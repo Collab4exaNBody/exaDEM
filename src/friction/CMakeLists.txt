@@ -1,0 +1,2 @@
+set(exadem_friction_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exadem_field_mutator)
+xstamp_add_plugin(exadem_friction ${CMAKE_CURRENT_SOURCE_DIR})

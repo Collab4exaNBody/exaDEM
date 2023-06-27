@@ -1,0 +1,2 @@
+set(exadem_numerical_scheme_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exadem_field_mutator)
+xstamp_add_plugin(exadem_numerical_scheme ${CMAKE_CURRENT_SOURCE_DIR})

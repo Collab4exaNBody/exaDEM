@@ -1,0 +1,27 @@
+#### specialization for Optimized chunk_neighbors #######
+
+################### AMR ############################
+rebuild_amr:
+  sub_grid_density: 24
+  amr_z_curve: false
+  enforced_ordering: 2
+####################################################
+
+
+################### Neighbor list update ############################
+chunk_neighbors2:
+  config:
+    free_scratch_memory: true
+    build_particle_offset: false
+    subcell_compaction: true
+    scratch_mem_per_cell: 1572864
+    stream_prealloc_factor: 1.05
+    chunk_size: 8
+
+chunk_neighbors_impl: chunk_neighbors2
+
+update_particle_neighbors:
+  - chunk_neighbors_impl
+  - resize_particle_locks
+####################################################################
+

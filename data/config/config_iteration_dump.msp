@@ -1,0 +1,79 @@
+# define when log must be printed
+trigger_dump_data:
+  rebind: { freq: simulation_dump_frequency , result: trigger_dump_data }
+  body:
+    - nth_timestep: { first: false }
+
+trigger_dump_paraview:
+  rebind: { freq: simulation_paraview_frequency , result: trigger_dump_paraview }
+  body:
+    - nth_timestep: { first: false }
+
+dump_data_vtklegacy:
+  - timestep_file: "output_%010d.vtk"
+  - memory_stats
+  - message: { mesg: "Write vtk-legacy " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - write_paraview_generic
+
+write_paraview_generic:
+  binary: false
+  write_ghost: false
+  write_box: true
+  fields: ["vx","vy","vz","id","radius"]
+
+dump_data_paraview:
+  - timestep_file: "paraview/output_%010d"
+  - message: { mesg: "Write paraview " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - write_paraview_generic
+
+dump_data_particles:
+  - timestep_file: "atoms_%09d.dump"
+  - message: { mesg: "Write dump " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - compact_neighbor_friction
+  - write_dump_particles
+  - reorder_neighbor_friction
+
+iteration_dump_writer: 
+  - dump_data_particles
+
+iteration_paraview_writer: 
+  - dump_data_paraview
+
+final_dump_writer: dump_data_particles
+
+# usefull to cleanly place particles in corresponding cells
+# and/or extend domain, just before a dump
+cleanup_before_dump: 
+  - extend_domain
+  - load_balance
+  - update_particles_full_body
+
+# define how to print log
+dump_data_if_triggered:
+  condition: trigger_dump_data
+  body:
+    - cleanup_before_dump
+    - iteration_dump_writer
+
+# define how to print log
+dump_paraview_if_triggered:
+  condition: trigger_dump_paraview
+  body:
+    - iteration_paraview_writer
+
+final_dump:
+    - cleanup_before_dump
+    - final_dump_writer
+

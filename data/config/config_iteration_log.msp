@@ -1,0 +1,27 @@
+# default operators to use
+default_print_thermodynamic_state: print_simulation_state
+default_dump_thermodynamic_state: nop
+
+# define when log must be printed
+trigger_print_log:
+  rebind: { freq: simulation_log_frequency , result: trigger_print_log , lb_flag: trigger_load_balance , move_flag: trigger_move_particles }
+  body:
+    - nth_timestep: { first: true }
+
+# how to print log
+print_log_if_triggered:
+  condition: trigger_print_log
+  body:
+    - default_print_thermodynamic_state
+
+# when to output thermo variables curve
+dump_thermo_if_triggered:
+  condition: trigger_dump_thermo
+  body:
+    - default_dump_thermodynamic_state
+
+trigger_dump_thermo:
+  rebind: { freq: simulation_dump_thermo_frequency , result: trigger_dump_thermo }
+  body:
+    - nth_timestep: { first: false }
+

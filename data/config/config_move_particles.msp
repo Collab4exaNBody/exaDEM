@@ -1,0 +1,132 @@
+########### Generic particle update block ################
+
+
+
+# define a test node which outputs a boolean value 'trigger_move_particles'
+# which tells when to move particles across cells and update neighbor lists
+trigger_move_particles:
+  rebind: { threshold: max_displ , result: trigger_move_particles }
+  body:
+    - particle_displ_over
+
+
+################### AMR ############################
+rebuild_amr:
+  sub_grid_density: 6.5
+  amr_z_curve: false
+  enforced_ordering: 1
+####################################################
+
+
+################### Neighbor list update ############################
+chunk_neighbors_contact:
+  config:
+    free_scratch_memory: true
+    build_particle_offset: false
+    subcell_compaction: true
+    scratch_mem_per_cell: 1048576
+    stream_prealloc_factor: 1.05
+    chunk_size: 2
+
+chunk_neighbors_impl: 
+  - chunk_neighbors
+  - chunk_neighbors_contact
+
+update_particle_neighbors:
+  - amr_grid_pairs
+  - chunk_neighbors_impl
+  - resize_particle_locks
+####################################################################
+
+grid_post_processing: grid_memory_compact
+
+ghost_full_update:
+  - ghost_comm_scheme
+  - ghost_update_all
+  #- ghost_update_rq
+  
+
+################### parallel particle migration ############################
+parallel_update_particles:
+  - migrate_cell_particles_friction
+  - rebuild_amr
+  - backup_r
+  - ghost_full_update
+  - grid_post_processing
+  - update_particle_neighbors
+
+# define actions to initialize particles at startup, just after file read
+init_particles:
+  - move_particles # standard move_particles, even if friction is enabled. just re-order particles in cells, if needed
+  - extend_domain
+  - load_balance
+  - parallel_update_particles
+###########################################################################
+
+
+
+
+########################### Load balancing ############################
+# trigger load balance whenever domain size changed, whatever freq has been requested
+# extend_domain has an input named enable_domain_extension to control if domain extesion is allowed
+# enable_domain_extension is defined as false in 'global'
+trigger_load_balance:
+  - trigger_lb_tmp:
+      condition: enable_load_balance
+      rebind: { result: trigger_lb_tmp , freq: simulation_load_balance_frequency }
+      body:
+        - nth_timestep: { first: false , delayed: true }
+  - extend_domain
+  - combine:
+      rebind: { in1: trigger_lb_tmp , in2: domain_extended , result: trigger_load_balance }
+      body: [ boolean_or ]
+
+# define how load balancing is done
+load_balance:
+  - simple_cost_model: { ccost: 1.0 , pdens: 4.0 , pdens2:0.0 , pdens3:0.003 }
+  - load_balance_rcb
+#  - cpu_gpu_load_balance
+
+load_balancing_if_triggered:
+  condition: trigger_load_balance
+  body:
+    - load_balance
+#######################################################################
+
+
+
+update_particles_full_body:
+  - compact_neighbor_friction
+  - move_particles_friction
+  - trigger_load_balance
+  - load_balancing_if_triggered
+  - parallel_update_particles
+  - reorder_neighbor_friction
+#  - check_nbh_friction
+
+update_particles_full:
+  condition: trigger_move_particles
+  body:
+    - update_particles_full_body
+
+update_particles_fast_body:
+    #- ghost_update_all
+    #- ghost_update_full
+    - ghost_update_rq
+    #- ghost_update_r
+
+update_particles_fast:
+  condition: not trigger_move_particles
+  body:
+    - update_particles_fast_body
+
+check_and_update_particles:
+#  - ghost_update_r
+#  - update_nbh_friction
+  - trigger_move_particles
+  - update_particles_full
+  - update_particles_fast
+  - loadbalance_log_helper:
+      rebind: { lb_flag: trigger_load_balance , move_flag: trigger_move_particles }
+      body: [ lb_event_counter ]
+

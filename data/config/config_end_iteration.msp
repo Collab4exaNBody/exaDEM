@@ -1,0 +1,32 @@
+# define what to do at the end of an iteration
+
+trigger_thermo_state:
+  - combine1:
+      rebind: { in1: trigger_dump_data , in2: trigger_print_log , result: output1 }
+      body:
+        - boolean_or
+  - combine2:
+      rebind: { in1: output1 , in2: trigger_dump_thermo , result: trigger_thermo_state }
+      body:
+        - boolean_or
+
+default_thermodynamic_state: simulation_state
+
+thermo_state_if_triggered:
+  condition: trigger_thermo_state
+  body:
+#    - message: "thermodynamic_state"
+    - default_thermodynamic_state
+
+end_iteration:
+  - trigger_dump_data
+  - trigger_dump_paraview
+  - trigger_print_log
+  - trigger_dump_thermo
+  - trigger_thermo_state
+  - thermo_state_if_triggered
+  - dump_data_if_triggered
+  - dump_paraview_if_triggered
+  - print_log_if_triggered
+  - dump_thermo_if_triggered
+

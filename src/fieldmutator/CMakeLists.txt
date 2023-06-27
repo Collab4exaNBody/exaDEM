@@ -1,0 +1,2 @@
+set(exadem_field_mutator_LINK_LIBRARIES exanbCore exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles)
+xstamp_add_plugin(exadem_field_mutator ${CMAKE_CURRENT_SOURCE_DIR})

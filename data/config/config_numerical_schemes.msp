@@ -1,0 +1,25 @@
+compute_force: nop
+
+# define the verlet numerical scheme
+numerical_scheme_verlet_macro(compute_force_op):
+  name: scheme
+  body:
+#    - push_f_v_r: { dt_scale: 1.0 }
+#    - push_f_v: { dt_scale: 0.5 }
+#    - push_to_quaternion: { dt_scale: 1.0 }
+    - combined_compute_prolog
+    - check_and_update_particles
+    - reset_force_moment
+    - compute_force_op
+    - force_to_accel # TODO: add DEM specific force_to_accel operator
+#    - update_angular_acceleration 
+#    - update_angular_velocity: { dt_scale: 1 }
+#    - push_f_v: { dt_scale: 0.5 }
+    - combined_compute_epilog
+
+# define the verlet numerical scheme
+numerical_scheme_verlet: numerical_scheme_verlet_macro(compute_force)
+
+numerical_scheme: numerical_scheme_verlet
+
+

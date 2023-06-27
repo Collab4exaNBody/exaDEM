@@ -1,0 +1,79 @@
+grid_flavor: grid_flavor_dem
+
+input_data_from_xyz:
+  - read_xyz:
+      file: two_materials.xyz
+      bounds_mode: FILE
+      enlarge_bounds: 1.0 m
+  - dem_init_material:
+     type: 0
+     rad: 0.5
+     density: 0.02
+  - dem_init_material:
+     type: 1
+     rad: 0.5
+     density: 0.04
+  - init_random_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - init_inertia:
+  - random_vrot_arot
+
+input_data:
+#  - input_data_from_dump
+  - input_data_from_xyz
+
+myCylinder:
+  - cylinder_wall:
+     radius: 9 
+     center: [4.5,4.5,4.5]
+     kt: 80000
+     kn: 100000
+     kr : 1
+     mu: 0.5
+     cylinder_angular_velocity: [0,0,0]
+     #cylinder_angular_velocity: [0,0.5,0]
+     damprate: 0.999
+
+applyDrivers:
+  - myCylinder
+
+update_nbh_friction:
+  rcut: 1.1 m
+
+compute_loop:
+  loop: true
+  #unroll: 4
+  name: loop
+  condition: compute_loop_continue
+  body:
+    - compute_loop_prolog
+    - numerical_scheme
+    - end_iteration
+    - compute_loop_epilog
+    - next_time_step
+    - compute_loop_stop
+
+compute_force:
+  - init_homothety:
+     homothety: 0.0
+  - applyDrivers
+  - gravity_force
+  - hooke_force:
+      config: {rcut: 1.1 m, dncut: 0.0,  kn: 100000, kt: 80000, kr: 0, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
+
+domain:
+  cell_size: 4.0 m
+  periodic: [false,true,false]
+
+write_vtklegacy:
+  ascii: true
+  ghost: false
+
+global:
+  simulation_dump_frequency: -1
+  simulation_paraview_frequency: -1
+  simulation_end_iteration: 1000
+  simulation_log_frequency: 1000
+  dt: 0.00005 s 
+  rcut_inc: 0.1 m

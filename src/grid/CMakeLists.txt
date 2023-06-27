@@ -1,0 +1,2 @@
+set(exadem_grid_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles)
+xstamp_add_plugin(exadem_grid ${CMAKE_CURRENT_SOURCE_DIR})

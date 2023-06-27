@@ -1,0 +1,37 @@
+# configuration default values
+
+configuration:
+
+  # default plugins to load
+  plugins:  []
+
+  # Verbosity & debug
+  logging:
+    parallel: false
+    debug: false
+    profiling: false
+#   log_file: log.txt
+#   err_file: err.txt
+#   dbg_file: dbg.txt
+
+  profiling:
+    exectime: false
+    summary: false
+
+  # operator node graph debug
+  debug:
+    plugins: false
+    config: false
+    graph: false
+    graph_lod: 0
+    filter: []
+#   filter: [ ".*ewald_short_range_pc.*" , ".*primary_neighbor.*" ]
+#    rng: rng_dump.cfg
+
+# multi-threading configuration
+  mpimt: true
+  pinethreads: false
+  num_threads: {}
+#  omp_nested: true
+  omp_max_nesting: 2
+

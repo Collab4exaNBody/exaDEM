@@ -1,0 +1,88 @@
+grid_flavor: grid_flavor_dem
+
+configuration:
+  logging: { debug: false , parallel: false }
+  debug:
+#    filter: [ "ooo", ".*init_neighbor_friction" , ".*move_particles_friction" , ".*chunk_neighbors" , ".*check_nbh_friction" , ".*reorder_neighbor_friction" , ".*compact_neighbor_friction" , ".*extend_domain" , ".*migrate_cell_particles_friction" ]
+    filter: [ ".*init_neighbor_friction" , ".*move_particles_friction" , ".*check_nbh_friction" , ".*compact_neighbor_friction" , ".*extend_domain" ]
+
+input_data:
+  - read_xyz:
+      file: tenmillion.xyz
+      bounds_mode: FILE
+      enlarge_bounds: 1.0 m
+  - init_radius_quaternion:
+     rad: 0.5
+  - init_random_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - apply_density:
+     density: 0.02
+  - init_random_inertia:
+     var: 0.0
+     mean: [0.1,0.1,0.1]
+  - random_vrot_arot
+
+# Warning, rcut for check_nbh_friction and update_nbh_friction must not be hard coded
+
+check_nbh_friction:
+  rcut: 1.1 m # oversized, so that we check all neighbors
+
+update_nbh_friction:
+  rcut: 1.1 m
+
++init_particles:
+  - check_nbh_friction
+
++update_particles_full_body:
+  - check_nbh_friction
+
+check_and_update_particles:
+  - ghost_update_r
+  - update_nbh_friction
+  - trigger_move_particles
+  - update_particles_full
+  - update_particles_fast
+  - loadbalance_log_helper:
+      rebind: { lb_flag: trigger_load_balance , move_flag: trigger_move_particles }
+      body: [ lb_event_counter ]
+
++first_iteration:
+  - grid_stats
+  - chunk_neighbors_stats
+
+chunk_neighbors:
+  config:
+    chunk_size: 1
+
+compute_force:
+  - cylinder_wall:
+     radius: 300 
+     center: [209.475,32.55,209.475]
+     kt: 80000
+     kn: 100000
+     kr : 1
+     mu: 0.5
+     cylinder_angular_velocity: [0,0.5,0]
+     damprate: 0.999
+  - gravity_force
+  - hooke_force:
+      config: { rcut: 1.1 m , dncut: 0.1 m, kn: 100000, kt: 80000, kr: 1, fc: 0.05, mu: 0.1, damp_rate: 0.999 } 
+
+domain:
+  cell_size: 4.0 m
+  periodic: [false,true,false]
+
+write_vtklegacy:
+  ascii: true
+  ghost: false
+
+global:
+  simulation_dump_frequency: 10000
+  simulation_end_iteration: 5000000
+  simulation_log_frequency: 10
+  simulation_paraview_frequency: -1
+  dt: 0.000005 s 
+  rcut_inc: 0.01 m
+  friction_rcut: 1.06 m
+

@@ -1,0 +1,60 @@
+grid_flavor: grid_flavor_dem
+
+configuration:
+  onika:
+    gpu_sm_mult: 6
+    gpu_block_size: 256
+  profiling:
+    summary: false
+  logging: { debug: false , parallel: false }
+  debug:
+    filter: [ ".*write_dump_particles" , ".*read_dump_particles" , ".*compact_neighbor_friction" ]
+
+input_data:
+  - read_dump_particles:
+     filename: atoms_000101000.dump
+#     filename: dem_onemillion.dump
+#     scale_cell_size: 2
+
++first_iteration:
+  - grid_stats
+  - chunk_neighbors_stats
+
+chunk_neighbors:
+  config:
+    chunk_size: 1
+
+compute_force:
+  - cylinder_wall:
+     radius: 75
+     center: [ 51.975 , 51.975 , 51.975 ]
+     kt: 80000
+     kn: 100000
+     kr : 1
+     mu: 0.5
+     cylinder_angular_velocity: [ 0 , 0.5 , 0 ]
+     damprate: 0.999
+  - gravity_force
+  - hooke_force:
+      config: { rcut: 1.1 m , dncut: 0.1 m, kn: 100000, kt: 80000, kr: 1, fc: 0.05, mu: 0.1, damp_rate: 0.999 } 
+
+cleanup_before_dump: nop
+
+write_dump_particles:
+  compression_level: 6
+
+write_vtklegacy:
+  ascii: true
+  ghost: false
+
+global:
+  simulation_dump_frequency: 1000
+#  simulation_dump_frequency: -1
+  simulation_end_iteration: 102000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: -1
+  dt: 0.000005 s 
+  rcut_inc: 0.1 m
+
+final_dump: nop
+

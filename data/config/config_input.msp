@@ -1,0 +1,3 @@
+# default input : read last dump with legacy StampV3 format 
+input_data: nop
+

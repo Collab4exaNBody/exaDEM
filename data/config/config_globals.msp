@@ -1,0 +1,36 @@
+############ some global properties ############
+
+
+# default global values
+global:
+  dt: 1.0e-3 ps
+  rcut_inc: 1.0 ang   # additional distance so that we d'ont have to rebuild neighbor list each time step
+  compute_loop_continue: true
+  simulation_end_iteration: 10000
+  simulation_log_frequency: 10
+  simulation_load_balance_frequency: 100
+  simulation_dump_frequency: 1000         # 0 means no dump at all
+  simulation_dump_thermo_frequency: 10
+  timestep: 0
+  physical_time: 0.
+  enable_domain_extension: true
+  enable_load_balance: true
+  enable_task_graph: false
+  #amr_z_curve: false
+  enable_grid_compact: true
+#  force_initialized: false # default is to consider reader do not provide initialized acceleration
+
+# default grid variant we use
+grid_flavor: grid_flavor_full
+
+make_empty_grid:
+  rebind: { grid: null_grid }
+  body:
+    - grid_flavor
+
+# default domain parameters
+domain:
+  grid_dims: [ 0 , 0 , 0 ] # deduced from cell_size
+  cell_size: 0.0 ang # deduced from max rcut (a.k.a. output slot ghost_dist from nbh_dist node)
+
+particle_regions: []

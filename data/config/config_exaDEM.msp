@@ -1,0 +1,128 @@
+print_logo_banner:
+  profiling: false
+  body:
+    - message: |
+
+        _______________  ___  _____  ________  ___________   _____   
+        \_   _____/\   \/  / /  _  \ \______ \ \_   _____/  /     \  
+         |    __)_  \     / /  /_\  \ |    |  \ |    __)_  /  \ /  \ 
+         |        \ /     \/    |    \|    `   \|        \/    Y    \
+        /_______  //___/\  \____|__  /_______  /_______  /\____|__  /
+                \/       \_/       \/        \/        \/         \/ 
+
+
+includes:
+  - config_defaults.msp
+  - config_debug.msp
+  - config_move_particles.msp
+  - config_numerical_schemes.msp
+  - config_globals.msp
+  - config_iteration_log.msp
+  - config_iteration_dump.msp
+  - config_end_iteration.msp
+  - config_input.msp
+
+# usually outputs ParticleSpecies type to a slot named species, in case the data reader doesn't provide species description
+reduce_species_after_read: nop
+
+############### compute loop stop condition #############
+compute_loop_stop:
+  profiling: false
+  rebind: { end_at: simulation_end_iteration , result: compute_loop_continue }
+  body:
+    - sim_continue
+
+# executing potential sub nodes initializes rcut_max
+# won't actually compute anything since grid is empty at this time
+init_rcut_max:
+  profiling: false
+  rebind: { grid: null_grid, chunk_neighbors: null_neighbors }
+  body:
+    - compute_force    # executed on an empty grid, just here to update rcut_max
+    - nbh_dist:        # compute neighborhood distance in grid space (nbh_dist),
+        verbose: true  # also computes maximum particle move tolerance in grid space (max_displ)
+                       # and ghost_dist, a constant scaling of of nbh_dist using scale factor nbh_ghost_scale
+
+# executed once (whitout verbosity) first to enable automatic cell_size calculation
+preinit_rcut_max:
+  profiling: false
+  rebind: { grid: null_grid, chunk_neighbors: null_neighbors, domain: empty_domain }
+  body:
+    - domain:
+        cell_size: 0.0
+        grid_dims: [ 0 , 0 , 0 ]
+    - compute_force
+    - nbh_dist
+
+initialize_friction: reorder_neighbor_friction
+
+first_iteration:
+  - init_particles
+  - initialize_friction
+  - reset_force_moment
+  - compute_force
+#  - force_to_accel
+  - default_thermodynamic_state
+  - default_print_thermodynamic_state: { lb_flag: false , move_flag: false , print_header: true }
+  - next_time_step
+
+# does nothing, just placeholders
+compute_loop_prolog: nop
+compute_loop_epilog: nop
+init_prolog: nop
+init_epilog: nop
+
+compute_force:
+  - message: "calcul force"
+
+hw_device_init:
+  - mpi_comm_world
+  - init_cuda
+
+hw_device_finalize:
+  - finalize_cuda
+
+simulation_epilog:
+  - default_thermodynamic_state
+  - final_dump
+
+
+compute_loop:
+  loop: true
+  #unroll: 4
+  name: loop
+  condition: compute_loop_continue
+  body:
+    - compute_loop_prolog
+    - numerical_scheme
+    - end_iteration
+    - compute_loop_epilog
+    - next_time_step
+    - compute_loop_stop
+
+particles_regions: []
+
+######## simulation program description #################
+simulation:
+  name: sim
+  body:
+    - print_logo_banner
+    - hw_device_init   # provides MPI_COMM_WORLD as a default communicator
+    - make_empty_grid
+    - global
+    - preinit_rcut_max
+    - domain
+    - init_prolog
+    - grid_flavor
+    - particles_regions
+    - input_data
+    - grid_post_processing
+    - init_rcut_max
+    - print_domain
+    - performance_adviser: { verbose: true }
+    - init_epilog
+    - first_iteration
+    - compute_loop
+    - simulation_epilog
+    - hw_device_finalize
+

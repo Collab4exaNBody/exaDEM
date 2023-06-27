@@ -1,0 +1,2 @@
+set(exadem_io_LINK_LIBRARIES exanbIO exanbDefBox exanbParticleNeighbors exadem_numerical_scheme exadem_friction exadem_force_field)
+xstamp_add_plugin(exadem_io ${CMAKE_CURRENT_SOURCE_DIR})

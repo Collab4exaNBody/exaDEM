@@ -1,0 +1,15 @@
+# parrinello-rahman module
+
+numerical_scheme_parrinellorahman:
+  - simulation_thermodynamic_state
+  - first_push_parrinellorahman: { dt_scale: 1.0 }
+  - update_xform_parrinellorahman
+  - nbh_dist
+  - check_and_update_particles
+  - zero_force_energy
+  - compute_force
+  - force_to_accel
+  - convergence_push_parrinellorahman: { dt_scale: 1.0 }
+
+numerical_scheme: numerical_scheme_parrinellorahman
+
