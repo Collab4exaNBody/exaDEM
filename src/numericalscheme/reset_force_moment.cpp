@@ -34,8 +34,7 @@ namespace exaDEM
 			inline void execute () override final
 			{
 				//ResetForceMomentFunctor func = {};
-				auto default_values = std::make_tuple(double(0.0), double(0.0), double(0.0), Vec3d{0.0,0.0,0.0});
-				setFunctor<double,double, double, Vec3d> func = {default_values};
+				SetFunctor<double,double, double, Vec3d> func = { {double(0.0), double(0.0), double(0.0), Vec3d{0.0,0.0,0.0}} };
 				compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
 			}
 		};

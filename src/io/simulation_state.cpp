@@ -20,20 +20,11 @@
 #include <exaDEM/dem_simulation_state.h>
 
 
+// ================== Thermodynamic state compute operator ======================
 namespace exaDEM
 {
   using namespace exanb;
 
-  // =================== utility functions ==========================
-
-  // get particle virial tensor. assume the virial is null if particle hasn't virial field
-  template<bool> static Mat3d get_particle_virial(const Mat3d* __restrict__, size_t);
-  template<> inline Mat3d get_particle_virial<false>(const Mat3d* __restrict__ virials, size_t p_i) { return Mat3d(); }
-  template<> inline Mat3d get_particle_virial<true>(const Mat3d* __restrict__ virials, size_t p_i) { return virials[p_i]; }
-};
-  // ================== Thermodynamic state compute operator ======================
-namespace exaDEM
-{
   template<
     class GridT ,
 	  class = AssertGridHasFields< GridT, field::_vx, field::_vy, field::_vz, field::_mass >
@@ -78,7 +69,6 @@ namespace exaDEM
 		ReduceSimulationStateFunctor func = {};
 		simulation_state_variables sim = reduce_cell_particles( *grid , false , func , sim_init, reduce_field_set , gpu_execution_context() , gpu_time_account_func() );
 
-
 		auto prof_section = profile_begin_section("mpi");
 
 		// reduce partial sums and share the result
@@ -91,7 +81,7 @@ namespace exaDEM
 		    sim.potential_energy,
 		    sim.mass,
 		    static_cast<double>(sim.n_particles) };
-		  assert( tmp[17] == total_particles );
+		  assert( tmp[17] == sim.n_particles );
 		  MPI_Allreduce(MPI_IN_PLACE,tmp,18,MPI_DOUBLE,MPI_SUM,comm);
 		  virial.m11 = tmp[0];
 		  virial.m12 = tmp[1];

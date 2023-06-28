@@ -38,8 +38,8 @@ namespace exaDEM
 		inline void execute () override final
 		{
 			const double r = *rad;
-			std::tuple<double> default_values = std::make_tuple(*rad);
-			setFunctor<double> func = {default_values};
+//			std::tuple<double> default_values = std::make_tuple(*rad);
+			SetFunctor<double> func = { {*rad} };
 			compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
 		}
 		};

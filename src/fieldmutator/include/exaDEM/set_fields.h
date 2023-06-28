@@ -2,7 +2,7 @@
 
 #include <exanb/core/basic_types.h>
 #include <exanb/compute/compute_cell_particles.h>
-#include <tuple>
+#include <onika/flat_tuple.h>
 
 
 namespace exaDEM
@@ -10,81 +10,55 @@ namespace exaDEM
   using namespace exanb;
 
   template<int idx, typename Tuple, typename Arg>
-    ONIKA_HOST_DEVICE_FUNC inline void setter(const Tuple& values, Arg& arg)
-    {
-      arg = std::get<idx> (values);
-    }
+  ONIKA_HOST_DEVICE_FUNC static inline void setter(const Tuple& values, Arg& arg)
+  {
+    arg = values.get( onika::tuple_index<idx> );
+  }
 
   template<int idx, typename Arg, typename Tuple, typename... Args>
-    ONIKA_HOST_DEVICE_FUNC inline void setter(const Tuple& values, Arg& arg, Args&... args) 
+  ONIKA_HOST_DEVICE_FUNC static inline void setter(const Tuple& values, Arg& arg, Args&... args) 
+  {
+    arg = values.get( onika::tuple_index<idx> );
+    setter<idx+1>(values, args...);
+  }
+
+
+  template <typename... Ts>
+  struct SetFunctor
+  {
+    template<typename... Args>
+    ONIKA_HOST_DEVICE_FUNC inline void operator () (Args&... args) const
     {
-      arg = std::get<idx> (values);
-      setter<idx+1>(values, args...);
+      static constexpr int first = 0;
+      setter<first>(m_default_values, args...);
+    }
+    onika::FlatTuple<Ts...> m_default_values;
+  };
+
+  template <typename... Ts>
+  struct FilteredSetFunctor
+  {
+    template<typename... Args>
+    ONIKA_HOST_DEVICE_FUNC inline void operator () (uint8_t type, Args&... args) const
+    {
+      if(type == filtered_type)
+      {
+        constexpr int first = 0;
+        setter<first>(m_default_values, args...);
+      }
     }
 
-
-  template <typename... Ts>
-    struct setFunctor
-    {
-      template<typename... Args>
-	ONIKA_HOST_DEVICE_FUNC inline void operator () (Args&... args) const
-	{
-	  constexpr int first = 0;
-	  setter<first>(m_default_values, args...);
-	}
-      std::tuple<Ts...> m_default_values;
-    };
-
-  template <typename... Ts>
-    struct FilteredSetFunctor
-    {
-      template<typename... Args>
-	ONIKA_HOST_DEVICE_FUNC inline void operator () (uint8_t type, Args&... args) const
-	{
-	  if(type == filtered_type)
-	  {
-	    constexpr int first = 0;
-	    setter<first>(m_default_values, args...);
-	  }
-	}
-
-      uint8_t filtered_type;
-      std::tuple<Ts...> m_default_values;
-    };
-}
-
-namespace exanb
-{
-  template<> struct ComputeCellParticlesTraits<exaDEM::setFunctor<double>>
-  {
-    static inline constexpr bool RequiresBlockSynchronousCall = false;
-    static inline constexpr bool CudaCompatible = false;
+    uint8_t filtered_type;
+    onika::FlatTuple<Ts...> m_default_values;
   };
 }
 
 namespace exanb
 {
-  template<> struct ComputeCellParticlesTraits<exaDEM::setFunctor<double,double, double, Vec3d>>
+  template<class... Ts> struct ComputeCellParticlesTraits< exaDEM::SetFunctor<Ts...> >
   {
     static inline constexpr bool RequiresBlockSynchronousCall = false;
     static inline constexpr bool CudaCompatible = true;
   };
 }
 
-namespace exanb
-{
-  template<> struct ComputeCellParticlesTraits<exaDEM::setFunctor<Quaternion, double>>
-  {
-    static inline constexpr bool RequiresBlockSynchronousCall = false;
-    static inline constexpr bool CudaCompatible = false;
-  };
-}
-
-namespace exanb
-{
-  template<> struct ComputeCellParticlesTraits<exaDEM::FilteredSetFunctor<double, double, Quaternion>>
-  {
-    static inline constexpr bool RequiresBlockSynchronousCall = false;
-    static inline constexpr bool CudaCompatible = true;
-  };
-}
