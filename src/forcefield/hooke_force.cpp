@@ -207,6 +207,8 @@ namespace exaDEM
 					*rcut_max = std::max( *rcut_max , rcut );
 					if( grid->number_of_cells() == 0 ) { return; }
 
+          ldbg<<"Hooke: rcut="<<rcut<<std::endl;
+
 					ComputePairOptionalLocks<false> cp_locks {};
 					exanb::GridChunkNeighborsLightWeightIt<false> nbh_it{ *chunk_neighbors };
 

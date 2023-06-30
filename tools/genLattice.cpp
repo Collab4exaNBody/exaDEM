@@ -4,12 +4,11 @@
 int main ()
 {
 //	int N = 50;
-	int nx = 400;
-	int ny = 63;
-	int nz = 400;
+	int nx = 10;
+	int ny = 10;
+	int nz = 10;
 
 	double lattice = 0.5; // metre
-
 
 	int id = 0;
 	int shape = 0;
@@ -30,3 +29,4 @@ int main ()
 	}
 
 }
+
