@@ -37,7 +37,6 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
-			const Vec3d g = *gravity;
 			GravityForceFunctor func { *gravity};
 			compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
 		}
