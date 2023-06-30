@@ -169,13 +169,14 @@ namespace exaDEM
 								const auto _mu = *mu;
 								const auto _dp = *damprate;
 
-								// define walls
-								RigidSurfaceFunctor r_wall_x {normx, *blocked_wall_x_offset, _dt, _kt, _kn, _kr, _mu, _dp};
-								RigidSurfaceFunctor r_wall_y {normy, *blocked_wall_y_offset, _dt, _kt, _kn, _kr, _mu, _dp};
-								RigidSurfaceFunctor r_wall_z {normz, *blocked_wall_z_offset, _dt, _kt, _kn, _kr, _mu, _dp};
-								CompressionWallFunctor c_wall_x {neg_normx, (*compression_wall_x_offset), *compression_wall_x_velocity, _dt, _kt, _kn, _kr, _mu, _dp}; // Warning offset is defined with negative normal vector
-								CompressionWallFunctor c_wall_y {neg_normy, (*compression_wall_y_offset), *compression_wall_y_velocity,  _dt, _kt, _kn, _kr, _mu, _dp}; 
-								MovableWallFunctor m_wall_z {neg_normz, real_offset, *movable_wall_z_velocity, *dt, *kt, *kn, *kr, *mu, *damprate};
+								// define walls r = unmovable, c=compression, m = movable
+								const double vel_null = double(0.);
+								RigidSurfaceFunctor r_wall_x {normx, *blocked_wall_x_offset, vel_null, _dt, _kt, _kn, _kr, _mu, _dp};
+								RigidSurfaceFunctor r_wall_y {normy, *blocked_wall_y_offset, vel_null, _dt, _kt, _kn, _kr, _mu, _dp};
+								RigidSurfaceFunctor r_wall_z {normz, *blocked_wall_z_offset, vel_null, _dt, _kt, _kn, _kr, _mu, _dp};
+								RigidSurfaceFunctor c_wall_x {neg_normx, (*compression_wall_x_offset), *compression_wall_x_velocity, _dt, _kt, _kn, _kr, _mu, _dp}; // Warning offset is defined with negative normal vector
+								RigidSurfaceFunctor c_wall_y {neg_normy, (*compression_wall_y_offset), *compression_wall_y_velocity,  _dt, _kt, _kn, _kr, _mu, _dp}; 
+								RigidSurfaceFunctor m_wall_z {neg_normz, real_offset, *movable_wall_z_velocity, *dt, *kt, *kn, *kr, *mu, *damprate};
 
 								// first step (time scheme)
 								const double _dt2_2 = 0.5 * _dt * _dt;
@@ -227,8 +228,8 @@ namespace exaDEM
 											r_wall_x(__ARGS_);
 											r_wall_y(__ARGS_);
 											r_wall_z(__ARGS_);
-											c_wall_x(__ARGS_, sum_forces_x);
-											c_wall_y(__ARGS_, sum_forces_y);
+											sum_forces_x += c_wall_x(__ARGS_);
+											sum_forces_y += c_wall_y(__ARGS_);
 											m_wall_z(__ARGS_);
 #undef __ARGS_AND_SUM
 											// compute total mass

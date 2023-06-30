@@ -65,7 +65,7 @@ namespace exaDEM
 								{
 									new_offset = *offset;
 								}
-								MovableWallFunctor func {*normal, new_offset, *wall_velocity, *dt, *kt, *kn, *kr, *mu, *damprate};
+								RigidSurfaceFunctor func {*normal, new_offset, *wall_velocity, *dt, *kt, *kn, *kr, *mu, *damprate};
 								compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
 							}
 						};

@@ -59,7 +59,7 @@ namespace exaDEM
 			*offset += (*dt) * (*w_vel) + 0.5 * (*dt) * (*dt) * (*w_acc);
 			if(sig != 0.0) (*w_vel) += 0.5 * (*dt) * (*w_acc);
 
-			CompressionWallFunctor func {*normal, *offset, *w_vel, *dt, *kt, *kn, *kr, *mu, *damprate};
+			RigidSurfaceFunctor func {*normal, *offset, *w_vel, *dt, *kt, *kn, *kr, *mu, *damprate};
 			double sum_f = 0.0; // forces applied on the ball
 			double sum_m = 0.0; // summ of masses of particles inside the ball 
 													// TODO WARNING : it works for "basic" walls x y or z
@@ -104,13 +104,12 @@ namespace exaDEM
 #         pragma omp simd //reduction(+:sum_f, sum_m)
 					for(size_t j=0;j<n;j++)
 					{
-						func(
+						sum_f += func(
 								_rx[j], _ry[j], _rz[j],
 								_vx[j], _vy[j], _vz[j],
 								_vrot[j], _r[j],
 								_fx[j], _fy[j], _fz[j],
-								_m[j], _mom[j], _fric[j],
-								sum_f
+								_m[j], _mom[j], _fric[j]
 								);
 						sum_m += _m[j];
 					}
