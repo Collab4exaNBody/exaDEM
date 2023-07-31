@@ -52,7 +52,20 @@ The following test-cases are available in the directory : example
 
 ## List of DEM operators
 
+### Drivers
 
+#### Rigid Surface
+
+| Operator name  | rigid_surface |
+|--|--|
+| Description | This operator computes forces between particles and a rigid surface (named wall in other operators) using the Hooke law. |    			
+| damprate | flow : IN <br> type double <br> desc : Parameter of the force law used to model contact rigid surface/sphere |
+| kn | flow : IN <br>  type : double <br> desc : Parameter of the force law used to model contact rigid surface/sphere |
+| kr | flow : IN <br> type : double <br> desc : Parameter of the force law used to model contact rigid surface/sphere |
+| kt | flow : IN <br> type : double <br> desc : Parameter of the force law used to model contact rigid surface/sphere |
+| mu | flow : IN <br> type double <br> desc : Parameter of the force law used to model contact rigid surface/sphere |
+| normal | flow : IN <br> type : Vec3d <br> desc : Normal vector of the rigid surface |
+| offset | flow : IN <br> type : double <br> desc : Offset from the origin (0,0,0) of the rigid surface |
 
 ## Authors and acknowledgment
 Show your appreciation to those who have contributed to the project.
