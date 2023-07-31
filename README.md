@@ -52,6 +52,43 @@ The following test-cases are available in the directory : example
 
 ## List of DEM operators
 
+### Global operators
+
+Some operators from default `exaNBody` operator list to  
+
+- Operator `domain` : see @exaNBody in plugin @exanbIOPlugin
+  - `cell_size` : The cell size will be approximately the value given by the possible subdivision of the grid covering the simulation volume. Cell size must be greater than twice the radius of the largest sphere. Note that cell size can greatly influence performance. 
+  - `periodic` : Define whether or not the boundary conditions of the system under study are periodic along the (Ox), (Oy) and (Oz) axes.
+
+YAML example:
+
+```
+domain:
+  cell_size: 2 m
+  periodic: [false,true,false]
+```
+
+- Operator `global` :  see @exaNBody in plugin @exanbCorePlugin
+  - `simulation_dump_frequency` : Writes an mpiio file each time the number of iterations modulo this number is true.
+  - `simulation_paraview_frequency` : Writes an paraview file each time the number of iterations modulo this number is true.
+  - `simulation_log_frequency` : Prints logs each time the number of iterations modulo this number is true.
+  - `simulation_end_iteration` : Total number of iterations
+  - `dt` : Is the integration time value
+  - `rcut_inc` : Corresponds to the Verlet radius used by the Verlet list method. Note that the smaller the radius, the more often verlet lists are reconstructed. On the other hand, the larger the radius, the more expensive it is to build the verlet lists.
+  - `friction_rcut` : This radius is used to construct lists containing the value of friction between sphere pairs. This radius must be `>= rcut + rcut_inc`.
+
+YAML example:
+```
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 100000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 5000
+  dt: 0.00005 s
+  rcut_inc: 0.01 m
+  friction_rcut: 1.1 m
+```
+
 ### Force law
 
 | Operator name | hooke_force |
@@ -68,9 +105,20 @@ YAML example:
   config: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.9, damp_rate: 0.9}
 ```
 
-### Drivers
+| Operator name | gravity_force |
+|--|--|
+| Description | This operator computes forces related to the gravity. |
+| gravity | flow : IN <br> type : Vec3d <br> desc : Define the gravity constant in function of the gravity axis, default value are x axis = 0, y axis = 0 and z axis = -9.807 |
 
-#### Rigid Surface / Wall
+YAML example:
+
+```
+- gravity_force:
+  - gravity: [0,0,-0.009807]
+```
+
+
+### Drivers
 
 | Operator name  | rigid_surface |
 |--|--|
@@ -95,6 +143,26 @@ Yaml example, see `example/rigid_surface.msp`:
    mu: 0.9
    damprate: 0.9
 ```
+
+### Reader/Writer
+
+| Operator | read_xyz |
+|--|--|
+| Description | This operator reads a file written according to the xyz format |
+| bounds_mode | flow : IN <br> type : ReadBoundsSelectionMode |
+| enlarge_bounds | flow : IN <br> type : double <br> desc : Define a layer around the volume size in the xyz file | 
+| file | flow : IN <br> type : string <br> desc : Filename | 
+| pbc_adjust_xform | flow : IN <br> type : bool <br> desc : Ajust the form |
+
+YAML example: 
+
+```
+- read_xyz:
+  file: input_file_rigid_surface.xyz
+  bounds_mode: FILE
+  enlarge_bounds: 1.0 m
+```
+
 
 ## Authors and acknowledgment
 Show your appreciation to those who have contributed to the project.
