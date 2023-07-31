@@ -43,18 +43,34 @@ The following test-cases are available in the directory : example
 
 | Test case | Start | End |
 |-----------|-------|-----|
-| rotating-drum | ![](doc/examples/rotating_drum_start.png) | ![](doc/examples/rotating_drum_end.png) |
-| axial-stress | ![](doc/examples/axial_stress_start.png) | ![](doc/examples/axial_stress_end.png) |
-| radial-stress | ![](idoc/examples/radial_stress_start.png) | ![](doc/examples/radial_stress_end.png) |
-| rigid-surface | ![](doc/examples/rigid_surface_start.png) | ![](doc/examples/rigid_surface_end.png) |
-| impose-velocity | ![](doc/examples/impose_velocity_start.png) | ![](doc/examples/impose_velocity_end.png) |
-| movable-wall | ![](doc/examples/movable_wall_start.png) | ![](doc/examples/movable_wall_end.png) |
+| rotating-drum | ![](doc/example/rotating_drum_start.png) | ![](doc/example/rotating_drum_end.png) |
+| axial-stress | ![](doc/example/axial_stress_start.png) | ![](doc/example/axial_stress_end.png) |
+| radial-stress | ![](doc/example/radial_stress_start.png) | ![](doc/example/radial_stress_end.png) |
+| rigid-surface | ![](doc/example/rigid_surface_start.png) | ![](doc/example/rigid_surface_end.png) |
+| impose-velocity | ![](doc/example/impose_velocity_start.png) | ![](doc/example/impose_velocity_end.png) |
+| movable-wall | ![](doc/example/movable_wall_start.png) | ![](doc/example/movable_wall_end.png) |
 
 ## List of DEM operators
 
+### Force law
+
+| Operator name | hooke_force |
+|--|--|
+| Description | This operator computes forces between spheric particles using the Hooke law. |
+| config | flow : IN <br> type : exaDEM::HookeParams <br> desc : Data structure that contains hooke force parameters (rcut, dncut, kn, kt, kr, fc, mu, damp_rate) |
+
+Comment: hooke force includes a cohesion force from `rcut` to `rcut+dncut` with the cohesion force parameter `fc`.
+
+YAML example:
+
+```
+- hooke_force:
+  config: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.9, damp_rate: 0.9}
+```
+
 ### Drivers
 
-#### Rigid Surface
+#### Rigid Surface / Wall
 
 | Operator name  | rigid_surface |
 |--|--|
@@ -66,6 +82,19 @@ The following test-cases are available in the directory : example
 | mu | flow : IN <br> type double <br> desc : Parameter of the force law used to model contact rigid surface/sphere |
 | normal | flow : IN <br> type : Vec3d <br> desc : Normal vector of the rigid surface |
 | offset | flow : IN <br> type : double <br> desc : Offset from the origin (0,0,0) of the rigid surface |
+
+Yaml example, see `example/rigid_surface.msp`:
+
+```
+- rigid_surface:
+   normal: [0,0,1]
+   offset: -1
+   kt: 80000
+   kn: 100000
+   kr : 0
+   mu: 0.9
+   damprate: 0.9
+```
 
 ## Authors and acknowledgment
 Show your appreciation to those who have contributed to the project.
