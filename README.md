@@ -17,6 +17,8 @@ git push -uf origin main
 
 ## Installation
 
+### Required
+
 First, you need to isntall exaNBody : 
 
 ```
@@ -27,13 +29,27 @@ make install
 export exaNBody_DIR=path_to_install
 ```
 
+Second, install yaml-cpp (with spack or cmake)
+
+```
+spack install yaml-cpp
+spack load yaml-cpp
+```
+
+### Optional
+
+- Cuda
+- MPI
+
+## ExaDEM Installation
+
 Install ExaDEM
 
 ```
 export exaNBody_DIR=path_to_install
 git clone https://www-git-cad.intra.cea.fr/DEC/collaboratif/rp269144/exadem.git
 mkdir build-exaDEM && cd build-exaDEM
-cmake ../exaDEM
+cmake ../exadem -DXSTAMP_BUILD_CUDA=OFF
 make -j 4
 ```
 
