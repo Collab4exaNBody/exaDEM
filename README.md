@@ -17,7 +17,7 @@ git push -uf origin main
 
 ## Installation
 
-### Required
+### Minimal Requirements
 
 First, you need to isntall exaNBody : 
 
@@ -52,6 +52,8 @@ mkdir build-exaDEM && cd build-exaDEM
 cmake ../exadem -DXSTAMP_BUILD_CUDA=OFF
 make -j 4
 ```
+
+Warning : ExaNBody does not compile without Cuda.
 
 ## Test cases
 
