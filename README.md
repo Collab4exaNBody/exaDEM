@@ -31,8 +31,8 @@ Install ExaDEM
 
 ```
 export exaNBody_DIR=path_to_install
-git clone pathto/exaDEM.git
-mkdir build-exaDEM && cd build exaDEM
+git clone https://www-git-cad.intra.cea.fr/DEC/collaboratif/rp269144/exadem.git
+mkdir build-exaDEM && cd build-exaDEM
 cmake ../exaDEM
 make -j 4
 ```
