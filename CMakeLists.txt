@@ -15,12 +15,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 # ======================================
 find_package(exaNBody)
 
-
-# ===========================================
-# === Sets directory of embedded tkspline ===
-# ===========================================
-find_path(TKSPLINE_INCLUDE_DIRS tk/spline.h HINTS ${CMAKE_SOURCE_DIR}/thirdparty/tkspline)
-
 # =================================
 # === Host System configuration ===
 # =================================
@@ -43,15 +37,13 @@ endforeach()
 # ==============================
 # === Application version    ===
 # ==============================
-set(EXASTAMP_VERSION "exaDEM-3.3") 
-message(STATUS "Project version : ${EXASTAMP_VERSION}")
-
+set(EXASDEM_VERSION "exaDEM-3.3") 
+message(STATUS "Project version : ${EXASDEM_VERSION}")
 
 # ==================================
 # === environment setup commands ===
 # ==================================
 set(PROJECT_SETUP_ENV_COMMANDS "" CACHE STRING "Environment setup commands") 
-
 
 # ====================================
 # === CCC supercomputing facility  ===
@@ -65,12 +57,6 @@ if(EXASTAMP_CCC_USER)
   set(XNB_APP_INCLUDE_DIRS ${XNB_APP_INCLUDE_DIRS} ${CCC_USER_INCLUDE_DIRS})
   set(XNB_APP_LIBRARIES ${XNB_APP_LIBRARIES} ${CCC_USER_LIBRARIES})
 endif()
-
-# ===========================================
-# === Sets directory of embedded tkspline ===
-# ===========================================
-find_path(TKSPLINE_INCLUDE_DIRS tk/spline.h HINTS ${CMAKE_SOURCE_DIR}/thirdparty/tkspline)
-
 
 # ==============================
 # === test data directory    ===
