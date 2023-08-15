@@ -70,6 +70,37 @@ Build ExaDEM using the make command with a specified number of parallel jobs (e.
 make -j 4
 ```
 
+Build Plugins
+
+```
+make UpdatePluginDataBase
+```
+
+This command will display all plugins and related operators. Example: 
+
+```
++ exadem_force_fieldPlugin
+  operator    cylinder_wall
+  operator    gravity_force
+  operator    hooke_force
+  operator    rigid_surface
++ exadem_ioPlugin
+  operator    print_simulation_state
+  operator    read_xyz
+  operator    read_dump_particles
+```
+
+### Running your simulation
+
+Now that you have installed the exaDEM and exaNBody packages, you can create your simulation file in YAML format (refer to the 'example' folder or the documentation for each operator). Once this file is constructed, you can initiate your simulation using the following instructions.
+
+```
+export N_OMP=1
+export N_MPI=1
+export OMP_NUM_THREADS=$N_OMP
+mpirun -n $N_MPI ./exaDEM test-case.msp
+```
+
 ## Test cases
 
 You can explore various basic test cases located in the `example` directory. These test cases serve as illustrative examples of ExaDEM's functionality and can assist you in understanding its behavior and capabilities.
@@ -126,11 +157,66 @@ In this DEM simulation, a cluster of spherical particles is constrained against 
 |-----------|-------|-----|
 | movable-wall | ![](doc/example/movable_wall_start.png) | ![](doc/example/movable_wall_end.png) |
 
+
+## Tutorial: How to add a new operator
+
+### Add a new plugin
+
+You can create new plugins if you wish to develop a new set of operators that can be compiled independently of others or require specific plugin compilation. Here's how to define and add a new plugin.
+
+First of all, add your new plugin directory in `src/CMakeLists.txt`:
+
+```
+mkdir my_new_plugin
+add_subdirectory(my_new_plugin)
+cd my_new_plugin
+vi CMakeLists.txt
+```
+
+Create a CMakeLists.txt and use the macros defined to plug your operators to exaNBody support such as:
+
+```
+set(list_of_plugins_required exanbIO exanbDefBox exanbParticleNeighbors exadem_numerical_scheme exadem_friction exadem_force_field)
+set(exadem_my_new_plugin_LINK_LIBRARIES ${list_of_plugins_required})
+xstamp_add_plugin(exadem_my_new_plugin ${CMAKE_CURRENT_SOURCE_DIR})
+```
+
+Warning: Do not forget to do a `make UpdatePluginDataBase`.
+
+### Add a new operator
+
+Initially, it's crucial to establish a precise definition of the intended kernel, the targeted data, and the method for executing this kernel.
+We recommend writing the computation kernel (in a functor) in a `.h` file within an `include/exaDEM` folder of your plugin directory. For instance, if one intends to apply gravitational force to a particle, it's necessary to have knowledge of the external force and access to mutators for modifying the force fields. The kernel for a particle is then written in a file `include/exaDEM/gravity_force.h`: 
+
+```
+namespace exaDEM
+{
+  struct GravityForceFunctor
+  {
+    exanb::Vec3d g = { 0.0 , 0.0 , -9.807};
+    ONIKA_HOST_DEVICE_FUNC inline void operator () (double mass, double& fx, double& fy, double& fz ) const
+    {
+      fx += g.x * mass;
+      fy += g.y * mass;
+      fz += g.z * mass;
+    }
+  };
+}
+```
+
+It is also possible to give the kernels specific `Traits` that will be used by the data browsing functions. For example, if we want to provide the GPU capabilities for this kernel:
+
+```
+```
+
+
 ## List of DEM operators
+
+In this section, we describe the main ExaDEM operators and the operators used from ExaNBody. Each operator description is accompanied by a general description, a slot description and an example of use in yaml that you can include in your simulations.
 
 ### Global operators
 
-Some operators from default `exaNBody` operator list to  
+Some operators from the default `exaNBody` operator list. Here's a list of the main operators that will be useful for your simulations.
 
 - Operator `domain` : see @exaNBody in plugin @exanbIOPlugin
   - `cell_size` : The cell size will be approximately the value given by the possible subdivision of the grid covering the simulation volume. Cell size must be greater than twice the radius of the largest sphere. Note that cell size can greatly influence performance. 
