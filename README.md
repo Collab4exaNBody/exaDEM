@@ -207,6 +207,7 @@ namespace exaDEM
 It is also possible to give the kernels specific `Traits` that will be used by the data browsing functions. For example, if we want to provide the GPU capabilities for this kernel:
 
 ```
+
 ```
 
 
