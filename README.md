@@ -1,9 +1,8 @@
-# exaDEM
+# ExaDEM
 
-- Exadem is "Discrete Element Method" DEM code developed using the exaNBody framwork. 
-- ExaDEM uses hybrid MPI+Threads(OpenMP) parallelization to accelerate computation times. 
-- ExaDEM can also be used on MPI+GPUs (cuda). 
-- ExaDEM is written in C++17.
+ExaDEM is a software solution in the field of computational simulations. It's a Discrete Element Method (DEM) code developed within the exaNBody framework. This framework provides the basis for DEM functionalities and performance optimizations. A notable aspect of ExaDEM is its hybrid parallelization approach, which combines the use of MPI (Message Passing Interface) and Threads (OpenMP). This combination aims to enhance computation times for simulations, making them more efficient and manageable.
+
+Additionally, ExaDEM offers compatibility with MPI+GPUs, using the CUDA programming model (Onika layer). This feature provides the option to leverage GPU processing power for potential performance gains in simulations. Written in C++17, ExaDEM is built on a contemporary codebase. It aims to provide researchers and engineers with a tool for adressing DEM simulations.
 
 
 ## Add your files
@@ -19,7 +18,7 @@ git push -uf origin main
 
 ### Minimal Requirements
 
-First, you need to isntall exaNBody : 
+To proceed with the installation, your system must meet the minimum prerequisites. The first step involves the installation of exaNBody:
 
 ```
 git clone https://github.com/Collab4exaNBody/exaNBody.git
@@ -29,43 +28,102 @@ make install
 export exaNBody_DIR=path_to_install
 ```
 
-Second, install yaml-cpp (with spack or cmake)
+The next step involves the installation of yaml-cpp, which can be achieved using either the spack package manager or cmake:
 
 ```
 spack install yaml-cpp
 spack load yaml-cpp
 ```
 
-### Optional
+### Optional Dependencies
+
+Before proceeding further, you have the option to consider the following dependencies:
 
 - Cuda
 - MPI
 
-## ExaDEM Installation
+### ExaDEM Installation
 
-Install ExaDEM
+To install ExaDEM, follow these steps:
+
+Set the exaNBody_DIR environment variable to the installation path. Clone the ExaDEM repository using the command:
 
 ```
-export exaNBody_DIR=path_to_install
 git clone https://www-git-cad.intra.cea.fr/DEC/collaboratif/rp269144/exadem.git
+```
+
+Create a directory named build-exaDEM and navigate into it:
+
+```
 mkdir build-exaDEM && cd build-exaDEM
+```
+
+Run CMake to configure the ExaDEM build, specifying that CUDA support should be turned off:
+
+```
 cmake ../exadem -DXSTAMP_BUILD_CUDA=OFF
+```
+
+Build ExaDEM using the make command with a specified number of parallel jobs (e.g., -j 4 for 4 parallel jobs):
+
+```
 make -j 4
 ```
 
-Warning : ExaNBody does not compile without Cuda.
-
 ## Test cases
 
-The following test-cases are available in the directory : example
+You can explore various basic test cases located in the `example` directory. These test cases serve as illustrative examples of ExaDEM's functionality and can assist you in understanding its behavior and capabilities.
+
+### Example 1: Rotating drum
+
+A DEM simulation of a rotating drum involves modeling the movement of spherical particles within a drum container as it rotates. Through this simulation, we can observe how particles interact, collide, and move in response to the drum's motion. This provides insights into phenomena like particle segregation, convection currents, and mixing patterns, contributing to improved understanding of granular material behavior in rotational scenarios.
 
 | Test case | Start | End |
 |-----------|-------|-----|
 | rotating-drum | ![](doc/example/rotating_drum_start.png) | ![](doc/example/rotating_drum_end.png) |
+
+
+### Example 2: Axial stress
+
+A DEM simulation under axial stress involves subjecting a collection of particles to pressure from a rigid surface along a specific axis. By simulating this scenario using the Discrete Element Method (DEM), we can study how particles respond to the applied stress. The simulation reveals how particles interact, deform, and reposition under the influence of the external force, providing insights into the behavior of granular materials under axial loading conditions. 
+
+| Test case | Start | End |
+|-----------|-------|-----|
 | axial-stress | ![](doc/example/axial_stress_start.png) | ![](doc/example/axial_stress_end.png) |
+
+
+### Example 3: Rigid stress
+
+In a DEM simulation under radial stress, particles are exposed to pressure from a central point, causing an outward force in all directions. Using the Discrete Element Method (DEM) to simulate this scenario allows us to analyze how particles within a system react to the applied radial stress. The simulation offers insights into particle rearrangements, contact forces, and structural changes, giving us a deeper understanding of granular material behavior under radial loading conditions.
+
+| Test case | Start | End |
+|-----------|-------|-----|
 | radial-stress | ![](doc/example/radial_stress_start.png) | ![](doc/example/radial_stress_end.png) |
+
+### Example 4: Rigid surface 
+
+A DEM simulation involving spherical particles falling onto a rigid surface offers a virtual exploration of particle dynamics in a gravity-driven scenario. This simulation captures the behavior of individual spherical particles as they descend and interact with a solid surface below.
+
+| Test case | Start | End |
+|-----------|-------|-----|
 | rigid-surface | ![](doc/example/rigid_surface_start.png) | ![](doc/example/rigid_surface_end.png) |
+
+
+### Example 5: 
+
+In this DEM simulation, a scenario is simulated where a group of particles with imposed velocity occupies a defined area. As other particles fall into this region, they interact with the moving particles, impacting their trajectories. The simulation provides insights into how moving particles influence the behavior of surrounding particles.
+
+| Test case | Start | End |
+|-----------|-------|-----|
 | impose-velocity | ![](doc/example/impose_velocity_start.png) | ![](doc/example/impose_velocity_end.png) |
+
+
+### Example 6 : Movable wall
+
+In this DEM simulation, a cluster of spherical particles is constrained against a rigid surface. A piston is introduced to apply a steadily increasing stress that linearly evolves over time. This simulation captures the dynamics as the piston's force gradually grows. As the piston imparts its stress, the particle block undergoes deformation and stress propagation. 
+
+| Test case | Start | End |
+|-----------|-------|-----|
 | movable-wall | ![](doc/example/movable_wall_start.png) | ![](doc/example/movable_wall_end.png) |
 
 ## List of DEM operators
