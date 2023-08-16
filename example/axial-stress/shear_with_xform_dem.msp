@@ -27,7 +27,7 @@ input_data:
   - set_density:
      density: 0.02
   - set_rand_vrot_arot
-  - updata_inertia
+  - update_inertia
 
 +simulation_epilog:
   - memory_stats
