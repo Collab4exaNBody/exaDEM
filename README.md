@@ -1,9 +1,11 @@
 # ExaDEM
 
+
+![](doc/logo/exaDEMlogo2.png)
+
 ExaDEM is a software solution in the field of computational simulations. It's a Discrete Element Method (DEM) code developed within the exaNBody framework. This framework provides the basis for DEM functionalities and performance optimizations. A notable aspect of ExaDEM is its hybrid parallelization approach, which combines the use of MPI (Message Passing Interface) and Threads (OpenMP). This combination aims to enhance computation times for simulations, making them more efficient and manageable.
 
 Additionally, ExaDEM offers compatibility with MPI+GPUs, using the CUDA programming model (Onika layer). This feature provides the option to leverage GPU processing power for potential performance gains in simulations. Written in C++17, ExaDEM is built on a contemporary codebase. It aims to provide researchers and engineers with a tool for adressing DEM simulations.
-
 
 ## Add your files
 
@@ -219,7 +221,7 @@ namespace exanb
 }
 ```
 
-#### Define the operator:
+#### Define an operator:
 
 To begin with, all operators inherit from the OperatorNode class, where you establish the necessary physical fields for applying your operator. Following that, it's essential to define the slots that will establish the execution graph among operators. Ultimately, you are required to furnish an Execute() function, which the graph will execute, along with a Documentation() function.
 
@@ -345,7 +347,7 @@ global:
   friction_rcut: 1.1 m
 ```
 
-### Force law
+### exadem_force_fieldPlugin
 
 | Operator name | hooke_force |
 |--|--|
@@ -374,7 +376,7 @@ YAML example:
 ```
 
 
-### Drivers
+### exadem_driverPlugin
 
 | Operator name  | rigid_surface |
 |--|--|
@@ -400,7 +402,17 @@ Yaml example, see `example/rigid_surface.msp`:
    damprate: 0.9
 ```
 
-### Reader/Writer
+### exadem_frictionPlugin
+
+TODO
+
+### exadem_numerical_schemePlugin
+
+TODO
+
+### exadem_ioPlugin 
+
+#### Reader/Writer
 
 | Operator | read_xyz |
 |--|--|
@@ -419,6 +431,136 @@ YAML example:
   enlarge_bounds: 1.0 m
 ```
 
+
+| Operator | read_dump_particles |
+|--|--|
+| Description | This operator readz a dump file with all particles information required to restart the simulation. See operator : @write_dump_particles |
+| enable_friction | flow : IN <br> type : bool <br> desc : Enable to write friction information. By default this option is activated |
+| filename | flow : IN <br> type : string <br> desc : dump file name | 
+
+```
+YAML example:
+input_data:
+  - read_dump_particles:
+      filename: last.dump
+```
+
+| Operator | write_dump_particles |
+|--|--|
+| Description | This operator writes a dump file with all particles information required to restart the simulation. See operator : @read_dump_particles |
+| compression_level | flow : IN <br> type : long <br> desc : Zlib compression level |
+| filename | flow : IN <br> type : string <br> desc : dump file name | 
+
+This operator is defined in the default `ExaDEM` operator named `dump_data_particles`. Note that the default name is defined by : `- timestep_file: "exaDEM_%09d.dump` and piloted by `simulation_dump_frequency: 1` in the operator `global`.
+
+TODO : @Lhassan, il faut définir les outputs de cet opérateur.
+
+| Operator | print_simulation_state |
+|--|--|
+| Description | This operator prints logs during the simulation.|
+
+This operator is defined as part of default operators. To trigger this log, you need to specify : `simulation_log_frequency: 1000` in the operator `global`.
+
+
+### exadem_field_mutatorPlugin
+
+This repertory plugin only provides operators for modifying fields, especially at initialization. The following operators are based on the functor `set` and initialize one ore more fields: 
+- set_densities_multiple_materials : 
+  - [std::vector<double>] `densities`
+  - Comment: mass is deduced from the density and radius
+- set_density
+  - [double] `density`
+- set_homothety
+  - [double] `homothety`
+- set_material_properties
+  - [uint8_t] `type`
+  - [double] `rad`
+  - [double] `density`
+  - [Quaternion] `quat`
+- set_quaternion
+  - [Quaternion] `quat` 
+- set_radius
+  - [double] `rad`
+- set_rand_vrot_arot:
+  - [double] `var_vrot` (variance), default = 0
+  - [double] `var_arot` (variance), default = 0
+  - [Vec3d] `mean_arot`(mean), default = {0,0,0}
+  - [Vec3d] `mean_vrot`(mean), default = {0,0,0}
+  - Comment : This operator set the angular acceleration and velocity using a normal distribution
+- set_rand_velocity
+  - [double] `var` (variance), default = 0
+  - [Vec3d] `mean`, default = {0,0,0}
+
+YAML example:
+
+```
+  - set_radius:
+     rad: 0.5
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.02
+  - set_rand_vrot_arot
+```
+
+This is a minimal example to add your own mutator_field operator:
+- [1] Set class name: `SetYourFields`
+- [2] Set fields: `field::_YOUR_FIELD_1, field::_YOUR_FIELD_2, ..., field::_YOUR_FIELD_N`
+- [3] Set types: `YOUR_TYPE_1, YOUR_TYPE_Z, ... , YOUR_TYPE_N`
+- [4] Set field slots: `your_field_1, your_field_2, ..., your_field_N` 
+- [5] Set operator name: `set_your_fields`
+- [6] Specify template: `SetYourFields`
+
+```
+#include <exaDEM/set_fields.h>
+namespace exaDEM
+{
+	using namespace exanb;
+	template<typename GridT
+		, class = AssertGridHasFields< GridT, field::_YOUR_FIELD_1, field::_YOUR_FIELD_2, ..., field::_YOUR_FIELD_N>
+		>
+		class SetYourFields : public OperatorNode
+		{
+		static constexpr YOUR_TYPE_1 default_field_value_1 = YOUR_TYPE_1();
+    static constexpr YOUR_TYPE_2 default_field_value_2 = YOUR_TYPE_2();
+    ...
+    static constexpr YOUR_TYPE_N default_field_value_N = YOUR_TYPE_N();
+		using ComputeFields = FieldSet< field::_YOUR_FIELD_1, field::_YOUR_FIELD_2, ..., field::_YOUR_FIELD_N>;
+		static constexpr ComputeFields compute_field_set {};
+
+		ADD_SLOT( GridT  		, grid  , INPUT_OUTPUT );
+		ADD_SLOT( YOUR_TYPE_1  		, your_field_1  	, INPUT , default_radius	, DocString{"default radius value for all particles"} );
+    ADD_SLOT( YOUR_TYPE_2  		, your_field_2  	, INPUT , default_radius	, DocString{"default radius value for all particles"} );
+    ...
+		ADD_SLOT( YOUR_TYPE_N  		, your_field_N  	, INPUT , default_radius	, DocString{"default radius value for all particles"} );
+
+			public:
+
+		inline std::string documentation() const override final
+		{
+			return R"EOF(
+        This operator sets the ... value(s) for every particles.
+        )EOF";
+		}
+
+		inline void execute () override final
+		{
+			SetFunctor<YOUR_TYPE_1,YOUR_TYPE_2, ... , YOUR_TYPE_N> func = { {*your_field_1}, {*your_field_2},... , {*your_field_N} };
+			compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+		}
+		};
+
+	template<class GridT> using SetYourFieldsTmpl = SetYourFields<GridT>;
+
+	// === register factories ===  
+	CONSTRUCTOR_FUNCTION
+	{
+		OperatorNodeFactory::instance()->register_factory( "set_your_fields", make_grid_variant_operator< SetYourFieldsTmpl > );
+	}
+}
+```
 
 ## Authors and acknowledgment
 Show your appreciation to those who have contributed to the project.
