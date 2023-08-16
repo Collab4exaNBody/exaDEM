@@ -347,7 +347,7 @@ global:
   friction_rcut: 1.1 m
 ```
 
-### Force law
+### exadem_force_fieldPlugin
 
 | Operator name | hooke_force |
 |--|--|
@@ -376,7 +376,7 @@ YAML example:
 ```
 
 
-### Drivers
+### exadem_driverPlugin
 
 | Operator name  | rigid_surface |
 |--|--|
@@ -401,6 +401,14 @@ Yaml example, see `example/rigid_surface.msp`:
    mu: 0.9
    damprate: 0.9
 ```
+
+### exadem_frictionPlugin
+
+TODO
+
+### exadem_numerical_schemePlugin
+
+TODO
 
 ### exadem_ioPlugin 
 
@@ -483,7 +491,27 @@ This repertory plugin only provides operators for modifying fields, especially a
   - [double] `var` (variance), default = 0
   - [Vec3d] `mean`, default = {0,0,0}
 
-This is a minimal tutorial to add your own mutator_field operator:
+YAML example:
+
+```
+  - set_radius:
+     rad: 0.5
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.02
+  - set_rand_vrot_arot
+```
+
+This is a minimal example to add your own mutator_field operator:
+- [1] Set class name: `SetYourFields`
+- [2] Set fields: `field::_YOUR_FIELD_1, field::_YOUR_FIELD_2, ..., field::_YOUR_FIELD_N`
+- [3] Set types: `YOUR_TYPE_1, YOUR_TYPE_Z, ... , YOUR_TYPE_N`
+- [4] Set field slots: `your_field_1, your_field_2, ..., your_field_N` 
+- [5] Set operator name: `set_your_fields`
+- [6] Specify template: `SetYourFields`
 
 ```
 #include <exaDEM/set_fields.h>
