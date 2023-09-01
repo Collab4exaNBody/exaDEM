@@ -35,7 +35,7 @@ dump_data_paraview:
   - write_paraview_generic
 
 dump_data_particles:
-  - timestep_file: "atoms_%09d.dump"
+  - timestep_file: "exaDEM_%09d.dump"
   - message: { mesg: "Write dump " , endl: false }
   - print_dump_file:
       rebind: { mesg: filename }
