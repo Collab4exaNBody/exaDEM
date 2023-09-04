@@ -29,6 +29,7 @@ date: 16 August 2023
 bibliography: paper.bib
 ---
 
+
 # Summary 
 
 `ExaDEM` is a software solution in the field of computational simulations. It's a Discrete Element Method (`DEM`) code developed within the exaNBody framework. This framework provides the basis for `DEM` functionalities and performance optimizations. A notable aspect of `ExaDEM` is its hybrid parallelization approach, which combines the use of MPI (Message Passing Interface) and Threads (OpenMP). This combination aims to enhance computation times for simulations, making them more efficient and manageable.
@@ -44,9 +45,13 @@ A crucial point for `DEM` simulation code is dicted by the need to figure out qu
 
 # Statement of needs
 
-The behavior of granular media is still an open issue for the scientific community and DEM simulations improve our knowledges by studying phenomena impossible, or expensive, to examine with experimentations. However, to observe such phenomena, we need to simulate a representative number of particles that can be thousands particles to billion of particles. To simulate thousand particles, a current single processor can achieved such simulation but to simulate more than 1 million particles, we are limited either by the memory limit, either by runtime. To tackle this issue, a lot of scientific code use HPC tools these codes run on HPC platforms. The `DEM` method has the advantage to be naturarly parallel and several works exist for this subjects, spatial domain decomposition, thread parallelization over cells and so on. In this paper we highlight our code ExaDEM designed to achieve large scale DEM simulation on HPC platform. This code relies on many features of the exaNBody framework, including data structure management, MPI+X parallelization and add-on modules (IO, Paraview).    
+The behavior of granular media is still an open issue for the scientific community and DEM simulations improve our knowledges by studying phenomena impossible, or expensive, to examine with experimentations. However, to observe such phenomena, we need to simulate a representative number of particles that can be thousands particles to billion of particles. To simulate thousand particles, a current single processor can achieved such simulation but to simulate more than 1 million particles, we are limited either by the memory limit, either by runtime. To tackle this issue, a lot of scientific code use HPC tools these codes run on HPC platforms. The `DEM` method has the advantage to be naturarly parallel and several works exist for this subjects, spatial domain decomposition, thread parallelization over cells and so on. In this paper we highlight our code ExaDEM designed to achieve large scale DEM simulation on HPC platform. This code relies on many features of the exaNBody framework, including data structure management, MPI+X parallelization and add-on modules (IO, Paraview).
 
 # Software stack
+
+
+
+# Main algorithm
 
 # Performance Results
 
