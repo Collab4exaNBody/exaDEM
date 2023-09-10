@@ -481,6 +481,8 @@ This repertory plugin only provides operators for modifying fields, especially a
   - [Quaternion] `quat` 
 - set_radius
   - [double] `rad`
+- set_radius_multiple_materials
+	- [std::vector<double>]` radius` (list of radius according to types)
 - set_rand_vrot_arot:
   - [double] `var_vrot` (variance), default = 0
   - [double] `var_arot` (variance), default = 0
