@@ -55,12 +55,12 @@ int main()
 	double epsilon = 0.01;
 
 	const int lvl = 2;
-	for(double z = 0 ; z < H ; z+= 2 * (r1 + epsilon)) 
+	for(double z = r1 ; z < H ; z+= 2 * (r1 + epsilon)) 
 		comp += build_arc<false>(0, C, C, z, r1, lvl);
 
 	for(double x = 0 ; x < 2*C ; x+= 2 * (r2 + epsilon)) 
 		for(double y = 0 ; y < 2*C ; y+= 2 * (r2 + epsilon)) 
-			for(double z = 0 ; z < H ; z+= 2 * (r2 + epsilon)) 
+			for(double z = r2 ; z < H ; z+= 2 * (r2 + epsilon)) 
 			{
 				const double rp = (x-C)*(x-C) + (y-C)*(y-C);
 				if( rp < C2 * C2 && rp > (C1+r1+r2)*(C1+r1+r2))
@@ -72,12 +72,12 @@ int main()
 
 	std::cout << comp << std::endl;
 	std::cout << 2*C << " " << 2*C << " " << H << std::endl;
-	for(double z = 0 ; z < H ; z+= 2 * (r1 + epsilon)) 
+	for(double z = r1 ; z < H ; z+= 2 * (r1 + epsilon)) 
 		comp += build_arc<true>(0, C, C, z, r1, lvl);
 
 	for(double x = 0 ; x < 2*C ; x+= 2 * (r2 + epsilon)) 
 		for(double y = 0 ; y < 2*C ; y+= 2 * (r2 + epsilon)) 
-			for(double z = 0 ; z < H ; z+= 2 * (r2 + epsilon)) 
+			for(double z = r2 ; z < H ; z+= 2 * (r2 + epsilon)) 
 			{
 				const double rp = (x-C)*(x-C) + (y-C)*(y-C);
 				if( rp < C2 * C2 && rp > (C1+r1+r2)*(C1+r1+r2))
