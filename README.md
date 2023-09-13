@@ -402,6 +402,21 @@ Yaml example, see `example/rigid_surface.msp`:
    damprate: 0.9
 ```
 
+| Operator name  | rigid_surface |
+|--|--|
+| Description | External forces that model air or fluid, f = - mu * cx * v * vector(v). |
+| cx | flow : IN <br>  type : double <br> desc : aerodynamic coefficient, air = 0.38 |
+| mu | flow : IN <br> type : double <br> desc : drag coefficient. air = 0.000015 |
+
+
+YAML example; see example `quadratic-force-test/QuadraticForceInput.msp`
+
+```
+- quadratic_force:
+   cx: 0.38
+   mu: 0.0000015
+```
+
 ### exadem_frictionPlugin
 
 TODO
