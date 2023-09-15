@@ -540,33 +540,33 @@ namespace exaDEM
 		>
 		class SetYourFields : public OperatorNode
 		{
-		static constexpr YOUR_TYPE_1 default_field_value_1 = YOUR_TYPE_1();
-    static constexpr YOUR_TYPE_2 default_field_value_2 = YOUR_TYPE_2();
-    ...
-    static constexpr YOUR_TYPE_N default_field_value_N = YOUR_TYPE_N();
-		using ComputeFields = FieldSet< field::_YOUR_FIELD_1, field::_YOUR_FIELD_2, ..., field::_YOUR_FIELD_N>;
-		static constexpr ComputeFields compute_field_set {};
+			static constexpr YOUR_TYPE_1 default_field_value_1 = YOUR_TYPE_1();
+    			static constexpr YOUR_TYPE_2 default_field_value_2 = YOUR_TYPE_2();
+			...
+			static constexpr YOUR_TYPE_N default_field_value_N = YOUR_TYPE_N();
+			using ComputeFields = FieldSet< field::_YOUR_FIELD_1, field::_YOUR_FIELD_2, ..., field::_YOUR_FIELD_N>;
+			static constexpr ComputeFields compute_field_set {};
 
-		ADD_SLOT( GridT  		, grid  , INPUT_OUTPUT );
-		ADD_SLOT( YOUR_TYPE_1  		, your_field_1  	, INPUT , default_radius	, DocString{"default radius value for all particles"} );
-    ADD_SLOT( YOUR_TYPE_2  		, your_field_2  	, INPUT , default_radius	, DocString{"default radius value for all particles"} );
-    ...
-		ADD_SLOT( YOUR_TYPE_N  		, your_field_N  	, INPUT , default_radius	, DocString{"default radius value for all particles"} );
+			ADD_SLOT( GridT  		, grid  , INPUT_OUTPUT );
+			ADD_SLOT( YOUR_TYPE_1  		, your_field_1  	, INPUT , default_radius	, DocString{"default radius value for all particles"} );
+			ADD_SLOT( YOUR_TYPE_2  		, your_field_2  	, INPUT , default_radius	, DocString{"default radius value for all particles"} );
+			...
+			ADD_SLOT( YOUR_TYPE_N  		, your_field_N  	, INPUT , default_radius	, DocString{"default radius value for all particles"} );
 
 			public:
 
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
-        This operator sets the ... value(s) for every particles.
-        )EOF";
-		}
+			inline std::string documentation() const override final
+			{
+				return R"EOF(
+      	  				This operator sets the ... value(s) for every particles.
+     	   			)EOF";
+			}
 
-		inline void execute () override final
-		{
-			SetFunctor<YOUR_TYPE_1,YOUR_TYPE_2, ... , YOUR_TYPE_N> func = { {*your_field_1}, {*your_field_2},... , {*your_field_N} };
-			compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
-		}
+			inline void execute () override final
+			{
+				SetFunctor<YOUR_TYPE_1,YOUR_TYPE_2, ... , YOUR_TYPE_N> func = { {*your_field_1}, {*your_field_2},... , {*your_field_N} };
+				compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+			}
 		};
 
 	template<class GridT> using SetYourFieldsTmpl = SetYourFields<GridT>;
