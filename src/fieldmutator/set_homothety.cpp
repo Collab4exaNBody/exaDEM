@@ -39,7 +39,7 @@ namespace exaDEM
 			{
 //				std::tuple<double> default_values = std::make_tuple(*homothety);
 				SetFunctor<double> func = { {*homothety} };
-				compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+				compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 			}
 		};
 

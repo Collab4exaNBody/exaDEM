@@ -50,7 +50,7 @@ namespace exaDEM
 			const double mass = coeff * r * r * r; // 4/3 * pi * r^3 * d 
 //			std::tuple<double, double, Quaternion> default_values = std::make_tuple(r,mass,*quat);
 			FilteredSetFunctor<double, double, Quaternion> func { *type, {r,mass,*quat} };
-			compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+			compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 		}
 		};
 

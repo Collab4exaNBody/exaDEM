@@ -35,7 +35,7 @@ namespace exaDEM
 			{
 				//ResetForceMomentFunctor func = {};
 				SetFunctor<double,double, double, Vec3d> func = { {double(0.0), double(0.0), double(0.0), Vec3d{0.0,0.0,0.0}} };
-				compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+				compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 			}
 		};
 

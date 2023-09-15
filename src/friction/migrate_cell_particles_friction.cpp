@@ -23,7 +23,7 @@ namespace exaDEM
 	using namespace exanb;
 
 	// operator interface
-	template<class GridT, class CellValueMergeOperatorT = exanb::CellValueAdd >
+	template<class GridT, class CellValueMergeOperatorT = exanb::UpdateValueAdd >
 		class MigrateCellParticlesFriction : public OperatorNode
 	{
 		using CellParticles = typename GridT::CellParticles;

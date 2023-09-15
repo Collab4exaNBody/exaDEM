@@ -41,7 +41,7 @@ using namespace exanb;
       const double dt = *(this->dt);
       const double dt_2 = 0.5 * dt;
       PushToAngularVelocityFunctor func {dt_2};
-      compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+      compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
     }
   };
   

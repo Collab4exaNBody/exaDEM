@@ -43,7 +43,7 @@ using namespace exanb;
       const double dt_2 = 0.5 * dt;
       const double dt2_2 = dt_2 * dt;
       PushToQuaternionFunctor func {dt, dt_2, dt2_2};
-      compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+      compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
     }
   };
   

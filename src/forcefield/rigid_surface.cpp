@@ -56,7 +56,7 @@ namespace exaDEM
 								// no velocity version
 								const double vel_null = 0.;
 								RigidSurfaceFunctor func {*normal, *offset, vel_null, *dt, *kt, *kn, *kr, *mu, *damprate};
-								compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+								compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 							}
 						};
 

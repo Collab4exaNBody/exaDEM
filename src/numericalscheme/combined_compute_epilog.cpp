@@ -98,7 +98,7 @@ namespace exaDEM
 					PushToAngularVelocityFunctor func2 { half_delta_t };
 					PushVec3FirstOrderFunctor func3 { half_delta_t };
 					CombinedEpilogFunctor func { func1, func2, func3 };
-					compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 				}
 				else
 				{
@@ -107,7 +107,7 @@ namespace exaDEM
 					PushToAngularVelocityFunctor func2 { half_delta_t };
 					PushVec3FirstOrderXFormFunctor func3 { inv_xform , half_delta_t };
 					CombinedEpilogXFormFunctor func { func1, func2, func3 };
-					compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 				}
 
 			}

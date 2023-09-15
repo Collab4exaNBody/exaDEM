@@ -105,7 +105,7 @@ namespace exaDEM
         PushVec3FirstOrderFunctor func2 { half_delta_t };
         PushToQuaternionFunctor func3 { delta_t, half_delta_t, delta_t2_2 };
         CombinedPrologFunctor func { func1, func2, func3 };
-        compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+        compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
       }
       else
       {
@@ -114,7 +114,7 @@ namespace exaDEM
         PushVec3FirstOrderXFormFunctor func2 { inv_xform , half_delta_t };
         PushToQuaternionFunctor func3 { delta_t, half_delta_t, delta_t2_2 };
         CombinedPrologXFormFunctor func { func1, func2, func3 };
-        compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+        compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
       }
 
     }

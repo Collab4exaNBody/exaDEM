@@ -53,7 +53,7 @@ namespace exaDEM
 			inline void execute () override final
 			{
 				CylinderWallFunctor func { *center , *axis , *cylinder_angular_velocity , *cylinder_velocity, *radius, *dt, *kt, *kn, *kr, *mu, *damprate};
-				compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+				compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 			}
 		};
 

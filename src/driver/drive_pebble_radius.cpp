@@ -105,7 +105,7 @@ namespace exaDEM
 				}
 				const auto modulo = *number_of_particles / (*number_of_pebbles + 1);
 				DrivePebbleRadiusFunctor func { *dr , *rmax, modulo};
-				compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+				compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 			}
 		};
 

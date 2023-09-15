@@ -39,7 +39,7 @@ namespace exaDEM
 		{
 //			std::tuple<Quaternion> default_values = std::make_tuple(*quat);
 			SetFunctor<Quaternion> func = { {*quat} };
-			compute_cell_particles( *grid , false , func , compute_field_set , gpu_execution_context() , gpu_time_account_func() );
+			compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 		}
 		};
 
