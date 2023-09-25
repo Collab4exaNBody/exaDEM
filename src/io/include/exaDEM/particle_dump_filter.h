@@ -31,6 +31,13 @@ namespace exaDEM
     double scale_cell_size = 1.0;
     bool enable_friction = true;
 
+    // for forward compatibility with dump_reader_allow_initial_position_xform branch
+    inline void process_domain(Domain& domain , Mat3d& pos_read__xform)
+    {
+      pos_read__xform = make_identity_matrix();
+      this->process_domain(domain);
+    }
+
     inline void process_domain(Domain& domain)
     {
       if( scale_cell_size != 1.0 )
