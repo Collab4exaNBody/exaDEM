@@ -9,7 +9,7 @@ add_subdirectory(friction)
 add_subdirectory(forcefield)
 add_subdirectory(io)
 add_subdirectory(driver)
-add_subdirectory(analysis)
+#add_subdirectory(analysis)
 
 AddRegressionTestDir(${CMAKE_CURRENT_SOURCE_DIR}/regression)
 
