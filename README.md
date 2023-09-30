@@ -51,7 +51,7 @@ To install ExaDEM, follow these steps:
 Set the exaNBody_DIR environment variable to the installation path. Clone the ExaDEM repository using the command:
 
 ```
-git clone https://www-git-cad.intra.cea.fr/DEC/collaboratif/rp269144/exadem.git
+git clone https://github.com/Collab4exaNBody/exaDEM.git
 ```
 
 Create a directory named build-exaDEM and navigate into it:
