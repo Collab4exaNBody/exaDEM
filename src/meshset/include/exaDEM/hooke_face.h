@@ -6,17 +6,46 @@
 
 using exanb::Vec3d; 
 
+/**
+ * @brief Functor for calculating forces and torques on a particle interacting with a face.
+ *
+ * The `HookeFaceFunctor` struct represents a functor used to calculate forces and torques on a particle
+ * interacting with a face. It is designed to be used as an operator in simulations. The functor takes various
+ * parameters and updates force and torque components acting on the particle.
+ */
 struct HookeFaceFunctor
 {
-	exaDEM::Face face;
-	double m_dt;
-	double m_kt;
-	double m_kn;
-	double m_kr;
-	double m_mu;
-	double m_dampRate;
+	exaDEM::Face& face; /**< Reference to the face object. */
+	double m_dt; /**< Time step. */
+	double m_kt; /**< Tangential spring constant. */
+	double m_kn; /**< Normal spring constant. */
+	double m_kr; /**< Rotational spring constant. */
+	double m_mu; /**< Friction coefficient. */
+	double m_dampRate; /**< Damping rate. */
 
-	ONIKA_HOST_DEVICE_FUNC inline double operator () (
+
+	/**
+	 * @brief Operator for calculating forces and torques.
+	 *
+	 * This operator calculates the forces and torques acting on a particle interacting with a face.
+	 *
+	 * @param a_rx The x-coordinate of the particle's position.
+	 * @param a_ry The y-coordinate of the particle's position.
+	 * @param a_rz The z-coordinate of the particle's position.
+	 * @param a_vx The x-component of the particle's velocity.
+	 * @param a_vy The y-component of the particle's velocity.
+	 * @param a_vz The z-component of the particle's velocity.
+	 * @param a_vrot The rotational velocity of the particle.
+	 * @param a_particle_radius The radius of the particle.
+	 * @param a_fx Reference to store the x-component of the calculated force.
+	 * @param a_fy Reference to store the y-component of the calculated force.
+	 * @param a_fz Reference to store the z-component of the calculated force.
+	 * @param a_mass The mass of the particle.
+	 * @param a_mom Reference to store the angular momentum.
+	 * @param a_ft Reference to store the torque.
+	 * @return The result of the operator, representing a calculated value (double).
+	 */
+	ONIKA_HOST_DEVICE_FUNC inline void operator () (
 			const double a_rx, const double a_ry, const double a_rz,
 			const double a_vx, const double a_vy, const double a_vz,
 			Vec3d& a_vrot, 
@@ -39,7 +68,6 @@ struct HookeFaceFunctor
 			if(type == 0)
 			{
 				pos_proj = dot(pos, face.normal) * face.normal;
-				// contact_position = face.offset * face.normal; already define
 			}
 			else if(type == 1)
 			{
@@ -64,18 +92,10 @@ struct HookeFaceFunctor
 					rigid_surface_center, rigid_surface_velocity, rigid_surface_angular_velocity
 					);
 
-			// compute forces (norm)
-			const double res = (-1) * exanb::dot(Vec3d{f.x-a_ft.x,f.y-a_ft.y,f.z-a_ft.z}, face.normal);
-
 			// === update forces
 			a_fx += f.x ;
 			a_fy += f.y ;
 			a_fz += f.z ;
-			return res;
-		}
-		else 
-		{
-			return 0;
 		}
 	}
 };

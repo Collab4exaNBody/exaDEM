@@ -7,16 +7,48 @@
 
 using exanb::Vec3d; 
 
+/**
+ * @brief Functor for applying Hooke's law to multiple Faces within a grid.
+ *
+ * The `ApplyHookeSTLMeshesFunctor` struct represents a functor used to apply Hooke's law to particles interacting
+ * with multiple STL meshes within a grid. It is designed to be used as an operator in simulations. The functor takes
+ * various parameters and updates forces and torques acting on the particles.
+ *
+ * @tparam GridT The type of grid.
+ */
+template<typename GridT>
 struct ApplyHookeSTLMeshesFunctor
 {
-	std::vector<exaDEM::stl_mesh>& meshes;
-	double m_dt;
-	double m_kt;
-	double m_kn;
-	double m_kr;
-	double m_mu;
-	double m_dampRate;
+	const GridT& grid; /**< Reference to the grid. */
+	std::vector<exaDEM::stl_mesh>& meshes; /**< A collection of STL meshes. */
+	double m_dt; /**< Time step. */
+	double m_kt; /**< Tangential spring constant. */
+	double m_kn; /**< Normal spring constant. */
+	double m_kr; /**< Rotational spring constant. */
+	double m_mu; /**< Friction coefficient. */
+	double m_dampRate; /**< Damping rate. */
 
+	/**
+	 * @brief Operator for applying Hooke's law.
+	 *
+	 * This operator applies Hooke's law to particles interacting with multiple STL meshes within a grid. It updates
+	 * forces and torques acting on the particles based on the specified parameters and properties.
+	 *
+	 * @param a_rx The x-coordinate of the particle's position.
+	 * @param a_ry The y-coordinate of the particle's position.
+	 * @param a_rz The z-coordinate of the particle's position.
+	 * @param a_vx The x-component of the particle's velocity.
+	 * @param a_vy The y-component of the particle's velocity.
+	 * @param a_vz The z-component of the particle's velocity.
+	 * @param a_vrot The rotational velocity of the particle.
+	 * @param a_particle_radius The radius of the particle.
+	 * @param a_fx Reference to store the x-component of the calculated force.
+	 * @param a_fy Reference to store the y-component of the calculated force.
+	 * @param a_fz Reference to store the z-component of the calculated force.
+	 * @param a_mass The mass of the particle.
+	 * @param a_mom Reference to store the angular momentum.
+	 * @param a_ft Reference to store the torque.
+	 */
 	ONIKA_HOST_DEVICE_FUNC inline void operator () (
 			const double a_rx, const double a_ry, const double a_rz,
 			const double a_vx, const double a_vy, const double a_vz,
@@ -27,18 +59,20 @@ struct ApplyHookeSTLMeshesFunctor
 			Vec3d& a_mom,
 			Vec3d& a_ft) const
 	{
-		// type = 0 -> face / sphere
-		// type = 1 -> edge / sphere
-		bool is_face = false; // If there is one contact with a face, we skip contact with edges
-		bool do_edge = false;
-
-		// contact face / sphere
+		const Vec3d sphere = {a_rx, a_ry, a_rz};
+		const auto dims = grid.dimension();
+		size_t cell_idx = grid_ijk_to_index( dims , grid.locate_cell(sphere) );
 		for(auto& mesh : meshes)
 		{
+			bool is_face = false; // If there is one contact with a face, we skip contact with edges
+			bool do_edge = false;
+			auto& idxs = mesh.indexes[cell_idx];
+			int fsize = idxs.size();
 			auto& faces = mesh.m_data;
 			// test face / sphere
-			for(auto& face : faces)
+			for(int face_idx = 0 ; face_idx < fsize ; face_idx++)
 			{
+				auto& face = faces[idxs[face_idx]];
 				auto [contact, potential, position] = face.contact_face_sphere(a_rx, a_ry, a_rz, a_particle_radius);
 				if(contact)
 				{
@@ -48,21 +82,17 @@ struct ApplyHookeSTLMeshesFunctor
 							a_vrot, a_particle_radius, 
 							a_fx, a_fy, a_fz, 
 							a_mass, a_mom, a_ft);
-						is_face = true;
+					is_face = true;
 				}
 				do_edge = do_edge || potential;
 			}
-		}
 
-		// contact edge / sphere
-		if(is_face == false && do_edge)
-		{
-			for(auto& mesh : meshes)
+			// contact edge / sphere
+			if(is_face == false && do_edge)
 			{
-				auto& faces = mesh.m_data;
-				// test face / sphere
-				for(auto& face : faces)
+				for(int face_idx = 0 ; face_idx < fsize ; face_idx++)
 				{
+					auto& face = faces[idxs[face_idx]];
 					auto [contact, position] = face.contact_edge_sphere(a_rx, a_ry, a_rz, a_particle_radius);
 					if(contact)
 					{
@@ -78,9 +108,30 @@ struct ApplyHookeSTLMeshesFunctor
 		}
 	}
 
-	// type = 0 -> face / sphere
-	// type = 1 -> edge / sphere
-
+	/**
+	 * @brief Operator for handling interactions between faces/edges and spheres.
+	 *
+	 * The operator function handles interactions between faces/edges and spheres. It calculates forces and torques
+	 * based on the specified parameters and properties, including the type of interaction (face/sphere or edge/sphere).
+	 *
+	 * @param face The face to interact with.
+	 * @param contact_position The position of contact.
+	 * @param type The type of interaction (0 for face/sphere, 1 for edge/sphere).
+	 * @param a_rx The x-coordinate of the particle's position.
+	 * @param a_ry The y-coordinate of the particle's position.
+	 * @param a_rz The z-coordinate of the particle's position.
+	 * @param a_vx The x-component of the particle's velocity.
+	 * @param a_vy The y-component of the particle's velocity.
+	 * @param a_vz The z-component of the particle's velocity.
+	 * @param a_vrot The rotational velocity of the particle.
+	 * @param a_particle_radius The radius of the particle.
+	 * @param a_fx Reference to store the x-component of the calculated force.
+	 * @param a_fy Reference to store the y-component of the calculated force.
+	 * @param a_fz Reference to store the z-component of the calculated force.
+	 * @param a_mass The mass of the particle.
+	 * @param a_mom Reference to store the angular momentum.
+	 * @param a_ft Reference to store the torque.
+	 */
 	ONIKA_HOST_DEVICE_FUNC inline void operator () (
 			const exaDEM::Face& face, const Vec3d& contact_position, const int type,
 			const double a_rx, const double a_ry, const double a_rz,
