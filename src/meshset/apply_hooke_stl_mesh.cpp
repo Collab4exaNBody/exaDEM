@@ -52,7 +52,8 @@ namespace exaDEM
 
 							inline void execute () override final
 							{
-								ApplyHookeSTLMeshesFunctor func {*stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
+								//ApplyHookeSTLMeshesFunctor<GridT> func {*grid, *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
+								ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
 								compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 							}
 						};
