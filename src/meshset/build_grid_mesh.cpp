@@ -26,10 +26,9 @@ namespace exaDEM
 	{
 		using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz>;
 		static constexpr ComputeFields compute_field_set {};
-		ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD);
-		ADD_SLOT( GridT    , grid     , INPUT_OUTPUT );
-		ADD_SLOT( double   , rcut_max , INPUT , 0.0 );
-		ADD_SLOT( Domain   , domain   , INPUT , REQUIRED );
+		ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD , DocString{"MPI communicator for parallel processing."});
+		ADD_SLOT( GridT    , grid     , INPUT_OUTPUT , DocString{"Grid used for computations."} );
+		ADD_SLOT( double   , rcut_max , INPUT , 0.0, DocString{"Maximum cutoff radius for computations. Default is 0.0."} );
 		ADD_SLOT( std::vector<exaDEM::stl_mesh> , stl_collection, INPUT_OUTPUT , DocString{"Collection of meshes from stl files"});
 
 		public:

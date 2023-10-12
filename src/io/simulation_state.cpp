@@ -56,9 +56,6 @@ namespace exaDEM
 			ReduceSimulationStateFunctor func = {};
 			reduce_cell_particles( *grid , false , func , sim, reduce_field_set , parallel_execution_context() );
 
-
-			auto prof_section = profile_begin_section("mpi");
-
 			// reduce partial sums and share the result
 			{
 				// tmp size = 3*3 + 3 + 3 + 1 + 1 + 1 = 18
@@ -70,7 +67,7 @@ namespace exaDEM
 					sim.mass,
 					static_cast<double>(sim.n_particles) };
 				assert( tmp[17] == sim.n_particles );
-				MPI_Allreduce(MPI_IN_PLACE, tmp, 18, MPI_DOUBLE, MPI_SUM,comm);
+				MPI_Allreduce(MPI_IN_PLACE, tmp, 18, MPI_DOUBLE, MPI_SUM, comm);
 				virial.m11 = tmp[0];
 				virial.m12 = tmp[1];
 				virial.m13 = tmp[2];
@@ -91,7 +88,6 @@ namespace exaDEM
 				total_particles = tmp[17];
 			}
 
-			profile_end_section(prof_section);
 			// temperature
 			Vec3d temperature = 2. * ( kinetic_energy - 0.5 * momentum * momentum / mass );
 
