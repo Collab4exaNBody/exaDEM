@@ -16,7 +16,7 @@
 
 #include <exanb/core/config.h> // for MAX_PARTICLE_NEIGHBORS
 #include <exanb/particle_neighbors/chunk_neighbors.h>
-#include <exanb/compute/compute_pair_singlemat.h>
+#include <exanb/compute/compute_cell_particle_pairs.h>
 
 #include <onika/memory/allocator.h> // for DEFAULT_ALIGNMENT
 

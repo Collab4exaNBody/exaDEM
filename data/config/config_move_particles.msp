@@ -54,6 +54,7 @@ parallel_update_particles:
   - ghost_full_update
   - grid_post_processing
   - update_particle_neighbors
+  - build_grid_stl_mesh
 
 # define actions to initialize particles at startup, just after file read
 init_particles:

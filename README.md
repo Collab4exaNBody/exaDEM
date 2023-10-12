@@ -159,6 +159,13 @@ In this DEM simulation, a cluster of spherical particles is constrained against 
 |-----------|-------|-----|
 | movable-wall | ![](doc/example/movable_wall_start.png) | ![](doc/example/movable_wall_end.png) |
 
+### Example 6 : Using a STL Mesh
+
+In this DEM simulation, a cluster of spherical particles is  a cluster of particles falls onto an stl mesh and into a box. This case study highlights the use of meshes containing numerous facets.
+
+| Test case | Start | End |
+|-----------|-------|-----|
+| mesg-stl | ![](doc/example/mesh_stl_start.png) | ![](doc/example/mesh_stl_end.png) |
 
 ## Tutorial: How to add a new operator
 

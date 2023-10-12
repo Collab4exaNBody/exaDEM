@@ -1,0 +1,76 @@
+grid_flavor: grid_flavor_dem
+
+reader2:
+  - read_dump_particles:
+      filename: last.dump
+  - read_stl:
+     filename: test.stl
+
+replicate_domain:
+  repeat: [ 1 , 1 , 1 ]
+
+reader1:
+  - read_xyz:
+      file: particles.xyz
+      bounds_mode: FILE
+      enlarge_bounds: 1 m
+  - set_radius:
+     rad: 0.0015
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.001
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 2500
+  - set_rand_vrot_arot
+  - update_inertia
+  - read_stl:
+     filename: mesh.stl
+  - read_stl:
+     filename: cube.stl
+  - replicate_domain
+
+
+input_data:
+  - reader1
+#  - reader2
+
+check_nbh_friction:
+  rcut: 0.003 m # oversized, so that we check all neighbors
+
+update_nbh_friction:
+  rcut: 0.003 m
+
++first_iteration:
+  - chunk_neighbors_stats
+
+compute_force:
+  - apply_hooke_stl_meshes:
+     kt: 100000
+     kn: 100000
+     kr : 0
+     mu: 0.3
+     damprate: 0.3
+  - gravity_force
+  - quadratic_force:
+     cx: 0.38
+     mu: 0.0000015
+  - hooke_force:
+      config: { rcut: 0.003 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
+
+domain:
+  cell_size: 0.05 m
+  periodic: [false,false,false]
+
+write_vtklegacy:
+  ascii: true
+  ghost: false
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 200000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 1000
+  dt: 0.00001 s 
+  rcut_inc: 0.002 m
+  friction_rcut: 0.002 m

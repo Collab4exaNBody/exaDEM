@@ -16,7 +16,7 @@
 
 #include <exanb/core/config.h> // for MAX_PARTICLE_NEIGHBORS
 #include <exanb/particle_neighbors/chunk_neighbors.h>
-#include <exanb/compute/compute_pair_singlemat.h>
+#include <exanb/compute/compute_cell_particle_pairs.h>
 
 #include <onika/memory/allocator.h> // for DEFAULT_ALIGNMENT
 
@@ -219,12 +219,12 @@ namespace exaDEM
 					if( domain->xform_is_identity() )
 					{
 						auto optional = make_compute_pair_optional_args( nbh_it, cp_friction, NullXForm{}, cp_locks );
-						compute_pair_singlemat( *grid, rcut, *ghost, optional, force_buf, force_op, compute_fields, DefaultPositionFields{}, parallel_execution_context());
+						compute_cell_particle_pairs( *grid, rcut, *ghost, optional, force_buf, force_op, compute_fields, DefaultPositionFields{}, parallel_execution_context() );
 					}
 					else
 					{
 						auto optional = make_compute_pair_optional_args( nbh_it, cp_friction , LinearXForm{ domain->xform() }, cp_locks );
-						compute_pair_singlemat( *grid, rcut, *ghost, optional, force_buf, force_op, compute_fields, DefaultPositionFields{}, parallel_execution_context());
+						compute_cell_particle_pairs( *grid, rcut, *ghost, optional, force_buf, force_op, compute_fields, DefaultPositionFields{}, parallel_execution_context() );
 					}
 				}
 
