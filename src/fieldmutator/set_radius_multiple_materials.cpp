@@ -37,7 +37,7 @@ using namespace exanb;
 				{
 					GRID_OMP_FOR_BEGIN(dims,i,loc, schedule(dynamic) )
 					{
-						double* __restrict__ m = cells[i][field::mass];
+						//double* __restrict__ m = cells[i][field::mass];
 						double* __restrict__ r = cells[i][field::radius];
 						uint32_t* __restrict__ myType = cells[i][field::shape];
 						const double* rad 	= (*radius).data();
