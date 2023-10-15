@@ -593,13 +593,17 @@ namespace exaDEM
     
       const Word* dataw = (const Word*) datav;
       assert( data_bytes % sizeof(Word) == 0 );
+#ifndef NDEBUG
       size_t len = data_bytes / sizeof(Word);
-      
+#endif
+
       const size_t n_particles = dataw[0];
       assert( part_seq_len == n_particles );
       assert( len == dataw[0]+2 + dataw[0]*2 + dataw[1] * CellParticleNeighborFriction::PairFrictionWords );
       
+#ifndef NDEBUG
       const size_t expected_total_pairs = dataw[1];
+#endif
       size_t total_pairs = 0;
       for(size_t p=0;p<n_particles;p++)
       {

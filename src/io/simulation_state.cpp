@@ -32,7 +32,7 @@ namespace exaDEM
 		ADD_SLOT( MPI_Comm           , mpi                 , INPUT , MPI_COMM_WORLD);
 		ADD_SLOT( GridT              , grid                , INPUT , REQUIRED);
 		ADD_SLOT( Domain             , domain              , INPUT , REQUIRED);
-		ADD_SLOT( double             , potential_energy_shift , INPUT , 0.0 );
+//		ADD_SLOT( double             , potential_energy_shift , INPUT , 0.0 );
 		ADD_SLOT( SimulationState    , simulation_state , OUTPUT );
 
 		static constexpr FieldSet<field::_vx ,field::_vy ,field::_vz, field::_mass> reduce_field_set {};
@@ -45,10 +45,8 @@ namespace exaDEM
 			MPI_Comm comm = *mpi;
 			SimulationState& sim_info = *simulation_state;
 
-			Mat3d virial; // constructs itself with 0s
 			Vec3d momentum;  // constructs itself with 0s
 			Vec3d kinetic_energy;  // constructs itself with 0s
-			double potential_energy = 0.;
 			double mass = 0.;
 			unsigned long long int total_particles = 0;
 
@@ -58,40 +56,24 @@ namespace exaDEM
 
 			// reduce partial sums and share the result
 			{
-				// tmp size = 3*3 + 3 + 3 + 1 + 1 + 1 = 18
-				double tmp[18] = {
-					virial.m11, virial.m12, virial.m13, virial.m21, virial.m22, virial.m23,  virial.m31, virial.m32, virial.m33, 
+				double tmp[8] = {
 					sim.momentum.x, sim.momentum.y, sim.momentum.z,
 					sim.kinetic_energy.x, sim.kinetic_energy.y, sim.kinetic_energy.z,
-					sim.potential_energy,
-					sim.mass,
-					static_cast<double>(sim.n_particles) };
-				assert( tmp[17] == sim.n_particles );
-				MPI_Allreduce(MPI_IN_PLACE, tmp, 18, MPI_DOUBLE, MPI_SUM, comm);
-				virial.m11 = tmp[0];
-				virial.m12 = tmp[1];
-				virial.m13 = tmp[2];
-				virial.m21 = tmp[3];
-				virial.m22 = tmp[4];
-				virial.m23 = tmp[5];
-				virial.m31 = tmp[6];
-				virial.m32 = tmp[7];
-				virial.m33 = tmp[8];
-				momentum.x = tmp[9];
-				momentum.y = tmp[10];
-				momentum.z = tmp[11];
-				kinetic_energy.x = tmp[12];
-				kinetic_energy.y = tmp[13];
-				kinetic_energy.z = tmp[14];
-				potential_energy = tmp[15];
-				mass = tmp[16];
-				total_particles = tmp[17];
+					sim.mass, static_cast<double>(sim.n_particles) };
+				assert( tmp[7] == sim.n_particles );
+				MPI_Allreduce(MPI_IN_PLACE, tmp, 8, MPI_DOUBLE, MPI_SUM, comm);
+				momentum.x = tmp[0];
+				momentum.y = tmp[1];
+				momentum.z = tmp[2];
+				kinetic_energy.x = tmp[3];
+				kinetic_energy.y = tmp[4];
+				kinetic_energy.z = tmp[5];
+				mass = tmp[6];
+				total_particles = tmp[7];
 			}
 
 			// temperature
 			Vec3d temperature = 2. * ( kinetic_energy - 0.5 * momentum * momentum / mass );
-
-			Vec3d virdiag = { virial.m11 , virial.m22, virial.m33 };
 
 			// Volume
 			double volume = 1.0;
@@ -105,17 +87,8 @@ namespace exaDEM
 			}
 			volume *= bounds_volume( domain->bounds() );
 
-			Vec3d pressure = ( temperature + virdiag ) / volume;
-
 			// write results to output
-			sim_info.set_virial( virial );
-			sim_info.set_pressure( pressure );
-			sim_info.set_kinetic_energy( kinetic_energy );
 			sim_info.set_temperature( temperature );
-			sim_info.set_kinetic_momentum( momentum );
-			sim_info.set_potential_energy( potential_energy + (*potential_energy_shift) );
-			sim_info.set_internal_energy( 0. );
-			sim_info.set_chemical_energy( 0. );
 			sim_info.set_mass( mass );
 			sim_info.set_volume( volume );
 			sim_info.set_particle_count( total_particles );
