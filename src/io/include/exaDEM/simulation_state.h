@@ -23,10 +23,10 @@ namespace exaDEM
 
 	struct simulation_state_variables
 	{
-		Vec3d momentum; 
-		Vec3d kinetic_energy; 
-		double mass;
-		unsigned long long int n_particles;
+		Vec3d momentum = { 0. , 0. , 0. }; 
+		Vec3d kinetic_energy = { 0. , 0. , 0. }; 
+		double mass = 0.;
+		unsigned long long int n_particles = 0;
 	};
 
 	struct ReduceSimulationStateFunctor
