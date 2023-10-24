@@ -23,7 +23,7 @@ namespace exaDEM
   {
     using GridFieldSet = typename GridT::Fields;
     using TupleT = onika::soatl::FieldTupleFromFieldIds< DumpFieldSet >;
-    using StorageType = TupleT; //onika::soatl::FieldTupleFromFieldIds< FieldSet<fids...,field::nbhfriction,field::drvfriction> >;
+    using StorageType = TupleT; 
 
     GridCellParticleNeigborFriction& nbh_friction;
     GridT& grid;
@@ -31,23 +31,89 @@ namespace exaDEM
     double scale_cell_size = 1.0;
     bool enable_friction = true;
 
-    // for forward compatibility with dump_reader_allow_initial_position_xform branch
-    inline void process_domain(Domain& domain , Mat3d& pos_read__xform)
-    {
-      pos_read__xform = make_identity_matrix();
-      this->process_domain(domain);
-    }
+    // optional modification of domain periodicity
+    bool override_periodicity = false;
+    bool periodic_x = false;
+    bool periodic_y = false;
+    bool periodic_z = false;
 
-    inline void process_domain(Domain& domain)
+    // optional override of domain expandability
+    bool override_expandable = false;
+    bool expandable = false;
+
+    // optionally override domain bounds
+    bool override_domain_bounds = true;
+    bool shrink_to_fit = false;
+    AABB domain_bounds = { {0,0,0} , {0,0,0} };
+
+
+
+    // for forward compatibility with dump_reader_allow_initial_position_xform branch
+    inline void process_domain(Domain& domain , Mat3d& particle_read_xform)
     {
+      particle_read_xform = make_identity_matrix();
       if( scale_cell_size != 1.0 )
       {
-        Vec3d dom_size = domain.bounds_size();
+        const Vec3d dom_size = domain.bounds_size();
+        const Mat3d dom_xform = domain.xform();
+
         double desired_cell_size = domain.cell_size() * scale_cell_size;
         IJK grid_dims = make_ijk( Vec3d{0.5,0.5,0.5} + ( dom_size / desired_cell_size ) ); // round to nearest
         domain.set_grid_dimension( grid_dims );
         domain.set_cell_size( desired_cell_size );
+        // domain bounds should remain the same
         domain.set_bounds( { domain.origin() , domain.origin() + ( grid_dims * desired_cell_size ) } );
+        const Vec3d dom_new_size = domain.bounds_size();
+
+        particle_read_xform = diag_matrix( dom_new_size / dom_size );
+        const Mat3d dom_new_xform = inverse( particle_read_xform ) * dom_xform;
+        domain.set_xform( dom_new_xform );
+      }
+      if( override_periodicity )
+      {
+        domain.set_periodic_boundary( periodic_x , periodic_y , periodic_z );
+      }
+      if( override_expandable )
+      {
+        domain.set_expandable( expandable );
+      }
+
+      if( override_domain_bounds )
+      {
+        if( ! domain.xform_is_identity() )
+        {
+          if( ! is_diagonal( domain.xform() ) )
+          {
+            fatal_error() << "cannot force domain bounds on a domain with non diagonal transform matrix" << std::endl;
+          }
+          else
+          {
+            Vec3d diag = { domain.xform().m11 , domain.xform().m22 , domain.xform().m33 };
+            domain_bounds.bmin = domain_bounds.bmin / diag;
+            domain_bounds.bmax = domain_bounds.bmax / diag;
+          }
+        }
+        if( domain.periodic_boundary_x() ) { domain_bounds.bmin.x = domain.bounds().bmin.x; domain_bounds.bmax.x = domain.bounds().bmax.x; }
+        if( domain.periodic_boundary_y() ) { domain_bounds.bmin.y = domain.bounds().bmin.y; domain_bounds.bmax.y = domain.bounds().bmax.y; }
+        if( domain.periodic_boundary_z() ) { domain_bounds.bmin.z = domain.bounds().bmin.z; domain_bounds.bmax.z = domain.bounds().bmax.z; }
+      }
+    }
+
+    inline bool particle_input_filter(const Vec3d& r)
+    {
+      return ( ! override_domain_bounds ) || ( is_inside(domain_bounds,r) );
+    }
+
+    inline void post_process_domain(Domain& domain)
+    {
+      if( override_domain_bounds && shrink_to_fit)
+      {
+        const IJK cell_shift = make_ijk( floor( ( domain_bounds.bmin - domain.origin() ) / domain.cell_size() ) );
+        const Vec3d new_origin = domain.origin() + cell_shift * domain.cell_size();
+        const IJK new_grid_dims = make_ijk( ceil( ( domain_bounds.bmax - new_origin ) / domain.cell_size() ) );
+        const Vec3d new_extent = new_origin + new_grid_dims * domain.cell_size();
+        domain.set_bounds( { new_origin , new_extent } );
+        domain.set_grid_dimension( new_grid_dims );
       }
     }
 
