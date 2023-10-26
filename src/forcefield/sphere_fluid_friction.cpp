@@ -20,11 +20,11 @@ namespace exaDEM
 
   struct SphereFrictionFunctor
   {
-    ONIKA_HOST_DEVICE_FUNC inline Vec3d operator () ( const Vec3d& r, const Vec3d& pv, const Vec3d& fv , double radius ) const
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d operator () ( const Vec3d& r, const Vec3d& pv, const Vec3d& fv , const double cx, const double radius ) const
     {
       const Vec3d relative_velocity = fv - pv;
       const double relative_velocity_norm = norm(relative_velocity);
-      return relative_velocity * relative_velocity_norm * M_PI * radius*radius;
+      return cx * (relative_velocity * relative_velocity_norm * M_PI * radius*radius);
     }
   };
 
