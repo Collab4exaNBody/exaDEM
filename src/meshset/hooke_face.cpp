@@ -35,6 +35,7 @@ namespace exaDEM
 							ADD_SLOT( GridT  , grid    , INPUT_OUTPUT );
 							ADD_SLOT( Domain , domain  , INPUT , REQUIRED );
 							ADD_SLOT( std::vector<Vec3d> , verticies, INPUT , REQUIRED , DocString{"list of verticies"});
+							//ADD_SLOT( onika::memory::CudaMMVector <Vec3d>, verticies, INPUT, REQUIRED, DocString{"list of verticies"});
 							ADD_SLOT( double  , dt                		, INPUT 	, REQUIRED 	, DocString{"Timestep of the simulation"});
 							ADD_SLOT( double  , kt  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
 							ADD_SLOT( double  , kn  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"} );

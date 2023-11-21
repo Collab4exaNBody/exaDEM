@@ -1,3 +1,5 @@
+#pragma xstamp_cuda_enable
+
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
@@ -19,6 +21,9 @@
 
 #include <mpi.h>
 
+#include <onika/cuda/cuda.h> // mots cles specifiques
+#include <onika/memory/allocator.h> // cudaMMVector
+
 namespace exaDEM
 {
 	using namespace exanb;
@@ -30,7 +35,8 @@ namespace exaDEM
 		ADD_SLOT( GridT    , grid     , INPUT_OUTPUT );
 		ADD_SLOT( Domain   , domain   , INPUT , REQUIRED );
 		ADD_SLOT( std::string , filename, INPUT , REQUIRED , DocString{"Inpute filename"});
-		ADD_SLOT( std::vector<exaDEM::stl_mesh> , stl_collection, INPUT_OUTPUT , DocString{"Collection of meshes from stl files"});
+		//ADD_SLOT( std::vector<exaDEM::stl_mesh> , stl_collection, INPUT_OUTPUT , DocString{"Collection of meshes from stl files"});
+		ADD_SLOT( onika::memory::CudaMMVector< exaDEM::stl_mesh > , stl_collection, INPUT_OUTPUT , DocString{"Collection of meshes from stl files"});
 
 		public:
 		inline std::string documentation() const override final
@@ -42,9 +48,23 @@ namespace exaDEM
 		inline void execute () override final
 		{
 			auto& collection = *stl_collection;
-			stl_mesh mesh;
+			stl_mesh mesh; 
 			mesh.read_stl(*filename);
+			//auto exec_ctx = parallel_execution_context();
+			//bool gpu_present = exec_ctx != nullptr
+			//	&& exec_ctx->has_gpu_context()
+			//	&& exec_ctx->gpu_context()->has_devices();
+			//if( gpu_present ) {
+			//	int NbBlocks = 128;
+			//	int BlockSize = 32;
+			//	ONIKA_CU_LAUNCH_KERNEL( NbBlocks, BlockSize
+			//		, 0, exec_ctx->gpu_stream()
+			//		, mesh.build_boxes_kernel);
+			//}
+			//else {
 			mesh.build_boxes();
+			//}
+			
 			collection.push_back(mesh);
 		};
 	};

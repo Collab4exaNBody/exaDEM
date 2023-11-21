@@ -3,6 +3,8 @@
 #include <exaDEM/common_compute_kernels.h>
 #include <exaDEM/compute_hooke_force.h>
 #include <exaDEM/face.h>
+//#include <onika/cuda/cuda.h> // mots cles specifiques
+//#include <onika/memory/allocator.h> // cudaMMVector
 
 using exanb::Vec3d; 
 

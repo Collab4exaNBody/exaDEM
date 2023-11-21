@@ -5,9 +5,18 @@
 #include <exaDEM/face.h>
 #include <exaDEM/stl_mesh.h>
 
+//#include <thrust/host_vector.h>
+//#include <thrust/device_vector.h> 
+//#include <thrust/universal_vector.h>
+
+#include <onika/cuda/cuda.h> // mots cles specifiques
+#include <onika/memory/allocator.h> // cudaMMVector
+
 namespace exaDEM
 {
-	using exanb::Vec3d; 
+	using exanb::Vec3d;
+	
+	using namespace exanb; 
 
 	/**
 	 * @brief Functor for applying Hooke's law to multiple Faces within a grid.
@@ -20,14 +29,17 @@ namespace exaDEM
 	 */
 	struct ApplyHookeSTLMeshesFunctor
 	{
-		std::vector<exaDEM::stl_mesh>& meshes; /**< A collection of STL meshes. */
+		//std::vector<exaDEM::stl_mesh>& meshes; /**< A collection of STL meshes. */
+		onika::memory::CudaMMVector< exaDEM::stl_mesh > & meshes;
 		double m_dt; /**< Time step. */
 		double m_kt; /**< Tangential spring constant. */
 		double m_kn; /**< Normal spring constant. */
 		double m_kr; /**< Rotational spring constant. */
 		double m_mu; /**< Friction coefficient. */
+		//cudaMallocManaged(&m_mu, sizeof(double));
 		double m_dampRate; /**< Damping rate. */
-
+		
+		
 		/**
 		 * @brief Operator for applying Hooke's law.
 		 *
@@ -50,7 +62,8 @@ namespace exaDEM
 		 * @param a_mom Reference to store the angular momentum.
 		 * @param a_ft Reference to store the torque.
 		 */
-		ONIKA_HOST_DEVICE_FUNC inline void operator () (
+		ONIKA_HOST_DEVICE_FUNC 
+		inline void operator () (
 				const size_t cell_idx,
 				const double a_rx, const double a_ry, const double a_rz,
 				const double a_vx, const double a_vy, const double a_vz,
@@ -62,7 +75,9 @@ namespace exaDEM
 				Vec3d& a_ft) const
 		{
 			for(auto& mesh : meshes)
+			//for(int i=0; i<meshes.size(); i++)
 			{
+				//exaDEM::stl_mesh & mesh= meshes[i];
 				bool is_face = false; // If there is one contact with a face, we skip contact with edges
 				bool do_edge = false;
 				auto& idxs = mesh.indexes[cell_idx];
@@ -106,6 +121,8 @@ namespace exaDEM
 				}
 			}
 		}
+		
+		
 
 		/**
 		 * @brief Operator for handling interactions between faces/edges and spheres.
@@ -131,6 +148,7 @@ namespace exaDEM
 		 * @param a_mom Reference to store the angular momentum.
 		 * @param a_ft Reference to store the torque.
 		 */
+		
 		ONIKA_HOST_DEVICE_FUNC inline void operator () (
 				const exaDEM::Face& face, const Vec3d& contact_position, const int type,
 				const double a_rx, const double a_ry, const double a_rz,
@@ -180,6 +198,7 @@ namespace exaDEM
 			a_fy += f.y ;
 			a_fz += f.z ;
 		}
+		
 	};
 }
 
@@ -189,7 +208,7 @@ namespace exanb
 	template<> struct ComputeCellParticlesTraits<exaDEM::ApplyHookeSTLMeshesFunctor>
 	{
 		static inline constexpr bool RequiresBlockSynchronousCall = false;
-		static inline constexpr bool CudaCompatible = false;
+		static inline constexpr bool CudaCompatible = true;
 	};
 
 	template<> struct ComputeCellParticlesTraitsUseCellIdx<exaDEM::ApplyHookeSTLMeshesFunctor>

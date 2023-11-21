@@ -2,6 +2,9 @@
 
 #include <exanb/core/basic_types.h>
 
+#include <onika/cuda/cuda.h> // mots cles specifiques
+#include <onika/memory/allocator.h> // cudaMMVector
+
 namespace exaDEM
 {
 	using namespace exanb;
@@ -44,6 +47,7 @@ namespace exaDEM
 	 * @brief Normalize a 3D vector.
 	 * @param v The input vector to be normalized.
 	 */
+	 ONIKA_HOST_DEVICE_FUNC 
 	inline void normalize(Vec3d& v) { v = v / exanb::norm(v); }
 
 
@@ -52,7 +56,8 @@ namespace exaDEM
 	 */
 	struct Face 
 	{
-		std::vector<Vec3d> vertices; /**< The vertices of the face. */
+		//std::vector<Vec3d> vertices; /**< The vertices of the face. */
+		onika::memory::CudaMMVector< Vec3d > vertices;
 		Vec3d normal;  /**< The normal vector of the face. */
 		double offset; /**< The offset of the face. */
 
@@ -61,6 +66,17 @@ namespace exaDEM
 		 * @param in A vector of Vec3d representing the vertices of the face.
 		 */
 		Face(std::vector<Vec3d>& in) {
+		//Face(onika::memory::CudaMMVector<Vec3d> & in){
+			vertices.resize(in.size());
+			for(long unsigned int i = 0 ; i < in.size() ; i++) vertices[i] = in[i];
+			auto [_normal, _offset, _exist] = compute_normal_and_offset();
+			normal = _normal;
+			offset = _offset;
+			if(!_exist) std::cout << " error when filling this Face " << std::endl;
+		}
+		
+		Face(onika::memory::CudaMMVector< Vec3d > & in) {
+		//Face(onika::memory::CudaMMVector<Vec3d> & in){
 			vertices = in;
 			auto [_normal, _offset, _exist] = compute_normal_and_offset();
 			normal = _normal;
@@ -83,6 +99,7 @@ namespace exaDEM
 		 *         - `bool` potential_contact: Indicates potential intersection with the face for further testing.
 		 *         - `Vec3d` contact_position: The contact position if an intersection occurs (otherwise, it is {0,0,0}).
 		 */
+		 ONIKA_HOST_DEVICE_FUNC
 		std::tuple<bool, bool, Vec3d> contact_face_sphere(const double rx, const double ry, const double rz, const double rad) const 
 		{
 			const Vec3d center = {rx,ry,rz};
@@ -167,7 +184,8 @@ namespace exaDEM
 		 * @return A tuple containing two values:
 		 *         - `bool` intersects: Indicates whether there is an intersection with an edge.
 		 *         - `Vec3d` contact_position: The contact position if an intersection occurs (otherwise, it is {0,0,0}).
-		 */	
+		 */
+		 ONIKA_HOST_DEVICE_FUNC	
 		std::tuple<bool, Vec3d> contact_edge_sphere(const double rx, const double ry, const double rz, const double rad) const 
 		{
 			// already tested if  exanb::dot(center,normal) - offset < rad
@@ -306,7 +324,7 @@ namespace exaDEM
 		 *
 		 * @return A Box struct representing the bounding box of the polygon.
 		 */
-		Box create_box()
+		 Box create_box()
 		{
 			Vec3d inf = vertices[0];
 			Vec3d sup = inf;

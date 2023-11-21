@@ -4,6 +4,9 @@
 #include <sstream>
 #include <exanb/core/basic_types.h>
 
+#include <onika/cuda/cuda.h> // mots cles specifiques
+#include <onika/memory/allocator.h> // cudaMMVector
+
 namespace exaDEM
 {
 	using namespace exanb;
@@ -16,9 +19,12 @@ namespace exaDEM
 	 */
 	struct stl_mesh
 	{
-		std::vector <Face> m_data; /**< A collection of Face objects representing the mesh. */
-		std::vector <Box> m_boxes;  /**< A collection of Box objects bounding the mesh. */
-		std::vector <std::vector<int>> indexes; /**< Indexes for mesh data. */
+		//std::vector <Face> m_data; /**< A collection of Face objects representing the mesh. */
+		onika::memory::CudaMMVector< Face > m_data;
+		//std::vector <Box> m_boxes;  /**< A collection of Box objects bounding the mesh. */
+		onika::memory::CudaMMVector< Box > m_boxes;
+		//std::vector <std::vector<int>> indexes; /**< Indexes for mesh data. */
+		onika::memory::CudaMMVector <std::vector<int>> indexes;
 
 		/**
 		 * @brief Adds a Face to the mesh.
@@ -33,7 +39,8 @@ namespace exaDEM
 		 * @brief Gets a reference to the mesh data.
 		 * @return A reference to the vector of Face objects representing the mesh.
 		 */
-		std::vector <Face>& get_data()
+		 //std::vector <Face> & get_data()
+		onika::memory::CudaMMVector <Face>& get_data()
 		{
 			return m_data;
 		}
@@ -47,7 +54,7 @@ namespace exaDEM
 		{
 			return m_data[idx];
 		}
-
+		
 		/**
 		 * @brief Reads mesh data from an STL file and populates the mesh.
 		 *
@@ -62,6 +69,7 @@ namespace exaDEM
 			std::ifstream input( file_name.c_str() );
 			std::string first;
 			std::vector<Vec3d> vertices;
+			//onika::memory::CudaMMVector <Vec3d> vertices;
 			Vec3d vertex;
 			int nv = 0;
 			int nf = 0;
@@ -116,6 +124,20 @@ namespace exaDEM
 				m_boxes[i] = m_data[i].create_box();
 			}
 		}
+		
+		/**ONIKA_DEVICE_KERNEL_FUNC
+		void build_boxes_kernel()
+		{
+			const int size = m_data.size();
+			assert(size > 0);
+			m_boxes.resize(size);
+			long nt = ONIKA_CU_GRID_SIZE*ONIKA_CU_BLOCK_SIZE;
+			long i = ONIKA_CU_BLOCK_IDX*ONIKA_CU_BLOCK_SIZE + ONIKA_CU_THREAD_IDX;
+			for( ; i < size ; i += nt )
+			{
+				m_boxes[i] = m_data[i].create_box();
+			}
+		}*/
 
 		/**
 		 * @brief Updates the indexes based on the bounding box of a face.
