@@ -4,6 +4,7 @@
 
 #include <onika/cuda/cuda.h> // mots cles specifiques
 #include <onika/memory/allocator.h> // cudaMMVector
+#include <onika/cuda/stl_adaptors.h>
 
 namespace exaDEM
 {
@@ -33,6 +34,7 @@ namespace exaDEM
 	 * @param v The input vector.
 	 * @return The length of the vector.
 	 */
+	 ONIKA_HOST_DEVICE_FUNC
 	inline double length(Vec3d& v) {return std::sqrt(v.x*v.x+v.y*v.y+v.z*v.z);}
 
 	/**
@@ -40,6 +42,7 @@ namespace exaDEM
 	 * @param v The input vector.
 	 * @return The length of the vector.
 	 */
+	 ONIKA_HOST_DEVICE_FUNC
 	inline double length(const Vec3d& v) {return std::sqrt(v.x*v.x+v.y*v.y+v.z*v.z);}
 
 
@@ -116,10 +119,15 @@ namespace exaDEM
 
 			potential_contact = true; // This face will be tested versus edges (second pass)
 
-			const int nb_vertices = vertices.size();
-			const Vec3d& pa = vertices[0];
-			const Vec3d& pb = vertices[1];
-			const Vec3d& pc = vertices[nb_vertices-1];
+			//const int nb_vertices = vertices.size();
+			const int nb_vertices = onika::cuda::vector_size(vertices);
+			const Vec3d* vertices_array = onika::cuda::vector_data(vertices);
+			//const Vec3d& pa = onika::cuda::get(vertices, 0);
+			const Vec3d& pa = vertices_array[0];
+			//size_t k= 0;
+			//const Vec3d& pa = onika::cuda::vector_access(vertices, k);
+			const Vec3d& pb = vertices_array[1];
+			const Vec3d& pc = vertices_array[nb_vertices-1];
 			Vec3d v1 = pb - pa;
 			Vec3d v2 = pc - pa;
 			normalize(v1);
@@ -145,8 +153,8 @@ namespace exaDEM
 			for (int iva = 0; iva < nb_vertices ; ++iva) {
 				int ivb = iva + 1;
 				if (ivb == nb_vertices) ivb = 0;
-				const Vec3d& posNodeA_jv = vertices[iva];
-				const Vec3d& posNodeB_jv = vertices[ivb];
+				const Vec3d& posNodeA_jv = vertices_array[iva];
+				const Vec3d& posNodeB_jv = vertices_array[ivb];
 				double pa1 = exanb::dot(posNodeA_jv , v1);
 				double pb1 = exanb::dot(posNodeB_jv , v1);
 				double pa2 = exanb::dot(posNodeA_jv , v2);
@@ -192,9 +200,10 @@ namespace exaDEM
 			// test if the sphere intersects an edge 
 			const Vec3d center = {rx,ry,rz};
 			const Vec3d default_contact_point = {0,0,0}; // won't be used
-			for (size_t i = 0; i < vertices.size(); ++i) {
-				Vec3d p1 = vertices[i];
-				Vec3d p2 = vertices[(i + 1) % vertices.size()];
+			const Vec3d* vertices_array = onika::cuda::vector_data(vertices);
+			for (size_t i = 0; i < onika::cuda::vector_size(vertices); ++i) {
+				Vec3d p1 = vertices_array[i];
+				Vec3d p2 = vertices_array[(i + 1) % onika::cuda::vector_size(vertices)];
 				Vec3d edge = p2 - p1;
 				Vec3d sphereToEdge = center - p1;
 

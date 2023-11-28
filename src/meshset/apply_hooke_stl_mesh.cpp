@@ -1,11 +1,11 @@
-#pragma xstamp_cuda_enable
+//#pragma xstamp_cuda_enable
 
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
+#include <exanb/core/grid.h>	
 #include <exanb/core/domain.h>
 
 
@@ -62,9 +62,9 @@ namespace exaDEM
 								//cudaMallocManaged(&stl_collection, stl_collection->size()*sizeof(stl_mesh));
 								//cudaMallocManaged(&stl_collection, N)
 								//ApplyHookeSTLMeshesFunctor<GridT> func {*grid, *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
-								ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
+								auto& vec = *stl_collection;
+								ApplyHookeSTLMeshesFunctor func { vec.data(), vec.size()/***stl_collection*/, *dt, *kt, *kn, *kr, *mu, *damprate};
 								compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
-								cudaDeviceSynchronize();
 							}
 						};
 

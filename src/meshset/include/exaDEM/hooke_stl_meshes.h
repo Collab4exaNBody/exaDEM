@@ -11,12 +11,14 @@
 
 #include <onika/cuda/cuda.h> // mots cles specifiques
 #include <onika/memory/allocator.h> // cudaMMVector
+#include <onika/cuda/stl_adaptors.h>
 
 namespace exaDEM
 {
 	using exanb::Vec3d;
 	
 	using namespace exanb; 
+
 
 	/**
 	 * @brief Functor for applying Hooke's law to multiple Faces within a grid.
@@ -30,13 +32,16 @@ namespace exaDEM
 	struct ApplyHookeSTLMeshesFunctor
 	{
 		//std::vector<exaDEM::stl_mesh>& meshes; /**< A collection of STL meshes. */
-		onika::memory::CudaMMVector< exaDEM::stl_mesh > & meshes;
+		//onika::memory::CudaMMVector< exaDEM::stl_mesh >  meshes;
+		exaDEM::stl_mesh*  pmeshes;
+		int smeshes;
 		double m_dt; /**< Time step. */
 		double m_kt; /**< Tangential spring constant. */
 		double m_kn; /**< Normal spring constant. */
 		double m_kr; /**< Rotational spring constant. */
 		double m_mu; /**< Friction coefficient. */
 		//cudaMallocManaged(&m_mu, sizeof(double));
+		
 		double m_dampRate; /**< Damping rate. */
 		
 		
@@ -74,19 +79,32 @@ namespace exaDEM
 				Vec3d& a_mom,
 				Vec3d& a_ft) const
 		{
-			for(auto& mesh : meshes)
-			//for(int i=0; i<meshes.size(); i++)
+			auto* meshes_array= pmeshes; //onika::cuda::vector_data(meshes);
+			//auto* meshes_array= onika::cuda::vector_data(meshes);
+			//std::vector<int>* 
+			//for(auto& mesh : meshes)
+			//auto* indexes= onika::cuda::vector_data(meshes.indexes);
+			//auto* data= onika::cuda::vector_data(meshes.m_data);
+			for(size_t i=0; i< smeshes ; i++)//onika::cuda::vector_size(meshes); i++)
 			{
 				//exaDEM::stl_mesh & mesh= meshes[i];
+				auto& mesh= meshes_array[i];
+				auto* indexes= onika::cuda::vector_data(mesh.indexes);
+				//auto* data= onika::cuda::vector_data(mesh.m_data);
 				bool is_face = false; // If there is one contact with a face, we skip contact with edges
 				bool do_edge = false;
-				auto& idxs = mesh.indexes[cell_idx];
-				int fsize = idxs.size();
-				auto& faces = mesh.m_data;
+				//auto& idxs = mesh.indexes[cell_idx];
+				auto& idxs = indexes[cell_idx];
+				auto* idxs_array= onika::cuda::vector_data(indexes[cell_idx]);
+				//int fsize = idxs.size();
+				int fsize = onika::cuda::vector_size(idxs);
+				//auto& faces = mesh.m_data;
+				auto* faces = onika::cuda::vector_data(mesh.m_data);
 				// test face / sphere
 				for(int face_idx = 0 ; face_idx < fsize ; face_idx++)
 				{
-					auto& face = faces[idxs[face_idx]];
+					//auto& face = faces[idxs[face_idx]];
+					auto& face = faces[idxs_array[face_idx]];
 					auto [contact, potential, position] = face.contact_face_sphere(a_rx, a_ry, a_rz, a_particle_radius);
 					if(contact)
 					{
@@ -106,7 +124,8 @@ namespace exaDEM
 				{
 					for(int face_idx = 0 ; face_idx < fsize ; face_idx++)
 					{
-						auto& face = faces[idxs[face_idx]];
+						//auto& face = faces[idxs[face_idx]];
+						auto& face = faces[idxs_array[face_idx]];
 						auto [contact, position] = face.contact_edge_sphere(a_rx, a_ry, a_rz, a_particle_radius);
 						if(contact)
 						{

@@ -1,4 +1,4 @@
-#pragma xstamp_cuda_enable
+
 
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
