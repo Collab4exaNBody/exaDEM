@@ -121,7 +121,10 @@ update_particles_full:
 update_particles_fast_body:
     #- ghost_update_all
     #- ghost_update_full
-    - ghost_update_rq
+    - ghost_update_rq:
+       gpu_buffer_pack: true
+       async_buffer_pack: false
+       staging_buffer: true
     #- ghost_update_r
 
 update_particles_fast:

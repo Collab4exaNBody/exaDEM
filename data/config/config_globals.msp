@@ -18,7 +18,7 @@ global:
   enable_task_graph: false
   #amr_z_curve: false
   enable_grid_compact: true
-  enable_vtk_mesh: false
+  enable_stl_mesh: false
 #  force_initialized: false # default is to consider reader do not provide initialized acceleration
 
 # default grid variant we use
