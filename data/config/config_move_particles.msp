@@ -29,7 +29,8 @@ chunk_neighbors_contact:
     chunk_size: 2
 
 chunk_neighbors_impl: 
-  - chunk_neighbors
+#  - chunk_neighbors
+#  - chunk_neighbors2
   - chunk_neighbors_contact
 
 update_particle_neighbors:
@@ -105,7 +106,7 @@ load_balancing_if_triggered:
 
 
 update_particles_full_body:
-  - compact_neighbor_friction
+#  - compact_neighbor_friction
   - move_particles_friction
   - trigger_load_balance
   - load_balancing_if_triggered
@@ -123,7 +124,7 @@ update_particles_fast_body:
     #- ghost_update_full
     - ghost_update_rq:
        gpu_buffer_pack: true
-       async_buffer_pack: false
+       async_buffer_pack: true #false
        staging_buffer: true
     #- ghost_update_r
 
