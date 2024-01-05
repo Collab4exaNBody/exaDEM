@@ -5,6 +5,7 @@
 #include <onika/cuda/cuda.h> // mots cles specifiques
 #include <onika/memory/allocator.h> // cudaMMVector
 #include <onika/cuda/stl_adaptors.h>
+#include <exanb/core/basic_types.h>
 
 namespace exaDEM
 {
@@ -26,6 +27,22 @@ namespace exaDEM
 			Vec3d res = (sup - inf)/2;
 			return res;
 		};
+	};
+	
+	struct OBB
+	{
+	
+		Vec3d center;
+		Vec3d axis[3];
+		Vec3d extents;
+		
+	};
+	
+	struct face_contact
+	{
+		bool contact;
+		bool potential;
+		Vec3d pos;
 	};
 
 
@@ -53,7 +70,32 @@ namespace exaDEM
 	 ONIKA_HOST_DEVICE_FUNC 
 	inline void normalize(Vec3d& v) { v = v / exanb::norm(v); }
 
-
+	ONIKA_HOST_DEVICE_FUNC
+	inline Vec3d normalize_GPU( Vec3d v)
+	{
+		double norm= std::sqrt((v.x*v.x)+(v.y*v.y)+(v.z*v.z));
+		return {v.x/norm, v.y/norm, v.z/norm};
+	}
+	
+	ONIKA_HOST_DEVICE_FUNC
+	inline Vec3d VecP (Vec3d iv, double dist, Vec3d n)
+	{
+		double a= -dist;
+		Vec3d b= -n;
+		if(dist < 0.0){  return iv - a * b;}
+		else{ return iv - dist * n;}
+	}
+	
+	inline Vec3d V2 (Vec3d n, Vec3d v1, double dist)
+	{
+		Vec3d a= -n;
+		if(dist<0.0){return Vec3d{ a.y*v1.z - a.z*v1.y,
+		              a.z*v1.x - a.x*v1.z,
+		              a.x*v1.y - a.y*v1.x };   }
+		else{return Vec3d{ n.y*v1.z - n.z*v1.y,
+		              n.z*v1.x - n.x*v1.z,
+		              n.x*v1.y - n.y*v1.x };   }
+	}
 	/**
 	 * @brief Struct representing a 3D face.
 	 */
@@ -63,6 +105,9 @@ namespace exaDEM
 		onika::memory::CudaMMVector< Vec3d > vertices;
 		Vec3d normal;  /**< The normal vector of the face. */
 		double offset; /**< The offset of the face. */
+		/**bool contact;
+		bool potential;
+		Vec3d position;*/
 
 		/**
 		 * @brief Constructor for the Face struct.
@@ -70,23 +115,35 @@ namespace exaDEM
 		 */
 		Face(std::vector<Vec3d>& in) {
 		//Face(onika::memory::CudaMMVector<Vec3d> & in){
+			printf("FACEEE1\n");
 			vertices.resize(in.size());
 			for(long unsigned int i = 0 ; i < in.size() ; i++) vertices[i] = in[i];
 			auto [_normal, _offset, _exist] = compute_normal_and_offset();
 			normal = _normal;
+			
 			offset = _offset;
+			printf("REAL_OFFSET : %f\n", offset);
 			if(!_exist) std::cout << " error when filling this Face " << std::endl;
 		}
 		
 		Face(onika::memory::CudaMMVector< Vec3d > & in) {
 		//Face(onika::memory::CudaMMVector<Vec3d> & in){
+			printf("FACEEE2\n");
 			vertices = in;
 			auto [_normal, _offset, _exist] = compute_normal_and_offset();
 			normal = _normal;
-			offset = _offset;
+			//offset = _offset;
+			offset= 1.0;
 			if(!_exist) std::cout << " error when filling this Face " << std::endl;
 		}
-
+		
+		ONIKA_HOST_DEVICE_FUNC double abs(double p) {
+			//printf("TEST\n");
+			if(p<0) {return p;}
+			else {return p;}
+		}
+		
+		
 		/**
 		 * @brief Determines if a sphere and a face potentially intersect and calculates the contact position.
 		 *
@@ -102,30 +159,36 @@ namespace exaDEM
 		 *         - `bool` potential_contact: Indicates potential intersection with the face for further testing.
 		 *         - `Vec3d` contact_position: The contact position if an intersection occurs (otherwise, it is {0,0,0}).
 		 */
-		 ONIKA_HOST_DEVICE_FUNC
-		std::tuple<bool, bool, Vec3d> contact_face_sphere(const double rx, const double ry, const double rz, const double rad) const 
+		 
+		ONIKA_HOST_DEVICE_FUNC int ret( ) { return 2; }
+		
+		ONIKA_HOST_DEVICE_FUNC void contact_face_sphere(const double rx, const double ry, const double rz, const double rad, bool& contact, bool& potential, Vec3d& position) 
+		//ONIKA_HOST_DEVICE_FUNC void contact_face_sphere(const double rx, const double ry, const double rz, const double rad) 
 		{
 			const Vec3d center = {rx,ry,rz};
-			const Vec3d default_contact_point = {0,0,0}; // won't be used
-			bool potential_contact = false;
-			bool face_contact = false;
-			Vec3d contact_position = default_contact_point;
+			//const Vec3d default_contact_point = {0,0,0}; // won't be used
+			//bool potential_contact = false;
+			//bool face_contact = false;
+			//Vec3d contact_position = default_contact_point;
 
 			double p = exanb::dot(center,normal) - offset;
-			if( std::abs(p) > rad)
+			/**if( std::abs(p) > rad)
 			{
-				return std::make_tuple(face_contact, potential_contact, contact_position);
-			}
+				//return std::make_tuple(face_contact, potential_contact, contact_position);
+				contact = false;
+				potential = false;
+				position = {0,0,0};
+			}*/
+			
+			if(abs(p) <= rad)
+			{
 
-			potential_contact = true; // This face will be tested versus edges (second pass)
+			//potential_contact = true; // This face will be tested versus edges (second pass)
+			potential = true;
 
-			//const int nb_vertices = vertices.size();
 			const int nb_vertices = onika::cuda::vector_size(vertices);
 			const Vec3d* vertices_array = onika::cuda::vector_data(vertices);
-			//const Vec3d& pa = onika::cuda::get(vertices, 0);
 			const Vec3d& pa = vertices_array[0];
-			//size_t k= 0;
-			//const Vec3d& pa = onika::cuda::vector_access(vertices, k);
 			const Vec3d& pb = vertices_array[1];
 			const Vec3d& pc = vertices_array[nb_vertices-1];
 			Vec3d v1 = pb - pa;
@@ -171,11 +234,14 @@ namespace exaDEM
 
 			if(intersections == 1) // ODD 
 			{
-				contact_position = normal*offset; // we need dot(conatct_position, normal)
-				face_contact = true;
+				//contact_position = normal*offset; // we need dot(conatct_position, normal)
+				position = normal*offset;
+				//face_contact = true;
+				contact = true;
 			}
 
-			return  std::make_tuple(face_contact, potential_contact, contact_position);
+			//return  std::make_tuple(face_contact, potential_contact, contact_position);
+		}
 		}
 
 
@@ -194,10 +260,12 @@ namespace exaDEM
 		 *         - `Vec3d` contact_position: The contact position if an intersection occurs (otherwise, it is {0,0,0}).
 		 */
 		 ONIKA_HOST_DEVICE_FUNC	
-		std::tuple<bool, Vec3d> contact_edge_sphere(const double rx, const double ry, const double rz, const double rad) const 
+		 void contact_edge_sphere(const double rx, const double ry, const double rz, const double rad, bool& contact, Vec3d& position)
+		//std::tuple<bool, Vec3d> contact_edge_sphere(const double rx, const double ry, const double rz, const double rad) const
 		{
 			// already tested if  exanb::dot(center,normal) - offset < rad
 			// test if the sphere intersects an edge 
+			//printf("JE SUIS LÀ AUSSI AUSSI\n");
 			const Vec3d center = {rx,ry,rz};
 			const Vec3d default_contact_point = {0,0,0}; // won't be used
 			const Vec3d* vertices_array = onika::cuda::vector_data(vertices);
@@ -212,10 +280,16 @@ namespace exaDEM
 				if (distanceToEdge <= rad && exanb::dot(sphereToEdge, edge) > 0 && exanb::dot(sphereToEdge - edge, edge) < 0) {
 					auto n_edge = edge / exanb::norm(edge);
 					Vec3d contact_position = p1 + n_edge * dot(sphereToEdge, n_edge);
-					return std::make_tuple(true, contact_position); 
+					//printf("JE SUIS LAAAAAAAAAAAAAAAAAAAAAAAA");
+					//return std::make_tuple(true, contact_position); 
+					contact = true;
+					position = contact_position;
 				}
 			}
-			return std::make_tuple(false, default_contact_point);
+			
+			//return std::make_tuple(false, default_contact_point);
+			contact = false;
+			position = default_contact_point;
 		}
 
 		std::tuple<bool, Vec3d, int> intersect_sphere(const double rx, const double ry, const double rz, const double rad) const 
@@ -349,5 +423,161 @@ namespace exaDEM
 			Box res = {inf,sup};
 			return res;
 		}
+		
+		void SymSchur2 (const Mat3d &a, int p, int q, double &c, double s){
+			
+			if(std::abs(get_Mat3d(a, p, q) > 0.0001)) {
+				double r = (get_Mat3d(a, q, q) - get_Mat3d(a, p, p)) / (2.0 * get_Mat3d(a, p, q));
+				double t;
+				if (r >= 0.0){
+					t = 1.0 / (r + std::sqrt(1.0 + r*r));
+				} else {
+					t = -1.0 / (-r + std::sqrt(1.0 + r*r));
+				}
+				c = 1.0 / std::sqrt(1.0 + t*t);
+				s = t * c;
+			} else {
+				c = 1.0;
+				s = 0.0;
+			}
+			
+		}
+		
+		double max (Vec3d v){
+			
+			double max = exanb::dot(vertices[0], v);
+			for( size_t i = 1; i < vertices.size(); i++) {
+				if(exanb::dot(vertices[i], v) > max)
+					max = exanb::dot(vertices[i], v);
+			}
+			
+			return max;
+		}
+		
+		double min (Vec3d v){
+			
+			double min = exanb::dot(vertices[0], v);
+			for(size_t i = 1; i < vertices.size(); i++) {
+				if(exanb::dot(vertices[i], v) < min)
+					min = exanb::dot(vertices[i], v);
+			}
+			
+			return min;
+		}
+		
+		
+		
+		OBB create_OBB()
+		{
+		
+			double numVertices = vertices.size();
+			double off = 1/numVertices;
+			Vec3d mean = {0., 0., 0.};
+			Mat3d covariance = make_mat3d({0., 0., 0.}, {0., 0., 0.}, {0., 0., 0.});
+			double e00, e11, e22, e01, e02, e12;
+			
+			//Compute the mean
+			for (auto vertex : vertices)
+				mean += vertex;
+			
+			mean *= off;
+			
+			//Compute the covariance matric
+			e00 = e11 = e22 = e01 = e02 = e12 = 0.0;
+			for (auto vertex : vertices) {
+				Vec3d p = vertex - mean;
+				e00 += p.x * p.x;
+				e11 += p.y * p.y;
+				e22 *= p.z * p.z;
+				e01 += p.x * p.y;
+				e02 += p.x * p.z;
+				e12 += p.y * p.z;
+			}
+			
+			covariance.m11 = e00 * off;
+			covariance.m22 = e11 * off;
+			covariance.m33 = e22 * off;
+			covariance.m12 = covariance.m21 = e01 * off;
+			covariance.m13 = covariance.m31 = e02 * off;
+			covariance.m23 = covariance.m32 = e12 * off;
+		
+			
+			//Compute of the eigenvectors of the covariance using the classic Jacobi method
+			int i, j, p, q;
+			double c, s;
+			Mat3d J, b, t;
+			
+			//Initialize v to identify matrix
+			//for (i = 0; i < 3; i++) {
+			//	eigenvectors[i][0] = eigenvectors[i][1] = eigenvectors[i][2] = 0.0;
+			//	eigenvectors[i][i] = 1.0;
+			//}
+			
+			Mat3d eigenvectors = make_mat3d({1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.});
+			
+			//Repeat for some maximum number of iterations
+			int MAX_ITERATIONS = 50;
+			for (int n = 0; n < MAX_ITERATIONS; n++) {
+				//Find largest off-diagonal absolute element a[p][q]
+				p = 0; q = 1;
+				for (i = 0; i < 3; i++) {
+					for (j = 0; j < 3; j++){
+						if(i == j) continue;
+						//if(std::abs(covariance[i][j]) > std::abs(covariance[p][q])) {
+						  if(std::abs(get_Mat3d(covariance, i, j)) > std::abs(get_Mat3d(covariance, p, q))) {
+							p = i;
+							q = j;
+						}
+					}
+				}
+				
+				//Compute the Jacobi rotation matrix(p, q, theta)
+				SymSchur2(covariance, p, q, c, s);
+				/**for (i = 0; i < 3; i++) {
+					J[i][0] = J[i][1] = J[i][2] = 0.0;
+					J[i][i] = 1.0;
+				}*/
+				
+				J = make_mat3d({1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.});
+				
+				//J[p][p] = c; J[p][q] = s;
+				//J[q][p] = -s; J[q][q] = c;
+				
+				set_Mat3d(J, p, p, c);
+				set_Mat3d(J, p, q, s);
+				set_Mat3d(J, q, p, -s);
+				set_Mat3d(J, q, q, c);
+				
+				//Cumulate rotations into what will contain the eigenvectors
+				eigenvectors = eigenvectors * J;
+			}
+			
+			//Vec3d axis1 = eigenvectors[0];
+			Vec3d axis1 = line1(eigenvectors);
+			//Vec3d axis2 = eigenvectors[1];
+			Vec3d axis2 = line2(eigenvectors);
+			//Vec3d axis3 = eigenvectors[2];
+			Vec3d axis3 = line3(eigenvectors);
+			
+			//double u1, l1, u2, l2, u3 , l3;
+			
+			double u1 = max(axis1); 
+			double u2 = max(axis2); 
+			double u3 = max(axis3);
+			double l1 = min(axis1); 
+			double l2 = min(axis2); 
+			double l3 = min(axis3);
+			
+			Vec3d extent = {u1 - l1, u2 - l2, u3 - l3};
+			
+			Vec3d center = 1/2*(l1 + u1)*axis1 + 1/2*(l2 + u2)*axis2 + 1/2*(l3 + u3)*axis3;
+			
+			return OBB{center, {axis1, axis2, axis3}, extent};
+			
+		}
+			
+			
+		
+			
 	};
 };

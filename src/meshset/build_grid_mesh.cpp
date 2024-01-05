@@ -52,7 +52,8 @@ namespace exaDEM
 			{
 				auto& ind = mesh.indexes;
 				ind.resize(n_cells);
-				mesh.build_boxes();
+				//mesh.build_boxes();
+				mesh.build_obbs();
 #     pragma omp parallel
 				{
 					GRID_OMP_FOR_BEGIN(dims-2*gl,_,block_loc, schedule(dynamic))
@@ -65,7 +66,8 @@ namespace exaDEM
 
 						const int n_particles = cells[cell_a].size();
 						if (n_particles == 0) continue;
-						mesh.update_indexes(cell_a, bx);
+						//mesh.update_indexes(cell_a, bx);
+						mesh.update_indexes_obb(cell_a, bx);
 					}
 					GRID_OMP_FOR_END
 				}

@@ -7,6 +7,8 @@
 #include <onika/cuda/cuda.h> // mots cles specifiques
 #include <onika/memory/allocator.h> // cudaMMVector
 
+#include <cfloat>
+
 namespace exaDEM
 {
 	using namespace exanb;
@@ -21,10 +23,16 @@ namespace exaDEM
 	{
 		//std::vector <Face> m_data; /**< A collection of Face objects representing the mesh. */
 		onika::memory::CudaMMVector< Face > m_data;
+		//Face* m_data;
+		//long unsigned int m_data_size = 0;
 		//std::vector <Box> m_boxes;  /**< A collection of Box objects bounding the mesh. */
 		onika::memory::CudaMMVector< Box > m_boxes;
+		onika::memory::CudaMMVector< OBB > m_obbs;
 		//std::vector <std::vector<int>> indexes; /**< Indexes for mesh data. */
-		onika::memory::CudaMMVector <std::vector<int>> indexes;
+		//onika::memory::CudaMMVector <std::vector<int>> indexes;
+		onika::memory::CudaMMVector <onika::memory::CudaMMVector <int> > indexes;
+		// indexes;
+		//long unsigned int indexes_size = 0;
 
 		/**
 		 * @brief Adds a Face to the mesh.
@@ -33,6 +41,8 @@ namespace exaDEM
 		void add_face(Face& face)
 		{
 			m_data.push_back(face);
+			//m_data[m_data_size] = face;
+			//m_data_size++;
 		}
 
 		/**
@@ -44,6 +54,11 @@ namespace exaDEM
 		{
 			return m_data;
 		}
+		
+		/**Face* get_data()
+		{
+			return m_data;
+		}*/
 
 		/**
 		 * @brief Gets a reference to a specific Face in the mesh.
@@ -116,12 +131,25 @@ namespace exaDEM
 		void build_boxes()
 		{
 			const int size = m_data.size();
+			//const int size = m_data_size;
 			assert(size > 0);
 			m_boxes.resize(size);
 #pragma omp parallel for
 			for(int i = 0 ; i < size ; i++)
 			{
 				m_boxes[i] = m_data[i].create_box();
+			}
+		}
+		
+		void build_obbs()
+		{
+			const int size = m_data.size();
+			assert(size > 0);
+			m_obbs.resize(size);
+#pragma omp parallel for
+			for(int i = 0; i < size; i++)
+			{
+				m_obbs[i] = m_data[i].create_OBB();
 			}
 		}
 		
@@ -134,7 +162,7 @@ namespace exaDEM
 			long nt = ONIKA_CU_GRID_SIZE*ONIKA_CU_BLOCK_SIZE;
 			long i = ONIKA_CU_BLOCK_IDX*ONIKA_CU_BLOCK_SIZE + ONIKA_CU_THREAD_IDX;
 			for( ; i < size ; i += nt )
-			{
+			{M
 				m_boxes[i] = m_data[i].create_box();
 			}
 		}*/
@@ -159,6 +187,125 @@ namespace exaDEM
 				{
 					indexes[id].push_back(idBox);
 				}
+			}
+		}
+		
+		bool intersect_OBB( const OBB &b1, const OBB &b2 )
+		{
+			double ra, rb;
+			//Mat3d R, AbsR;
+			
+			Mat3d R = make_mat3d({0., 0., 0.}, {0., 0., 0.}, {0., 0., 0.});
+			Mat3d AbsR = make_mat3d({0., 0., 0.}, {0., 0., 0.}, {0., 0., 0.});
+			
+			//Compute rotation matrix expressing b2 in b1's coordinate frame
+			for( int i = 0; i < 3; i++){
+				for(int j = 0; j < 3; j++){
+					set_Mat3d(R, i, j, exanb::dot(b1.axis[i], b2.axis[j]));
+				}
+			}
+			
+			//Compute translation vector t
+			Vec3d t = b2.center - b1.center;
+			
+			//Bring translation vector into a's coordinate form
+			t = {exanb::dot(t, b1.axis[0]), exanb::dot(t, b1.axis[1]), exanb::dot(t, b1.axis[2])};
+			
+			//Compute common subexpressions. Add in an epsilon term to counteract arithmetic errors when two edges are parallel and thei cross product is near null
+			for( int i = 0; i < 3; i++){
+				for( int j = 0; j < 3; j++){
+					double set = std::abs(get_Mat3d(R, i, j)) + FLT_EPSILON;
+					set_Mat3d(AbsR, i, j, set);
+				}
+			}
+			
+			
+			//Test axes L = A0, L = A1, L = A2
+			ra = b1.extents.x;
+			rb = b2.extents.x * get_Mat3d(AbsR, 0, 0) + b2.extents.y * get_Mat3d(AbsR, 0, 1) + b2.extents.z * get_Mat3d(AbsR, 0, 2);
+			if(std::abs(t.x) > ra + rb) return false;
+			
+			ra = b1.extents.y;
+			rb = b2.extents.x * get_Mat3d(AbsR, 1, 0) + b2.extents.y * get_Mat3d(AbsR, 1, 1) + b2.extents.z * get_Mat3d(AbsR, 1, 2);
+			if(std::abs(t.x) > ra + rb) return false;
+			
+			ra = b1.extents.z;
+			rb = b2.extents.x * get_Mat3d(AbsR, 2, 0) + b2.extents.y * get_Mat3d(AbsR, 2, 1) + b2.extents.z * get_Mat3d(AbsR, 2, 2);
+			if(std::abs(t.x) > ra + rb) return false;
+			
+			//Test axes L = B0, L = B1, L = B2
+			ra = b1.extents.x * get_Mat3d(AbsR, 0, 0) + b1.extents.y * get_Mat3d(AbsR, 1, 0) + b1.extents.z * get_Mat3d(AbsR, 2, 0);
+			rb = b2.extents.x;
+			if(std::abs(t.x * get_Mat3d(R, 0, 0) + t.y * get_Mat3d(R, 1, 0) + t.z * get_Mat3d(R, 2, 0)) > ra + rb) return false;
+			
+			ra = b1.extents.x * get_Mat3d(AbsR, 0, 1) + b1.extents.y * get_Mat3d(AbsR, 1, 1) + b1.extents.z * get_Mat3d(AbsR, 2, 1);
+			rb = b2.extents.y;
+			if(std::abs(t.x * get_Mat3d(R, 0, 1) + t.y * get_Mat3d(R, 1, 1) + t.z * get_Mat3d(R, 2, 1)) > ra + rb) return false;
+			
+			ra = b1.extents.x * get_Mat3d(AbsR, 0, 2) + b1.extents.y * get_Mat3d(AbsR, 1, 2) + b1.extents.z * get_Mat3d(AbsR, 2, 2);
+			rb = b2.extents.z;
+			if(std::abs(t.x * get_Mat3d(R, 0, 2) + t.y * get_Mat3d(R, 1, 2) + t.z * get_Mat3d(R, 2, 2)) > ra + rb) return false;
+			
+			//Test axis L = A0 * B0
+			ra = b1.extents.y * get_Mat3d(AbsR, 2, 0) + b1.extents.z * get_Mat3d(AbsR, 1, 0);
+			rb = b2.extents.y * get_Mat3d(AbsR, 0, 2) + b2.extents.z * get_Mat3d(AbsR, 0, 1);
+			if( std::abs(t.z * get_Mat3d(R, 1, 0) - t.y * get_Mat3d(R, 2, 0)) > ra + rb) return false;
+			
+			//Test axis L = A0 * B1
+			ra = b1.extents.y * get_Mat3d(AbsR, 2, 1) + b1.extents.z * get_Mat3d(AbsR, 1, 1);
+			rb = b2.extents.x * get_Mat3d(AbsR, 0, 2) + b2.extents.z * get_Mat3d(AbsR, 0, 0);
+			if( std::abs(t.z * get_Mat3d(R, 1, 1) - t.y * get_Mat3d(R, 2, 1)) > ra + rb) return false;
+			
+			//Test axis L = A0 * B2
+			ra = b1.extents.y * get_Mat3d(AbsR, 2, 2) + b1.extents.z * get_Mat3d(AbsR, 1, 2);
+			rb = b2.extents.x * get_Mat3d(AbsR, 0, 1) + b2.extents.y * get_Mat3d(AbsR, 0, 0);
+			if( std::abs(t.z * get_Mat3d(R, 1, 2) - t.y * get_Mat3d(R, 2, 2)) > ra + rb) return false;
+			
+			//Test axis L = A1 * B0
+			ra = b1.extents.x * get_Mat3d(AbsR, 2, 0) + b1.extents.z * get_Mat3d(AbsR, 0, 0);
+			rb = b2.extents.y * get_Mat3d(AbsR, 1, 2) + b2.extents.z * get_Mat3d(AbsR, 1, 1);
+			if( std::abs(t.x * get_Mat3d(R, 2, 0) - t.z * get_Mat3d(R, 0, 0)) > ra + rb) return false;
+			
+			//Test axis L = A1 * B1
+			ra = b1.extents.x * get_Mat3d(AbsR, 2, 1) + b1.extents.z * get_Mat3d(AbsR, 0, 1);
+			rb = b2.extents.x * get_Mat3d(AbsR, 1, 2) + b2.extents.z * get_Mat3d(AbsR, 1, 0);
+			if( std::abs(t.x * get_Mat3d(R, 2, 1) - t.z * get_Mat3d(R, 0, 1)) > ra + rb) return false;
+			
+			//Test axis L = A1 * B2
+			ra = b1.extents.x * get_Mat3d(AbsR, 2, 2) + b1.extents.z * get_Mat3d(AbsR, 0, 2);
+			rb = b2.extents.x * get_Mat3d(AbsR, 1, 1) + b2.extents.y * get_Mat3d(AbsR, 1, 0);
+			if( std::abs(t.x * get_Mat3d(R, 2, 2) - t.z * get_Mat3d(R, 0, 2)) > ra + rb) return false;
+			
+			//Test axis L = A2 * B0
+			ra = b1.extents.x * get_Mat3d(AbsR, 1, 0) + b1.extents.y * get_Mat3d(AbsR, 0, 0);
+			rb = b2.extents.y * get_Mat3d(AbsR, 2, 2) + b2.extents.z * get_Mat3d(AbsR, 2, 1);
+			if( std::abs(t.y * get_Mat3d(R, 0, 0) - t.x * get_Mat3d(R, 1, 0)) > ra + rb) return false;
+			
+			//Test axis L = A2 * B1
+			ra = b1.extents.x * get_Mat3d(AbsR, 1, 1) + b1.extents.y * get_Mat3d(AbsR, 0, 1);
+			rb = b2.extents.x * get_Mat3d(AbsR, 2, 2) + b2.extents.z * get_Mat3d(AbsR, 2, 2);
+			if( std::abs(t.y * get_Mat3d(R, 0, 1) - t.x * get_Mat3d(R, 1, 1)) > ra + rb) return false;
+			
+			//Test axis L = A2 * B2
+			ra = b1.extents.x * get_Mat3d(AbsR, 1, 2) + b1.extents.y * get_Mat3d(AbsR, 0, 2);
+			rb = b2.extents.x * get_Mat3d(AbsR, 2, 1) + b2.extents.y * get_Mat3d(AbsR, 2, 0);
+			if( std::abs(t.y * get_Mat3d(R, 0, 2) - t.x * get_Mat3d(R, 1, 2)) > ra + rb) return false;
+			
+			return true;
+					
+		}
+		
+		void update_indexes_obb(const int id, Box& b1)
+		{
+		
+			//Convert AABB into OBB
+			Vec3d extent = b1.sup - b1.inf;
+			Vec3d center = b1.center();
+			OBB test = {center, {{1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}}, extent}; 
+			for( size_t idBox = 0 ; idBox < m_obbs.size() ; idBox++ )
+			{
+				auto& b2 = m_obbs[idBox];
+				if(intersect_OBB( b2, test )) indexes[id].push_back(idBox);
 			}
 		}
 	};

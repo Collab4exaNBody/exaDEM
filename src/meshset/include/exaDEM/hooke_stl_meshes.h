@@ -4,6 +4,7 @@
 #include <exaDEM/compute_hooke_force.h>
 #include <exaDEM/face.h>
 #include <exaDEM/stl_mesh.h>
+#include <cstdio> 
 
 //#include <thrust/host_vector.h>
 //#include <thrust/device_vector.h> 
@@ -13,13 +14,14 @@
 #include <onika/memory/allocator.h> // cudaMMVector
 #include <onika/cuda/stl_adaptors.h>
 
+
 namespace exaDEM
 {
 	using exanb::Vec3d;
 	
 	using namespace exanb; 
 
-
+	
 	/**
 	 * @brief Functor for applying Hooke's law to multiple Faces within a grid.
 	 *
@@ -34,14 +36,17 @@ namespace exaDEM
 		//std::vector<exaDEM::stl_mesh>& meshes; /**< A collection of STL meshes. */
 		//onika::memory::CudaMMVector< exaDEM::stl_mesh >  meshes;
 		exaDEM::stl_mesh*  pmeshes;
-		int smeshes;
+		long unsigned int smeshes;
 		double m_dt; /**< Time step. */
 		double m_kt; /**< Tangential spring constant. */
 		double m_kn; /**< Normal spring constant. */
 		double m_kr; /**< Rotational spring constant. */
 		double m_mu; /**< Friction coefficient. */
 		//cudaMallocManaged(&m_mu, sizeof(double));
-		
+		//int *gpuVariable;
+		//int cpu= 0;
+		//cudaMalloc((void**)&gpuVariable, sizeof(int));
+		//cudaMemcpy(gpuVariable, &cpu, sizeof(int), cudaMemcpyHostToDevice);*/
 		double m_dampRate; /**< Damping rate. */
 		
 		
@@ -79,35 +84,40 @@ namespace exaDEM
 				Vec3d& a_mom,
 				Vec3d& a_ft) const
 		{
-			auto* meshes_array= pmeshes; //onika::cuda::vector_data(meshes);
+			//auto* meshes_array= pmeshes; //onika::cuda::vector_data(meshes);
 			//auto* meshes_array= onika::cuda::vector_data(meshes);
-			//std::vector<int>* 
 			//for(auto& mesh : meshes)
-			//auto* indexes= onika::cuda::vector_data(meshes.indexes);
-			//auto* data= onika::cuda::vector_data(meshes.m_data);
 			for(size_t i=0; i< smeshes ; i++)//onika::cuda::vector_size(meshes); i++)
 			{
 				//exaDEM::stl_mesh & mesh= meshes[i];
-				auto& mesh= meshes_array[i];
-				auto* indexes= onika::cuda::vector_data(mesh.indexes);
-				//auto* data= onika::cuda::vector_data(mesh.m_data);
+				//auto& mesh= meshes_array[i];
+				auto& mesh= pmeshes[i];
+				auto& indexes= mesh.indexes;
+				auto* indexes2= onika::cuda::vector_data(indexes);
+				auto& idx= indexes2[cell_idx];
+				auto* idx2= onika::cuda::vector_data(idx);
+				size_t fsize= onika::cuda::vector_size(idx);
+				auto& faces= mesh.m_data;
+				auto* faces2= onika::cuda::vector_data(faces);
 				bool is_face = false; // If there is one contact with a face, we skip contact with edges
 				bool do_edge = false;
-				//auto& idxs = mesh.indexes[cell_idx];
-				auto& idxs = indexes[cell_idx];
-				auto* idxs_array= onika::cuda::vector_data(indexes[cell_idx]);
-				//int fsize = idxs.size();
-				int fsize = onika::cuda::vector_size(idxs);
-				//auto& faces = mesh.m_data;
-				auto* faces = onika::cuda::vector_data(mesh.m_data);
-				// test face / sphere
-				for(int face_idx = 0 ; face_idx < fsize ; face_idx++)
+				/**bool contact;
+				bool potential;
+				Vec3d position;*/
+				//printf("SIZE: %d\n", fsize);
+				for(size_t face_idx = 0 ; face_idx < fsize ; face_idx++)
 				{
-					//auto& face = faces[idxs[face_idx]];
-					auto& face = faces[idxs_array[face_idx]];
-					auto [contact, potential, position] = face.contact_face_sphere(a_rx, a_ry, a_rz, a_particle_radius);
+					auto& face = faces2[idx2[face_idx]];
+					bool contact= false;
+					bool potential= false;
+					Vec3d position= {0,0,0};
+					face.contact_face_sphere(a_rx, a_ry, a_rz, a_particle_radius, contact, potential, position);
+					//printf("CONTACT : %d\n", contact);
+					//printf("POTENTIAL : %d\n", potential);
+					//printf("Position.x : %f Position.y : %f Position.z : %f\n", position.x, position.y, position.z);
 					if(contact)
 					{
+						//printf("TRUE\n");
 						constexpr int type = 0;
 						this->operator()(face, position, type, a_rx, a_ry, a_rz, 
 								a_vx, a_vy, a_vz, 
@@ -122,11 +132,14 @@ namespace exaDEM
 				// contact edge / sphere
 				if(is_face == false && do_edge)
 				{
-					for(int face_idx = 0 ; face_idx < fsize ; face_idx++)
+					for( size_t face_idx = 0 ; face_idx < fsize ; face_idx++)
 					{
 						//auto& face = faces[idxs[face_idx]];
-						auto& face = faces[idxs_array[face_idx]];
-						auto [contact, position] = face.contact_edge_sphere(a_rx, a_ry, a_rz, a_particle_radius);
+						auto& face = faces2[idx2[face_idx]];
+						//auto [contact, position] = face.contact_edge_sphere(a_rx, a_ry, a_rz, a_particle_radius);
+						bool contact = false;
+						Vec3d position = {0,0,0};
+						face.contact_edge_sphere(a_rx, a_ry, a_rz, a_particle_radius, contact, position);
 						if(contact)
 						{
 							constexpr int type = 1;
@@ -179,6 +192,7 @@ namespace exaDEM
 				Vec3d& a_mom,
 				Vec3d& a_ft) const
 		{
+			//printf("JE SUIS ICI\n");
 			Vec3d pos_proj;
 			double m_vel = 0;
 			Vec3d pos = {a_rx,a_ry,a_rz};
@@ -227,7 +241,7 @@ namespace exanb
 	template<> struct ComputeCellParticlesTraits<exaDEM::ApplyHookeSTLMeshesFunctor>
 	{
 		static inline constexpr bool RequiresBlockSynchronousCall = false;
-		static inline constexpr bool CudaCompatible = true;
+		static inline constexpr bool CudaCompatible = true	;
 	};
 
 	template<> struct ComputeCellParticlesTraitsUseCellIdx<exaDEM::ApplyHookeSTLMeshesFunctor>
