@@ -24,7 +24,7 @@ XSTAMP_DECLARE_FIELD(double          ,az                ,"particle acceleration 
 XSTAMP_DECLARE_FIELD(double          	,mass           ,"particle mass");
 XSTAMP_DECLARE_FIELD(double          	,homothety      ,"particle shape homothety");
 XSTAMP_DECLARE_FIELD(double    		,radius         	,"radius");
-XSTAMP_DECLARE_FIELD(uint32_t    	,shape         	,"particle shape");
+XSTAMP_DECLARE_FIELD(uint32_t    		,shape         	,"radius");
 XSTAMP_DECLARE_FIELD(::exanb::Quaternion      ,orient  ,"angular position");
 XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , mom   	,"moment"); 
 XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , vrot   	,"angular velocity"); //

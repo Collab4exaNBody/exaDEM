@@ -57,6 +57,7 @@ trigger_update_stl_mesh:
 
 ################### parallel particle migration ############################
 parallel_update_particles:
+#  - migrate_cell_particles_interaction
   - migrate_cell_particles_friction
   - rebuild_amr
   - backup_r
@@ -108,9 +109,11 @@ load_balancing_if_triggered:
 update_particles_full_body:
 #  - compact_neighbor_friction
   - move_particles_friction
+#  - move_particles_interaction
   - trigger_load_balance
   - load_balancing_if_triggered
   - parallel_update_particles
+#  - reorder_interactions
   - reorder_neighbor_friction
 #  - check_nbh_friction
 
