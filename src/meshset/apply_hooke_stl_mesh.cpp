@@ -24,6 +24,11 @@
 #include <exaDEM/stl_mesh.h>
 #include <exaDEM/hooke_stl_meshes.h>
 
+
+#include <onika/cuda/cuda.h> // mots cles specifiques
+#include <onika/memory/allocator.h> // cudaMMVector
+
+
 #include <mpi.h>
 
 namespace exaDEM
@@ -62,6 +67,8 @@ namespace exaDEM
 								//cudaMallocManaged(&stl_collection, stl_collection->size()*sizeof(stl_mesh));
 								//cudaMallocManaged(&stl_collection, N)
 								//ApplyHookeSTLMeshesFunctor<GridT> func {*grid, *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
+								float dA[3];
+								cudaMalloc((void **)&dA, sizeof(dA[0]) * 3);
 								auto& vec = *stl_collection;
 								ApplyHookeSTLMeshesFunctor func { vec.data(), vec.size()/***stl_collection*/, *dt, *kt, *kn, *kr, *mu, *damprate};
 								compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );

@@ -435,10 +435,10 @@ namespace exaDEM
 					t = -1.0 / (-r + std::sqrt(1.0 + r*r));
 				}
 				c = 1.0 / std::sqrt(1.0 + t*t);
-				s = t * c;
+				//s = t * c;
 			} else {
 				c = 1.0;
-				s = 0.0;
+				//s = 0.0;
 			}
 			
 		}

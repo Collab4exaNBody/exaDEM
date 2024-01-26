@@ -62,8 +62,8 @@ namespace exaDEM
 			//		, mesh.build_boxes_kernel);
 			//}
 			//else {
-			//mesh.build_boxes();
-			mesh.build_obbs();
+			mesh.build_boxes();
+			//mesh.build_obbs();
 			//}
 			
 			collection.push_back(mesh);
