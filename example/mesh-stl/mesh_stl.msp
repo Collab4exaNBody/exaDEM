@@ -13,7 +13,8 @@ reader1:
   - read_xyz:
       file: particles.xyz
       bounds_mode: FILE
-      enlarge_bounds: 1 m
+      enlarge_bounds: 0.01 m
+      adjust_bounds_to_particles: true
   - set_radius:
      rad: 0.0015
   - set_quaternion
@@ -35,22 +36,21 @@ input_data:
   - reader1
 #  - reader2
 
-check_nbh_friction:
-  rcut: 0.003 m # oversized, so that we check all neighbors
-
 update_nbh_friction:
   rcut: 0.003 m
 
-+first_iteration:
-  - chunk_neighbors_stats
+trigger_apply_hooke_stl_meshes:
+  condition: enable_stl_mesh
+  body:
+    - apply_hooke_stl_meshes:
+       kt: 100000
+       kn: 100000
+       kr : 0
+       mu: 0.3
+       damprate: 0.3
 
 compute_force:
-  - apply_hooke_stl_meshes:
-     kt: 100000
-     kn: 100000
-     kr : 0
-     mu: 0.3
-     damprate: 0.3
+  - trigger_apply_hooke_stl_meshes
   - gravity_force
   - quadratic_force:
      cx: 0.38
@@ -59,7 +59,7 @@ compute_force:
       config: { rcut: 0.003 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
 
 domain:
-  cell_size: 0.05 m
+  cell_size: 0.005 m
   periodic: [false,false,false]
 
 write_vtklegacy:
@@ -74,3 +74,4 @@ global:
   dt: 0.00001 s 
   rcut_inc: 0.002 m
   friction_rcut: 0.002 m
+  enable_stl_mesh: true

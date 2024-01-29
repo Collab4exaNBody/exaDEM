@@ -29,7 +29,8 @@ chunk_neighbors_contact:
     chunk_size: 2
 
 chunk_neighbors_impl: 
-  - chunk_neighbors
+#  - chunk_neighbors
+#  - chunk_neighbors2
   - chunk_neighbors_contact
 
 update_particle_neighbors:
@@ -46,6 +47,14 @@ ghost_full_update:
   #- ghost_update_rq
   
 
+################## trigger stl mesh update ########################
+
+trigger_update_stl_mesh:
+  condition: enable_stl_mesh
+  body:
+    - build_grid_stl_mesh
+
+
 ################### parallel particle migration ############################
 parallel_update_particles:
   - migrate_cell_particles_friction
@@ -54,7 +63,7 @@ parallel_update_particles:
   - ghost_full_update
   - grid_post_processing
   - update_particle_neighbors
-  - build_grid_stl_mesh
+  - trigger_update_stl_mesh
 
 # define actions to initialize particles at startup, just after file read
 init_particles:
@@ -97,7 +106,7 @@ load_balancing_if_triggered:
 
 
 update_particles_full_body:
-  - compact_neighbor_friction
+#  - compact_neighbor_friction
   - move_particles_friction
   - trigger_load_balance
   - load_balancing_if_triggered
@@ -113,7 +122,10 @@ update_particles_full:
 update_particles_fast_body:
     #- ghost_update_all
     #- ghost_update_full
-    - ghost_update_rq
+    - ghost_update_rq:
+       gpu_buffer_pack: true
+       async_buffer_pack: true #false
+       staging_buffer: true
     #- ghost_update_r
 
 update_particles_fast:

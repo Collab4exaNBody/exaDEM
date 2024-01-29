@@ -49,6 +49,7 @@ using namespace exanb;
     ADD_SLOT( GridT           , grid         , INPUT_OUTPUT );
     ADD_SLOT( double          , enlarge_bounds, INPUT , 0.0 );
     ADD_SLOT( bool            , pbc_adjust_xform , INPUT , false );
+    ADD_SLOT( bool            , adjust_bounds_to_particles , INPUT , false );
     ADD_SLOT( ParticleTypes   , particle_types , INPUT ); // optional. if no species given, type ids are allocated automatically
 
   public:
@@ -127,6 +128,7 @@ using namespace exanb;
         double box_size_y=-1.0;
         double box_size_z=-1.0;
         std::stringstream(line) >> box_size_x >> box_size_y >> box_size_z;
+        std::stringstream(line) >> box_size_x >> box_size_y >> box_size_z;
         
         AABB file_bounds  = { { 0., 0., 0. } , {box_size_x,box_size_y,box_size_z} };
         lout << "File bounds      = "<<file_bounds<<std::endl;
@@ -174,6 +176,14 @@ using namespace exanb;
         //DOMAIN
         AABB computed_bounds = { {min_x, min_y, min_z} , {max_x, max_y, max_z} };
         ldbg << "computed_bounds  = " << computed_bounds << std::endl;
+
+				if(*adjust_bounds_to_particles)
+				{
+					assert(*enlarge_bounds >= 0);
+					if((*enlarge_bounds) == 0) lout << "Warning, enlarge_bounds is equal to 0" << std::endl;
+					file_bounds =  { {min_x - (*enlarge_bounds), min_y - (*enlarge_bounds), min_z - (*enlarge_bounds)} , {max_x + (*enlarge_bounds), max_y + (*enlarge_bounds), max_z + (*enlarge_bounds)} };
+					lout << "File bounds (fit)= "<<file_bounds<<std::endl;
+				}
  
         //domain->m_bounds = bounds;
         compute_domain_bounds(*domain,*bounds_mode,*enlarge_bounds,file_bounds,computed_bounds, *pbc_adjust_xform );
