@@ -241,7 +241,7 @@ namespace exanb
 	template<> struct ComputeCellParticlesTraits<exaDEM::ApplyHookeSTLMeshesFunctor>
 	{
 		static inline constexpr bool RequiresBlockSynchronousCall = false;
-		static inline constexpr bool CudaCompatible = false	;
+		static inline constexpr bool CudaCompatible = true	;
 	};
 
 	template<> struct ComputeCellParticlesTraitsUseCellIdx<exaDEM::ApplyHookeSTLMeshesFunctor>
