@@ -7,15 +7,6 @@ ExaDEM is a software solution in the field of computational simulations. It's a 
 
 Additionally, ExaDEM offers compatibility with MPI+GPUs, using the CUDA programming model (Onika layer). This feature provides the option to leverage GPU processing power for potential performance gains in simulations. Written in C++17, ExaDEM is built on a contemporary codebase. It aims to provide researchers and engineers with a tool for adressing DEM simulations.
 
-## Add your files
-
-```
-cd existing_repo
-git remote add origin https://www-git-cad.intra.cea.fr/DEC/collaboratif/rp269144/exadem.git
-git branch -M main
-git push -uf origin main
-```
-
 ## Installation
 
 ### Minimal Requirements
