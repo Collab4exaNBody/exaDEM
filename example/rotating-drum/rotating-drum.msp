@@ -1,19 +1,14 @@
 grid_flavor: grid_flavor_dem
 
-#configuration:
-#  logging:
-#    debug: true
-#  debug:
-#    filter: [ ".*hooke_force" ]
-
 replicate_domain:
   repeat: [ 1 , 1 , 1 ]
 
 input_data:
-  - read_xyz:
-      file: input_file_rotating_drum.xyz
-      bounds_mode: FILE
-      enlarge_bounds: 1.0 m
+  - lattice:
+      structure: SC
+      types: [ 0 ]
+      size: [ 1.1 , 1.1 , 1.1 ]
+      repeats: [ 5 , 5 , 5 ]
   - set_radius:
      rad: 0.5
   - set_quaternion
@@ -26,16 +21,8 @@ input_data:
   - update_inertia
   - replicate_domain
 
-# Warning, rcut for check_nbh_friction and update_nbh_friction must not be hard coded
-
-check_nbh_friction:
-  rcut: 1.1 m # oversized, so that we check all neighbors
-
 update_nbh_friction:
   rcut: 1.1 m
-
-+first_iteration:
-  - chunk_neighbors_stats
 
 compute_force:
   - cylinder_wall:
@@ -65,7 +52,6 @@ global:
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 5000
   dt: 0.00005 s 
-#  dt: 0.000005 s 
-  rcut_inc: 0.01 m
+  rcut_inc: 0.4 m
   friction_rcut: 1.1 m
 
