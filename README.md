@@ -24,8 +24,14 @@ export exaNBody_DIR=path_to_install
 The next step involves the installation of yaml-cpp, which can be achieved using either the spack package manager or cmake:
 
 ```
-spack install yaml-cpp
+spack install yaml-cpp@0.6.3
 spack load yaml-cpp
+```
+
+Variant: 
+
+```
+apt install libyaml-cpp-dev
 ```
 
 ### Optional Dependencies
@@ -93,6 +99,8 @@ export N_MPI=1
 export OMP_NUM_THREADS=$N_OMP
 mpirun -n $N_MPI ./exaDEM test-case.msp
 ```
+
+Note: for your first example, copy the `exaDEMexample/rotating-drum` directory and run `path-to-build/exaDEM rotating-drum.msp`.
 
 ## Test cases
 
