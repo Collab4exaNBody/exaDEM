@@ -31,6 +31,7 @@ namespace exaDEM
 		ADD_SLOT( double   , rcut_max , INPUT , 0.0, DocString{"Maximum cutoff radius for computations. Default is 0.0."} );
 		//ADD_SLOT( std::vector<exaDEM::stl_mesh> , stl_collection, INPUT_OUTPUT , DocString{"Collection of meshes from stl files"});
 		ADD_SLOT( onika::memory::CudaMMVector< exaDEM::stl_mesh > , stl_collection, INPUT_OUTPUT , DocString{"Collection of meshes from stl files"});
+		ADD_SLOT( stl_meshes, meshes, INPUT_OUTPUT, DocString{"Meshes"});
 
 		public:
 		inline std::string documentation() const override final
@@ -41,7 +42,9 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
+			//printf("ICIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII0IIIIIIII\n");
 			auto& collection = *stl_collection;
+			auto& m = *meshes;
 			const double rad = *rcut_max;
 
 			const auto cells = grid->cells();
@@ -50,6 +53,7 @@ namespace exaDEM
 			const int gl = grid->ghost_layers();
 			for(auto &mesh : collection)
 			{
+			//printf("OOOOOOOOKKKKKKKKKKKKKKKKKKKKKKKKKK\n");
 				auto& ind = mesh.indexes;
 				ind.resize(n_cells);
 				mesh.build_boxes();
@@ -72,6 +76,53 @@ namespace exaDEM
 					GRID_OMP_FOR_END
 				}
 			}
+			for(int i=0; i<m.nb_meshes; i++){
+				//printf("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO\n");
+				auto &ind = m.indexes[i];
+				ind.resize(n_cells);
+				m.build2_boxes(i);
+				//printf("OLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+#pragma omp parallel
+				{
+					GRID_OMP_FOR_BEGIN(dims-2*gl,_,block_loc, schedule(dynamic))
+					{
+						IJK loc_a = block_loc + gl;
+						size_t cell_a = grid_ijk_to_index( dims , loc_a );
+						ind[cell_a].clear();
+						auto cb = grid->cell_bounds(loc_a);
+						Box bx = { cb.bmin - rad , cb.bmax + rad };
+
+						const int n_particles = cells[cell_a].size();
+						if (n_particles == 0) continue;
+						//printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+				//		printf("OLCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\n");
+						m.update_indexes(i, cell_a, bx);
+						//mesh.update_indexes_obb(cell_a, bx);
+				//		printf("OLBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
+					}
+					//printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
+					GRID_OMP_FOR_END
+				}
+			}
+					
+			/**bool breaking = true;
+			int i =0;
+			while(breaking && i<m.nb_meshes){for(int i=0; i< m.nb_meshes; i++){
+				onika::memory::CudaMMVector<onika::memory::CudaMMVector<int>> ind1 = collection[i].indexes;
+				onika::memory::CudaMMVector<onika::memory::CudaMMVector<int>> ind2 = m.indexes[i];
+				if(ind1.size() != ind2.size()){ breaking = false; }
+				} else {
+					int j=0;
+					//for(int j = 0; j< ind1.size(); j++){
+					while(breaking && j<ind1.size()){
+						if(ind1[i] != ind2[i]) breaking = false;
+						j++;
+					}
+				}
+				i++;
+			}
+			if(breaking){ printf("INDEXES C'EST BON\n");}
+			else{ printf("INDEXES C'EST PAS BON\n");}*/
 		};
 	};
 

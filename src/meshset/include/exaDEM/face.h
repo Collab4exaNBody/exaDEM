@@ -115,20 +115,20 @@ namespace exaDEM
 		 */
 		Face(std::vector<Vec3d>& in) {
 		//Face(onika::memory::CudaMMVector<Vec3d> & in){
-			printf("FACEEE1\n");
+			//printf("FACEEE1\n");
 			vertices.resize(in.size());
 			for(long unsigned int i = 0 ; i < in.size() ; i++) vertices[i] = in[i];
 			auto [_normal, _offset, _exist] = compute_normal_and_offset();
 			normal = _normal;
 			
 			offset = _offset;
-			printf("REAL_OFFSET : %f\n", offset);
+			//printf("REAL_OFFSET : %f\n", offset);
 			if(!_exist) std::cout << " error when filling this Face " << std::endl;
 		}
 		
 		Face(onika::memory::CudaMMVector< Vec3d > & in) {
 		//Face(onika::memory::CudaMMVector<Vec3d> & in){
-			printf("FACEEE2\n");
+			//printf("FACEEE2\n");
 			vertices = in;
 			auto [_normal, _offset, _exist] = compute_normal_and_offset();
 			normal = _normal;
@@ -180,11 +180,12 @@ namespace exaDEM
 				position = {0,0,0};
 			}*/
 			
-			if(abs(p) <= rad)
-			{
+			//if(abs(p) <= rad)
+			//{
 
 			//potential_contact = true; // This face will be tested versus edges (second pass)
-			potential = true;
+			//potential = true;
+			potential = abs(p) <= rad;
 
 			const int nb_vertices = onika::cuda::vector_size(vertices);
 			const Vec3d* vertices_array = onika::cuda::vector_data(vertices);
@@ -198,11 +199,11 @@ namespace exaDEM
 			normalize(n);
 			Vec3d iv = center;// - pa;
 			double dist = exanb::dot(iv,n);
-			if(dist < 0.0)
-			{
-				dist = -dist;
-				n = -n;
-			}
+			//if(dist < 0.0)
+			//{
+				dist = (dist < 0.0)*-dist + (1 - (dist < 0.0))*dist;
+				n = (dist < 0.0)*-n + (1 - (dist < 0.0))*n;
+			//}
 
 			// test if the sphere intersects the surface 
 			int intersections = 0;
@@ -225,23 +226,27 @@ namespace exaDEM
 
 				// @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
 				// @see http://alienryderflex.com/polygon/
-				if ((pa2 < ori2 && pb2 >= ori2) || (pb2 < ori2 && pa2 >= ori2)) {
-					if (pa1 + (ori2 - pa2) / (pb2 - pa2) * (pb1 - pa1) < ori1) {
-						intersections = 1 - intersections;
-					}
-				}
+				//if ((pa2 < ori2 && pb2 >= ori2) || (pb2 < ori2 && pa2 >= ori2)) {
+				//	if (pa1 + (ori2 - pa2) / (pb2 - pa2) * (pb1 - pa1) < ori1) {
+				bool boolean = ((pa2 < ori2 && pb2 >= ori2) || (pb2 < ori2 && pa2 >= ori2)) && (pa1 + (ori2 - pa2) / (pb2 - pa2) * (pb1 - pa1) < ori1);
+						intersections = boolean*(1 - intersections) + (1 - boolean)*intersections;
+				//	}
+				//}
 			}
 
-			if(intersections == 1) // ODD 
-			{
+			//if(intersections == 1) // ODD 
+			//{
+			//bool boolean_2 = (intersections==1) && potential;
+			contact = (intersections==1) && potential;
 				//contact_position = normal*offset; // we need dot(conatct_position, normal)
-				position = normal*offset;
+				position = normal*offset*contact;
+				//*boolean;
 				//face_contact = true;
-				contact = true;
-			}
+				//contact = boolean;
+			//}
 
 			//return  std::make_tuple(face_contact, potential_contact, contact_position);
-		}
+		//}
 		}
 
 
