@@ -54,6 +54,7 @@ namespace exaDEM
 							ADD_SLOT( double  , kr  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
 							ADD_SLOT( double  , mu  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
 							ADD_SLOT( double  , damprate  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
+							ADD_SLOT( stl_meshes , meshes, INPUT_OUTPUT, DocString{"list of verticies"});
 
 							public:
 							inline std::string documentation() const override final
