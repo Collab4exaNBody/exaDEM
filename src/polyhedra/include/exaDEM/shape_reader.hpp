@@ -26,6 +26,8 @@ namespace exaDEM
 			input >> first;
 			if(first == "<")
 			{
+				OBB obb;
+
 				first = ""; // reset first for next shape
 				shape new_shape;
 				bool do_fill = true;
@@ -37,6 +39,34 @@ namespace exaDEM
 						input >> new_shape.m_name;
 					}
 
+
+					// === keys relative to the OBB
+					if(key == "obb.center")
+					{
+						input >> obb.center.x >> obb.center.y >> obb.center.z;
+					}
+
+					if(key == "obb.extent")
+					{
+						input >> obb.extent.x >> obb.extent.y >> obb.extent.z;
+					}
+
+					if(key == "obb.e1")
+					{
+						input >> obb.e[0].x >> obb.e[0].y >> obb.e[0].z;
+					}
+
+					if(key == "obb.e2")
+					{
+						input >> obb.e[1].x >> obb.e[1].y >> obb.e[1].z;
+					}
+
+					if(key == "obb.e3")
+					{
+						input >> obb.e[2].x >> obb.e[2].y >> obb.e[2].z;
+					}
+
+					// 
 					if(key == "radius")
 					{
 						input >> new_shape.m_radius;
@@ -107,6 +137,7 @@ namespace exaDEM
 
 					if(key == ">")
 					{
+						new_shape.obb = obb;
 						do_fill = false;
 					}
 				}
@@ -114,6 +145,8 @@ namespace exaDEM
 				{
 					new_shape.print();
 					new_shape.write_paraview();
+					new_shape.pre_compute_obb_edges();
+					new_shape.pre_compute_obb_faces();
 					sphs.add_shape(&new_shape);
 					do_fill = true;
 				}

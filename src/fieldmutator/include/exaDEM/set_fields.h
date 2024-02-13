@@ -35,6 +35,19 @@ namespace exaDEM
     onika::FlatTuple<Ts...> m_default_values;
   };
 
+  template <typename Func, typename... Ts>
+  struct SetFunctorWithProcessing
+  {
+    template<typename... Args>
+    ONIKA_HOST_DEVICE_FUNC inline void operator () (Args&... args) const 
+    {
+      static constexpr int first = 0;
+      setter<first>(m_default_values, m_processing(args)...);
+    }
+		mutable Func m_processing;
+    onika::FlatTuple<Ts...> m_default_values;
+  };
+
   template <typename... Ts>
   struct FilteredSetFunctor
   {

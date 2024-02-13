@@ -18,15 +18,13 @@
 
 namespace exaDEM
 {
-  using namespace exanb;
+	using namespace exanb;
 
-  template<typename GridT
-    , class = AssertGridHasFields< GridT, field::_radius >
-    >
-  class BuildCylinderInteraction : public OperatorNode
-  {
-    // attributes processed during computation
-    using ComputeFields = FieldSet< field::_vrot, field::_arot >;
+	template<typename GridT, class = AssertGridHasFields< GridT, field::_id, field::_type, field::_orient >>
+		class BuildCylinderInteraction : public OperatorNode
+	{
+		// attributes processed during computation
+		using ComputeFields = FieldSet< field::_vrot, field::_arot >;
 		static constexpr ComputeFields compute_field_set {};
 		Vec3d null = {0,0,0};
 		Vec3d default_axis = Vec3d{1,0,1};
@@ -62,7 +60,8 @@ namespace exaDEM
 			const double radius = *cylinder_radius;
 			const Vec3d axis = *cylinder_axis;
 			const Vec3d center_proj = (*cylinder_center) * axis; 
-	
+
+			std::vector<Interaction> history = extract_history(interactions);
 			interactions.clear();
 
 			const uint64_t id_j = 0;
@@ -76,6 +75,7 @@ namespace exaDEM
 				item.id_j = id_j;
 				item.cell_j = cell_j;
 				item.p_j = p_j;
+				item.sub_j = 0;
 				item.moment = null;
 				item.friction = null;
 				item.type = 4; // type : cylinder
@@ -103,7 +103,7 @@ namespace exaDEM
 						int nv = shp->get_number_of_vertices();
 						for(int sub = 0 ; sub < nv ; sub++)
 						{
-							auto contact = shape_polyhedron::filter_vertex_cylinder(rVerlet, proj, sub, shp, orient[j], center_proj, axis, radius);
+							auto contact = exaDEM::filter_vertex_cylinder(rVerlet, proj, sub, shp, orient[j], center_proj, axis, radius);
 							if(contact)
 							{
 								item.sub_i = sub;
@@ -111,17 +111,20 @@ namespace exaDEM
 							}
 						}
 					}
-					if(local.size()>0)
-					{
-#pragma omp critical
-						{
-							interactions.insert(interactions.end(), local.begin(), local.end());
-						}
-						local.clear();
-					}
 				}
-				GRID_OMP_FOR_END
+				GRID_OMP_FOR_END;
+
+				if(local.size()>0)
+				{
+#pragma omp critical
+					{
+						interactions.insert(interactions.end(), local.begin(), local.end());
+					}
+					local.clear();
+				}
 			}
+
+			update_friction_moment(interactions, history);
 		}
 	};
 
@@ -132,6 +135,4 @@ namespace exaDEM
 	{
 		OperatorNodeFactory::instance()->register_factory( "build_cylinder_interactions_v2", make_grid_variant_operator< BuildCylinderInteractionTmpl > );
 	}
-
 }
-

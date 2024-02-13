@@ -18,12 +18,6 @@ namespace exaDEM
 		{
 			return m_data.size();
 		}
-/*
-		shape* operator[] (const size_t idx)
-		{
-			return &m_data[idx];
-		}
-*/
 
 		const shape* operator[] (const uint8_t idx) const
 		{

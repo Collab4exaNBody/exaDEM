@@ -47,7 +47,7 @@ struct CylinderWallFunctor
 		const auto contact 	= m_center * m_axis + dir_norm * m_radius ; // compute contact position between the particle and the cylinder
 
 		// === compute damp
-		const double meff = 1;//mass; // mass cylinder >>>>> mass i
+		const double meff = a_mass; // mass cylinder >>>>> mass i
 		const double damp = exaDEM::compute_damp(m_dampRate, m_kn, meff);
 
 		// === relative velocity	

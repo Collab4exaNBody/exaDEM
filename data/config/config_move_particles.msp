@@ -7,8 +7,8 @@
 trigger_move_particles:
   rebind: { threshold: max_displ , result: trigger_move_particles }
   body:
-    - particle_displ_over
-
+#    - particle_displ_over
+    - polyhedron_displ_over
 
 ################### AMR ############################
 rebuild_amr:
@@ -26,12 +26,11 @@ chunk_neighbors_contact:
     subcell_compaction: true
     scratch_mem_per_cell: 1048576
     stream_prealloc_factor: 1.05
-    chunk_size: 2
+    chunk_size: 1
 
 chunk_neighbors_impl: 
-#  - chunk_neighbors
-#  - chunk_neighbors2
   - chunk_neighbors_contact
+  - update_mutexes
 
 update_particle_neighbors:
   - amr_grid_pairs
@@ -60,7 +59,8 @@ parallel_update_particles:
 #  - migrate_cell_particles_interaction
   - migrate_cell_particles_friction
   - rebuild_amr
-  - backup_r
+#  - backup_r
+  - backup_dem
   - ghost_full_update
   - grid_post_processing
   - update_particle_neighbors

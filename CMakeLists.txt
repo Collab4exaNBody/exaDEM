@@ -88,6 +88,12 @@ exaNBodyStartApplication()
 # ==========================================
 add_subdirectory(src)
 
+
+# =============================
+# === check exaDEM examples ===
+# =============================
+add_subdirectory(example)
+
 # ==================================================
 # === exaNBody plugins and unit tests final pass ===
 # ==================================================

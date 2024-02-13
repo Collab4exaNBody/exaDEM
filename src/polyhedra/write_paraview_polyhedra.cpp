@@ -1,3 +1,9 @@
+#include <vector>
+#include <iomanip>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
@@ -10,8 +16,6 @@
 #include <exanb/core/basic_types_stream.h>
 #include <onika/memory/allocator.h> // for ONIKA_ASSUME_ALIGNED macro
 #include <exanb/compute/compute_pair_optional_args.h>
-#include <vector>
-#include <iomanip>
 
 #include <exanb/compute/compute_cell_particles.h>
 
@@ -30,6 +34,7 @@ namespace exaDEM
 		ADD_SLOT( GridT    , grid     , INPUT_OUTPUT );
 		ADD_SLOT( Domain   , domain   , INPUT , REQUIRED );
 		ADD_SLOT( std::string , basename, INPUT , REQUIRED , DocString{"Output filename"});
+		ADD_SLOT( std::string , basedir, INPUT , "polyhedra_paraview" , DocString{"Output directory, default is polyhedra_paraview"});
 		ADD_SLOT( long        , timestep      , INPUT , DocString{"Iteration number"} );
 		ADD_SLOT( shapes , shapes_collection, INPUT_OUTPUT , DocString{"Collection of shapes"});
 
@@ -42,14 +47,35 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
+			// mpi stuff
+			int rank, size;
+			MPI_Comm_rank(*mpi, &rank);
+			MPI_Comm_size(*mpi, &size);
+
+			std::string directory = (*basedir) + "/" + (*basename) + "_" + std::to_string(*timestep);
+			std::string filename = directory + "/" + (*basename) + "_" + std::to_string(*timestep) + "_" + std::to_string(rank) ;
+
+			// prepro
+			if(rank == 0)
+			{
+				namespace fs = std::filesystem;
+				fs::create_directory(*basedir);
+				fs::create_directory(directory);
+			}
+
 			auto& shps = *shapes_collection;
 			const auto cells = grid->cells();
 			const size_t n_cells = grid->number_of_cells(); // nbh.size();
 
-			size_t count_point_size(0), count_polygon_size(0), count_polygon_table_size(0) ;
+
+			size_t count_vertex(0), count_face(0), polygon_offset_in_stream(0);
 			std::stringstream buff_vertices; // store vertices
 			std::stringstream buff_faces; // store faces
+			std::stringstream buff_offsets; // store face offsets
 
+
+#define __PARAMS__ count_vertex, count_face, buff_vertices, buff_faces, buff_offsets
+			// fill string buffers
 			for(size_t cell_a = 0 ; cell_a < n_cells ; cell_a++)
 			{
 				if(grid->is_ghost_cell(cell_a)) continue;
@@ -63,12 +89,29 @@ namespace exaDEM
 				{
 					exanb::Vec3d pos  {rx[j], ry[j], rz[j]};
 					const shape* shp = shps[type[j]];
-					build_buffer(pos, shp, orient[j], count_point_size, count_polygon_size, count_polygon_table_size, buff_vertices, buff_faces); 
+					build_buffer(pos, shp, orient[j], polygon_offset_in_stream, __PARAMS__); 
 				}
 			};
 
-			std::string filename = (*basename) + "_" + std::to_string(*timestep);
-			exaDEM::build_vtk (filename, count_point_size, count_polygon_size, count_polygon_table_size, buff_vertices, buff_faces );
+			// get global informations
+/*
+			uint64_t buffer[5] = {count_point_size, 
+				count_line_size, count_line_table_size, 
+				count_polygon_size, count_polygon_table_size};
+			MPI_Reduce(MPI_IN_PLACE, buffer, 6, MPI_UINT64_T, MPI_SUM, 0, *mpi);
+*/
+
+/*
+			if(rank == 0)
+			{
+				// build global file here
+					auto [ total_count_point_size, total_count_line_size, total_count_line_table_size, total_count_polygon_size, total_count_polygon_table_size ] = buffer;
+				std::string global_filename = "polyedra/" + (*basename) + "_" + std::to_string(*timestep) ;
+			}
+*/
+
+			exaDEM::build_vtk (filename, __PARAMS__);
+#undef __PARAMS__
 		}
 	};
 

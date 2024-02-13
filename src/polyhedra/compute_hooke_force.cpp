@@ -16,6 +16,7 @@
 #include <exaDEM/interaction.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
+#include <exaDEM/mutexes.h>
 
 namespace exaDEM
 {
@@ -30,11 +31,12 @@ namespace exaDEM
 			using ComputeFields = FieldSet< field::_vrot, field::_arot >;
 			static constexpr ComputeFields compute_field_set {};
 
-			ADD_SLOT( GridT  , grid     , INPUT_OUTPUT , REQUIRED );
+			ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
 			ADD_SLOT( std::vector<Interaction> , nbh_interactions , INPUT_OUTPUT , DocString{"TODO"} );
-			ADD_SLOT( shapes , shapes_collection, INPUT_OUTPUT , DocString{"Collection of shapes"});
-			ADD_SLOT( HookeParams           , config            , INPUT , REQUIRED );
-			ADD_SLOT( double                , dt                , INPUT , REQUIRED );
+			ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
+			ADD_SLOT( HookeParams , config            , INPUT , REQUIRED );
+			ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
+			ADD_SLOT( double      , dt                , INPUT , REQUIRED );
 
 
 			public:
@@ -52,6 +54,7 @@ namespace exaDEM
 				auto & shps = *shapes_collection;
 				const HookeParams params = *config;
 				const double time = *dt;
+				mutexes& locker = *locks;
 
 				auto get_r = [&cells] (const int cell_id, const int p_id) -> const Vec3d 
 				{
@@ -71,16 +74,19 @@ namespace exaDEM
 					return res;
 				};
 
+				int skip = 0;
+
+
 #pragma omp parallel
 				{
 					auto detection = std::vector{
-						shape_polyhedron::detection_vertex_vertex,
-							shape_polyhedron::detection_vertex_edge,
-							shape_polyhedron::detection_vertex_face,
-							shape_polyhedron::detection_edge_edge
+						exaDEM::detection_vertex_vertex,
+							exaDEM::detection_vertex_edge,
+							exaDEM::detection_vertex_face,
+							exaDEM::detection_edge_edge
 					};
 
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
 					for(size_t it = 0 ; it < interactions.size() ; it++)
 					{
 						Interaction& item = interactions[it];
@@ -120,6 +126,7 @@ namespace exaDEM
 							const auto& m_i = cell_i[field::mass][item.p_i];
 							const auto& m_j = cell_j[field::mass][item.p_j];
 
+							// temporary vec3d to store forces.
 							Vec3d f = {0,0,0};
 							const double meff = compute_effective_mass(m_i, m_j);
 
@@ -130,12 +137,29 @@ namespace exaDEM
 									dr, vj, vrot_j // particle nbh
 									);
 
-							// === update informations
-							//auto& mom = cell_i[field::mom][item.p_i];
-							//update_moments(mom, contact_position, ri, f, item.moment);
+
+							// === update particle informations
+							// ==== Particle i
+							locker.lock(item.cell_i, item.p_i);
+
+							auto& mom_i = cell_i[field::mom][item.p_i];
+							mom_i += compute_moments(contact_position, origin, f, item.moment);
 							cell_i[field::fx][item.p_i] += f.x;
 							cell_i[field::fy][item.p_i] += f.y;
 							cell_i[field::fz][item.p_i] += f.z;
+
+							locker.unlock(item.cell_i, item.p_i);
+
+							// ==== Particle j
+							locker.lock(item.cell_j, item.p_j);
+
+							auto& mom_j = cell_j[field::mom][item.p_j];
+							mom_j += compute_moments(contact_position, dr, -f, -item.moment);
+							cell_j[field::fx][item.p_j] -= f.x;
+							cell_j[field::fy][item.p_j] -= f.y;
+							cell_j[field::fz][item.p_j] -= f.z;
+
+							locker.unlock(item.cell_j, item.p_j);
 						}
 						else
 						{

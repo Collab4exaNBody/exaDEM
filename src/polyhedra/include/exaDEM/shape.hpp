@@ -3,10 +3,8 @@
 #include <vector>
 #include <cassert>
 #include <math.h>
-#include <exanb/core/quaternion_operators.h>
-#include <exanb/core/basic_types.h>
-#include <exanb/core/basic_types_operators.h>
-
+#include <exaDEM/basic_types.hpp>
+//#include <exaDEM/shape_printer.hpp>
 
 namespace exaDEM
 {
@@ -25,20 +23,27 @@ namespace exaDEM
 			m_name = "undefined";
 		}
 
-		std::vector<exanb::Vec3d> m_vertices; ///<  
+		std::vector <exanb::Vec3d> m_vertices; ///<  
 		exanb::Vec3d m_inertia_on_mass;
+		std::vector <OBB> m_obb_edges;
+		std::vector <OBB> m_obb_faces;
+		OBB obb;
 		std::vector<int> m_edges; ///<  
 		std::vector<int> m_faces; ///<  
 		double m_radius; ///< use for detection
 		double m_volume; ///< use for detection
 		std::string m_name = "undefined";
 
-		inline
-			const double get_volume() const
-			{
-				assert(m_volume != 0 && "wrong initialisation");
-				return m_volume;
-			}
+		// functions in shape_prepro.hpp
+		inline void pre_compute_obb_edges();
+		inline void pre_compute_obb_faces();
+
+
+		inline const double get_volume() const
+		{
+			assert(m_volume != 0 && "wrong initialisation");
+			return m_volume;
+		}
 
 		inline const exanb::Vec3d get_Im()
 		{
@@ -139,6 +144,22 @@ namespace exaDEM
 			return { ptr + 1, ptr[0] };
 		}
 
+		inline OBB get_obb_edge(const exanb::Vec3d& position, const size_t index, exanb::Quaternion orientation) const
+		{
+			OBB res = m_obb_edges[index];
+			res.rotate ( conv_to_quat (orientation) );
+			res.translate ( conv_to_vec3r (position) );
+			return res;
+		}
+
+		inline OBB get_obb_face(const exanb::Vec3d& position, const size_t index, exanb::Quaternion orientation) const
+		{
+			OBB res = m_obb_faces[index];
+			res.rotate ( conv_to_quat (orientation) );
+			res.translate ( conv_to_vec3r (position) );
+			return res;
+		}
+
 		void add_vertex(const exanb::Vec3d& vertex)
 		{
 			m_vertices.push_back(vertex);
@@ -174,22 +195,12 @@ namespace exaDEM
 		{
 			const size_t n = this->get_number_of_vertices();
 			double rcut = 0;
-			// try every combinaisons  --> old and not useful	
-
-			const exanb::Vec3d origin = {0.0,0.0,0.0};		
 			for(size_t it = 0 ; it < n ; it++ )
 			{
 				auto& vertex = this->get_vertex(it);
-				const exanb::Vec3d dov = vertex - origin;
-				const double d = exanb::norm(dov) + 2 * m_radius;
+				const double d = exanb::norm(vertex) + m_radius;//2 * m_radius;
 				std::cout <<"rcut = " << d << std::endl;
 				rcut = std::max(rcut, d);
-	
-				/*for(size_t it2 = 0 ; it2 < n ; it2++ )
-				{
-					if(it1 == it2) continue;
-					auto& vertex2 = this->get_vertex(it2);
-				}*/		
 			}
 
 			assert(rcut != 0);
@@ -217,10 +228,22 @@ namespace exaDEM
 					func(vertex, std::forward<Args>(args)...);
 				}
 			}
+
 		template<typename Func, typename... Args>
 			void for_all_edges(Func& func, Args&&... args)
 			{
-				const size_t n = this->get_number_of_faces();
+				const size_t n = this->get_number_of_edges();
+				for(size_t it = 0 ; it < n ; it++ )
+				{
+					auto [first, second] = this->get_edge(it);
+					func(first, second, std::forward<Args>(args)...);
+				}
+			}
+
+		template<typename Func, typename... Args>
+			void for_all_edges(Func& func, Args&&... args) const
+			{
+				const size_t n = this->get_number_of_edges();
 				for(size_t it = 0 ; it < n ; it++ )
 				{
 					auto [first, second] = this->get_edge(it);
@@ -302,58 +325,77 @@ namespace exaDEM
 			}
 		}
 
-		// This function displays information about the shape
-		void print()
+	inline void print()
+	{
+		std::cout << "======= Shape Configuration =====" << std::endl;
+		std::cout << "Shape Name: " << this->m_name << std::endl;
+		std::cout << "Shape Radius: " << this->m_radius << std::endl;
+		std::cout << "Shape I/m: [" << this->m_inertia_on_mass << "]" << std::endl;
+		std::cout << "Shape Volume: " << this->m_volume << std::endl;
+		print_vertices();
+		print_edges();
+		print_faces();
+		std::cout << "=================================" << std::endl << std::endl;
+	}
+	inline void write_paraview()
+	{
+		std::cout << " writting paraview for shape " << this->m_name << std::endl;
+		std::string name = m_name + ".vtk";
+		std::ofstream outFile(name);
+		if (!outFile) {
+			std::cerr << "Erreur : impossible de créer le fichier de sortie !" << std::endl;
+			return;
+		}
+		outFile << "# vtk DataFile Version 3.0" << std::endl;
+		outFile << "Spheres" << std::endl;
+		outFile << "ASCII" << std::endl;
+		outFile << "DATASET POLYDATA"<<std::endl;
+		outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
+		auto writer_v = [] (exanb::Vec3d& v, std::ofstream& out) 
 		{
-			std::cout << "======= Shape Configuration =====" << std::endl;
-			std::cout << "Shape Name: " << this->m_name << std::endl;
-			std::cout << "Shape Radius: " << this->m_radius << std::endl;
-			std::cout << "Shape I/m: [" << this->m_inertia_on_mass << "]" << std::endl;
-			std::cout << "Shape Volume: " << this->m_volume << std::endl;
-			print_vertices();
-			print_edges();
-			print_faces();
-			std::cout << "=================================" << std::endl << std::endl;
+			out << v.x << " " << v.y << " " << v.z << std::endl;
+		};
+
+		for_all_vertices(writer_v, outFile);
+
+		outFile << std::endl;
+		int count_polygon_size = this->get_number_of_faces();
+		int count_polygon_table_size = 0;
+		int* ptr = this->m_faces.data() + 1;
+		for(int it = 0 ; it < count_polygon_size ; it++)
+		{
+			count_polygon_table_size += ptr[0] + 1; // number of vertices + vertex idexes
+			ptr += ptr[0] + 1; // -> next face 
 		}
 
-		void write_paraview()
+		outFile << "POLYGONS "<<count_polygon_size<< " " << count_polygon_table_size << std::endl;
+		auto writer_f = [] (const size_t size, const int * data,  std::ofstream& out)
 		{
-			std::cout << " writting paraview for shape " << this->m_name << std::endl;
-			std::string name = m_name + ".vtk";
-			std::ofstream outFile(name);
-			if (!outFile) {
-				std::cerr << "Erreur : impossible de créer le fichier de sortie !" << std::endl;
-				return;
-			}
-			outFile << "# vtk DataFile Version 3.0" << std::endl;
-			outFile << "Spheres" << std::endl;
-			outFile << "ASCII" << std::endl;
-			outFile << "DATASET POLYDATA"<<std::endl;
-			outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
-			auto writer_v = [] (exanb::Vec3d& v, std::ofstream& out) 
-			{
-				out << v.x << " " << v.y << " " << v.z << std::endl;
-			};
-
-			for_all_vertices(writer_v, outFile);
-
-			outFile << std::endl;
-			int count_polygon_size = this->get_number_of_faces();
-			int count_polygon_table_size = 0;
-			int* ptr = this->m_faces.data() + 1;
-			for(int it = 0 ; it < count_polygon_size ; it++)
-			{
-				count_polygon_table_size += ptr[0] + 1; // number of vertices + vertex idexes
-				ptr += ptr[0] + 1; // -> next face 
-			}
-			outFile << "POLYGONS "<<count_polygon_size<< " " << count_polygon_table_size << std::endl;
-			auto writer_f = [] (const size_t size, const int * data,  std::ofstream& out)
-			{
-				out << size;
-				for (size_t it = 0 ; it < size ; it++) out << " " << data[it];
-				out << std::endl;
-			};
-			for_all_faces(writer_f, outFile);
-		}
+			out << size;
+			for (size_t it = 0 ; it < size ; it++) out << " " << data[it];
+			out << std::endl;
+		};
+		for_all_faces(writer_f, outFile);
+	}
+/*
+		inline void print();
+		inline void write_paraview();
+*/
 	};
+
+	inline int contact_possibilities (const shape* s1, const shape* s2)
+	{
+		const int nv1 = s1->get_number_of_vertices();
+		const int ne1 = s1->get_number_of_edges();
+		const int nf1 = s1->get_number_of_faces();
+		const int nv2 = s2->get_number_of_vertices();
+		const int ne2 = s2->get_number_of_edges();
+		const int nf2 = s2->get_number_of_faces();
+		return nv1*(nv2 + ne2 + nf2) + ne1*ne2 + nv2 * ( ne1 + nf1);
+	}
+
+
 };
+
+
+#include <exaDEM/shape_prepro.hpp>

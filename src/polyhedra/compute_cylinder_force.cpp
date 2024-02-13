@@ -17,6 +17,7 @@
 #include <exaDEM/interaction.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
+#include <exaDEM/mutexes.h>
 
 namespace exaDEM
 {
@@ -36,6 +37,7 @@ namespace exaDEM
 			ADD_SLOT( std::vector<Interaction> , cylinder_interactions , INPUT_OUTPUT , DocString{"TODO"} );
 			ADD_SLOT( shapes      , shapes_collection, INPUT_OUTPUT , DocString{"Collection of shapes"});
 			ADD_SLOT( HookeParams , config            , INPUT , REQUIRED );
+			ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
 			ADD_SLOT( double      , dt                , INPUT , REQUIRED );
 			ADD_SLOT( double      , cylinder_radius           , INPUT        , REQUIRED , DocString{"Radius of the cylinder, positive and should be superior to the biggest sphere radius in the cylinder"});
 			ADD_SLOT( Vec3d       , cylinder_center           , INPUT        , REQUIRED , DocString{"Center of the cylinder"});
@@ -59,6 +61,7 @@ namespace exaDEM
 				auto & shps              = *shapes_collection;
 				const HookeParams params = *config;
 				const double time        = *dt;
+				mutexes& locker = *locks;
 
 				const Vec3d& axis   = *cylinder_axis;
 				const Vec3d rj      = (*cylinder_center) * axis;
@@ -84,8 +87,6 @@ namespace exaDEM
 					return res;
 				};
 
-
-
 #pragma omp parallel
 				{
 #pragma omp for schedule(dynamic)
@@ -106,7 +107,7 @@ namespace exaDEM
 						// === shapes
 						const shape* shp_i   = shps[type_i];
 
-						auto [contact, dn, n, contact_position] = shape_polyhedron::detection_vertex_cylinder(ri, item.sub_i, shp_i, orient_i, rj, axis, radius);
+						auto [contact, dn, n, contact_position] = exaDEM::detection_vertex_cylinder(ri, item.sub_i, shp_i, orient_i, rj, axis, radius);
 
 						if(contact)
 						{
@@ -115,18 +116,20 @@ namespace exaDEM
 							const double meff = cell_i[field::mass][item.p_i];
 							Vec3d f = {0,0,0};
 							auto& cell_i = cells[item.cell_i];
-	
 							hooke_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr,
 									params.m_mu, params.m_damp_rate, meff,
 									item.friction, contact_position,
 									ri, vi, f, item.moment, vrot_i,  // particle i
 									rj, vj, vrot_j // particle j
 									);
+
 							// === update informations
-							update_moments(mom, contact_position, ri, f, item.moment);
+							locker.lock(item.cell_i, item.p_i);
+							mom += compute_moments(contact_position, ri, f, item.moment);
 							cell_i[field::fx][item.p_i] += f.x;
 							cell_i[field::fy][item.p_i] += f.y;
 							cell_i[field::fz][item.p_i] += f.z;
+							locker.unlock(item.cell_i, item.p_i);
 						}
 						else
 						{
