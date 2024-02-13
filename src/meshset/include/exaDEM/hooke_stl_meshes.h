@@ -61,6 +61,7 @@ namespace exaDEM
 				Vec3d& a_mom,
 				Vec3d& a_ft) const
 		{
+			//printf("APPLY_HOOKE8STL_MESH OPERATOR 1\n");
 			for(auto& mesh : meshes)
 			{
 				bool is_face = false; // If there is one contact with a face, we skip contact with edges
@@ -142,6 +143,7 @@ namespace exaDEM
 				Vec3d& a_mom,
 				Vec3d& a_ft) const
 		{
+			//printf("APPLY_HOOKESTL_MESH OPERATOR 2\n");
 			Vec3d pos_proj;
 			double m_vel = 0;
 			Vec3d pos = {a_rx,a_ry,a_rz};

@@ -54,6 +54,7 @@ namespace exaDEM
 							{
 								//ApplyHookeSTLMeshesFunctor<GridT> func {*grid, *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
 								ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
+								//printf("APPLY HOOKE STL MESH\n");
 								compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 							}
 						};

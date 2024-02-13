@@ -85,6 +85,7 @@ namespace exaDEM
 		 */
 		std::tuple<bool, bool, Vec3d> contact_face_sphere(const double rx, const double ry, const double rz, const double rad) const 
 		{
+			//printf("CONTACT FACE SPHERE\n");
 			const Vec3d center = {rx,ry,rz};
 			const Vec3d default_contact_point = {0,0,0}; // won't be used
 			bool potential_contact = false;
@@ -170,6 +171,7 @@ namespace exaDEM
 		 */	
 		std::tuple<bool, Vec3d> contact_edge_sphere(const double rx, const double ry, const double rz, const double rad) const 
 		{
+			//printf("CONTACT EDGE SPHERE\n");
 			// already tested if  exanb::dot(center,normal) - offset < rad
 			// test if the sphere intersects an edge 
 			const Vec3d center = {rx,ry,rz};
