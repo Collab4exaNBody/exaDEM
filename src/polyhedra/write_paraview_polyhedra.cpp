@@ -62,6 +62,7 @@ namespace exaDEM
 				fs::create_directory(*basedir);
 				fs::create_directory(directory);
 			}
+			MPI_Barrier(*mpi);
 
 			auto& shps = *shapes_collection;
 			const auto cells = grid->cells();
@@ -92,25 +93,14 @@ namespace exaDEM
 					build_buffer(pos, shp, orient[j], polygon_offset_in_stream, __PARAMS__); 
 				}
 			};
-
-			// get global informations
-/*
-			uint64_t buffer[5] = {count_point_size, 
-				count_line_size, count_line_table_size, 
-				count_polygon_size, count_polygon_table_size};
-			MPI_Reduce(MPI_IN_PLACE, buffer, 6, MPI_UINT64_T, MPI_SUM, 0, *mpi);
-*/
-
-/*
-			if(rank == 0)
+			
+			if(rank == 0) 
 			{
-				// build global file here
-					auto [ total_count_point_size, total_count_line_size, total_count_line_table_size, total_count_polygon_size, total_count_polygon_table_size ] = buffer;
-				std::string global_filename = "polyedra/" + (*basename) + "_" + std::to_string(*timestep) ;
+				std::string dir = *basedir;
+				std::string name = *basename + "_" + std::to_string(*timestep);
+				exaDEM::write_pvtp (dir, name ,size);
 			}
-*/
-
-			exaDEM::build_vtk (filename, __PARAMS__);
+			exaDEM::write_vtp (filename, __PARAMS__);
 #undef __PARAMS__
 		}
 	};

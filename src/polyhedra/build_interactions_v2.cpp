@@ -53,6 +53,7 @@ namespace exaDEM
 		{
 			const auto cells = grid->cells();
 
+			auto& g = *grid;
 			const IJK dims = grid->dimension();
 			const int gl = grid->ghost_layers();
 
@@ -87,7 +88,7 @@ namespace exaDEM
 				Interaction item;
 				std::vector<Interaction> local;
 				local.reserve(interactions.size() / omp_get_num_threads());
-				GRID_OMP_FOR_BEGIN(dims-2*gl,_,block_loc, schedule(static, 10) )
+				GRID_OMP_FOR_BEGIN(dims-2*gl,_,block_loc, schedule(guided) )
 				{
 					IJK loc_a = block_loc + gl;
 					size_t cell_a = grid_ijk_to_index( dims , loc_a );
@@ -99,13 +100,19 @@ namespace exaDEM
 					const auto* __restrict__ t_a = cells[cell_a][ field::type ]; ONIKA_ASSUME_ALIGNED(t_a);
 					const auto* __restrict__ orient_a = cells[cell_a][ field::orient ]; ONIKA_ASSUME_ALIGNED(orient_a);
 
-//					apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-					apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::true_type() /* is symetric */,
-							[cells, cell_a, &local, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, add_contact]
+					apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
+//					apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::true_type() /* is symetric */,
+							[&g , cells, cell_a, &local, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, add_contact]
 							( int p_a, size_t cell_b, unsigned int p_b , size_t p_nbh_index )
 							{
 							// default value of the interaction studied (A or i -> B or j)
 							const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+
+							if( id_a[p_a] >= id_nbh) 
+							{
+								if ( !g.is_ghost_cell(cell_b) ) return;
+							}
+
 							const uint8_t type_nbh = cells[cell_b][field::type][p_b];
 							const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
 							const double rx_nbh = cells[cell_b][field::rx][p_b]; 
@@ -245,7 +252,7 @@ namespace exaDEM
 						update_friction_moment(local, history);
 #pragma omp critical
 						{
-//							interactions.insert(interactions.end(), local.begin(), local.end());
+							//							interactions.insert(interactions.end(), local.begin(), local.end());
 
 							size_t size = local.size();
 							if( size + shift > interactions.size() ) interactions.resize(size+shift);

@@ -92,7 +92,7 @@ namespace exaDEM
 		name = name + ".vtp";
 		std::ofstream outFile(name);
 		if (!outFile) {
-			std::cerr << "Erreur : impossible de créer le fichier de sortie !" << std::endl;
+			std::cerr << "Erreur : impossible de créer le fichier de sortie suivant: " << name << std::endl;
 			return;
 		}
 
@@ -101,25 +101,44 @@ namespace exaDEM
 		outFile << "   <Piece NumberOfPoints=\"" << n_vertices << "\" NumberOfPolys=\"" << n_polygons << "\">"  << std::endl;
 		outFile << "   <Points>"  << std::endl;
 		outFile << "     <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-		outFile << buff_vertices.rdbuf() << std::endl;
+		if( n_vertices != 0)	outFile << buff_vertices.rdbuf() << std::endl;
 		outFile << "     </DataArray>"  << std::endl;
 		outFile << "   </Points>"  << std::endl;
 		outFile << "   <Polys>"  << std::endl;
 		outFile << "     <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">"  << std::endl;
-		outFile << buff_faces.rdbuf() << std::endl;
+		if( n_polygons != 0) outFile << buff_faces.rdbuf() << std::endl;
 		outFile << "     </DataArray>"  << std::endl;
 		outFile << "     <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">"  << std::endl;
-		outFile << buff_offsets.rdbuf() << std::endl;
+		if( n_polygons != 0) outFile << buff_offsets.rdbuf() << std::endl;
 		outFile << "     </DataArray>"  << std::endl;
 		outFile << "   </Polys>"  << std::endl;
 		outFile << "  </Piece>"  << std::endl;
 		outFile << " </PolyData>"  << std::endl;
 		outFile << "</VTKFile>"  << std::endl;
 	}
-	
-	void write_pvtp
+
+
+	void write_pvtp( std::string basedir,  std::string basename, size_t number_of_files)
 	{
-		
+
+		std::string name = basedir + "/" + basename + ".pvtp";
+		std::ofstream outFile(name);
+		if (!outFile) {
+			std::cerr << "Erreur : impossible de créer le fichier de sortie suivant: " << name << std::endl;
+			return;
+		}
+		outFile << " <VTKFile type=\"PPolyData\"> " << std::endl;
+		outFile << "   <PPolyData GhostLevel=\"0\">" << std::endl;
+		outFile << "     <PPoints>" << std::endl;
+		outFile << "       <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
+		outFile << "     </PPoints> " << std::endl;
+		for(size_t i = 0 ; i < number_of_files ; i++ )
+		{
+			std::string subfile = basename + "/" + basename + "_" + std::to_string(i) + ".vtp" ;
+			outFile << "     <Piece Source=\"" << subfile << "\"/>" << std::endl;
+		}
+		outFile << "   </PPolyData>" << std::endl;
+	  outFile << " </VTKFile>" << std::endl;
 	}
 	/*
 		 void build_buffer_old (const exanb::Vec3d& pos, const shape* shp, const exanb::Quaternion& orient,  size_t& count_point_size, 
