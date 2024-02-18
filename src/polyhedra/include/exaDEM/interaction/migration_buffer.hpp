@@ -5,15 +5,24 @@
 namespace exaDEM
 {
 	template<typename T>
-		struct ExtraDynamicStorageGridMoveBufferT;
+		struct ExtraDynamicStorageDataGridMoveBufferT;
 
+	/**
+	 * @brief Template struct representing a storage for extra dynamic data associated with cells in a move buffer.
+	 * @tparam T The type of extra dynamic data stored in the cell move buffer.
+	 */
 	template <typename T>
 		struct ExtraDynamicDataStorageCellMoveBufferT
 		{
 			using uint = uint64_t;
-			using info = std::tuple<uint, uint, uint>;
-			std::vector< size_t > m_indirection; 
-			std::vector< char > m_data; // global info,  offset, data, packed contiguously
+			using info = std::tuple<uint, uint, uint>; /**< Alias for information tuple containing offset, data size and particle id. */
+			std::vector< size_t > m_indirection; /**< Indirection vector storing indices of the start of each particle's data in m_data. */
+			std::vector< char > m_data; /**< Data vector storing the actual data for each cell, packed contiguously. */
+
+			/**
+			 * @brief Clears the extra dynamic data storage and resets global information.
+			 * It also resets the global information in the data vector by resizing it and setting the number of particles and items to zero.
+			 */
 			inline void clear()
 			{
 				m_indirection.clear();
@@ -24,6 +33,11 @@ namespace exaDEM
 				global_information[1] = 0;
 			}
 
+			/**
+			 * @brief Decodes the data storage in 3 pointers.
+			 * @param n_particles The number of particles.
+			 * @return A tuple containing const pointers to the global information, information tuple, and data vector.
+			 */
 			std::tuple<const uint*, const info*, const T*> decode_pointers(const unsigned int n_particles) const
 			{
 				const uint* glob_info_ptr = (uint*) m_data.data();
@@ -32,6 +46,11 @@ namespace exaDEM
 				return {glob_info_ptr, info_ptr, data_ptr};
 			}
 
+			/**
+			 * @brief Decodes the data storage in 3 pointers.
+			 * @param n_particles The number of particles.
+			 * @return A tuple containing const pointers to the global information, information tuple, and data vector.
+			 */
 			std::tuple<uint*, info*, T*> decode_pointers(const unsigned int n_particles) 
 			{
 				uint* glob_info_ptr = (uint*) m_data.data();
@@ -40,13 +59,22 @@ namespace exaDEM
 				return {glob_info_ptr, info_ptr, data_ptr};
 			}
 
+			/**
+			 * @brief Retrieves the information tuple for a specific particle.
+			 * @param p The index of the particle.
+			 * @return A reference to the information tuple for the specified particle.
+			 */
 			inline info& get_info(const unsigned int p)
 			{
 				constexpr unsigned int global_information_shift = 2 * sizeof(uint);
-        info * __restrict__ info_ptr = (info *) (m_data.data() + global_information_shift);
-        return info_ptr[m_indirection[p]];
+				info * __restrict__ info_ptr = (info *) (m_data.data() + global_information_shift);
+				return info_ptr[m_indirection[p]];
 			}
 
+			/**
+			 * @brief Gets the total number of particles stored in the storage.
+			 * @return The total number of particles.
+			 */
 			inline size_t number_of_particles() const
 			{
 				//uint n_particles = ((uint*) m_data.data()) [0]; // 0 -> n_particles, 1 -> n_items
@@ -54,47 +82,74 @@ namespace exaDEM
 				return m_indirection.size();
 			}
 
+			/**
+			 * @brief Swaps the indirection values for two particles.
+			 * @param a The index of the first particle.
+			 * @param b The index of the second particle.
+			 */
 			inline void swap( size_t a, size_t b )
 			{
 				std::swap( m_indirection[a] , m_indirection[b] );
 			}
 
+			/**
+			 * @brief Retrieves particle's id.
+			 * @param p The index of the particle.
+			 * @return The particle's id.
+			 */
 			inline uint64_t particle_id(size_t p) const
 			{
-				constexpr unsigned int global_information_shift = 2 * sizeof(uint);
-				const info * __restrict__ info_ptr = (const info *) (m_data.data() + global_information_shift);
-				auto& particle_information = info_ptr[m_indirection[p]];
+				auto& particle_information = this->get_info(p);
 				return std::get<2> (particle_information);
 			}
 
+			/**
+			 * @brief Retrieves the number of items associated with a particle.
+			 * @param p The index of the particle.
+			 * @return The number of items associated with the particle.
+			 */
 			inline size_t particle_number_of_items(size_t p) const
 			{
-				constexpr unsigned int global_information_shift = 2 * sizeof(uint);
-				const info * __restrict__ info_ptr = (const info *) (m_data.data() + global_information_shift);
-				auto& particle_information = info_ptr[ m_indirection[p] ];
+				auto& particle_information = this->get_info(p);
 				return std::get<1> (particle_information);
 			}
 
+			/**
+			 * @brief Retrieves the range of data associated with a particle.
+			 * @param p The index of the particle.
+			 * @return A pair of const pointers representing the beginning and end of the data range associated with the particle.
+			 */
 			inline std::pair< const T* , const T* > particle_data_range(size_t p) const
 			{
 				constexpr unsigned int global_information_shift = 2 * sizeof(uint);
 				uint n_particles = ((uint*) m_data.data()) [0]; // 0 -> n_particles, 1 -> n_items
-				const info * __restrict__ info_ptr = (const info *) (m_data.data() + global_information_shift);
-				const auto& [offset, size, id] = info_ptr[ m_indirection[p] ];
+				const auto [offset, size, id] = this->get_info(p);
 				const T* data_ptr = (const T*) (m_data.data() + global_information_shift + n_particles * sizeof (info)); 
 				return { data_ptr + offset, data_ptr + offset + size -1 };
 			}
 
+			/**
+			 * @brief Retrieves a specific item associated with a particle.
+			 * @param p The index of the particle.
+			 * @param i The index of the item within the particle's data.
+			 * @return A const pointer to the item associated with the particle at the specified index.
+			 */
 			inline const T* item(size_t p, size_t i) const
 			{
 				constexpr unsigned int global_information_shift = 2 * sizeof(uint);
 				uint n_particles = ((uint*) m_data.data()) [0]; // 0 -> n_particles, 1 -> n_items
-				const info * __restrict__ info_ptr = (const info *) (m_data.data() + global_information_shift);
-				const auto& [offset, size, id] = info_ptr[ m_indirection[p] ];
+				const auto [offset, size, id] = this->get_info(p);
 				const T* data_ptr = (const T*) (m_data.data() + global_information_shift + n_particles * sizeof (info)); 
 				return data_ptr + offset + i;
 			}
 
+			/**
+			 * @brief Checks the consistency of the information stored in the storage.
+			 * This function checks the consistency of the information stored in the storage.
+			 * It verifies whether the information is consistent across all particles and returns true if consistent,
+			 * indicating that the data is correctly structured and organized.
+			 * @return True if the information is consistent across all particles, false otherwise.
+			 */
 			inline bool check_info_consistency()
 			{
 				const auto [glob_ptr, info_ptr, data_ptr] = decode_pointers(number_of_particles());
@@ -102,31 +157,50 @@ namespace exaDEM
 				return migration_test::check_info_consistency ( info_ptr, n_particles) ;
 			}
 
-			inline void copy_incoming_particle( const ExtraDynamicStorageGridMoveBufferT<T>& opt_buffer, size_t cell_i, size_t p_i); // defined after ExtraDynamicStorageGridMoveBuffer 
+			/**
+			 * @brief Copies incoming particle data from a ExtraDynamicStorageDataGridMoveBufferT into the current move buffer.
+			 * @param opt_buffer The grid move buffer containing incoming particle data.
+			 * @param cell_i The index of the cell of  the particle data copied.
+			 * @param p_i The index of the particle within the cell.
+			 */
+			inline void copy_incoming_particle( const ExtraDynamicStorageDataGridMoveBufferT<T>& opt_buffer, size_t cell_i, size_t p_i); 
 		};
 
+	/**
+	 * @brief Template struct representing a grid of buffer for extra dynamic storage data in a grid.
+	 * @tparam T The type of extra dynamic storage data.
+	 */
 	template<typename T>
-		struct ExtraDynamicStorageGridMoveBufferT
+		struct ExtraDynamicStorageDataGridMoveBufferT
 		{
 			using uint = uint64_t;
 			using info = std::tuple<uint,uint,uint>;
 			using CellMoveBuffer = ExtraDynamicDataStorageCellMoveBufferT<T>;
 			using CellStorage    = CellExtraDynamicDataStorageT<T>;
 			onika::memory::CudaMMVector< CellExtraDynamicDataStorageT<T> > & m_cell_data;
-			CellMoveBuffer & m_otb_buffer; // buffer for elements going outside of grid
-			std::vector<CellMoveBuffer> m_cell_buffer; // incoming buffers for elements entering another cell of the grid
-
+			CellMoveBuffer & m_otb_buffer; /** buffer for elements going outside of grid */
+			std::vector<CellMoveBuffer> m_cell_buffer; /** incoming buffers for elements entering another cell of the grid */
+f
 			inline CellMoveBuffer* otb_buffer() { return & m_otb_buffer; }
 			inline CellMoveBuffer* cell_buffer( size_t cell_i ) { return & m_cell_buffer[cell_i]; }
 
+			/**
+			 * @brief Initializes the grid buffer with the specified number of cells.
+			 * @param n_cells The number of cells to initialize the move buffer for.
+			 */
 			inline void initialize( size_t n_cells )
 			{
 				m_cell_buffer.resize( n_cells );
 				for(size_t i=0;i<n_cells;i++) m_cell_buffer[i].clear();
 				m_otb_buffer.clear();
 			}
-
-			// must be done following the same particle re-organisation as in move_particles_across_cells.h
+			/**
+			 * @brief Packs particles of a cell into a contiguous buffer.
+			 * It performs the packing according to the same particle re-organization as in move_particles_across_cells.h.
+			 * @param cell_i The index of the cell whose particles are to be packed.
+			 * @param packed_particles Reference to a vector to store the packed particles.
+			 * @param removed_particles Flag indicating whether to include removed particles in the packing. Default is true.
+			 */
 			inline void pack_cell_particles( size_t cell_i, const std::vector<int32_t> & packed_particles, bool removed_particles = true )
 			{
 				assert( cell_i < m_cell_data.size() );
@@ -212,7 +286,7 @@ namespace exaDEM
 	 * @param p_i The index of the particle within the cell.
 	 */
 	template<typename T>
-		inline void ExtraDynamicDataStorageCellMoveBufferT<T>::copy_incoming_particle( const ExtraDynamicStorageGridMoveBufferT<T>& opt_buffer, size_t cell_i, size_t p_i)
+		inline void ExtraDynamicDataStorageCellMoveBufferT<T>::copy_incoming_particle( const ExtraDynamicStorageDataGridMoveBufferT<T>& opt_buffer, size_t cell_i, size_t p_i)
 		{
 			// Note : This function is not optimal, it does one std::move for every calls.
 			// get cell information
