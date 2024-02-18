@@ -149,38 +149,11 @@ namespace exaDEM
 		}
 
 	inline 
-		void update_friction_moment_old(std::vector<Interaction>& interactions, std::vector<Interaction>& history)
-		{
-			// stupid way
-			size_t compt_interaction_copied = 0;
-
-			for(size_t i = 0 ; i < history.size() ; i++)
-			{
-				auto & old_item = history[i];
-				for (size_t j = 0 ; j < interactions.size() ; j++)
-				{
-					auto & item = interactions[j];
-					if ( old_item == item ) 
-					{
-						item.update_friction_and_moment(old_item);
-						compt_interaction_copied++;
-						break;
-					}
-				}
-			}
-#ifdef DEBUG_INTERACTION
-			std::cout << " Number of interaction copied: " << compt_interaction_copied << ". Number of old interactions: " << history.size() << ". Number of new interactions: " << interactions.size() << "." << std::endl;
-#endif
-			history.clear();
-		}
-	inline 
 		void update_friction_moment(std::vector<Interaction>& interactions, std::vector<Interaction>& history)
 		{
 
 			if (history.size() == 0) return;
 			if (interactions.size() == 0) return;
-
-
 
 			// interactions and history are sorted
 			size_t id = 0;
@@ -222,4 +195,20 @@ namespace exaDEM
 				}
 			}
 		}
+
+		// sequential
+	inline void extract_history(std::vector<Interaction>& local, const Interaction * data, const unsigned int size)
+		{
+			const exanb::Vec3d null = {0,0,0};
+			local.clear();
+			for(size_t i = 0 ; i < size ; i++)
+			{
+				const auto& item = data[i];
+				if(item.moment != null || item.friction != null)
+				{
+					local.push_back(item);
+				}
+			}			
+		}
+
 }

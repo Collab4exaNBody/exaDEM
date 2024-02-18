@@ -54,8 +54,8 @@ namespace exaDEM
 		ADD_SLOT( bool               , async     , INPUT , false );
 		ADD_SLOT( shapes             , shapes_collection, INPUT , DocString{"Collection of shapes"});
 		ADD_SLOT( bool               , result    , OUTPUT );
-		ADD_SLOT( DEMBackupData      , backup_dem  , INPUT );
-		ADD_SLOT( ParticleDisplOverAsyncRequest       , particle_displ_comm , INPUT_OUTPUT );
+		ADD_SLOT( DEMBackupData      , backup_dem, INPUT );
+		ADD_SLOT( ParticleDisplOverAsyncRequest, particle_displ_comm , INPUT_OUTPUT );
 
 		public:
 		// -----------------------------------------------
@@ -78,7 +78,6 @@ sets result output to true if at least one particle has moved further than thres
 			// interest for auto here, is to be able to easily switch between single and double precision floats if needed.
 			const double max_dist = *threshold;
 			const double max_dist2 = max_dist * max_dist;
-			const double cell_size = grid->cell_size();
 
 			particle_displ_comm->m_comm = *mpi;
 			particle_displ_comm->m_request = MPI_REQUEST_NULL;
@@ -86,39 +85,36 @@ sets result output to true if at least one particle has moved further than thres
 			particle_displ_comm->m_all_particles_over = 0;
 			particle_displ_comm->m_async_request = false;
 			particle_displ_comm->m_request_started = false;
-			particle_displ_comm->m_reduction_end_callback = onika::parallel::ParallelExecutionStreamCallback{ nullptr , nullptr , nullptr , 0 };
-
 
 			ReduceMaxPolyhedronDisplacementFunctor func = { backup_dem->m_data.data() , max_dist2 , shps };
 
 			if( *async )
 			{
-				ldbg << "Async particle_displ_over => result set to false" << std::endl;
-				particle_displ_comm->m_async_request = true;
-				//particle_displ_comm->m_reduction_end_callback = ParallelExecutionStreamCallback{ reduction_end_callback , particle_displ_comm.get_pointer() , nullptr , 0 };
-				reduce_cell_particles( *grid , false , func , particle_displ_comm->m_particles_over , reduce_field_set
-						, parallel_execution_context() /*, & particle_displ_comm->m_reduction_end_callback*/ );
-				particle_displ_comm->start_mpi_async_request();
-				*result = false;
+        ldbg << "Async particle_displ_over => result set to false" << std::endl;
+        particle_displ_comm->m_async_request = true;
+        auto user_cb = onika::parallel::ParallelExecutionCallback{ reduction_end_callback , & (*particle_displ_comm) };
+        reduce_cell_particles( *grid , false , func , particle_displ_comm->m_particles_over , reduce_field_set , parallel_execution_context() , user_cb );
+        particle_displ_comm->start_mpi_async_request();
+        *result = false;
 			}
 			else
-			{    
-				reduce_cell_particles( *grid , false , func , particle_displ_comm->m_particles_over , reduce_field_set , parallel_execution_context() );
-				MPI_Allreduce( & ( particle_displ_comm->m_particles_over ) , & ( particle_displ_comm->m_all_particles_over ) , 1 , MPI_UNSIGNED_LONG_LONG , MPI_SUM , comm );
-				ldbg << "Nb part moved over "<< max_dist <<" (local/all) = "<< particle_displ_comm->m_particles_over <<" / "<< particle_displ_comm->m_all_particles_over << std::endl;
-				*result = ( particle_displ_comm->m_all_particles_over > 0 ) ;
+			{ 
+        ldbg << "Nb part moved over "<< max_dist <<" (local) = " << particle_displ_comm->m_particles_over << std::endl;
+        reduce_cell_particles( *grid , false , func , particle_displ_comm->m_particles_over , reduce_field_set , parallel_execution_context() );
+        MPI_Allreduce( & ( particle_displ_comm->m_particles_over ) , & ( particle_displ_comm->m_all_particles_over ) , 1 , MPI_UNSIGNED_LONG_LONG , MPI_SUM , comm );
+        ldbg << "Nb part moved over "<< max_dist <<" (local/all) = "<< particle_displ_comm->m_particles_over <<" / "<< particle_displ_comm->m_all_particles_over << std::endl;
+        *result = ( particle_displ_comm->m_all_particles_over > 0 ) ;
 			}
 
 		}
 
-		static inline void reduction_end_callback( onika::parallel::ParallelExecutionContext* exec_ctx , void * userData )
+    static inline void reduction_end_callback( void * userData )
 		{
-			::exanb::ldbg << "async CPU/GPU reduction done, start async MPI collective" << std::endl;
-			if( exec_ctx != nullptr ) { exec_ctx->wait(); }
-			auto * particle_displ_comm = (ParticleDisplOverAsyncRequest*) userData ;
-			assert( particle_displ_comm != nullptr );
-			assert( particle_displ_comm->m_all_particles_over >= particle_displ_comm->m_particles_over );
-			particle_displ_comm->start_mpi_async_request();
+      ::exanb::ldbg << "async CPU/GPU reduction done, start async MPI collective" << std::endl;
+      auto * particle_displ_comm = (ParticleDisplOverAsyncRequest*) userData ;
+      assert( particle_displ_comm != nullptr );
+      assert( particle_displ_comm->m_all_particles_over >= particle_displ_comm->m_particles_over );
+      particle_displ_comm->start_mpi_async_request();
 		}
 
 	};

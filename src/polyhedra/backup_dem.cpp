@@ -42,7 +42,6 @@ namespace exaDEM
     {
       IJK dims = grid->dimension();
       auto cells = grid->cells();
-      const double cell_size = domain->cell_size();
       const ssize_t gl = grid->ghost_layers();
 
       backup_dem->m_xform = domain->xform();

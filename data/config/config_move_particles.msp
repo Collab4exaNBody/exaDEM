@@ -56,8 +56,12 @@ trigger_update_stl_mesh:
 
 ################### parallel particle migration ############################
 parallel_update_particles:
-#  - migrate_cell_particles_interaction
-  - migrate_cell_particles_friction
+  - message: { mesg: "first" , endl: true }
+  - stats_interactions
+  - migrate_cell_particles_interaction
+  - message: { mesg: "second" , endl: true }
+  - stats_interactions
+##  - migrate_cell_particles_friction
   - rebuild_amr
 #  - backup_r
   - backup_dem
@@ -71,6 +75,7 @@ init_particles:
   - move_particles # standard move_particles, even if friction is enabled. just re-order particles in cells, if needed
   - extend_domain
   - load_balance
+  - update_grid_interaction
   - parallel_update_particles
 ###########################################################################
 
@@ -107,15 +112,16 @@ load_balancing_if_triggered:
 
 
 update_particles_full_body:
-#  - compact_neighbor_friction
-  - move_particles_friction
-#  - move_particles_interaction
+##  - compact_neighbor_friction
+#  - move_particles_friction
+  - move_particles_interaction
   - trigger_load_balance
   - load_balancing_if_triggered
   - parallel_update_particles
-#  - reorder_interactions
-  - reorder_neighbor_friction
-#  - check_nbh_friction
+
+##  - reorder_interactions
+#  - reorder_neighbor_friction
+##  - check_nbh_friction
 
 update_particles_full:
   condition: trigger_move_particles
@@ -129,6 +135,8 @@ update_particles_fast_body:
        gpu_buffer_pack: true
        async_buffer_pack: true #false
        staging_buffer: true
+       serialize_pack_send: true
+       wait_all: false
     #- ghost_update_r
 
 update_particles_fast:
@@ -138,7 +146,7 @@ update_particles_fast:
 
 check_and_update_particles:
 #  - ghost_update_r
-#  - update_nbh_friction
+##  - update_nbh_friction
   - trigger_move_particles
   - update_particles_full
   - update_particles_fast

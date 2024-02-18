@@ -75,5 +75,7 @@ dump_paraview_if_triggered:
 
 final_dump:
     - cleanup_before_dump
-    - final_dump_writer
+#    - final_dump_writer 
+# re add it later
+
 

@@ -40,7 +40,7 @@ namespace exaDEM
 				std::vector<double> r;
 				r.resize(size);
 				double rmax=0;
-				for(int i = 0 ; i < size ; i++)
+				for(size_t i = 0 ; i < size ; i++)
 				{
 					double rad_max = shps[i]->compute_max_rcut();
 					r[i] = rad_max; 

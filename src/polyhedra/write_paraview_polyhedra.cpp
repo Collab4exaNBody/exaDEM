@@ -62,6 +62,7 @@ namespace exaDEM
 				fs::create_directory(*basedir);
 				fs::create_directory(directory);
 			}
+
 			MPI_Barrier(*mpi);
 
 			auto& shps = *shapes_collection;

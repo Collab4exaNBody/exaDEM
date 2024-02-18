@@ -17,6 +17,10 @@
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/mutexes.h>
+#include <exaDEM/interaction.hpp>
+#include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape_detection.hpp>
 
 namespace exaDEM
 {
@@ -32,7 +36,7 @@ namespace exaDEM
 			static constexpr ComputeFields compute_field_set {};
 
 			ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
-			ADD_SLOT( std::vector<Interaction> , nbh_interactions , INPUT_OUTPUT , DocString{"TODO"} );
+			ADD_SLOT( GridCellParticleInteraction , grid_interaction  , INPUT_OUTPUT , DocString{"Interaction list"} );
 			ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
 			ADD_SLOT( HookeParams , config            , INPUT , REQUIRED );
 			ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
@@ -50,7 +54,7 @@ namespace exaDEM
 			inline void execute () override final
 			{
 				const auto cells = grid->cells();
-				auto & interactions = *nbh_interactions;
+				auto & cell_interactions = grid_interaction->m_data;
 				auto & shps = *shapes_collection;
 				const HookeParams params = *config;
 				const double time = *dt;
@@ -74,8 +78,6 @@ namespace exaDEM
 					return res;
 				};
 
-				int skip = 0;
-
 
 #pragma omp parallel
 				{
@@ -86,84 +88,90 @@ namespace exaDEM
 							exaDEM::detection_edge_edge
 					};
 
-#pragma omp for schedule(static)
-					for(size_t it = 0 ; it < interactions.size() ; it++)
+#pragma omp for schedule(dynamic)
+					for(size_t current_cell = 0 ; current_cell < cell_interactions.size() ; current_cell++)
 					{
-						Interaction& item = interactions[it];
+						auto& interactions = cell_interactions[current_cell];
+						const unsigned int  n_interactions_in_cell = interactions.m_data.size();
+						exaDEM::Interaction* __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data ); 
 
-						// === positions
-						const Vec3d ri = get_r(item.cell_i, item.p_i);
-						const Vec3d rj = get_r(item.cell_j, item.p_j);
-						const Vec3d origin = {0,0,0};
-						const Vec3d dr = rj - ri;
-
-						// === cell
-						auto& cell_i =  cells[item.cell_i];
-						auto& cell_j =  cells[item.cell_j];
-
-						// === vrot
-						const Vec3d& vrot_i = cell_i[field::vrot][item.p_i];
-						const Vec3d& vrot_j = cell_j[field::vrot][item.p_j];
-
-						// === type
-						const auto& type_i = cell_i[field::type][item.p_i];
-						const auto& type_j = cell_j[field::type][item.p_j];
-
-						// === orientation
-						const auto& orient_i = cell_i[field::orient][item.p_i];
-						const auto& orient_j = cell_j[field::orient][item.p_j];
-
-						// === shapes
-						const shape* shp_i = shps[type_i];
-						const shape* shp_j = shps[type_j];
-
-						auto [contact, dn, n, contact_position] = detection[item.type](origin, item.sub_i, shp_i, orient_i, dr, item.sub_j, shp_j, orient_j);
-
-						if(contact)
+						for( size_t it = 0; it < n_interactions_in_cell ; it++ )
 						{
-							const Vec3d vi = get_v(item.cell_i, item.p_i);
-							const Vec3d vj = get_v(item.cell_j, item.p_j);
-							const auto& m_i = cell_i[field::mass][item.p_i];
-							const auto& m_j = cell_j[field::mass][item.p_j];
+							Interaction& item = data_ptr[it];
+							// === positions
+							const Vec3d ri = get_r(item.cell_i, item.p_i);
+							const Vec3d rj = get_r(item.cell_j, item.p_j);
+							const Vec3d origin = {0,0,0};
+							const Vec3d dr = rj - ri;
 
-							// temporary vec3d to store forces.
-							Vec3d f = {0,0,0};
-							const double meff = compute_effective_mass(m_i, m_j);
+							// === cell
+							auto& cell_i =  cells[item.cell_i];
+							auto& cell_j =  cells[item.cell_j];
 
-							hooke_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr,
-									params.m_mu, params.m_damp_rate, meff,
-									item.friction, contact_position,
-									origin, vi, f, item.moment, vrot_i,  // particle 1
-									dr, vj, vrot_j // particle nbh
-									);
+							// === vrot
+							const Vec3d& vrot_i = cell_i[field::vrot][item.p_i];
+							const Vec3d& vrot_j = cell_j[field::vrot][item.p_j];
+
+							// === type
+							const auto& type_i = cell_i[field::type][item.p_i];
+							const auto& type_j = cell_j[field::type][item.p_j];
+
+							// === orientation
+							const auto& orient_i = cell_i[field::orient][item.p_i];
+							const auto& orient_j = cell_j[field::orient][item.p_j];
+
+							// === shapes
+							const shape* shp_i = shps[type_i];
+							const shape* shp_j = shps[type_j];
+
+							auto [contact, dn, n, contact_position] = detection[item.type](origin, item.sub_i, shp_i, orient_i, dr, item.sub_j, shp_j, orient_j);
+
+							if(contact)
+							{
+								const Vec3d vi = get_v(item.cell_i, item.p_i);
+								const Vec3d vj = get_v(item.cell_j, item.p_j);
+								const auto& m_i = cell_i[field::mass][item.p_i];
+								const auto& m_j = cell_j[field::mass][item.p_j];
+
+								// temporary vec3d to store forces.
+								Vec3d f = {0,0,0};
+								const double meff = compute_effective_mass(m_i, m_j);
+
+								hooke_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr,
+										params.m_mu, params.m_damp_rate, meff,
+										item.friction, contact_position,
+										origin, vi, f, item.moment, vrot_i,  // particle 1
+										dr, vj, vrot_j // particle nbh
+										);
 
 
-							// === update particle informations
-							// ==== Particle i
-							locker.lock(item.cell_i, item.p_i);
+								// === update particle informations
+								// ==== Particle i
+								locker.lock(item.cell_i, item.p_i);
 
-							auto& mom_i = cell_i[field::mom][item.p_i];
-							mom_i += compute_moments(contact_position, origin, f, item.moment);
-							cell_i[field::fx][item.p_i] += f.x;
-							cell_i[field::fy][item.p_i] += f.y;
-							cell_i[field::fz][item.p_i] += f.z;
+								auto& mom_i = cell_i[field::mom][item.p_i];
+								mom_i += compute_moments(contact_position, origin, f, item.moment);
+								cell_i[field::fx][item.p_i] += f.x;
+								cell_i[field::fy][item.p_i] += f.y;
+								cell_i[field::fz][item.p_i] += f.z;
 
-							locker.unlock(item.cell_i, item.p_i);
+								locker.unlock(item.cell_i, item.p_i);
 
-							// ==== Particle j
-							locker.lock(item.cell_j, item.p_j);
+								// ==== Particle j
+								locker.lock(item.cell_j, item.p_j);
 
-							auto& mom_j = cell_j[field::mom][item.p_j];
-							mom_j += compute_moments(contact_position, dr, -f, -item.moment);
-							cell_j[field::fx][item.p_j] -= f.x;
-							cell_j[field::fy][item.p_j] -= f.y;
-							cell_j[field::fz][item.p_j] -= f.z;
+								auto& mom_j = cell_j[field::mom][item.p_j];
+								mom_j += compute_moments(contact_position, dr, -f, -item.moment);
+								cell_j[field::fx][item.p_j] -= f.x;
+								cell_j[field::fy][item.p_j] -= f.y;
+								cell_j[field::fz][item.p_j] -= f.z;
 
-							locker.unlock(item.cell_j, item.p_j);
-						}
-						else
-						{
-							item.reset();
+								locker.unlock(item.cell_j, item.p_j);
+							}
+							else
+							{
+								item.reset();
+							}
 						}
 					}
 				}
@@ -175,7 +183,7 @@ namespace exaDEM
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "compute_hooke_interactions_v2", make_grid_variant_operator< ComputeHookeInteractionTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "compute_hooke_interactions", make_grid_variant_operator< ComputeHookeInteractionTmpl > );
 	}
 }
 
