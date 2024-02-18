@@ -1,6 +1,6 @@
 #pragma once
 #include <exanb/core/basic_types.h> 
-#include <exaDEM/interaction/cell_interaction.hpp>
+#include <exaDEM/interaction/dynamic_data_storage.hpp>
 #include <exaDEM/interaction/migration_buffer.hpp>
 
 namespace exaDEM

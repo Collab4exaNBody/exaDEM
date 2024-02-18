@@ -1,7 +1,7 @@
 #pragma once 
 
 #include <exaDEM/interaction.hpp>
-#include <exaDEM/interaction/cell_interaction.hpp>
+#include <exaDEM/interaction/dynamic_data_storage.hpp>
 #include <exaDEM/interaction/migration_buffer.hpp>
 #include <exaDEM/interaction/migration_helper.hpp>
 
@@ -18,5 +18,5 @@ namespace exaDEM
 
 	typedef ExtraDynamicDataStorageMigrationHelper<Interaction> InteractionMigrationHelper;
 	typedef ExtraDynamicDataStorageCellMoveBufferT<Interaction> InteractionCellMoveBuffer;
-	typedef ExtraDynamicStorageGridMoveBufferT<Interaction> InteractionGridMoveBuffer;
+	typedef ExtraDynamicStorageDataGridMoveBufferT<Interaction> InteractionGridMoveBuffer;
 }
