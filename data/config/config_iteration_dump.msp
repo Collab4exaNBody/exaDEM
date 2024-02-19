@@ -41,9 +41,10 @@ dump_data_particles:
       rebind: { mesg: filename }
       body:
         - message: { endl: true }
-  - compact_neighbor_friction
-  - write_dump_particles
-  - reorder_neighbor_friction
+#  - compact_neighbor_friction
+#  - write_dump_particles
+  - write_dump_particle_interaction
+#  - reorder_neighbor_friction
 
 iteration_dump_writer: 
   - dump_data_particles
@@ -75,7 +76,7 @@ dump_paraview_if_triggered:
 
 final_dump:
     - cleanup_before_dump
-#    - final_dump_writer 
+    - final_dump_writer 
 # re add it later
 
 

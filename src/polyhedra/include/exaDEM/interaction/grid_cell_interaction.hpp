@@ -14,11 +14,7 @@ namespace exaDEM
 	 * @brief Struct representing interactions in DEM simulation.
 	 * It contains a memory-managed vector storing extra dynamic data storage for interactions.
 	 */
-	struct GridCellParticleInteraction
-	{
-		onika::memory::CudaMMVector< CellExtraDynamicDataStorageT<Interaction> > m_data;
-		GridCellParticleInteraction() {};
-	};
+	typedef GridExtraDynamicDataStorageT<Interaction> GridCellParticleInteraction;
 
 	/**
 	 * @brief Alias for the migration helper for interactions.

@@ -67,7 +67,7 @@ namespace exaDEM
 
 			auto& shps = *shapes_collection;
 			const auto cells = grid->cells();
-			const size_t n_cells = grid->number_of_cells(); // nbh.size();
+			const size_t n_cells = grid->number_of_cells();
 
 
 			size_t count_vertex(0), count_face(0), polygon_offset_in_stream(0);

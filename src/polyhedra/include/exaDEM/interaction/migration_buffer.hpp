@@ -64,6 +64,18 @@ namespace exaDEM
 			 * @param p The index of the particle.
 			 * @return A reference to the information tuple for the specified particle.
 			 */
+			inline const info& get_info(const unsigned int p) const
+			{
+				constexpr unsigned int global_information_shift = 2 * sizeof(uint);
+				const info * __restrict__ info_ptr = (info *) (m_data.data() + global_information_shift);
+				return info_ptr[m_indirection[p]];
+			}
+
+			/**
+			 * @brief Retrieves the information tuple for a specific particle.
+			 * @param p The index of the particle.
+			 * @return A reference to the information tuple for the specified particle.
+			 */
 			inline info& get_info(const unsigned int p)
 			{
 				constexpr unsigned int global_information_shift = 2 * sizeof(uint);
@@ -97,7 +109,7 @@ namespace exaDEM
 			 * @param p The index of the particle.
 			 * @return The particle's id.
 			 */
-			inline uint64_t particle_id(size_t p) const
+			inline uint particle_id(size_t p) const
 			{
 				auto& particle_information = this->get_info(p);
 				return std::get<2> (particle_information);
@@ -180,7 +192,6 @@ namespace exaDEM
 			onika::memory::CudaMMVector< CellExtraDynamicDataStorageT<T> > & m_cell_data;
 			CellMoveBuffer & m_otb_buffer; /** buffer for elements going outside of grid */
 			std::vector<CellMoveBuffer> m_cell_buffer; /** incoming buffers for elements entering another cell of the grid */
-f
 			inline CellMoveBuffer* otb_buffer() { return & m_otb_buffer; }
 			inline CellMoveBuffer* cell_buffer( size_t cell_i ) { return & m_cell_buffer[cell_i]; }
 

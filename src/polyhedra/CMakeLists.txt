@@ -1,2 +1,2 @@
-set(exadem_polyhedra_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exadem_friction exadem_force_field)
+set(exadem_polyhedra_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exadem_friction exadem_force_field exadem_io)
 xstamp_add_plugin(exadem_polyhedra ${CMAKE_CURRENT_SOURCE_DIR})

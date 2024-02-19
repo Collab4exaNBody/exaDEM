@@ -6,30 +6,30 @@
 #include <onika/soatl/field_tuple.h>
 #include <exanb/io/sim_dump_io.h>
 #include <iostream>
-
-#include <exaDEM/neighbor_friction.h>
-
 #include <exanb/core/basic_types_operators.h>
 #include <exanb/core/basic_types_stream.h>
 #include <exanb/core/quaternion_operators.h>
 #include <exanb/core/quaternion_stream.h>
+#include <exaDEM/interaction/dynamic_data_storage.hpp>
+#include <exaDEM/interaction/reader_dynamic_data_storage.hpp>
+
 
 namespace exaDEM
 {
   using namespace exanb;
 
-  template< class GridT , class DumpFieldSet >
-  struct ParticleDumpFilter
+  template< class GridT , class Item, class DumpFieldSet >
+  struct ParticleDumpFilterWithExtraDataStorage
   {
     using GridFieldSet = typename GridT::Fields;
     using TupleT = onika::soatl::FieldTupleFromFieldIds< DumpFieldSet >;
     using StorageType = TupleT; 
 
-    GridCellParticleNeigborFriction& nbh_friction;
+    GridExtraDynamicDataStorageT<Item>& grid_item;
     GridT& grid;
-    ParticleFrictionReadHelper friction_read_helper;
+    ExtraDynamicDataStorageReadHelper<Item> extra_data_read_helper;
     double scale_cell_size = 1.0;
-    bool enable_friction = true;
+    bool enable_extra_data = true;
 
     // optional modification of domain periodicity
     bool override_periodicity = false;
@@ -45,8 +45,6 @@ namespace exaDEM
     bool override_domain_bounds = true;
     bool shrink_to_fit = false;
     AABB domain_bounds = { {0,0,0} , {0,0,0} };
-
-
 
     // for forward compatibility with dump_reader_allow_initial_position_xform branch
     inline void process_domain(Domain& domain , Mat3d& particle_read_xform)
@@ -123,65 +121,54 @@ namespace exaDEM
 
     inline void initialize_read()
     {
-      friction_read_helper.initialize( grid.number_of_cells() );
+      extra_data_read_helper.initialize( grid.number_of_cells() );
     }
 
     inline void finalize_read()
     {
-      if( enable_friction && ! friction_read_helper.m_out_friction.empty() )
+      if( enable_extra_data && ! extra_data_read_helper.m_out_item.empty() )
       {
         auto cells = grid.cells();
         auto particle_id_func = [cells]( size_t cell_idx, size_t p_idx ) -> uint64_t { return cells[cell_idx][field::id][p_idx]; } ;
-        friction_read_helper.finalize( nbh_friction , particle_id_func );
+        extra_data_read_helper.finalize( grid_item , particle_id_func );
       }
     }
 
     inline void read_optional_data_from_stream( const uint8_t* stream_start , size_t stream_size )
     {
-      if( enable_friction )
+      if( enable_extra_data )
       {
-        friction_read_helper.read_from_stream( stream_start , stream_size );
+        extra_data_read_helper.read_from_stream( stream_start , stream_size );
       }
     }
 
     inline void append_cell_particle( size_t cell_idx, size_t p_idx )
     {
-      if( enable_friction )
+      if( enable_extra_data )
       {
         auto cells = grid.cells();
-        friction_read_helper.append_cell_particle( cell_idx , p_idx , cells[cell_idx][field::id][p_idx] );
+        extra_data_read_helper.append_cell_particle( cell_idx , p_idx , cells[cell_idx][field::id][p_idx] );
       }
     }
 
     inline size_t optional_cell_data_size(size_t cell_index)
     {
-      if( enable_friction )
+      if( enable_extra_data )
       {
-        assert( cell_index < nbh_friction.m_cell_friction.size() );
-        return nbh_friction.m_cell_friction[cell_index].storage_size();
+        assert( cell_index < grid_item.m_data.size() );
+				constexpr int header_size = 2 * sizeof(uint);
+        return header_size + grid_item.m_data[cell_index].storage_size();
       }
       else { return 0; }
     }
 
 		inline void write_optional_cell_data(uint8_t* buff, const size_t cell_index)
 		{
-			auto& cell = nbh_friction.m_cell_friction[cell_index];
+      assert( cell_index < grid_item.m_data.size() );
+			auto& cell = grid_item.m_data[cell_index];
 			cell.encode_cell_to_buffer((void*)buff);
 		}
-/*
-    inline const uint8_t* optional_cell_data_ptr(size_t cell_index)
-    {
-      if( enable_friction )
-      {
-        assert( cell_index < nbh_friction.m_cell_friction.size() );
-        return nbh_friction.m_cell_friction[cell_index].storage_ptr();
-      }
-      else
-      {
-        return nullptr;
-      }
-    }
-*/
+
     template<class WriteFuncT>
     inline size_t write_optional_header( WriteFuncT write_func )
     {
@@ -205,8 +192,6 @@ namespace exaDEM
       update_sats( stp );
       return stp;
     }
-
   };
-
 }
 

@@ -336,4 +336,16 @@ namespace exaDEM
 			return migration_test::check_info_consistency( m_info.data(), m_info.size() );  
 		}
 	};
+
+
+	/**
+	 * @brief Template struct representing grid of extra dynamic data storage.
+	 * @tparam T The type of extra data stored in each cell.
+	 */
+	template<typename T>
+		struct GridExtraDynamicDataStorageT	
+		{
+			onika::memory::CudaMMVector< CellExtraDynamicDataStorageT< T > > m_data; /**< Memory-managed vector storing extra dynamic data storage for each cell. */
+			GridExtraDynamicDataStorageT() {};
+		};
 }
