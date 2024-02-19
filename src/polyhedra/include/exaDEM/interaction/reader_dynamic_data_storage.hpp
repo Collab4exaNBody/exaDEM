@@ -8,14 +8,14 @@
 
 namespace exaDEM
 {
-	template<typename ITEM>
+	template<typename ItemType>
 		struct ExtraDynamicDataStorageReadHelper
 		{
-			using uint = uint64_t;
-			using info = std::tuple<uint, uint, uint>;
-			std::vector< std::vector< std::vector< ITEM > > > m_out_item; /** [cell->particles->items] */
-			std::vector<CellExtraDynamicDataStorageT < ITEM > > m_in_item; /** not grid cells, just chunks of item data */
-			std::map< uint , std::pair<size_t,size_t> > m_id_map; /** makes relation between particle id and (cell, position in cell) */
+			using UIntType = uint64_t;
+			using InfoType = std::tuple<UIntType, UIntType, UIntType>;
+			std::vector< std::vector< std::vector< ItemType > > > m_out_item; /** [cell->particles->items] */
+			std::vector<CellExtraDynamicDataStorageT < ItemType > > m_in_item; /** not grid cells, just chunks of item data */
+			std::map< UIntType , std::pair<size_t,size_t> > m_id_map; /** makes relation between particle id and (cell, position in cell) */
 
 			void initialize(size_t n_cells)
 			{
@@ -26,16 +26,16 @@ namespace exaDEM
 
 			inline void read_from_stream( const uint8_t* stream_start , size_t stream_size )
 			{
-				using uint = uint64_t;
+				using UIntType = uint64_t;
 				m_in_item.clear();
 				m_id_map.clear();
 
 				const uint8_t* stream = stream_start;
-				constexpr int buffer_header_size = 2 * sizeof(uint);
+				constexpr int buffer_header_size = 2 * sizeof(UIntType);
 
 				while( (stream-stream_start) < ssize_t(stream_size) )
 				{
-					CellExtraDynamicDataStorageT < ITEM > cell;
+					CellExtraDynamicDataStorageT < ItemType > cell;
 					cell.decode_buffer_to_cell((void*) stream );
 					stream += cell.storage_size() + buffer_header_size; // shift ptr to decode the next cell
 					assert( (stream-stream_start) <= ssize_t(stream_size) );
@@ -49,7 +49,7 @@ namespace exaDEM
 					const size_t n_particles = m_in_item[cell_i].number_of_particles();
 					for(size_t p_i = 0 ; p_i < n_particles ; p_i++)
 					{
-						uint id = m_in_item[cell_i].particle_id( p_i );
+						UIntType id = m_in_item[cell_i].particle_id( p_i );
 						m_id_map[ id ] = std::pair<size_t,size_t>{ cell_i , p_i };
 					}
 				}
@@ -75,7 +75,7 @@ namespace exaDEM
 			}
 
 			template< class ParticleIdFuncT>
-				inline void finalize( GridExtraDynamicDataStorageT<ITEM> & grid_item , ParticleIdFuncT particle_id )
+				inline void finalize( GridExtraDynamicDataStorageT<ItemType> & grid_item , ParticleIdFuncT particle_id )
 				{
 					grid_item.m_data.clear();
 					const size_t n_cells = m_out_item.size();
@@ -88,12 +88,12 @@ namespace exaDEM
 						// get current cell of items
 						auto& cell_item = grid_item.m_data[i];
 						cell_item.initialize( n_particles );
-						uint offset = 0;
-						info* __restrict__ info_ptr = cell_item.m_info.data();
+						UIntType offset = 0;
+						InfoType * __restrict__ info_ptr = cell_item.m_info.data();
 						for(size_t p = 0 ; p < n_particles ; p++)
 						{
-							const uint id = particle_id( i , p );
-							const uint n_items = m_out_item[i][p].size();
+							const UIntType id = particle_id( i , p );
+							const UIntType n_items = m_out_item[i][p].size();
 							info_ptr [p] = {offset, n_items, id};
 							cell_item.m_data.insert( cell_item.m_data.end(), m_out_item[i][p].begin() , m_out_item[i][p].end());
 							offset += n_items;

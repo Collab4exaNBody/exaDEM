@@ -12,12 +12,12 @@ namespace exaDEM
 	 *
 	 * @tparam T The type of extra dynamic data stored in the cell storage.
 	 */
-	template<typename T> struct CellExtraDynamicDataStorageT
+	template<typename ItemType> struct CellExtraDynamicDataStorageT
 	{
-		using uint = uint64_t;
-		using info = std::tuple<uint,uint, uint>;
-		onika::memory::CudaMMVector<info> m_info; /**< Info vector storing indices of the [start, number of items, particle id] of each cell's extra dynamic data in m_data. */ 
-		onika::memory::CudaMMVector<T> m_data; /**< Data vector storing the extra dynamic data for each cell. */
+		using UIntType = uint64_t;
+		using InfoType = std::tuple<UIntType,UIntType, UIntType>;
+		onika::memory::CudaMMVector<InfoType> m_info; /**< Info vector storing indices of the [start, number of items, particle id] of each cell's extra dynamic data in m_data. */ 
+		onika::memory::CudaMMVector<ItemType> m_data; /**< Data vector storing the extra dynamic data for each cell. */
 
 		/**
 		 * @brief Gets the total number of particles stored in the data structure.
@@ -47,24 +47,24 @@ namespace exaDEM
 		 * @param ppf The std::vector containing data associated with the new particle.
 		 * @param id The particle ID
 		 */
-		inline void push_back( const uint id, const std::vector<T>& ppf )
+		inline void push_back( const UIntType id, const std::vector<ItemType>& ppf )
 		{
 			if(	m_info.empty() )
 			{
-				info new_info = {0, ppf.size(), id};
+				InfoType new_info = {0, ppf.size(), id};
 				m_info.push_back( new_info );
 			}
 			else
 			{
 				const auto & last = m_info.back();
 				const unsigned int offset = std::get<0> (last) + std::get<1> (last);
-				info new_info = {offset, ppf.size(), id};
+				InfoType new_info = {offset, ppf.size(), id};
 				m_info.push_back( new_info );
 			}
 			m_data.push_back(ppf.begin(), ppf.end());
 		}
 
-		inline void set_item(const uint offset, const T& item )
+		inline void set_item(const UIntType offset, const ItemType& item )
 		{
 			m_data[offset] = item;
 		}
@@ -72,7 +72,7 @@ namespace exaDEM
 		/**
 		 * @brief Copy a range in Extra Storage type.
 		 */
-		inline void set_data_storage( const std::vector<T>& ppf )
+		inline void set_data_storage( const std::vector<ItemType>& ppf )
 		{
 			m_data.resize( ppf.size() );
 			std::copy ( ppf.begin(), ppf.end(), m_data.begin());
@@ -111,7 +111,7 @@ namespace exaDEM
 		 * @brief Gets a pointer to the storage info data.
 		 * @return A const pointer to the storage info data.
 		 */
-		inline const info* storage_info_ptr() const // bytes
+		inline const InfoType* storage_info_ptr() const // bytes
 		{
 			return m_info.data();
 		}
@@ -120,7 +120,7 @@ namespace exaDEM
 		 * @brief Gets a pointer to the storage info data.
 		 * @return A const pointer to the storage info data.
 		 */
-		inline const info* storage_info_ptr() // bytes
+		inline const InfoType* storage_info_ptr() // bytes
 		{
 			return m_info.data();
 		}
@@ -141,7 +141,7 @@ namespace exaDEM
 		 */
 		inline const size_t storage_size() const
 		{
-			return m_data.size() * sizeof(T) + m_info.size() * sizeof(info);
+			return m_data.size() * sizeof(ItemType) + m_info.size() * sizeof(InfoType);
 		}
 
 		/**
@@ -153,19 +153,19 @@ namespace exaDEM
 		inline void encode_cell_to_buffer ( void* buffer )
 		{
 			// get size in bytes
-			const size_t info_size = m_info.size() * sizeof(info);
-			const size_t data_size = m_data.size() * sizeof(T);
+			const size_t info_size = m_info.size() * sizeof(InfoType);
+			const size_t data_size = m_data.size() * sizeof(ItemType);
 
 			const char * const __restrict__ info_ptr   = (const char*) onika::cuda::vector_data( m_info );
 			const char * const __restrict__ data_ptr   = (const char*) onika::cuda::vector_data( m_data );
 			char * __restrict__ buffer_ptr = (char*) buffer;
 
-			// cast ptr in uint to store the number of particles and items
-			uint * __restrict__ buffer_ptr_global_info = (uint*) buffer_ptr;
+			// cast ptr in UIntType to store the number of particles and items
+			UIntType * __restrict__ buffer_ptr_global_info = (UIntType*) buffer_ptr;
 			buffer_ptr_global_info[0] = m_info.size();
 			buffer_ptr_global_info[1] = m_data.size();
 
-			const unsigned int global_info_shift = 2 * sizeof(uint);
+			const unsigned int global_info_shift = 2 * sizeof(UIntType);
 
 			assert ( migration_test::check_info_consistency( m_info.data(), m_info.size() ));  
 
@@ -184,16 +184,16 @@ namespace exaDEM
 			const char* buff_ptr = (const char *) buffer;
 
 			// first two variables contains the number of particles and the second one contains the number of items (it could be deduced from offset)
-			uint n_particles = ((uint *) buffer) [0];
-			uint n_items     = ((uint *) buffer) [1];
+			UIntType n_particles = ((UIntType *) buffer) [0];
+			UIntType n_items     = ((UIntType *) buffer) [1];
 
-			const uint info_size = n_particles;
-			const uint first_info = 2 * sizeof(uint);
-			const uint first_data = first_info + info_size * sizeof(info); 
+			const UIntType info_size = n_particles;
+			const UIntType first_info = 2 * sizeof(UIntType);
+			const UIntType first_data = first_info + info_size * sizeof(InfoType); 
 
 			// get sizes in bytes
 			auto& last = m_info.back();			
-			const uint data_size = std::get<0> (last) + std::get<1> (last);
+			const UIntType data_size = std::get<0> (last) + std::get<1> (last);
 
 			assert ( n_items == data_size );
 
@@ -201,13 +201,13 @@ namespace exaDEM
 			m_data.resize(n_items);
 
 			// get data pointers
-			info * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
-			T *    const __restrict__ data_ptr = onika::cuda::vector_data( m_data );
+			InfoType * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
+			ItemType * const __restrict__ data_ptr = onika::cuda::vector_data( m_data );
 
 
 			// get buffer pointers
-			const info * const __restrict__ buff_info_ptr = (const info*) (buff_ptr + first_info);
-			const T*     const __restrict__ buff_data_ptr = (const T*)    (buff_ptr + first_data);
+			const InfoType * const __restrict__ buff_info_ptr = (const InfoType*) (buff_ptr + first_info);
+			const ItemType * const __restrict__ buff_data_ptr = (const ItemType*) (buff_ptr + first_data);
 
 			// first offset, then type T
 			std::copy ( buff_info_ptr, buff_info_ptr + info_size, info_ptr );
@@ -230,9 +230,9 @@ namespace exaDEM
 			m_info.resize(new_info_size);
 
 			// compute shift pointers for info and data vectors
-			 uint * const __restrict__ buff      = ( uint* ) buffer;
-			 info * const __restrict__ buff_info = ( info*) (buff + 2);
-			 T * const __restrict__    buff_data = ( T*) (buff_info + (end - start));
+			 UIntType * const __restrict__ buff      = ( UIntType* ) buffer;
+			 InfoType * const __restrict__ buff_info = ( InfoType*) (buff + 2);
+			 ItemType * const __restrict__ buff_data = ( ItemType*) (buff_info + (end - start));
 
 			for(size_t i = 0 ; i < buff[0] ; i++)
 			{
@@ -264,9 +264,9 @@ namespace exaDEM
 			assert ( migration_test::check_info_consistency( m_info.data(), m_info.size() ));
 
 			// define item range [first, last] | note: last particle idx = end-1 
-			uint first_item = std::get<0> (buff_info[start]);
-			uint last_item  = std::get<0> (buff_info[end -1] ) + std::get<1> (buff_info[end-1]);
-			uint new_items_to_append = last_item - first_item;
+			UIntType first_item = std::get<0> (buff_info[start]);
+			UIntType last_item  = std::get<0> (buff_info[end -1] ) + std::get<1> (buff_info[end-1]);
+			UIntType new_items_to_append = last_item - first_item;
 
 			if( new_items_to_append == 0 ) return;			 
 
@@ -282,10 +282,10 @@ namespace exaDEM
 		 * @param p The index of the particle.
 		 * @return A tuple containing a pointer to the particle data and the size of the data.
 		 */
-		ONIKA_HOST_DEVICE_FUNC inline uint particle_id(const unsigned int p) const
+		ONIKA_HOST_DEVICE_FUNC inline UIntType particle_id(const unsigned int p) const
 		{
-			const T * const __restrict__ data_ptr = onika::cuda::vector_data( m_data );
-			const info * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
+			const ItemType * const __restrict__ data_ptr = onika::cuda::vector_data( m_data );
+			const InfoType * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
 			return std::get<2> (info_ptr[p]);
 		}
 
@@ -294,9 +294,9 @@ namespace exaDEM
 		 * @param p The index of the particle.
 		 * @return A tuple containing a pointer to the particle data and the size of the data.
 		 */
-		ONIKA_HOST_DEVICE_FUNC inline uint particle_id(const unsigned int p) 
+		ONIKA_HOST_DEVICE_FUNC inline UIntType particle_id(const unsigned int p) 
 		{
-			info * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
+			InfoType * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
 			return std::get<2> (info_ptr[p]);
 		}
 
@@ -307,12 +307,12 @@ namespace exaDEM
 		 * @param n The index of the item within the particle's data.
 		 * @return A reference to the requested item of the particle's data.
 		 */
-		ONIKA_HOST_DEVICE_FUNC inline T& get_particle_item(const unsigned int p, const unsigned int n) const
+		ONIKA_HOST_DEVICE_FUNC inline ItemType& get_particle_item(const unsigned int p, const unsigned int n) const
 		{
-			const T * const __restrict__ data_ptr = onika::cuda::vector_data( m_data );
-			const info * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
+			const ItemType * const __restrict__ data_ptr = onika::cuda::vector_data( m_data );
+			const InfoType * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
 			const auto [offset, size, id ] = info_ptr[p]; 
-			const T * __restrict__ ppf_base = data_ptr + offset ;
+			const ItemType * __restrict__ ppf_base = data_ptr + offset ;
 			return ppf_base[ n ];
 		}
 
@@ -322,12 +322,12 @@ namespace exaDEM
 		 * @param n The index of the item within the particle's data.
 		 * @return A reference to the requested item of the particle's data.
 		 */
-		ONIKA_HOST_DEVICE_FUNC inline T& get_particle_item(const unsigned int p, const unsigned int n)
+		ONIKA_HOST_DEVICE_FUNC inline ItemType& get_particle_item(const unsigned int p, const unsigned int n)
 		{
-			T * const __restrict__ data_ptr = onika::cuda::vector_data( m_data );
-			const info * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
+			ItemType * const __restrict__ data_ptr = onika::cuda::vector_data( m_data );
+			const InfoType * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
 			const auto [offset, size, id ] = info_ptr[p]; 
-			T * __restrict__ ppf_base = data_ptr + offset ;
+			ItemType * __restrict__ ppf_base = data_ptr + offset ;
 			return ppf_base[ n ];
 		}
 
@@ -342,10 +342,10 @@ namespace exaDEM
 	 * @brief Template struct representing grid of extra dynamic data storage.
 	 * @tparam T The type of extra data stored in each cell.
 	 */
-	template<typename T>
+	template<typename ItemType>
 		struct GridExtraDynamicDataStorageT	
 		{
-			onika::memory::CudaMMVector< CellExtraDynamicDataStorageT< T > > m_data; /**< Memory-managed vector storing extra dynamic data storage for each cell. */
+			onika::memory::CudaMMVector< CellExtraDynamicDataStorageT< ItemType > > m_data; /**< Memory-managed vector storing extra dynamic data storage for each cell. */
 			GridExtraDynamicDataStorageT() {};
 		};
 }

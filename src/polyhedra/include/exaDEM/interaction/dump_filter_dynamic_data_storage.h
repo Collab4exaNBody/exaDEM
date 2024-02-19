@@ -18,16 +18,16 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  template< class GridT , class Item, class DumpFieldSet >
+  template< class GridT , class ItemType, class DumpFieldSet >
   struct ParticleDumpFilterWithExtraDataStorage
   {
     using GridFieldSet = typename GridT::Fields;
     using TupleT = onika::soatl::FieldTupleFromFieldIds< DumpFieldSet >;
     using StorageType = TupleT; 
 
-    GridExtraDynamicDataStorageT<Item>& grid_item;
+    GridExtraDynamicDataStorageT<ItemType>& grid_item;
     GridT& grid;
-    ExtraDynamicDataStorageReadHelper<Item> extra_data_read_helper;
+    ExtraDynamicDataStorageReadHelper<ItemType> extra_data_read_helper;
     double scale_cell_size = 1.0;
     bool enable_extra_data = true;
 
@@ -156,7 +156,7 @@ namespace exaDEM
       if( enable_extra_data )
       {
         assert( cell_index < grid_item.m_data.size() );
-				constexpr int header_size = 2 * sizeof(uint);
+				constexpr size_t header_size = 2 * sizeof(uint64_t); // WARNING
         return header_size + grid_item.m_data[cell_index].storage_size();
       }
       else { return 0; }

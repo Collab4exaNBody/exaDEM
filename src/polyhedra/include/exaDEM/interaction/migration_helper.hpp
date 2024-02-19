@@ -11,14 +11,14 @@ namespace exaDEM
 	 * It contains references to the cell extra data and an outside-the-box (OTB) buffer for migrating data.
 	 * @tparam T The type of extra dynamic data stored in the cell.
 	 */
-	template<typename T> struct ExtraDynamicDataStorageMigrationHelper
+	template<typename ItemType> struct ExtraDynamicDataStorageMigrationHelper
 	{
-		using uint = uint64_t;
-		using info = std::tuple<uint, uint, uint>;
+		using UIntType = uint64_t;
+		using InfoType = std::tuple<UIntType, UIntType, UIntType>;
 
 		// members
-		onika::memory::CudaMMVector< CellExtraDynamicDataStorageT<T> > & m_cell_extra_data; /**< Reference to the cell extra data. */
-		ExtraDynamicDataStorageCellMoveBufferT<T> & m_otb_buffer; /**< Reference to OTB buffer for migrating data. */
+		onika::memory::CudaMMVector< CellExtraDynamicDataStorageT<ItemType> > & m_cell_extra_data; /**< Reference to the cell extra data. */
+		ExtraDynamicDataStorageCellMoveBufferT<ItemType> & m_otb_buffer; /**< Reference to OTB buffer for migrating data. */
 
 		inline const unsigned int cell_particles_data_size ( size_t cell_i )
 		{
@@ -59,18 +59,18 @@ namespace exaDEM
 		{
 			assert ( pend >= pstart );  
 			const size_t n_particles = pend - pstart;
-			uint total_size = 0;
+			UIntType total_size = 0;
 
 			// Since particles can be reordered, 
 			// we have to iterate through the data to determine the item size.
 			for(size_t p = pstart ; p < pend ; p++)
 			{
-				uint sz = m_otb_buffer.particle_number_of_items(p);
-				total_size += sz * sizeof(T);
+				UIntType sz = m_otb_buffer.particle_number_of_items(p);
+				total_size += sz * sizeof(ItemType);
 			}
 
 			// Add global information and 'info' vector 
-			total_size += n_particles * sizeof(info) + 2 * sizeof(uint);
+			total_size += n_particles * sizeof(InfoType) + 2 * sizeof(UIntType);
 			return total_size;
 		}
 
@@ -88,24 +88,24 @@ namespace exaDEM
 			const size_t n_particles = pend - pstart;
 			const auto [from_glob_ptr, from_info_ptr, from_data_ptr] = m_otb_buffer.decode_pointers(n_particles);
 			// Decode stream buffer pointers.
-			uint* to_glob_ptr = (uint*) to_buff; // global information
-			info* to_info_ptr = (info*) (to_glob_ptr + 2);
-			T*    to_data_ptr = (T*) (to_info_ptr + n_particles);
+			UIntType* to_glob_ptr = (UIntType*) to_buff; // global information
+			InfoType* to_info_ptr = (InfoType*) (to_glob_ptr + 2);
+			ItemType* to_data_ptr = (ItemType*) (to_info_ptr + n_particles);
 
 			// Set global information, number of items will be updated after
 			to_glob_ptr[0] = n_particles; 
 			to_glob_ptr[1] = 0; // number of items
 
-			uint total_size = n_particles * sizeof(info) + 2 * sizeof(uint); // total_size count in Word units
+			UIntType total_size = n_particles * sizeof(InfoType) + 2 * sizeof(UIntType); // total_size count in Word units
 			// We need to set the correct offset in the buffer, it is not store in the OTB vector
-			uint to_offset = 0;
+			UIntType to_offset = 0;
 
 			// Iterate over the OTB vector to add 'info' + extra data storage 
 			for( size_t p = pstart ; p < pend ; p++)
 			{
 				const auto [from_offset, from_size, from_id] = m_otb_buffer.get_info(p); 
 				to_glob_ptr[1] += from_size;
-				total_size += from_size * sizeof(T);
+				total_size += from_size * sizeof(ItemType);
 				// update info	
 				to_info_ptr[p] = {to_offset, from_size, from_id}; // fit offset
 				// update data
@@ -132,7 +132,7 @@ namespace exaDEM
 		}
 
 		// Default behavior used by the following function
-		struct NullParticleIdFunc { inline constexpr uint64_t operator () (size_t) { return 0; } };
+		struct NullParticleIdFunc { inline constexpr UIntType operator () (size_t) { return 0; } };
 
 		/**
 		 * @brief Appends data to the stream using specified functions for cell indexing, locking, and unlocking.
@@ -157,8 +157,8 @@ namespace exaDEM
 				assert( data_bytes % sizeof(char) == 0 ); // always true
 
 				// decode header
-				const uint* const __restrict__ buff = (const uint *) datav; 
-				const uint n_particles = buff[0];
+				const UIntType* const __restrict__ buff = (const UIntType *) datav; 
+				const UIntType n_particles = buff[0];
 
 				// Defined to process out of the grid possibilities
 				size_t cur_cell = std::numeric_limits<size_t>::max();
