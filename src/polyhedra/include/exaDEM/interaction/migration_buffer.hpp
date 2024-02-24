@@ -29,8 +29,8 @@ namespace exaDEM
 				m_data.clear();
 				m_data.resize(2 * sizeof(UIntType)); // number of particles, number of items 
 				UIntType* global_information = (UIntType*) m_data.data();
-				global_information[0] = 0;
-				global_information[1] = 0;
+				global_information[0] = UIntType(0);
+				global_information[1] = UIntType(0);
 			}
 
 			/**
@@ -89,6 +89,11 @@ namespace exaDEM
 			 */
 			inline size_t number_of_particles() const
 			{
+#ifndef NDEBUG
+				UIntType* glob_info_ptr = (UIntType*) m_data.data();
+				UIntType np = glob_info_ptr[0];
+				assert( m_indirection.size() == np );
+#endif
 				return m_indirection.size();
 			}
 
@@ -99,6 +104,8 @@ namespace exaDEM
 			 */
 			inline void swap( size_t a, size_t b )
 			{
+				assert ( a < m_indirection.size() );
+				assert ( b < m_indirection.size() );
 				std::swap( m_indirection[a] , m_indirection[b] );
 			}
 
@@ -109,6 +116,7 @@ namespace exaDEM
 			 */
 			inline UIntType particle_id(size_t p) const
 			{
+				assert ( p < m_indirection.size() );
 				auto& particle_information = this->get_info(p);
 				return std::get<2> (particle_information);
 			}
@@ -120,6 +128,7 @@ namespace exaDEM
 			 */
 			inline size_t particle_number_of_items(size_t p) const
 			{
+				assert ( p < m_indirection.size() );
 				auto& particle_information = this->get_info(p);
 				return std::get<1> (particle_information);
 			}
@@ -131,11 +140,13 @@ namespace exaDEM
 			 */
 			inline std::pair< const ItemType* , const ItemType* > particle_data_range(size_t p) const
 			{
+				assert ( p < m_indirection.size() );
 				constexpr unsigned int global_information_shift = 2 * sizeof(UIntType);
 				UIntType n_particles = ((UIntType*) m_data.data()) [0]; // 0 -> n_particles, 1 -> n_items
 				const auto [offset, size, id] = this->get_info(p);
 				const ItemType* data_ptr = (const ItemType*) (m_data.data() + global_information_shift + n_particles * sizeof (InfoType)); 
-				return { data_ptr + offset, data_ptr + offset + size -1 };
+				return { data_ptr + offset, data_ptr + offset + size };
+				//return { data_ptr + offset, data_ptr + offset + size -1 };
 			}
 
 			/**
@@ -146,8 +157,9 @@ namespace exaDEM
 			 */
 			inline const ItemType* item(size_t p, size_t i) const
 			{
+				assert ( p < m_indirection.size() );
 				constexpr unsigned int global_information_shift = 2 * sizeof(UIntType);
-				UIntType n_particles = ((UIntType*) m_data.data()) [0]; // 0 -> n_particles, 1 -> n_items
+				UIntType n_particles = this->number_of_particles(); // 0 -> n_particles, 1 -> n_items
 				const auto [offset, size, id] = this->get_info(p);
 				const ItemType* data_ptr = (const ItemType*) (m_data.data() + global_information_shift + n_particles * sizeof (InfoType)); 
 				return data_ptr + offset + i;
@@ -200,7 +212,10 @@ namespace exaDEM
 			inline void initialize( size_t n_cells )
 			{
 				m_cell_buffer.resize( n_cells );
-				for(size_t i=0;i<n_cells;i++) m_cell_buffer[i].clear();
+				for(size_t i = 0 ; i < n_cells ; i++) 
+				{
+					m_cell_buffer[i].clear();
+				}
 				m_otb_buffer.clear();
 			}
 			/**
@@ -227,7 +242,7 @@ namespace exaDEM
 				if( removed_particles )
 				{
 					const size_t n_particles = packed_particles.size();
-					for(p=0; p<n_particles ;p++)
+					for( p = 0 ; p < n_particles ; p++)
 					{
 						// update information -> (offset , number of items, particle id) 
 						const UIntType id = cell.particle_id( packed_particles[p] );
@@ -245,7 +260,7 @@ namespace exaDEM
 				else // copy original particles as is
 				{
 					const size_t n_particles = cell.number_of_particles();
-					for( p=0 ; p < n_particles ; p++)
+					for( p = 0 ; p < n_particles ; p++)
 					{
 						// update information
 						const auto id = cell.particle_id( p );
@@ -263,7 +278,7 @@ namespace exaDEM
 
 				// add new items in the futur cell extra data storage
 				// offset and p are incremented in the last loop 
-				for(size_t i=0 ; i<n_incoming_particles ; i++)
+				for(size_t i = 0 ; i < n_incoming_particles ; i++)
 				{
 					// update information -> (offset , number of items, particle id) 
 					auto id = m_cell_buffer[cell_i].particle_id(i);

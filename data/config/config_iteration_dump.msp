@@ -43,6 +43,8 @@ dump_data_particles:
         - message: { endl: true }
 #  - compact_neighbor_friction
 #  - write_dump_particles
+  - message: { mesg: "before write" , endl: true }
+  - stats_interactions
   - write_dump_particle_interaction
 #  - reorder_neighbor_friction
 

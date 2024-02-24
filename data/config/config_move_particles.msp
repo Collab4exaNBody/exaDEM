@@ -1,14 +1,12 @@
 ########### Generic particle update block ################
 
-
-
 # define a test node which outputs a boolean value 'trigger_move_particles'
 # which tells when to move particles across cells and update neighbor lists
 trigger_move_particles:
   rebind: { threshold: max_displ , result: trigger_move_particles }
-  body:
-#    - particle_displ_over
-    - polyhedron_displ_over
+  body: 
+    - particle_displ_over
+
 
 ################### AMR ############################
 rebuild_amr:
@@ -30,7 +28,6 @@ chunk_neighbors_contact:
 
 chunk_neighbors_impl: 
   - chunk_neighbors_contact
-  - update_mutexes
 
 update_particle_neighbors:
   - amr_grid_pairs
@@ -43,9 +40,7 @@ grid_post_processing: grid_memory_compact
 ghost_full_update:
   - ghost_comm_scheme
   - ghost_update_all
-  #- ghost_update_rq
   
-
 ################## trigger stl mesh update ########################
 
 trigger_update_stl_mesh:
@@ -53,18 +48,13 @@ trigger_update_stl_mesh:
   body:
     - build_grid_stl_mesh
 
-
 ################### parallel particle migration ############################
+
+## should be define by your particle mode (spheres or polyhedra)
+migrate_particles: nop
+
 parallel_update_particles:
-  - message: { mesg: "first" , endl: true }
-  - stats_interactions
-  - migrate_cell_particles_interaction
-  - message: { mesg: "second" , endl: true }
-  - stats_interactions
-##  - migrate_cell_particles_friction
-  - rebuild_amr
-#  - backup_r
-  - backup_dem
+  - migrate_particles
   - ghost_full_update
   - grid_post_processing
   - update_particle_neighbors
@@ -75,12 +65,8 @@ init_particles:
   - move_particles # standard move_particles, even if friction is enabled. just re-order particles in cells, if needed
   - extend_domain
   - load_balance
-  - update_grid_interaction
   - parallel_update_particles
 ###########################################################################
-
-
-
 
 ########################### Load balancing ############################
 # trigger load balance whenever domain size changed, whatever freq has been requested
@@ -108,20 +94,16 @@ load_balancing_if_triggered:
   body:
     - load_balance
 #######################################################################
-
-
+## should be define by your particle mode (spheres or polyhedra)
+move_particles_extra_data: nop
+reorder_extra_data: nop
 
 update_particles_full_body:
-##  - compact_neighbor_friction
-#  - move_particles_friction
-  - move_particles_interaction
+  - move_particles_extra_data
   - trigger_load_balance
   - load_balancing_if_triggered
   - parallel_update_particles
-
-##  - reorder_interactions
-#  - reorder_neighbor_friction
-##  - check_nbh_friction
+  - reorder_extra_data
 
 update_particles_full:
   condition: trigger_move_particles
@@ -129,15 +111,12 @@ update_particles_full:
     - update_particles_full_body
 
 update_particles_fast_body:
-    #- ghost_update_all
-    #- ghost_update_full
     - ghost_update_rq:
        gpu_buffer_pack: true
        async_buffer_pack: true #false
        staging_buffer: true
        serialize_pack_send: true
        wait_all: false
-    #- ghost_update_r
 
 update_particles_fast:
   condition: not trigger_move_particles
@@ -145,12 +124,9 @@ update_particles_fast:
     - update_particles_fast_body
 
 check_and_update_particles:
-#  - ghost_update_r
-##  - update_nbh_friction
   - trigger_move_particles
   - update_particles_full
   - update_particles_fast
   - loadbalance_log_helper:
       rebind: { lb_flag: trigger_load_balance , move_flag: trigger_move_particles }
       body: [ lb_event_counter ]
-

@@ -53,6 +53,8 @@ namespace exaDEM
 
 			inline void execute () override final
 			{
+				if( grid->number_of_cells() == 0 ) { return; }
+
 				const auto cells = grid->cells();
 				auto & cell_interactions = grid_interaction->m_data;
 				auto & shps = *shapes_collection;
@@ -88,12 +90,22 @@ namespace exaDEM
 							exaDEM::detection_edge_edge
 					};
 
+#ifndef NDEBUG
+//#define VERBOSE_INTERACTIONS
+#endif
+#ifdef VERBOSE_INTERACTIONS
+					uint64_t count_number_of_active_interactions = 0;
+					uint64_t count_number_of_unactive_interactions = 0;
+#endif
+
+
 #pragma omp for schedule(dynamic)
 					for(size_t current_cell = 0 ; current_cell < cell_interactions.size() ; current_cell++)
 					{
 						auto& interactions = cell_interactions[current_cell];
 						const unsigned int  n_interactions_in_cell = interactions.m_data.size();
-						exaDEM::Interaction* __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data ); 
+						exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data ); 
+
 
 						for( size_t it = 0; it < n_interactions_in_cell ; it++ )
 						{
@@ -128,6 +140,9 @@ namespace exaDEM
 
 							if(contact)
 							{
+#ifdef VERBOSE_INTERACTIONS
+								count_number_of_active_interactions++;
+#endif
 								const Vec3d vi = get_v(item.cell_i, item.p_i);
 								const Vec3d vj = get_v(item.cell_j, item.p_j);
 								const auto& m_i = cell_i[field::mass][item.p_i];
@@ -171,9 +186,16 @@ namespace exaDEM
 							else
 							{
 								item.reset();
+#ifdef VERBOSE_INTERACTIONS
+								count_number_of_unactive_interactions++;
+#endif
 							}
 						}
 					}
+#ifdef VERBOSE_INTERACTIONS
+				std::cout << "The number of active interactions on proc 0 is : " << (double) (count_number_of_active_interactions) << std::endl;
+				std::cout << "The number of unactive interactions on proc 0 is : " << (double) (count_number_of_unactive_interactions) << std::endl;
+#endif
 				}
 			}
 		};

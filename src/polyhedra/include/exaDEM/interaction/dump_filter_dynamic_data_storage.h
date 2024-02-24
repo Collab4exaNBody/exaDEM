@@ -76,6 +76,8 @@ namespace exaDEM
         domain.set_expandable( expandable );
       }
 
+			domain_bounds = domain.bounds();
+
       if( override_domain_bounds )
       {
         if( ! domain.xform_is_identity() )

@@ -3,6 +3,7 @@
 #include <vector>
 #include <cassert>
 #include <math.h>
+#include <exanb/core/log.h>
 #include <exaDEM/basic_types.hpp>
 //#include <exaDEM/shape_printer.hpp>
 
@@ -199,7 +200,6 @@ namespace exaDEM
 			{
 				auto& vertex = this->get_vertex(it);
 				const double d = exanb::norm(vertex) + m_radius;//2 * m_radius;
-				std::cout <<"rcut = " << d << std::endl;
 				rcut = std::max(rcut, d);
 			}
 
@@ -277,10 +277,10 @@ namespace exaDEM
 		{
 			int idx = 0;
 			auto printer = [&idx](exanb::Vec3d& vertex) {
-				std::cout << "Vertex[" << idx++ << "]: [" << vertex.x << "," << vertex.y << "," << vertex.z << "]" << std::endl;
+				lout << "Vertex[" << idx++ << "]: [" << vertex.x << "," << vertex.y << "," << vertex.z << "]" << std::endl;
 			};
 
-			std::cout << "Number of vertices: " << this->get_number_of_vertices() << std::endl;
+			lout << "Number of vertices: " << this->get_number_of_vertices() << std::endl;
 			for_all_vertices(printer);
 		}
 
@@ -288,16 +288,16 @@ namespace exaDEM
 		{
 			int idx = 0;
 			auto printer = [&idx](int first, int second) {
-				std::cout << "Edge["<<idx++ <<"]: ["<< first << "," << second << "]";
+				lout << "Edge["<<idx++ <<"]: ["<< first << "," << second << "]" << std::endl;
 			};
 
 			if(this->get_number_of_edges() == 0)
 			{
-				std::cout << "No edge" << std::endl;
+				lout << "No edge" << std::endl;
 			}
 			else
 			{
-				std::cout << "Number of edges: " << this->get_number_of_edges() << std::endl;
+				lout << "Number of edges: " << this->get_number_of_edges() << std::endl;
 				for_all_edges(printer);
 			}
 		}
@@ -306,40 +306,39 @@ namespace exaDEM
 		{
 			int idx = 0;
 			auto printer = [&idx](int vertices, int* data) {
-				std::cout << "Number of vertices in face [" << idx++ << "]: " << vertices << std::endl;
-				std::cout << "Vertices :";
+				lout << "Face [" << idx++ << "]: ";
 				for(int it = 0; it < vertices - 1 ; it++)
 				{
-					std::cout << data[it] << ", ";
+					lout << data[it] << ", ";
 				}
-				std::cout << data[vertices-1] << std::endl;
+				lout << data[vertices-1] << std::endl;
 			};
 			if(this->get_number_of_faces() == 0)
 			{
-				std::cout << "No face" << std::endl;
+				lout << "No face" << std::endl;
 			}
 			else
 			{
-				std::cout << "Number of faces: " << this->get_number_of_faces() << std::endl;
+				lout << "Number of faces: " << this->get_number_of_faces() << std::endl;
 				for_all_faces(printer);
 			}
 		}
 
 	inline void print()
 	{
-		std::cout << "======= Shape Configuration =====" << std::endl;
-		std::cout << "Shape Name: " << this->m_name << std::endl;
-		std::cout << "Shape Radius: " << this->m_radius << std::endl;
-		std::cout << "Shape I/m: [" << this->m_inertia_on_mass << "]" << std::endl;
-		std::cout << "Shape Volume: " << this->m_volume << std::endl;
+		lout << "======= Shape Configuration =====" << std::endl;
+		lout << "Shape Name: " << this->m_name << std::endl;
+		lout << "Shape Radius: " << this->m_radius << std::endl;
+		lout << "Shape I/m: [" << this->m_inertia_on_mass << "]" << std::endl;
+		lout << "Shape Volume: " << this->m_volume << std::endl;
 		print_vertices();
 		print_edges();
 		print_faces();
-		std::cout << "=================================" << std::endl << std::endl;
+		lout << "=================================" << std::endl << std::endl;
 	}
 	inline void write_paraview()
 	{
-		std::cout << " writting paraview for shape " << this->m_name << std::endl;
+		lout << " writting paraview for shape " << this->m_name << std::endl;
 		std::string name = m_name + ".vtk";
 		std::ofstream outFile(name);
 		if (!outFile) {

@@ -3,8 +3,8 @@
 
 # default global values
 global:
-  dt: 1.0e-3 ps
-  rcut_inc: 1.0 ang   # additional distance so that we d'ont have to rebuild neighbor list each time step
+  dt: 1.0e-4 s
+  rcut_inc: 0.1 m   # additional distance so that we d'ont have to rebuild neighbor list each time step
   compute_loop_continue: true
   simulation_end_iteration: 10000
   simulation_log_frequency: 10
@@ -19,7 +19,7 @@ global:
   #amr_z_curve: false
   enable_grid_compact: true
   enable_stl_mesh: false
-#  force_initialized: false # default is to consider reader do not provide initialized acceleration
+  enable_polyhedron: false
 
 # default grid variant we use
 grid_flavor: grid_flavor_full
@@ -32,6 +32,6 @@ make_empty_grid:
 # default domain parameters
 domain:
   grid_dims: [ 0 , 0 , 0 ] # deduced from cell_size
-  cell_size: 0.0 ang # deduced from max rcut (a.k.a. output slot ghost_dist from nbh_dist node)
+  cell_size: 0.0 m # deduced from max rcut (a.k.a. output slot ghost_dist from nbh_dist node)
 
 particle_regions: []

@@ -1,0 +1,9 @@
+######### SPHERES mode ####################
+migrate_particles:
+    - migrate_cell_particles_friction
+    - rebuild_amr
+    - backup_r
+
+move_particles_extra_data: move_particles_friction
+
+reorder_extra_data: reorder_neighbor_friction

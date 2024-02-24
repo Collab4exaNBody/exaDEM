@@ -19,25 +19,24 @@
 
 namespace exaDEM
 {
-  using namespace exanb;
+	using namespace exanb;
 
-  template<class GridT>
-  class MovePaticlesWithInteraction : public OperatorNode
-  { 
-    using ParticleT = typename exanb::MoveParticlesHelper<GridT>::ParticleT;
-    using ParticleVector = typename exanb::MoveParticlesHelper<GridT>::ParticleVector;
-    using MovePaticlesScratch = typename exanb::MoveParticlesHelper<GridT>::MovePaticlesScratch;
+	template<class GridT>
+		class MovePaticlesWithInteraction : public OperatorNode
+	{ 
+		using ParticleT = typename exanb::MoveParticlesHelper<GridT>::ParticleT;
+		using ParticleVector = typename exanb::MoveParticlesHelper<GridT>::ParticleVector;
+		using MovePaticlesScratch = typename exanb::MoveParticlesHelper<GridT>::MovePaticlesScratch;
 
-    ADD_SLOT( Domain , domain , INPUT );
-    ADD_SLOT( GridT , grid , INPUT_OUTPUT );
-    ADD_SLOT( ParticleVector , otb_particles , OUTPUT );
-    
-    ADD_SLOT( GridCellParticleInteraction , grid_interaction  , INPUT_OUTPUT , DocString{"Interaction list"} );
-    ADD_SLOT( InteractionCellMoveBuffer , buffer_interaction , INPUT_OUTPUT, InteractionCellMoveBuffer{} , DocString{"interaction data of particles moving outside the box"} );
- 
-    ADD_SLOT( MovePaticlesScratch, move_particles_scratch , PRIVATE );
+		ADD_SLOT( Domain , domain , INPUT );
+		ADD_SLOT( GridT , grid , INPUT_OUTPUT );
+		ADD_SLOT( ParticleVector , otb_particles , OUTPUT );
+		ADD_SLOT( GridCellParticleInteraction , grid_interaction  , INPUT_OUTPUT , DocString{"Interaction list"} );
+		ADD_SLOT( InteractionCellMoveBuffer , buffer_interaction , INPUT_OUTPUT, InteractionCellMoveBuffer{} , DocString{"interaction data of particles moving outside the box"} );
 
-  public:
+		ADD_SLOT( MovePaticlesScratch, move_particles_scratch , PRIVATE );
+
+		public:
 
 		inline std::string documentation() const override final
 		{

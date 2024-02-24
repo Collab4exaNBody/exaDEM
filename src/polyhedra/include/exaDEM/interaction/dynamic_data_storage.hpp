@@ -49,7 +49,7 @@ namespace exaDEM
 		 */
 		inline void push_back( const UIntType id, const std::vector<ItemType>& ppf )
 		{
-			if(	m_info.empty() )
+			if(	m_info.size() == 0 )
 			{
 				InfoType new_info = {0, ppf.size(), id};
 				m_info.push_back( new_info );
@@ -99,7 +99,7 @@ namespace exaDEM
 			}
 
 			m_info.resize (n_particles);
-			m_info.assign (n_particles, {0,0,0});
+			m_info.assign (n_particles, {0,0,UIntType(-1)});
 		}
 
 		inline void clear()
@@ -187,18 +187,17 @@ namespace exaDEM
 			UIntType n_particles = ((UIntType *) buffer) [0];
 			UIntType n_items     = ((UIntType *) buffer) [1];
 
-			const UIntType info_size = n_particles;
-			const UIntType first_info = 2 * sizeof(UIntType);
-			const UIntType first_data = first_info + info_size * sizeof(InfoType); 
-
-			// get sizes in bytes
-			auto& last = m_info.back();			
-			const UIntType data_size = std::get<0> (last) + std::get<1> (last);
-
-			assert ( n_items == data_size );
-
-			m_info.resize(info_size);
+			if ( n_particles == 0 && m_info.size() == 0)
+			{
+				this->clear();
+				return;
+			}
+			//auto& last = m_info.size() > 0 ? m_info.back() : {0,0,0};	 // only used in the next line		
+			// resize data
+			m_info.resize(n_particles);
 			m_data.resize(n_items);
+			const UIntType info_size = m_info.size();
+			const UIntType data_size = m_data.size(); // std::get<0> (last) + std::get<1> (last);
 
 			// get data pointers
 			InfoType * const __restrict__ info_ptr = onika::cuda::vector_data( m_info );
@@ -206,10 +205,12 @@ namespace exaDEM
 
 
 			// get buffer pointers
+			const UIntType first_info = 2 * sizeof(UIntType);
+			const UIntType first_data = first_info + info_size * sizeof(InfoType); 
 			const InfoType * const __restrict__ buff_info_ptr = (const InfoType*) (buff_ptr + first_info);
 			const ItemType * const __restrict__ buff_data_ptr = (const ItemType*) (buff_ptr + first_data);
 
-			// first offset, then type T
+			// first informaions, then items
 			std::copy ( buff_info_ptr, buff_info_ptr + info_size, info_ptr );
 			std::copy ( buff_data_ptr, buff_data_ptr + data_size, data_ptr );
 		}
@@ -230,9 +231,10 @@ namespace exaDEM
 			m_info.resize(new_info_size);
 
 			// compute shift pointers for info and data vectors
-			 UIntType * const __restrict__ buff      = ( UIntType* ) buffer;
+			 UIntType * const __restrict__ buff      = ( UIntType*) buffer;
+			 UIntType buff_n_particles = buff[0];
 			 InfoType * const __restrict__ buff_info = ( InfoType*) (buff + 2);
-			 ItemType * const __restrict__ buff_data = ( ItemType*) (buff_info + (end - start));
+			 ItemType * const __restrict__ buff_data = ( ItemType*) (buff_info + buff_n_particles);
 
 			for(size_t i = 0 ; i < buff[0] ; i++)
 			{
@@ -244,8 +246,8 @@ namespace exaDEM
 					std::get<0> (buff_info[i]) = last_offset + last_size;
 				}
 			}
-
-			assert ( migration_test::check_info_consistency( buff_info, buff[0] ));
+			assert ( migration_test::check_info_doublon    ( buff_info, buff_n_particles));
+			assert ( migration_test::check_info_consistency( buff_info, buff_n_particles));
 
 			// copy new information and update offset to fit with the current cell extra data storage
 			// sizes and ids do not change
@@ -261,6 +263,7 @@ namespace exaDEM
 				}
 			}
 
+			assert ( migration_test::check_info_doublon    ( m_info.data(), m_info.size() ));
 			assert ( migration_test::check_info_consistency( m_info.data(), m_info.size() ));
 
 			// define item range [first, last] | note: last particle idx = end-1 

@@ -8,8 +8,8 @@ namespace exaDEM
 	 */
 	struct Interaction
 	{
-		exanb::Vec3d friction; /**< Friction vector associated with the interaction. */
-		exanb::Vec3d moment;   /**< Moment vector associated with the interaction. */
+		exanb::Vec3d friction= {0,0,0};  /**< Friction vector associated with the interaction. */
+		exanb::Vec3d moment = {0,0,0};   /**< Moment vector associated with the interaction. */
 		uint64_t id_i;         /**< Id of the first particle */
 		uint64_t id_j;         /**< Id of the second particle */
 		size_t cell_i;         /**< Index of the cell of the first particle involved in the interaction. */
@@ -36,6 +36,17 @@ namespace exaDEM
 		void print()
 		{
 			std::cout << "Interaction(type = " << int(type) << 
+					" [cell: "<< cell_i << ", idx " << p_i << ", particle id: " << id_i << "] and" <<
+					" [cell: "<< cell_j << ", idx " << p_j << ", particle id: " << id_j << "] : (friction: " <<
+					friction << ", moment: " << moment << ")" << std::endl;
+		}
+
+		/**
+		 * @brief Displays the Interaction data.
+		 */
+		void print() const
+		{
+			std::cout << "Interaction(type = " << int(type) << 
 					" [cell: "<< cell_i << ", idx " << id_i << ", particle id: " << p_i << "] and" <<
 					" [cell: "<< cell_j << ", idx " << id_j << ", particle id: " << p_j << "] : (friction: " <<
 					friction << ", moment: " << moment << ")" << std::endl;
@@ -46,7 +57,11 @@ namespace exaDEM
 		 */
 		bool operator==(Interaction& I)
 		{
-			if ( this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i == I.sub_i && this->sub_j == I.sub_j && this->type == I.type)
+			if( this->id_i == I.id_i && 
+					this->id_j == I.id_j && 
+					this->sub_i == I.sub_i && 
+					this->sub_j == I.sub_j && 
+					this->type == I.type)
 			{
 				return true;
 			}
@@ -61,7 +76,11 @@ namespace exaDEM
 		 */
 		bool operator==(const Interaction& I) const
 		{
-			if ( this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i == I.sub_i && this->sub_j == I.sub_j && this->type == I.type)
+			if( this->id_i == I.id_i && 
+					this->id_j == I.id_j && 
+					this->sub_i == I.sub_i && 
+					this->sub_j == I.sub_j && 
+					this->type == I.type)
 			{
 				return true;
 			}
@@ -106,109 +125,116 @@ namespace exaDEM
 			return {exist, *iterator};
 		}
 
-
 	inline
-		std::vector<Interaction> extract_history(std::vector<Interaction>& interactions)
+		std::vector<Interaction> extract_history_omp(std::vector<Interaction>& interactions)
 		{
 			std::vector<Interaction> ret;
 			const exanb::Vec3d null = {0,0,0};
-#ifndef SERIAL
 #pragma omp parallel
 			{
-				std::vector<Interaction> local;
+				std::vector<Interaction> tmp;
 #pragma omp for
 				for( size_t i = 0 ; i < interactions.size() ; i++ )
 				{
-					if(interactions[i].moment == null && interactions[i].friction == null)
+					if(interactions[i].moment != null || interactions[i].friction != null)
 					{
-						local.push_back(interactions[i]);
+						tmp.push_back(interactions[i]);
 					}
 				}
 
-				if(local.size() > 0)
+				if(tmp.size() > 0)
 				{
 #pragma omp critical
 					{
-						ret.insert(ret.end(), local.begin(), local.end());
+						ret.insert(ret.end(), tmp.begin(), tmp.end());
 					}
 				}
 			}
-#else
-			int last = interactions.size() - 1;
-			for(int i = last ; i >= 0 ; i--)
-			{
-				if(interactions[i].moment == null && interactions[i].friction == null)
-				{
-					interactions[i] = interactions[last--];
-				}
-			}
-			interactions.resize(last+1);
-			ret = interactions;
-#endif
+
 			return ret;
 		}
 
 	inline 
-		void update_friction_moment(std::vector<Interaction>& interactions, std::vector<Interaction>& history)
+		void update_friction_moment_omp(std::vector<Interaction>& interactions, std::vector<Interaction>& history)
 		{
-
-			if (history.size() == 0) return;
-			if (interactions.size() == 0) return;
-
-			// interactions and history are sorted
-			size_t id = 0;
-			auto& old_item    = history[0];
-			auto& first_item  = interactions[0];
-			// get first elem
-			while( old_item < first_item && id < history.size()) old_item = history[++id];
-
+#pragma omp parallel for
 			for(size_t it = 0 ; it < interactions.size() ; it++)
 			{
 				auto & item = interactions[it];
-				if ( item < old_item  ) continue;
-
-				id++; // incr
-
-				if ( old_item == item ) 
+				auto lower = std::lower_bound( history.begin(), history.end(), item );
+				if(lower != history.end() )
 				{
-					item.update_friction_and_moment(old_item);
-					if(id < history.size())
+					if( item == *lower )
 					{
-						old_item = history[id];
+						item.update_friction_and_moment(*lower);
 					}
-					else
-					{
-						return;
-					}						
-				}
-				else
-				{
-					if(id < history.size())
-					{
-						old_item = history[id];
-						it--;
-					}
-					else
-					{
-						return;
-					}						
 				}
 			}
 		}
 
-		// sequential
-	inline void extract_history(std::vector<Interaction>& local, const Interaction * data, const unsigned int size)
+	inline void update_friction_moment(std::vector<Interaction>& interactions, std::vector<Interaction>& history)
+	{
+		[[maybe_unused]] int number_of_active_interactions = history.size();
+		[[maybe_unused]] int count_number_of_update = 0;
+		for(size_t it = 0 ; it < interactions.size() ; it++)
 		{
-			const exanb::Vec3d null = {0,0,0};
-			local.clear();
-			for(size_t i = 0 ; i < size ; i++)
+			auto & item = interactions[it];
+			auto lower = std::lower_bound( history.begin(), history.end(), item );
+			if(lower != history.end() )
 			{
-				const auto& item = data[i];
-				if(item.moment != null || item.friction != null)
+				if( item == *lower )
 				{
-					local.push_back(item);
+					item.update_friction_and_moment(*lower);
+					count_number_of_update++;
 				}
-			}			
+			}
 		}
+		/*
+		// not always true so I comment it. (ghost areas)
+#ifndef NDEBUG
+		if ( count_number_of_update != number_of_active_interactions)
+		{
+			std::cout << "count_number_of_update: " <<count_number_of_update << 
+				" should be equal to " << number_of_active_interactions << std::endl;
+		}
+
+		std::vector<bool> markers(history.size());
+		markers.assign(history.size(), false);
+
+    for(size_t it = 0 ; it < interactions.size() ; it++)
+    {
+      auto & item = interactions[it];
+      auto lower = std::lower_bound( history.begin(), history.end(), item );
+      if(lower != history.end() )
+      {
+        if( item == *lower )
+        {
+					markers[std::distance(history.begin(), lower)] = true;
+        }
+      }
+    }
+		for(size_t it = 0 ; it < history.size() ; it++)
+		{
+			if( markers[it] == false ) history[it].print();
+		}
+#endif
+		assert ( count_number_of_update == number_of_active_interactions );
+		*/
+	}
+
+	// sequential
+	inline void extract_history(std::vector<Interaction>& local, const Interaction * data, const unsigned int size)
+	{
+		const exanb::Vec3d null = {0,0,0};
+		local.clear();
+		for(size_t i = 0 ; i < size ; i++)
+		{
+			const auto& item = data[i];
+			if(item.moment != null || item.friction != null)
+			{
+				local.push_back(item);
+			}
+		}			
+	}
 
 }

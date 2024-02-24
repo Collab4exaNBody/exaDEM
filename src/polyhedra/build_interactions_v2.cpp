@@ -68,7 +68,7 @@ namespace exaDEM
 				return;
 			}
 
-			std::vector<Interaction> history = extract_history(interactions);
+			std::vector<Interaction> history = extract_history_omp(interactions);
 			std::sort (history.begin(), history.end());
 			interactions.clear();
 

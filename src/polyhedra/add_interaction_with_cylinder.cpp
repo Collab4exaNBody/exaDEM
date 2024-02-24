@@ -61,7 +61,7 @@ namespace exaDEM
 			const Vec3d axis = *cylinder_axis;
 			const Vec3d center_proj = (*cylinder_center) * axis; 
 
-			std::vector<Interaction> history = extract_history(interactions);
+			std::vector<Interaction> cylinder_history =	extract_history_omp(interactions);
 			interactions.clear();
 
 			const uint64_t id_j = 0;
@@ -123,8 +123,7 @@ namespace exaDEM
 					local.clear();
 				}
 			}
-
-			update_friction_moment(interactions, history);
+			update_friction_moment_omp(interactions, cylinder_history);
 		}
 	};
 

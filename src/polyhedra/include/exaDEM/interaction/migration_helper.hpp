@@ -22,6 +22,7 @@ namespace exaDEM
 
 		inline const unsigned int cell_particles_data_size ( size_t cell_i )
 		{
+			if ( cell_i >= m_cell_extra_data.size() ) return 0; // case no grid
 			return m_cell_extra_data[ cell_i ]. storage_size();
 		}
 
@@ -85,8 +86,10 @@ namespace exaDEM
 		inline size_t serialize_otb_range( void* to_buff, size_t pstart, size_t pend )
 		{
 			assert (m_otb_buffer.check_info_consistency() );
-			const size_t n_particles = pend - pstart;
-			const auto [from_glob_ptr, from_info_ptr, from_data_ptr] = m_otb_buffer.decode_pointers(n_particles);
+			assert ( pstart < pend );
+			const size_t otb_n_particles = m_otb_buffer.number_of_particles(); //pend - pstart;
+			const auto [from_glob_ptr, from_info_ptr, from_data_ptr] = m_otb_buffer.decode_pointers(otb_n_particles);
+			UIntType n_particles = pend - pstart;
 			// Decode stream buffer pointers.
 			UIntType* to_glob_ptr = (UIntType*) to_buff; // global information
 			InfoType* to_info_ptr = (InfoType*) (to_glob_ptr + 2);
@@ -96,7 +99,7 @@ namespace exaDEM
 			to_glob_ptr[0] = n_particles; 
 			to_glob_ptr[1] = 0; // number of items
 
-			UIntType total_size = n_particles * sizeof(InfoType) + 2 * sizeof(UIntType); // total_size count in Word units
+			UIntType total_size = (pend - pstart) * sizeof(InfoType) + 2 * sizeof(UIntType); // total_size count in Word units
 			// We need to set the correct offset in the buffer, it is not store in the OTB vector
 			UIntType to_offset = 0;
 
@@ -104,15 +107,17 @@ namespace exaDEM
 			for( size_t p = pstart ; p < pend ; p++)
 			{
 				const auto [from_offset, from_size, from_id] = m_otb_buffer.get_info(p); 
+				// update info	
+				to_info_ptr[p-pstart] = {to_offset, from_size, from_id}; // fit offset
+				if ( from_size == 0 ) continue;
 				to_glob_ptr[1] += from_size;
 				total_size += from_size * sizeof(ItemType);
-				// update info	
-				to_info_ptr[p] = {to_offset, from_size, from_id}; // fit offset
 				// update data
 				std::copy ( from_data_ptr + from_offset, from_data_ptr + from_offset + from_size, to_data_ptr + to_offset);
 				to_offset += from_size;	
 			}
 
+			assert ( migration_test :: check_info_doublon( to_info_ptr, n_particles) );
 			assert ( migration_test :: check_info_consistency( to_info_ptr, n_particles) );
 			assert( total_size == storage_size_for_otb_range(pstart,pend) );
 			return total_size;
