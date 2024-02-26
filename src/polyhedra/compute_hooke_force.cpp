@@ -84,20 +84,19 @@ namespace exaDEM
 #pragma omp parallel
 				{
 					auto detection = std::vector{
+
+						exaDEM::detection_vertex_vertex_precompute,
+							exaDEM::detection_vertex_edge_precompute,
+							exaDEM::detection_vertex_face_precompute,
+							exaDEM::detection_edge_edge_precompute
+
+/*
 						exaDEM::detection_vertex_vertex,
 							exaDEM::detection_vertex_edge,
 							exaDEM::detection_vertex_face,
 							exaDEM::detection_edge_edge
+*/
 					};
-
-#ifndef NDEBUG
-//#define VERBOSE_INTERACTIONS
-#endif
-#ifdef VERBOSE_INTERACTIONS
-					uint64_t count_number_of_active_interactions = 0;
-					uint64_t count_number_of_unactive_interactions = 0;
-#endif
-
 
 #pragma omp for schedule(dynamic)
 					for(size_t current_cell = 0 ; current_cell < cell_interactions.size() ; current_cell++)
@@ -114,7 +113,7 @@ namespace exaDEM
 							const Vec3d ri = get_r(item.cell_i, item.p_i);
 							const Vec3d rj = get_r(item.cell_j, item.p_j);
 							const Vec3d origin = {0,0,0};
-							const Vec3d dr = rj - ri;
+//							const Vec3d dr = rj - ri;
 
 							// === cell
 							auto& cell_i =  cells[item.cell_i];
@@ -128,21 +127,22 @@ namespace exaDEM
 							const auto& type_i = cell_i[field::type][item.p_i];
 							const auto& type_j = cell_j[field::type][item.p_j];
 
+							// === vertex array
+							const auto& vertices_i =  cell_i[field::vertices][item.p_i];
+							const auto& vertices_j =  cell_j[field::vertices][item.p_j];
 							// === orientation
-							const auto& orient_i = cell_i[field::orient][item.p_i];
-							const auto& orient_j = cell_j[field::orient][item.p_j];
+//							const auto& orient_i = cell_i[field::orient][item.p_i];
+//							const auto& orient_j = cell_j[field::orient][item.p_j];
 
 							// === shapes
 							const shape* shp_i = shps[type_i];
 							const shape* shp_j = shps[type_j];
 
-							auto [contact, dn, n, contact_position] = detection[item.type](origin, item.sub_i, shp_i, orient_i, dr, item.sub_j, shp_j, orient_j);
+//							auto [contact, dn, n, contact_position] = detection[item.type](origin, item.sub_i, shp_i, orient_i, dr, item.sub_j, shp_j, orient_j);
+							auto [contact, dn, n, contact_position] = detection[item.type](vertices_i, item.sub_i, shp_i, vertices_j, item.sub_j, shp_j);
 
 							if(contact)
 							{
-#ifdef VERBOSE_INTERACTIONS
-								count_number_of_active_interactions++;
-#endif
 								const Vec3d vi = get_v(item.cell_i, item.p_i);
 								const Vec3d vj = get_v(item.cell_j, item.p_j);
 								const auto& m_i = cell_i[field::mass][item.p_i];
@@ -155,8 +155,10 @@ namespace exaDEM
 								hooke_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr,
 										params.m_mu, params.m_damp_rate, meff,
 										item.friction, contact_position,
-										origin, vi, f, item.moment, vrot_i,  // particle 1
-										dr, vj, vrot_j // particle nbh
+										ri, vi, f, item.moment, vrot_i,  // particle 1
+										rj, vj, vrot_j // particle nbh
+										//origin, vi, f, item.moment, vrot_i,  // particle 1
+										//dr, vj, vrot_j // particle nbh
 										);
 
 
@@ -165,7 +167,8 @@ namespace exaDEM
 								locker.lock(item.cell_i, item.p_i);
 
 								auto& mom_i = cell_i[field::mom][item.p_i];
-								mom_i += compute_moments(contact_position, origin, f, item.moment);
+								//mom_i += compute_moments(contact_position, origin, f, item.moment);
+								mom_i += compute_moments(contact_position, ri, f, item.moment);
 								cell_i[field::fx][item.p_i] += f.x;
 								cell_i[field::fy][item.p_i] += f.y;
 								cell_i[field::fz][item.p_i] += f.z;
@@ -176,7 +179,8 @@ namespace exaDEM
 								locker.lock(item.cell_j, item.p_j);
 
 								auto& mom_j = cell_j[field::mom][item.p_j];
-								mom_j += compute_moments(contact_position, dr, -f, -item.moment);
+								//mom_j += compute_moments(contact_position, dr, -f, -item.moment);
+								mom_j += compute_moments(contact_position, rj, -f, -item.moment);
 								cell_j[field::fx][item.p_j] -= f.x;
 								cell_j[field::fy][item.p_j] -= f.y;
 								cell_j[field::fz][item.p_j] -= f.z;
@@ -186,16 +190,9 @@ namespace exaDEM
 							else
 							{
 								item.reset();
-#ifdef VERBOSE_INTERACTIONS
-								count_number_of_unactive_interactions++;
-#endif
 							}
 						}
 					}
-#ifdef VERBOSE_INTERACTIONS
-				std::cout << "The number of active interactions on proc 0 is : " << (double) (count_number_of_active_interactions) << std::endl;
-				std::cout << "The number of unactive interactions on proc 0 is : " << (double) (count_number_of_unactive_interactions) << std::endl;
-#endif
 				}
 			}
 		};

@@ -43,7 +43,7 @@ namespace exaDEM
 					size_t n_particles_stored = storage.number_of_particles();
 					auto* info_ptr = storage.m_info.data();
 					auto* data_ptr = storage.m_data.data();
-					bool is_okay = interaction_test::check_extra_interaction_storage_consistency( n_particles_stored, info_ptr, data_ptr);
+					[[maybe_unused]] bool is_okay = interaction_test::check_extra_interaction_storage_consistency( n_particles_stored, info_ptr, data_ptr);
 					assert(is_okay && "CheckInteractionConsistency");
 				}
 		}

@@ -43,7 +43,7 @@ namespace exaDEM
 					auto storage = cell_interactions[current_cell];
 					size_t n_particles_stored = storage.number_of_particles();
 					auto* info_ptr = storage.m_info.data();
-					bool is_okay = migration_test::check_info_consistency( info_ptr, n_particles_stored);
+					[[maybe_unused]] bool is_okay = migration_test::check_info_consistency( info_ptr, n_particles_stored);
 					assert(is_okay && "CheckInteractionConsistency");
 				}
 		}

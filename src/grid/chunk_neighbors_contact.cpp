@@ -85,7 +85,10 @@ namespace exaDEM
         std::abort();
       }
 
-      const bool gpu_enabled = parallel_execution_context()->has_gpu_context();
+      //const bool gpu_enabled = parallel_execution_context()->has_gpu_context();
+
+			bool gpu_enabled = ( global_cuda_ctx() != nullptr );
+      if( gpu_enabled ) gpu_enabled = global_cuda_ctx()->has_devices(); 
 
       auto cells = grid->cells();
       ContactNeighborFilterFunc<decltype(cells)> nbh_filter { cells , *rcut_inc };

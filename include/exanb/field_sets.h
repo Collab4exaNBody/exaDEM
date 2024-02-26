@@ -15,7 +15,7 @@ namespace exanb
 	field::_orient, 
 	field::_mom, field::_vrot, field::_arot,
 	field::_inertia, field::_id , field::_shape,
-	field::_friction, field::_type
+	field::_friction, field::_type, field::_vertices
 	>;
 
   // the standard set of FieldSet

@@ -1,3 +1,9 @@
+#######################################################################
+## should be define by your particle mode (spheres or polyhedra)
+move_particles_extra_data: nop
+compute_new_vertices: nop # after update ghost
+reorder_extra_data: nop
+
 ########### Generic particle update block ################
 
 # define a test node which outputs a boolean value 'trigger_move_particles'
@@ -40,6 +46,8 @@ grid_post_processing: grid_memory_compact
 ghost_full_update:
   - ghost_comm_scheme
   - ghost_update_all
+  - compute_new_vertices
+
   
 ################## trigger stl mesh update ########################
 
@@ -93,10 +101,6 @@ load_balancing_if_triggered:
   condition: trigger_load_balance
   body:
     - load_balance
-#######################################################################
-## should be define by your particle mode (spheres or polyhedra)
-move_particles_extra_data: nop
-reorder_extra_data: nop
 
 update_particles_full_body:
   - move_particles_extra_data
@@ -117,6 +121,7 @@ update_particles_fast_body:
        staging_buffer: true
        serialize_pack_send: true
        wait_all: false
+    - compute_new_vertices
 
 update_particles_fast:
   condition: not trigger_move_particles
