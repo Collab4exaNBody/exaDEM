@@ -34,19 +34,8 @@ dump_data_paraview:
         - message: { endl: true }
   - write_paraview_generic
 
-dump_data_particles:
-  - timestep_file: "exaDEM_%09d.dump"
-  - message: { mesg: "Write dump " , endl: false }
-  - print_dump_file:
-      rebind: { mesg: filename }
-      body:
-        - message: { endl: true }
-#  - compact_neighbor_friction
-#  - write_dump_particles
-  - message: { mesg: "before write" , endl: true }
-  - stats_interactions
-  - write_dump_particle_interaction
-#  - reorder_neighbor_friction
+## This operator is defined in spheres or polyhedra . msp
+dump_data_particles: nop
 
 iteration_dump_writer: 
   - dump_data_particles

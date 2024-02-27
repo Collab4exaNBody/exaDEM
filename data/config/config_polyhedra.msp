@@ -23,3 +23,12 @@ move_particles_extra_data: move_particles_interaction
 compute_new_vertices: polyhedra_compute_vertices
 
 reorder_extra_data: nop
+
+dump_data_particles:
+  - timestep_file: "exaDEM_%09d.dump"
+  - message: { mesg: "Write dump " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - write_dump_particle_interaction
