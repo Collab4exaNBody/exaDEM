@@ -334,6 +334,46 @@ namespace exaDEM
 			return ppf_base[ n ];
 		}
 
+		/**
+		 * @brief Compresses data using a specified function.
+		 * @tparam Func The type of the function object used for saving the compressed data.
+		 * @param save_data This functor object is responsible for saving the compressed data, it returns true if the data has to be saved.
+		 */
+		template<typename Func>
+			inline void compress_data(const Func& save_data)
+			{
+				if(m_data.size() == 0) return;
+				// compress for each particle
+				UIntType cur_off = 0;
+				int itData = 0;
+				// this function do not conserve the same data order per particle.
+				for(size_t i = 0 ; i < m_info.size() ; i++)
+				{
+					auto& [offset, size, id] = m_info[i];
+					UIntType acc = 0;
+
+					size_t last_item = offset + size;
+					size_t first_item = offset;
+
+					for (size_t it = first_item ; it < last_item ; it++)
+					{
+						if ( save_data( m_data[it] ) )
+						{
+							m_data[itData++] = m_data[it];
+							acc++;
+						}
+					}
+					// update new information
+					offset = cur_off;
+					size = acc;
+					cur_off += acc;
+
+				}
+				m_data.resize(itData);
+				assert ( check_info_consistency() );	
+			}
+
+
 		inline bool check_info_consistency()
 		{
 			return migration_test::check_info_consistency( m_info.data(), m_info.size() );  

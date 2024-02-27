@@ -30,14 +30,29 @@ namespace exaDEM
 		}
 
 		/**
+		 * @brief Checks if the interaction is active.
+		 *
+		 * This function checks if the interaction is active by examining the moment and friction vectors.
+		 * An interaction is considered active if either the moment vector or the friction vector is non-zero.
+		 *
+		 * @return True if the interaction is active (moment vector or friction vector is non-zero), false otherwise.
+		 */
+		inline bool is_active() const
+		{
+			constexpr exanb::Vec3d null = {0,0,0};
+			bool res = (moment != null) || (friction != null);
+			return res;
+		}
+
+		/**
 		 * @brief Displays the Interaction data.
 		 */
 		void print()
 		{
 			std::cout << "Interaction(type = " << int(type) << 
-					" [cell: "<< cell_i << ", idx " << p_i << ", particle id: " << id_i << "] and" <<
-					" [cell: "<< cell_j << ", idx " << p_j << ", particle id: " << id_j << "] : (friction: " <<
-					friction << ", moment: " << moment << ")" << std::endl;
+				" [cell: "<< cell_i << ", idx " << p_i << ", particle id: " << id_i << "] and" <<
+				" [cell: "<< cell_j << ", idx " << p_j << ", particle id: " << id_j << "] : (friction: " <<
+				friction << ", moment: " << moment << ")" << std::endl;
 		}
 
 		/**
@@ -46,9 +61,9 @@ namespace exaDEM
 		void print() const
 		{
 			std::cout << "Interaction(type = " << int(type) << 
-					" [cell: "<< cell_i << ", idx " << id_i << ", particle id: " << p_i << "] and" <<
-					" [cell: "<< cell_j << ", idx " << id_j << ", particle id: " << p_j << "] : (friction: " <<
-					friction << ", moment: " << moment << ")" << std::endl;
+				" [cell: "<< cell_i << ", idx " << id_i << ", particle id: " << p_i << "] and" <<
+				" [cell: "<< cell_j << ", idx " << id_j << ", particle id: " << p_j << "] : (friction: " <<
+				friction << ", moment: " << moment << ")" << std::endl;
 		}
 
 		/**
@@ -128,14 +143,13 @@ namespace exaDEM
 		std::vector<Interaction> extract_history_omp(std::vector<Interaction>& interactions)
 		{
 			std::vector<Interaction> ret;
-			const exanb::Vec3d null = {0,0,0};
 #pragma omp parallel
 			{
 				std::vector<Interaction> tmp;
 #pragma omp for
 				for( size_t i = 0 ; i < interactions.size() ; i++ )
 				{
-					if(interactions[i].moment != null || interactions[i].friction != null)
+					if(interactions[i].is_active())
 					{
 						tmp.push_back(interactions[i]);
 					}
@@ -173,8 +187,6 @@ namespace exaDEM
 
 	inline void update_friction_moment(std::vector<Interaction>& interactions, std::vector<Interaction>& history)
 	{
-		[[maybe_unused]] int number_of_active_interactions = history.size();
-		[[maybe_unused]] int count_number_of_update = 0;
 		for(size_t it = 0 ; it < interactions.size() ; it++)
 		{
 			auto & item = interactions[it];
@@ -184,56 +196,22 @@ namespace exaDEM
 				if( item == *lower )
 				{
 					item.update_friction_and_moment(*lower);
-					count_number_of_update++;
 				}
 			}
 		}
-		/*
-		// not always true so I comment it. (ghost areas)
-#ifndef NDEBUG
-		if ( count_number_of_update != number_of_active_interactions)
-		{
-			std::cout << "count_number_of_update: " <<count_number_of_update << 
-				" should be equal to " << number_of_active_interactions << std::endl;
-		}
-
-		std::vector<bool> markers(history.size());
-		markers.assign(history.size(), false);
-
-    for(size_t it = 0 ; it < interactions.size() ; it++)
-    {
-      auto & item = interactions[it];
-      auto lower = std::lower_bound( history.begin(), history.end(), item );
-      if(lower != history.end() )
-      {
-        if( item == *lower )
-        {
-					markers[std::distance(history.begin(), lower)] = true;
-        }
-      }
-    }
-		for(size_t it = 0 ; it < history.size() ; it++)
-		{
-			if( markers[it] == false ) history[it].print();
-		}
-#endif
-		assert ( count_number_of_update == number_of_active_interactions );
-		*/
 	}
 
 	// sequential
 	inline void extract_history(std::vector<Interaction>& local, const Interaction * data, const unsigned int size)
 	{
-		const exanb::Vec3d null = {0,0,0};
 		local.clear();
 		for(size_t i = 0 ; i < size ; i++)
 		{
 			const auto& item = data[i];
-			if(item.moment != null || item.friction != null)
+			if(item.is_active())
 			{
 				local.push_back(item);
 			}
 		}			
 	}
-
 }
