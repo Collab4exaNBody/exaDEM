@@ -357,9 +357,12 @@ namespace exaDEM
 
 					for (size_t it = first_item ; it < last_item ; it++)
 					{
+						assert ( it < m_data.size() );
 						if ( save_data( m_data[it] ) )
 						{
-							m_data[itData++] = m_data[it];
+							assert ( itData <= it );
+							m_data[itData++] = std::move(m_data[it]);
+							//m_data[itData++] = std::move(m_data[it]);
 							acc++;
 						}
 					}
@@ -369,7 +372,12 @@ namespace exaDEM
 					cur_off += acc;
 
 				}
+
 				m_data.resize(itData);
+
+				// some tests
+				[[maybe_unused]] auto [last_offset, last_size, last_id] = m_info.back();
+				assert ( itData == last_offset + last_size );
 				assert ( check_info_consistency() );	
 			}
 

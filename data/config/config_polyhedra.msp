@@ -31,7 +31,8 @@ dump_data_particles:
       rebind: { mesg: filename }
       body:
         - message: { endl: true }
-  - stats_interactions
+#  - stats_interactions
   - compress_interaction
   - stats_interactions
   - write_dump_particle_interaction
+  - chunk_neighbors_impl #redbuild interactions

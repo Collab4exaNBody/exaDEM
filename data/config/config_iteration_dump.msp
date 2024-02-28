@@ -23,7 +23,8 @@ write_paraview_generic:
   binary: false
   write_ghost: false
   write_box: true
-  fields: ["vx","vy","vz","id","radius"]
+  fields: ["vx","vy","vz","id","orient"]
+#  fields: ["vx","vy","vz","id","radius"]
 
 dump_data_paraview:
   - timestep_file: "paraview/output_%010d"
