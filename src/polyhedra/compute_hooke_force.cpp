@@ -38,7 +38,7 @@ namespace exaDEM
 			ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
 			ADD_SLOT( GridCellParticleInteraction , grid_interaction  , INPUT_OUTPUT , DocString{"Interaction list"} );
 			ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
-			ADD_SLOT( HookeParams , config            , INPUT , REQUIRED );
+			ADD_SLOT( HookeParams , config            , INPUT_OUTPUT , REQUIRED ); // can be re-used for to dump contact network
 			ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
 			ADD_SLOT( double      , dt                , INPUT , REQUIRED );
 
