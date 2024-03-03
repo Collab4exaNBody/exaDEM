@@ -1,5 +1,6 @@
 includes:
   - xform_shear.cfg
+  - config_spheres.msp
 
 xform_function: xform_time_interpolate_byparts
 

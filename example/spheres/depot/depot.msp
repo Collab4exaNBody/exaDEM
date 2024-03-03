@@ -6,6 +6,9 @@ grid_flavor: grid_flavor_dem
 #  debug:
 #    filter: [ ".*hooke_force" ]
 
+includes:
+  - config_spheres.msp
+
 replicate_domain:
   repeat: [ 1 , 1 , 1 ]
 

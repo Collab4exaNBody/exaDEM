@@ -1,5 +1,8 @@
 grid_flavor: grid_flavor_dem
 
+includes:
+  - config_spheres.msp
+
 input_data:
   - read_xyz:
       file: input_file_impose_velocity.xyz
