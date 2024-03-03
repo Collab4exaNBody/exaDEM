@@ -154,8 +154,8 @@ namespace exaDEM
 
 					// === Utilize temporary values to avoid updating friction and moment in hooke_force_core. 
 					Vec3d f = {0,0,0};
-					Vec3d fr = item.friction;
-					Vec3d mom = item.moment;
+					Vec3d fr = I.friction;
+					Vec3d mom = I.moment;
 					const double meff = compute_effective_mass(m_i, m_j);
 
 					hooke_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr,

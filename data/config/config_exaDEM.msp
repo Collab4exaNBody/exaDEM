@@ -56,7 +56,10 @@ preinit_rcut_max:
 
 initialize_friction: reorder_neighbor_friction
 
+init_particle_regions: nop
+
 first_iteration:
+  - init_particle_regions
   - init_particles
   - initialize_friction
   - reset_force_moment
@@ -100,8 +103,6 @@ compute_loop:
     - next_time_step
     - compute_loop_stop
 
-particles_regions: []
-
 ######## simulation program description #################
 simulation:
   name: sim
@@ -114,7 +115,7 @@ simulation:
     - domain
     - init_prolog
     - grid_flavor
-    - particles_regions
+    - particle_regions
     - input_data
     - grid_post_processing
     - init_rcut_max

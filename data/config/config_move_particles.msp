@@ -60,9 +60,14 @@ trigger_update_stl_mesh:
 
 ## should be define by your particle mode (spheres or polyhedra)
 migrate_particles: nop
+add_generated_particles: nop
 
 parallel_update_particles:
   - migrate_particles
+  - particle_generator:
+      condition: trigger_generator
+      body: 
+         - add_generated_particles
   - ghost_full_update
   - grid_post_processing
   - update_particle_neighbors
@@ -128,8 +133,14 @@ update_particles_fast:
   body:
     - update_particles_fast_body
 
+## if no particle generator, it follows the trigger_move_particles behavior
+triger_particle_generator: 
+  rebind: { in1: trigger_generator , in2: trigger_move_particles , result: trigger_move_particles }
+  body: [ boolean_or ]
+
 check_and_update_particles:
   - trigger_move_particles
+  - triger_particle_generator
   - update_particles_full
   - update_particles_fast
   - loadbalance_log_helper:

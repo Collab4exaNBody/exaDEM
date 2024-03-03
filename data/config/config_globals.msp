@@ -19,7 +19,7 @@ global:
   #amr_z_curve: false
   enable_grid_compact: true
   enable_stl_mesh: false
-  enable_polyhedron: false
+  trigger_generator: false
 
 # default grid variant we use
 grid_flavor: grid_flavor_full
@@ -34,4 +34,4 @@ domain:
   grid_dims: [ 0 , 0 , 0 ] # deduced from cell_size
   cell_size: 0.0 m # deduced from max rcut (a.k.a. output slot ghost_dist from nbh_dist node)
 
-particle_regions: []
+#particle_regions: []
