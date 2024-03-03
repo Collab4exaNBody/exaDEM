@@ -58,7 +58,7 @@ trigger_update_stl_mesh:
 
 ################### parallel particle migration ############################
 
-## should be define by your particle mode (spheres or polyhedra)
+## These operator should be define by your particle mode (spheres or polyhedra)
 migrate_particles: nop
 add_generated_particles: nop
 
@@ -133,14 +133,24 @@ update_particles_fast:
   body:
     - update_particles_fast_body
 
+######################################################
+############# Particle Generator #####################
+######################################################
 ## if no particle generator, it follows the trigger_move_particles behavior
-triger_particle_generator: 
+combine_particle_generator: 
   rebind: { in1: trigger_generator , in2: trigger_move_particles , result: trigger_move_particles }
   body: [ boolean_or ]
 
+trigger_particle_generator:
+  rebind: { freq: simulation_generator_frequency , result: trigger_generator }
+  body:
+    - nth_timestep: { first: false }
+
+######################################################
 check_and_update_particles:
   - trigger_move_particles
-  - triger_particle_generator
+  - trigger_particle_generator
+  - combine_particle_generator
   - update_particles_full
   - update_particles_fast
   - loadbalance_log_helper:

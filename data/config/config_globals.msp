@@ -19,6 +19,7 @@ global:
   #amr_z_curve: false
   enable_grid_compact: true
   enable_stl_mesh: false
+  simulation_generator_frequency: -1
   trigger_generator: false
 
 # default grid variant we use
