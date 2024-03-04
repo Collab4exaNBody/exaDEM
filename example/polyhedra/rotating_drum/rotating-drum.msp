@@ -1,0 +1,55 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_polyhedra.msp
+
+input_data:
+  - lattice:
+      structure: SC
+      types: [ 0 ]
+      size: [ 1.0 , 1.0 , 1.0 ]
+      repeats: [ 5 , 5 , 5 ]
+      enlarge_bounds: 0.0 m
+  - read_shape_file:
+     filename: shapes.shp
+  - polyhedra_define_radius
+  - polyhedra_set_density
+  - set_rand_velocity:
+     var: 0.01
+     mean: [0.0,0.0,0.0]
+  - set_rand_vrot_arot
+  - set_quaternion
+  - polyhedra_update_inertia
+
++chunk_neighbors_impl:
+  - build_cylinder_interactions_v2:
+     cylinder_center: [2.5, 2.5, 2.5]
+     cylinder_axis: [1, 0, 1]
+     cylinder_radius: 4
+
+compute_force:
+  - gravity_force
+  - compute_cylinder_interactions_v2:
+     cylinder_center: [2.5, 2.5, 2.5]
+     cylinder_axis: [1, 0, 1]
+     cylinder_radius: 4
+     cylinder_angular_velocity: [0,0,0]
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
+  - compute_hooke_interactions:
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
+
+domain:
+  cell_size: 2 m
+  periodic: [false,true,false]
+
+write_vtklegacy:
+  ascii: true
+  ghost: false
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 150000
+  simulation_log_frequency: 10000
+  simulation_paraview_frequency: -1
+  dt: 0.00001 s 
+  rcut_inc: 0.05 m
