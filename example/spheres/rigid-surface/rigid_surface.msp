@@ -1,5 +1,8 @@
 grid_flavor: grid_flavor_dem
 
+includes:
+  - config_spheres.msp
+
 input_data:
   - read_xyz:
       file: input_file_rigid_surface.xyz
@@ -15,11 +18,6 @@ input_data:
      density: 0.02
   - set_rand_vrot_arot
   - update_inertia
-
-# Warning, rcut for check_nbh_friction and update_nbh_friction must not be hard coded
-
-check_nbh_friction:
-  rcut: 1.1 m # oversized, so that we check all neighbors
 
 update_nbh_friction:
   rcut: 1.1 m

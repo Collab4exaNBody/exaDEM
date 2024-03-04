@@ -1,7 +1,6 @@
 enable_testing()
 
-list(APPEND DLIST rotating-drum)
-#list(APPEND DLIST rotating-drum rigid-surface radial-stress)
+list(APPEND DLIST rotating-drum impose_velocity radial-stress rigid-surface axial-stress quadratic-force-test mesh-stl)
 
 foreach(DirExample IN LISTS DLIST)
   add_subdirectory(${DirExample})

@@ -3,6 +3,11 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_spheres.msp
 
+reader2:
+  - read_dump_particles:
+      filename: last.dump
+  - read_stl:
+     filename: test.stl
 
 replicate_domain:
   repeat: [ 1 , 1 , 1 ]
@@ -32,6 +37,7 @@ reader1:
 
 input_data:
   - reader1
+#  - reader2
 
 update_nbh_friction:
   rcut: 0.003 m
@@ -65,9 +71,9 @@ write_vtklegacy:
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 100
-  simulation_log_frequency: 10
-  simulation_paraview_frequency: -1
+  simulation_end_iteration: 200000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 1000
   dt: 0.00001 s 
   rcut_inc: 0.002 m
   friction_rcut: 0.002 m
