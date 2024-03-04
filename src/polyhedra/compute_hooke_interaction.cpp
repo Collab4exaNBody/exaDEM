@@ -12,15 +12,14 @@
 
 #include <exaDEM/hooke_force_parameters.h>
 #include <exaDEM/compute_hooke_force.h>
-#include <exaDEM/neighbor_type.h>
-#include <exaDEM/interaction.hpp>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_detection.hpp>
-#include <exaDEM/mutexes.h>
-#include <exaDEM/interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shape_detection.hpp>
+#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shape_detection.hpp>
+#include <exaDEM/mutexes.h>
 
 namespace exaDEM
 {
@@ -89,13 +88,6 @@ namespace exaDEM
 							exaDEM::detection_vertex_edge_precompute,
 							exaDEM::detection_vertex_face_precompute,
 							exaDEM::detection_edge_edge_precompute
-
-/*
-						exaDEM::detection_vertex_vertex,
-							exaDEM::detection_vertex_edge,
-							exaDEM::detection_vertex_face,
-							exaDEM::detection_edge_edge
-*/
 					};
 
 #pragma omp for schedule(dynamic)
@@ -112,8 +104,6 @@ namespace exaDEM
 							// === positions
 							const Vec3d ri = get_r(item.cell_i, item.p_i);
 							const Vec3d rj = get_r(item.cell_j, item.p_j);
-							const Vec3d origin = {0,0,0};
-//							const Vec3d dr = rj - ri;
 
 							// === cell
 							auto& cell_i =  cells[item.cell_i];
@@ -130,15 +120,11 @@ namespace exaDEM
 							// === vertex array
 							const auto& vertices_i =  cell_i[field::vertices][item.p_i];
 							const auto& vertices_j =  cell_j[field::vertices][item.p_j];
-							// === orientation
-//							const auto& orient_i = cell_i[field::orient][item.p_i];
-//							const auto& orient_j = cell_j[field::orient][item.p_j];
 
 							// === shapes
 							const shape* shp_i = shps[type_i];
 							const shape* shp_j = shps[type_j];
 
-//							auto [contact, dn, n, contact_position] = detection[item.type](origin, item.sub_i, shp_i, orient_i, dr, item.sub_j, shp_j, orient_j);
 							auto [contact, dn, n, contact_position] = detection[item.type](vertices_i, item.sub_i, shp_i, vertices_j, item.sub_j, shp_j);
 
 							if(contact)
@@ -157,8 +143,6 @@ namespace exaDEM
 										item.friction, contact_position,
 										ri, vi, f, item.moment, vrot_i,  // particle 1
 										rj, vj, vrot_j // particle nbh
-										//origin, vi, f, item.moment, vrot_i,  // particle 1
-										//dr, vj, vrot_j // particle nbh
 										);
 
 
@@ -167,7 +151,6 @@ namespace exaDEM
 								locker.lock(item.cell_i, item.p_i);
 
 								auto& mom_i = cell_i[field::mom][item.p_i];
-								//mom_i += compute_moments(contact_position, origin, f, item.moment);
 								mom_i += compute_moments(contact_position, ri, f, item.moment);
 								cell_i[field::fx][item.p_i] += f.x;
 								cell_i[field::fy][item.p_i] += f.y;
@@ -179,7 +162,6 @@ namespace exaDEM
 								locker.lock(item.cell_j, item.p_j);
 
 								auto& mom_j = cell_j[field::mom][item.p_j];
-								//mom_j += compute_moments(contact_position, dr, -f, -item.moment);
 								mom_j += compute_moments(contact_position, rj, -f, -item.moment);
 								cell_j[field::fx][item.p_j] -= f.x;
 								cell_j[field::fy][item.p_j] -= f.y;
@@ -202,7 +184,7 @@ namespace exaDEM
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "compute_hooke_interactions", make_grid_variant_operator< ComputeHookeInteractionTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "compute_hooke_interaction", make_grid_variant_operator< ComputeHookeInteractionTmpl > );
 	}
 }
 

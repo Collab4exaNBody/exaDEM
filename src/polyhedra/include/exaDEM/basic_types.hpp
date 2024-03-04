@@ -2,7 +2,7 @@
 #include <exanb/core/quaternion_operators.h>
 #include <exanb/core/basic_types.h>
 #include <exanb/core/basic_types_operators.h>
-#include <exaDEM/OBB.hpp>
+#include <exaDEM/type/OBB.hpp>
 
 namespace exaDEM
 {

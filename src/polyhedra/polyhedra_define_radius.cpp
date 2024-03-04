@@ -8,7 +8,7 @@
 #include <exanb/grid_cell_particles/particle_region.h>
 #include <memory>
 #include <random>
-#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape/shapes.hpp>
 
 namespace exaDEM
 {

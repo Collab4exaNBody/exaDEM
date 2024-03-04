@@ -8,11 +8,11 @@
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
-#include <exaDEM/interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shape_detection.hpp>
 
 #include<cassert>
 
@@ -118,7 +118,7 @@ namespace exaDEM
 
 						assert( migration_test::check_info_doublon( storage.m_info.data(), storage.m_info.size() ));
 
-						auto scan = [] (onika::memory::CudaMMVector<std::tuple<uint64_t, uint64_t, uint64_t>>& info) -> std::vector<uint64_t>
+						auto scan = [] (onika::memory::CudaMMVector<std::tuple<uint64_t, uint64_t, uint64_t>& info) -> std::vector<uint64_t>
 						{
 							std::vector<uint64_t> res;
 							for(auto& it : info)
@@ -132,9 +132,9 @@ namespace exaDEM
 							return res;
 						};
 
-            auto scan_interactions = [] (std::vector<Interaction>& data) -> std::vector<std::pair<uint64_t, uint64_t>>
+            auto scan_interactions = [] (std::vector<Interaction>& data) -> std::vector<std::pair<uint64_t, uint64_t>
             {
-              std::vector<std::pair<uint64_t, uint64_t>> res;
+              std::vector<std::pair<uint64_t, uint64_t> res;
               for(auto& it : data)
               { 
                 res.push_back( {it.id_i,it.id_j} );

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <exaDEM/shape.hpp>
-#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/shape/shape.hpp>
+#include <exaDEM/shape/shape_detection.hpp>
 
 namespace exaDEM
 {

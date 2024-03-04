@@ -11,7 +11,7 @@
 #include <exanb/grid_cell_particles/grid_cell_values.h>
 
 #include <exanb/mpi/migrate_cell_particles.h>
-#include <exaDEM/interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 
 #include <mpi.h>

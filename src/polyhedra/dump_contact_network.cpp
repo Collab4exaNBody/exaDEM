@@ -17,9 +17,9 @@
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
-#include <exaDEM/interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/network.hpp>
 
 

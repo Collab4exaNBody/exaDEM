@@ -12,10 +12,9 @@
 
 #include <exaDEM/hooke_force_parameters.h>
 #include <exaDEM/compute_hooke_force.h>
-#include <exaDEM/neighbor_type.h>
-#include <exaDEM/interaction.hpp>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/mutexes.h>
 
 namespace exaDEM
@@ -48,17 +47,12 @@ namespace exaDEM
 				const int n_cells    = grid->number_of_cells();
 				mutexes & cell_locks = *locks;
 				locks -> resize (n_cells) ;
-//				int n_locks = 0;
-//#pragma omp parallel for reduction (+:n_locks)
 #pragma omp parallel for
 				for (int c = 0 ; c < n_cells ; c++)
 				{
 					auto& current_locks = cell_locks.get_mutexes (c); 
 					current_locks . resize (cells[c].size());
-//          n_locks += cells[c].size();
 				}	
-
-//				std::cout << " number of locks: " << n_locks << " n cells : " << n_cells << std::endl;
 				cell_locks . initialize();
 
 			}

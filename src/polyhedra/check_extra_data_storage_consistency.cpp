@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <exaDEM/interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
 

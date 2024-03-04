@@ -33,16 +33,15 @@ under the License.
 
 #include <exanb/compute/reduce_cell_particles.h>
 #include <exanb/mpi/particle_displ_over_async_request.h>
-#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/backup_dem.h>
 
 
 namespace exaDEM
 {
-
 	using namespace exanb;
 	template<typename GridT>
-		class PolyhedronDisplacementOver : public OperatorNode
+		class VertexDisplacementOver : public OperatorNode
 	{
 		static constexpr FieldSet<field::_rx,field::_ry,field::_rz, field::_type, field::_orient> reduce_field_set {};
 
@@ -86,7 +85,7 @@ sets result output to true if at least one particle has moved further than thres
 			particle_displ_comm->m_async_request = false;
 			particle_displ_comm->m_request_started = false;
 
-			ReduceMaxPolyhedronDisplacementFunctor func = { backup_dem->m_data.data() , max_dist2 , shps };
+			ReduceMaxVertexDisplacementFunctor func = { backup_dem->m_data.data() , max_dist2 , shps };
 
 			if( *async )
 			{
@@ -122,7 +121,7 @@ sets result output to true if at least one particle has moved further than thres
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "polyhedron_displ_over", make_grid_variant_operator< PolyhedronDisplacementOver > );
+		OperatorNodeFactory::instance()->register_factory( "vertex_displ_over", make_grid_variant_operator< VertexDisplacementOver > );
 	}
 
 }

@@ -12,16 +12,16 @@
 
 #include <memory>
 
-#include <exaDEM/interaction.hpp>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shape_detection.hpp>
 
 namespace exaDEM
 {
 	using namespace exanb;
 
 	template<typename GridT, class = AssertGridHasFields< GridT, field::_id, field::_type, field::_orient >>
-		class BuildCylinderInteraction : public OperatorNode
+		class UpdateCylinderInteraction : public OperatorNode
 	{
 		// attributes processed during computation
 		using ComputeFields = FieldSet< field::_vrot, field::_arot >;
@@ -127,11 +127,11 @@ namespace exaDEM
 		}
 	};
 
-	template<class GridT> using BuildCylinderInteractionTmpl = BuildCylinderInteraction<GridT>;
+	template<class GridT> using UpdateCylinderInteractionTmpl = UpdateCylinderInteraction<GridT>;
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "build_cylinder_interactions_v2", make_grid_variant_operator< BuildCylinderInteractionTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "update_cylinder_interaction", make_grid_variant_operator< UpdateCylinderInteractionTmpl > );
 	}
 }

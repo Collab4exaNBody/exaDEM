@@ -16,16 +16,14 @@
 #include <exanb/compute/compute_cell_particles.h>
 
 #include <mpi.h>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_reader.hpp>
+#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shape_reader.hpp>
 
 namespace exaDEM
 {
 	using namespace exanb;
 	template<	class GridT, class = AssertGridHasFields< GridT >> class ReadShapeFileOperator : public OperatorNode
 	{
-		using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz>;
-		static constexpr ComputeFields compute_field_set {};
 		ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD);
 		ADD_SLOT( GridT    , grid     , INPUT_OUTPUT );
 		ADD_SLOT( Domain   , domain   , INPUT , REQUIRED );

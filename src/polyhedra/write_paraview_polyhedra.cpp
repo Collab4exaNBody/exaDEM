@@ -20,8 +20,8 @@
 #include <exanb/compute/compute_cell_particles.h>
 
 #include <mpi.h>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_printer.hpp>
+#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shape_printer.hpp>
 
 namespace exaDEM
 {

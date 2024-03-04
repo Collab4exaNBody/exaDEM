@@ -5,7 +5,7 @@
 #include <math.h>
 #include <exanb/core/log.h>
 #include <exaDEM/basic_types.hpp>
-//#include <exaDEM/shape_printer.hpp>
+//#include <exaDEM/shape/shape_printer.hpp>
 
 namespace exaDEM
 {
@@ -397,4 +397,4 @@ namespace exaDEM
 };
 
 
-#include <exaDEM/shape_prepro.hpp>
+#include <exaDEM/shape/shape_prepro.hpp>

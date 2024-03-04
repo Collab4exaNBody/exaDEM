@@ -7,7 +7,7 @@
 #include <exanb/core/grid.h>
 #include <memory>
 #include <random>
-#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/compute_vertices.hpp>
 
 
@@ -30,7 +30,6 @@ namespace exaDEM
 			inline std::string documentation() const override final
 			{
 				return R"EOF(
-        This operator applies the same density to all particles. If you want to apply various densities according to their material properties, use set_densities_multiple_materials.
         )EOF";
 			}
 

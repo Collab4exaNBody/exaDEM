@@ -1,5 +1,5 @@
 #pragma once
-#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape/shapes.hpp>
 #include <cassert>
 
 namespace exaDEM

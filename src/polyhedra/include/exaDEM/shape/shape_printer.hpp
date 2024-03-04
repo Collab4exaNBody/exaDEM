@@ -1,6 +1,6 @@
 #pragma once
 
-#include <exaDEM/shape.hpp>
+#include <exaDEM/shape/shape.hpp>
 #include <iostream>
 
 namespace exaDEM

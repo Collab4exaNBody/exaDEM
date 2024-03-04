@@ -13,7 +13,7 @@
 #include <vector>
 
 #include <exanb/grid_cell_particles/move_particles_across_cells.h>
-#include <exaDEM/interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 
 

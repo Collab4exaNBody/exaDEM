@@ -6,7 +6,7 @@
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <memory>
-#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape/shapes.hpp>
 
 namespace exaDEM
 {

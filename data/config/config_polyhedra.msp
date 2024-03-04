@@ -2,11 +2,11 @@
 trigger_move_particles:
   rebind: { threshold: max_displ , result: trigger_move_particles }
   body:
-    - polyhedron_displ_over
+    - vertex_displ_over
 
-+dump_data_paraview:
-  - write_paraview_polyhedra:
-     basename: polyhedra
+#+dump_data_paraview:
+#  - write_paraview_polyhedra:
+#     basename: polyhedra
 
 +chunk_neighbors_impl:
   - update_grid_interaction

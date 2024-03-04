@@ -22,24 +22,24 @@ input_data:
   - polyhedra_update_inertia
 
 +chunk_neighbors_impl:
-  - build_cylinder_interactions_v2:
+  - update_cylinder_interaction:
      cylinder_center: [2.5, 2.5, 2.5]
      cylinder_axis: [1, 0, 1]
      cylinder_radius: 4
 
 compute_force:
   - gravity_force
-  - compute_cylinder_interactions_v2:
+  - compute_cylinder_interaction:
      cylinder_center: [2.5, 2.5, 2.5]
      cylinder_axis: [1, 0, 1]
      cylinder_radius: 4
      cylinder_angular_velocity: [0,0,0]
      config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
-  - compute_hooke_interactions:
+  - compute_hooke_interaction:
      config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2 m
+  cell_size: 2.5 m
   periodic: [false,true,false]
 
 write_vtklegacy:

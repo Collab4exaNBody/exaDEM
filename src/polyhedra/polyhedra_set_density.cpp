@@ -6,7 +6,7 @@
 #include <exanb/core/grid.h>
 #include <memory>
 #include <random>
-#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape/shapes.hpp>
 
 
 namespace exaDEM

@@ -14,10 +14,10 @@
 
 #include <exaDEM/hooke_force_parameters.h>
 #include <exaDEM/compute_hooke_force.h>
-#include <exaDEM/interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shape_detection.hpp>
 
 namespace exaDEM
 {

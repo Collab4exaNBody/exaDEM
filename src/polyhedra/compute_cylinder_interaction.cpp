@@ -14,9 +14,9 @@
 
 #include <exaDEM/hooke_force_parameters.h>
 #include <exaDEM/compute_hooke_force.h>
-#include <exaDEM/interaction.hpp>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/mutexes.h>
 
 namespace exaDEM
@@ -145,7 +145,7 @@ namespace exaDEM
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "compute_cylinder_interactions_v2", make_grid_variant_operator< ComputerCylinderInteractionTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "compute_cylinder_interaction", make_grid_variant_operator< ComputerCylinderInteractionTmpl > );
 	}
 }
 

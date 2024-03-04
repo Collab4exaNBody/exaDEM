@@ -7,7 +7,7 @@
 #include <onika/cuda/cuda.h>
 #include <onika/cuda/cuda_math.h>
 #include <exanb/compute/reduce_cell_particles.h>
-#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape/shapes.hpp>
 
 namespace exaDEM
 {
@@ -21,7 +21,7 @@ namespace exaDEM
 		Mat3d m_xform;
 	};
 
-	struct ReduceMaxPolyhedronDisplacementFunctor
+	struct ReduceMaxVertexDisplacementFunctor
 	{
 		const DEMBackupData::CellDEMBackupVector * m_backup_data = nullptr;
 		const double m_threshold_sqr = 0.0;
@@ -62,7 +62,7 @@ namespace exaDEM
 
 namespace exanb
 {
-	template<> struct ReduceCellParticlesTraits<exaDEM::ReduceMaxPolyhedronDisplacementFunctor>
+	template<> struct ReduceCellParticlesTraits<exaDEM::ReduceMaxVertexDisplacementFunctor>
 	{
 		static inline constexpr bool RequiresBlockSynchronousCall = false;
 		static inline constexpr bool RequiresCellParticleIndex = true;
