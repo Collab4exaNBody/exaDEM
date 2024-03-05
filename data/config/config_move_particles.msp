@@ -22,11 +22,11 @@ rebuild_amr:
 chunk_neighbors_contact:
   config:
     free_scratch_memory: true
-    build_particle_offset: false
+    build_particle_offset: true
     subcell_compaction: true
     scratch_mem_per_cell: 1048576
     stream_prealloc_factor: 1.05
-    chunk_size: 2
+    chunk_size: 1
 
 chunk_neighbors_impl: 
 #  - chunk_neighbors
