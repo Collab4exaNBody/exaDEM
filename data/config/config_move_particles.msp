@@ -149,7 +149,6 @@ trigger_particle_generator:
 ######################################################
 check_and_update_particles:
   - trigger_move_particles
-  - trigger_particle_generator
   - combine_particle_generator
   - update_particles_full
   - update_particles_fast
