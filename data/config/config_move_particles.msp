@@ -63,11 +63,11 @@ migrate_particles: nop
 add_generated_particles: nop
 
 parallel_update_particles:
-  - migrate_particles
   - particle_generator:
       condition: trigger_generator
       body: 
          - add_generated_particles
+  - migrate_particles
   - ghost_full_update
   - grid_post_processing
   - update_particle_neighbors
@@ -98,7 +98,8 @@ trigger_load_balance:
 
 # define how load balancing is done
 load_balance:
-  - simple_cost_model: { ccost: 1.0 , pdens: 4.0 , pdens2:0.0 , pdens3:0.003 }
+#  - simple_cost_model: { ccost: 1.0 , pdens: 40.0 , pdens2:0.0 , pdens3:0.000 }
+  - simple_cost_model: { cost_model_coefs: [2,10,4,1] }
   - load_balance_rcb
 #  - cpu_gpu_load_balance
 
