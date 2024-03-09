@@ -30,7 +30,7 @@ namespace exaDEM
 
 			ADD_SLOT( GridT                       , grid              , INPUT_OUTPUT , REQUIRED );
       ADD_SLOT( exanb::GridChunkNeighbors   , chunk_neighbors   , INPUT        , OPTIONAL , DocString{"Neighbor list"} );
-			ADD_SLOT( GridCellParticleInteraction , grid_interaction  , INPUT_OUTPUT , DocString{"Interaction list"} );
+			ADD_SLOT( GridCellParticleInteraction , ges               , INPUT_OUTPUT , DocString{"Interaction list"} );
     	ADD_SLOT( shapes                      , shapes_collection , INPUT        , DocString{"Collection of shapes"});
     	ADD_SLOT(double                       , rcut_inc          , INPUT_OUTPUT , DocString{"value added to the search distance to update neighbor list less frequently. in physical space"} );
 
@@ -51,7 +51,7 @@ namespace exaDEM
 				const size_t n_cells = g.number_of_cells(); // nbh.size();
 				const IJK dims = g.dimension();
 				const int gl = g.ghost_layers();
-				auto & interactions = grid_interaction->m_data;
+				auto & interactions = ges->m_data;
 
 				// if grid structure (dimensions) changed, we invalidate thie whole data
 				if( interactions.size() != n_cells )

@@ -30,7 +30,7 @@ namespace exaDEM
   {
 		ADD_SLOT( MPI_Comm  , mpi        , INPUT , MPI_COMM_WORLD );
 		ADD_SLOT( GridT  , grid     , INPUT_OUTPUT , REQUIRED );
-		ADD_SLOT( GridCellParticleInteraction , grid_interaction  , INPUT_OUTPUT , DocString{"Interaction list"} );
+		ADD_SLOT( GridCellParticleInteraction , ges , INPUT_OUTPUT , DocString{"Interaction list"} );
 
 		public:
 
@@ -42,8 +42,7 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
-			//const auto cells = grid->cells();
-			auto & cells = grid_interaction->m_data;
+			auto & cells = ges->m_data;
 
 			int nvv(0), nve(0), nvf(0), nee(0); // interaction counters
 			int an(0), anvv(0), anve(0), anvf(0), anee(0); // active interaction counters

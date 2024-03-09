@@ -1,8 +1,12 @@
 #pragma once
 
+#include <iostream>
+//#include <ostream>
+#include <exanb/core/basic_types.h>
+#include <exanb/core/basic_types_stream.h>
+
 namespace exaDEM
 {
-
 	/**
 	 * @brief Structure representing an interaction in a Discrete Element Method (DEM) simulation.
 	 */

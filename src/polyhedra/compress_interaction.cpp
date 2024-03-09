@@ -9,7 +9,7 @@
 
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/interaction/migration_test.hpp>
+#include <exanb/extra_storage/migration_test.hpp>
 
 namespace exaDEM
 {
@@ -21,7 +21,7 @@ namespace exaDEM
 		class CompressInteraction : public OperatorNode
 		{
 			ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
-			ADD_SLOT( GridCellParticleInteraction , grid_interaction  , INPUT , DocString{"Interaction list"} );
+			ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
 
 
 			public:
@@ -36,7 +36,7 @@ namespace exaDEM
 			inline void execute () override final
 			{
 				if( grid->number_of_cells() == 0 ) { return; }
-				auto & cell_interactions = grid_interaction->m_data;
+				auto & cell_interactions = ges->m_data;
 
 				auto save = [] (const exaDEM::Interaction& interaction)
 				{

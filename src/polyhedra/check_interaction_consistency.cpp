@@ -9,6 +9,7 @@
 
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exanb/extra_storage/migration_test.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
 
 namespace exaDEM
@@ -21,7 +22,7 @@ namespace exaDEM
 		class CheckInteractionConsistency : public OperatorNode
 		{
 			ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
-			ADD_SLOT( GridCellParticleInteraction , grid_interaction  , INPUT , DocString{"Interaction list"} );
+			ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
 
 
 			public:
@@ -36,7 +37,7 @@ namespace exaDEM
 			inline void execute () override final
 			{
 				if( grid->number_of_cells() == 0 ) { return; }
-				auto & cell_interactions = grid_interaction->m_data;
+				auto & cell_interactions = ges->m_data;
 				for(size_t current_cell = 0 ; current_cell < cell_interactions.size() ; current_cell++)
 				{
 					auto storage = cell_interactions[current_cell];

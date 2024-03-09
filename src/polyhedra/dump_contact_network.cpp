@@ -34,7 +34,7 @@ namespace exaDEM
 		{
 			ADD_SLOT( MPI_Comm , mpi        , INPUT , MPI_COMM_WORLD);
 			ADD_SLOT( GridT    , grid       , INPUT_OUTPUT , REQUIRED );
-			ADD_SLOT( GridCellParticleInteraction , grid_interaction  , INPUT , DocString{"Interaction list"} );
+			ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
 			ADD_SLOT( shapes                , shapes_collection       , INPUT , DocString{"Collection of shapes"});
 			ADD_SLOT( HookeParams , config  , INPUT );
 			ADD_SLOT( double      , dt      , INPUT );
@@ -53,7 +53,7 @@ namespace exaDEM
 
 			inline void execute () override final
 			{
-				auto & interactions = grid_interaction->m_data;
+				auto & interactions = ges->m_data;
 
 				// Fill network and manage paraview output
 				NetworkFunctor<GridT> manager( *grid, *shapes_collection, *config, *dt);

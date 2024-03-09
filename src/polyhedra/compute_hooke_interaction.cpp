@@ -35,7 +35,7 @@ namespace exaDEM
 			static constexpr ComputeFields compute_field_set {};
 
 			ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
-			ADD_SLOT( GridCellParticleInteraction , grid_interaction  , INPUT_OUTPUT , DocString{"Interaction list"} );
+			ADD_SLOT( GridCellParticleInteraction , ges  , INPUT_OUTPUT , DocString{"Interaction list"} );
 			ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
 			ADD_SLOT( HookeParams , config            , INPUT_OUTPUT , REQUIRED ); // can be re-used for to dump contact network
 			ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
@@ -55,7 +55,7 @@ namespace exaDEM
 				if( grid->number_of_cells() == 0 ) { return; }
 
 				const auto cells = grid->cells();
-				auto & cell_interactions = grid_interaction->m_data;
+				auto & cell_interactions = ges->m_data;
 				auto & shps = *shapes_collection;
 				const HookeParams params = *config;
 				const double time = *dt;
