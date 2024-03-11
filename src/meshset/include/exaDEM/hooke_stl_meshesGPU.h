@@ -108,15 +108,15 @@ namespace exaDEM
 				auto& off_face= mesh.offs_faces_GPU;
 				auto* of= onika::cuda::vector_data(off_face);
 				
-				auto& off_mesh= mesh.offs_mesh_GPU;
-				auto* om= onika::cuda::vector_data(off_mesh);
+				auto& off_vert= mesh.offs_vertices_GPU;
+				auto* ov= onika::cuda::vector_data(off_vert);
 				
 				auto& cl= mesh.cells_GPU;
 				size_t nb_cells= onika::cuda::vector_size(cl);
 				auto* cells= onika::cuda::vector_data(cl);
 				
-				auto& nb= mesh.nb_meshes_GPU;
-				auto* nb_meshes= onika::cuda::vector_data(nb);
+				auto& nb= mesh.nb_vertices_GPU;
+				auto* nb_vertices= onika::cuda::vector_data(nb);
 				
 				auto& nf= mesh.nb_faces_GPU;
 				auto* nb_faces= onika::cuda::vector_data(nf);
@@ -147,13 +147,14 @@ namespace exaDEM
 						}
 						Vec3d normal= {nx[idx1], ny[idx1], nz[idx1]};
 						double offset= offsets[idx1];
-						int size= nb_meshes[idx1];
+						int size= nb_vertices[idx1];
+						int index_it= idx2;
 						int index_start;
 						int index_second;
 						int index_last;
 						for(int j = 0; j < size; j++){
 							if( i > 0 || j > 0){
-								idx2= om[idx2];
+								idx2= ov[idx2];
 							}
 							if(j == 0) index_start= idx2;
 							if(j == 1) index_second = idx2;
@@ -201,13 +202,23 @@ namespace exaDEM
 						double ori2 = exanb::dot(P,v2);
 
 						for (int iva = 0; iva < size ; ++iva) {
-							int d1;
-							int d2;
-							if(iva==0){ d1= index_start; d2= index_second;}
-							if(iva==1){ d1= index_second; d2= index_last;}
-							if(iva==2){ d1= index_last; d2= index_start;}
-							const Vec3d& posNodeA_jv = {vx[d1], vy[d1], vz[d1]};
-							const Vec3d& posNodeB_jv = {vx[d2], vy[d2], vz[d2]};
+							if(iva > 0 || i > 0){
+								index_it= ov[index_it];
+							}
+							int ivb= iva + 1;
+							int index2;
+							if(ivb == size){
+								index2= index_start;
+							} else {
+								index2= ov[index_it];
+							}
+							//int d1;
+							//int d2;
+							//if(iva==0){ d1= index_start; d2= index_second;}
+							//if(iva==1){ d1= index_second; d2= index_last;}
+							//if(iva==2){ d1= index_last; d2= index_start;}
+							const Vec3d& posNodeA_jv = {vx[index_it], vy[index_it], vz[index_it]};
+							const Vec3d& posNodeB_jv = {vx[index2], vy[index2], vz[index2]};
 							double pa1 = exanb::dot(posNodeA_jv , v1);
 							double pb1 = exanb::dot(posNodeB_jv , v1);
 							double pa2 = exanb::dot(posNodeA_jv , v2);
@@ -252,25 +263,23 @@ namespace exaDEM
 								idx3= of[idx3];
 							}
 							Vec3d normal= {nx[idx3], ny[idx3], nz[idx3]};
-							double offset= offsets[idx3];
-							int size= nb_meshes[idx3];
+							int size= nb_vertices[idx3];
 							bool contact= false;
 							Vec3d position= {0,0,0};
 							
 							//CONTACT_EDGE_SPHERE
 							const Vec3d center = {a_rx,a_ry,a_rz};
-							const Vec3d default_contact_point = {0,0,0}; // won't be used
 							int index_start = idx4;
 							for (size_t iva = 0; iva < size; ++iva) {
 								if( i > 0 || iva > 0 ){
-									idx4 = om[idx4];
+									idx4 = ov[idx4];
 								}
 								int ivb = iva + 1;
 								int idx4_2;
 								if( ivb == size ){
 									idx4_2 = index_start;
 								} else {
-									idx4_2 = om[idx4];
+									idx4_2 = ov[idx4];
 								}
 								Vec3d p1 = {vx[idx4], vy[idx4], vz[idx4]};
 								Vec3d p2 = {vx[idx4_2], vy[idx4_2], vz[idx4_2]};

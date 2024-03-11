@@ -59,9 +59,11 @@ namespace exaDEM
 		onika::memory::CudaMMVector< double > vx_GPU;/**< x coordinate of the faces's vertices for the faces that interperse with a cell.*/
 		onika::memory::CudaMMVector< double > vy_GPU;/**< y coordinate of the faces's vertices for the faces that intersperse with a cell.*/
 		onika::memory::CudaMMVector< double > vz_GPU;/**< z coordinate of the faces's vertices for the faces that intersperse with a cell.*/
-		onika::memory::CudaMMVector< int > offs_mesh_GPU;/**< Vector used to keep track of the indexes for each cell's faces's vertices.*/
-		onika::memory::CudaMMVector< int > nb_meshes_GPU;/**< Number of vertices for each face taht intersperse with a cell.*/
-
+		onika::memory::CudaMMVector< int > offs_vertices_GPU;/**< Vector used to keep track of the indexes for each cell's faces's vertices.*/
+		onika::memory::CudaMMVector< int > nb_vertices_GPU;/**< Number of vertices for each face taht intersperse with a cell.*/
+		
+		//offs_mesh_GPU
+		//nb_meshes_GPU
 		/**
 		 * @brief Reads mesh data from an STL file and populates the mesh.
 		 *
@@ -246,6 +248,7 @@ namespace exaDEM
 			offsets_GPU.resize(0);
 			nb_max_meshes.clear();
 			nb_max_meshes.resize(nb_max_faces);
+			int nb_vertices=0;
 			for(int i = 0; i < nb_max_faces; i++){
 				int max_meshes=0;
 				for(int j = 0; j < nb_cells; j++){
@@ -254,24 +257,24 @@ namespace exaDEM
 						ny_GPU.push_back(ny[indexes[cells_GPU[j]][i]]);
 						nz_GPU.push_back(nz[indexes[cells_GPU[j]][i]]);
 						offsets_GPU.push_back(offsets[indexes[cells_GPU[j]][i]]);
-						nb_meshes_GPU.push_back(nb_meshes[indexes[cells_GPU[j]][i]]);
+						nb_vertices_GPU.push_back(nb_meshes[indexes[cells_GPU[j]][i]]);
 						if(nb_meshes[indexes[cells_GPU[j]][i]] > max_meshes) max_meshes= nb_meshes[indexes[cells_GPU[j]][i]];
 						if( i > 0 ){
 							offs_faces_GPU[offs_cells[j]]= nx_GPU.size() - 1;
 						}
 						offs_cells[j]= nx_GPU.size() - 1;
+						nb_vertices+= nb_meshes[indexes[cells_GPU[j]][i]];
 					} 
 				}
 				nb_max_meshes[i] = max_meshes;
 			}
 			
 			/**WHICH VERTICES.*/
-			int nb_m = 3 * nb_faces;
 			vx_GPU.resize(0);
 			vy_GPU.resize(0);
 			vz_GPU.resize(0);
-			offs_mesh_GPU.clear();
-			offs_mesh_GPU.resize(nb_m);
+			offs_vertices_GPU.clear();
+			offs_vertices_GPU.resize(nb_vertices);
 			for(int i = 0; i < nb_max_faces; i++){
 				for(int j = 0; j < nb_max_meshes[i]; j++){
 					for(int z = 0; z < nb_cells; z++){
@@ -280,7 +283,7 @@ namespace exaDEM
 							vy_GPU.push_back(vy[start[indexes[cells_GPU[z]][i]]+j]);
 							vz_GPU.push_back(vz[start[indexes[cells_GPU[z]][i]]+j]);
 							if(i > 0 || j > 0){
-								offs_mesh_GPU[offs_cells[z]]= vx_GPU.size() - 1;
+								offs_vertices_GPU[offs_cells[z]]= vx_GPU.size() - 1;
 							}
 							offs_cells[z]= vx_GPU.size() - 1;
 						} 
