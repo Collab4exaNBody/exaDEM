@@ -21,20 +21,16 @@ input_data:
   - set_quaternion
   - polyhedra_update_inertia
 
-+chunk_neighbors_impl:
-  - update_cylinder_interaction:
-     cylinder_center: [2.5, 2.5, 2.5]
-     cylinder_axis: [1, 0, 1]
-     cylinder_radius: 4
+setup_drivers:
+  - add_cylinder:
+     driver_id: 0
+     center: [2.5, 2.5, 2.5]
+     axis: [1, 0, 1]
+     radius: 4
+     angular_velocity: [0,0,0]
 
 compute_force:
   - gravity_force
-  - compute_cylinder_interaction:
-     cylinder_center: [2.5, 2.5, 2.5]
-     cylinder_axis: [1, 0, 1]
-     cylinder_radius: 4
-     cylinder_angular_velocity: [0,0,0]
-     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
   - compute_hooke_interaction:
      config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
 
@@ -50,6 +46,6 @@ global:
   simulation_dump_frequency: -1
   simulation_end_iteration: 150000
   simulation_log_frequency: 10000
-  simulation_paraview_frequency: -1
+  simulation_paraview_frequency: 4000
   dt: 0.00001 s 
-  rcut_inc: 0.05 m
+  rcut_inc: 0.1 m

@@ -20,6 +20,7 @@
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/mutexes.h>
+#include <exaDEM/drivers.h>
 
 namespace exaDEM
 {
@@ -40,6 +41,7 @@ namespace exaDEM
 			ADD_SLOT( HookeParams , config            , INPUT_OUTPUT , REQUIRED ); // can be re-used for to dump contact network
 			ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
 			ADD_SLOT( double      , dt                , INPUT , REQUIRED );
+      ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers"});
 
 
 			public:
@@ -88,6 +90,7 @@ namespace exaDEM
 							exaDEM::detection_vertex_edge_precompute,
 							exaDEM::detection_vertex_face_precompute,
 							exaDEM::detection_edge_edge_precompute
+
 					};
 
 #pragma omp for schedule(dynamic)
@@ -101,79 +104,132 @@ namespace exaDEM
 						for( size_t it = 0; it < n_interactions_in_cell ; it++ )
 						{
 							Interaction& item = data_ptr[it];
-							// === positions
-							const Vec3d ri = get_r(item.cell_i, item.p_i);
-							const Vec3d rj = get_r(item.cell_j, item.p_j);
 
-							// === cell
-							auto& cell_i =  cells[item.cell_i];
-							auto& cell_j =  cells[item.cell_j];
-
-							// === vrot
-							const Vec3d& vrot_i = cell_i[field::vrot][item.p_i];
-							const Vec3d& vrot_j = cell_j[field::vrot][item.p_j];
-
-							// === type
-							const auto& type_i = cell_i[field::type][item.p_i];
-							const auto& type_j = cell_j[field::type][item.p_j];
-
-							// === vertex array
-							const auto& vertices_i =  cell_i[field::vertices][item.p_i];
-							const auto& vertices_j =  cell_j[field::vertices][item.p_j];
-
-							// === shapes
-							const shape* shp_i = shps[type_i];
-							const shape* shp_j = shps[type_j];
-
-							auto [contact, dn, n, contact_position] = detection[item.type](vertices_i, item.sub_i, shp_i, vertices_j, item.sub_j, shp_j);
-
-							if(contact)
+							if( item.type < 4 ) // polyhedra 
 							{
-								const Vec3d vi = get_v(item.cell_i, item.p_i);
-								const Vec3d vj = get_v(item.cell_j, item.p_j);
-								const auto& m_i = cell_i[field::mass][item.p_i];
-								const auto& m_j = cell_j[field::mass][item.p_j];
+								// === positions
+								const Vec3d ri = get_r(item.cell_i, item.p_i);
+								const Vec3d rj = get_r(item.cell_j, item.p_j);
 
-								// temporary vec3d to store forces.
-								Vec3d f = {0,0,0};
-								const double meff = compute_effective_mass(m_i, m_j);
+								// === cell
+								auto& cell_i =  cells[item.cell_i];
+								auto& cell_j =  cells[item.cell_j];
 
-								hooke_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr,
-										params.m_mu, params.m_damp_rate, meff,
-										item.friction, contact_position,
-										ri, vi, f, item.moment, vrot_i,  // particle 1
-										rj, vj, vrot_j // particle nbh
-										);
+								// === vrot
+								const Vec3d& vrot_i = cell_i[field::vrot][item.p_i];
+								const Vec3d& vrot_j = cell_j[field::vrot][item.p_j];
+
+								// === type
+								const auto& type_i = cell_i[field::type][item.p_i];
+								const auto& type_j = cell_j[field::type][item.p_j];
+
+								// === vertex array
+								const auto& vertices_i =  cell_i[field::vertices][item.p_i];
+								const auto& vertices_j =  cell_j[field::vertices][item.p_j];
+
+								// === shapes
+								const shape* shp_i = shps[type_i];
+								const shape* shp_j = shps[type_j];
+
+								auto [contact, dn, n, contact_position] = detection[item.type](vertices_i, item.sub_i, shp_i, vertices_j, item.sub_j, shp_j);
+
+								if(contact)
+								{
+									const Vec3d vi = get_v(item.cell_i, item.p_i);
+									const Vec3d vj = get_v(item.cell_j, item.p_j);
+									const auto& m_i = cell_i[field::mass][item.p_i];
+									const auto& m_j = cell_j[field::mass][item.p_j];
+
+									// temporary vec3d to store forces.
+									Vec3d f = {0,0,0};
+									const double meff = compute_effective_mass(m_i, m_j);
+
+									hooke_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr,
+											params.m_mu, params.m_damp_rate, meff,
+											item.friction, contact_position,
+											ri, vi, f, item.moment, vrot_i,  // particle 1
+											rj, vj, vrot_j // particle nbh
+											);
 
 
-								// === update particle informations
-								// ==== Particle i
-								locker.lock(item.cell_i, item.p_i);
+									// === update particle informations
+									// ==== Particle i
+									locker.lock(item.cell_i, item.p_i);
 
-								auto& mom_i = cell_i[field::mom][item.p_i];
-								mom_i += compute_moments(contact_position, ri, f, item.moment);
-								cell_i[field::fx][item.p_i] += f.x;
-								cell_i[field::fy][item.p_i] += f.y;
-								cell_i[field::fz][item.p_i] += f.z;
+									auto& mom_i = cell_i[field::mom][item.p_i];
+									mom_i += compute_moments(contact_position, ri, f, item.moment);
+									cell_i[field::fx][item.p_i] += f.x;
+									cell_i[field::fy][item.p_i] += f.y;
+									cell_i[field::fz][item.p_i] += f.z;
 
-								locker.unlock(item.cell_i, item.p_i);
+									locker.unlock(item.cell_i, item.p_i);
 
-								// ==== Particle j
-								locker.lock(item.cell_j, item.p_j);
+									// ==== Particle j
+									locker.lock(item.cell_j, item.p_j);
 
-								auto& mom_j = cell_j[field::mom][item.p_j];
-								mom_j += compute_moments(contact_position, rj, -f, -item.moment);
-								cell_j[field::fx][item.p_j] -= f.x;
-								cell_j[field::fy][item.p_j] -= f.y;
-								cell_j[field::fz][item.p_j] -= f.z;
+									auto& mom_j = cell_j[field::mom][item.p_j];
+									mom_j += compute_moments(contact_position, rj, -f, -item.moment);
+									cell_j[field::fx][item.p_j] -= f.x;
+									cell_j[field::fy][item.p_j] -= f.y;
+									cell_j[field::fz][item.p_j] -= f.z;
 
-								locker.unlock(item.cell_j, item.p_j);
+									locker.unlock(item.cell_j, item.p_j);
+								}
+								else
+								{
+									item.reset();
+								}
 							}
-							else
+						else // drivers
+						{
+							if(item.type == 4)
 							{
-								item.reset();
+								// get cylinder
+								Cylinder& cylinder = std::get<Cylinder>(drivers->data(item.id_j));
+								// === positions
+								const Vec3d ri       = get_r(item.cell_i, item.p_i) * cylinder.axis;
+								// === cell
+								auto& cell_i         = cells[item.cell_i];
+								// === vrot
+								const Vec3d& vrot_i  = cell_i[field::vrot][item.p_i];
+								// === type
+								const auto& type_i   = cell_i[field::type][item.p_i];
+								// === orientation
+								const auto& orient_i = cell_i[field::orient][item.p_i];
+								// === shapes
+								const shape* shp_i   = shps[type_i];
+
+								auto [contact, dn, n, contact_position] = exaDEM::detection_vertex_cylinder(ri, item.sub_i, shp_i, orient_i, cylinder.center, cylinder.axis, cylinder.radius);
+
+								if(contact)
+								{
+									auto& mom = cell_i[field::mom][item.p_i];
+									const Vec3d vi = get_v(item.cell_i, item.p_i);
+									const double meff = cell_i[field::mass][item.p_i];
+									Vec3d f = {0,0,0};
+									auto& cell_i = cells[item.cell_i];
+									hooke_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr,
+											params.m_mu, params.m_damp_rate, meff,
+											item.friction, contact_position,
+											ri, vi, f, item.moment, vrot_i,  // particle i
+											cylinder.center, cylinder.velocity, cylinder.angular_velocity // particle j
+											);
+
+									// === update informations
+									locker.lock(item.cell_i, item.p_i);
+									mom += compute_moments(contact_position, ri, f, item.moment);
+									cell_i[field::fx][item.p_i] += f.x;
+									cell_i[field::fy][item.p_i] += f.y;
+									cell_i[field::fz][item.p_i] += f.z;
+									locker.unlock(item.cell_i, item.p_i);
+								}
+								else
+								{
+									item.reset();
+								}
 							}
 						}
+}
 					}
 				}
 			}

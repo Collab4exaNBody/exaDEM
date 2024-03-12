@@ -13,6 +13,7 @@
 #include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
+#include <exaDEM/drivers.h>
 
 #include<cassert>
 
@@ -33,6 +34,7 @@ namespace exaDEM
 			ADD_SLOT( GridCellParticleInteraction , ges               , INPUT_OUTPUT , DocString{"Interaction list"} );
     	ADD_SLOT( shapes                      , shapes_collection , INPUT        , DocString{"Collection of shapes"});
     	ADD_SLOT(double                       , rcut_inc          , INPUT_OUTPUT , DocString{"value added to the search distance to update neighbor list less frequently. in physical space"} );
+      ADD_SLOT( Drivers                     , drivers           , INPUT        , DocString{"List of Drivers"});
 
 
 			public:
@@ -79,8 +81,11 @@ namespace exaDEM
 #     pragma omp parallel
 				{
 					Interaction item;
-					std::vector<exaDEM::Interaction> local;
 					std::vector<exaDEM::Interaction> local_history;
+					std::vector<exaDEM::Interaction> driver_data;
+					std::vector<exaDEM::Interaction> poly_data;
+					std::vector<size_t> driver_count;
+					std::vector<size_t> poly_count;
 					GRID_OMP_FOR_BEGIN(dims-2*gl,_,block_loc, schedule(guided) )
 					{
 						IJK loc_a = block_loc + gl;
@@ -101,11 +106,14 @@ namespace exaDEM
 						// extract history before reset it
 						const size_t data_size = storage.m_data.size();
 
-						const Interaction* const __restrict__ data_ptr  = storage.m_data.data();
+						Interaction* __restrict__ data_ptr  = storage.m_data.data();
 						extract_history(local_history, data_ptr, data_size);
 						std::sort ( local_history.begin(), local_history.end() );
 
-						local.clear();
+						driver_data.clear();
+						poly_data.clear();
+						driver_count.assign(n_particles, 0);
+						poly_count.assign(n_particles, 0);
 
 						const uint64_t* __restrict__ id_a = cells[cell_a][ field::id ]; ONIKA_ASSUME_ALIGNED(id_a);
 						const auto* __restrict__ rx_a = cells[cell_a][ field::rx ]; ONIKA_ASSUME_ALIGNED(rx_a);
@@ -114,83 +122,6 @@ namespace exaDEM
 						const auto* __restrict__ t_a = cells[cell_a][ field::type ]; ONIKA_ASSUME_ALIGNED(t_a);
 						const auto* __restrict__ orient_a = cells[cell_a][ field::orient ]; ONIKA_ASSUME_ALIGNED(orient_a);
 
-#ifndef NDEBUG
-
-						assert( migration_test::check_info_doublon( storage.m_info.data(), storage.m_info.size() ));
-
-						auto scan = [] (onika::memory::CudaMMVector<std::tuple<uint64_t, uint64_t, uint64_t>& info) -> std::vector<uint64_t>
-						{
-							std::vector<uint64_t> res;
-							for(auto& it : info)
-							{
-								res.push_back(std::get<2> (it));
-							}
-							auto last = std::unique(res.begin(), res.end());
-							int n_doublons = std::distance (last, res.end());
-							if( n_doublons > 0 ) std::cout << "number of doublons: " << n_doublons << std::endl;
-							res.erase(last, res.end());
-							return res;
-						};
-
-            auto scan_interactions = [] (std::vector<Interaction>& data) -> std::vector<std::pair<uint64_t, uint64_t>
-            {
-              std::vector<std::pair<uint64_t, uint64_t> res;
-              for(auto& it : data)
-              { 
-                res.push_back( {it.id_i,it.id_j} );
-              }
-              auto last = std::unique(res.begin(), res.end());
-              res.erase(last, res.end());
-              return res;
-            };
-
-						auto check_particle_inside_cell = [] (uint64_t id, const uint64_t* __restrict__ data , size_t size) -> bool
-						{
-							for(size_t i = 0 ; i < size ; i++ )
-							{
-								if( id == data[i] ) return true;	
-							}
-							std::cout << "this partcle is not in this cell -> " << id << std::endl;
-							return false;
-						};
-
-						auto check_interaction_inside_cell = [] (std::pair<uint64_t,uint64_t>& id, const uint64_t* __restrict__ data , size_t size) -> bool
-						{
-							for(size_t i = 0 ; i < size ; i++ )
-							{
-								if( id.first == data[i] || id.second == data[i] ) return true;	
-							}
-							std::cout << "this partcle is not in this cell -> (" << id.first << "," << id.second << ")" << std::endl;
-							return false;
-						};
-
-						auto ids = scan (storage.m_info);
-						auto its = scan_interactions (local_history);
-						for (auto& id : ids ) 
-						{
-							if ( ! check_particle_inside_cell ( id , id_a, n_particles) )
-							{
-								auto res = std::find(ids.begin(), ids.end(), id);
-								std::cout << "idx in cell: " << std::distance(ids.begin(), res) << " / " << ids.size() << std::endl; 
-								std::cout << "ids for cell: " << cell_a << std::endl; 
-								// get particle id
-								for( size_t it = 0 ; it < n_particles ; it++)
-								{
-									std::cout << "id[" << it << "]= " << id_a[it] << std::endl; 
-								}
-
-								std::cout << "Storage Info: " << std::endl;
-								for(auto& inf : storage.m_info) std::cout << std::get<0>( inf ) << " "  << std::get<1>( inf ) << " "  << std::get<2>( inf ) << std::endl;
-								std::cout << "Storage Data: " << std::endl;
-								for(auto& interaction : storage.m_data) interaction.print();
-							}
-							assert ( check_particle_inside_cell ( id , id_a, n_particles) );
-						} 
-						for (auto& it : its ) 
-						{
-							assert ( check_interaction_inside_cell ( it , id_a, n_particles) );
-						}
-#endif
 						storage.initialize(n_particles);
 						auto& info_particles = storage.m_info;
 
@@ -201,9 +132,9 @@ namespace exaDEM
 							list.push_back(item);
 						};
 
-						auto incr_particle_interactions_info = [&info_particles] (int p_a)
+						auto incr_particle_interactions = [] (std::vector<size_t>& count, int p_a)
 						{
-							std::get<1> (info_particles [p_a])++;
+							count[p_a]++;
 						};
 
 						// get particle id
@@ -212,8 +143,50 @@ namespace exaDEM
 							std::get<2> (info_particles[it]) = id_a[it];
 						}
 
+
+						// First drivers
+						if ( drivers.has_value() )
+						{
+							auto& drvs = *drivers;
+							item.cell_i = cell_a;
+							item.id_j = -1;
+							item.cell_j = -1;
+							item.p_j = -1;
+							item.moment = Vec3d{0,0,0};
+							item.friction = Vec3d{0,0,0};
+							for( size_t i = 0 ; i < drvs.get_size() ; i++ )
+							{
+								if( drvs.type(i) == DRIVER_TYPE::CYLINDER )
+								{ 
+									item.type = 4; // type : cylinder
+									item.id_j = i; // we store the driver idx
+									Cylinder& cylinder = std::get<Cylinder>(drvs.data(i));
+									cylinder.center = cylinder.center * cylinder.axis; // project
+
+									for(size_t p = 0 ; p < n_particles ; p++)
+									{
+										const Vec3d proj = Vec3d{rx_a[p], ry_a[p], rz_a[p]} * cylinder.axis;
+										const shape* shp = shps[t_a[p]];
+										int nv = shp->get_number_of_vertices();
+										for(int sub = 0 ; sub < nv ; sub++)
+										{
+											auto contact = exaDEM::filter_vertex_cylinder(rVerlet, proj, sub, shp, orient_a[p], cylinder.center, cylinder.axis, cylinder.radius);
+											if(contact)
+											{
+												item.p_i = p;	
+												item.id_i = id_a[p];
+												incr_particle_interactions(driver_count, p);
+												add_contact(driver_data, item, sub, -1);
+											}
+										}		
+									}
+								}								
+							}
+						}
+
+						// Second polyhedra					
 						apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-								[&g , cells, &info_particles, cell_a, &local, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &add_contact, &incr_particle_interactions_info]
+								[&g , cells, &info_particles, cell_a, &poly_data, &poly_count, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &add_contact, &incr_particle_interactions]
 								( int p_a, size_t cell_b, unsigned int p_b , size_t p_nbh_index ){
 								// default value of the interaction studied (A or i -> B or j)
 								const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -288,8 +261,8 @@ namespace exaDEM
 											bool contact = exaDEM::filter_vertex_vertex(rVerlet, r, i, shp, orient, r_nbh, j, shp_nbh, orient_nbh);
 											if ( contact ) 
 											{
-												incr_particle_interactions_info(p_a);
-												add_contact(local, item, i, j);
+												incr_particle_interactions(poly_count, p_a);
+												add_contact(poly_data, item, i, j);
 											}
 										}
 
@@ -299,8 +272,8 @@ namespace exaDEM
 											bool contact = exaDEM::filter_vertex_edge <skip_obb> (obbvi, r_nbh, j, shp_nbh, orient_nbh);
 											if(contact) 
 											{
-												incr_particle_interactions_info(p_a);
-												add_contact(local, item, i, j);
+												incr_particle_interactions(poly_count, p_a);
+												add_contact(poly_data, item, i, j);
 											}
 										}
 
@@ -310,8 +283,8 @@ namespace exaDEM
 											bool contact = exaDEM::filter_vertex_face <skip_obb> (obbvi, r_nbh, j, shp_nbh, orient_nbh);
 											if(contact) 
 											{
-												incr_particle_interactions_info(p_a);
-												add_contact(local, item, i, j);
+												incr_particle_interactions(poly_count, p_a);
+												add_contact(poly_data, item, i, j);
 											}
 										}
 									}
@@ -329,8 +302,8 @@ namespace exaDEM
 											OBB obb_edge_j = shp_nbh->get_obb_edge(r_nbh, j, orient_nbh);
 											if( obb_edge_i.intersect(obb_edge_j)) 
 											{
-												add_contact(local, item, i, j);
-												incr_particle_interactions_info(p_a);
+												incr_particle_interactions(poly_count, p_a);
+												add_contact(poly_data, item, i, j);
 											}
 										}
 									}
@@ -359,8 +332,8 @@ namespace exaDEM
 											bool contact = exaDEM::filter_vertex_edge <skip_obb> (obbvj, r, i, shp, orient);
 											if(contact) 
 											{
-												add_contact(local, item, j, i);
-												incr_particle_interactions_info(p_a);
+												incr_particle_interactions(poly_count, p_a);
+												add_contact(poly_data, item, j, i);
 											}
 										}
 
@@ -370,24 +343,35 @@ namespace exaDEM
 											bool contact = exaDEM::filter_vertex_face <skip_obb> (obbvj, r, i, shp, orient);
 											if(contact) 
 											{
-												add_contact(local, item, j, i);
-												incr_particle_interactions_info(p_a);
+												incr_particle_interactions(poly_count, p_a);
+												add_contact(poly_data, item, j, i);
 											}
 										}
 									}
 								}
 								});
 
-						// update offset for interaction
-						std::get<0> (info_particles[0]) = 0;
-						for ( size_t it = 1 ; it < info_particles.size() ; it++)
+						//
+						update_friction_moment(driver_data, local_history);
+						update_friction_moment(poly_data, local_history);
+
+						// build storage
+						size_t offset = 0 ;
+						size_t offset_driver = 0 ;
+						size_t offset_poly = 0 ;
+						storage.m_data.resize( poly_data.size () + driver_data.size() );
+						data_ptr = storage.m_data.data();
+						for(int p = 0 ; p < n_particles ; p++)
 						{
-							std::get<0> (info_particles[it]) = std::get<0> (info_particles[it-1]) + std::get<1> (info_particles[it-1]);
-						} 
+							std::get<0> (info_particles[p]) = offset;
+							for(int it = 0 ; it < driver_count[p] ; it++ ) data_ptr[offset ++ ] = driver_data[offset_driver++];	
+							for(int it = 0 ; it < poly_count[p] ; it++ )   data_ptr[offset ++ ] =   poly_data[  offset_poly++];	
+							std::get<1> (info_particles[p]) = driver_count[p] + poly_count[p];
+						}
+						assert ( offset_driver == driver_data.size() );
+						assert ( offset_poly == poly_data.size() );
 
 						// add history, local history and local have to be sorted. local is sorted by construction.
-						update_friction_moment(local, local_history);
-						storage.set_data_storage(local);
 						assert ( 
 								interaction_test::check_extra_interaction_storage_consistency( 
 									storage.number_of_particles(), 
