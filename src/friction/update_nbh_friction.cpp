@@ -120,12 +120,12 @@ namespace exaDEM
       if( domain->xform_is_identity() )
       {
         auto optional = make_compute_pair_optional_args( nbh_it, cp_friction, NullXForm{}, cp_locks );
-        compute_cell_particle_pairs( *grid, *rcut, false /*no ghost*/, optional, make_default_pair_buffer(), update_op , compute_fields , parallel_execution_context() );
+        compute_cell_particle_pairs( *grid, *rcut, false /*no ghost*/, optional, make_default_pair_buffer(), update_op , compute_fields , DefaultPositionFields{} , parallel_execution_context() );
       }
       else
       {
         auto optional = make_compute_pair_optional_args( nbh_it, cp_friction , LinearXForm{ domain->xform() }, cp_locks );
-        compute_cell_particle_pairs( *grid, *rcut, false /*no ghost*/, optional, make_default_pair_buffer(), update_op , compute_fields , parallel_execution_context() );
+        compute_cell_particle_pairs( *grid, *rcut, false /*no ghost*/, optional, make_default_pair_buffer(), update_op , compute_fields , DefaultPositionFields{} , parallel_execution_context() );
       }
 
     }
