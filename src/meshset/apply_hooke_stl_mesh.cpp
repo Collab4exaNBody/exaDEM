@@ -23,7 +23,8 @@
 #include <exaDEM/face.h>
 
 //#include <exaDEM/stl_mesh.h>
-#include <exaDEM/stl_meshGPU.h>
+//#include <exaDEM/stl_meshGPU.h>
+#include <exaDEM/stl_meshesGPU.h>
 
 //#include <exaDEM/hooke_stl_meshes.h>
 #include <exaDEM/hooke_stl_meshesGPU.h>
@@ -50,13 +51,14 @@ namespace exaDEM
 							ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD);
 							ADD_SLOT( GridT  , grid    , INPUT_OUTPUT );
 							ADD_SLOT( Domain , domain  , INPUT , REQUIRED );
-							ADD_SLOT( onika::memory::CudaMMVector< exaDEM::stl_mesh > , stl_collection, INPUT_OUTPUT , DocString{"list of verticies"});
+							//ADD_SLOT( onika::memory::CudaMMVector< exaDEM::stl_mesh > , stl_collection, INPUT_OUTPUT , DocString{"list of verticies"});
 							ADD_SLOT( double  , dt                		, INPUT 	, REQUIRED 	, DocString{"Timestep of the simulation"});
 							ADD_SLOT( double  , kt  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
 							ADD_SLOT( double  , kn  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"} );
 							ADD_SLOT( double  , kr  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
 							ADD_SLOT( double  , mu  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
 							ADD_SLOT( double  , damprate  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
+							ADD_SLOT( exaDEM::stl_meshes, meshes, INPUT_OUTPUT, DocString{"Collection of meshes from stl files"});
 
 							public:
 							inline std::string documentation() const override final
@@ -67,8 +69,9 @@ namespace exaDEM
 
 							inline void execute () override final
 							{
-								auto& vec = *stl_collection;
-								ApplyHookeSTLMeshesFunctor func { vec.data(), vec.size(), *dt, *kt, *kn, *kr, *mu, *damprate};
+								//auto& vec = *stl_collection;
+								//ApplyHookeSTLMeshesFunctor func { vec.data(), vec.size(), *dt, *kt, *kn, *kr, *mu, *damprate};
+								ApplyHookeSTLMeshesFunctor func { *meshes, *dt, *kt, *kn, *kr, *mu, *damprate};
 								compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 							}
 						};

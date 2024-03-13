@@ -17,7 +17,8 @@
 #include <exaDEM/face.h>
 
 //#include <exaDEM/stl_mesh.h>
-#include <exaDEM/stl_meshGPU.h>
+//#include <exaDEM/stl_meshGPU.h>
+#include <exaDEM/stl_meshesGPU.h>
 
 #include <mpi.h>
 
@@ -31,7 +32,8 @@ namespace exaDEM
 		ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD , DocString{"MPI communicator for parallel processing."});
 		ADD_SLOT( GridT    , grid     , INPUT_OUTPUT , DocString{"Grid used for computations."} );
 		ADD_SLOT( double   , rcut_max , INPUT , 0.0, DocString{"Maximum cutoff radius for computations. Default is 0.0."} );
-		ADD_SLOT( onika::memory::CudaMMVector< exaDEM::stl_mesh > , stl_collection, INPUT_OUTPUT , DocString{"Collection of meshes from stl files"});
+		//ADD_SLOT( onika::memory::CudaMMVector< exaDEM::stl_mesh > , stl_collection, INPUT_OUTPUT , DocString{"Collection of meshes from stl files"});
+		ADD_SLOT( exaDEM::stl_meshes, meshes, INPUT_OUTPUT, DocString{"Collection of meshes from stl files"});
 
 		public:
 		inline std::string documentation() const override final
@@ -42,15 +44,16 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
-			auto& collection = *stl_collection;
+			//auto& collection = *stl_collection;
+			auto& mesh= *meshes;
 			const double rad = *rcut_max;
 
 			const auto cells = grid->cells();
 			const size_t n_cells = grid->number_of_cells(); // nbh.size();
 			const IJK dims = grid->dimension();
 			const int gl = grid->ghost_layers();
-			for(auto &mesh : collection)
-			{
+			//for(auto &mesh : collection)
+			//{
 				auto& ind = mesh.indexes;
 				ind.resize(n_cells);
 				mesh.build_boxes();
@@ -71,7 +74,7 @@ namespace exaDEM
 					GRID_OMP_FOR_END
 				}
 				mesh.update_GPU();
-			}
+			//}
 		};
 	};
 
