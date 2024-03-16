@@ -55,6 +55,7 @@ struct HookeFaceFunctor
 			Vec3d& a_mom,
 			Vec3d& a_ft) const
 	{
+		//printf("HOOKE FACE\n");
 		Vec3d pos_proj;
 		auto [is_contact, contact_position, type] = face.intersect_sphere(a_rx, a_ry, a_rz, a_particle_radius);
 

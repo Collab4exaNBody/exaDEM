@@ -27,6 +27,10 @@ input_data:
 update_nbh_friction:
   rcut: 1.1 m
 
+chunk_neighbors_contact:
+  config:
+    chunk_size: 1
+
 compute_force:
   - cylinder_wall:
      radius: 9 

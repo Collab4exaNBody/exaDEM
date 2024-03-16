@@ -34,11 +34,12 @@ namespace exaDEM
     const double rcut_inc = 0.0;
     inline bool operator () (double d2, double rcut2,size_t cell_a,size_t p_a,size_t cell_b,size_t p_b) const
     {
+      assert( cell_a!=cell_b || p_a!=p_b );
       const double r_a = cells[cell_a][field::radius][p_a];
       const double r_b = cells[cell_b][field::radius][p_b];
       const double rmax = r_a + r_b + rcut_inc;
       const double rmax2 = rmax * rmax;
-      return d2 < rmax2 && d2 < rcut2 ;
+      return d2 > 0.0 && d2 < rmax2 && d2 < rcut2 ;
     }
   };
 
