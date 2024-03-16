@@ -11,15 +11,18 @@
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
+#include <exaDEM/drivers.h>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
-#include <exaDEM/drivers.h>
+#include <exaDEM/shape/shape_detection_driver.hpp>
 
 #include<cassert>
 
 namespace exaDEM
 {
 	using namespace exanb;
+	using VertexArray = ::onika::oarray_t<::exanb::Vec3d, 8>;
+
 
 	template<typename GridT
 		, class = AssertGridHasFields< GridT >
@@ -30,11 +33,11 @@ namespace exaDEM
 			static constexpr ComputeFields compute_field_set {};
 
 			ADD_SLOT( GridT                       , grid              , INPUT_OUTPUT , REQUIRED );
-      ADD_SLOT( exanb::GridChunkNeighbors   , chunk_neighbors   , INPUT        , OPTIONAL , DocString{"Neighbor list"} );
+			ADD_SLOT( exanb::GridChunkNeighbors   , chunk_neighbors   , INPUT        , OPTIONAL , DocString{"Neighbor list"} );
 			ADD_SLOT( GridCellParticleInteraction , ges               , INPUT_OUTPUT , DocString{"Interaction list"} );
-    	ADD_SLOT( shapes                      , shapes_collection , INPUT        , DocString{"Collection of shapes"});
-    	ADD_SLOT(double                       , rcut_inc          , INPUT_OUTPUT , DocString{"value added to the search distance to update neighbor list less frequently. in physical space"} );
-      ADD_SLOT( Drivers                     , drivers           , INPUT        , DocString{"List of Drivers"});
+			ADD_SLOT( shapes                      , shapes_collection , INPUT        , DocString{"Collection of shapes"});
+			ADD_SLOT(double                       , rcut_inc          , INPUT_OUTPUT , DocString{"value added to the search distance to update neighbor list less frequently. in physical space"} );
+			ADD_SLOT( Drivers                     , drivers           , INPUT        , DocString{"List of Drivers"});
 
 
 			public:
@@ -45,6 +48,34 @@ namespace exaDEM
 				        )EOF";
 			}
 
+
+			template<typename D>
+				void add_driver_interaction( D& driver, std::vector<Interaction>& driver_data, std::vector<size_t>& driver_count,
+						Interaction& item, const size_t n_particles, const double rVerlet, 
+						const uint8_t* __restrict__ type, const uint64_t* __restrict__ id, const VertexArray* __restrict__ vertices, shapes& shps)
+				{
+					for(size_t p = 0 ; p < n_particles ; p++)
+					{
+						const auto va = vertices[p];
+						const shape* shp = shps[type[p]];
+						int nv = shp->get_number_of_vertices();
+						for(int sub = 0 ; sub < nv ; sub++)
+						{
+							bool contact = exaDEM::filter_vertex_driver( 
+									driver, rVerlet, 
+									va, sub, shp);
+							if(contact)
+							{
+								item.p_i = p;	
+								item.id_i = id[p];
+								driver_count[p]++;
+								item.sub_i = sub;
+								item.sub_j = -1;
+								driver_data.push_back(item);
+							}
+						}		
+					}
+				}
 
 			inline void execute () override final
 			{
@@ -121,6 +152,7 @@ namespace exaDEM
 						const auto* __restrict__ rz_a = cells[cell_a][ field::rz ]; ONIKA_ASSUME_ALIGNED(rz_a);
 						const auto* __restrict__ t_a = cells[cell_a][ field::type ]; ONIKA_ASSUME_ALIGNED(t_a);
 						const auto* __restrict__ orient_a = cells[cell_a][ field::orient ]; ONIKA_ASSUME_ALIGNED(orient_a);
+						const auto* __restrict__ vertices_a = cells[cell_a][ field::vertices ]; ONIKA_ASSUME_ALIGNED(vertices_a);
 
 						storage.initialize(n_particles);
 						auto& info_particles = storage.m_info;
@@ -143,7 +175,6 @@ namespace exaDEM
 							std::get<2> (info_particles[it]) = id_a[it];
 						}
 
-
 						// First drivers
 						if ( drivers.has_value() )
 						{
@@ -154,39 +185,31 @@ namespace exaDEM
 							item.p_j = -1;
 							item.moment = Vec3d{0,0,0};
 							item.friction = Vec3d{0,0,0};
-							for( size_t i = 0 ; i < drvs.get_size() ; i++ )
+							for( size_t drvs_idx = 0 ; drvs_idx < drvs.get_size() ; drvs_idx++ )
 							{
-								if( drvs.type(i) == DRIVER_TYPE::CYLINDER )
-								{ 
-									item.type = 4; // type : cylinder
-									item.id_j = i; // we store the driver idx
-									Cylinder& cylinder = std::get<Cylinder>(drvs.data(i));
-									cylinder.center = cylinder.center * cylinder.axis; // project
-
-									for(size_t p = 0 ; p < n_particles ; p++)
-									{
-										const Vec3d proj = Vec3d{rx_a[p], ry_a[p], rz_a[p]} * cylinder.axis;
-										const shape* shp = shps[t_a[p]];
-										int nv = shp->get_number_of_vertices();
-										for(int sub = 0 ; sub < nv ; sub++)
-										{
-											auto contact = exaDEM::filter_vertex_cylinder(rVerlet, proj, sub, shp, orient_a[p], cylinder.center, cylinder.axis, cylinder.radius);
-											if(contact)
-											{
-												item.p_i = p;	
-												item.id_i = id_a[p];
-												incr_particle_interactions(driver_count, p);
-												add_contact(driver_data, item, sub, -1);
-											}
-										}		
-									}
-								}								
+								item.id_j = drvs_idx; // we store the driver idx
+								if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER)
+								{
+									item.type = 4; 
+									Cylinder driver = std::get<Cylinder>(drvs.data(drvs_idx)) ;
+									add_driver_interaction( driver, driver_data, driver_count,
+											item, n_particles, rVerlet, 
+											t_a, id_a, vertices_a, shps);
+								}
+								if ( drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
+								{
+									item.type = 5; 
+									Surface driver =  std::get<Surface>(drvs.data(drvs_idx)) ; 
+									add_driver_interaction( driver, driver_data, driver_count,
+											item, n_particles, rVerlet, 
+											t_a, id_a, vertices_a, shps);
+								}
 							}
 						}
 
 						// Second polyhedra					
 						apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-								[&g , cells, &info_particles, cell_a, &poly_data, &poly_count, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &add_contact, &incr_particle_interactions]
+								[&g , cells, &info_particles, cell_a, &poly_data, &poly_count, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, vertices_a, &add_contact, &incr_particle_interactions]
 								( int p_a, size_t cell_b, unsigned int p_b , size_t p_nbh_index ){
 								// default value of the interaction studied (A or i -> B or j)
 								const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -200,6 +223,7 @@ namespace exaDEM
 								const double rx_nbh = cells[cell_b][field::rx][p_b];
 								const double ry_nbh = cells[cell_b][field::ry][p_b];
 								const double rz_nbh = cells[cell_b][field::rz][p_b];
+								const auto& vertices_b = cells[cell_b][field::vertices][p_b];
 
 								// prev
 								const shape* shp = shps[t_a[p_a]];
@@ -258,7 +282,7 @@ namespace exaDEM
 										item.type = 0; // === Vertex - Vertex
 										for(int j = 0; j < nv_nbh ; j++)
 										{
-											bool contact = exaDEM::filter_vertex_vertex(rVerlet, r, i, shp, orient, r_nbh, j, shp_nbh, orient_nbh);
+											bool contact = exaDEM::filter_vertex_vertex(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh);
 											if ( contact ) 
 											{
 												incr_particle_interactions(poly_count, p_a);
@@ -361,11 +385,11 @@ namespace exaDEM
 						size_t offset_poly = 0 ;
 						storage.m_data.resize( poly_data.size () + driver_data.size() );
 						data_ptr = storage.m_data.data();
-						for(int p = 0 ; p < n_particles ; p++)
+						for(size_t p = 0 ; p < n_particles ; p++)
 						{
 							std::get<0> (info_particles[p]) = offset;
-							for(int it = 0 ; it < driver_count[p] ; it++ ) data_ptr[offset ++ ] = driver_data[offset_driver++];	
-							for(int it = 0 ; it < poly_count[p] ; it++ )   data_ptr[offset ++ ] =   poly_data[  offset_poly++];	
+							for(size_t it = 0 ; it < driver_count[p] ; it++ ) data_ptr[offset ++ ] = driver_data[offset_driver++];	
+							for(size_t it = 0 ; it < poly_count[p] ; it++ )   data_ptr[offset ++ ] =   poly_data[  offset_poly++];	
 							std::get<1> (info_particles[p]) = driver_count[p] + poly_count[p];
 						}
 						assert ( offset_driver == driver_data.size() );

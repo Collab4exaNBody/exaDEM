@@ -26,7 +26,7 @@ namespace exaDEM
 
 
       ADD_SLOT( Drivers , drivers    , INPUT_OUTPUT, DocString{"List of Drivers"});
-      ADD_SLOT( int     , driver_id  , INPUT       , REQUIRED , DocString{"Driver index"});
+      ADD_SLOT( int     , id         , INPUT       , REQUIRED , DocString{"Driver index"});
       ADD_SLOT( Vec3d   , center     , INPUT       , REQUIRED , DocString{"Center of the cylinder"});
       ADD_SLOT( Vec3d   , axis       , INPUT       , default_axis , DocString{"Define the plan of the cylinder"});
       ADD_SLOT( Vec3d   , angular_velocity, INPUT  , null     , DocString{"Angular velocity of the cylinder, default is 0 m.s-"});
@@ -44,8 +44,8 @@ namespace exaDEM
 
       inline void execute () override final
       {
-        exaDEM::Cylinder driver = {*radius, *center, *axis, *angular_velocity, *velocity};
-        drivers->add_driver(*driver_id, driver);
+        exaDEM::Cylinder driver = {*radius, *axis, *center, *velocity, *angular_velocity};
+        drivers->add_driver(*id, driver);
       }
     };
 

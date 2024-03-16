@@ -6,30 +6,32 @@ namespace exaDEM
 {
 	using namespace exanb;
 
-  struct Surface
+  struct Ball
 	{
-		double offset;
-		exanb::Vec3d normal;
+		double radius;
 		exanb::Vec3d center; // normal * offset
 		exanb::Vec3d vel;   // 0,0,0
 		exanb::Vec3d vrot;
 
-		constexpr DRIVER_TYPE get_type() {return DRIVER_TYPE::SURFACE;}
+		constexpr DRIVER_TYPE get_type() {return DRIVER_TYPE::BALL;}
 
 		void print()
 		{
-			std::cout << "Driver Type: Surface" << std::endl;
-			std::cout << "Offset: " << offset   << std::endl;
-			std::cout << "Normal: " << normal   << std::endl;
-			std::cout << "Vel   : " << vel << std::endl;
-			std::cout << "AngVel: " << vrot << std::endl;
+			std::cout << "Driver Type: Ball"  << std::endl;
+			std::cout << "Radius: " << radius << std::endl;
+			std::cout << "Center: " << center << std::endl;
+			std::cout << "Vel   : " << vel    << std::endl;
+			std::cout << "AngVel: " << vrot   << std::endl;
 		}
 
 		inline void initialize ()
 		{
-			center = normal * offset;
-			// checks
-			
+			assert (radius > 0 );
+		}
+
+		inline void update_radius (const double incr)
+		{
+			radius += incr;
 		}
 
 		inline void update_position ( const double t )
@@ -39,17 +41,15 @@ namespace exaDEM
 
 		inline bool filter( const double rcut , const exanb::Vec3d& p)
 		{
-			//Vec3d proj = exanb::dot(p , normal);
-			Vec3d proj = dot(p , normal) * normal;
-			double d = norm ( proj - center );
+			const Vec3d dist = center - p;
+			double d = norm ( dist );
 			return d <= rcut;
 		}
 
 		inline std::tuple<bool, double, Vec3d, Vec3d> detector( const double rcut , const Vec3d& p)
 		{
-			Vec3d proj = dot(p , normal) * normal;
-			Vec3d surface_to_point = center - proj;
-			double d = norm ( surface_to_point );
+			Vec3d point_to_center = center - proj;
+			double d = norm ( point_to_center );
 			double dn = d - rcut;
 			if( dn > 0 )
 			{
@@ -57,11 +57,10 @@ namespace exaDEM
 			}
 			else
 			{
-				Vec3d n = surface_to_point / d;
+				Vec3d n = point_to_center / d;
 				Vec3d contact_position = p - n * ( rcut + 0.5 * dn ); 
 				return {true, dn, n, contact_position};
 			}
 		}
-
 	};
 }
