@@ -31,7 +31,7 @@ namespace exaDEM
       ADD_SLOT( Vec3d   , axis       , INPUT       , default_axis , DocString{"Define the plan of the cylinder"});
       ADD_SLOT( Vec3d   , angular_velocity, INPUT  , null     , DocString{"Angular velocity of the cylinder, default is 0 m.s-"});
       ADD_SLOT( Vec3d   , velocity   , INPUT       , null     , DocString{"Cylinder velocity, could be used in 'expert mode'"});
-      ADD_SLOT( double  , radius     , INPUT_OUTPUT, REQUIRED , DocString{"Radius of the cylinder, positive and should be superior to the biggest sphere radius in the cylinder"});
+      ADD_SLOT( double  , radius     , INPUT       , REQUIRED , DocString{"Radius of the cylinder, positive and should be superior to the biggest sphere radius in the cylinder"});
 
       public:
 

@@ -247,6 +247,11 @@ namespace exaDEM
 								Surface& driver = std::get<Surface>(drvs.data(driver_idx)) ; 
 								compute_driver(cells[item.cell_i], driver, hkp_drvs, shp, item, time, locker);
 							}
+							else if (item.type == 6)
+							{
+								Ball& driver = std::get<Ball>(drvs.data(driver_idx)) ; 
+								compute_driver(cells[item.cell_i], driver, hkp_drvs, shp, item, time, locker);
+							}
 						}
 					}
 				}

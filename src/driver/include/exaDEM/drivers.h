@@ -5,6 +5,7 @@
 #include <exaDEM/driver_base.h>
 #include <exaDEM/cylinder.h>
 #include <exaDEM/surface.h>
+#include <exaDEM/ball.h>
 #include <exaDEM/undefined_driver.h>
 #include <variant>
 
@@ -15,7 +16,7 @@ namespace exaDEM
 	struct Drivers
 	{
 		template <typename T> using vector_t = onika::memory::CudaMMVector<T>;
-		using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
+		using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::UndefinedDriver>;
 		using driver_t = DRIVER_TYPE;
 		vector_t<DRIVER_TYPE> m_type;
 		vector_t<data_t> m_data;

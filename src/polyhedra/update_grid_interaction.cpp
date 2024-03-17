@@ -196,10 +196,18 @@ namespace exaDEM
 											item, n_particles, rVerlet, 
 											t_a, id_a, vertices_a, shps);
 								}
-								if ( drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
+								else if ( drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
 								{
 									item.type = 5; 
 									Surface driver =  std::get<Surface>(drvs.data(drvs_idx)) ; 
+									add_driver_interaction( driver, driver_data, driver_count,
+											item, n_particles, rVerlet, 
+											t_a, id_a, vertices_a, shps);
+								}
+								else if ( drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
+								{
+									item.type = 6; 
+									Ball driver =  std::get<BALL>(drvs.data(drvs_idx)) ; 
 									add_driver_interaction( driver, driver_data, driver_count,
 											item, n_particles, rVerlet, 
 											t_a, id_a, vertices_a, shps);

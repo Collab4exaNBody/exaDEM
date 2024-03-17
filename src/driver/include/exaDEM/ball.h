@@ -9,7 +9,7 @@ namespace exaDEM
   struct Ball
 	{
 		double radius;
-		exanb::Vec3d center; // normal * offset
+		exanb::Vec3d center; //  
 		exanb::Vec3d vel;   // 0,0,0
 		exanb::Vec3d vrot;
 
@@ -36,28 +36,35 @@ namespace exaDEM
 
 		inline void update_position ( const double t )
 		{
-			center = normal * offset + t * vel; 
+			center = center + t * vel; 
 		}
 
 		inline bool filter( const double rcut , const exanb::Vec3d& p)
 		{
 			const Vec3d dist = center - p;
-			double d = norm ( dist );
-			return d <= rcut;
+			double d = radius - norm ( dist );
+			return std::fabs(d) <= rcut;
 		}
 
 		inline std::tuple<bool, double, Vec3d, Vec3d> detector( const double rcut , const Vec3d& p)
 		{
-			Vec3d point_to_center = center - proj;
+			Vec3d point_to_center = center - p;
 			double d = norm ( point_to_center );
-			double dn = d - rcut;
+			double dn; 
+			Vec3d n = point_to_center / d;
+			if ( d > radius )
+			{ 
+				dn = d - radius - rcut;
+				n = (-1) * n;
+			}
+			else dn = radius - d - rcut;
+
 			if( dn > 0 )
 			{
 				return {false, 0.0, Vec3d(), Vec3d()};
 			}
 			else
 			{
-				Vec3d n = point_to_center / d;
 				Vec3d contact_position = p - n * ( rcut + 0.5 * dn ); 
 				return {true, dn, n, contact_position};
 			}
