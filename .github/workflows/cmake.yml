@@ -32,4 +32,4 @@ jobs:
 
     - name: Test Example
       working-directory: ${{github.workspace}}/build
-      run: ctest --test-dir example -C --rerun-failed --output-on-failure ${{env.BUILD_TYPE}}
+      run: make UpdatePluginDataBase && ctest --test-dir example -C --rerun-failed --output-on-failure ${{env.BUILD_TYPE}}
