@@ -75,6 +75,8 @@ struct HookeFaceFunctor
 				pos_proj = pos;
 			}
 
+
+			// === distance vertex - contact
 			Vec3d vec_n = pos_proj - contact_position;
 			double n = norm(vec_n);
 			vec_n = vec_n / n;

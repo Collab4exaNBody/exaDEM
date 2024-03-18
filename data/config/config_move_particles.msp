@@ -1,12 +1,16 @@
+#######################################################################
+## should be define by your particle mode (spheres or polyhedra)
+move_particles_extra_data: nop
+compute_new_vertices: nop # after update ghost
+reorder_extra_data: nop
+
 ########### Generic particle update block ################
-
-
 
 # define a test node which outputs a boolean value 'trigger_move_particles'
 # which tells when to move particles across cells and update neighbor lists
 trigger_move_particles:
   rebind: { threshold: max_displ , result: trigger_move_particles }
-  body:
+  body: 
     - particle_displ_over
 
 
@@ -29,8 +33,6 @@ chunk_neighbors_contact:
     chunk_size: 1
 
 chunk_neighbors_impl: 
-#  - chunk_neighbors
-#  - chunk_neighbors2
   - chunk_neighbors_contact
 
 update_particle_neighbors:
@@ -44,9 +46,9 @@ grid_post_processing: grid_memory_compact
 ghost_full_update:
   - ghost_comm_scheme
   - ghost_update_all
-  #- ghost_update_rq
-  
+  - compute_new_vertices
 
+  
 ################## trigger stl mesh update ########################
 
 trigger_update_stl_mesh:
@@ -54,12 +56,18 @@ trigger_update_stl_mesh:
   body:
     - build_grid_stl_mesh
 
-
 ################### parallel particle migration ############################
+
+## These operator should be define by your particle mode (spheres or polyhedra)
+migrate_particles: nop
+add_generated_particles: nop
+
 parallel_update_particles:
-  - migrate_cell_particles_friction
-  - rebuild_amr
-  - backup_r
+  - particle_generator:
+      condition: trigger_generator
+      body: 
+         - add_generated_particles
+  - migrate_particles
   - ghost_full_update
   - grid_post_processing
   - update_particle_neighbors
@@ -72,9 +80,6 @@ init_particles:
   - load_balance
   - parallel_update_particles
 ###########################################################################
-
-
-
 
 ########################### Load balancing ############################
 # trigger load balance whenever domain size changed, whatever freq has been requested
@@ -93,7 +98,8 @@ trigger_load_balance:
 
 # define how load balancing is done
 load_balance:
-  - simple_cost_model: { ccost: 1.0 , pdens: 4.0 , pdens2:0.0 , pdens3:0.003 }
+#  - simple_cost_model: { ccost: 1.0 , pdens: 40.0 , pdens2:0.0 , pdens3:0.000 }
+  - simple_cost_model: { cost_model_coefs: [2,10,4,1] }
   - load_balance_rcb
 #  - cpu_gpu_load_balance
 
@@ -101,18 +107,13 @@ load_balancing_if_triggered:
   condition: trigger_load_balance
   body:
     - load_balance
-#######################################################################
-
-
 
 update_particles_full_body:
-#  - compact_neighbor_friction
-  - move_particles_friction
+  - move_particles_extra_data
   - trigger_load_balance
   - load_balancing_if_triggered
   - parallel_update_particles
-  - reorder_neighbor_friction
-#  - check_nbh_friction
+  - reorder_extra_data
 
 update_particles_full:
   condition: trigger_move_particles
@@ -126,20 +127,32 @@ update_particles_fast_body:
        staging_buffer: true
        serialize_pack_send: true
        wait_all: false
-    #- ghost_update_r
+    - compute_new_vertices
 
 update_particles_fast:
   condition: not trigger_move_particles
   body:
     - update_particles_fast_body
 
+######################################################
+############# Particle Generator #####################
+######################################################
+## if no particle generator, it follows the trigger_move_particles behavior
+combine_particle_generator: 
+  rebind: { in1: trigger_generator , in2: trigger_move_particles , result: trigger_move_particles }
+  body: [ boolean_or ]
+
+trigger_particle_generator:
+  rebind: { freq: simulation_generator_frequency , result: trigger_generator }
+  body:
+    - nth_timestep: { first: false }
+
+######################################################
 check_and_update_particles:
-#  - ghost_update_r
-#  - update_nbh_friction
   - trigger_move_particles
+  - combine_particle_generator
   - update_particles_full
   - update_particles_fast
   - loadbalance_log_helper:
       rebind: { lb_flag: trigger_load_balance , move_flag: trigger_move_particles }
       body: [ lb_event_counter ]
-

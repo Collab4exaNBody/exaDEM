@@ -1,0 +1,20 @@
+######### SPHERES mode ####################
+migrate_particles:
+    - migrate_cell_particles_friction
+    - rebuild_amr
+    - backup_r
+
+move_particles_extra_data: move_particles_friction
+
+reorder_extra_data: reorder_neighbor_friction
+
+dump_data_particles:
+  - timestep_file: "exaDEM_%09d.dump"
+  - message: { mesg: "Write dump " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - compact_neighbor_friction
+  - write_dump_particles
+  - reorder_neighbor_friction

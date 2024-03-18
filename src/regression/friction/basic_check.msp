@@ -1,5 +1,8 @@
 grid_flavor: grid_flavor_dem
 
+includes:
+  - config_spheres.msp
+
 configuration:
   logging: { debug: false , parallel: true }
   debug:
@@ -7,21 +10,23 @@ configuration:
     filter: [ ".*init_neighbor_friction" , ".*move_particles_friction" , ".*check_nbh_friction" , ".*compact_neighbor_friction" , ".*extend_domain" ]
 
 input_data:
-  - read_xyz:
-      file: 1000.xyz
-      bounds_mode: FILE
-      enlarge_bounds: 1.0 m
-  - init_radius_quaternion:
-     rad: 0.5
-  - init_random_velocity:
+  - lattice:
+      structure: SC
+      types: [ 0 ]
+      size: [ 1.1 , 1.1 , 1.1 ]
+      repeats: [ 10 , 10 , 10 ]
+      enlarge_bounds: 0.0 m
+  - set_radius
+  - set_quaternion
+  - set_rand_velocity:
      var: 0.1
      mean: [0.0,0.0,0.0]
-  - apply_density:
+  - set_density:
      density: 0.02
-  - init_random_inertia:
+  - update_inertia:
      var: 0.0
      mean: [0.1,0.1,0.1]
-  - random_vrot_arot
+  - set_rand_vrot_arot
 
 # Warning, rcut for check_nbh_friction and update_nbh_friction must not be hard coded
 

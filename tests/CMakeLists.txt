@@ -10,5 +10,7 @@ foreach(varTest IN LISTS TLIST)
 	target_include_directories(demTest_${varTest} PUBLIC ${USTAMP_INCLUDE_DIRS})
 	target_link_libraries(demTest_${varTest} PUBLIC cea_des_dem exanbCompute ${USTAMP_CORE_LIBRARIES} ${OpenMP_CXX_LIBRARIES} dl)
 	add_test(basicDem${varTest} demTest_${varTest})
+	install(TARGETS demTest_${varTest} DESTINATION bin)
 endforeach()
+
 

@@ -1,55 +1,34 @@
 grid_flavor: grid_flavor_dem
 
-configuration:
-  logging: { debug: false , parallel: true }
-  debug:
-#    filter: [ "ooo", ".*init_neighbor_friction" , ".*move_particles_friction" , ".*chunk_neighbors" , ".*check_nbh_friction" , ".*reorder_neighbor_friction" , ".*compact_neighbor_friction" , ".*extend_domain" , ".*migrate_cell_particles_friction" ]
-    filter: [ ".*init_neighbor_friction" , ".*move_particles_friction" , ".*check_nbh_friction" , ".*compact_neighbor_friction" , ".*extend_domain" ]
+includes:
+  - config_spheres.msp
 
 input_data:
-  - read_xyz:
-      file: 1000.xyz
-      bounds_mode: FILE
-      enlarge_bounds: 1.0 m
-  - init_radius_quaternion:
-     rad: 0.5
-  - init_random_velocity:
+  - lattice:
+      structure: SC
+      types: [ 0 ]
+      size: [ 1.1 , 1.1 , 1.1 ]
+      repeats: [ 10 , 10 , 10 ]
+      enlarge_bounds: 0.0 m
+  - set_radius
+  - set_quaternion
+  - set_rand_velocity:
      var: 0.1
      mean: [0.0,0.0,0.0]
-  - apply_density:
+  - set_density:
      density: 0.02
-  - init_random_inertia:
+  - update_inertia:
      var: 0.0
      mean: [0.1,0.1,0.1]
-  - random_vrot_arot
-
-# Warning, rcut for check_nbh_friction and update_nbh_friction must not be hard coded
-
-check_nbh_friction:
-  rcut: 1.1 m # oversized, so that we check all neighbors
-
-update_nbh_friction:
-  rcut: 1.1 m
-
-+first_iteration:
-  - chunk_neighbors_stats
+  - set_rand_vrot_arot
 
 compute_force:
-  - cylinder_wall:
-     radius: 9 
-     center: [4.5,4.5,4.5]
-     kt: 80000
-     kn: 100000
-     kr : 1
-     mu: 0.5
-     cylinder_angular_velocity: [0,0.5,0]
-     damprate: 0.999
   - gravity_force
   - hooke_force:
-      config: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.5, damp_rate: 0.9} 
+      config: {rcut: 1.0 m , dncut: 1.1 m, kn: 10000, kt: 10000, kr: 0.1, fc: 0.05, mu: 0.5, damp_rate: 0.9} 
 
 domain:
-  cell_size: 1.5 m
+  cell_size: 2.0 m
   periodic: [false,true,false]
 
 write_vtklegacy:
@@ -58,10 +37,9 @@ write_vtklegacy:
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 5000000
-  simulation_log_frequency: 100
-  simulation_paraview_frequency: -1
+  simulation_end_iteration: 100
+  simulation_log_frequency: -1
   dt: 0.000005 s 
-  rcut_inc: 0.01 m
-  friction_rcut: 1.06 m
+  rcut_inc: 0.1 m
+
 

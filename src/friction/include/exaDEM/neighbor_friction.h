@@ -40,6 +40,21 @@ namespace exaDEM
       m_data[1] = 0; // total number of pair frictions
     }
 
+    inline void encode_cell_to_buffer ( void* buffer )
+    {
+			Word* buff_ptr = (Word*) buffer;
+			std::copy (m_data.begin(), m_data.end(), buff_ptr);
+		}
+
+    inline void decode_buffer_to_cell ( void* stream )
+    {
+		  const Word* streamw = ( const Word * ) stream;
+      const size_t n_particles = streamw[0];
+      const size_t total_pairs = streamw[1];
+      const size_t payload = n_particles+2 + n_particles*2 + total_pairs * PairFrictionWords ;
+      m_data.assign( streamw , streamw + payload );
+		}
+
     inline const uint8_t* read_from_stream( const uint8_t* stream )
     {
       const Word* streamw = ( const Word * ) stream;
@@ -501,255 +516,273 @@ namespace exaDEM
     onika::memory::CudaMMVector< CellParticleNeighborFriction > & m_cell_friction;
     ParticleNeighborFrictionCellMoveBuffer & m_otb_buffer;
     
-    inline std::pair<const uint8_t*,size_t> cell_particles_data(size_t cell_i) const
-    {
-      if( m_cell_friction.empty() ) return { nullptr , 0 };
-      else 
-      {
-        assert( cell_i < m_cell_friction.size() );
-        return { m_cell_friction[cell_i].storage_ptr() , m_cell_friction[cell_i].storage_size() };
-      }
-    }
-    
-    // returns 2 informations :
-    // - pointer to start of stream location where particle # otb_i data starts
-    // - size of stream portion in bytes
-    inline std::pair<const uint8_t*,size_t> otb_particle_data(size_t otb_i) const
-    {
-      const auto [ otb_start_w , otb_end_w ] = m_otb_buffer.particle_data_range(otb_i);
-      const uint8_t* otb_start = (const uint8_t*) otb_start_w;
-      const uint8_t* otb_end = (const uint8_t*) otb_end_w;
-      assert( otb_end >= otb_start );
-      return { otb_start , otb_end - otb_start };
-    }
-    
-    inline void swap_otb_particles( size_t a, size_t b )
-    {
-      m_otb_buffer.swap( a , b );
-    }
-    
-    inline size_t storage_size_for_otb_range(size_t pstart, size_t pend)
+    inline size_t cell_particles_data_size(size_t cell_i) const
     {
       if( m_cell_friction.empty() ) return 0;
-      
-      assert( pend > pstart );
-      const size_t n_particles = pend - pstart;
-      size_t total_size = 0;
-      for(size_t p=pstart;p<pend;p++)
+      else 
       {
-        auto [ ptr , sz ] = otb_particle_data(p);
-        total_size += sz;
+				return m_cell_friction[cell_i].storage_size();
       }
-      // add header so that it is compatible with CellParticleNeighborFriction data
-      total_size += ( n_particles + 2 ) * sizeof(Word);
-      return total_size;
-    }
-    
-    inline size_t serialize_otb_range( void* streamv, size_t pstart, size_t pend )
-    {
-      assert( pstart < pend );
-      const size_t n_particles = pend - pstart;
-      // add header so that it is compatible with CellParticleNeighborFriction data
-      Word* streamw = (Word *) streamv;
-      streamw[0] = n_particles;
-      streamw[1] = 0;
-      uint8_t* streamb = (uint8_t*) ( streamw + n_particles + 2 );
-      size_t total_size = n_particles + 2; // total_size count in Word units
-      for(size_t p=pstart;p<pend;p++)
-      {
-        const size_t n_pairs = m_otb_buffer.particle_pair_count(p);
-        streamw[1] += n_pairs;
+		}
 
-        total_size += 2; // header ahead of particle's friction pairs
-        streamw[2+p-pstart] = total_size;
-        total_size += n_pairs * CellParticleNeighborFriction::PairFrictionWords;
-        
-        auto [ ptr , sz ] = otb_particle_data(p);
-        assert( sz == ( 2 + n_pairs * CellParticleNeighborFriction::PairFrictionWords ) * sizeof(Word) );
-        std::memcpy( streamb , ptr , sz );
-        streamb += sz;
-      }
-      assert( total_size == 2 + n_particles + n_particles*2 + streamw[1] * CellParticleNeighborFriction::PairFrictionWords );
-      total_size *= sizeof(Word);
-      assert( total_size == storage_size_for_otb_range(pstart,pend) );
-      return total_size;
-    }
-    
-    inline void clear_cell_data(size_t cell_i)
-    {
-      if( ! m_cell_friction.empty() )
-      {
-        assert( cell_i < m_cell_friction.size() );
-        m_cell_friction[cell_i].clear();
-      }
-    }
+		//TODO FIX IT
+		inline void write_cell_particles_data_in_buffer(void* buffer, size_t cell_i) const
+		{
+			if( m_cell_friction.empty() ) return ;
+			else
+			{
+				m_cell_friction[ cell_i ].encode_cell_to_buffer(buffer);
+			}
+		}
 
-    struct NullParticleIdFunc { inline constexpr uint64_t operator () (size_t) { return 0; } };
 
-    template<class CellIndexFuncT, class CellLockFuncT, class CellUnlockFuncT, class ParticleIdFuncT = NullParticleIdFunc >
-    inline void append_data_stream(const void* datav, size_t data_bytes, size_t part_seq_len, CellIndexFuncT cell_index_func, CellLockFuncT cell_lock_func, CellUnlockFuncT cell_unlock_func, ParticleIdFuncT particle_id_func = {} )
-    {
-      static constexpr bool has_particle_id = ! std::is_same_v<ParticleIdFuncT,NullParticleIdFunc>;
-    
-      const Word* dataw = (const Word*) datav;
-      assert( data_bytes % sizeof(Word) == 0 );
+		inline std::pair<const uint8_t*,size_t> cell_particles_data(size_t cell_i) const
+		{
+			if( m_cell_friction.empty() ) return { nullptr , 0 };
+			else 
+			{
+				assert( cell_i < m_cell_friction.size() );
+				return { m_cell_friction[cell_i].storage_ptr() , m_cell_friction[cell_i].storage_size() };
+			}
+		}
+
+		// returns 2 informations :
+		// - pointer to start of stream location where particle # otb_i data starts
+		// - size of stream portion in bytes
+		inline std::pair<const uint8_t*,size_t> otb_particle_data(size_t otb_i) const
+		{
+			const auto [ otb_start_w , otb_end_w ] = m_otb_buffer.particle_data_range(otb_i);
+			const uint8_t* otb_start = (const uint8_t*) otb_start_w;
+			const uint8_t* otb_end = (const uint8_t*) otb_end_w;
+			assert( otb_end >= otb_start );
+			return { otb_start , otb_end - otb_start };
+		}
+
+		inline void swap_otb_particles( size_t a, size_t b )
+		{
+			m_otb_buffer.swap( a , b );
+		}
+
+		inline size_t storage_size_for_otb_range(size_t pstart, size_t pend)
+		{
+			if( m_cell_friction.empty() ) return 0;
+
+			assert( pend > pstart );
+			const size_t n_particles = pend - pstart;
+			size_t total_size = 0;
+			for(size_t p=pstart;p<pend;p++)
+			{
+				auto [ ptr , sz ] = otb_particle_data(p);
+				total_size += sz;
+			}
+			// add header so that it is compatible with CellParticleNeighborFriction data
+			total_size += ( n_particles + 2 ) * sizeof(Word);
+			return total_size;
+		}
+
+		inline size_t serialize_otb_range( void* streamv, size_t pstart, size_t pend )
+		{
+			assert( pstart < pend );
+			const size_t n_particles = pend - pstart;
+			// add header so that it is compatible with CellParticleNeighborFriction data
+			Word* streamw = (Word *) streamv;
+			streamw[0] = n_particles;
+			streamw[1] = 0;
+			uint8_t* streamb = (uint8_t*) ( streamw + n_particles + 2 );
+			size_t total_size = n_particles + 2; // total_size count in Word units
+			for(size_t p=pstart;p<pend;p++)
+			{
+				const size_t n_pairs = m_otb_buffer.particle_pair_count(p);
+				streamw[1] += n_pairs;
+
+				total_size += 2; // header ahead of particle's friction pairs
+				streamw[2+p-pstart] = total_size;
+				total_size += n_pairs * CellParticleNeighborFriction::PairFrictionWords;
+
+				auto [ ptr , sz ] = otb_particle_data(p);
+				assert( sz == ( 2 + n_pairs * CellParticleNeighborFriction::PairFrictionWords ) * sizeof(Word) );
+				std::memcpy( streamb , ptr , sz );
+				streamb += sz;
+			}
+			assert( total_size == 2 + n_particles + n_particles*2 + streamw[1] * CellParticleNeighborFriction::PairFrictionWords );
+			total_size *= sizeof(Word);
+			assert( total_size == storage_size_for_otb_range(pstart,pend) );
+			return total_size;
+		}
+
+		inline void clear_cell_data(size_t cell_i)
+		{
+			if( ! m_cell_friction.empty() )
+			{
+				assert( cell_i < m_cell_friction.size() );
+				m_cell_friction[cell_i].clear();
+			}
+		}
+
+		struct NullParticleIdFunc { inline constexpr uint64_t operator () (size_t) { return 0; } };
+
+		template<class CellIndexFuncT, class CellLockFuncT, class CellUnlockFuncT, class ParticleIdFuncT = NullParticleIdFunc >
+			inline void append_data_stream(const void* datav, size_t data_bytes, size_t part_seq_len, CellIndexFuncT cell_index_func, CellLockFuncT cell_lock_func, CellUnlockFuncT cell_unlock_func, ParticleIdFuncT particle_id_func = {} )
+			{
+				static constexpr bool has_particle_id = ! std::is_same_v<ParticleIdFuncT,NullParticleIdFunc>;
+
+				const Word* dataw = (const Word*) datav;
+				assert( data_bytes % sizeof(Word) == 0 );
 #ifndef NDEBUG
-      size_t len = data_bytes / sizeof(Word);
+				size_t len = data_bytes / sizeof(Word);
 #endif
 
-      const size_t n_particles = dataw[0];
-      assert( part_seq_len == n_particles );
-      assert( len == dataw[0]+2 + dataw[0]*2 + dataw[1] * CellParticleNeighborFriction::PairFrictionWords );
-      
+				const size_t n_particles = dataw[0];
+				assert( part_seq_len == n_particles );
+				assert( len == dataw[0]+2 + dataw[0]*2 + dataw[1] * CellParticleNeighborFriction::PairFrictionWords );
+
 #ifndef NDEBUG
-      const size_t expected_total_pairs = dataw[1];
+				const size_t expected_total_pairs = dataw[1];
 #endif
-      size_t total_pairs = 0;
-      for(size_t p=0;p<n_particles;p++)
-      {
-        size_t data_offset = dataw[p+2];
-        size_t n_pairs = dataw[data_offset-1];
-        assert( data_offset + n_pairs * CellParticleNeighborFriction::PairFrictionWords <= len );
-        if constexpr ( has_particle_id )
-        {
-          assert( dataw[data_offset-2] == particle_id_func(p) );
-        }
-        total_pairs += n_pairs;
-      }
-      assert( total_pairs == expected_total_pairs );
-      
-      size_t cur_cell = std::numeric_limits<size_t>::max();
-      size_t cur_cell_start_p = 0;
-      
-      size_t p=0;
-      for(p=0;p<n_particles;p++)
-      {
-        size_t cell_index = cell_index_func(p);
-        if( cell_index != cur_cell )
-        {
-          if( cur_cell != std::numeric_limits<size_t>::max() )
-          {
-            assert( cur_cell_start_p < p );
-            //lout<<"import friction to cell #"<<cur_cell<<std::endl;
-            m_cell_friction[cur_cell].append_data_stream_range( dataw, cur_cell_start_p, p );
-            cell_unlock_func( cur_cell );
-          }
-          cur_cell = cell_index;
-          cell_lock_func( cur_cell);
-          cur_cell_start_p = p;
-        }
-      }
-      if( cur_cell != std::numeric_limits<size_t>::max() )
-      {
-        //lout<<"import friction to cell #"<<cur_cell<<std::endl;
-        m_cell_friction[cur_cell].append_data_stream_range( dataw, cur_cell_start_p, p );
-        cell_unlock_func( cur_cell );
-      }
-    }
+				size_t total_pairs = 0;
+				for(size_t p=0;p<n_particles;p++)
+				{
+					size_t data_offset = dataw[p+2];
+					size_t n_pairs = dataw[data_offset-1];
+					assert( data_offset + n_pairs * CellParticleNeighborFriction::PairFrictionWords <= len );
+					if constexpr ( has_particle_id )
+					{
+						assert( dataw[data_offset-2] == particle_id_func(p) );
+					}
+					total_pairs += n_pairs;
+				}
+				assert( total_pairs == expected_total_pairs );
 
-    inline void set_dimension( const IJK& dims )
-    {
-      m_cell_friction.clear();
-      m_cell_friction.resize( dims.i * dims.j * dims.k );
-    }
-    
-  };
+				size_t cur_cell = std::numeric_limits<size_t>::max();
+				size_t cur_cell_start_p = 0;
 
+				size_t p=0;
+				for(p=0;p<n_particles;p++)
+				{
+					size_t cell_index = cell_index_func(p);
+					if( cell_index != cur_cell )
+					{
+						if( cur_cell != std::numeric_limits<size_t>::max() )
+						{
+							assert( cur_cell_start_p < p );
+							//lout<<"import friction to cell #"<<cur_cell<<std::endl;
+							m_cell_friction[cur_cell].append_data_stream_range( dataw, cur_cell_start_p, p );
+							cell_unlock_func( cur_cell );
+						}
+						cur_cell = cell_index;
+						cell_lock_func( cur_cell);
+						cur_cell_start_p = p;
+					}
+				}
+				if( cur_cell != std::numeric_limits<size_t>::max() )
+				{
+					//lout<<"import friction to cell #"<<cur_cell<<std::endl;
+					m_cell_friction[cur_cell].append_data_stream_range( dataw, cur_cell_start_p, p );
+					cell_unlock_func( cur_cell );
+				}
+			}
 
-  // =======================================================================================
-  // ================ dump reader helper for injection of friction data ====================
-  // =======================================================================================
+		inline void set_dimension( const IJK& dims )
+		{
+			m_cell_friction.clear();
+			m_cell_friction.resize( dims.i * dims.j * dims.k );
+		}
 
-  struct ParticleFrictionReadHelper
-  {
-    std::vector< std::vector< std::vector<ParticlePairFriction> > > m_out_friction; // m_out_friction[cell_idx][particle_idx][friction_pair_idx]
-    
-    std::vector<CellParticleNeighborFriction> m_in_friction; // not grid cells, just chunks of friction data
-    std::map< uint64_t , std::pair<size_t,size_t> > m_id_map;
-
-    inline void read_from_stream( const uint8_t* stream_start , size_t stream_size )
-    {
-      m_in_friction.clear();
-      m_id_map.clear();
-
-      const uint8_t* stream = stream_start;
-      while( (stream-stream_start) < ssize_t(stream_size) )
-      {
-        CellParticleNeighborFriction cell;
-        stream = cell.read_from_stream( stream );
-        assert( (stream-stream_start) <= ssize_t(stream_size) );
-        m_in_friction.push_back( cell );
-      }
-      assert( (stream-stream_start) == ssize_t(stream_size) );
-      
-      const size_t n_cells = m_in_friction.size();
-      for(size_t cell_i=0;cell_i<n_cells;cell_i++)
-      {
-        const size_t n_particles = m_in_friction[cell_i].number_of_particles();
-        for(size_t p_i=0;p_i<n_particles;p_i++)
-        {
-          uint64_t id = m_in_friction[cell_i].particle_id( p_i );
-          m_id_map[ id ] = std::pair<size_t,size_t>{ cell_i , p_i };
-        }
-      }
-    }
-        
-    void initialize(size_t n_cells)
-    {
-      m_out_friction.resize( n_cells );
-      m_in_friction.clear();
-      m_id_map.clear();
-    }
-    
-    inline void append_cell_particle( size_t cell_idx , size_t p_idx , uint64_t id )
-    {
-      if( m_id_map.empty() ) return;
-      
-      assert( cell_idx < m_out_friction.size() );
-      assert( p_idx == m_out_friction[cell_idx].size() );
-      auto & new_particle_friction = m_out_friction[cell_idx].emplace_back();
-      
-      auto it = m_id_map.find(id);
-      if( it != m_id_map.end() )
-      {
-        auto [ c , p ] = it->second;
-        assert( m_in_friction[c].particle_id(p) == id );
-        const size_t n_pairs = m_in_friction[c].particle_number_of_pairs(p);
-        for(size_t i=0;i<n_pairs;i++)
-        {
-          new_particle_friction.push_back( m_in_friction[c].pair_friction(p,i) );
-        }
-      }
-    }
-    
-    template<class ParticleIdFuncT>
-    inline void finalize( GridCellParticleNeigborFriction& nbh_friction , ParticleIdFuncT particle_id )
-    {
-      nbh_friction.m_cell_friction.clear();
-      const size_t n_cells = m_out_friction.size();
-      nbh_friction.m_cell_friction.resize( n_cells );
-      for(size_t i=0;i<n_cells;i++)
-      {
-        const size_t n_particles = m_out_friction[i].size();
-        nbh_friction.m_cell_friction[i].initialize( n_particles );
-        for(size_t p=0;p<n_particles;p++)
-        {
-          auto id = particle_id( i , p );
-          nbh_friction.m_cell_friction[i].begin_nbh_write( p , id );
-          const size_t n_pairs = m_out_friction[i][p].size();
-          for(size_t j=0;j<n_pairs;j++)
-          {
-            nbh_friction.m_cell_friction[i].push_back( m_out_friction[i][p][j] );
-          }
-          nbh_friction.m_cell_friction[i].end_nbh_write( p , id );
-        }
-        m_out_friction[i].clear();
-        m_out_friction[i].shrink_to_fit(); // really free memory
-        nbh_friction.m_cell_friction[i].m_data.shrink_to_fit(); // reallocate
-      }
-    }
-  };
+	};
 
 
+	// =======================================================================================
+	// ================ dump reader helper for injection of friction data ====================
+	// =======================================================================================
+
+	struct ParticleFrictionReadHelper
+	{
+		std::vector< std::vector< std::vector<ParticlePairFriction> > > m_out_friction; // m_out_friction[cell_idx][particle_idx][friction_pair_idx]
+
+		std::vector<CellParticleNeighborFriction> m_in_friction; // not grid cells, just chunks of friction data
+		std::map< uint64_t , std::pair<size_t,size_t> > m_id_map;
+
+		inline void read_from_stream( const uint8_t* stream_start , size_t stream_size )
+		{
+			m_in_friction.clear();
+			m_id_map.clear();
+
+			const uint8_t* stream = stream_start;
+			while( (stream-stream_start) < ssize_t(stream_size) )
+			{
+				CellParticleNeighborFriction cell;
+				stream = cell.read_from_stream( stream );
+				assert( (stream-stream_start) <= ssize_t(stream_size) );
+				m_in_friction.push_back( cell );
+			}
+			assert( (stream-stream_start) == ssize_t(stream_size) );
+
+			const size_t n_cells = m_in_friction.size();
+			for(size_t cell_i=0;cell_i<n_cells;cell_i++)
+			{
+				const size_t n_particles = m_in_friction[cell_i].number_of_particles();
+				for(size_t p_i=0;p_i<n_particles;p_i++)
+				{
+					uint64_t id = m_in_friction[cell_i].particle_id( p_i );
+					m_id_map[ id ] = std::pair<size_t,size_t>{ cell_i , p_i };
+				}
+			}
+		}
+
+		void initialize(size_t n_cells)
+		{
+			m_out_friction.resize( n_cells );
+			m_in_friction.clear();
+			m_id_map.clear();
+		}
+
+		inline void append_cell_particle( size_t cell_idx , size_t p_idx , uint64_t id )
+		{
+			if( m_id_map.empty() ) return;
+
+			assert( cell_idx < m_out_friction.size() );
+			assert( p_idx == m_out_friction[cell_idx].size() );
+			auto & new_particle_friction = m_out_friction[cell_idx].emplace_back();
+
+			auto it = m_id_map.find(id);
+			if( it != m_id_map.end() )
+			{
+				auto [ c , p ] = it->second;
+				assert( m_in_friction[c].particle_id(p) == id );
+				const size_t n_pairs = m_in_friction[c].particle_number_of_pairs(p);
+				for(size_t i=0;i<n_pairs;i++)
+				{
+					new_particle_friction.push_back( m_in_friction[c].pair_friction(p,i) );
+				}
+			}
+		}
+
+		template<class ParticleIdFuncT>
+			inline void finalize( GridCellParticleNeigborFriction& nbh_friction , ParticleIdFuncT particle_id )
+			{
+				nbh_friction.m_cell_friction.clear();
+				const size_t n_cells = m_out_friction.size();
+				nbh_friction.m_cell_friction.resize( n_cells );
+				for(size_t i=0;i<n_cells;i++)
+				{
+					const size_t n_particles = m_out_friction[i].size();
+					nbh_friction.m_cell_friction[i].initialize( n_particles );
+					for(size_t p=0;p<n_particles;p++)
+					{
+						auto id = particle_id( i , p );
+						nbh_friction.m_cell_friction[i].begin_nbh_write( p , id );
+						const size_t n_pairs = m_out_friction[i][p].size();
+						for(size_t j=0;j<n_pairs;j++)
+						{
+							nbh_friction.m_cell_friction[i].push_back( m_out_friction[i][p][j] );
+						}
+						nbh_friction.m_cell_friction[i].end_nbh_write( p , id );
+					}
+					m_out_friction[i].clear();
+					m_out_friction[i].shrink_to_fit(); // really free memory
+					nbh_friction.m_cell_friction[i].m_data.shrink_to_fit(); // reallocate
+				}
+			}
+	};
 }
 
