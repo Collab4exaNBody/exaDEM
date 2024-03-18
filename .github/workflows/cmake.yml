@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Get Yaml cpp
-      run: apt install libyaml-cpp-dev
+      run: sudo apt install libyaml-cpp-dev
     - uses: mpi4py/setup-mpi@v1
     - name: Get ExaNBody
       run: git clone https://github.com/Collab4exaNBody/exaNBody.git
