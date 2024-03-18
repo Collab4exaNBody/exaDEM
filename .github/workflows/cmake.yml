@@ -20,9 +20,11 @@ jobs:
     - uses: mpi4py/setup-mpi@v1
     - name: Get ExaNBody
       run: git clone https://github.com/Collab4exaNBody/exaNBody.git
-
+    - name: Install Yaml
+      run: apt install libyaml-cpp0.5v5 libyaml-cpp-dev
+      
     - name: Configure CMake
-      run: ls ${{github.workspace}}/exaNBody && cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_MODULE_PATH=${{github.workspace}}/exaNBody -DCMAKE_PREFIX_PATH=${{github.workspace}}/exaNBody -DexaNBody_DIR=${{github.workspace}}/exaNBody
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DexaNBody_DIR=${{github.workspace}}/exaNBody
 
     - name: Build
       # Build your program with the given configuration
