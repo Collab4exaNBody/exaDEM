@@ -19,7 +19,7 @@ jobs:
     - uses: mpi4py/setup-mpi@v1
     - uses: mpi4py/setup-mpi@v1
     - name: Get ExaNBody
-      run: git clone https://github.com/Collab4exaNBody/exaNBody.git && export exaNBody_DIR=${pwd}/exaNBody
+      run: git clone https://github.com/Collab4exaNBody/exaNBody.git && export exaNBody_DIR=$PWD/exaNBody
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
