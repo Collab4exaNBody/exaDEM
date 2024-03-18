@@ -16,6 +16,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        persist-credentials: false
+    - uses: actions/setup-node@v4
     - name: Get Yaml cpp
       run: sudo apt install libyaml-cpp-dev
     - uses: mpi4py/setup-mpi@v1
@@ -35,12 +38,12 @@ jobs:
       run: make UpdatePluginDataBase && ctest --test-dir example -C --rerun-failed --output-on-failure ${{env.BUILD_TYPE}}
 
     - name: Generate a code coverage report
+      run: gcovr --html-details coverage.html
+      
+    - name: Generate a code coverage report
       uses: threeal/gcovr-action@v1.0.0
       with:
         root: ${{github.workspace}}
-
-    - name: Generate a code coverage report
-      run: gcovr --html-details coverage.html
 
     - name: Archive code coverage results
       uses: actions/upload-artifact@v4
