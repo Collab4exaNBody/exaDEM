@@ -16,7 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - uses: jbeder/yaml-cpp@0.6.3
+    - uses: jbeder/yaml-cpp@0v1
     - uses: mpi4py/setup-mpi@v1
     - name: Get ExaNBody
       run: git clone https://github.com/Collab4exaNBody/exaNBody.git
