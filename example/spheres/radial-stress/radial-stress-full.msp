@@ -48,10 +48,10 @@ write_vtklegacy:
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 10000
+  simulation_end_iteration: 100000
   simulation_log_frequency: 1000
-  simulation_paraview_frequency: -1
-  dt: 0.00005 s 
+  simulation_paraview_frequency: 5000
+  dt: 0.000005 s 
   rcut_inc: 0.01 m
   friction_rcut: 1.1 m
 
