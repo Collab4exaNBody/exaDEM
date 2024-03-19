@@ -18,7 +18,7 @@ input_data:
   - read_xyz:
       file: 735.xyz
       bounds_mode: FILE
-  - replicate_domain: [1, 1, 1]
+  - replicate_domain: [4, 1, 4]
   - set_radius:
      rad: 0.5
   - set_quaternion
@@ -64,8 +64,8 @@ write_vtklegacy:
 
 global:
   simulation_dump_frequency: -1
-  simulation_paraview_frequency: -1
-  simulation_end_iteration: 10000
+  simulation_paraview_frequency: 5000
+  simulation_end_iteration: 100000
   simulation_log_frequency: 1000
-  dt: 0.0001 s 
+  dt: 0.00005 s 
   rcut_inc: 0.4 m
