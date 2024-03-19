@@ -34,7 +34,7 @@ namespace exaDEM
 							ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD);
 							ADD_SLOT( GridT  , grid    , INPUT_OUTPUT );
 							ADD_SLOT( Domain , domain  , INPUT , REQUIRED );
-							ADD_SLOT( Vec3d  , normal  , INPUT , Vec3d{1.0,0.0,0.0} , DocString{"Normal vector of the rigid surface"});
+							ADD_SLOT( Vec3d  , normal  , INPUT , Vec3d{0.0,0.0,1.0} , DocString{"Normal vector of the rigid surface"});
 							ADD_SLOT( double , offset  , INPUT , 0.0, DocString{"Offset from the origin (0,0,0) of the rigid surface"} );
 							ADD_SLOT( double  , dt                		, INPUT 	, REQUIRED 	, DocString{"Timestep of the simulation"});
 							ADD_SLOT( double  , kt  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
@@ -56,6 +56,7 @@ namespace exaDEM
 								// no velocity version
 								const double vel_null = 0.;
 								RigidSurfaceFunctor func {*normal, *offset, vel_null, *dt, *kt, *kn, *kr, *mu, *damprate};
+func.test();
 								compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 							}
 						};
