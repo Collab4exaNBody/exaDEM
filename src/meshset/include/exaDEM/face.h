@@ -115,6 +115,7 @@ namespace exaDEM
 		
 		ONIKA_HOST_DEVICE_FUNC void contact_face_sphere(const double rx, const double ry, const double rz, const double rad, bool& contact, bool& potential, Vec3d& position) 
 		{
+			//printf("CONTACT FACE SPHERE\n");
 			const Vec3d center = {rx,ry,rz};
 
 			double p = exanb::dot(center,normal) - offset;
@@ -198,6 +199,7 @@ namespace exaDEM
 		 void contact_edge_sphere(const double rx, const double ry, const double rz, const double rad, bool& contact, Vec3d& position)
 		//std::tuple<bool, Vec3d> contact_edge_sphere(const double rx, const double ry, const double rz, const double rad) const
 		{
+			//printf("CONTACT EDGE SPHERE\n");
 			// already tested if  exanb::dot(center,normal) - offset < rad
 			// test if the sphere intersects an edge 
 			//printf("JE SUIS LÀ AUSSI AUSSI\n");

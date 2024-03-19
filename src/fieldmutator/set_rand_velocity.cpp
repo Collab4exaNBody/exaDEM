@@ -4,21 +4,42 @@
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
+#include <exanb/grid_cell_particles/particle_region.h>
+#include <exaDEM/set_fields.h>
 #include <memory>
 #include <random>
 
 namespace exaDEM
 {
-using namespace exanb;
+	using namespace exanb;
 
-  template<typename GridT
-    , class = AssertGridHasFields< GridT, field::_vx, field::_vy, field::_vz >
-    >
-  class SetRandVelocity : public OperatorNode
-  {
-    ADD_SLOT( GridT , grid  , INPUT_OUTPUT );
-    ADD_SLOT( double, var , INPUT, 0, DocString{"Variance (same for all dimensions)"});
-    ADD_SLOT( Vec3d, mean , INPUT, Vec3d{0,0,0}, DocString{"Average vector value."});
+	template<typename GridT, class = AssertGridHasFields< GridT, field::_vx, field::_vy, field::_vz >>
+		class SetRandVelocity : public OperatorNode
+	{
+
+		// Define some fieldsets used in compute_cell_particles
+		using ComputeFieldsVx = FieldSet<field::_vx>;
+		using ComputeFieldsVy = FieldSet<field::_vy>;
+		using ComputeFieldsVz = FieldSet<field::_vz>;
+		using ComputeFields = FieldSet<field::_vx, field::_vy, field::_vz>;
+		using ComputeRegionFieldsVx = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vx>;
+		using ComputeRegionFieldsVy = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vy>;
+		using ComputeRegionFieldsVz = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vz>;
+		using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vx, field::_vy, field::_vz>;
+		static constexpr ComputeFieldsVx compute_field_vx {};
+		static constexpr ComputeFieldsVy compute_field_vy {};
+		static constexpr ComputeFieldsVz compute_field_vz {};
+		static constexpr ComputeFields compute_field_set {};
+		static constexpr ComputeRegionFieldsVx compute_region_field_vx {};
+		static constexpr ComputeRegionFieldsVy compute_region_field_vy {};
+		static constexpr ComputeRegionFieldsVz compute_region_field_vz {};
+		static constexpr ComputeRegionFields compute_region_field_set {};
+
+		ADD_SLOT( GridT , grid  , INPUT_OUTPUT );
+		ADD_SLOT( double, var , INPUT, 0, DocString{"Variance (same for all dimensions)"});
+		ADD_SLOT( Vec3d, mean , INPUT, Vec3d{0,0,0}, DocString{"Average vector value."});
+		ADD_SLOT( ParticleRegions   , particle_regions , INPUT , OPTIONAL );
+		ADD_SLOT( ParticleRegionCSG , region           , INPUT , OPTIONAL );
 
 		public:
 
@@ -31,32 +52,60 @@ using namespace exanb;
 
 		inline void execute () override final
 		{
-			auto cells = grid->cells();
-			const IJK dims = grid->dimension();
-
-#     pragma omp parallel
+			struct jammy 
 			{
-				GRID_OMP_FOR_BEGIN(dims,i,loc, schedule(dynamic) )
+				jammy(double var) 
 				{
-					std::normal_distribution<> dist(0, *var);
-					const auto* __restrict__ id = cells[i][field::id];
-					double* __restrict__ vx = cells[i][field::vx];
-					double* __restrict__ vy = cells[i][field::vy];
-					double* __restrict__ vz = cells[i][field::vz];
-					const size_t n = cells[i].size();
-#         pragma omp simd
-					for(size_t j=0;j<n;j++)
-					{
-						std::default_random_engine seed;
-						seed.seed(id[j]); // TODO : Warning
-						vx[j] = (*mean).x + dist(seed);
-						seed.seed(id[j]+1); // TODO : Warning
-						vy[j] = (*mean).y + dist(seed);
-						seed.seed(id[j]+2); // TODO : Warning
-						vz[j] = (*mean).z + dist(seed);
-					}
+					dist = std::normal_distribution<> (0, var);
 				}
-				GRID_OMP_FOR_END
+
+				ONIKA_HOST_DEVICE_FUNC inline int operator()(double& val)
+				{
+					val += dist(seed);
+					seed();
+					return 0;
+				}
+
+				std::normal_distribution<> dist;
+				std::default_random_engine seed;
+			};
+
+			jammy gen(*var);
+			if( region.has_value() )
+			{
+				if( !particle_regions.has_value() )
+				{
+					fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+				}
+
+        if( region->m_nb_operands==0 )
+        {
+          ldbg << "rebuild CSG from expr "<< region->m_user_expr << std::endl;
+          region->build_from_expression_string( particle_regions->data() , particle_regions->size() );
+        }
+
+
+				ParticleRegionCSGShallowCopy prcsg = *region;
+
+				SetRegionFunctor<double> func_vx = {prcsg, (*mean).x};
+				SetRegionFunctor<double> func_vy = {prcsg, (*mean).y};
+				SetRegionFunctor<double> func_vz = {prcsg, (*mean).z};
+				GenSetRegionFunctor<jammy> func = {prcsg, gen};
+				compute_cell_particles( *grid , false , func_vx , compute_region_field_vx , parallel_execution_context() );
+				compute_cell_particles( *grid , false , func_vy , compute_region_field_vy , parallel_execution_context() );
+				compute_cell_particles( *grid , false , func_vz , compute_region_field_vz , parallel_execution_context() );
+				compute_cell_particles( *grid , false , func , compute_region_field_set , parallel_execution_context() );
+			}
+			else
+			{
+				SetFunctor<double> func_vx = {(*mean).x};
+				SetFunctor<double> func_vy = {(*mean).y};
+				SetFunctor<double> func_vz = {(*mean).z};
+				GenSetFunctor<jammy> func = {gen};
+				compute_cell_particles( *grid , false , func_vx , compute_field_vx , parallel_execution_context() );
+				compute_cell_particles( *grid , false , func_vy , compute_field_vy , parallel_execution_context() );
+				compute_cell_particles( *grid , false , func_vz , compute_field_vz , parallel_execution_context() );
+				compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 			}
 		}
 	};

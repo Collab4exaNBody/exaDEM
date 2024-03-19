@@ -1,0 +1,52 @@
+name: CMake
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        persist-credentials: false
+    - uses: actions/setup-node@v4
+    - name: Get Yaml cpp
+      run: sudo apt install libyaml-cpp-dev
+    - uses: mpi4py/setup-mpi@v1
+    - name: Get ExaNBody
+      run: git clone https://github.com/Collab4exaNBody/exaNBody.git
+
+      
+    - name: Configure CMake
+      run: cmake -DCMAKE_CXX_FLAGS="--coverage -g" -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DexaNBody_DIR=${{github.workspace}}/exaNBody
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Test Example
+      working-directory: ${{github.workspace}}/build
+      run: make UpdatePluginDataBase && ctest --test-dir example -C --rerun-failed --output-on-failure ${{env.BUILD_TYPE}}
+
+#    - name: Generate a code coverage report
+#      uses: threeal/gcovr-action@v1.0.0
+#      with:
+#        root: ${{github.workspace}}
+
+#    - name: Generate a code coverage report
+#      run: gcovr --html-details coverage.html
+      
+#    - name: Archive code coverage results
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: code-coverage-report
+#        path: coverage.html        

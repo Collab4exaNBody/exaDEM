@@ -79,6 +79,7 @@ namespace exaDEM
 				Vec3d& a_mom,
 				Vec3d& a_ft) const
 		{
+
 			for(size_t i=0; i< smeshes ; i++)
 			{
 				auto& mesh= pmeshes[i];
@@ -173,6 +174,7 @@ namespace exaDEM
 				Vec3d& a_mom,
 				Vec3d& a_ft) const
 		{
+			//printf("APPLY_HOOKESTL_MESH OPERATOR 2\n");
 			Vec3d pos_proj;
 			double m_vel = 0;
 			Vec3d pos = {a_rx,a_ry,a_rz};

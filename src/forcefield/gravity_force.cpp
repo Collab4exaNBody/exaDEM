@@ -37,6 +37,7 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
+			//printf("POISON\n");
 			GravityForceFunctor func { *gravity};
 			compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 		}

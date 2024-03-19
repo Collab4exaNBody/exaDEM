@@ -23,8 +23,8 @@
 #include <exaDEM/face.h>
 
 //#include <exaDEM/stl_mesh.h>
-//#include <exaDEM/stl_meshGPU.h>
-#include <exaDEM/stl_meshesGPU.h>
+#include <exaDEM/stl_meshGPU.h>
+//#include <exaDEM/stl_meshesGPU.h>
 
 //#include <exaDEM/hooke_stl_meshes.h>
 #include <exaDEM/hooke_stl_meshesGPU.h>
@@ -69,9 +69,11 @@ namespace exaDEM
 
 							inline void execute () override final
 							{
+
 								//auto& vec = *stl_collection;
 								//ApplyHookeSTLMeshesFunctor func { vec.data(), vec.size(), *dt, *kt, *kn, *kr, *mu, *damprate};
 								ApplyHookeSTLMeshesFunctor func { *meshes, *dt, *kt, *kn, *kr, *mu, *damprate};
+
 								compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 							}
 						};

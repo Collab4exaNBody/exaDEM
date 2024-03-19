@@ -1,5 +1,8 @@
 grid_flavor: grid_flavor_dem
 
+includes:
+  - config_spheres.msp
+
 configuration:
   onika:
     gpu_sm_mult: 6
@@ -11,10 +14,23 @@ configuration:
     filter: [ ".*write_dump_particles" , ".*read_dump_particles" , ".*compact_neighbor_friction" ]
 
 input_data:
-  - read_dump_particles:
-     filename: atoms_000101000.dump
-#     filename: dem_onemillion.dump
-#     scale_cell_size: 2
+  - lattice:
+      structure: SC
+      types: [ 0 ]
+      size: [ 1.1 , 1.1 , 1.1 ]
+      repeats: [ 100 , 100 , 100 ]
+      enlarge_bounds: 0.0 m
+  - set_radius
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.02
+  - update_inertia:
+     var: 0.0
+     mean: [0.1,0.1,0.1]
+  - set_rand_vrot_arot
 
 +first_iteration:
   - grid_stats
@@ -48,10 +64,10 @@ write_vtklegacy:
   ghost: false
 
 global:
-  simulation_dump_frequency: 1000
+  simulation_dump_frequency: -1
 #  simulation_dump_frequency: -1
-  simulation_end_iteration: 102000
-  simulation_log_frequency: 100
+  simulation_end_iteration: 2
+  simulation_log_frequency: 1
   simulation_paraview_frequency: -1
   dt: 0.000005 s 
   rcut_inc: 0.1 m

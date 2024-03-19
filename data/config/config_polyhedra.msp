@@ -1,0 +1,37 @@
+######### POLYHEDRA mode ####################
+trigger_move_particles:
+  rebind: { threshold: max_displ , result: trigger_move_particles }
+  body:
+    - vertex_displ_over
+
+#+dump_data_paraview:
+#  - write_paraview_polyhedra:
+#     basename: polyhedra
+
++chunk_neighbors_impl:
+  - update_grid_interaction
+  - update_mutexes
+  - resize_particle_locks
+
+migrate_particles:
+  - migrate_cell_particles_interaction
+  - rebuild_amr
+  - backup_dem
+
+move_particles_extra_data: move_particles_interaction
+
+compute_new_vertices: polyhedra_compute_vertices
+
+reorder_extra_data: nop
+
+dump_data_particles:
+  - timestep_file: "exaDEM_%09d.dump"
+  - message: { mesg: "Write dump " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - compress_interaction
+  - stats_interactions
+  - write_dump_particle_interaction
+  - chunk_neighbors_impl #redbuild interactions

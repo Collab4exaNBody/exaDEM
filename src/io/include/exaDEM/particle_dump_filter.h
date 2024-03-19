@@ -163,6 +163,12 @@ namespace exaDEM
       else { return 0; }
     }
 
+		inline void write_optional_cell_data(uint8_t* buff, const size_t cell_index)
+		{
+			auto& cell = nbh_friction.m_cell_friction[cell_index];
+			cell.encode_cell_to_buffer((void*)buff);
+		}
+/*
     inline const uint8_t* optional_cell_data_ptr(size_t cell_index)
     {
       if( enable_friction )
@@ -175,7 +181,7 @@ namespace exaDEM
         return nullptr;
       }
     }
-
+*/
     template<class WriteFuncT>
     inline size_t write_optional_header( WriteFuncT write_func )
     {

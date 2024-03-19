@@ -1,23 +1,26 @@
 grid_flavor: grid_flavor_dem
 
+includes:
+  - config_spheres.msp
+
 input_data_from_xyz:
   - read_xyz:
       file: two_materials.xyz
       bounds_mode: FILE
       enlarge_bounds: 1.0 m
-  - dem_init_material:
+  - set_material_properties:
      type: 0
      rad: 0.5
      density: 0.02
-  - dem_init_material:
+  - set_material_properties:
      type: 1
      rad: 0.5
      density: 0.04
-  - init_random_velocity:
+  - set_rand_velocity:
      var: 0.1
      mean: [0.0,0.0,0.0]
-  - init_inertia:
-  - random_vrot_arot
+  - update_inertia:
+  - set_rand_vrot_arot
 
 input_data:
 #  - input_data_from_dump
@@ -55,8 +58,6 @@ compute_loop:
     - compute_loop_stop
 
 compute_force:
-  - init_homothety:
-     homothety: 0.0
   - applyDrivers
   - gravity_force
   - hooke_force:
@@ -73,7 +74,7 @@ write_vtklegacy:
 global:
   simulation_dump_frequency: -1
   simulation_paraview_frequency: -1
-  simulation_end_iteration: 1000
-  simulation_log_frequency: 1000
+  simulation_end_iteration: 100
+  simulation_log_frequency: -1
   dt: 0.00005 s 
   rcut_inc: 0.1 m
