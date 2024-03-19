@@ -60,7 +60,7 @@ namespace exaDEM
 
 	struct Driver
 	{
-		virtual constexpr DRIVER_TYPE get_type();
+		constexpr DRIVER_TYPE get_type();
 		virtual void print();
 		virtual bool filter( const double, const Vec3d&);
 		virtual std::tuple<bool, double, Vec3d, Vec3d> dectector( const double, const Vec3d&);

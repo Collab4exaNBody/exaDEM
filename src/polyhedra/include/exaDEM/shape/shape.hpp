@@ -5,12 +5,19 @@
 #include <math.h>
 #include <exanb/core/log.h>
 #include <exaDEM/basic_types.hpp>
+#include <onika/cuda/cuda.h>
+#include <onika/cuda/stl_adaptors.h>
+
 //#include <exaDEM/shape/shape_printer.hpp>
 
 namespace exaDEM
 {
+	using namespace onika;
 	struct shape
 	{
+
+		template <typename T> using VectorT =  onika::memory::CudaMMVector<T>; 
+
 		shape() {
 			m_faces.push_back(0); // init
 		}
@@ -19,18 +26,19 @@ namespace exaDEM
 		{
 			m_vertices.clear(); 
 			m_faces.clear();
-			m_faces.push_back(0);
+			m_faces.resize(1);
+			m_faces[0] = 0;
 			m_edges.clear();
 			m_name = "undefined";
 		}
 
-		std::vector <exanb::Vec3d> m_vertices; ///<  
+		VectorT <exanb::Vec3d> m_vertices; ///<  
 		exanb::Vec3d m_inertia_on_mass;
-		std::vector <OBB> m_obb_edges;
-		std::vector <OBB> m_obb_faces;
+		VectorT <OBB> m_obb_edges;
+		VectorT <OBB> m_obb_faces;
 		OBB obb;
-		std::vector<int> m_edges; ///<  
-		std::vector<int> m_faces; ///<  
+		VectorT <int> m_edges; ///<  
+		VectorT <int> m_faces; ///<  
 		double m_radius; ///< use for detection
 		double m_volume; ///< use for detection
 		std::string m_name = "undefined";
@@ -40,86 +48,104 @@ namespace exaDEM
 		inline void pre_compute_obb_faces();
 
 
-		inline const double get_volume() const
+		ONIKA_HOST_DEVICE_FUNC
+		inline double get_volume() const
 		{
 			assert(m_volume != 0 && "wrong initialisation");
 			return m_volume;
 		}
 
-		inline const exanb::Vec3d get_Im()
+		ONIKA_HOST_DEVICE_FUNC
+		inline const exanb::Vec3d& get_Im()
 		{
 			return m_inertia_on_mass;
 		}
 
-		inline const exanb::Vec3d get_Im() const
+		ONIKA_HOST_DEVICE_FUNC
+		inline const exanb::Vec3d& get_Im() const
 		{
 			return m_inertia_on_mass;
 		}
 
-		inline const int get_number_of_vertices()
-		{
-			return m_vertices.size();
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline int get_number_of_vertices()
+			{
+				return onika::cuda::vector_size( m_vertices );
+			}
 
-		inline const int get_number_of_vertices() const
-		{
-			return m_vertices.size();
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline int get_number_of_vertices() const
+			{
+				return onika::cuda::vector_size( m_vertices );
+			}
 
-		inline const int get_number_of_edges()
-		{
-			return m_edges.size() / 2;
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline int get_number_of_edges()
+			{
+				return onika::cuda::vector_size ( m_edges ) / 2;
+			}
 
-		inline const int get_number_of_edges() const
-		{
-			return m_edges.size() / 2;
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline int get_number_of_edges() const
+			{
+				return onika::cuda::vector_size( m_edges ) / 2;
+			}
 
-		inline const int get_number_of_faces()
-		{
-			return m_faces[0];
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline int get_number_of_faces()
+			{
+				return m_faces[0];
+			}
 
-		inline const int get_number_of_faces() const
-		{
-			return m_faces[0];
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline int get_number_of_faces() const
+			{
+				return m_faces[0];
+			}
 
-		inline exanb::Vec3d& get_vertex(const int i)
-		{
-			return m_vertices[i];
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline exanb::Vec3d& get_vertex(const int i)
+			{
+				return m_vertices[i];
+			}
 
-		inline const exanb::Vec3d& get_vertex(const int i) const
-		{
-			return m_vertices[i];
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline const exanb::Vec3d& get_vertex(const int i) const
+			{
+				return m_vertices[i];
+			}
 
-		inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d& p, const exanb::Quaternion& orient)
-		{
-			return p + orient * m_vertices[i];
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d& p, const exanb::Quaternion& orient)
+			{
+				return p + orient * m_vertices[i];
+			}
 
-		inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d& p, const exanb::Quaternion& orient) const
-		{
-			return p + orient * m_vertices[i];
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d& p, const exanb::Quaternion& orient) const
+			{
+        const Vec3d * __restrict__ vertices = onika::cuda::vector_data( m_vertices );
+				return p + orient * vertices[i];
+			}
 
-		inline const std::pair<int,int> get_edge(const int i)
-		{
-			return {m_edges[2*i], m_edges[2*i+1]};
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline std::pair<int,int> get_edge(const int i)
+			{
+				const int * __restrict__ edges = onika::cuda::vector_data( m_edges );
+				return { edges[2*i], edges[2*i+1] };
+			}
 
-		inline const std::pair<int,int> get_edge(const int i) const
-		{
-			return {m_edges[2*i], m_edges[2*i+1]};
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline std::pair<int,int> get_edge(const int i) const
+			{
+				return {m_edges[2*i], m_edges[2*i+1]};
+			}
 
-		inline int* get_faces() const
-		{
-			return (int*)m_faces.data();
-		}
+		ONIKA_HOST_DEVICE_FUNC
+			inline int* get_faces() const
+			{
+				return (int*)m_faces.data();
+			}
 
 		// returns the pointor on data and the number of vertex in the faces
 		const std::pair<int*, int> get_face(const int i)
@@ -324,62 +350,62 @@ namespace exaDEM
 			}
 		}
 
-	inline void print()
-	{
-		lout << "======= Shape Configuration =====" << std::endl;
-		lout << "Shape Name: " << this->m_name << std::endl;
-		lout << "Shape Radius: " << this->m_radius << std::endl;
-		lout << "Shape I/m: [" << this->m_inertia_on_mass << "]" << std::endl;
-		lout << "Shape Volume: " << this->m_volume << std::endl;
-		print_vertices();
-		print_edges();
-		print_faces();
-		lout << "=================================" << std::endl << std::endl;
-	}
-	inline void write_paraview()
-	{
-		lout << " writting paraview for shape " << this->m_name << std::endl;
-		std::string name = m_name + ".vtk";
-		std::ofstream outFile(name);
-		if (!outFile) {
-			std::cerr << "Erreur : impossible de créer le fichier de sortie !" << std::endl;
-			return;
+		inline void print()
+		{
+			lout << "======= Shape Configuration =====" << std::endl;
+			lout << "Shape Name: " << this->m_name << std::endl;
+			lout << "Shape Radius: " << this->m_radius << std::endl;
+			lout << "Shape I/m: [" << this->m_inertia_on_mass << "]" << std::endl;
+			lout << "Shape Volume: " << this->m_volume << std::endl;
+			print_vertices();
+			print_edges();
+			print_faces();
+			lout << "=================================" << std::endl << std::endl;
 		}
-		outFile << "# vtk DataFile Version 3.0" << std::endl;
-		outFile << "Spheres" << std::endl;
-		outFile << "ASCII" << std::endl;
-		outFile << "DATASET POLYDATA"<<std::endl;
-		outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
-		auto writer_v = [] (exanb::Vec3d& v, std::ofstream& out) 
+		inline void write_paraview()
 		{
-			out << v.x << " " << v.y << " " << v.z << std::endl;
-		};
+			lout << " writting paraview for shape " << this->m_name << std::endl;
+			std::string name = m_name + ".vtk";
+			std::ofstream outFile(name);
+			if (!outFile) {
+				std::cerr << "Erreur : impossible de créer le fichier de sortie !" << std::endl;
+				return;
+			}
+			outFile << "# vtk DataFile Version 3.0" << std::endl;
+			outFile << "Spheres" << std::endl;
+			outFile << "ASCII" << std::endl;
+			outFile << "DATASET POLYDATA"<<std::endl;
+			outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
+			auto writer_v = [] (exanb::Vec3d& v, std::ofstream& out) 
+			{
+				out << v.x << " " << v.y << " " << v.z << std::endl;
+			};
 
-		for_all_vertices(writer_v, outFile);
+			for_all_vertices(writer_v, outFile);
 
-		outFile << std::endl;
-		int count_polygon_size = this->get_number_of_faces();
-		int count_polygon_table_size = 0;
-		int* ptr = this->m_faces.data() + 1;
-		for(int it = 0 ; it < count_polygon_size ; it++)
-		{
-			count_polygon_table_size += ptr[0] + 1; // number of vertices + vertex idexes
-			ptr += ptr[0] + 1; // -> next face 
+			outFile << std::endl;
+			int count_polygon_size = this->get_number_of_faces();
+			int count_polygon_table_size = 0;
+			int* ptr = this->m_faces.data() + 1;
+			for(int it = 0 ; it < count_polygon_size ; it++)
+			{
+				count_polygon_table_size += ptr[0] + 1; // number of vertices + vertex idexes
+				ptr += ptr[0] + 1; // -> next face 
+			}
+
+			outFile << "POLYGONS "<<count_polygon_size<< " " << count_polygon_table_size << std::endl;
+			auto writer_f = [] (const size_t size, const int * data,  std::ofstream& out)
+			{
+				out << size;
+				for (size_t it = 0 ; it < size ; it++) out << " " << data[it];
+				out << std::endl;
+			};
+			for_all_faces(writer_f, outFile);
 		}
-
-		outFile << "POLYGONS "<<count_polygon_size<< " " << count_polygon_table_size << std::endl;
-		auto writer_f = [] (const size_t size, const int * data,  std::ofstream& out)
-		{
-			out << size;
-			for (size_t it = 0 ; it < size ; it++) out << " " << data[it];
-			out << std::endl;
-		};
-		for_all_faces(writer_f, outFile);
-	}
-/*
-		inline void print();
-		inline void write_paraview();
-*/
+		/*
+			 inline void print();
+			 inline void write_paraview();
+		 */
 	};
 
 	inline int contact_possibilities (const shape* s1, const shape* s2)

@@ -64,7 +64,7 @@ namespace exaDEM
 
 		// Accessors
 		ONIKA_HOST_DEVICE_FUNC 
-		inline const DRIVER_TYPE type(int idx)
+		inline DRIVER_TYPE type(int idx)
 		{
 			assert( idx < m_type.size());
 			return m_type[idx];

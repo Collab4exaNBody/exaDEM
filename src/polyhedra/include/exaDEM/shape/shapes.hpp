@@ -7,37 +7,41 @@ namespace exaDEM
 	// data collection of shapes
 	struct shapes
 	{
-		std::vector<shape> m_data;
+		template <typename T> using VectorT =  onika::memory::CudaMMVector<T>; 
+		VectorT<shape> m_data;
 
-		const size_t get_size()
+		inline size_t get_size()
 		{
-			return m_data.size();
+			return onika::cuda::vector_size( m_data );
 		}
 
-		inline const size_t get_size() const
+		inline size_t get_size() const
 		{
-			return m_data.size();
+			return onika::cuda::vector_size( m_data );
 		}
 
-		const shape* operator[] (const uint8_t idx) const
-		{
-			return &m_data[idx];
-		}
-
-		shape* operator[] (const std::string name)
-		{
-			for (auto& shp : this->m_data)
+		ONIKA_HOST_DEVICE_FUNC
+			inline const shape* operator[] (const uint8_t idx) const
 			{
-				if(shp.m_name == name)
-				{
-					return &shp;
-				}
+				const shape * data = onika::cuda::vector_data( m_data );
+				return data + idx;
 			}
-			std::cout << "Warning, the shape: " << name << " is not included in this collection of shapes. We return a nullptr." << std::endl;
-			return nullptr;
-		}
 
-		void add_shape(shape* shp)
+		ONIKA_HOST_DEVICE_FUNC
+			inline shape* operator[] (const std::string name)
+			{
+				for (auto& shp : this->m_data)
+				{
+					if(shp.m_name == name)
+					{
+						return &shp;
+					}
+				}
+				//std::cout << "Warning, the shape: " << name << " is not included in this collection of shapes. We return a nullptr." << std::endl;
+				return nullptr;
+			}
+
+		inline void add_shape(shape* shp)
 		{
 			this->m_data.push_back(*shp); // copy
 		}
