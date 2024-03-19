@@ -20,8 +20,7 @@ namespace exaDEM
 		double m_dampRate;
 
 		void test() {std::cout << "test" << std::endl;}
-
-		ONIKA_HOST_DEVICE_FUNC inline double operator () (
+		ONIKA_HOST_DEVICE_FUNC inline void operator () (
 				const double a_rx, const double a_ry, const double a_rz,
 				const double a_vx, const double a_vy, const double a_vz,
 				Vec3d& a_vrot, 
@@ -31,7 +30,19 @@ namespace exaDEM
 				Vec3d& a_mom,
 				Vec3d& a_ft) const
 		{
-			std::cout <<" la "<< std::endl;
+			[[maybe_unused]] double res = run  ( a_rx, a_ry, a_rz, a_vx, a_vy, a_vz, a_vrot, a_particle_radius, a_fx, a_fy, a_fz, a_mass, a_mom, a_ft);
+		}
+
+		ONIKA_HOST_DEVICE_FUNC inline double run (
+				const double a_rx, const double a_ry, const double a_rz,
+				const double a_vx, const double a_vy, const double a_vz,
+				Vec3d& a_vrot, 
+				double a_particle_radius,
+				double& a_fx, double& a_fy, double& a_fz, 
+				const double a_mass,
+				Vec3d& a_mom,
+				Vec3d& a_ft) const
+		{
 			Vec3d pos = {a_rx,a_ry,a_rz};
 			Vec3d vel = {a_vx,a_vy,a_vz};
 
@@ -40,10 +51,10 @@ namespace exaDEM
 
 			Vec3d vec_n = pos_proj - rigid_surface_center;
 			double n = norm(vec_n);
-			vec_n = vec_n / n;
 			const double dn = n - a_particle_radius;
 			if (dn < 0.0)
 			{
+			  vec_n = vec_n / n;
 				const Vec3d contact_position = pos_proj - vec_n * ( a_particle_radius + 0.5 * dn ) ; 
 				const Vec3d rigid_surface_velocity = m_normal * m_vel; 
 				constexpr Vec3d rigid_surface_angular_velocity = {0.0,0.0,0.0};
@@ -82,9 +93,9 @@ namespace exaDEM
 
 namespace exanb
 {
-  template<> struct ComputeCellParticlesTraits<exaDEM::RigidSurfaceFunctor>
-  {
-    static inline constexpr bool RequiresBlockSynchronousCall = false;
-    static inline constexpr bool CudaCompatible = true;
-  };
+	template<> struct ComputeCellParticlesTraits<exaDEM::RigidSurfaceFunctor>
+	{
+		static inline constexpr bool RequiresBlockSynchronousCall = false;
+		static inline constexpr bool CudaCompatible = true;
+	};
 }

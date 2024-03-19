@@ -228,8 +228,8 @@ namespace exaDEM
 											r_wall_x(__ARGS_);
 											r_wall_y(__ARGS_);
 											r_wall_z(__ARGS_);
-											sum_forces_x += c_wall_x(__ARGS_);
-											sum_forces_y += c_wall_y(__ARGS_);
+											sum_forces_x += c_wall_x.run(__ARGS_);
+											sum_forces_y += c_wall_y.run(__ARGS_);
 											m_wall_z(__ARGS_);
 #undef __ARGS_AND_SUM
 											// compute total mass

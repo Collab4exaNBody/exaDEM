@@ -22,7 +22,7 @@ input_data:
 compute_force:
   - rigid_surface:
      normal: [0,0,1]
-     offset: 0.0
+     offset: -1
      kt: 80000
      kn: 100000
      kr : 1
@@ -42,9 +42,9 @@ write_vtklegacy:
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 100000
-  simulation_log_frequency: 1000
-  simulation_paraview_frequency: 10000
+  simulation_end_iteration: 10000
+  simulation_log_frequency: 10000
+  simulation_paraview_frequency: -1
   dt: 0.0001 s 
   rcut_inc: 0.4 m
   friction_rcut: 1.1 m

@@ -104,7 +104,7 @@ namespace exaDEM
 #         pragma omp simd //reduction(+:sum_f, sum_m)
 					for(size_t j=0;j<n;j++)
 					{
-						sum_f += func(
+						sum_f += func.run(
 								_rx[j], _ry[j], _rz[j],
 								_vx[j], _vy[j], _vz[j],
 								_vrot[j], _r[j],

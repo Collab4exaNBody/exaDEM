@@ -4,7 +4,6 @@
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <exanb/core/domain.h>
 #include <exanb/core/basic_types.h>
 #include <exanb/core/basic_types_operators.h>
 #include <exanb/core/basic_types_stream.h>
@@ -33,7 +32,6 @@ namespace exaDEM
 							static constexpr ComputeFields compute_field_set {};
 							ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD);
 							ADD_SLOT( GridT  , grid    , INPUT_OUTPUT );
-							ADD_SLOT( Domain , domain  , INPUT , REQUIRED );
 							ADD_SLOT( Vec3d  , normal  , INPUT , Vec3d{0.0,0.0,1.0} , DocString{"Normal vector of the rigid surface"});
 							ADD_SLOT( double , offset  , INPUT , 0.0, DocString{"Offset from the origin (0,0,0) of the rigid surface"} );
 							ADD_SLOT( double  , dt                		, INPUT 	, REQUIRED 	, DocString{"Timestep of the simulation"});
@@ -56,7 +54,6 @@ namespace exaDEM
 								// no velocity version
 								const double vel_null = 0.;
 								RigidSurfaceFunctor func {*normal, *offset, vel_null, *dt, *kt, *kn, *kr, *mu, *damprate};
-func.test();
 								compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 							}
 						};
