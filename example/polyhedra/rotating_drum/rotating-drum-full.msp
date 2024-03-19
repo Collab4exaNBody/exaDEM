@@ -8,7 +8,7 @@ input_data:
       structure: SC
       types: [ 0 ]
       size: [ 1.0 , 1.0 , 1.0 ]
-      repeats: [ 5 , 5 , 5 ]
+      repeats: [ 10 , 10 , 10 ]
       enlarge_bounds: 0.0 m
   - read_shape_file:
      filename: shapes.shp
@@ -24,9 +24,9 @@ input_data:
 setup_drivers:
   - add_cylinder:
      id: 0
-     center: [2.5, 2.5, 2.5]
+     center: [5, 5, 5]
      axis: [1, 0, 1]
-     radius: 4
+     radius: 9
      angular_velocity: [0,0,0]
 
 compute_force:
@@ -45,8 +45,8 @@ write_vtklegacy:
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 10000
-  simulation_log_frequency: 1000
-  simulation_paraview_frequency: 10000
-  dt: 0.0001 s 
+  simulation_end_iteration: 150000
+  simulation_log_frequency: 10000
+  simulation_paraview_frequency: 5000
+  dt: 0.00001 s 
   rcut_inc: 0.1 m
