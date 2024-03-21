@@ -97,7 +97,8 @@ trigger_load_balance:
       rebind: { in1: trigger_lb_tmp , in2: domain_extended , result: trigger_load_balance }
       body: [ boolean_or ]
 
-- cost_model: simple_cost_model { ccost: 1.0 , pdens: 40.0 , pdens2:0.0 , pdens3:0.000 }
+cost_model: 
+  - simple_cost_model: { ccost: 1.0 , pdens: 40.0 , pdens2:0.0 , pdens3:0.000 }
 
 # define how load balancing is done
 load_balance:

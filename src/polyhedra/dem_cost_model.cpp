@@ -68,8 +68,8 @@ namespace exaDEM
 	assert( cell_costs.m_block.end.k >= cell_costs.m_block.start.k );
 
 	IJK dims = dimension( cell_costs.m_block );
-//	const size_t n_cells = grid_cell_count( dims );
-	const size_t n_cells = cells->size();//grid_cell_count( dims );
+	const size_t n_cells = grid_cell_count( dims );
+//	const size_t n_cells = cells->size();//grid_cell_count( dims );
 	cell_costs.m_costs.resize( n_cells , 0. );
 	auto & interactions = ges->m_data;
 
