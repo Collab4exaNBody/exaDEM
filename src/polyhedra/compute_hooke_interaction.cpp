@@ -40,6 +40,7 @@ namespace exaDEM
 		ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
 		ADD_SLOT( double      , dt                , INPUT , REQUIRED );
 		ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers"});
+		ADD_SLOT( std::vector<size_t>         , idxs              , INPUT_OUTPUT , DocString{"List of non empty cells"});
 
 
 		public:
@@ -134,6 +135,8 @@ namespace exaDEM
 			};
 
 
+			auto& indexes = *idxs;
+
 #pragma omp parallel
 			{
 				auto detection = std::vector{
@@ -145,9 +148,15 @@ namespace exaDEM
 
 				};
 
+
 #pragma omp for schedule(dynamic)
-				for(size_t current_cell = 0 ; current_cell < cell_interactions.size() ; current_cell++)
+/*				for(size_t current_cell = 0 ; current_cell < cell_interactions.size() ; current_cell++)
 				{
+*/
+				for( size_t ci = 0 ; ci < indexes.size() ; ci ++ )
+{
+size_t current_cell = indexes[ci];  
+
 					auto& interactions = cell_interactions[current_cell];
 					const unsigned int  n_interactions_in_cell = interactions.m_data.size();
 					exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data ); 

@@ -67,6 +67,7 @@ parallel_update_particles:
       condition: trigger_generator
       body: 
          - add_generated_particles
+#  - mpi_barrier
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
@@ -96,10 +97,11 @@ trigger_load_balance:
       rebind: { in1: trigger_lb_tmp , in2: domain_extended , result: trigger_load_balance }
       body: [ boolean_or ]
 
+- cost_model: simple_cost_model { ccost: 1.0 , pdens: 40.0 , pdens2:0.0 , pdens3:0.000 }
+
 # define how load balancing is done
 load_balance:
-#  - simple_cost_model: { ccost: 1.0 , pdens: 40.0 , pdens2:0.0 , pdens3:0.000 }
-  - simple_cost_model: { cost_model_coefs: [2,10,4,1] }
+  - cost_model
   - load_balance_rcb
 #  - cpu_gpu_load_balance
 
@@ -109,9 +111,12 @@ load_balancing_if_triggered:
     - load_balance
 
 update_particles_full_body:
+#  - mpi_barrier
+  - compress_interaction
   - move_particles_extra_data
   - trigger_load_balance
   - load_balancing_if_triggered
+#  - mpi_barrier
   - parallel_update_particles
   - reorder_extra_data
 
