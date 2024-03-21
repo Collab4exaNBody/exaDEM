@@ -24,6 +24,8 @@ move_particles_extra_data: move_particles_interaction
 
 compute_new_vertices: polyhedra_compute_vertices
 
+compress_data: compress_interaction
+
 reorder_extra_data: nop
 
 dump_data_particles:

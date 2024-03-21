@@ -23,7 +23,6 @@ namespace exaDEM
 			ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
 			ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
 
-
 			public:
 
 			inline std::string documentation() const override final

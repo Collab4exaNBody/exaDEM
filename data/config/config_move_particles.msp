@@ -21,6 +21,7 @@ rebuild_amr:
   enforced_ordering: 1
 ####################################################
 
+compress_data: nop
 
 ################### Neighbor list update ############################
 chunk_neighbors_contact:
@@ -113,7 +114,7 @@ load_balancing_if_triggered:
 
 update_particles_full_body:
 #  - mpi_barrier
-  - compress_interaction
+  - compress_data
   - move_particles_extra_data
   - trigger_load_balance
   - load_balancing_if_triggered
