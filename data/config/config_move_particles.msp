@@ -50,18 +50,13 @@ ghost_full_update:
   - compute_new_vertices
 
   
-################## trigger stl mesh update ########################
-
-trigger_update_stl_mesh:
-  condition: enable_stl_mesh
-  body:
-    - build_grid_stl_mesh
 
 ################### parallel particle migration ############################
 
 ## These operator should be define by your particle mode (spheres or polyhedra)
 migrate_particles: nop
 add_generated_particles: nop
+update_stl_mesh: nop
 
 parallel_update_particles:
   - particle_generator:
@@ -72,8 +67,8 @@ parallel_update_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
+  - update_stl_mesh
   - update_particle_neighbors
-  - trigger_update_stl_mesh
 
 # define actions to initialize particles at startup, just after file read
 init_particles:

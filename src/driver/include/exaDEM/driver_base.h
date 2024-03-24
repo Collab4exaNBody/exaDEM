@@ -11,6 +11,7 @@ namespace exaDEM
 		CYLINDER,
 		SURFACE,
     BALL,
+    STL_MESH,
 		UNDEFINED
 	};
 
@@ -23,6 +24,7 @@ namespace exaDEM
 			case DRIVER_TYPE::CYLINDER: return "Cylinder";
 			case DRIVER_TYPE::SURFACE: return "Surface";
 			case DRIVER_TYPE::BALL: return "Ball";
+			case DRIVER_TYPE::STL_MESH: return "Stl_mesh";
 			case DRIVER_TYPE::UNDEFINED: return "Undefined Driver";
 			default: return "Undefined Driver";
 		}
@@ -40,6 +42,7 @@ namespace exaDEM
 			case str2int("CYLINDER"): return DRIVER_TYPE::CYLINDER;
 			case str2int("SURFACE"): return DRIVER_TYPE::SURFACE;
 			case str2int("BALL"): return DRIVER_TYPE::BALL;
+			case str2int("STL_MESH"): return DRIVER_TYPE::STL_MESH;
 			default: std::cout << "error, no driver " << driver_name << " found" << std::endl;
 							 std::cout << "Use: CYLINDER, SURFACE, or BALL" << std::endl;
 							 std::abort();
@@ -49,6 +52,7 @@ namespace exaDEM
 	struct Cylinder;
 	struct Surface;
 	struct Ball;
+	struct Stl_mesh;
 	struct UndefinedDriver;
 
 	template<typename T>
@@ -56,6 +60,7 @@ namespace exaDEM
 	template<> constexpr DRIVER_TYPE get_type<exaDEM::Cylinder> () { return DRIVER_TYPE::CYLINDER; }
 	template<> constexpr DRIVER_TYPE get_type<exaDEM::Surface> () { return DRIVER_TYPE::SURFACE;	}
 	template<> constexpr DRIVER_TYPE get_type<exaDEM::Ball> () { return DRIVER_TYPE::BALL;	}
+	template<> constexpr DRIVER_TYPE get_type<exaDEM::Stl_mesh> () { return DRIVER_TYPE::STL_MESH;	}
 	template<> constexpr DRIVER_TYPE get_type<exaDEM::UndefinedDriver> () { return DRIVER_TYPE::UNDEFINED;	}
 
 	struct Driver

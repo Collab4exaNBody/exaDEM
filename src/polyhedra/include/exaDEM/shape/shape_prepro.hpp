@@ -85,6 +85,15 @@ namespace exaDEM
 //#define OLD_VERSION
 
 	// general functon;
+	inline OBB build_obb_vertex(const Vec3d& position, const int index, const shape* shp, const exanb::Quaternion& orientation)
+	{
+		const double ext = shp->m_radius;
+		auto vertex = shp->get_vertex(index, position, orientation);
+		std::vector<vec3r> v = {conv_to_vec3r(vertex)};
+		OBB res = build_OBB (v, ext);
+		return res;
+	}
+
 	inline OBB build_obb_edge(const Vec3d& position, const int index, const shape* shp, const exanb::Quaternion& orientation)
 	{
 		const double ext = shp->m_radius;
@@ -94,26 +103,6 @@ namespace exaDEM
 		std::vector<vec3r> v = {conv_to_vec3r(vf), conv_to_vec3r(vs)};
 		OBB res = build_OBB (v, ext);
 		return res;
-#ifdef OLD_VERSION
-		// TODO use orientation
-		OBB res;
-		const Vec3d center = (vf + vs) / 2;
-		res.center = { center.x , center.y, center.z };
-
-		constexpr int DIM = 3;
-		// TODO:  add obb orientation HERE
-		// Use distance between vf and vs and apply rotation
-
-		const auto v = conv_to_vec3r (vf);
-
-		for ( int dim = 0 ; dim < DIM ; dim++ )
-		{
-			res.extent[dim] = std::abs ( res.center[dim] - v [dim] );
-		}
-
-		res.enlarge( ext );
-		return res;
-#endif
 	}
 
 	inline OBB build_obb_face(const Vec3d& position, const int index, const shape* shp, const exanb::Quaternion& orientation)
@@ -127,39 +116,23 @@ namespace exaDEM
 		}
 		OBB res = build_OBB (v, ext);
 		return res;
-#ifdef OLD_VERSION
-		OBB obb_face;
-		assert ( nf > 0 );
+	}
 
-		constexpr int DIM = 3;
-		for ( int dim = 0 ; dim < DIM ; dim++ )
+	inline void shape::pre_compute_obb_vertices()
+	{
+		// This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_face`
+		const size_t size = this->get_number_of_vertices();
+		m_obb_vertices.resize(size);
+		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center);
+		const exanb::Quaternion onull = {1,0,0,0};
+
+		lout << "build " << size << " obb [vertices]" << std::endl;
+
+#pragma omp parallel for schedule (static)
+		for ( size_t i = 0 ; i < size ; i++)
 		{
-			double acc = 0.0;
-			for (int f = 0 ; f < nf ; f++)
-			{
-				vec3r v = conv_to_vec3r (shp->get_vertex(data[f], position, orientation));
-				acc += v[dim];
-			}
-			obb_face.center[dim] = acc / nf;
+			m_obb_vertices[i] = build_obb_vertex (center, i, this, onull);
 		}
-
-		// TODO:  add obb orientation HERE
-		// Use distance between vf and vs and apply rotation
-		// TODO : we could do it with only one loop
-		for ( int dim = 0 ; dim < DIM ; dim++ )
-		{
-			double acc = 0.0;
-			for (int f = 0 ; f < nf ; f++)
-			{
-				vec3r v = conv_to_vec3r (shp->get_vertex(data[f], position, orientation));
-				acc = std::max ( acc , std::abs( v[dim] - obb_face.center[dim] ));
-			}
-			obb_face.extent[dim] = acc;
-		}
-
-		obb_face.enlarge( ext );
-		return obb_face;
-#endif
 	}
 
 	inline void shape::pre_compute_obb_edges()
@@ -171,7 +144,8 @@ namespace exaDEM
 		//const exanb::Vec3d vnull      = {0,0,0};
 		const exanb::Quaternion onull = {1,0,0,0};
 		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center);
-#pragma omp parallel for
+		lout << "build " << size << " obb [edges]" << std::endl;
+#pragma omp parallel for schedule(static)
 		for ( size_t i = 0 ; i < size ; i++)
 		{
 			m_obb_edges[i] = build_obb_edge (center, i, this, onull);
@@ -186,11 +160,34 @@ namespace exaDEM
 		//const exanb::Vec3d vnull      = {0,0,0};
 		const exanb::Quaternion onull = {1,0,0,0};
 		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center);
+		lout << "build " << size << " obb [faces]" << std::endl;
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(static)
 		for ( size_t i = 0 ; i < size ; i++)
 		{
 			m_obb_faces[i] = build_obb_face (center, i, this, onull);
+		}
+	}
+
+	inline void shape::increase_obb ( const double value )
+	{
+#pragma omp parallel
+		{
+#pragma omp for schedule(static) nowait
+			for (size_t i = 0 ; i < m_obb_vertices.size() ; i++)
+			{
+				m_obb_vertices[i].enlarge(value);
+			}
+#pragma omp for schedule(static) nowait
+			for (size_t i = 0 ; i < m_obb_edges.size() ; i++)
+			{
+				m_obb_edges[i].enlarge(value);
+			}
+#pragma omp for schedule(static)
+			for (size_t i = 0 ; i < m_obb_faces.size() ; i++)
+			{
+				m_obb_faces[i].enlarge(value);
+			}
 		}
 	}
 }
