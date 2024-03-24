@@ -44,7 +44,7 @@ namespace exaDEM
 	 * @brief Normalize a 3D vector.
 	 * @param v The input vector to be normalized.
 	 */
-	inline void normalize(Vec3d& v) { v = v / exanb::norm(v); }
+	inline void _normalize(Vec3d& v) { v = v / exanb::norm(v); }
 
 
 	/**
@@ -106,9 +106,9 @@ namespace exaDEM
 			const Vec3d& pc = vertices[nb_vertices-1];
 			Vec3d v1 = pb - pa;
 			Vec3d v2 = pc - pa;
-			normalize(v1);
+			_normalize(v1);
 			Vec3d n = exanb::cross(v1,v2);
-			normalize(n);
+			_normalize(n);
 			Vec3d iv = center;// - pa;
 			double dist = exanb::dot(iv,n);
 			if(dist < 0.0)

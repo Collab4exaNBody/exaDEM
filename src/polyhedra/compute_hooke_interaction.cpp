@@ -20,6 +20,7 @@
 #include <exaDEM/shape/shape_detection_driver.hpp>
 #include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
+#include <exaDEM/compute_hooke_interaction.h>
 
 namespace exaDEM
 {
@@ -260,6 +261,11 @@ size_t current_cell = indexes[ci];
 							{
 								Ball& driver = std::get<Ball>(drvs.data(driver_idx)) ; 
 								compute_driver(cells[item.cell_i], driver, hkp_drvs, shp, item, time, locker);
+							}
+							else if ( item.type >= 7 && item.type <= 12)
+							{
+								Stl_mesh& driver = std::get<Stl_mesh>(drvs.data(driver_idx)) ;
+								compute_driver_stl(cells[item.cell_i], driver, hkp_drvs, shp, item, time, locker);
 							}
 						}
 					}

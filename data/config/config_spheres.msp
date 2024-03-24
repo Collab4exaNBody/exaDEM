@@ -1,4 +1,15 @@
 ######### SPHERES mode ####################
+
+################## trigger stl mesh update ########################
+
+trigger_update_stl_mesh:
+  condition: enable_stl_mesh AND trigger_load_balance
+  body:
+    - build_grid_stl_mesh
+
+update_stl_mesh: trigger_update_stl_mesh
+
+################# Move spheres ####################################
 migrate_particles:
     - migrate_cell_particles_friction
     - rebuild_amr

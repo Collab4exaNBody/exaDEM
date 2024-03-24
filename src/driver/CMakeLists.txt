@@ -1,2 +1,2 @@
-set(exadem_driver_LINK_LIBRARIES exanbIO exanbDefBox exanbParticleNeighbors exadem_numerical_scheme exadem_friction exadem_force_field exadem_io)
+set(exadem_driver_LINK_LIBRARIES exanbIO exanbDefBox exanbParticleNeighbors exadem_numerical_scheme exadem_friction exadem_force_field exadem_io exadem_mesh_set exadem_polyhedra)
 xstamp_add_plugin(exadem_driver ${CMAKE_CURRENT_SOURCE_DIR})
