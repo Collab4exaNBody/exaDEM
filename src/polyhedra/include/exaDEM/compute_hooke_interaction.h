@@ -87,13 +87,12 @@ namespace exaDEM
 				const Vec3d r_i       = { cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i] };
 				// === vrot
 				const Vec3d& vrot_i  = cell[field::vrot][p_i];
-				const auto& t_i  = cell[field::type][p_i];
 				const Quaternion& orient_i  = cell[field::orient][p_i];
 				const auto& shp_j = driver.shp;
 
 				// WARNING
 				const Quaternion orient_j = {1.0,0.0,0.0,0.0};
-				auto [contact, dn, n, contact_position] = func(I.type, r_i, sub_i, &shp_i[t_i], orient_i, driver.center, sub_j, &shp_j, orient_j);
+				auto [contact, dn, n, contact_position] = func(I.type, r_i, sub_i, shp_i, orient_i, driver.center, sub_j, &shp_j, orient_j);
 
 				if(contact)
 				{
