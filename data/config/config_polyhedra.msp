@@ -1,4 +1,16 @@
 ######### POLYHEDRA mode ####################
+
+######## STL Mesh ##########################
+
+trigger_update_stl_mesh:
+  condition: enable_stl_mesh AND trigger_load_balance
+  body:
+    - update_grid_stl_mesh
+
+update_stl_mesh: trigger_update_stl_mesh
+
+######### Move Particles ###################
+
 trigger_move_particles:
   rebind: { threshold: max_displ , result: trigger_move_particles }
   body:
@@ -7,6 +19,8 @@ trigger_move_particles:
 #+dump_data_paraview:
 #  - write_paraview_polyhedra:
 #     basename: polyhedra
+
+
 
 +chunk_neighbors_impl:
   - update_grid_interaction

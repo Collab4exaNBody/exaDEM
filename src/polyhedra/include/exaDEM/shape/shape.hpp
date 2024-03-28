@@ -34,6 +34,7 @@ namespace exaDEM
 
 		VectorT <exanb::Vec3d> m_vertices; ///<  
 		exanb::Vec3d m_inertia_on_mass;
+		VectorT <OBB> m_obb_vertices; ///< only used for stl meshes
 		VectorT <OBB> m_obb_edges;
 		VectorT <OBB> m_obb_faces;
 		OBB obb;
@@ -44,8 +45,10 @@ namespace exaDEM
 		std::string m_name = "undefined";
 
 		// functions in shape_prepro.hpp
+		inline void pre_compute_obb_vertices();
 		inline void pre_compute_obb_edges();
 		inline void pre_compute_obb_faces();
+    inline void increase_obb ( const double value );
 
 
 		ONIKA_HOST_DEVICE_FUNC
@@ -306,7 +309,7 @@ namespace exaDEM
 				lout << "Vertex[" << idx++ << "]: [" << vertex.x << "," << vertex.y << "," << vertex.z << "]" << std::endl;
 			};
 
-			lout << "Number of vertices: " << this->get_number_of_vertices() << std::endl;
+			lout << "Number of vertices= " << this->get_number_of_vertices() << std::endl;
 			for_all_vertices(printer);
 		}
 
@@ -323,7 +326,7 @@ namespace exaDEM
 			}
 			else
 			{
-				lout << "Number of edges: " << this->get_number_of_edges() << std::endl;
+				lout << "Number of edge  = " << this->get_number_of_edges() << std::endl;
 				for_all_edges(printer);
 			}
 		}
@@ -345,7 +348,7 @@ namespace exaDEM
 			}
 			else
 			{
-				lout << "Number of faces: " << this->get_number_of_faces() << std::endl;
+				lout << "Number of faces  = " << this->get_number_of_faces() << std::endl;
 				for_all_faces(printer);
 			}
 		}
@@ -353,10 +356,10 @@ namespace exaDEM
 		inline void print()
 		{
 			lout << "======= Shape Configuration =====" << std::endl;
-			lout << "Shape Name: " << this->m_name << std::endl;
-			lout << "Shape Radius: " << this->m_radius << std::endl;
-			lout << "Shape I/m: [" << this->m_inertia_on_mass << "]" << std::endl;
-			lout << "Shape Volume: " << this->m_volume << std::endl;
+			lout << "Shape Name        = " << this->m_name << std::endl;
+			lout << "Shape Radius      = " << this->m_radius << std::endl;
+			lout << "Shape I/m         = [" << this->m_inertia_on_mass << "]" << std::endl;
+			lout << "Shape Volume      = " << this->m_volume << std::endl;
 			print_vertices();
 			print_edges();
 			print_faces();

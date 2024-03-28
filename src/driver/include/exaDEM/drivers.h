@@ -6,6 +6,7 @@
 #include <exaDEM/cylinder.h>
 #include <exaDEM/surface.h>
 #include <exaDEM/ball.h>
+#include <exaDEM/driver_stl_mesh.h>
 #include <exaDEM/undefined_driver.h>
 #include <variant>
 
@@ -16,7 +17,7 @@ namespace exaDEM
 	struct Drivers
 	{
 		template <typename T> using vector_t = onika::memory::CudaMMVector<T>;
-		using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::UndefinedDriver>;
+		using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
 		using driver_t = DRIVER_TYPE;
 		vector_t<DRIVER_TYPE> m_type;
 		vector_t<data_t> m_data;
@@ -64,27 +65,27 @@ namespace exaDEM
 
 		// Accessors
 		ONIKA_HOST_DEVICE_FUNC 
-		inline DRIVER_TYPE type(int idx)
+		inline DRIVER_TYPE type(size_t idx)
 		{
 			assert( idx < m_type.size());
 			return m_type[idx];
 		}
 
 		ONIKA_HOST_DEVICE_FUNC 
-		inline const data_t& data(int idx) const
+		inline const data_t& data(size_t idx) const
 		{
 			assert( idx < m_data.size());
 			return m_data[idx];
 		}
 
 		ONIKA_HOST_DEVICE_FUNC 
-		inline data_t& data(int idx)
+		inline data_t& data(size_t idx)
 		{
 			assert( idx < m_data.size());
 			return m_data[idx];
 		}
 
-		bool well_former()
+		bool well_defined()
 		{
 			for( auto& it : m_type )
 			{

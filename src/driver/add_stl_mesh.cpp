@@ -1,0 +1,75 @@
+//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
+#include "exanb/core/operator.h"
+#include "exanb/core/operator_slot.h"
+#include "exanb/core/operator_factory.h"
+#include "exanb/core/make_grid_variant_operator.h"
+#include "exanb/core/parallel_grid_algorithm.h"
+#include "exanb/core/grid.h"
+#include "exanb/core/domain.h"
+#include "exanb/compute/compute_cell_particles.h"
+#include <mpi.h>
+#include <memory>
+#include <exaDEM/driver_base.h>
+#include <exaDEM/drivers.h>
+#include <exaDEM/driver_stl_mesh.h>
+#include <exaDEM/stl_mesh.h>
+#include <exaDEM/shape/shape.hpp>
+#include <exaDEM/stl_mesh_to_driver.h>
+
+namespace exaDEM
+{
+
+	using namespace exanb;
+
+	template<typename GridT>
+		class AddSTLMesh : public OperatorNode
+	{
+		static constexpr Vec3d null= { 0.0, 0.0, 0.0 };
+
+		ADD_SLOT( Drivers     , drivers         , INPUT_OUTPUT,            DocString{"List of Drivers"});
+		ADD_SLOT( int         , id              , INPUT       , REQUIRED , DocString{"Driver index"});
+		ADD_SLOT( std::string , filename        , INPUT       , REQUIRED , DocString{"Input filename"});
+		ADD_SLOT( Vec3d       , center          , INPUT       , null     , DocString{"Defined but not used"});
+		ADD_SLOT( Vec3d       , angular_velocity, INPUT       , null     , DocString{"Defined but not used"});
+		ADD_SLOT( Vec3d       , velocity        , INPUT       , null     , DocString{"Defined but not used"});
+    ADD_SLOT( double      , minskowski      , INPUT       , REQUIRED , DocString{"Minskowski radius value"} );
+    ADD_SLOT( double      , rcut_inc        , INPUT       , DocString{"value added to the search distance to update neighbor list less frequently. in physical space"} );
+
+		public:
+
+		inline std::string documentation() const override final
+		{
+			return R"EOF(
+        This operator add a stl mesh to the drivers list.
+        )EOF";
+		}
+
+		inline void execute () override final
+		{
+			stl_mesh mesh;
+			mesh.read_stl(*filename);
+			std::string output_name_vtk = *filename;
+			std::string old_extension = ".stl";
+
+			std::string::size_type it = output_name_vtk.find(old_extension);
+			if(it !=  std::string::npos)
+			{
+				output_name_vtk.erase(it, old_extension.length());
+			}
+			shape shp = build_shape(mesh, output_name_vtk);
+			shp.m_radius = *minskowski;
+			shp.increase_obb (*rcut_inc);
+			exaDEM::Stl_mesh driver= {*center, *velocity, *angular_velocity, shp};
+			drivers->add_driver(*id, driver);
+		}
+	};
+
+	template<class GridT> using AddSTLMeshTmpl = AddSTLMesh<GridT>;
+
+	// === register factories ===  
+	CONSTRUCTOR_FUNCTION
+	{
+		OperatorNodeFactory::instance()->register_factory( "add_stl_mesh", make_grid_variant_operator< AddSTLMeshTmpl > );
+	}
+}
+
