@@ -6,20 +6,29 @@
 namespace exaDEM
 {
 	using namespace exanb;
+	/**
+	 * @brief Enumeration representing different types of drivers in the exaDEM simulation.
+	 */
 	enum DRIVER_TYPE
 	{
-		CYLINDER,
-		SURFACE,
-    BALL,
-    STL_MESH,
-		UNDEFINED
+		CYLINDER,    /**< Cylinder driver type. */
+		SURFACE,     /**< Surface driver type. */
+		BALL,        /**< Ball driver type. */
+		STL_MESH,    /**< STL mesh driver type. */
+		UNDEFINED    /**< Undefined driver type. */
 	};
 
-	constexpr int DRIVER_TYPE_SIZE = 3;
 
+	constexpr int DRIVER_TYPE_SIZE = 5; /**< Size of the driver type enum. */
+
+	/**
+	 * @brief Converts a DRIVER_TYPE enum value to its corresponding string representation.
+	 * @param type The DRIVER_TYPE enum value.
+	 * @return The string representation of the DRIVER_TYPE.
+	 */
 	inline std::string print(DRIVER_TYPE type)
 	{
-    switch(type)
+		switch(type)
 		{
 			case DRIVER_TYPE::CYLINDER: return "Cylinder";
 			case DRIVER_TYPE::SURFACE: return "Surface";
@@ -35,6 +44,11 @@ namespace exaDEM
 		return !str[h] ? 5381 : (str2int(str, h+1) * 33) ^ str[h];
 	}
 
+	/**
+	 * @brief Converts a string representation of a driver type to its corresponding DRIVER_TYPE enum value.
+	 * @param driver_name The name of the driver as a string.
+	 * @return The corresponding DRIVER_TYPE enum value.
+	 */
 	inline DRIVER_TYPE get_type(std::string driver_name)
 	{
 		switch(str2int(driver_name.c_str()))
@@ -55,6 +69,11 @@ namespace exaDEM
 	struct Stl_mesh;
 	struct UndefinedDriver;
 
+	/**
+	 * @brief Template function to get the DRIVER_TYPE of a given type.
+	 * @tparam T The type whose DRIVER_TYPE is to be obtained.
+	 * @return The DRIVER_TYPE corresponding to the type T.
+	 */
 	template<typename T>
 		constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::UNDEFINED;}
 	template<> constexpr DRIVER_TYPE get_type<exaDEM::Cylinder> () { return DRIVER_TYPE::CYLINDER; }
@@ -63,6 +82,9 @@ namespace exaDEM
 	template<> constexpr DRIVER_TYPE get_type<exaDEM::Stl_mesh> () { return DRIVER_TYPE::STL_MESH;	}
 	template<> constexpr DRIVER_TYPE get_type<exaDEM::UndefinedDriver> () { return DRIVER_TYPE::UNDEFINED;	}
 
+	/**
+	 * @brief Abstract base class representing a driver in the exaDEM simulation.
+	 */
 	struct Driver
 	{
 		constexpr DRIVER_TYPE get_type();
