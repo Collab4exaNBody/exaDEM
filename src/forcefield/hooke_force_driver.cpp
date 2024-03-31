@@ -22,6 +22,7 @@
 #include <exaDEM/compute_hooke_force.h>
 #include <exaDEM/hooke_force_parameters.h>
 #include <exaDEM/cylinder_wall.h>
+#include <exaDEM/compute_wall.h>
 
 
 namespace exaDEM
@@ -39,9 +40,6 @@ namespace exaDEM
 		ADD_SLOT( GridT        , grid     , INPUT_OUTPUT );
 		ADD_SLOT( Domain       , domain   , INPUT , REQUIRED );
 		ADD_SLOT( double       , dt       , INPUT , REQUIRED );
-
-		// shortcut to the Compute buffer used (and passed to functor) by compute_pair_singlemat
-		static constexpr bool UseNbhId = true;
 
 		// cell particles array type
 		using CellParticles = typename GridT::CellParticles;
@@ -66,6 +64,7 @@ namespace exaDEM
 			const HookeParams params = *config;
 			if( grid->number_of_cells() == 0 ) { return; }
 
+
 			ldbg<<"Hooke: rcut="<<rcut<<std::endl;
 
 			// First drivers
@@ -87,6 +86,15 @@ namespace exaDEM
 						compute_cell_particles( *grid , false , func , compute_fields , parallel_execution_context() );
 					}
 
+					if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
+					{
+						// Get driver
+						Surface& driver = std::get<Surface>(drvs.data(drvs_idx)) ;
+						// Define Functor
+						// vel is null
+						RigidSurfaceFunctor func {driver.normal, driver.offset, 0.0, *dt, params.m_kt, params.m_kn, params.m_kr, params.m_mu, params.m_damp_rate};
+						compute_cell_particles( *grid , false , func , compute_fields , parallel_execution_context() );
+					}
 				}
 			}
 		}
