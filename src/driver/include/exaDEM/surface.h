@@ -4,64 +4,97 @@
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
+  /**
+   * @brief Struct representing a surface in the exaDEM simulation.
+   */
   struct Surface
-	{
-		double offset;
-		exanb::Vec3d normal;
-		exanb::Vec3d center; // normal * offset
-		exanb::Vec3d vel;   // 0,0,0
-		exanb::Vec3d vrot;
+  {
+    double offset;          /**< Offset from the origin along the normal vector. */
+    exanb::Vec3d normal;    /**< Normal vector of the surface. */
+    exanb::Vec3d center;    /**< Center position of the surface. */
+    exanb::Vec3d vel;       /**< Velocity of the surface. */
+    exanb::Vec3d vrot;      /**< Angular velocity of the surface. */
 
-		constexpr DRIVER_TYPE get_type() {return DRIVER_TYPE::SURFACE;}
+    /**
+     * @brief Get the type of the driver (in this case, SURFACE).
+     * @return The type of the driver.
+     */
+    constexpr DRIVER_TYPE get_type() {return DRIVER_TYPE::SURFACE;}
 
-		void print()
-		{
-			std::cout << "Driver Type: Surface" << std::endl;
-			std::cout << "Offset: " << offset   << std::endl;
-			std::cout << "Normal: " << normal   << std::endl;
-			std::cout << "Vel   : " << vel << std::endl;
-			std::cout << "AngVel: " << vrot << std::endl;
-		}
+    /**
+     * @brief Print information about the surface.
+     */
+    void print()
+    {
+      std::cout << "Driver Type: Surface" << std::endl;
+      std::cout << "Offset: " << offset   << std::endl;
+      std::cout << "Normal: " << normal   << std::endl;
+      std::cout << "Vel   : " << vel << std::endl;
+      std::cout << "AngVel: " << vrot << std::endl;
+    }
 
-		inline void initialize ()
-		{
-			center = normal * offset;
-			// checks
-			
-		}
+    /**
+     * @brief Initialize the surface.
+     * @details Calculates the center position based on the normal and offset.
+     */
+    inline void initialize ()
+    {
+      center = normal * offset;
+      // checks
 
-		inline void update_position ( const double t )
-		{
-			center = normal * offset + t * vel; 
-		}
+    }
 
-		inline bool filter( const double rcut , const exanb::Vec3d& p)
-		{
-			//Vec3d proj = exanb::dot(p , normal);
-			Vec3d proj = dot(p , normal) * normal;
-			double d = norm ( proj - center );
-			return d <= rcut;
-		}
+    /**
+     * @brief Update the position of the surface.
+     * @param t The time step.
+     */
+    inline void update_position ( const double t )
+    {
+      center = normal * offset + t * vel; 
+    }
 
-		inline std::tuple<bool, double, Vec3d, Vec3d> detector( const double rcut , const Vec3d& p)
-		{
-			Vec3d proj = dot(p , normal) * normal;
-			Vec3d surface_to_point = center - proj;
-			double d = norm ( surface_to_point );
-			double dn = d - rcut;
-			if( dn > 0 )
-			{
-				return {false, 0.0, Vec3d(), Vec3d()};
-			}
-			else
-			{
-				Vec3d n = surface_to_point / d;
-				Vec3d contact_position = p - n * ( rcut + 0.5 * dn ); 
-				return {true, dn, n, contact_position};
-			}
-		}
+    /**
+     * @brief Filter function to check if a vertex is within a certain radius of the surface.
+     * @param rcut The cut-off radius.
+     * @param p The point to check.
+     * @return True if the point is within the cut-off radius of the surface, false otherwise.
+     */
+    inline bool filter( const double rcut , const exanb::Vec3d& p)
+    {
+      Vec3d proj = dot(p , normal) * normal;
+      double d = norm ( proj - center );
+      return d <= rcut;
+    }
 
-	};
+    /**
+     * @brief Detects collision between a vertex and the surface.
+     * @param rcut The cut-off radius.
+     * @param p The point to check for collision.
+     * @return A tuple containing:
+     *         - A boolean indicating whether a collision occurred.
+     *         - The penetration depth (negative if inside the surface).
+     *         - The normal vector pointing from the collision point to the surface.
+     *         - The contact position on the surface.
+     */
+    inline std::tuple<bool, double, Vec3d, Vec3d> detector( const double rcut , const Vec3d& p)
+    {
+      Vec3d proj = dot(p , normal) * normal;
+      Vec3d surface_to_point = center - proj;
+      double d = norm ( surface_to_point );
+      double dn = d - rcut;
+      if( dn > 0 )
+      {
+        return {false, 0.0, Vec3d(), Vec3d()};
+      }
+      else
+      {
+        Vec3d n = surface_to_point / d;
+        Vec3d contact_position = p - n * ( rcut + 0.5 * dn ); 
+        return {true, dn, n, contact_position};
+      }
+    }
+
+  };
 }
