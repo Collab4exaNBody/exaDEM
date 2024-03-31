@@ -99,7 +99,7 @@ namespace exaDEM
           if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL || drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
           {
             lout << "Driver type BALL or STL MESH are not implemented as pur drivers with spheres. Please use test case in the example directory" << std::endl;
-            std::abort()²
+            std::abort();
           }
         }
       }
