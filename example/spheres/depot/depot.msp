@@ -41,16 +41,12 @@ setup_drivers:
      center: [44,44,44]
      axis: [1, 1, 0]
      angular_velocity: [0,0,0]
-
-compute_force:
-  - rigid_surface:
+  - add_surface:
+     id: 1
      normal: [0,0,1]
      offset: -11
-     kt: 100000
-     kn: 100000
-     kr : 1
-     mu: 0.1
-     damprate: 0.999
+
+compute_force:
   - gravity_force
   - hooke_force_driver:
       config: { rcut: 20.0 m , dncut: 0.0 m, kn: 80000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.1, damp_rate: 0.9} 
