@@ -95,6 +95,11 @@ namespace exaDEM
 						RigidSurfaceFunctor func {driver.normal, driver.offset, 0.0, *dt, params.m_kt, params.m_kn, params.m_kr, params.m_mu, params.m_damp_rate};
 						compute_cell_particles( *grid , false , func , compute_fields , parallel_execution_context() );
 					}
+					
+					if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL || drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
+					{
+						lout << "Driver type BALL or STL MESH are not implemented as pur drivers with spheres. Please use test case in the example directory" << std::endl;
+					}
 				}
 			}
 		}
