@@ -4,86 +4,102 @@
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	struct Cylinder
-	{
-		double radius;
-		exanb::Vec3d axis;
-		exanb::Vec3d center;
-		exanb::Vec3d vel;
-		exanb::Vec3d vrot;
+  /**
+   * @brief Struct representing a cylinder in the exaDEM simulation.
+   */
+  struct Cylinder
+  {
+    double radius;          /**< Radius of the cylinder. */
+    exanb::Vec3d axis;      /**< Axis direction of the cylinder. */
+    exanb::Vec3d center;    /**< Center position of the cylinder. */
+    exanb::Vec3d vel;       /**< Velocity of the cylinder. */
+    exanb::Vec3d vrot;      /**< Angular velocity of the cylinder. */
 
-		constexpr DRIVER_TYPE get_type() {return DRIVER_TYPE::CYLINDER;}
-		void print()
-		{
-			std::cout << "Driver Type: Cylinder" << std::endl;
-			std::cout << "Radius: " << radius << std::endl;
-			std::cout << "Axis  : " << axis << std::endl;
-			std::cout << "Center: " << center << std::endl;
-			std::cout << "Vel   : " << vel << std::endl;
-			std::cout << "AngVel: " << vrot << std::endl;
-		}
+    /**
+     * @brief Get the type of the driver (in this case, CYLINDER).
+     * @return The type of the driver.
+     */
+    constexpr DRIVER_TYPE get_type() {return DRIVER_TYPE::CYLINDER;}
 
-		//rcut = rverlet + r shape
-		inline bool filter( const double rcut, const Vec3d& vi)
-		{
-			const Vec3d proj = vi * axis;
+    /**
+     * @brief Print information about the cylinder.
+     */
+    void print()
+    {
+      std::cout << "Driver Type: Cylinder" << std::endl;
+      std::cout << "Radius: " << radius << std::endl;
+      std::cout << "Axis  : " << axis << std::endl;
+      std::cout << "Center: " << center << std::endl;
+      std::cout << "Vel   : " << vel << std::endl;
+      std::cout << "AngVel: " << vrot << std::endl;
+    }
 
-			// === direction
-			const auto dir = proj - center;
+    /**
+     * @brief Filter function to check if a point is within a certain radius of the cylinder.
+     * @param rcut The cut-off radius. Note: rcut = rverlet + r shape
+     * @param vi The vector representing the point to check.
+     * @return True if the point is within the cut-off radius of the cylinder, false otherwise.
+     */
+    inline bool filter( const double rcut, const Vec3d& vi)
+    {
+      const Vec3d proj = vi * axis;
 
-			// === interpenetration
-			const double d = norm(dir);
-			const double dn = radius - (d + rcut);
-			return dn <= 0;
-		}
+      // === direction
+      const auto dir = proj - center;
 
-		/**
-		 * @brief Detects the intersection between a vertex of a polyhedron and a cylinder.
-		 *
-		 * This function checks if a vertex, represented by its position 'pi' and orientation 'oi',
-		 * intersects with a cylindrical shape defined by its center projection 'center_proj', axis 'axis',
-		 * and radius 'radius'.
-		 *
-		 * @param rcut The shape radius. 
-		 * @param pi The position of the vertex.
-		 *
-		 * @return A tuple containing:
-		 *   - A boolean indicating whether there is an intersection (true) or not (false).
-		 *   - The penetration depth in case of intersection.
-		 *   - The contact normal at the intersection point.
-		 *   - The contact point between the vertex and the cylinder.
-		 */
-		// rcut = r shape
-		inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d& pi)
-		{
-			// === project the vertex in the plan as the cylinder center
-			const Vec3d proj = pi * axis;
+      // === interpenetration
+      const double d = norm(dir);
+      const double dn = radius - (d + rcut);
+      return dn <= 0;
+    }
 
-			// === direction
-			const Vec3d dir = center - proj;
+    /**
+     * @brief Detects the intersection between a vertex of a polyhedron and a cylinder.
+     *
+     * This function checks if a vertex, represented by its position 'pi' and orientation 'oi',
+     * intersects with a cylindrical shape defined by its center projection 'center_proj', axis 'axis',
+     * and radius 'radius'.
+     *
+     * @param rcut The shape radius. 
+     * @param pi The position of the vertex.
+     *
+     * @return A tuple containing:
+     *   - A boolean indicating whether there is an intersection (true) or not (false).
+     *   - The penetration depth in case of intersection.
+     *   - The contact normal at the intersection point.
+     *   - The contact point between the vertex and the cylinder.
+     */
+    // rcut = r shape
+    inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d& pi)
+    {
+      // === project the vertex in the plan as the cylinder center
+      const Vec3d proj = pi * axis;
 
-			// === interpenetration
-			const double d = exanb::norm(dir);
+      // === direction
+      const Vec3d dir = center - proj;
 
-			// === compute interpenetration
-			const double dn = radius - (rcut + d);
+      // === interpenetration
+      const double d = exanb::norm(dir);
 
-			if ( dn > 0 )
-			{
-				return {false, 0.0, Vec3d(), Vec3d()};
-			}
-			else
-			{
-				// === compute contact normal 
-				const Vec3d n = dir / d;
+      // === compute interpenetration
+      const double dn = radius - (rcut + d);
 
-				// === compute contact point
-				const Vec3d contact_position = pi - n * (rcut + 0.5 * dn);
+      if ( dn > 0 )
+      {
+        return {false, 0.0, Vec3d(), Vec3d()};
+      }
+      else
+      {
+        // === compute contact normal 
+        const Vec3d n = dir / d;
 
-				return {true, dn, n, contact_position};
-			}
-		}
-	};
+        // === compute contact point
+        const Vec3d contact_position = pi - n * (rcut + 0.5 * dn);
+
+        return {true, dn, n, contact_position};
+      }
+    }
+  };
 }
