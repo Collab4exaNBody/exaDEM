@@ -36,7 +36,7 @@ namespace exaDEM
 			double time;                                   ///< Incrementation time value
 
 
-			using signature = std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> (*)(const onika::oarray_t<exanb::Vec3d, 8>&, int, const exaDEM::shape*, const onika::oarray_t<exanb::Vec3d, 8>&, int, const exaDEM::shape*);
+			using signature = std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> (*)(const onika::oarray_t<exanb::Vec3d, EXADEM_MAX_VERTICES>&, int, const exaDEM::shape*, const onika::oarray_t<exanb::Vec3d, EXADEM_MAX_VERTICES>&, int, const exaDEM::shape*);
 
 			/**
 			 * @brief Array of function pointers for precomputed detection signatures.

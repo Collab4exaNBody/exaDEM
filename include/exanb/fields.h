@@ -32,7 +32,7 @@ XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , vrot   	,"angular velocity"); //
 XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , arot   	,"angular acceleration"); // 
 XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , inertia   	,"inertia values (same value in the diagonal)");
 XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , friction   	,"tmp field"); // 
-typedef ::onika::oarray_t<::exanb::Vec3d, 8> VerticesType;
+typedef ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES> VerticesType;
 XSTAMP_DECLARE_FIELD(VerticesType , vertices   	,"list to compute vertices"); // 
 
 
