@@ -15,6 +15,16 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # ======================================
+# === ExaDEM Package Option          ===
+# ======================================
+
+option(USE_RSA "Add RSA Package" ON)
+
+if(USE_RSA)
+	find_package(rsa_mpi REQUIRED)
+endif(
+
+# ======================================
 # === exaNBody application framework ===
 # ======================================
 find_package(exaNBody)

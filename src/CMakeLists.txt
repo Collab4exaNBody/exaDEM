@@ -12,6 +12,10 @@ add_subdirectory(driver)
 add_subdirectory(meshset)
 add_subdirectory(polyhedra)
 
+if(USE_RSA)
+	add_subdirectory(rsa)
+endif()
+
 AddRegressionTestDir(${CMAKE_CURRENT_SOURCE_DIR}/regression)
 
  
