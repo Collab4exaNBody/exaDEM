@@ -16,7 +16,6 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exanb/extra_storage/sim_dump_writer_es.hpp>
 #include <exanb/extra_storage/dump_filter_dynamic_data_storage.h>
