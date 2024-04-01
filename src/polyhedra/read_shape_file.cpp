@@ -40,7 +40,7 @@ namespace exaDEM
 		inline void execute () override final
 		{
 			auto& collection = *shapes_collection;
-			std::cout << "read file: " << *filename << std::endl;
+			lout << "Read file= " << *filename << std::endl;
 			exaDEM::add_shape_from_file_shp(collection, *filename);
 		};
 	};
