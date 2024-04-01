@@ -4,17 +4,6 @@
 
 namespace exaDEM
 {
-/*
-	bool adder(std::ifstream& stream, shape& item, std::string in)
-	{
-		switch (in)
-		{
-			case "name": 
-			default return false;
-		}
-	}
-*/
-
 	void add_shape_from_file_shp(shapes& sphs, const std::string file_name)
 	{
 		std::ifstream input( file_name.c_str() );
@@ -38,7 +27,6 @@ namespace exaDEM
 					{
 						input >> new_shape.m_name;
 					}
-
 
 					// === keys relative to the OBB
 					if(key == "obb.center")
@@ -88,6 +76,13 @@ namespace exaDEM
 					{
 						int nv = 0;
 						input >> nv;
+						if( nv >= EXADEM_MAX_VERTICES ) 
+						{
+							lout << "=== EXADEM ERROR ===
+							lout << "=== Please, increase the maximum number of vertices: cmake ${Path_To_ExaDEM} -DEXADEM_MAX_VERTICES=" << nv << std::endl;
+							lout << "=== ABORT ===     
+							std::abort();
+						}
 						assert( nv !=0 );
 						for(int i = 0; i < nv ; i++)
 						{
