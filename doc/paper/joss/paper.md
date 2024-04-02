@@ -5,8 +5,8 @@ tags:
   - HPC
   - N-Body
   - MPI
-	- OpenMP
-	- GPU
+  - OpenMP
+- GPU
 authors:
   - name: Raphaël Prat
     orcid: 0009-0002-3808-5401
@@ -25,13 +25,16 @@ authors:
     affiliation: 1
   - name: Carlo-eliat Donchecchi
     orcid: 0000-0000-0000-0000
+    affiliation:
+  - name: Jean-Mathieu Vanson
+    orcid: 0000-0000-0000-0000
     affiliation: 1
 affiliations:
  - name: DES/IRESNE/DEC/SESC, CEA, France
    index: 1
  - name: DAM/DIF/DPTA, CEA, France
    index: 2
- - name: CNRS
+ - name: CNRS ...
    index: 3
 date: 16 August 2023
 bibliography: paper.bib
