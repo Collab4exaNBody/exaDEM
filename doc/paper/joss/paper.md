@@ -6,7 +6,7 @@ tags:
   - N-Body
   - MPI
   - OpenMP
-- GPU
+  - GPU
 authors:
   - name: Raphaël Prat
     orcid: 0009-0002-3808-5401
