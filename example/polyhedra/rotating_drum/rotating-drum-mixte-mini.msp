@@ -14,14 +14,14 @@ input_data:
      filename: alpha3.shp
   - read_shape_file:
      filename: octahedron.shp
-  - polyhedra_define_radius
-  - polyhedra_set_density
+  - radius_from_shape
+  - density_from_shape
   - set_rand_velocity:
      var: 0.1
      mean: [0.0,0.0,0.0]
   - set_rand_vrot_arot
   - set_quaternion
-  - polyhedra_update_inertia
+  - inertia_from_shape
 
 
 input_data:

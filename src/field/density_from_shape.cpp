@@ -80,7 +80,7 @@ namespace exaDEM
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "polyhedra_set_density", make_grid_variant_operator< PolyhedraSetDensityTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "density_from_shape", make_grid_variant_operator< PolyhedraSetDensityTmpl > );
 	}
 
 }

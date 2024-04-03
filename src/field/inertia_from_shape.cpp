@@ -80,7 +80,7 @@ using namespace exanb;
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "polyhedra_update_inertia", make_grid_variant_operator< PolyhedraUpdateInertiaTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "inertia_from_shape", make_grid_variant_operator< PolyhedraUpdateInertiaTmpl > );
 	}
 }
 

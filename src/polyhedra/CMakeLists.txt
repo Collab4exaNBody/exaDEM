@@ -14,5 +14,5 @@
 # kind, either express or implied.  see the license for the
 # specific language governing permissions and limitations
 # under the license.
-set(exadem_polyhedra_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exanbExtraStorage exadem_driver exadem_force_field exadem_io exadem_mesh_set)
+set(exadem_polyhedra_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exanbExtraStorage exadem_driver exadem_force_field exadem_mesh_set)
 xstamp_add_plugin(exadem_polyhedra ${CMAKE_CURRENT_SOURCE_DIR})

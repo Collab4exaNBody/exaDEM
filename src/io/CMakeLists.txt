@@ -14,5 +14,5 @@
 # kind, either express or implied.  see the license for the
 # specific language governing permissions and limitations
 # under the license.
-set(exadem_io_LINK_LIBRARIES exanbIO exanbDefBox exanbParticleNeighbors exadem_numerical_scheme exadem_friction exadem_force_field)
+set(exadem_io_LINK_LIBRARIES exanbIO exanbDefBox exanbParticleNeighbors exanbExtraStorage exadem_friction exadem_force_field exadem_polyhedra)
 xstamp_add_plugin(exadem_io ${CMAKE_CURRENT_SOURCE_DIR})
