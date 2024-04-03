@@ -9,7 +9,7 @@ input_data:
      filename: alpha3.shp
   - read_dump_particle_interaction:
      filename: exaDEM_001200000.dump
-  - polyhedra_define_radius
+  - radius_from_shape
 
 setup_drivers:
   - add_cylinder:

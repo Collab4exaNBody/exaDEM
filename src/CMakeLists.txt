@@ -20,7 +20,7 @@
 # ===================================
 
 add_subdirectory(grid)
-add_subdirectory(fieldmutator)
+add_subdirectory(field)
 add_subdirectory(numericalscheme)
 add_subdirectory(friction)
 add_subdirectory(forcefield)

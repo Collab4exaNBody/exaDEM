@@ -14,5 +14,5 @@
 # kind, either express or implied.  see the license for the
 # specific language governing permissions and limitations
 # under the license.
-set(exadem_friction_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exadem_field_mutator)
+set(exadem_friction_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exadem_field)
 xstamp_add_plugin(exadem_friction ${CMAKE_CURRENT_SOURCE_DIR})

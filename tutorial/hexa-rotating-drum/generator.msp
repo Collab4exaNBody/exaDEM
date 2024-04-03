@@ -22,15 +22,15 @@ first_particles:
      region: AREA
 
 init_new_particles:
-  - polyhedra_set_density
+  - density_from_shape
   - set_rand_velocity: 
      region: AREA
      var: 0.1
      mean: [0.0,0.0,-10.0]
-  - polyhedra_update_inertia
+  - inertia_from_shape
   - set_quaternion:
      region: AREA
-  - polyhedra_define_radius:
+  - radius_from_shape:
      region: AREA
 
 input_data:

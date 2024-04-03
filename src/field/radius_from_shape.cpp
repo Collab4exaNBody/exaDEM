@@ -142,7 +142,7 @@ namespace exaDEM
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "polyhedra_define_radius", make_grid_variant_operator< PolyhedraDefineRadiusTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "radius_from_shape", make_grid_variant_operator< PolyhedraDefineRadiusTmpl > );
 	}
 
 }
