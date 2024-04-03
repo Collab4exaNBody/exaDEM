@@ -9,15 +9,17 @@ Additionally, ExaDEM offers compatibility with MPI+GPUs, using the CUDA programm
 
 ## Documentation
 
-Documentation is available here: https://github.com/Collab4exaNBody/Documentation
+Documentation is available here: [ExaDEM Documentation](https://github.com/Collab4exaNBody/doc_exaDEM.git)
 
 Build the documentation:
 
 ```
-git clone https://github.com/Collab4exaNBody/Documentation.git
-cd Documentation
+git clone https://github.com/Collab4exaNBody/doc_exaDEM.git
+cd doc_exaDEM/
+git submodule init
+git submodule update
 make html
-firefox build/html/index.html
+firefox build/html/index.html 
 ```
 
 ## Installation
