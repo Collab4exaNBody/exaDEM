@@ -94,7 +94,7 @@ namespace exaDEM
 					{
 						int nv = 0;
 						input >> nv;
-						if( nv >= EXADEM_MAX_VERTICES ) 
+						if( nv > EXADEM_MAX_VERTICES ) 
 						{
 							lout << "=== EXADEM ERROR ===" << std::endl;
 							lout << "=== Please, increase the maximum number of vertices: cmake ${Path_To_ExaDEM} -DEXADEM_MAX_VERTICES=" << nv << std::endl;

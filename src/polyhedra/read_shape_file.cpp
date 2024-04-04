@@ -45,7 +45,7 @@ namespace exaDEM
 		ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD);
 		ADD_SLOT( GridT    , grid     , INPUT_OUTPUT );
 		ADD_SLOT( Domain   , domain   , INPUT , REQUIRED );
-		ADD_SLOT( std::string , filename, INPUT , REQUIRED , DocString{"Inpute filename"});
+		ADD_SLOT( std::string , filename, INPUT , REQUIRED , DocString{"Input filename"});
 		ADD_SLOT( shapes , shapes_collection, INPUT_OUTPUT , DocString{"Collection of shapes"});
 
 		public:
