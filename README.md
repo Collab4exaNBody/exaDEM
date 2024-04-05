@@ -18,7 +18,7 @@ git clone https://github.com/Collab4exaNBody/doc_exaDEM.git
 cd doc_exaDEM/
 git submodule init
 git submodule update
-cd 
+cd doc_exaNBody && git pull && cd ..
 make html
 firefox build/html/index.html 
 ```
