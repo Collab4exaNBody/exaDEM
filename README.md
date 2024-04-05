@@ -18,6 +18,7 @@ git clone https://github.com/Collab4exaNBody/doc_exaDEM.git
 cd doc_exaDEM/
 git submodule init
 git submodule update
+cd 
 make html
 firefox build/html/index.html 
 ```
@@ -29,18 +30,15 @@ firefox build/html/index.html
 To proceed with the installation, your system must meet the minimum prerequisites. The first step involves the installation of exaNBody:
 
 ```
-git clone https://github.com/Collab4exaNBody/exaNBody.git
-mkdir build-exaNBody/ && cd build-exaNBody/
-cmake ../exaNBody/ -DCMAKE_INSTALL_PREFIX=path_to_install
-make install
-export exaNBody_DIR=path_to_install
+  git clone https://github.com/Collab4exaNBody/exaNBody.git
+   export exaNBody_DIR=${PWD}/exaNBody 
 ```
 
 The next step involves the installation of yaml-cpp, which can be achieved using either the spack package manager or cmake:
 
 ```
 spack install yaml-cpp@0.6.3
-spack load yaml-cpp
+spack load yaml-cpp@0.6.3
 ```
 
 Variant: 
@@ -55,6 +53,7 @@ Before proceeding further, you have the option to consider the following depende
 
 - Cuda
 - MPI
+- HIP
 
 ### Buidling ExaDEM With CMAKE
 
@@ -76,7 +75,7 @@ mkdir build-exaDEM && cd build-exaDEM
 Run CMake to configure the ExaDEM build, specifying that CUDA support should be turned off:
 
 ```		
-cmake ../exaDEM -DXSTAMP_BUILD_CUDA=OFF
+cmake ../exaDEM -DXNB_BUILD_CUDA=OFF
 ```
 
 Build ExaDEM using the make command with a specified number of parallel jobs (e.g., -j 4 for 4 parallel jobs):
