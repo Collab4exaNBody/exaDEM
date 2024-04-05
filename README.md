@@ -30,8 +30,8 @@ firefox build/html/index.html
 To proceed with the installation, your system must meet the minimum prerequisites. The first step involves the installation of exaNBody:
 
 ```
-  git clone https://github.com/Collab4exaNBody/exaNBody.git
-   export exaNBody_DIR=${PWD}/exaNBody 
+git clone https://github.com/Collab4exaNBody/exaNBody.git
+export exaNBody_DIR=${PWD}/exaNBody 
 ```
 
 The next step involves the installation of yaml-cpp, which can be achieved using either the spack package manager or cmake:
