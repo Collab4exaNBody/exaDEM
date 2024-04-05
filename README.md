@@ -156,6 +156,12 @@ mpirun -n $N_MPI ./exaDEM test-case.msp
 
 Note: for your first example, copy the `exaDEMexample/rotating-drum` directory and run `path-to-build/exaDEM rotating-drum.msp`.
 
+## Running CTEST
+
+```
+ctest --test-dir example
+```
+
 ## Authors and acknowledgment
 Show your appreciation to those who have contributed to the project.
 
