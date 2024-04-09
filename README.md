@@ -154,7 +154,7 @@ export OMP_NUM_THREADS=$N_OMP
 mpirun -n $N_MPI ./exaDEM test-case.msp
 ```
 
-Note: for your first example, copy the `exaDEMexample/rotating-drum` directory and run `path-to-build/exaDEM rotating-drum.msp`.
+Note: for your first example, copy the `exaDEM/example/spheres/rotating-drum/` directory, cd `rotating-drum`, and run `path-to-build/exaDEM rotating-drum.msp`.
 
 ## Running CTEST
 
