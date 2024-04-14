@@ -46,7 +46,7 @@ namespace exaDEM
       static constexpr ComputeRegionFields compute_region_field_set {};
 
       ADD_SLOT( GridT             , grid             , INPUT_OUTPUT );
-      ADD_SLOT( uint8_t           , type             , INPUT , REQUIRED   , DocString{"type of particle to setialize"} );
+      ADD_SLOT( uint32_t           , type             , INPUT , REQUIRED   , DocString{"type of particle to setialize"} );
       ADD_SLOT( double            , rad               , INPUT , default_radius  , DocString{"default radius value is 0.5 for all particles"} );
       ADD_SLOT( double            , density           , INPUT , default_density  , DocString{"default density value is 0 for all particles"} );
       ADD_SLOT( Quaternion        , quat              , INPUT , default_quaternion  , DocString{"default quaternion value for all particles "} );

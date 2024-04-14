@@ -61,7 +61,7 @@ namespace exaDEM
 					GRID_OMP_FOR_BEGIN(dims,i,loc, schedule(dynamic) )
 					{
 						double* __restrict__ m = cells[i][field::mass];
-						uint8_t* __restrict__ t = cells[i][field::type];
+						auto* __restrict__ t = cells[i][field::type];
 						const size_t n = cells[i].size();
 #         pragma omp simd
 						for(size_t j=0;j<n;j++)

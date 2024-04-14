@@ -39,7 +39,7 @@ namespace exaDEM
 		}
 
 		ONIKA_HOST_DEVICE_FUNC
-			inline const shape* operator[] (const uint8_t idx) const
+			inline const shape* operator[] (const uint32_t idx) const
 			{
 				const shape * data = onika::cuda::vector_data( m_data );
 				return data + idx;

@@ -45,7 +45,7 @@ namespace exaDEM
 		const double m_threshold_sqr = 0.0;
 		const shapes& shps;
 
-		ONIKA_HOST_DEVICE_FUNC inline void operator () (unsigned long long int & count_over_dist2 , IJK cell_loc, size_t cell, size_t j, double rx, double ry, double rz , uint8_t type, const exanb::Quaternion& orientation, reduce_thread_local_t={} ) const
+		ONIKA_HOST_DEVICE_FUNC inline void operator () (unsigned long long int & count_over_dist2 , IJK cell_loc, size_t cell, size_t j, double rx, double ry, double rz , uint32_t type, const exanb::Quaternion& orientation, reduce_thread_local_t={} ) const
 		{
 			const double* __restrict__ rb = onika::cuda::vector_data( m_backup_data[cell] );
 			Quaternion old_orientation = {rb[j*7+3], rb[j*7+4], rb[j*7+5], rb[j*7+6]};

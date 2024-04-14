@@ -28,7 +28,7 @@ typedef ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES> VerticesType;
 
 // for rx, use xstamp::field::rx as a field descriptor
 XSTAMP_DECLARE_FIELD(uint64_t            ,id         ,"particle id");
-XSTAMP_DECLARE_FIELD(uint8_t             ,type       ,"particle type");
+XSTAMP_DECLARE_FIELD(uint32_t            ,type       ,"particle type");
 XSTAMP_DECLARE_FIELD(double              ,rx         ,"particle position X");
 XSTAMP_DECLARE_FIELD(double              ,ry         ,"particle position Y");
 XSTAMP_DECLARE_FIELD(double              ,rz         ,"particle position Z");

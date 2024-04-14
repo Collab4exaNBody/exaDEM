@@ -36,12 +36,12 @@ namespace exaDEM
     const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
 		onika::memory::CudaMMVector<double> list_of_radius; /** filled in PolyhedraDefineRadius. */
 
-    ONIKA_HOST_DEVICE_FUNC inline void operator () (uint8_t type, double& radius) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator () (uint32_t type, double& radius) const
     {
 			radius = list_of_radius[type];
     }
     // If the region feature is activated
-    ONIKA_HOST_DEVICE_FUNC inline void operator () (const double rx, const double ry, const double rz, const uint64_t id, uint8_t type, double& radius) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator () (const double rx, const double ry, const double rz, const uint64_t id, uint32_t type, double& radius) const
     {
       Vec3d r = {rx,ry,rz};
       if( region.contains( r , id ) )

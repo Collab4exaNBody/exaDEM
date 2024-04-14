@@ -253,7 +253,7 @@ namespace exaDEM
 	template <typename... Ts>
 		struct FilteredSetFunctor
 		{
-			uint8_t filtered_type;                     /**< The filtered type. */
+			uint32_t filtered_type;                     /**< The filtered type. */
 			onika::FlatTuple<Ts...> m_default_values;  /**< Flat tuple of default values of types Ts. */
 
 			/**
@@ -263,7 +263,7 @@ namespace exaDEM
 			 * @param args Additional arguments to process.
 			 */
 			template<typename... Args>
-				ONIKA_HOST_DEVICE_FUNC inline void operator () (uint8_t type, Args&... args) const
+				ONIKA_HOST_DEVICE_FUNC inline void operator () (uint32_t type, Args&... args) const
 				{
 					if(type == filtered_type)
 					{
@@ -282,7 +282,7 @@ namespace exaDEM
 		struct FilteredSetRegionFunctor
 		{
 			const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
-			uint8_t filtered_type;                     /**< The filtered type. */
+			uint32_t filtered_type;                     /**< The filtered type. */
 			onika::FlatTuple<Ts...> m_default_values;  /**< Flat tuple of default values of types Ts. */
 
 			/**
@@ -296,7 +296,7 @@ namespace exaDEM
 			 * @param args Additional arguments to process.
 			 */
 			template<typename... Args>
-				ONIKA_HOST_DEVICE_FUNC inline void operator () (double rx, double ry, double rz, const uint64_t id, uint8_t type, Args&... args) const
+				ONIKA_HOST_DEVICE_FUNC inline void operator () (double rx, double ry, double rz, const uint64_t id, uint32_t type, Args&... args) const
 				{
 					if(type == filtered_type)
 					{

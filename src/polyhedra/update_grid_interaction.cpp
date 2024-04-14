@@ -69,7 +69,7 @@ namespace exaDEM
 
       void add_driver_interaction( Stl_mesh& mesh, size_t cell_a, std::vector<Interaction>& driver_data, std::vector<size_t>& driver_count,
           Interaction& item, const size_t n_particles, const double rVerlet,
-          const uint8_t* __restrict__ type, 
+          const uint32_t* __restrict__ type, 
           const uint64_t* __restrict__ id, 
           const double* __restrict__ rx,  
           const double* __restrict__ ry,  
@@ -209,7 +209,7 @@ namespace exaDEM
       template<typename D>
         void add_driver_interaction( D& driver, std::vector<Interaction>& driver_data, std::vector<size_t>& driver_count,
             Interaction& item, const size_t n_particles, const double rVerlet, 
-            const uint8_t* __restrict__ type, const uint64_t* __restrict__ id, const VertexArray* __restrict__ vertices, shapes& shps)
+            const uint32_t* __restrict__ type, const uint64_t* __restrict__ id, const VertexArray* __restrict__ vertices, shapes& shps)
         {
           for(size_t p = 0 ; p < n_particles ; p++)
           {
@@ -405,7 +405,7 @@ namespace exaDEM
                 if ( !g.is_ghost_cell(cell_b) ) return;
                 }
 
-                const uint8_t type_nbh = cells[cell_b][field::type][p_b];
+                const uint32_t type_nbh = cells[cell_b][field::type][p_b];
                 const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
                 const double rx_nbh = cells[cell_b][field::rx][p_b];
                 const double ry_nbh = cells[cell_b][field::ry][p_b];
