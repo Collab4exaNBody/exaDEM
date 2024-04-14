@@ -96,7 +96,7 @@ namespace exaDEM
               hkp.m_mu, hkp.m_damp_rate, meff,
               I.friction, contact_position,
               r, v, f, I.moment, vrot,  // particle i
-              driver.center, driver.vel, driver.vrot // particle j
+              driver.center, driver.get_vel(), driver.vrot // particle j
               );
 
           // === update informations

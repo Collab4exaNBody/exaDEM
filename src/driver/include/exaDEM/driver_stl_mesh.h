@@ -88,6 +88,14 @@ namespace exaDEM
     }
 
     /**
+     * @brief return driver velocity
+     */
+    inline Vec3d& get_vel()
+    {
+      return vel;
+    }
+
+    /**
      * @brief Prints a summary of grid indices for the STL mesh.
      * @details This function prints the number of elements in the grid indexes for vertices, edges, and faces.
      */

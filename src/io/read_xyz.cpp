@@ -95,7 +95,7 @@ using namespace exanb;
       lout << "======== " << basename << " ========" << std::endl;
       //-------------------------------------------------------------------------------------------
 
-      using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_shape>;
+      using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type>;
       using ParticleTuple = decltype( grid->cells()[0][0] );
 
       assert( grid->number_of_particles() == 0 );

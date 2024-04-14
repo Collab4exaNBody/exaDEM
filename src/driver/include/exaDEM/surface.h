@@ -32,7 +32,7 @@ namespace exaDEM
     double offset;          /**< Offset from the origin along the normal vector. */
     exanb::Vec3d normal;    /**< Normal vector of the surface. */
     exanb::Vec3d center;    /**< Center position of the surface. */
-    exanb::Vec3d vel;       /**< Velocity of the surface. */
+    double vel;             /**< Velocity of the surface. */
     exanb::Vec3d vrot;      /**< Angular velocity of the surface. */
 
     /**
@@ -61,16 +61,24 @@ namespace exaDEM
     {
       center = normal * offset;
       // checks
-
+      if( exanb::dot(normal,normal) != 1 )  lout << "Warning, normal vector (surface) is not correctly defined" << std::endl;
     }
 
     /**
-     * @brief Update the position of the surface.
+     * @brief Compute offset if we ignore forces apply on this surface.
      * @param t The time step.
      */
-    inline void update_position ( const double t )
+    inline double compute_pos_from_vel ( const double t )
     {
-      center = normal * offset + t * vel; 
+      return offset + t * vel; 
+    }
+
+    /**
+     * @brief return driver velocity
+     */
+    inline Vec3d get_vel()
+    {
+      return normal * vel;
     }
 
     /**
@@ -104,13 +112,13 @@ namespace exaDEM
       double dn = d - rcut;
       if( dn > 0 )
       {
-        return {false, 0.0, Vec3d(), Vec3d()};
+	return {false, 0.0, Vec3d(), Vec3d()};
       }
       else
       {
-        Vec3d n = surface_to_point / d;
-        Vec3d contact_position = p - n * ( rcut + 0.5 * dn ); 
-        return {true, dn, n, contact_position};
+	Vec3d n = surface_to_point / d;
+	Vec3d contact_position = p - n * ( rcut + 0.5 * dn ); 
+	return {true, dn, n, contact_position};
       }
     }
 

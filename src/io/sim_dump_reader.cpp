@@ -61,7 +61,7 @@ namespace exaDEM
   public:
     inline void execute () override final
     {
-      using DumpFieldSet = FieldSet<field::_rx,field::_ry,field::_rz, field::_vx,field::_vy,field::_vz, field::_mass, field::_homothety, field::_radius, field::_orient , field::_mom , field::_vrot , field::_arot, field::_inertia , field::_id , field::_shape>;
+      using DumpFieldSet = FieldSet<field::_rx,field::_ry,field::_rz, field::_vx,field::_vy,field::_vz, field::_mass, field::_homothety, field::_radius, field::_orient , field::_mom , field::_vrot , field::_arot, field::_inertia , field::_id , field::_type>;
 
       ParticleDumpFilter<GridT,DumpFieldSet> dump_filter = {*nbh_friction,*grid};
       if( scale_cell_size.has_value() )

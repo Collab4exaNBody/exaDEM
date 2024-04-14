@@ -39,50 +39,50 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
-	template<
-		class GridT,
-					class = AssertGridHasFields< GridT, field::_fx, field::_fy, field::_fz, field::_friction >
-						>
-						class HookeFaceOperator : public OperatorNode
-						{
+  using namespace exanb;
+  template<
+    class GridT,
+          class = AssertGridHasFields< GridT, field::_fx, field::_fy, field::_fz>
+            >
+            class HookeFaceOperator : public OperatorNode
+            {
 
-							using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz, field::_vx ,field::_vy ,field::_vz, field::_vrot, field::_radius , field::_fx ,field::_fy ,field::_fz, field::_mass, field::_mom, field::_friction >;
-							static constexpr ComputeFields compute_field_set {};
-							ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD);
-							ADD_SLOT( GridT  , grid    , INPUT_OUTPUT );
-							ADD_SLOT( Domain , domain  , INPUT , REQUIRED );
-							ADD_SLOT( std::vector<Vec3d> , verticies, INPUT , REQUIRED , DocString{"list of verticies"});
-							ADD_SLOT( double  , dt                		, INPUT 	, REQUIRED 	, DocString{"Timestep of the simulation"});
-							ADD_SLOT( double  , kt  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
-							ADD_SLOT( double  , kn  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"} );
-							ADD_SLOT( double  , kr  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
-							ADD_SLOT( double  , mu  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
-							ADD_SLOT( double  , damprate  			, INPUT 	, REQUIRED 	, DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
+              using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz, field::_vx ,field::_vy ,field::_vz, field::_vrot, field::_radius , field::_fx ,field::_fy ,field::_fz, field::_mass, field::_mom>;
+              static constexpr ComputeFields compute_field_set {};
+              ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD);
+              ADD_SLOT( GridT  , grid    , INPUT_OUTPUT );
+              ADD_SLOT( Domain , domain  , INPUT , REQUIRED );
+              ADD_SLOT( std::vector<Vec3d> , verticies, INPUT , REQUIRED , DocString{"list of verticies"});
+              ADD_SLOT( double  , dt                    , INPUT   , REQUIRED   , DocString{"Timestep of the simulation"});
+              ADD_SLOT( double  , kt        , INPUT   , REQUIRED   , DocString{"Parameter of the force law used to model contact Sphere / Face"});
+              ADD_SLOT( double  , kn        , INPUT   , REQUIRED   , DocString{"Parameter of the force law used to model contact Sphere / Face"} );
+              ADD_SLOT( double  , kr        , INPUT   , REQUIRED   , DocString{"Parameter of the force law used to model contact Sphere / Face"});
+              ADD_SLOT( double  , mu        , INPUT   , REQUIRED   , DocString{"Parameter of the force law used to model contact Sphere / Face"});
+              ADD_SLOT( double  , damprate        , INPUT   , REQUIRED   , DocString{"Parameter of the force law used to model contact Sphere / Face"});
 
-							public:
-							inline std::string documentation() const override final
-							{
-								return R"EOF(
-    	    			)EOF";
-							}
+              public:
+              inline std::string documentation() const override final
+              {
+                return R"EOF(
+                )EOF";
+              }
 
-							inline void execute () override final
-							{
-								Face face(*verticies);
-								HookeFaceFunctor func {face, *dt, *kt, *kn, *kr, *mu, *damprate};
-								compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
-							}
-						};
+              inline void execute () override final
+              {
+                Face face(*verticies);
+                HookeFaceFunctor func {face, *dt, *kt, *kn, *kr, *mu, *damprate};
+                compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+              }
+            };
 
 
-	// this helps older versions of gcc handle the unnamed default second template parameter
-	template <class GridT> using HookeFaceOperatorTemplate = HookeFaceOperator<GridT>;
+  // this helps older versions of gcc handle the unnamed default second template parameter
+  template <class GridT> using HookeFaceOperatorTemplate = HookeFaceOperator<GridT>;
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "hooke_face", make_grid_variant_operator< HookeFaceOperatorTemplate > );
-	}
+  // === register factories ===  
+  CONSTRUCTOR_FUNCTION
+  {
+    OperatorNodeFactory::instance()->register_factory( "hooke_face", make_grid_variant_operator< HookeFaceOperatorTemplate > );
+  }
 }
 

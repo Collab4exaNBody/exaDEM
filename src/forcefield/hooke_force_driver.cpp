@@ -47,7 +47,7 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  template<  class GridT,   class = AssertGridHasFields< GridT, field::_radius, field::_vx,field::_vy,field::_vz, field::_mass, field::_fx ,field::_fy,field::_fz, field::_vrot, field::_mom, field::_homothety >>
+  template<  class GridT,   class = AssertGridHasFields< GridT, field::_radius, field::_vx,field::_vy,field::_vz, field::_mass, field::_fx ,field::_fy,field::_fz, field::_vrot, field::_mom >>
     class HookeForceDriver : public OperatorNode
   {
     // ========= I/O slots =======================
@@ -58,12 +58,13 @@ namespace exaDEM
     ADD_SLOT( GridT        , grid     , INPUT_OUTPUT );
     ADD_SLOT( Domain       , domain   , INPUT , REQUIRED );
     ADD_SLOT( double       , dt       , INPUT , REQUIRED );
+    ADD_SLOT( long         , timestep , INPUT , REQUIRED );
 
     // cell particles array type
     using CellParticles = typename GridT::CellParticles;
 
     // attributes processed during computation
-    using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz, field::_vx ,field::_vy ,field::_vz, field::_vrot, field::_radius , field::_fx ,field::_fy ,field::_fz, field::_mass, field::_mom, field::_friction >;
+    using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz, field::_vx ,field::_vy ,field::_vz, field::_vrot, field::_radius , field::_fx ,field::_fy ,field::_fz, field::_mass, field::_mom>;
     static constexpr ComputeFields compute_fields {};
 
     public:
@@ -110,7 +111,8 @@ namespace exaDEM
             Surface& driver = std::get<Surface>(drvs.data(drvs_idx)) ;
             // Define Functor
             // vel is null
-            RigidSurfaceFunctor func {driver.normal, driver.offset, 0.0, *dt, params.m_kt, params.m_kn, params.m_kr, params.m_mu, params.m_damp_rate};
+            double new_offset = driver.compute_pos_from_vel((*dt) * (*timestep));
+            RigidSurfaceFunctor func {driver.normal, new_offset, driver.vel, *dt, params.m_kt, params.m_kn, params.m_kr, params.m_mu, params.m_damp_rate};
             compute_cell_particles( *grid , false , func , compute_fields , parallel_execution_context() );
           }
 

@@ -43,8 +43,7 @@ struct CylinderWallFunctor
 			double a_particle_radius,
 			double& a_fx, double& a_fy, double& a_fz, 
 			const double a_mass,
-			Vec3d& a_mom,
-			Vec3d& a_ft) const
+			Vec3d& a_mom) const
 	{
 		Vec3d pos 	= Vec3d{a_rx, a_ry, a_rz} * m_axis;
 		Vec3d pos_proj 	= pos * m_axis;
@@ -56,7 +55,6 @@ struct CylinderWallFunctor
 		const double dn = m_radius - ( norm(dir) + a_particle_radius );
 		if(dn > 0.0) 
 		{
-			a_ft = {0.0,0.0,0.0};
 			return;
 		}
 
@@ -81,14 +79,11 @@ struct CylinderWallFunctor
 
 		// === compute tangential force
 		auto ft 		= exaDEM::compute_tangential_force(m_kt, m_dt, vn, dir_norm, total_vel);
-		//a_ft 			+= exaDEM::compute_tangential_force(m_kt, m_dt, vn, dir_norm, total_vel);
 		auto threshold_ft 	= exaDEM::compute_threshold_ft(m_mu, m_kn, dn);
 
 		exaDEM::fit_tangential_force(threshold_ft, ft);
-		//exaDEM::fit_tangential_force(threshold_ft, a_ft);
 
 		const auto f = (-1) *(fn + ft); 
-		//const auto f = (-1) *(fn + a_ft); 
 
 		// === update forces
 		a_fx += f.x ;

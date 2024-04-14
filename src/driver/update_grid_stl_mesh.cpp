@@ -48,6 +48,7 @@ namespace exaDEM
 		ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD , DocString{"MPI communicator for parallel processing."});
 		ADD_SLOT( GridT    , grid     , INPUT_OUTPUT , DocString{"Grid used for computations."} );
 		ADD_SLOT( Drivers     , drivers         , INPUT_OUTPUT,            DocString{"List of Drivers"});
+		ADD_SLOT( double     , rcut_max         , INPUT, REQUIRED,           DocString{"rcut_max"});
 
 		public:
 		inline std::string documentation() const override final
@@ -92,6 +93,7 @@ namespace exaDEM
 			const IJK dims = grid->dimension();
 			const int gl = grid->ghost_layers();
 			const double csize = grid->cell_size();
+			const double Rmax = *rcut_max;
 
 			for(size_t id = 0 ; id < drivers->get_size() ; id++)
 			{
@@ -105,7 +107,7 @@ namespace exaDEM
 #     pragma omp parallel
 					{
 						OBB bx;
-            bx.extent = {0.5 * csize, 0.5 * csize, 0.5 * csize};
+            bx.extent = {0.5 * csize + Rmax, 0.5 * csize + Rmax, 0.5 * csize + Rmax};
 						GRID_OMP_FOR_BEGIN(dims-2*gl,_,block_loc, schedule(dynamic))
 						{
 							IJK loc_a = block_loc + gl;

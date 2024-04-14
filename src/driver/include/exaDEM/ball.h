@@ -62,6 +62,14 @@ namespace exaDEM
     }
 
     /**
+     * @brief return driver velocity
+     */
+    inline Vec3d& get_vel()
+    {
+      return vel;
+    }
+
+    /**
      * @brief Initialize the ball.
      * @details This function asserts that the radius of the ball is greater than 0.
      */

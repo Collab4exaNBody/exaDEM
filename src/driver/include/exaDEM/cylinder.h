@@ -54,6 +54,15 @@ namespace exaDEM
       std::cout << "AngVel: " << vrot << std::endl;
     }
 
+
+    /**
+     * @brief return driver velocity
+     */
+    inline Vec3d& get_vel()
+    {
+      return vel;
+    }
+
     /**
      * @brief Filter function to check if a point is within a certain radius of the cylinder.
      * @param rcut The cut-off radius. Note: rcut = rverlet + r shape
