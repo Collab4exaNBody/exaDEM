@@ -233,15 +233,17 @@ namespace exaDEM
 							const auto* __restrict__ radius_a = cells[cell_a][ field::radius ]; ONIKA_ASSUME_ALIGNED(radius_a);
 							interactions_cells[cell_a].resize(n_particles);
 							interactions_indexes[cell_a].resize(n_particles);
+							std::vector<int> faces_idx;
 							for(int particle = 0; particle < n_particles; particle++){
 								bool add_particle = false;
-								std::vector< int > faces_idx;
+								faces_idx.resize(0);
+								//std::vector< int > faces_idx;
 								interactions_indexes[cell_a][particle] = false;
 								for(int j = 0; j < ind2[cell_a].size(); j++){
 									int idx = ind2[cell_a][j];
-									OBB obbface = obb_faces[idx];
+									OBB& obbface = obb_faces[idx];
 									OBB sphere = sphere_to_obb(rx_a[particle], ry_a[particle], rz_a[particle], radius_a[particle]);
-									obbface.enlarge(*rcut_inc);
+									//obbface.enlarge(*rcut_inc);
 									sphere.enlarge(*rcut_inc);
 									if(obbface.intersect(sphere))
 									{

@@ -96,7 +96,7 @@ namespace exaDEM
 				bool potential = false;
 				Vec3d position = {0,0,0};
 				
-			
+				
 
 				//CONTACT FACE SPHERE (from the Face structure in face.h)
 				const Vec3d center = {rx,ry,rz};
