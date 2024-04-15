@@ -1,0 +1,71 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+input_data:
+  - read_xyz:
+      file: input_file_impose_velocity.xyz
+      bounds_mode: FILE
+  - replicate_domain: [5, 1, 15]
+  - set_radius:
+     rad: 0.5
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.02
+  - update_inertia:
+  - set_rand_vrot_arot
+  - particle_regions:
+        - PLANE1:
+            quadric:
+              shape: { plane: [ 0 , 0 , -1 , 0 ] }
+              transform:
+                - translate: [ 0 , 0 , 10 m ]
+
++simulation_epilog:
+  - memory_stats
+  - grid_stats
+  - timestep_file
+
+update_nbh_friction:
+  rcut: 1.1 m
+
+compute_loop:
+  loop: true
+  name: loop
+  condition: compute_loop_continue
+  body:
+    - compute_loop_prolog
+    - numerical_scheme
+    - end_iteration
+    - compute_loop_epilog
+    - next_time_step
+    - compute_loop_stop
+
+transverse_velocity_slab:
+  body:  [ set_velocity: { value: [ -10. m/s ,   0 , 0 ], region: not PLANE1 } ]
+
+compute_force:
+  - gravity_force  
+  - hooke_force:
+      config: {rcut: 1.0 m, dncut: 0.0,  kn: 100000, kt: 80000, kr: 0, fc: 0.00, mu: 0.3, damp_rate: 0.9}
+  - transverse_velocity_slab
+
+domain:
+  cell_size: 2.0 m
+  periodic: [true, true, false]
+
+write_vtklegacy:
+  ascii: true
+  ghost: false
+
+global:
+  simulation_dump_frequency: -1
+  simulation_paraview_frequency: -1
+  simulation_end_iteration: 10
+  simulation_log_frequency: 10
+  dt: 0.0001 s 
+  rcut_inc: 0.4 m

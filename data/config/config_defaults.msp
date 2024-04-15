@@ -16,7 +16,7 @@ configuration:
 
   profiling:
     exectime: false
-    summary: false
+    summary: true
 
   # operator node graph debug
   debug:

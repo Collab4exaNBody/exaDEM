@@ -4,9 +4,9 @@
 int main ()
 {
 	//	int N = 50;
-	int nx = 10;
-	int ny = 10;
-	int nz = 10;
+	int nx = 2000;
+	int ny = 20;
+	int nz = 20;
 
 	double lattice = 0.5; // metre
 

@@ -19,6 +19,7 @@
 
 #include <exanb/compute/compute_cell_particles.h>
 
+
 #include <exaDEM/stl_mesh.h>
 //#include <exaDEM/hooke_stl_meshes.h>
 #include <exaDEM/interaction.h>
@@ -311,6 +312,7 @@ namespace exaDEM
 
 							inline void execute () override final
 							{
+
 								
 								auto& g = *grid;
 								const auto cells = g.cells();
@@ -327,8 +329,11 @@ namespace exaDEM
 								
 								ApplyHookeSTLMesh_GPU<<<numBlocks, blockSize>>>(cells, I, size, *dt, *kt, *kn, *kr, *mu, *damprate);
 								
-						}
+							}
 					};
+
+
+
 
 
 	// this helps older versions of gcc handle the unnamed default second template parameter

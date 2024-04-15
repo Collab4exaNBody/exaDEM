@@ -21,37 +21,63 @@ namespace exaDEM
 		{
 			static constexpr double default_radius = 0.5;
 			static constexpr double default_density = 1;
-			static constexpr Quaternion default_quaternion = {0.0,0.0,0.0,1.0}; // impossible : Quaternion{0.0,0.0,0.0,1.0}
-		using ComputeFields = FieldSet<field::_shape, field::_radius, field::_mass, field::_orient>;
-		static constexpr ComputeFields compute_field_set {};
+			static constexpr Quaternion default_quaternion = {0.0,0.0,0.0,1.0}; 
+			using ComputeFields = FieldSet< field::_shape, field::_radius, field::_mass, field::_orient>;
+			using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_shape, field::_radius, field::_mass, field::_orient>;
+			static constexpr ComputeFields compute_field_set {};
+			static constexpr ComputeRegionFields compute_region_field_set {};
 
-		ADD_SLOT( GridT  		, grid  , INPUT_OUTPUT );
-		ADD_SLOT( uint8_t  		, type  	, INPUT , REQUIRED 	, DocString{"type of particle to setialize"} );
-		ADD_SLOT( double  		, rad  	, INPUT , default_radius	, DocString{"default radius value is 0.5 for all particles"} );
-		ADD_SLOT( double  		, density  	, INPUT , default_density	, DocString{"default density value is 0 for all particles"} );
-		ADD_SLOT( Quaternion  	, quat 	, INPUT , default_quaternion	, DocString{"default quaternion value for all particles "} );
+			ADD_SLOT( GridT             , grid             , INPUT_OUTPUT );
+			ADD_SLOT( uint8_t           , type  	         , INPUT , REQUIRED 	, DocString{"type of particle to setialize"} );
+			ADD_SLOT( double            , rad  	           , INPUT , default_radius	, DocString{"default radius value is 0.5 for all particles"} );
+			ADD_SLOT( double            , density  	       , INPUT , default_density	, DocString{"default density value is 0 for all particles"} );
+			ADD_SLOT( Quaternion        , quat 	           , INPUT , default_quaternion	, DocString{"default quaternion value for all particles "} );
+			ADD_SLOT( ParticleRegions   , particle_regions , INPUT , OPTIONAL );
+			ADD_SLOT( ParticleRegionCSG , region           , INPUT , OPTIONAL );
+
 
 			public:
 
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
-        This operator sets material properties, ie radius, denstiy and quaternion values.
+			inline std::string documentation() const override final
+			{
+				return R"EOF(
+        This operator sets material properties for spheres, ie radius, denstiy and quaternion values.
         )EOF";
-		}
+			}
 
-		inline void execute () override final
-		{
-			// compute mass
-			const double d 	= (*density);
-			const double r 	= (*rad);
-			const double pi 	= 4*std::atan(1);
-			const double coeff	= ((4.0)/(3.0)) * pi * d; 	 
-			const double mass = coeff * r * r * r; // 4/3 * pi * r^3 * d 
-//			std::tuple<double, double, Quaternion> default_values = std::make_tuple(r,mass,*quat);
-			FilteredSetFunctor<double, double, Quaternion> func { *type, {r,mass,*quat} };
-			compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
-		}
+			inline void execute () override final
+			{
+				// compute mass
+				const double d 	= (*density);
+				const double r 	= (*rad);
+				const double pi 	= 4*std::atan(1);
+				const double coeff	= ((4.0)/(3.0)) * pi * d; 	 
+				const double mass = coeff * r * r * r; // 4/3 * pi * r^3 * d 
+
+				if( region.has_value() )
+				{
+					if( !particle_regions.has_value() )
+					{
+						fatal_error() << "GenericVec3Operator: region is defined, but particle_regions has no value" << std::endl;
+					}
+
+					if( region->m_nb_operands==0 )
+					{
+						ldbg << "rebuild CSG from expr "<< region->m_user_expr << std::endl;
+						region->build_from_expression_string( particle_regions->data() , particle_regions->size() );
+					}
+
+					ParticleRegionCSGShallowCopy prcsg = *region;
+
+					FilteredSetRegionFunctor<double, double, Quaternion> func { prcsg, *type, {r, mass, *quat}};
+					compute_cell_particles( *grid , false , func , compute_region_field_set , parallel_execution_context() );
+				}
+				else
+				{
+					FilteredSetFunctor<double, double, Quaternion> func { *type, {r, mass, *quat}};
+					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+				}
+			}
 		};
 
 	template<class GridT> using SetMaterialPropertiesTmpl = SetMaterialProperties<GridT>;

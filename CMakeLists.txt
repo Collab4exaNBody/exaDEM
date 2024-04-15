@@ -8,6 +8,10 @@ project(exaDEM LANGUAGES C CXX)
 # === CMake customization ===
 # ===========================
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Release RelWithDebInfo Debug)
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # ======================================
@@ -87,6 +91,12 @@ exaNBodyStartApplication()
 # === build application plugins and libs ===
 # ==========================================
 add_subdirectory(src)
+
+
+# =============================
+# === check exaDEM examples ===
+# =============================
+add_subdirectory(example)
 
 # ==================================================
 # === exaNBody plugins and unit tests final pass ===

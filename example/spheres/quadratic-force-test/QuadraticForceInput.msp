@@ -1,0 +1,48 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+input_data:
+  - read_xyz:
+      file: particles.xyz
+      bounds_mode: FILE
+      enlarge_bounds: 0.0 m
+  - set_radius:
+     rad: 0.001
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.0
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.001
+  - set_rand_vrot_arot
+  - update_inertia
+
+update_nbh_friction:
+  rcut: 0.002 m
+
+compute_force:
+  - gravity_force:
+     gravity: [0.0,0.0,-9.80665]
+  - quadratic_force:
+     cx: 0.38
+     mu: 0.0000015
+
+domain:
+  cell_size: 0.002 m
+  periodic: [false,false,true]
+
+write_vtklegacy:
+  ascii: true
+  ghost: false
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 1000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 10
+  dt: 0.00005 s 
+  rcut_inc: 0.005 m
+  friction_rcut: 0.002 m
+

@@ -20,26 +20,50 @@ namespace exaDEM
 		class SetRadius : public OperatorNode
 		{
 			static constexpr double default_radius = 0.5;
-		using ComputeFields = FieldSet< field::_radius>;
-		static constexpr ComputeFields compute_field_set {};
+			using ComputeFields = FieldSet< field::_radius>;
+			using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_radius>;
+			static constexpr ComputeFields compute_field_set {};
+			static constexpr ComputeRegionFields compute_region_field_set {};
 
-		ADD_SLOT( GridT  		, grid  , INPUT_OUTPUT );
-		ADD_SLOT( double  		, rad  	, INPUT , default_radius	, DocString{"default radius value for all particles"} );
+			ADD_SLOT( GridT             , grid             , INPUT_OUTPUT );
+			ADD_SLOT( double            , rad              , INPUT , default_radius	, DocString{"default radius value for all particles"} );
+			ADD_SLOT( ParticleRegions   , particle_regions , INPUT , OPTIONAL );
+			ADD_SLOT( ParticleRegionCSG , region           , INPUT , OPTIONAL );
 
 			public:
 
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
+			inline std::string documentation() const override final
+			{
+				return R"EOF(
         This operator sets the radius value for every particles.
         )EOF";
-		}
+			}
 
-		inline void execute () override final
-		{
-			SetFunctor<double> func = { {*rad} };
-			compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
-		}
+			inline void execute () override final
+			{
+				if( region.has_value() )
+				{
+					if( !particle_regions.has_value() )
+					{
+						fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+					}
+
+					if( region->m_nb_operands==0 )
+					{
+						ldbg << "rebuild CSG from expr "<< region->m_user_expr << std::endl;
+						region->build_from_expression_string( particle_regions->data() , particle_regions->size() );
+					}
+
+					ParticleRegionCSGShallowCopy prcsg = *region;
+					SetRegionFunctor<double> func = { prcsg, {*rad} };
+					compute_cell_particles( *grid , false , func , compute_region_field_set , parallel_execution_context() );
+				}
+				else
+				{
+					SetFunctor<double> func = { {*rad} };
+					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+				}
+			}
 		};
 
 	template<class GridT> using SetRadiusTmpl = SetRadius<GridT>;

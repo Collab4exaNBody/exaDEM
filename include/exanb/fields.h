@@ -3,6 +3,7 @@
 #include <exanb/core/basic_types_def.h>
 #include <exanb/core/quaternion.h>
 #include <exanb/core/declare_field.h>
+#include <onika/oarray.h>
 
 #include <cstdint>
 
@@ -21,16 +22,19 @@ XSTAMP_DECLARE_FIELD(double          ,ay                ,"particle acceleration 
 XSTAMP_DECLARE_FIELD(double          ,az                ,"particle acceleration Z");
 
 // DEM - reuse orient and angmom
-XSTAMP_DECLARE_FIELD(double          	,mass           ,"particle mass");
-XSTAMP_DECLARE_FIELD(double          	,homothety      ,"particle shape homothety");
-XSTAMP_DECLARE_FIELD(double    		,radius         	,"radius");
-XSTAMP_DECLARE_FIELD(uint32_t    	,shape         	,"particle shape");
+XSTAMP_DECLARE_FIELD(double   ,mass           ,"particle mass");
+XSTAMP_DECLARE_FIELD(double   ,homothety      ,"particle shape homothety");
+XSTAMP_DECLARE_FIELD(double   ,radius         	,"radius");
+XSTAMP_DECLARE_FIELD(uint32_t ,shape         	,"radius");
 XSTAMP_DECLARE_FIELD(::exanb::Quaternion      ,orient  ,"angular position");
 XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , mom   	,"moment"); 
 XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , vrot   	,"angular velocity"); //
 XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , arot   	,"angular acceleration"); // 
-XSTAMP_DECLARE_FIELD(::exanb::Vec3d    ,inertia   	,"inertia values (same value in the diagonal)");
+XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , inertia   	,"inertia values (same value in the diagonal)");
 XSTAMP_DECLARE_FIELD(::exanb::Vec3d    , friction   	,"tmp field"); // 
+typedef ::onika::oarray_t<::exanb::Vec3d, 8> VerticesType;
+XSTAMP_DECLARE_FIELD(VerticesType , vertices   	,"list to compute vertices"); // 
+
 
 // aliases
 XSTAMP_DECLARE_ALIAS( fx, ax )

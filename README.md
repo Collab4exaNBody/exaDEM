@@ -7,15 +7,6 @@ ExaDEM is a software solution in the field of computational simulations. It's a 
 
 Additionally, ExaDEM offers compatibility with MPI+GPUs, using the CUDA programming model (Onika layer). This feature provides the option to leverage GPU processing power for potential performance gains in simulations. Written in C++17, ExaDEM is built on a contemporary codebase. It aims to provide researchers and engineers with a tool for adressing DEM simulations.
 
-## Add your files
-
-```
-cd existing_repo
-git remote add origin https://www-git-cad.intra.cea.fr/DEC/collaboratif/rp269144/exadem.git
-git branch -M main
-git push -uf origin main
-```
-
 ## Installation
 
 ### Minimal Requirements
@@ -33,8 +24,14 @@ export exaNBody_DIR=path_to_install
 The next step involves the installation of yaml-cpp, which can be achieved using either the spack package manager or cmake:
 
 ```
-spack install yaml-cpp
+spack install yaml-cpp@0.6.3
 spack load yaml-cpp
+```
+
+Variant: 
+
+```
+apt install libyaml-cpp-dev
 ```
 
 ### Optional Dependencies
@@ -102,6 +99,8 @@ export N_MPI=1
 export OMP_NUM_THREADS=$N_OMP
 mpirun -n $N_MPI ./exaDEM test-case.msp
 ```
+
+Note: for your first example, copy the `exaDEMexample/rotating-drum` directory and run `path-to-build/exaDEM rotating-drum.msp`.
 
 ## Test cases
 
