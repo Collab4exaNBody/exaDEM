@@ -6,6 +6,8 @@
 #include <onika/memory/allocator.h> // cudaMMVector
 #include <onika/cuda/stl_adaptors.h>
 #include <exanb/core/basic_types.h>
+#include "OBB.hpp"
+
 
 namespace exaDEM
 {
@@ -27,15 +29,6 @@ namespace exaDEM
 			Vec3d res = (sup - inf)/2;
 			return res;
 		};
-	};
-	
-	struct OBB
-	{
-	
-		Vec3d center;
-		Vec3d axis[3];
-		Vec3d extents;
-		
 	};
 	
 
@@ -351,6 +344,8 @@ namespace exaDEM
 			Box res = {inf,sup};
 			return res;
 		}
+		
+
 		
 
 		

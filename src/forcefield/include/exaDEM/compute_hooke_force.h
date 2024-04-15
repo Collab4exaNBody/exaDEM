@@ -2,6 +2,7 @@
 
 #include <exanb/core/basic_types.h>
 #include <exaDEM/common_compute_kernels.h>
+#include <exanb/core/grid.h>	
 
 namespace exaDEM
 {
@@ -105,7 +106,7 @@ namespace exaDEM
 						reset(ft); // no friction if no contact
 						cohesive_force_core(dn,n,dncut,fc,f_i); // if dn >= 0.0
 					}
-
+			
 
 				}
 
@@ -186,7 +187,7 @@ namespace exaDEM
 			const Vec3d& pos_i, // positions i
 			const Vec3d& vel_i, // positions i
 			Vec3d& f_i, // forces i
-			Vec3d & mom_i, // moments i
+			Vec3d& mom_i, // moments i
 			const Vec3d& vrot_i, // angular velocities i
 			const Vec3d& pos_j, // positions j
 			const Vec3d& vel_j, // positions j
@@ -195,6 +196,7 @@ namespace exaDEM
 			{
 				if(dn <= 0.0) 
 				{
+					//printf("OKKKKKKKKKKKKKKKKKKK\n");
 					const double damp = compute_damp(dampRate, kn,  meff);
 
 
@@ -237,6 +239,227 @@ namespace exaDEM
 					reset(ft); // no friction if no contact
 				}
 			}
+			
+				ONIKA_HOST_DEVICE_FUNC inline 
+	void hooke_force_core_v5( 
+				const double dn,
+			const Vec3d& n, // normal
+			const double dt,
+			const double kn,
+			const double kt,
+			const double kr,
+			const double mu,
+			const double dampRate,
+			const double meff,
+			Vec3d& ft, // tangential force between particle i and j
+			const Vec3d& contact_position,
+			const Vec3d& pos_i, // positions i
+			const Vec3d& vel_i, // positions i
+			Vec3d& f_i, // forces i
+			Vec3d& mom_i, // moments i
+			const Vec3d& vrot_i, // angular velocities i
+			const Vec3d& pos_j, // positions j
+			const Vec3d& vel_j, // positions j
+			const Vec3d& vrot_j // angular velocities j
+			)
+			{
+				if(dn <= 0.0) 
+				{
+					//printf("OKKKKKKKKKKKKKKKKKKK\n");
+					const double damp = compute_damp(dampRate, kn,  meff);
+
+
+					// === Relative velocity (j relative to i)
+					auto vel = compute_relative_velocity(
+							contact_position,
+							pos_i, vel_i, vrot_i,
+							pos_j, vel_j, vrot_j
+							);
+
+					// compute relative velocity
+					const double vn = exanb::dot(pos_i - contact_position, vel);
+//const double vn = exanb::dot(n, vel);
+
+					// === Normal force (elatic contact + viscous damping)
+					const Vec3d fn = compute_normal_force(kn, damp, dn, vn, n); // fc ==> cohesive force
+
+					// === Tangential force (friction)
+					ft	 		+= exaDEM::compute_tangential_force(kt, dt, vn, n, vel);
+
+
+					// fit tangential force
+					auto threshold_ft 	= exaDEM::compute_threshold_ft(mu, kn, dn);
+					exaDEM::fit_tangential_force(threshold_ft, ft);
+
+					// === sum forces
+					const auto f = fn + ft;
+
+					// === update forces
+					f_i += f;
+
+					// === update moments
+					const Vec3d mom = kr * (vrot_j - vrot_i) * dt;
+					const auto Ci = (contact_position - pos_i);
+					const auto Pimoment = exanb::cross(Ci, f) + mom;
+					mom_i += Pimoment;
+				}
+				else
+				{
+					reset(ft); // no friction if no contact
+				}
+				
+			}
+			
+			ONIKA_HOST_DEVICE_FUNC inline 
+	void hooke_force_core_v3(
+			const double dn,
+			const Vec3d& n, // normal
+			const double dt,
+			const double kn,
+			const double kt,
+			const double kr,
+			const double mu,
+			const double dampRate,
+			const double meff,
+			//Vec3d& ft, // tangential force between particle i and j
+			double& ftx, double& fty, double& ftz,
+			const Vec3d& contact_position,
+			const Vec3d& pos_i, // positions i
+			const Vec3d& vel_i, // positions i
+			Vec3d& f_i, // forces i
+			//Vec3d & mom_i, // moments i
+			double momx, double momy, double momz,
+			const Vec3d& vrot_i, // angular velocities i
+			const Vec3d& pos_j, // positions j
+			const Vec3d& vel_j, // positions j
+			const Vec3d& vrot_j // angular velocities j
+			)
+			{
+				if(dn <= 0.0) 
+				{
+					const double damp = compute_damp(dampRate, kn,  meff);
+
+
+					// === Relative velocity (j relative to i)
+					auto vel = compute_relative_velocity(
+							contact_position,
+							pos_i, vel_i, vrot_i,
+							pos_j, vel_j, vrot_j
+							);
+
+					// compute relative velocity
+					const double vn = exanb::dot(pos_i - contact_position, vel);
+//const double vn = exanb::dot(n, vel);
+
+					// === Normal force (elatic contact + viscous damping)
+					const Vec3d fn = compute_normal_force(kn, damp, dn, vn, n); // fc ==> cohesive force
+
+					// === Tangential force (friction)
+					Vec3d ft = {ftx, fty, ftz};
+					ft	 		+= exaDEM::compute_tangential_force(kt, dt, vn, n, vel);
+					
+
+					// fit tangential force
+					auto threshold_ft 	= exaDEM::compute_threshold_ft(mu, kn, dn);
+					exaDEM::fit_tangential_force(threshold_ft, ft);
+					ftx= ft.x;
+					fty= ft.y;
+					ftz= ft.z;
+					
+					// === sum forces
+					const auto f = fn + ft;
+
+					// === update forces
+					f_i += f;
+					printf("FX2: %f FY2: %f FZ2: %f\n", f_i.x, f_i.y, f_i.z);
+					// === update moments
+					Vec3d dad = {momx, momy, momz};
+					const Vec3d mom = kr * (vrot_j - vrot_i) * dt;
+					const auto Ci = (contact_position - pos_i);
+					const auto Pimoment = exanb::cross(Ci, f) + mom;
+					dad += Pimoment;
+					momx = dad.x;
+					momy = dad.y;
+					momz = dad.z;
+				}
+				else
+				{
+					//Vec3d ft = {ftx, fty, ftz};
+					//reset(ft); // no friction if no contact
+					ftx = fty = ftz = 0.0;
+				}
+			}
+
+	ONIKA_HOST_DEVICE_FUNC inline 
+	void hooke_force_core_vGPU(
+			const double dn,
+			const Vec3d& n, // normal
+			const double dt,
+			const double kn,
+			const double kt,
+			const double kr,
+			const double mu,
+			const double dampRate,
+			const double meff,
+			Vec3d ft, Vec3d& ft_add, // tangential force between particle i and j
+			const Vec3d& contact_position,
+			const Vec3d& pos_i, // positions i
+			const Vec3d& vel_i, // positions i
+			Vec3d& f_i, // forces i
+			Vec3d & mom_i, Vec3d& mom_add,// moments i
+			const Vec3d& vrot_i, // angular velocities i
+			const Vec3d& pos_j, // positions j
+			const Vec3d& vel_j, // positions j
+			const Vec3d& vrot_j // angular velocities j
+			)
+			{
+				if(dn <= 0.0) 
+				{
+					const double damp = compute_damp(dampRate, kn,  meff);
+
+
+					// === Relative velocity (j relative to i)
+					auto vel = compute_relative_velocity(
+							contact_position,
+							pos_i, vel_i, vrot_i,
+							pos_j, vel_j, vrot_j
+							);
+
+					// compute relative velocity
+					const double vn = exanb::dot(pos_i - contact_position, vel);
+//const double vn = exanb::dot(n, vel);
+
+					// === Normal force (elatic contact + viscous damping)
+					const Vec3d fn = compute_normal_force(kn, damp, dn, vn, n); // fc ==> cohesive force
+
+					// === Tangential force (friction)
+					
+					ft_add	 		= exaDEM::compute_tangential_force(kt, dt, vn, n, vel);
+					ft += ft_add;
+
+					// fit tangential force
+					auto threshold_ft 	= exaDEM::compute_threshold_ft(mu, kn, dn);
+					exaDEM::fit_tangential_force(threshold_ft, ft);
+
+					// === sum forces
+					const auto f = fn + ft;
+
+					// === update forces
+					f_i += f;
+
+					// === update moments
+					const Vec3d mom = kr * (vrot_j - vrot_i) * dt;
+					const auto Ci = (contact_position - pos_i);
+					const auto Pimoment = exanb::cross(Ci, f) + mom;
+					mom_add = Pimoment;
+				}
+				else
+				{
+					//reset(ft); // no friction if no contact
+					ft_add = {-ft.x, -ft.y, -ft.z};
+				}
+			}
+			
 
 
 	ONIKA_HOST_DEVICE_FUNC inline 
@@ -264,6 +487,7 @@ namespace exaDEM
 			{
 				if(dn <= 0.0) 
 				{
+					printf("HOOOOOOKE\n");
 					const double damp = compute_damp(dampRate, kn,  meff);
 
 

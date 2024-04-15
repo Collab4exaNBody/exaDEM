@@ -69,6 +69,7 @@ namespace exaDEM
 
     inline void execute () override final
     {
+    	//printf("CUTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTtt: %f \n", *rcut_inc);
       unsigned int cs = config->chunk_size;
       unsigned int cs_log2 = 0;
       while( cs > 1 )

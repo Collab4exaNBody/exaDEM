@@ -19,8 +19,7 @@
 #include <exaDEM/face.h>
 
 //#include <exaDEM/stl_mesh.h>
-//#include <exaDEM/stl_meshGPU.h>
-#include <exaDEM/stl_meshesGPU.h>
+#include <exaDEM/stl_meshes.h>
 
 #include <mpi.h>
 
@@ -54,9 +53,7 @@ namespace exaDEM
 			//stl_mesh mesh;
 			auto& mesh= *meshes; 
 			mesh.read_stl(*filename);
-			mesh.build_boxes();
 			//collection.push_back(mesh);
-			
 		};
 	};
 
