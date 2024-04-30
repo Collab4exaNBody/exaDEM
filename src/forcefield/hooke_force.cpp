@@ -42,6 +42,7 @@ under the License.
 #include <exaDEM/hooke_force_parameters.h>
 #include <exaDEM/neighbor_friction.h>
 
+#include <exaDEM/interactions_PP.h>
 
 namespace exaDEM
 {
@@ -53,12 +54,17 @@ namespace exaDEM
 		// poetential parameters
 		const HookeParams m_params;
 		const double m_dt;
+		//Domain domain;
+		Mat3d xform;
 
 		template<class CellParticlesT>
 			ONIKA_HOST_DEVICE_FUNC inline void operator ()
 			(      
 			 const Vec3d& dr,   // imposes par la forme sans compute_buffer
 			 double d2,         //
+			 double rx, 
+			 double ry, 
+			 double rz,
 			 double radius, // les fiels requis
 			 double vx,
 			 double vy,
@@ -79,7 +85,20 @@ namespace exaDEM
 				const double drx = dr.x;
 				const double dry = dr.y;
 				const double drz = dr.z;
-
+				
+				const double rx_nbh = cells[cell_b][field::rx][p_b];
+				const double ry_nbh = cells[cell_b][field::ry][p_b];
+				const double rz_nbh = cells[cell_b][field::rz][p_b];
+				
+				/*const double dr2x = rx_nbh - rx;
+				const double dr2y = ry_nbh - ry;
+				const double dr2z = rz_nbh - rz;
+				Vec3d dr2 = {dr2x, dr2y, dr2z};
+				Vec3d dr_transform = xform * dr2;
+				double drx = dr_transform.x;
+				double dry = dr_transform.y;
+				double drz = dr_transform.z;*/
+				
 				const double vx_nbh = cells[cell_b][field::vx][p_b];
 				const double vy_nbh = cells[cell_b][field::vy][p_b];
 				const double vz_nbh = cells[cell_b][field::vz][p_b];
@@ -94,12 +113,16 @@ namespace exaDEM
 						m_params.dncut, m_dt, m_params.m_kn, m_params.m_kt, m_params.m_kr,   
 						m_params.m_fc, m_params.m_mu, m_params.m_damp_rate, 
 						ft,
-						0., 0., 0.,         
+						0., 0., 0.,
+						//rx, ry, rz,
+						//rx_nbh, ry_nbh, rz_nbh,         
 						vx, vy, vz,           
 						mass, radius,     
 						fx, fy, fz,     
 						mom, vrot, 
-						drx, dry, drz, 
+						drx, dry, drz,
+						//rx_nbh, ry_nbh, rz_nbh,
+						//rx, ry, rz, 
 						vx_nbh, vy_nbh, vz_nbh, 
 						mass_nbh, radius_nbh, 
 						fx_nbh, fy_nbh, fz_nbh, 
@@ -132,7 +155,7 @@ namespace exaDEM
 
 	template<
 		class GridT,
-					class = AssertGridHasFields< GridT, field::_radius, field::_vx,field::_vy,field::_vz, field::_mass, field::_fx ,field::_fy,field::_fz, field::_vrot, field::_mom, field::_homothety >
+					class = AssertGridHasFields< GridT, field::_rx, field::_ry, field::_rz, field::_radius, field::_vx,field::_vy,field::_vz, field::_mass, field::_fx ,field::_fy,field::_fz, field::_vrot, field::_mom, field::_homothety >
 						>
 						class HookeForce : public OperatorNode
 						{
@@ -145,6 +168,8 @@ namespace exaDEM
 							ADD_SLOT( GridT                 , grid              , INPUT_OUTPUT );
 							ADD_SLOT( Domain                , domain            , INPUT , REQUIRED );
 							ADD_SLOT( double                , dt                , INPUT , REQUIRED );
+							
+							ADD_SLOT( Interactions_PP       , interactions_PP   , INPUT_OUTPUT );//HOOKE_FORCE_GPU
 
 							// shortcut to the Compute buffer used (and passed to functor) by compute_pair_singlemat
 							static constexpr bool UseNbhId = true;
@@ -153,7 +178,7 @@ namespace exaDEM
 							using CellParticles = typename GridT::CellParticles;
 
 							// attributes processed during computation
-							using ComputeFields = FieldSet< field::_radius, field::_vx,field::_vy,field::_vz, field::_mass, field::_vrot, field::_fx ,field::_fy ,field::_fz, field::_mom, field::_homothety>;
+							using ComputeFields = FieldSet< field::_rx, field::_ry, field::_rz, field::_radius, field::_vx,field::_vy,field::_vz, field::_mass, field::_vrot, field::_fx ,field::_fy ,field::_fz, field::_mom, field::_homothety>;
 							static constexpr ComputeFields compute_fields {};
 
 							public:
@@ -168,6 +193,14 @@ namespace exaDEM
 							inline void execute () override final
 							{
 								assert( chunk_neighbors->number_of_cells() == grid->number_of_cells() );
+								
+								Interactions_PP& ints= *interactions_PP;//HOOKE_FORCE_GPU
+								
+								
+								//HOOKE_FORCE_GPU
+								auto& g = *grid;
+								const auto cells = g.cells();
+								//HOOKE_FORCE_GPU
 
 								const double rcut = config->rcut;
 								*rcut_max = std::max( *rcut_max , rcut );
@@ -177,21 +210,133 @@ namespace exaDEM
 
 								ComputePairOptionalLocks<false> cp_locks {};
 								exanb::GridChunkNeighborsLightWeightIt<false> nbh_it{ *chunk_neighbors };
-
-								HookeForceOp force_op { *config, *dt };
+								
+								
+								HookeForceOp force_op { *config, *dt, domain->xform() };
 
 								auto force_buf = make_default_pair_buffer();
 								ParticleNeighborFrictionIterator cp_friction{ nbh_friction->m_cell_friction.data() };
-								if( domain->xform_is_identity() )
+								
+								//HOOKE_FORCE_GPU
+								/**for(int i= 0; i < ints.nb_particles; i++){
+									int p= ints.pa[i];
+									int cell= ints.cella[i];
+									onika::memory::CudaMMVector<int> pb= ints.pb[i];
+									onika::memory::CudaMMVector<int> cellb= ints.cellb[i];
+									int ida = cells[cell][field::id][p];
+									for(int j= 0; j < pb.size(); j++){
+										int pb_index = j;
+										//ParticlePairFriction pair = cp_friction.get(cell, p, pb_index, cp_friction.make_ctx());
+										ParticlePairFriction pair = cp_friction.m_cell_frictions[cell].pair_friction( p , pb_index ); 
+									}
+								}*/
+								
+								/**for(int i= 0; i < ints.nb_particles; i++){
+									int p= ints.pa[i];
+									int cell= ints.cella[i];
+									onika::memory::CudaMMVector<int> pb= ints.pb[i];
+									onika::memory::CudaMMVector<int> cellb= ints.cellb[i];
+									int ida = cells[cell][field::id][p];
+									for(int j= 0; j < pb.size(); j++){
+										int p_nbh = pb[j];
+										int cell_nbh = cellb[j];
+										int idb = cells[cell_nbh][field::id][p_nbh];
+										//ParticlePairFriction pair = cp_friction.get(cell, p, pb_index, cp_friction.make_ctx());
+										ParticlePairFriction pair = cp_friction.m_cell_frictions[cell].pair_friction( ida , idb ); 
+									}
+								}*/
+								//HOOKE_FORCE_GPU
+								
+								//HOOKE_FORCE_GPU
+								Mat3d xfrom = domain->xform();
+								HookeParams hp = *config;
+								double dt2 = *dt;
+								#pragma omp parallel for
+								for(int i= 0; i < ints.nb_particles; i++){
+									int p= ints.pa[i];
+									int cell= ints.cella[i];
+									onika::memory::CudaMMVector<int> pb= ints.pb[i];
+									onika::memory::CudaMMVector<int> cellb= ints.cellb[i];
+									//onika::memory::CudaMMVector<Vec3d> ft_pair= ints.ft_pair[i];
+									double rx = cells[cell][field::rx][p];
+									double ry = cells[cell][field::ry][p];
+									double rz = cells[cell][field::rz][p];
+									double vx = cells[cell][field::vx][p];
+									double vy = cells[cell][field::vy][p];
+									double vz = cells[cell][field::vz][p];
+									double mass = cells[cell][field::mass][p];
+									double radius = cells[cell][field::radius][p];
+									double& fx = cells[cell][field::fx][p];
+									double& fy = cells[cell][field::fy][p];
+									double& fz = cells[cell][field::fz][p];
+									Vec3d& mom = cells[cell][field::mom][p];
+									Vec3d vrot = cells[cell][field::vrot][p];
+									double& homothety = cells[cell][field::homothety][p];
+									for(int j= 0; j < pb.size(); j++){
+										int p_nbh = pb[j];
+										int cell_nbh = cellb[j];
+										//Vec3d& ft = ints.ft_pair[i][j];
+										Vec3d& ft = ints.ft_pair[i][j];
+										double rx_nbh = cells[cell_nbh][field::rx][p_nbh];
+										double ry_nbh = cells[cell_nbh][field::ry][p_nbh];
+										double rz_nbh = cells[cell_nbh][field::rz][p_nbh]; 	
+										double vx_nbh = cells[cell_nbh][field::vx][p_nbh];
+										double vy_nbh = cells[cell_nbh][field::vy][p_nbh];
+										double vz_nbh = cells[cell_nbh][field::vz][p_nbh];
+										double mass_nbh = cells[cell_nbh][field::mass][p_nbh];
+										double radius_nbh = cells[cell_nbh][field::radius][p_nbh];
+										Vec3d vrot_nbh = cells[cell_nbh][field::vrot][p_nbh];
+										double fx_nbh(0.0), fy_nbh(0.0), fz_nbh(0.0);
+										Vec3d mom_nbh = {0,0,0};
+										double dr2x = rx_nbh - rx;
+										double dr2y = ry_nbh - ry;
+										double dr2z = rz_nbh - rz;
+										Vec3d dr2 = {dr2x, dr2y, dr2z};
+										Vec3d dr = xfrom * dr2; 
+										exaDEM::compute_hooke_force(
+											hp.dncut, dt2, hp.m_kn, hp.m_kt, hp.m_kr,
+											hp.m_fc, hp.m_mu, hp.m_damp_rate,
+											ft,
+											0., 0., 0.,
+											//rx, ry, rz,
+											vx, vy, vz,
+											mass, radius,
+											fx, fy, fz,
+											mom, vrot,
+											dr.x, dr.y, dr.z,
+											//rx_nbh, ry_nbh, rz_nbh,
+											//rx - rx_nbh, ry - ry_nbh, rz - rz_nbh,
+											vx_nbh, vy_nbh, vz_nbh,
+											mass_nbh, radius_nbh,
+											fx_nbh, fy_nbh, fz_nbh,
+											mom_nbh, vrot_nbh
+											);
+										homothety += ft.x * ft.x + ft.y * ft.y + ft.z * ft.z;
+									}
+									
+									//cells[cell][field::fx][p]= fx;
+									//cells[cell][field::fy][p]= fy;
+									//cells[cell][field::fz][p]= fz;
+									//cells[cell][field::mom][p]= mom;
+									//cells[cell][field::homothety][p]= homothety;
+									
+								}
+								//HOOKE_FORCE_GPU	
+								
+								/**if( domain->xform_is_identity() )
 								{
+									//printf("NULLXFORM\n");
 									auto optional = make_compute_pair_optional_args( nbh_it, cp_friction, NullXForm{}, cp_locks );
 									compute_cell_particle_pairs( *grid, rcut, *ghost, optional, force_buf, force_op, compute_fields, DefaultPositionFields{}, parallel_execution_context() );
 								}
 								else
 								{
+									//printf("LINEARXFORM\n");
 									auto optional = make_compute_pair_optional_args( nbh_it, cp_friction , LinearXForm{ domain->xform() }, cp_locks );
 									compute_cell_particle_pairs( *grid, rcut, *ghost, optional, force_buf, force_op, compute_fields, DefaultPositionFields{}, parallel_execution_context() );
-								}
+								}*/
+								
+								//printf("HOOKE FORCE FINISH\n");
 							}
 
 						};

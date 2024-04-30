@@ -39,7 +39,11 @@ under the License.
 #include <exanb/core/domain.h>
 #include <exanb/core/xform.h>
 
-#include <exanb/particle_neighbors/chunk_neighbors_execute.h>
+#include <exanb/particle_neighbors/chunk_neighbors_execute_2.h>
+
+//#include <exaDEM/interactions_PP.h>
+//#include <exaDEM/neighbor_friction.h>
+#include <../forcefield/include/exaDEM/interactions_PP.h>
 
 namespace exaDEM
 {
@@ -78,6 +82,8 @@ namespace exaDEM
 
     ADD_SLOT( ChunkNeighborsConfig, config , INPUT, ChunkNeighborsConfig{} );
     ADD_SLOT( ChunkNeighborsScratchStorage, chunk_neighbors_scratch, PRIVATE );
+    
+    ADD_SLOT( Interactions_PP     , interactions_PP , INPUT_OUTPUT);//HOOKE_FORCE_GPU
 
 		inline std::string documentation() const override final
 		{
@@ -88,6 +94,14 @@ namespace exaDEM
 
     inline void execute () override final
     {
+    	//printf("CHUNK START\n");
+    	std::vector< std::vector< std::vector< std::pair<int,int>>>> cell_particles_nbh;//HOOKE_FORCE_GPU
+    	
+    	//HOOKE_FORCE_GPU
+    	Interactions_PP& ints= *interactions_PP;
+    	ints.reset();
+    	//HOOKE_FORCE_GPU
+    
       unsigned int cs = config->chunk_size;
       unsigned int cs_log2 = 0;
       while( cs > 1 )
@@ -116,13 +130,54 @@ namespace exaDEM
       if( ! domain->xform_is_identity() )
       {
         LinearXForm xform = { domain->xform() };
-        chunk_neighbors_execute(ldbg,*chunk_neighbors,*grid,*amr,*amr_grid_pairs,*config,*chunk_neighbors_scratch,cs,cs_log2,*nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter );
+        chunk_neighbors_execute2(ldbg,*chunk_neighbors,*grid,*amr,*amr_grid_pairs,*config,*chunk_neighbors_scratch,cs,cs_log2,*nbh_dist_lab, xform, gpu_enabled, no_z_order, cell_particles_nbh, nbh_filter );
       }
       else
       {
         NullXForm xform = { };
-        chunk_neighbors_execute(ldbg,*chunk_neighbors,*grid,*amr,*amr_grid_pairs,*config,*chunk_neighbors_scratch,cs,cs_log2,*nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter );
+        chunk_neighbors_execute2(ldbg,*chunk_neighbors,*grid,*amr,*amr_grid_pairs,*config,*chunk_neighbors_scratch,cs,cs_log2,*nbh_dist_lab, xform, gpu_enabled, no_z_order, cell_particles_nbh , nbh_filter);
       }
+      
+      //TEST NBH LIST
+      /**const size_t n_cells = grid->number_of_cells(); // nbh.size();
+      printf("NOMBRE DE CELLULES: %d\n\n\n", n_cells);
+      for(int cell_a=0; cell_a < cell_particles_nbh.size(); cell_a++){
+      	if(cell_particles_nbh[cell_a].size()>0) printf("CELLULE: %d\n", cell_a);
+      	for(int p_a=0; p_a < cell_particles_nbh[cell_a].size(); p_a++){
+      		double rx = cells[cell_a][field::rx][p_a];
+		double ry = cells[cell_a][field::ry][p_a];
+		double rz = cells[cell_a][field::rz][p_a];
+      		printf("   PARTICULE(%f, %f, %f):\n", rx, ry, rz); 
+      		for(int nbh=0; nbh < cell_particles_nbh[cell_a][p_a].size(); nbh++){
+      			std::pair pair = cell_particles_nbh[cell_a][p_a][nbh];
+      			double rxb = cells[pair.second][field::rx][pair.first];
+			double ryb = cells[pair.second][field::ry][pair.first];
+			double rzb = cells[pair.second][field::rz][pair.first];
+      			printf("      NBH%d(%f, %f, %f)   ", nbh, rxb, ryb, rzb);
+      		}
+      		printf("\n");
+      	}
+      }
+      getchar();		 	
+      printf("\n\n\n\n\n");*/		  
+      //TEST NBH LIST
+      
+      
+      //HOOKE_FORCE_GPU
+      for(int i= 0; i < cell_particles_nbh.size(); i++){
+      	int cell= i;
+      	for(int j= 0; j < cell_particles_nbh[i].size(); j++){
+      		int particle= j;
+      		std::vector< std::pair<int, int>> nbh= cell_particles_nbh[i][j];
+      		if(nbh.size() > 0){
+      			ints.add_particle(particle, cell, nbh);
+      		}
+      	}
+      }
+      //HOOKE_FORCE_GPU
+      
+      //printf("CHUNK FINISH\n");
+      			 
     }
 
   };
