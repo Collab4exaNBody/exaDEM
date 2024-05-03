@@ -152,6 +152,84 @@ namespace exanb
 namespace exaDEM
 {
 	using namespace exanb;
+	
+	/**template< class GridT > __global__ void HookeForceGPU(GridT* cells, Interactions_PP I, HookeParams hp, double dt, Mat3d xform, int size)
+	{
+		int idx = threadIdx.x + blockIdx.x * blockDim.x;
+		if(idx < size)
+		{
+			auto pa_list = onika::cuda::vector_data(I.pa);
+			auto cella_list = onika::cuda::vector_data(I.cella);
+			auto pb_ = onika::cuda::vector_data(I.pb);
+			auto cellb_ = onika::cuda::vector_data(I.cellb);
+			auto ft_ = onika::cuda::vector_data(I.ft_pair);
+			
+			int p = pa_list[idx];
+			int cell = cella_list[idx];
+			
+			auto pb_list = onika::cuda::vector_data(pb_[idx]);
+			auto size_nbh = onika::cuda::vector_size(pb_[idx]);
+			auto cellb_list = onika::cuda::vector_data(cellb_[idx]);
+			auto ft_pair = onika::cuda::vector_data(ft_[idx]);
+			
+			double rx = cells[cell][field::rx][p];
+			double ry = cells[cell][field::ry][p];
+			double rz = cells[cell][field::rz][p];
+			double vx = cells[cell][field::vx][p];
+			double vy = cells[cell][field::vy][p];
+			double vz = cells[cell][field::vz][p];
+			double mass = cells[cell][field::mass][p];
+			double radius = cells[cell][field::radius][p];
+			double& fx = cells[cell][field::fx][p];
+			double& fy = cells[cell][field::fy][p];
+			double& fz = cells[cell][field::fz][p];
+			Vec3d& mom = cells[cell][field::mom][p];
+			Vec3d vrot = cells[cell][field::vrot][p];
+			double& homothety = cells[cell][field::homothety][p];
+			
+			for(int i=0; i < size_nbh; i++){
+				int p_nbh = pb_list[i];
+				int cell_nbh = cellb_list[i];
+				Vec3d ft = ft_pair[i];
+				double rx_nbh = cells[cell_nbh][field::rx][p_nbh];
+				double ry_nbh = cells[cell_nbh][field::ry][p_nbh];
+				double rz_nbh = cells[cell_nbh][field::rz][p_nbh]; 	
+				double vx_nbh = cells[cell_nbh][field::vx][p_nbh];
+				double vy_nbh = cells[cell_nbh][field::vy][p_nbh];
+				double vz_nbh = cells[cell_nbh][field::vz][p_nbh];
+				double mass_nbh = cells[cell_nbh][field::mass][p_nbh];
+				double radius_nbh = cells[cell_nbh][field::radius][p_nbh];
+				Vec3d vrot_nbh = cells[cell_nbh][field::vrot][p_nbh];
+				double fx_nbh(0.0), fy_nbh(0.0), fz_nbh(0.0);
+				Vec3d mom_nbh = {0,0,0};
+				double dr2x = rx_nbh - rx;
+				double dr2y = ry_nbh - ry;
+				double dr2z = rz_nbh - rz;
+				Vec3d dr2 = {dr2x, dr2y, dr2z};
+				Vec3d dr = xform * dr2;
+				exaDEM::compute_hooke_force(
+					hp.dncut, dt, hp.m_kn, hp.m_kt, hp.m_kr,
+					hp.m_fc, hp.m_mu, hp.m_damp_rate,
+					ft,
+					0., 0., 0.,
+					//rx, ry, rz,
+					vx, vy, vz,
+					mass, radius,
+					fx, fy, fz,
+					mom, vrot,
+					dr.x, dr.y, dr.z,
+					//rx_nbh, ry_nbh, rz_nbh,
+					//rx - rx_nbh, ry - ry_nbh, rz - rz_nbh,
+					vx_nbh, vy_nbh, vz_nbh,
+					mass_nbh, radius_nbh,
+					fx_nbh, fy_nbh, fz_nbh,
+					mom_nbh, vrot_nbh
+					);
+				 homothety += ft.x * ft.x + ft.y * ft.y + ft.z * ft.z;
+			}
+				
+		}
+	}*/
 
 	template<
 		class GridT,
@@ -218,6 +296,17 @@ namespace exaDEM
 								ParticleNeighborFrictionIterator cp_friction{ nbh_friction->m_cell_friction.data() };
 								
 								//HOOKE_FORCE_GPU
+								int size = ints.nb_particles;
+								int blockSize = 32;
+								int numBlocks;
+								if(size % blockSize == 0){ numBlocks = size/blockSize;}
+								else if(size / blockSize < 1){ numBlocks=1; blockSize = size;}
+								else { numBlocks = int(size/blockSize)+1; }
+								
+								//HookeForceGPU<<<numBlocks, blockSize>>>(cells, ints,  *config, *dt, domain->xform(), size);
+								
+								
+								//HOOKE_FORCE_GPU
 								/**for(int i= 0; i < ints.nb_particles; i++){
 									int p= ints.pa[i];
 									int cell= ints.cella[i];
@@ -247,8 +336,8 @@ namespace exaDEM
 								}*/
 								//HOOKE_FORCE_GPU
 								
-								//HOOKE_FORCE_GPU
-								Mat3d xfrom = domain->xform();
+								//HOOKE_FORCE_CPU
+								Mat3d xform = domain->xform();
 								HookeParams hp = *config;
 								double dt2 = *dt;
 								#pragma omp parallel for
@@ -292,7 +381,7 @@ namespace exaDEM
 										double dr2y = ry_nbh - ry;
 										double dr2z = rz_nbh - rz;
 										Vec3d dr2 = {dr2x, dr2y, dr2z};
-										Vec3d dr = xfrom * dr2; 
+										Vec3d dr = xform * dr2; 
 										exaDEM::compute_hooke_force(
 											hp.dncut, dt2, hp.m_kn, hp.m_kt, hp.m_kr,
 											hp.m_fc, hp.m_mu, hp.m_damp_rate,
@@ -311,7 +400,9 @@ namespace exaDEM
 											fx_nbh, fy_nbh, fz_nbh,
 											mom_nbh, vrot_nbh
 											);
-										homothety += ft.x * ft.x + ft.y * ft.y + ft.z * ft.z;
+										Vec3d ft2 = xform * ft;
+										homothety += ft2.x * ft2.x + ft2.y * ft2.y + ft2.z * ft2.z;
+
 									}
 									
 									//cells[cell][field::fx][p]= fx;
@@ -321,7 +412,7 @@ namespace exaDEM
 									//cells[cell][field::homothety][p]= homothety;
 									
 								}
-								//HOOKE_FORCE_GPU	
+								//HOOKE_FORCE_CPU	
 								
 								/**if( domain->xform_is_identity() )
 								{

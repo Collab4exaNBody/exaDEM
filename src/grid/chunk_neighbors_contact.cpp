@@ -99,6 +99,7 @@ namespace exaDEM
     	
     	//HOOKE_FORCE_GPU
     	Interactions_PP& ints= *interactions_PP;
+    	Interactions_PP ints_mid = ints;
     	ints.reset();
     	//HOOKE_FORCE_GPU
     
@@ -171,6 +172,44 @@ namespace exaDEM
       		std::vector< std::pair<int, int>> nbh= cell_particles_nbh[i][j];
       		if(nbh.size() > 0){
       			ints.add_particle(particle, cell, nbh);
+      		}
+      	}
+      }
+      
+      for(int i = 0; i < ints_mid.nb_particles; i++)
+      {
+      	int pa = ints_mid.pa[i];
+      	int cella = ints_mid.cella[i];
+      	auto pb_list = ints_mid.pb[i];
+      	auto cellb_list = ints_mid.cellb[i];
+      	auto ft_pair = ints_mid.ft_pair[i];
+      	
+      	for(int j = 0; j < ints.nb_particles; j++)
+      	{
+      		auto pa2 = ints.pa[j];
+      		auto cella2 = ints.cella[j];
+      		auto pb2_list = ints.pb[j];
+      		auto cellb2_list = ints.cellb[j];
+      		auto& ft_pair2 = ints.ft_pair[j];
+      		
+      		if(pa == pa2 && cella == cella2)
+      		{
+      			for(int z = 0; z < pb_list.size(); z++)
+      			{	
+      				int pb = pb_list[z];
+      				int cellb = cellb_list[z];
+      				
+      				for(int z2 = 0; z2 < pb2_list.size(); z2++)
+      				{
+      					int pb2 = pb2_list[z2];
+      					int cellb2 = cellb2_list[z2]; 
+      					if(pb == pb2 && cellb == cellb2)
+      					{
+      						ft_pair2[z2] = ft_pair[z];
+      						printf("FRICTION: (%f, %f, %f)\n", ints.ft_pair[j][z2].x, ints.ft_pair[j][z2].y, ints.ft_pair[j][z2].z);
+      					}
+      				}
+      			} 
       		}
       	}
       }
