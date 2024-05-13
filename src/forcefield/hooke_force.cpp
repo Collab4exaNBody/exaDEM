@@ -90,14 +90,21 @@ namespace exaDEM
 				const double ry_nbh = cells[cell_b][field::ry][p_b];
 				const double rz_nbh = cells[cell_b][field::rz][p_b];
 				
-				/*const double dr2x = rx_nbh - rx;
+				//Vec3d p1 = {rx, ry, rz};
+				//Vec3d p1_transform = xform * p1;
+				
+				//Vec3d p2 = {rx_nbh, ry_nbh, rz_nbh};
+				//Vec3d p2_transform = xform * p2;
+				
+				const double dr2x = rx_nbh - rx;
 				const double dr2y = ry_nbh - ry;
 				const double dr2z = rz_nbh - rz;
 				Vec3d dr2 = {dr2x, dr2y, dr2z};
 				Vec3d dr_transform = xform * dr2;
-				double drx = dr_transform.x;
-				double dry = dr_transform.y;
-				double drz = dr_transform.z;*/
+				//Vec3d dr_transform = p2_transform - p1_transform;
+				//double drx = dr_transform.x;
+				//double dry = dr_transform.y;
+				//double drz = dr_transform.z;
 				
 				const double vx_nbh = cells[cell_b][field::vx][p_b];
 				const double vy_nbh = cells[cell_b][field::vy][p_b];
@@ -153,7 +160,7 @@ namespace exaDEM
 {
 	using namespace exanb;
 	
-	/**template< class GridT > __global__ void HookeForceGPU(GridT* cells, Interactions_PP I, HookeParams hp, double dt, Mat3d xform, int size)
+	/*template< class GridT > __global__ void HookeForceGPU(GridT* cells, Interactions_PP I, HookeParams hp, double dt, Mat3d xform, int size)
 	{
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		if(idx < size)
@@ -270,6 +277,8 @@ namespace exaDEM
 							// Operator execution
 							inline void execute () override final
 							{
+								//printf("HOOKE_FORCE\n");
+								
 								assert( chunk_neighbors->number_of_cells() == grid->number_of_cells() );
 								
 								Interactions_PP& ints= *interactions_PP;//HOOKE_FORCE_GPU
@@ -362,11 +371,16 @@ namespace exaDEM
 									Vec3d vrot = cells[cell][field::vrot][p];
 									double& homothety = cells[cell][field::homothety][p];
 									for(int j= 0; j < pb.size(); j++){
+										//printf("I: %d, J: %d\n", i, j);
 										int p_nbh = pb[j];
+										//printf("ICI\n");
 										int cell_nbh = cellb[j];
+										//printf("ICI2\n");
 										//Vec3d& ft = ints.ft_pair[i][j];
 										Vec3d& ft = ints.ft_pair[i][j];
+										//printf("ICI3\n");
 										double rx_nbh = cells[cell_nbh][field::rx][p_nbh];
+										//printf("ICI4\n");
 										double ry_nbh = cells[cell_nbh][field::ry][p_nbh];
 										double rz_nbh = cells[cell_nbh][field::rz][p_nbh]; 	
 										double vx_nbh = cells[cell_nbh][field::vx][p_nbh];
@@ -375,13 +389,10 @@ namespace exaDEM
 										double mass_nbh = cells[cell_nbh][field::mass][p_nbh];
 										double radius_nbh = cells[cell_nbh][field::radius][p_nbh];
 										Vec3d vrot_nbh = cells[cell_nbh][field::vrot][p_nbh];
+										
 										double fx_nbh(0.0), fy_nbh(0.0), fz_nbh(0.0);
 										Vec3d mom_nbh = {0,0,0};
-										double dr2x = rx_nbh - rx;
-										double dr2y = ry_nbh - ry;
-										double dr2z = rz_nbh - rz;
-										Vec3d dr2 = {dr2x, dr2y, dr2z};
-										Vec3d dr = xform * dr2; 
+										Vec3d dr = xform * Vec3d{rx_nbh - rx, ry_nbh - ry, rz_nbh - rz};
 										exaDEM::compute_hooke_force(
 											hp.dncut, dt2, hp.m_kn, hp.m_kt, hp.m_kr,
 											hp.m_fc, hp.m_mu, hp.m_damp_rate,
@@ -400,9 +411,8 @@ namespace exaDEM
 											fx_nbh, fy_nbh, fz_nbh,
 											mom_nbh, vrot_nbh
 											);
-										Vec3d ft2 = xform * ft;
-										homothety += ft2.x * ft2.x + ft2.y * ft2.y + ft2.z * ft2.z;
-
+										homothety += ft.x * ft.x + ft.y * ft.y + ft.z * ft.z;
+										//printf("FIN I:%d, J:%d\n", i, j);
 									}
 									
 									//cells[cell][field::fx][p]= fx;

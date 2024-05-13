@@ -94,8 +94,10 @@ namespace exaDEM
 
     inline void execute () override final
     {
-    	//printf("CHUNK START\n");
+    	printf("CHUNK START\n");
     	std::vector< std::vector< std::vector< std::pair<int,int>>>> cell_particles_nbh;//HOOKE_FORCE_GPU
+    	std::vector< std::vector<int>> id_cell_particles_nbh;//HOOKE_FORCE_GPU
+    	std::vector< std::vector<std::vector <int>>> id2_cell_particles_nbh;//HOOKE_FORCE_GPU
     	
     	//HOOKE_FORCE_GPU
     	Interactions_PP& ints= *interactions_PP;
@@ -131,91 +133,40 @@ namespace exaDEM
       if( ! domain->xform_is_identity() )
       {
         LinearXForm xform = { domain->xform() };
-        chunk_neighbors_execute2(ldbg,*chunk_neighbors,*grid,*amr,*amr_grid_pairs,*config,*chunk_neighbors_scratch,cs,cs_log2,*nbh_dist_lab, xform, gpu_enabled, no_z_order, cell_particles_nbh, nbh_filter );
+        chunk_neighbors_execute2(ldbg,*chunk_neighbors,*grid,*amr,*amr_grid_pairs,*config,*chunk_neighbors_scratch,cs,cs_log2,*nbh_dist_lab, xform, gpu_enabled, no_z_order, cell_particles_nbh, id_cell_particles_nbh, id2_cell_particles_nbh, nbh_filter );
       }
       else
       {
         NullXForm xform = { };
-        chunk_neighbors_execute2(ldbg,*chunk_neighbors,*grid,*amr,*amr_grid_pairs,*config,*chunk_neighbors_scratch,cs,cs_log2,*nbh_dist_lab, xform, gpu_enabled, no_z_order, cell_particles_nbh , nbh_filter);
+        chunk_neighbors_execute2(ldbg,*chunk_neighbors,*grid,*amr,*amr_grid_pairs,*config,*chunk_neighbors_scratch,cs,cs_log2,*nbh_dist_lab, xform, gpu_enabled, no_z_order, cell_particles_nbh , id_cell_particles_nbh, id2_cell_particles_nbh, nbh_filter );
       }
-      
-      //TEST NBH LIST
-      /**const size_t n_cells = grid->number_of_cells(); // nbh.size();
-      printf("NOMBRE DE CELLULES: %d\n\n\n", n_cells);
-      for(int cell_a=0; cell_a < cell_particles_nbh.size(); cell_a++){
-      	if(cell_particles_nbh[cell_a].size()>0) printf("CELLULE: %d\n", cell_a);
-      	for(int p_a=0; p_a < cell_particles_nbh[cell_a].size(); p_a++){
-      		double rx = cells[cell_a][field::rx][p_a];
-		double ry = cells[cell_a][field::ry][p_a];
-		double rz = cells[cell_a][field::rz][p_a];
-      		printf("   PARTICULE(%f, %f, %f):\n", rx, ry, rz); 
-      		for(int nbh=0; nbh < cell_particles_nbh[cell_a][p_a].size(); nbh++){
-      			std::pair pair = cell_particles_nbh[cell_a][p_a][nbh];
-      			double rxb = cells[pair.second][field::rx][pair.first];
-			double ryb = cells[pair.second][field::ry][pair.first];
-			double rzb = cells[pair.second][field::rz][pair.first];
-      			printf("      NBH%d(%f, %f, %f)   ", nbh, rxb, ryb, rzb);
-      		}
-      		printf("\n");
-      	}
-      }
-      getchar();		 	
-      printf("\n\n\n\n\n");*/		  
-      //TEST NBH LIST
-      
       
       //HOOKE_FORCE_GPU
+      //#pragma omp parallel for
       for(int i= 0; i < cell_particles_nbh.size(); i++){
       	int cell= i;
+      	//printf("CELLI: %d\n", cell);
       	for(int j= 0; j < cell_particles_nbh[i].size(); j++){
       		int particle= j;
+      		//printf("    PARTICLE: %d\n", particle);
+      		auto ida = id_cell_particles_nbh[i][j];
       		std::vector< std::pair<int, int>> nbh= cell_particles_nbh[i][j];
+      		std::vector<int> idb = id2_cell_particles_nbh[i][j];
       		if(nbh.size() > 0){
-      			ints.add_particle(particle, cell, nbh);
+      			ints.add_particle(particle, cell, nbh, ida, idb);
       		}
       	}
       }
       
-      for(int i = 0; i < ints_mid.nb_particles; i++)
-      {
-      	int pa = ints_mid.pa[i];
-      	int cella = ints_mid.cella[i];
-      	auto pb_list = ints_mid.pb[i];
-      	auto cellb_list = ints_mid.cellb[i];
-      	auto ft_pair = ints_mid.ft_pair[i];
-      	
-      	for(int j = 0; j < ints.nb_particles; j++)
-      	{
-      		auto pa2 = ints.pa[j];
-      		auto cella2 = ints.cella[j];
-      		auto pb2_list = ints.pb[j];
-      		auto cellb2_list = ints.cellb[j];
-      		auto& ft_pair2 = ints.ft_pair[j];
-      		
-      		if(pa == pa2 && cella == cella2)
-      		{
-      			for(int z = 0; z < pb_list.size(); z++)
-      			{	
-      				int pb = pb_list[z];
-      				int cellb = cellb_list[z];
-      				
-      				for(int z2 = 0; z2 < pb2_list.size(); z2++)
-      				{
-      					int pb2 = pb2_list[z2];
-      					int cellb2 = cellb2_list[z2]; 
-      					if(pb == pb2 && cellb == cellb2)
-      					{
-      						ft_pair2[z2] = ft_pair[z];
-      						printf("FRICTION: (%f, %f, %f)\n", ints.ft_pair[j][z2].x, ints.ft_pair[j][z2].y, ints.ft_pair[j][z2].z);
-      					}
-      				}
-      			} 
-      		}
-      	}
-      }
+      
+      //TRI DES IDENTIFIANTS DES INTÉRACTIONS
+      ints.quickSort();
+      
+      ints.init_friction(ints_mid);
+      
       //HOOKE_FORCE_GPU
       
-      //printf("CHUNK FINISH\n");
+      printf("CHUNK FINISH\n");
       			 
     }
 
