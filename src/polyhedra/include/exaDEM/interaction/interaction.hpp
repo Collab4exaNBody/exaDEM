@@ -34,8 +34,8 @@ namespace exaDEM
 		exanb::Vec3d moment = {0,0,0};   /**< Moment vector associated with the interaction. */
 		uint64_t id_i;         /**< Id of the first particle */
 		uint64_t id_j;         /**< Id of the second particle */
-		size_t cell_i;         /**< Index of the cell of the first particle involved in the interaction. */
-		size_t cell_j;         /**< Index of the cell of the second particle involved in the interaction. */
+		uint32_t cell_i;         /**< Index of the cell of the first particle involved in the interaction. */
+		uint32_t cell_j;         /**< Index of the cell of the second particle involved in the interaction. */
 		uint16_t p_i;            /**< Index of the particle within its cell for the first particle involved in the interaction. */
 		uint16_t p_j;            /**< Index of the particle within its cell for the second particle involved in the interaction. */
 		uint16_t sub_i;          /**< Sub-particle index for the first particle involved in the interaction. */

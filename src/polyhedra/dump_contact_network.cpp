@@ -103,7 +103,7 @@ namespace exaDEM
 					auto* data_ptr = storage.m_data.data();
 					for (auto& it : info)
 					{
-						manager ( data_ptr, std::get<0>(it), std::get<1>(it)); // ptr, offset, size
+						manager ( data_ptr, it.offset, it.size); // ptr, offset, size
 					}
 				}
 

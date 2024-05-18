@@ -511,7 +511,8 @@ namespace exaDEM
       cell_friction = std::move( pf );
       cell_friction.shrink_to_fit();
     }
-         
+    
+		inline bool check() {return true;} // could add some checks here 
   };
 
   inline void ParticleNeighborFrictionCellMoveBuffer::copy_incoming_particle( const ParticleNeighborFrictionGridMoveBuffer& opt_buffer, size_t cell_i, size_t p_i)
@@ -705,6 +706,12 @@ namespace exaDEM
 			m_cell_friction.clear();
 			m_cell_friction.resize( dims.i * dims.j * dims.k );
 		}
+
+    bool check()
+    {
+      // add some check here, this function is called multiple times (assert)
+			return true; 
+    }
 
 	};
 

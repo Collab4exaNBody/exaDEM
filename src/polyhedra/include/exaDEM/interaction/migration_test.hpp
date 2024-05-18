@@ -19,6 +19,7 @@ under the License.
 #pragma once
 
 #include <cassert>
+#include <exanb/extra_storage/extra_storage_info.hpp>
 
 namespace exaDEM
 {
@@ -27,7 +28,7 @@ namespace exaDEM
 	namespace interaction_test
 	{
 		using UIntType = uint64_t;
-		using InfoType = std::tuple<UIntType,UIntType,UIntType>;
+    using InfoType = ExtraStorageInfo; 
 		inline bool check_extra_interaction_storage_consistency(int n_particles, InfoType* info_ptr, Interaction* data_ptr)
 		{
 			for( int p = 0 ; p < n_particles ; p++ )
