@@ -122,7 +122,8 @@ using namespace exanb;
 					pos.y = cell.get_center(s, 1);
 					pos.z = cell.get_center(s, 2);
 					auto id = cell.get_id(s);
-					pt = ParticleTupleIO( pos.x, pos.y, pos.z, id, *type );
+					std::cout << pos << std::endl;
+					pt = ParticleTupleIO( pos.x + b.bmin.x, pos.y + b.bmin.y, pos.z + b.bmin.z, id, *type );
 					particle_data.push_back(pt);
 				}
 			}
