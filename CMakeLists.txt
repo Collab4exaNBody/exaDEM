@@ -42,11 +42,13 @@ add_compile_options(-DEXADEM_MAX_VERTICES=${EXADEM_MAX_VERTICES})
 # === ExaDEM Package Option          ===
 # ======================================
 
-option(USE_RSA "Add RSA Package" ON)
+option(USE_RSA "Add RSA Package" OFF)
 
 if(USE_RSA)
 	find_package(rsa_mpi REQUIRED)
-endif(
+	message( STATUS "rsa_mpi is used, header location: ${RSA_MPI_INCLUDE_DIRS}")
+  include_directories(${RSA_MPI_INCLUDE_DIRS})
+endif(USE_RSA)
 
 # ======================================
 # === exaNBody application framework ===
