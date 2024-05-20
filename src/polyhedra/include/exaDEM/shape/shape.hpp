@@ -1,3 +1,21 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 #pragma once
 #include <fstream>  
 #include <vector>
@@ -97,25 +115,29 @@ namespace exaDEM
 		ONIKA_HOST_DEVICE_FUNC
 			inline int get_number_of_faces()
 			{
-				return m_faces[0];
+        const int * __restrict__ faces = onika::cuda::vector_data( m_faces );
+				return faces[0];
 			}
 
 		ONIKA_HOST_DEVICE_FUNC
 			inline int get_number_of_faces() const
 			{
-				return m_faces[0];
+        const int * __restrict__ faces = onika::cuda::vector_data( m_faces );
+				return faces[0];
 			}
 
 		ONIKA_HOST_DEVICE_FUNC
 			inline exanb::Vec3d& get_vertex(const int i)
 			{
-				return m_vertices[i];
+        Vec3d * __restrict__ vertices = onika::cuda::vector_data( m_vertices );
+				return vertices[i];
 			}
 
 		ONIKA_HOST_DEVICE_FUNC
 			inline const exanb::Vec3d& get_vertex(const int i) const
 			{
-				return m_vertices[i];
+        const Vec3d * __restrict__ vertices = onika::cuda::vector_data( m_vertices );
+				return vertices[i];
 			}
 
 		ONIKA_HOST_DEVICE_FUNC
@@ -141,13 +163,22 @@ namespace exaDEM
 		ONIKA_HOST_DEVICE_FUNC
 			inline std::pair<int,int> get_edge(const int i) const
 			{
-				return {m_edges[2*i], m_edges[2*i+1]};
+        const int * __restrict__ edges = onika::cuda::vector_data( m_edges );
+				return { edges[2*i], edges[2*i+1]};
 			}
 
 		ONIKA_HOST_DEVICE_FUNC
-			inline int* get_faces() const
+			inline int * get_faces() const
 			{
-				return (int*)m_faces.data();
+        const int * faces = onika::cuda::vector_data( m_faces );
+				return (int*) faces; // just get a copy of the pointer
+			}
+
+		ONIKA_HOST_DEVICE_FUNC
+			inline int * get_faces()
+			{
+        int * faces = onika::cuda::vector_data( m_faces );
+				return faces;
 			}
 
 		// returns the pointor on data and the number of vertex in the faces

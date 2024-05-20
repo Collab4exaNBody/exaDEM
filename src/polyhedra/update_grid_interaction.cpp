@@ -1,3 +1,21 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 #include <memory>
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
@@ -10,6 +28,7 @@
 
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/drivers.h>
 #include <exaDEM/shape/shapes.hpp>
@@ -21,7 +40,7 @@
 namespace exaDEM
 {
   using namespace exanb;
-  using VertexArray = ::onika::oarray_t<::exanb::Vec3d, 8>;
+  using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
 
 
   template<typename GridT
@@ -46,152 +65,142 @@ namespace exaDEM
       inline std::string documentation() const override final
       {
         return R"EOF(
+                      This function builds the list of interactions per particle (polyhedron). Interactions are between two particles or a particle and a driver. In this function, frictions and moments are updated if the interactions are still actived. Note that, a list of non-empty cells is built during this function.
                 )EOF";
       }
 
-      void add_driver_interaction( Stl_mesh& mesh, size_t cell_a, std::vector<Interaction>& driver_data, std::vector<size_t>& driver_count,
-          Interaction& item, const size_t n_particles, const double rVerlet,
-          const uint8_t* __restrict__ type, 
-          const uint64_t* __restrict__ id, 
-          const double* __restrict__ rx,  
-          const double* __restrict__ ry,  
-          const double* __restrict__ rz,  
-          const VertexArray* __restrict__ vertices, 
-          const exanb::Quaternion* __restrict__ orient, 
-          shapes& shps)
-      {
-        assert ( cell_a < mesh.grid_indexes.size() );
-        auto& list = mesh.grid_indexes[cell_a];
-        const size_t stl_nv = list.vertices.size();
-        const size_t stl_ne = list.edges.size();
-        const size_t stl_nf = list.faces.size();
-        auto& stl_shp = mesh.shp;
-        OBB* __restrict__ stl_obb_vertices = onika::cuda::vector_data( stl_shp.m_obb_vertices );
-        OBB* __restrict__ stl_obb_edges = onika::cuda::vector_data( stl_shp.m_obb_edges );
-        OBB* __restrict__ stl_obb_faces = onika::cuda::vector_data( stl_shp.m_obb_faces );
-
-        if( stl_nv == 0 && stl_ne == 0 && stl_nf == 0) return;
-
-        for( size_t p = 0 ; p < n_particles ; p++ )
+      template<typename Func>
+        void add_driver_interaction( Stl_mesh& mesh, size_t cell_a, Func& add_contact,
+            Interaction& item, const size_t n_particles, const double rVerlet,
+            const uint32_t* __restrict__ type, 
+            const uint64_t* __restrict__ id, 
+            const double* __restrict__ rx,  
+            const double* __restrict__ ry,  
+            const double* __restrict__ rz,  
+            const VertexArray* __restrict__ vertices, 
+            const exanb::Quaternion* __restrict__ orient, 
+            shapes& shps)
         {
-          Vec3d r = {rx[p], ry[p], rz[p]}; // position
-          item.p_i = p;  
-          item.id_i = id[p];
-          auto ti = type[p];
-          const shape* shpi = shps[ti];
-          const size_t nv = shpi->get_number_of_vertices();
-          const size_t ne = shpi->get_number_of_edges();
-          const size_t nf = shpi->get_number_of_faces();
+          assert ( cell_a < mesh.grid_indexes.size() );
+          auto& list = mesh.grid_indexes[cell_a];
+          const size_t stl_nv = list.vertices.size();
+          const size_t stl_ne = list.edges.size();
+          const size_t stl_nf = list.faces.size();
+          auto& stl_shp = mesh.shp;
+          OBB* __restrict__ stl_obb_vertices = onika::cuda::vector_data( stl_shp.m_obb_vertices );
+          OBB* __restrict__ stl_obb_edges = onika::cuda::vector_data( stl_shp.m_obb_edges );
+          OBB* __restrict__ stl_obb_faces = onika::cuda::vector_data( stl_shp.m_obb_faces );
 
-          for( size_t i = 0 ; i < nv ; i++ )
+          if( stl_nv == 0 && stl_ne == 0 && stl_nf == 0) return;
+
+          for( size_t p = 0 ; p < n_particles ; p++ )
           {
-            vec3r v = conv_to_vec3r(vertices[p][i]);
-            // vertex - vertex
-            item.type = 7;
-            item.sub_i = i;
-            for( size_t j = 0 ; j < stl_nv ; j++ )
+            Vec3d r = {rx[p], ry[p], rz[p]}; // position
+            item.p_i = p;  
+            item.id_i = id[p];
+            auto ti = type[p];
+            const shape* shpi = shps[ti];
+            const size_t nv = shpi->get_number_of_vertices();
+            const size_t ne = shpi->get_number_of_edges();
+            const size_t nf = shpi->get_number_of_faces();
+
+            for( size_t i = 0 ; i < nv ; i++ )
             {
-              size_t idx = list.vertices[j];
-              OBB& obb = stl_obb_vertices[idx];
-              obb.enlarge( shpi->m_radius );
-              if ( obb.intersect( v ))
+              vec3r v = conv_to_vec3r(vertices[p][i]);
+              // vertex - vertex
+              item.type = 7;
+              item.sub_i = i;
+              for( size_t j = 0 ; j < stl_nv ; j++ )
               {
-                driver_count[p]++;
-                item.sub_j = idx;
-                driver_data.push_back(item);
+                size_t idx = list.vertices[j];
+                OBB& obb = stl_obb_vertices[idx];
+                obb.enlarge( shpi->m_radius );
+                if ( obb.intersect( v ))
+                {
+                  add_contact(p, item, i, idx);
+                }
+                obb.enlarge( -shpi->m_radius );
               }
-              obb.enlarge( -shpi->m_radius );
+              // vertex - edge
+              item.type = 8;
+              for( size_t j = 0 ; j < stl_ne ; j++ )
+              {
+                size_t idx = list.edges[j];
+                OBB& obb = stl_obb_edges[idx];
+                obb.enlarge( shpi->m_radius );
+                if ( obb.intersect(v) )
+                {
+                  add_contact(p, item, i, idx);
+                }
+                obb.enlarge( -shpi->m_radius );
+              }
+              // vertex - face
+              item.type = 9;
+              for( size_t j = 0 ; j < stl_nf ; j++ )
+              {
+                size_t idx = list.faces[j];
+                OBB& obb = stl_obb_faces[idx];
+                obb.enlarge( shpi->m_radius );
+                if ( obb.intersect(v) )
+                {
+                  add_contact(p, item, i, idx);
+                }
+                obb.enlarge( -shpi->m_radius );
+              }
             }
-            // vertex - edge
-            item.type = 8;
-            for( size_t j = 0 ; j < stl_ne ; j++ )
+
+            for( size_t i = 0 ; i < ne ; i++ )
             {
-              size_t idx = list.edges[j];
-              OBB& obb = stl_obb_edges[idx];
-              obb.enlarge( shpi->m_radius );
-              if ( obb.intersect(v) )
+              item.type = 10;
+              item.sub_i = i;
+              OBB obb_edge_i = shpi->get_obb_edge(r, i, orient[i]);
+              // edge - edge
+              for(size_t j = 0; j < stl_ne ; j++)
               {
-                driver_count[p]++;
-                item.sub_j = idx;
-                driver_data.push_back(item);
+                const size_t idx = list.edges[j];
+                OBB& stl_obb_edge = stl_obb_edges[idx];
+                if( obb_edge_i.intersect(stl_obb_edge))
+                {
+                  add_contact(p, item, i, idx);
+                }
               }
-              obb.enlarge( -shpi->m_radius );
+
+              // edge - vertex
+              item.type = 11;
+              for(size_t j = 0; j < stl_nv ; j++)
+              {
+                const size_t idx = list.vertices[j];
+                OBB& obb = stl_obb_vertices[idx];
+                if( obb_edge_i.intersect(obb))
+                {
+                  add_contact(p, item, i, idx);
+                }
+              }
             }
-            // vertex - face
-            item.type = 9;
-            for( size_t j = 0 ; j < stl_nf ; j++ )
+
+            // face vertex
+            item.type = 12;
+            for( size_t i = 0 ; i < nf ; i++ )
             {
-              size_t idx = list.faces[j];
-              OBB& obb = stl_obb_faces[idx];
-              obb.enlarge( shpi->m_radius );
-              if ( obb.intersect(v) )
+              item.sub_i = i;
+              OBB obb_face_i = shpi->get_obb_face(r, i, orient[i]);
+              for(size_t j = 0; j < stl_nv ; j++)
               {
-                driver_count[p]++;
-                item.sub_j = idx;
-                driver_data.push_back(item);
+                size_t idx = list.vertices[j];
+                OBB& obb = stl_obb_vertices[idx];
+                if( obb_face_i.intersect(obb))
+                {
+                  add_contact(p, item, i, idx);
+                }
               }
-              obb.enlarge( -shpi->m_radius );
-            }
+            }  
           }
-
-          for( size_t i = 0 ; i < ne ; i++ )
-          {
-            item.type = 10;
-            item.sub_i = i;
-            OBB obb_edge_i = shpi->get_obb_edge(r, i, orient[i]);
-            // edge - edge
-            for(size_t j = 0; j < stl_ne ; j++)
-            {
-              const size_t idx = list.edges[j];
-              OBB& stl_obb_edge = stl_obb_edges[idx];
-              if( obb_edge_i.intersect(stl_obb_edge))
-              {
-                driver_count[p]++;
-                item.sub_j = idx;
-                driver_data.push_back(item);
-              }
-            }
-
-            // edge - vertex
-            item.type = 11;
-            for(size_t j = 0; j < stl_nv ; j++)
-            {
-              const size_t idx = list.vertices[j];
-              OBB& obb = stl_obb_vertices[idx];
-              if( obb_edge_i.intersect(obb))
-              {
-                driver_count[p]++;
-                item.sub_j = idx;
-                driver_data.push_back(item);
-              }
-            }
-          }
-
-          // face vertex
-          item.type = 12;
-          for( size_t i = 0 ; i < nf ; i++ )
-          {
-            item.sub_i = i;
-            OBB obb_face_i = shpi->get_obb_face(r, i, orient[i]);
-            for(size_t j = 0; j < stl_nv ; j++)
-            {
-              size_t idx = list.vertices[j];
-              OBB& obb = stl_obb_vertices[idx];
-              if( obb_face_i.intersect(obb))
-              {
-                driver_count[p]++;
-                item.sub_j = idx;
-                driver_data.push_back(item);
-              }
-            }
-          }  
         }
-      }
 
-      template<typename D>
-        void add_driver_interaction( D& driver, std::vector<Interaction>& driver_data, std::vector<size_t>& driver_count,
+      template<typename D, typename Func>
+        void add_driver_interaction( D& driver, Func& add_contact,
             Interaction& item, const size_t n_particles, const double rVerlet, 
-            const uint8_t* __restrict__ type, const uint64_t* __restrict__ id, const VertexArray* __restrict__ vertices, shapes& shps)
+            const uint32_t* __restrict__ type, const uint64_t* __restrict__ id, const VertexArray* __restrict__ vertices, shapes& shps)
         {
           for(size_t p = 0 ; p < n_particles ; p++)
           {
@@ -207,10 +216,9 @@ namespace exaDEM
               {
                 item.p_i = p;  
                 item.id_i = id[p];
-                driver_count[p]++;
-                item.sub_i = sub;
-                item.sub_j = -1;
-                driver_data.push_back(item);
+                //item.sub_i = sub;
+                //item.sub_j = -1;
+                add_contact(p, item, sub, -1);
               }
             }    
           }
@@ -224,6 +232,8 @@ namespace exaDEM
         const IJK dims = g.dimension();
         const int gl = g.ghost_layers();
         auto & interactions = ges->m_data;
+        auto & shps = *shapes_collection;
+        double rVerlet = *rcut_inc;
 
         // if grid structure (dimensions) changed, we invalidate thie whole data
         if( interactions.size() != n_cells )
@@ -241,14 +251,10 @@ namespace exaDEM
           return;
         }
 
-        auto & shps = *shapes_collection;
-        double rVerlet = *rcut_inc;
-
-
         // use OBB for vertex/edge and vertex/faces
         constexpr bool skip_obb = false;
 
-
+        // build the list of non-empty cells, use later to avoid useless computations
         auto& indexes = *idxs;
         indexes.clear();
         GRID_FOR_BEGIN(dims-2*gl,_,loc)
@@ -263,12 +269,9 @@ namespace exaDEM
 
 #     pragma omp parallel
         {
+          // local storage per thread
           Interaction item;
-          std::vector<exaDEM::Interaction> local_history;
-          std::vector<exaDEM::Interaction> driver_data;
-          std::vector<exaDEM::Interaction> poly_data;
-          std::vector<size_t> driver_count;
-          std::vector<size_t> poly_count;
+          interaction_manager manager;
 #pragma omp for schedule(dynamic)
           for(size_t ci = 0 ; ci < indexes.size() ; ci++)
           {
@@ -287,18 +290,18 @@ namespace exaDEM
 
             if(n_particles == 0) continue;
 
-            // extract history before reset it
+            // Extract history before reset it
             const size_t data_size = storage.m_data.size();
-
             Interaction* __restrict__ data_ptr  = storage.m_data.data();
-            extract_history(local_history, data_ptr, data_size);
-            std::sort ( local_history.begin(), local_history.end() );
+            extract_history(manager.hist, data_ptr, data_size);
+            std::sort ( manager.hist.begin(), manager.hist.end() );
+            manager.reset(n_particles);
 
-            driver_data.clear();
-            poly_data.clear();
-            driver_count.assign(n_particles, 0);
-            poly_count.assign(n_particles, 0);
+						// Reset storage, interaction history was stored in the manager
+            storage.initialize(n_particles);
+            auto& info_particles = storage.m_info;
 
+            // Get data pointers 
             const uint64_t* __restrict__ id_a = cells[cell_a][ field::id ]; ONIKA_ASSUME_ALIGNED(id_a);
             const auto* __restrict__ rx_a = cells[cell_a][ field::rx ]; ONIKA_ASSUME_ALIGNED(rx_a);
             const auto* __restrict__ ry_a = cells[cell_a][ field::ry ]; ONIKA_ASSUME_ALIGNED(ry_a);
@@ -307,32 +310,28 @@ namespace exaDEM
             const auto* __restrict__ orient_a = cells[cell_a][ field::orient ]; ONIKA_ASSUME_ALIGNED(orient_a);
             const auto* __restrict__ vertices_a = cells[cell_a][ field::vertices ]; ONIKA_ASSUME_ALIGNED(vertices_a);
 
-            storage.initialize(n_particles);
-            auto& info_particles = storage.m_info;
-
-            auto add_contact = []( std::vector<Interaction>& list, Interaction& item, int sub_i, int sub_j) -> void
+						// Define a function to add a new interaction if a contact is possible.
+            auto add_contact = [&manager](size_t p, Interaction& item, int sub_i, int sub_j) -> void
             {
               item.sub_i = sub_i;
               item.sub_j = sub_j;
-              list.push_back(item);
+              manager.add_item(p, item);
             };
 
-            auto incr_particle_interactions = [] (std::vector<size_t>& count, int p_a)
-            {
-              count[p_a]++;
-            };
-
-            // get particle id
+            // Fill particle ids in the interaction storage
             for( size_t it = 0 ; it < n_particles ; it++)
             {
-              std::get<2> (info_particles[it]) = id_a[it];
+              info_particles[it].pid = id_a[it];
             }
 
-            // First drivers
+            // First, interaction between a polyhedron and a driver
             if ( drivers.has_value() )
             {
               auto& drvs = *drivers;
               item.cell_i = cell_a;
+							// By default, if the interaction is between a particle and a driver
+              // Data about the particle j is set to -1
+              // Except for id_j that contains the driver id
               item.id_j = -1;
               item.cell_j = -1;
               item.p_j = -1;
@@ -345,7 +344,7 @@ namespace exaDEM
                 {
                   item.type = 4; 
                   Cylinder& driver = std::get<Cylinder>(drvs.data(drvs_idx)) ;
-                  add_driver_interaction( driver, driver_data, driver_count,
+                  add_driver_interaction( driver, add_contact,
                       item, n_particles, rVerlet, 
                       t_a, id_a, vertices_a, shps);
                 }
@@ -353,7 +352,7 @@ namespace exaDEM
                 {
                   item.type = 5; 
                   Surface& driver =  std::get<Surface>(drvs.data(drvs_idx)) ; 
-                  add_driver_interaction( driver, driver_data, driver_count,
+                  add_driver_interaction( driver, add_contact,
                       item, n_particles, rVerlet, 
                       t_a, id_a, vertices_a, shps);
                 }
@@ -361,7 +360,7 @@ namespace exaDEM
                 {
                   item.type = 6; 
                   Ball& driver =  std::get<BALL>(drvs.data(drvs_idx)) ; 
-                  add_driver_interaction( driver, driver_data, driver_count,
+                  add_driver_interaction( driver, add_contact,
                       item, n_particles, rVerlet, 
                       t_a, id_a, vertices_a, shps);
                 }
@@ -369,16 +368,16 @@ namespace exaDEM
                 {
                   Stl_mesh& driver =  std::get<STL_MESH>(drvs.data(drvs_idx)) ; 
                   //driver.grid_indexes_summary();
-                  add_driver_interaction ( driver, cell_a, driver_data, driver_count,
+                  add_driver_interaction ( driver, cell_a, add_contact,
                       item, n_particles, rVerlet,
                       t_a, id_a, rx_a, ry_a, rz_a, vertices_a, orient_a, shps);
                 }
               }
             }
 
-            // Second polyhedra          
+            // Second, we add interactions between two polyhedra.   
             apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-                [&g , cells, &info_particles, cell_a, &poly_data, &poly_count, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, vertices_a, &add_contact, &incr_particle_interactions]
+                [&g , cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, vertices_a, &add_contact]
                 ( int p_a, size_t cell_b, unsigned int p_b , size_t p_nbh_index ){
                 // default value of the interaction studied (A or i -> B or j)
                 const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -387,7 +386,8 @@ namespace exaDEM
                 if ( !g.is_ghost_cell(cell_b) ) return;
                 }
 
-                const uint8_t type_nbh = cells[cell_b][field::type][p_b];
+                // Get particle pointers for the particle b.
+                const uint32_t type_nbh = cells[cell_b][field::type][p_b];
                 const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
                 const double rx_nbh = cells[cell_b][field::rx][p_b];
                 const double ry_nbh = cells[cell_b][field::ry][p_b];
@@ -397,6 +397,8 @@ namespace exaDEM
                 // prev
                 const shape* shp = shps[t_a[p_a]];
                 const shape* shp_nbh = shps[type_nbh];
+
+                // Eliminate if two polyhedra are two far away if there is not intersection between their OBBs.
                 OBB obb_i = shp->obb;
                 OBB obb_j = shp_nbh->obb;
                 const Quaternion& orient = orient_a[p_a];
@@ -451,11 +453,9 @@ namespace exaDEM
                     item.type = 0; // === Vertex - Vertex
                     for(int j = 0; j < nv_nbh ; j++)
                     {
-                      bool contact = exaDEM::filter_vertex_vertex(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh);
-                      if ( contact ) 
+                      if( exaDEM::filter_vertex_vertex(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh))
                       {
-                        incr_particle_interactions(poly_count, p_a);
-                        add_contact(poly_data, item, i, j);
+                        add_contact(p_a, item, i, j);
                       }
                     }
 
@@ -465,8 +465,7 @@ namespace exaDEM
                       bool contact = exaDEM::filter_vertex_edge <skip_obb> (obbvi, r_nbh, j, shp_nbh, orient_nbh);
                       if(contact) 
                       {
-                        incr_particle_interactions(poly_count, p_a);
-                        add_contact(poly_data, item, i, j);
+                        add_contact(p_a, item, i, j);
                       }
                     }
 
@@ -476,8 +475,7 @@ namespace exaDEM
                       bool contact = exaDEM::filter_vertex_face <skip_obb> (obbvi, r_nbh, j, shp_nbh, orient_nbh);
                       if(contact) 
                       {
-                        incr_particle_interactions(poly_count, p_a);
-                        add_contact(poly_data, item, i, j);
+                        add_contact(p_a, item, i, j);
                       }
                     }
                   }
@@ -495,13 +493,13 @@ namespace exaDEM
                       OBB obb_edge_j = shp_nbh->get_obb_edge(r_nbh, j, orient_nbh);
                       if( obb_edge_i.intersect(obb_edge_j)) 
                       {
-                        incr_particle_interactions(poly_count, p_a);
-                        add_contact(poly_data, item, i, j);
+                        add_contact(p_a, item, i, j);
                       }
                     }
                   }
                 }
 
+                // interaction of from particle j to particle i
                 item.cell_j = cell_a;
                 item.id_j = id_a[p_a];
                 item.p_j = p_a;
@@ -525,8 +523,7 @@ namespace exaDEM
                       bool contact = exaDEM::filter_vertex_edge <skip_obb> (obbvj, r, i, shp, orient);
                       if(contact) 
                       {
-                        incr_particle_interactions(poly_count, p_a);
-                        add_contact(poly_data, item, j, i);
+                        add_contact(p_a, item, j, i);
                       }
                     }
 
@@ -536,53 +533,36 @@ namespace exaDEM
                       bool contact = exaDEM::filter_vertex_face <skip_obb> (obbvj, r, i, shp, orient);
                       if(contact) 
                       {
-                        incr_particle_interactions(poly_count, p_a);
-                        add_contact(poly_data, item, j, i);
+                        add_contact(p_a, item, j, i);
                       }
                     }
                   }
                 }
                 });
 
-            //
-            update_friction_moment(driver_data, local_history);
-            update_friction_moment(poly_data, local_history);
+						manager.update_extra_storage <true> ( storage );
 
-            // build storage
-            size_t offset = 0 ;
-            size_t offset_driver = 0 ;
-            size_t offset_poly = 0 ;
-            storage.m_data.resize( poly_data.size () + driver_data.size() );
-            data_ptr = storage.m_data.data();
-            for(size_t p = 0 ; p < n_particles ; p++)
-            {
-              std::get<0> (info_particles[p]) = offset;
-              for(size_t it = 0 ; it < driver_count[p] ; it++ ) data_ptr[offset ++ ] = driver_data[offset_driver++];  
-              for(size_t it = 0 ; it < poly_count[p] ; it++ )   data_ptr[offset ++ ] =   poly_data[  offset_poly++];  
-              std::get<1> (info_particles[p]) = driver_count[p] + poly_count[p];
-            }
-            assert ( offset_driver == driver_data.size() );
-            assert ( offset_poly == poly_data.size() );
+						assert ( 
+								interaction_test::check_extra_interaction_storage_consistency( 
+									storage.number_of_particles(), 
+									storage.m_info.data(), 
+									storage.m_data.data() 
+									));
 
-            // add history, local history and local have to be sorted. local is sorted by construction.
-            assert ( 
-                interaction_test::check_extra_interaction_storage_consistency( 
-                  storage.number_of_particles(), 
-                  storage.m_info.data(), 
-                  storage.m_data.data() 
-                  ));
-          }
-          //    GRID_OMP_FOR_END
-        }
-      }
-    };
+						assert( migration_test::check_info_value ( storage.m_info.data(), storage.m_info.size(), 1e6 ) );
 
-  template<class GridT> using UpdateGridCellInteractionTmpl = UpdateGridCellInteraction<GridT>;
+					}
+					//    GRID_OMP_FOR_END
+				}
+			}
+		};
 
-  // === register factories ===  
-  CONSTRUCTOR_FUNCTION
-  {
-    OperatorNodeFactory::instance()->register_factory( "update_grid_interaction", make_grid_variant_operator< UpdateGridCellInteraction > );
-  }
+	template<class GridT> using UpdateGridCellInteractionTmpl = UpdateGridCellInteraction<GridT>;
+
+	// === register factories ===  
+	CONSTRUCTOR_FUNCTION
+	{
+		OperatorNodeFactory::instance()->register_factory( "update_grid_interaction", make_grid_variant_operator< UpdateGridCellInteraction > );
+	}
 }
 

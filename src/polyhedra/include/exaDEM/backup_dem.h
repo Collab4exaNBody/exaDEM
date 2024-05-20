@@ -1,3 +1,21 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 #pragma once
 
 #include <vector>
@@ -27,7 +45,7 @@ namespace exaDEM
 		const double m_threshold_sqr = 0.0;
 		const shapes& shps;
 
-		ONIKA_HOST_DEVICE_FUNC inline void operator () (unsigned long long int & count_over_dist2 , IJK cell_loc, size_t cell, size_t j, double rx, double ry, double rz , uint8_t type, const exanb::Quaternion& orientation, reduce_thread_local_t={} ) const
+		ONIKA_HOST_DEVICE_FUNC inline void operator () (unsigned long long int & count_over_dist2 , IJK cell_loc, size_t cell, size_t j, double rx, double ry, double rz , uint32_t type, const exanb::Quaternion& orientation, reduce_thread_local_t={} ) const
 		{
 			const double* __restrict__ rb = onika::cuda::vector_data( m_backup_data[cell] );
 			Quaternion old_orientation = {rb[j*7+3], rb[j*7+4], rb[j*7+5], rb[j*7+6]};

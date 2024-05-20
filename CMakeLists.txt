@@ -1,3 +1,19 @@
+# licensed to the apache software foundation (asf) under one
+# or more contributor license agreements.  see the notice file
+# distributed with this work for additional information
+# regarding copyright ownership.  the asf licenses this file
+# to you under the apache license, version 2.0 (the
+# "license"); you may not use this file except in compliance
+# with the license.  you may obtain a copy of the license at
+# 
+#   http://www.apache.org/licenses/license-2.0
+# 
+# unless required by applicable law or agreed to in writing,
+# software distributed under the license is distributed on an
+# "as is" basis, without warranties or conditions of any
+# kind, either express or implied.  see the license for the
+# specific language governing permissions and limitations
+# under the license.
 # ===============
 # === Project ===
 # ===============
@@ -13,6 +29,14 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+# ==============================================
+# === Set Some default values for polyhedra ====
+# ==============================================
+# These values have to be set by exaNBody
+set(EXADEM_MAX_VERTICES "8" CACHE STRING "Maximum number of vertices per polyhedron")
+message(STATUS "Maximum number of vertices per polyhedron: ${EXADEM_MAX_VERTICES}, default is 8 vertices.")
+add_compile_options(-DEXADEM_MAX_VERTICES=${EXADEM_MAX_VERTICES})
 
 # ======================================
 # === ExaDEM Package Option          ===
@@ -97,11 +121,11 @@ endif()
 # =======================================
 exaNBodyStartApplication()
 
+
 # ==========================================
 # === build application plugins and libs ===
 # ==========================================
 add_subdirectory(src)
-
 
 # =============================
 # === check exaDEM examples ===

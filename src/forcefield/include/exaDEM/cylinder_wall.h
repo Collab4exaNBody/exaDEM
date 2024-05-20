@@ -1,3 +1,21 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 #pragma once
 #include <exanb/core/basic_types.h>
 #include <exaDEM/common_compute_kernels.h>
@@ -25,8 +43,7 @@ struct CylinderWallFunctor
 			double a_particle_radius,
 			double& a_fx, double& a_fy, double& a_fz, 
 			const double a_mass,
-			Vec3d& a_mom,
-			Vec3d& a_ft) const
+			Vec3d& a_mom) const
 	{
 		Vec3d pos 	= Vec3d{a_rx, a_ry, a_rz} * m_axis;
 		Vec3d pos_proj 	= pos * m_axis;
@@ -38,7 +55,6 @@ struct CylinderWallFunctor
 		const double dn = m_radius - ( norm(dir) + a_particle_radius );
 		if(dn > 0.0) 
 		{
-			a_ft = {0.0,0.0,0.0};
 			return;
 		}
 
@@ -63,14 +79,11 @@ struct CylinderWallFunctor
 
 		// === compute tangential force
 		auto ft 		= exaDEM::compute_tangential_force(m_kt, m_dt, vn, dir_norm, total_vel);
-		//a_ft 			+= exaDEM::compute_tangential_force(m_kt, m_dt, vn, dir_norm, total_vel);
 		auto threshold_ft 	= exaDEM::compute_threshold_ft(m_mu, m_kn, dn);
 
 		exaDEM::fit_tangential_force(threshold_ft, ft);
-		//exaDEM::fit_tangential_force(threshold_ft, a_ft);
 
 		const auto f = (-1) *(fn + ft); 
-		//const auto f = (-1) *(fn + a_ft); 
 
 		// === update forces
 		a_fx += f.x ;

@@ -1,20 +1,27 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 #pragma once
 #include <exaDEM/shape/shapes.hpp>
 #include <cassert>
 
 namespace exaDEM
 {
-/*
-	bool adder(std::ifstream& stream, shape& item, std::string in)
-	{
-		switch (in)
-		{
-			case "name": 
-			default return false;
-		}
-	}
-*/
-
 	void add_shape_from_file_shp(shapes& sphs, const std::string file_name)
 	{
 		std::ifstream input( file_name.c_str() );
@@ -38,7 +45,6 @@ namespace exaDEM
 					{
 						input >> new_shape.m_name;
 					}
-
 
 					// === keys relative to the OBB
 					if(key == "obb.center")
@@ -88,6 +94,13 @@ namespace exaDEM
 					{
 						int nv = 0;
 						input >> nv;
+						if( nv > EXADEM_MAX_VERTICES ) 
+						{
+							lout << "=== EXADEM ERROR ===" << std::endl;
+							lout << "=== Please, increase the maximum number of vertices: cmake ${Path_To_ExaDEM} -DEXADEM_MAX_VERTICES=" << nv << std::endl;
+							lout << "=== ABORT ===" << std::endl;     
+							std::abort();
+						}
 						assert( nv !=0 );
 						for(int i = 0; i < nv ; i++)
 						{
