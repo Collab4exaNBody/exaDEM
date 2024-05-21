@@ -142,13 +142,10 @@ namespace exaDEM
       }
       
       //HOOKE_FORCE_GPU
-      //#pragma omp parallel for
       for(int i= 0; i < cell_particles_nbh.size(); i++){
       	int cell= i;
-      	//printf("CELLI: %d\n", cell);
       	for(int j= 0; j < cell_particles_nbh[i].size(); j++){
       		int particle= j;
-      		//printf("    PARTICLE: %d\n", particle);
       		auto ida = id_cell_particles_nbh[i][j];
       		std::vector< std::pair<int, int>> nbh= cell_particles_nbh[i][j];
       		std::vector<int> idb = id2_cell_particles_nbh[i][j];
@@ -158,11 +155,7 @@ namespace exaDEM
       	}
       }
       
-      
-      //TRI DES IDENTIFIANTS DES INTÉRACTIONS
-      ints.quickSort();
-      
-      ints.init_friction(ints_mid);
+      ints.init_GPU();
       
       //HOOKE_FORCE_GPU
       

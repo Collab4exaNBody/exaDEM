@@ -11,19 +11,43 @@ namespace exaDEM
 
 	using namespace exanb;
 	
-	struct Interactions_PP
+	struct Interactions_PP//List of interactions between two neighboring particles
 	{
-		int nb_particles=0;
-		onika::memory::CudaMMVector<int> pa;
-		onika::memory::CudaMMVector<int> cella;
-		std::vector<int> id_a;
+		int nb_particles=0;//Number of  particles
 		
-		onika::memory::CudaMMVector< onika::memory::CudaMMVector<int>> pb;
-		onika::memory::CudaMMVector< onika::memory::CudaMMVector<int>> cellb;
-		onika::memory::CudaMMVector< onika::memory::CudaMMVector<Vec3d>> ft_pair;
+		std::vector<int> pa;//List of particle postion inside the cell
+		
+		std::vector<int> cella;//List of cells
+		
+		std::vector<int> id_a;//List of particle identifiers
+		
+		//Neighboring particles
+		std::vector<std::vector<int>> pb;
+		std::vector<std::vector<int>> cellb;
 		std::vector< std::vector<int>> id_b;
 		
+		std::vector<std::vector<Vec3d>> ft_pair;//Storage of friction between two particles
 		
+		std::vector<int> size_nbh;//Number of neighbors for a partices
+		
+		//Indexes for GPU's lists
+		std::vector<int> start;
+		std::vector<int> end;
+		
+		
+		int nb_interactions=0;//Numbe of interactions
+		
+		//GPU Lists
+		onika::memory::CudaMMVector<int> pa_GPU;
+		onika::memory::CudaMMVector<int> cella_GPU;
+		onika::memory::CudaMMVector<int> pb_GPU;
+		onika::memory::CudaMMVector<int> cellb_GPU;
+		//Friction
+		onika::memory::CudaMMVector<double> ftx_GPU;
+		onika::memory::CudaMMVector<double> fty_GPU;
+		onika::memory::CudaMMVector<double> ftz_GPU;
+		
+		//Reset the lists
 		void reset()
 		{
 			nb_particles= 0;
@@ -33,6 +57,7 @@ namespace exaDEM
 			cella.resize(0);
 			id_a.clear();
 			id_a.resize(0);
+			
 			for(int i=0; i<pb.size(); i++){
 				pb[i].clear();
 				pb[i].resize(0);
@@ -43,6 +68,7 @@ namespace exaDEM
 				id_b[i].clear();
 				id_b[i].resize(0);
 			}
+			
 			pb.clear();
 			pb.resize(0);
 			cellb.clear();
@@ -51,8 +77,32 @@ namespace exaDEM
 			ft_pair.resize(0);
 			id_b.clear();
 			id_b.resize(0);
+			
+			size_nbh.clear();
+			size_nbh.resize(0);
+			start.clear();
+			start.resize(0);
+			end.clear();
+			end.resize(0);
+			
+			nb_interactions = 0;
+			pa_GPU.clear();
+			pa_GPU.resize(0);
+			cella_GPU.clear();
+			cella_GPU.resize(0);
+			pb_GPU.clear();
+			pb_GPU.resize(0);
+			cellb_GPU.clear();
+			cellb_GPU.resize(0);
+			ftx_GPU.clear();
+			ftx_GPU.resize(0);
+			fty_GPU.clear();
+			fty_GPU.resize(0);
+			ftz_GPU.clear();
+			ftz_GPU.resize(0);
 		}
 		
+		//ADD PARTICLES
 		void add_particle(int p, int cell, std::vector<std::pair<int,int>> nbh, int ida, std::vector<int> idb)
 		{
 			pa.push_back(p);
@@ -72,7 +122,6 @@ namespace exaDEM
 			auto& ft= ft_pair[nb_particles-1];
 			auto& idb_ = id_b[nb_particles-1];
 			
-			//for(auto pair: nbh)
 			for(int i = 0; i < nbh.size(); i++)
 			{
 				p_b.push_back(nbh[i].first);
@@ -83,7 +132,7 @@ namespace exaDEM
 			
 		}
 		
-		//TRI QUICK SORT
+		//QUICK SORT
 		void swap_a(int i, int j)
 		{
 			int temp_pa = pa[i];
@@ -241,7 +290,6 @@ namespace exaDEM
 		
 		void quickSort()
 		{
-			//printf("QS\n");
 			int n = pa.size();
 			quickSort_a(0, n - 1);
 			
@@ -250,13 +298,12 @@ namespace exaDEM
 				int m = pb[i].size();
 				quickSort_b(i, 0, m - 1);
 			}
-			//printf("QS_END\n");
 		}
 		//TRI QUICK_SORT
 		
+		//INITIALISATION DE LA FRICTION
 		void init_friction(Interactions_PP mid)
 		{
-			printf("FRICTION\n");
 			if(nb_particles > 0 && mid.nb_particles > 0)
 			{
 				
@@ -265,7 +312,6 @@ namespace exaDEM
 				
 				while(a < nb_particles && b < mid.nb_particles)
 				{
-					printf("WHILE\n");
 					if(id_a[a] == mid.id_a[b])
 					{
 						int a2 = 0;
@@ -273,7 +319,6 @@ namespace exaDEM
 						
 						while(a2 < id_b[a].size() && b2 < mid.id_b[b].size())
 						{
-							printf("WHILE2\n");
 							
 							if(id_b[a][a2] == mid.id_b[b][b2])
 							{
@@ -304,7 +349,70 @@ namespace exaDEM
 					}
 				}
 			}
-			printf("FRICTION_END\n");
+		}
+		
+		//INITIALISATION DES LISTES SUR GPU
+		void init_GPU()
+		{
+			size_nbh.resize(nb_particles);
+			start.resize(nb_particles);
+			end.resize(nb_particles);
+			
+			#pragma omp parallel for
+			for(int i = 0; i < nb_particles; i++)
+			{
+				size_nbh[i] = pb[i].size();
+			}
+			
+			#pragma omp parallel for shared(nb_interactions)
+			for(int i = 0; i < nb_particles; i++)
+			{
+				nb_interactions+= size_nbh[i];
+			}
+			
+			start[0] = 0;
+			for(int i = 1; i < nb_particles; i++)
+			{
+				start[i] = size_nbh[i - 1] + start[i - 1];
+			}
+			
+			end[nb_particles - 1] = nb_interactions;
+			for(int i = 0; i < nb_particles - 1; i++)
+			{
+				end[i] = start[i + 1];
+			} 
+			
+			pa_GPU.resize(nb_interactions);
+			cella_GPU.resize(nb_interactions);
+			pb_GPU.resize(nb_interactions);
+			cellb_GPU.resize(nb_interactions);
+			ftx_GPU.resize(nb_interactions);
+			fty_GPU.resize(nb_interactions);
+			ftz_GPU.resize(nb_interactions);
+			
+			#pragma omp parallel for
+			for(int i = 0; i < nb_particles; i++)
+			{
+				int p_a = pa[i];
+				int cell_a = cella[i];
+				int start_idx = start[i];
+				int end_idx = end[i];
+				
+				int z = 0;
+				
+				for(int j = start_idx; j < end_idx; j++)
+				{
+					pa_GPU[j] = p_a;
+					cella_GPU[j] = cell_a;
+					pb_GPU[j] = pb[i][z];
+					cellb_GPU[j] = cellb[i][z];
+					Vec3d ft = ft_pair[i][z];
+					ftx_GPU[j] = ft.x;
+					fty_GPU[j] = ft.y;
+					ftz_GPU[j] = ft.z;
+					z++;
+				}
+			}
 		}
 		
 		
