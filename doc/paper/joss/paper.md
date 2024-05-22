@@ -70,7 +70,9 @@ Finally, it is important to note that the design of `ExaDEM` lead by the framewo
 
 # Main features
 
-![Simulation of near 700 thousands octahedra in a rotating drum running on 128 mpi processes with 8 OpenMP threads per mpi process. \label{fig:rotating-drum}](./rotating-drum.png "test"){width=80%}
+![Simulation of near 700 thousands octahedra in a rotating drum running on 128 mpi processes with 8 OpenMP threads per mpi process processor: (AMD EPYC Milan 7763). \label{fig:rotating-drum}](./rotating-drum.png "test"){width=95%}
+
+![Simulation of near 20 million spherical particles falling in a funnel. This simulation runs on 512 mpi processes with 8 OpenMP threads per mpi process (processor: (AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=95%}
 
 `ExaDEM` attends to meet scientific expectations, especially for fuel nuclear simulations consisting in rotating drum (see figure \ref{fig:rotating-drum}) or compression simulations. To do it, `ExaDEM` provides the following features:
 
@@ -81,7 +83,7 @@ Finally, it is important to note that the design of `ExaDEM` lead by the framewo
 	- The Recursive Coordinate Bissection method is used for the load balancing,
 - I/O support for check and restart files (MPIIO files),
 - Paraview output files containing fieds,
-- Drivers: Wall, Rotating drum or mesh of polyhedron surface for complex geometries such as funnel (see figure X),
+- Drivers: Wall, Rotating drum or mesh of polyhedron surface for complex geometries such as funnel (see figure \ref{fig:funnel}),
 - Numericall Scheme: Verlet Vitess,
 - Contact detection: Linked-cell method and Verlet Lists,
 - Force fields: contact force (Hooke law), cohesive force, gravity, and quadratic force,
