@@ -51,7 +51,7 @@ The behavior of granular media is still an open issue for the scientific communi
 
 # DEM Background
 
-The `DEM` method, used to study granular media, falls within the scope of so-called N-body methods. It consists in numerically reproducing the evolution of a set of particles over time. Time is discretized into time steps and at each time step n, we solve Newton's equation f=ma to deduce the acceleration for each particle and then calculate its velocity, which will give us the new positions at time n+1. "f" is computed from interaction between particules, i.e. contact interactions or external forces such as gravity. A usual numerical scheme used is the Velocity Verlet and to model contact interaction, Hooke is widely used. The DEM method allows to simulate rigid bodies with differents shape: from spherical particle to polyhedral particles. 
+The `DEM` method, used to study granular media, falls within the scope of so-called N-body methods. It consists in numerically reproducing the evolution of a set of rigid particles over time. Time is discretized into time steps and at each time step n, we solve Newton's equation f=ma to deduce the acceleration for each particle and then calculate its velocity, which will give us the new positions at time n+1. "f" is computed from interaction between particules, i.e. contact interactions or external forces such as gravity. A usual numerical scheme used is the Velocity Verlet and to model contact interaction, Hooke is widely used. The DEM method allows to simulate rigid bodies with differents shape: from spherical particle to polyhedral particles. 
 
 A crucial point for `DEM` simulation code is dicted by the need to figure out quickly the nearest neighbor particles to compute contact interactions. The common way to do it is to use the fuse between the linked cells method [@ciccotti1987simulation] and Verlet lists [@verlet1967computer] that limits the refresh rate of neighbor lists while optimizing the neighbor search using a cartesian grid of cells (complexity of N).   
 
@@ -59,7 +59,7 @@ Several DEM softwares have been developped over the last year and propose HPC fe
 
 # Implementation
 
-`ExaDEM` takes avantage of exaNBody data structures (grid, cells, fields) and main parallel algorithms (domain depcomposition, particle migration, numerical schemes) while integrating DEM specificities.  
+`ExaDEM` takes avantage of `exaNBody` data structures (grid, cells, fields) and main parallel algorithms (domain depcomposition, particles migration, numerical schemes) while integrating DEM specificities.  
 
 `ExaDEM` acheives an `MPI` parallelization by decomposing the simulation domain into subdomains with spatial domain decomposition and the Recursive Coordinate Bissection to evenly distribute the workload among `MPI` processes. A subdomain corresponds to a grid of cells while particle informations are stored into cells. The use of cells aims to apply the state-of-the-art linked cells method to speedup the neighbor search (complexity O(N), with N the number of particles) while the Verlet lists method aims to maintain bigger neighbor lists on several timesteps as long as a particle has not displaced more than 1/2 of the Vertle radius. 
 
@@ -90,7 +90,7 @@ Finally, it is important to note that the design of `ExaDEM` lead by the framewo
 - Contact detection: Linked-cell method and Verlet Lists
 - Force fields: contact force (Hooke law), cohesive force, gravity, and quadratic force
 
-All these functionalities are subject to evolution in line with new development needs, such as the addition of particle fragmentation.
+All these functionalities are subject to evolution in line with new development needs, such as the addition of particle fragmentation. Note that most of these functionnalities have been tested over 500 millions spheres or 10 millions polyhedra over ten thousands cores in `MPI` + `OpenMP` on AMD EPYC Milan 7763 processors.
 
 # Future of `ExaDEM`
 
