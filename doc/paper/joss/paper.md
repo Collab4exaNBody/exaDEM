@@ -1,5 +1,5 @@
 ---
-title: 'ExaDEM: a HPC application based on ExaNBody targetting DEM simulations with polyhedron particles'
+title: 'ExaDEM: a HPC application based on ExaNBody targeting DEM simulations with polyhedron particles'
 tags:
   - DEM
   - HPC
@@ -70,9 +70,9 @@ Finally, it is important to note that the design of `ExaDEM` lead by the framewo
 
 # Main features
 
-![Simulation of near 700 thousands octahedra in a rotating drum running on 128 mpi processes with 8 OpenMP threads per mpi process processor: (AMD EPYC Milan 7763). \label{fig:rotating-drum}](./rotating-drum.png "test"){width=95%}
+![Simulation of near 700 thousands octahedra in a rotating drum running on 128 mpi processes with 8 OpenMP threads per mpi process (processor: AMD EPYC Milan 7763). \label{fig:rotating-drum}](./rotating-drum.png "test"){width=95%}
 
-![Simulation of near 20 million spherical particles falling in a funnel. This simulation runs on 512 mpi processes with 8 OpenMP threads per mpi process (processor: (AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=80%}
+![Simulation of near 20 million spherical particles falling in a funnel. This simulation runs on 512 mpi processes with 8 OpenMP threads per mpi process (processor: AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=80%}
 
 `ExaDEM` attends to meet scientific expectations, especially for fuel nuclear simulations consisting in rotating drum (see figure \ref{fig:rotating-drum}) or compression simulations. To do it, `ExaDEM` provides the following features:
 
