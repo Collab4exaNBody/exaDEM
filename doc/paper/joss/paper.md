@@ -72,7 +72,7 @@ Finally, it is important to note that the design of `ExaDEM` lead by the framewo
 
 ![Simulation of near 700 thousands octahedra in a rotating drum running on 128 mpi processes with 8 OpenMP threads per mpi process processor: (AMD EPYC Milan 7763). \label{fig:rotating-drum}](./rotating-drum.png "test"){width=95%}
 
-![Simulation of near 20 million spherical particles falling in a funnel. This simulation runs on 512 mpi processes with 8 OpenMP threads per mpi process (processor: (AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=95%}
+![Simulation of near 20 million spherical particles falling in a funnel. This simulation runs on 512 mpi processes with 8 OpenMP threads per mpi process (processor: (AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=80%}
 
 `ExaDEM` attends to meet scientific expectations, especially for fuel nuclear simulations consisting in rotating drum (see figure \ref{fig:rotating-drum}) or compression simulations. To do it, `ExaDEM` provides the following features:
 
@@ -93,3 +93,8 @@ All these functionalities are subject to evolution in line with new development 
 # Future of `ExaDEM`
 
 In the upcoming years, we plan to add several `DEM` features such as complex geometries (propeller), particle fragmentation, or more diagnostics. On the other hand, we will develop other parallel strategies, especially on GPU, to run on future supercomputers. A specific focus will be done for simulation polyhedron particles. `ExaDEM` is available under an APACHE 2 license at https://github.com/Collab4exaNBody/exaDEM.git and the documentation is available at https://github.com/Collab4exaNBody/doc_exaDEM.git.
+
+
+# Acknowledgement
+
+This work was performed using HPC resources from CCRT funded by the CEA/DEs simulation programme.
