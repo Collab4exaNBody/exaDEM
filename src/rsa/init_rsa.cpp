@@ -141,11 +141,12 @@ using namespace exanb;
 			}
 
 			uint64_t n_particles = particle_data.size();
-			MPI_Reduce(&n_particles, &n_particles, 1, MPI_UINT64_T, MPI_SUM, 0, *mpi);
+			uint64_t n;
+			MPI_Reduce(&n_particles, &n, 1, MPI_UINT64_T, MPI_SUM, 0, *mpi);
 
 			// Display information
 			lout << "=================================" << std::endl;
-			lout << "Particles        = "<<n_particles<<std::endl;
+			lout << "Particles        = "<<n<<std::endl;
 			lout << "Domain XForm     = "<<domain->xform()<<std::endl;
 			lout << "Domain bounds    = "<<domain->bounds()<<std::endl;
 			lout << "Domain size      = "<<bounds_size(domain->bounds()) <<std::endl;
