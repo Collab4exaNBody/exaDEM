@@ -80,7 +80,6 @@ using namespace exanb;
 			int rank=0, np=1;
 			MPI_Comm_rank(*mpi, &rank);
 			MPI_Comm_size(*mpi, &np);
-			[[maybe_unused]] uint64_t n_particles = 0;
 
 			AABB b = *bounds;
       constexpr int DIM = 3;
@@ -90,7 +89,6 @@ using namespace exanb;
       std::array<double, DIM> domain_sup = {b.bmax.x, b.bmax.y, b.bmax.z};
       rsa_domain<DIM> rsa_domain(domain_inf, domain_sup, ghost_layer, *radius);
 
-      //rsa_domain.domain_log();
       size_t seed = 0;
       algorithm::uniform_generate<DIM, method>(rsa_domain, *radius, 6000, 10, seed);
       auto& cells = rsa_domain.get_grid();
@@ -122,7 +120,6 @@ using namespace exanb;
 					pos.y = cell.get_center(s, 1);
 					pos.z = cell.get_center(s, 2);
 					auto id = cell.get_id(s);
-					std::cout << pos << std::endl;
 					pt = ParticleTupleIO( pos.x + b.bmin.x, pos.y + b.bmin.y, pos.z + b.bmin.z, id, *type );
 					particle_data.push_back(pt);
 				}
@@ -143,9 +140,12 @@ using namespace exanb;
 				grid->cell( loc ).push_back( t , grid->cell_allocator() );
 			}
 
+			uint64_t n_particles = particle_data.size();
+			MPI_Reduce(&n_particles, &n_particles, 1, MPI_UINT64_T, MPI_SUM, 0, *mpi);
+
 			// Display information
 			lout << "=================================" << std::endl;
-			lout << "Particles        = "<<particle_data.size()<<std::endl;
+			lout << "Particles        = "<<n_particles<<std::endl;
 			lout << "Domain XForm     = "<<domain->xform()<<std::endl;
 			lout << "Domain bounds    = "<<domain->bounds()<<std::endl;
 			lout << "Domain size      = "<<bounds_size(domain->bounds()) <<std::endl;
