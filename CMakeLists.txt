@@ -46,8 +46,9 @@ option(USE_RSA "Add RSA Package" OFF)
 
 if(USE_RSA)
 	find_package(rsa_mpi REQUIRED)
-	message( STATUS "rsa_mpi is used, header location: ${RSA_MPI_INCLUDE_DIRS}")
-  include_directories(${RSA_MPI_INCLUDE_DIRS})
+	message( STATUS "rsa_mpi is used, header location: ${rsa_mpi_INCLUDE_DIRS}")
+	message( STATUS "rsa_mpi is used, rsa_mpi_DIR: ${rsa_mpi_DIR}")
+  include_directories(${rsa_mpi_INCLUDE_DIRS})
 endif(USE_RSA)
 
 # ======================================
