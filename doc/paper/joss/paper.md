@@ -23,7 +23,7 @@ authors:
   - name: Guillaume Latu
     orcid: 0009-0001-7274-1305
     affiliation: 1
-  - name: Carlo-eliat Donchecchi
+  - name: Carlo-elia Doncecchi
     orcid: 0000-0000-0000-0000
     affiliation:
   - name: Jean-Mathieu Vanson
