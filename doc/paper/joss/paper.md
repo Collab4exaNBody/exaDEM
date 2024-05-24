@@ -18,7 +18,7 @@ authors:
     orcid: 0009-0009-5120-1308
     affiliation: 1
   - name: Vincent Richefeu
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0002-8897-5499
     affiliation: 3
   - name: Carlo-elia Doncecchi
     orcid: 0009-0009-6361-3131
