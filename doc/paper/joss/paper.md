@@ -12,20 +12,20 @@ authors:
     orcid: 0009-0002-3808-5401
     affiliation: 1
   - name: Thierry Carrard
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0001-9396-4658
     affiliation: 2
   - name: Lhassan Amarsid
-    orcid: 0000-0000-0000-0000
+    orcid: 0009-0009-5120-1308
     affiliation: 1
   - name: Vincent Richefeu
     orcid: 0000-0000-0000-0000
     affiliation: 3
+  - name: Carlo-elia Doncecchi
+    orcid: 0009-0009-6361-3131
+    affiliation: 1
   - name: Guillaume Latu
     orcid: 0009-0001-7274-1305
     affiliation: 1
-  - name: Carlo-eliat Donchecchi
-    orcid: 0000-0000-0000-0000
-    affiliation:
   - name: Jean-Mathieu Vanson
     orcid: 0000-0002-5764-0928
     affiliation: 1
@@ -42,7 +42,7 @@ bibliography: paper.bib
 
 # Summary 
 
-`ExaDEM` is a Discrete Element Method (`DEM`) code developed using the `exaNBody` framework [@carrard2023exanbody] at the french atomic commission (`CEA`). This software provides `DEM` functionalities to simulate the mechanicak interactions occuring at contact between spheres and polyhedra while proposing performance optimizations on current `HPC` platforms. A notable aspect of `ExaDEM` is its hybrid parallelization approach, which combines the use of `MPI` and Threads (OpenMP). Additionally, `ExaDEM` offers compatibility with `MPI`+`GPU`s, using the `CUDA` programming model (named `Onika` layer) for `DEM` simulations with spherical particles. Written in `C++17`, `ExaDEM` aims to provide `HPC` capabilities for scientific community. `ExaDEM` intends to embed the physics of interest developed in the `Rockable` [richefeu_2016] code developed at CNRS.  
+`ExaDEM` is a Discrete Element Method (`DEM`) code developed using the `exaNBody` framework [@carrard2023exanbody] at the french atomic commission (`CEA`). This software provides `DEM` functionalities to simulate the mechanicak interactions occuring at contact between spheres and polyhedra while proposing performance optimizations on current `HPC` platforms. A notable aspect of `ExaDEM` is its hybrid parallelization approach, which combines the use of `MPI` and Threads (OpenMP). Additionally, `ExaDEM` offers compatibility with `MPI`+`GPU`s, using the `CUDA` programming model (named `Onika` layer) for `DEM` simulations with spherical particles. Written in `C++17`, `ExaDEM` aims to provide `HPC` capabilities for scientific community. `ExaDEM` intends to embed the physics of interest developed in the `Rockable` [@richefeu_2016] code developed at CNRS.  
 
 
 # Statement of needs
@@ -51,13 +51,14 @@ The behavior of granular media is still an open issue for the scientific communi
 
 # DEM Background
 
-The `DEM` method, employed to study granular media, falls within the scope of so-called N-body methods. It consists in numerically reproducing the kinetic and interactions of a set of rigid particles over time. Time is discretized into time steps and at each time step n, we detect the contacts between particles, solve Newton's equation f=ma to compute the acceleration for each particle and then calculate its velocity, which will give us the new positions at time n+1. "f" is computed from interaction between particles, i.e. contact interactions or external forces such as gravity. A usual numerical scheme used is the Velocity Verlet and to model contact interaction, Hooke law is widely used. The `DEM` method allows to simulate rigid bodies with differents shape: from spherical particles to polyhedral particles. 
+
+The `DEM` method, employed to study granular media, falls within the scope of so-called N-body methods. It consists in numerically reproducing the kinetic and interactions of a set of rigid particles over time. Time is discretized into time steps and at each time step n, we solve Newton's equation **f**=m**a** to deduce the acceleration for each particle and then calculate its velocity, which will give us the new positions at time n+1. "f" is computed from interaction between particles, i.e. contact interactions or external forces such as gravity. A usual numerical scheme used is the Velocity Verlet and to model contact interaction, Hooke law is widely used. The `DEM` method allows to simulate rigid bodies with differents shape: from spherical particles to polyhedral particles. Note that in `ExaDEM`, to deal with complex particle shapes, particle shapes are modeled using a sphero-polyhedral approach for highly simplified contact detection and the representability of complex shapes (Alonso-Marroquin [2008]). For sake of clarity, we use the word polyhedron for a sphero-polyhedral particle. 
 
 A crucial point for `DEM` simulation code is driven by the need to figure out quickly the nearest neighbor particles to compute contact interactions. The common way to do it is to use the fuse between the linked cells method [@ciccotti1987simulation] and Verlet lists [@verlet1967computer] that limits the refresh rate of neighbor lists while optimizing the neighbor search using a cartesian grid of cells (complexity of N).   
 
 Several `DEM` software have been developed over the last year and propose `HPC` features such as `LIGGGTHS` [@kloss2012models] based on `LAMMPS` [@thompson2022lammps] data structures (Molecular Dynamics code) with spherical particles (`MPI`) or `Blaze-DEM` [@govender2018study] with spheres and polyhedra on `GPU` using `CUDA`. `ExaDEM`'s objective is to position itself in the literature as a software product that combines `MPI` parallelization with `OpenMP` thread parallelization and `CUDA` `GPU` parallelization for polyhedral and spherical particles. As `LIGGGTHS` with `LAMMPS`, `ExaDEM` takes advantage of several `HPC` developments done in `ExaSTAMP` (Molecular Dynamics code) [@cieren2014exastamp] that have been mutualized in the `ExaNBody` framework such as `AMR` data structures [@prat2020amr] or In-situ analysis [@dirand2018tins]. To our knowledge, this is a non-exhaustive list of wellknown `DEM` codes: `EDEM` (not open source), `Rocky DEM` (not open source), `MercuryDPM` [@weinhart2020fast] (open source), and `Yade` [@smilauer2023yade] (open source).
 
-# Implementation
+# Implementation Details
 
 `ExaDEM` takes advantage of `exaNBody` data structures (grid, cells, fields) and main parallel algorithms (domain decomposition, particles migration, numerical schemes) while integrating DEM specificities. `ExaDEM` achieves a `MPI` parallelization by decomposing the simulation domain into subdomains with spatial domain decomposition and the Recursive Coordinate Bisection (`RCB`) partitioning method to evenly distribute the workload among `MPI` processes. A subdomain corresponds to a grid of cells while particle informations are stored into cells. The use of cells aims to apply the state-of-the-art linked cells method to speedup the neighbor search with a complexity of O(N), with N the number of particles, while the Verlet lists method aims to maintain bigger neighbor lists on several timesteps as long as a particle has not displaced more than 1/2 of the Verlet radius. Concerning the data layout, it is decomposed on two levels. The first level is associated to the grid of cells (`AOSOA`) that corresponds to a subdomain. The second level is the cell (`SOA`) composed of fields (`Array`) containing particle data. Note that the `DEM` grid contains the fields: type, position, velocities, accelerations, radius, angular velocities, orientation. The `AOSAO` data structure facilitates data movement between `MPI` processes while maintaining a good data locality, i.e. particles in a same cell or in a neighbor cell can interact. In addition, the use of `SOA` storage (cell layout) improves the use of `SIMD` instructions. 
 
@@ -68,13 +69,13 @@ About the intra-`MPI` parallelization, we distingue two main differences corresp
 
 Finally, it is important to note that the design of `ExaDEM` lead by the framework `ExaNBody` allows to add or remove one operator/feature without impacting the other functionalities as long as operators are independents. For example, the gravity force operator can be removed from the `ExaDEM` repository while the contact_neighbor operator (building neighbor lists for every particle) is required to runs the Hooke force operator. Efforts have be done to limit interactions between operators in order to add or remove easily new modules/operators coded by a new developer. 
 
-# Main features
+# Main Features
 
 ![Simulation of near 700 thousands octahedra in a rotating drum running on 128 mpi processes with 8 OpenMP threads per mpi process (processor: AMD EPYC Milan 7763). \label{fig:rotating-drum}](./rotating-drum.png "test"){width=95%}
 
 ![Simulation of near 20 million spherical particles falling in a funnel. This simulation runs on 512 mpi processes with 8 OpenMP threads per mpi process (processor: AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=80%}
 
-`ExaDEM` attends to meet scientific expectations, especially for fuel nuclear simulations consisting in rotating drum (see figure \ref{fig:rotating-drum}) or compression simulations. To do it, `ExaDEM` provides the following features:
+`ExaDEM` attends to meet scientific expectations, especially for fuel nuclear simulations consisting in rotating drum (see figure \ref{fig:rotating-drum}) or compression simulations. To do it, `ExaDEM` provides the following main features:
 
 - Handle different particle types: spherical and polyhedral particles,
 - Hybrid parallelisation `MPI` + X,
