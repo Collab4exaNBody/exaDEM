@@ -11,7 +11,7 @@ authors:
   - name: Raphaël Prat
     orcid: 0009-0002-3808-5401
     affiliation: 1
-  - name: Thiery Carrad
+  - name: Thierry Carrard
     orcid: 0000-0000-0000-0000
     affiliation: 2
   - name: Lhassan Amarsid
