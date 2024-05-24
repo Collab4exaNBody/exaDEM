@@ -208,7 +208,7 @@ namespace exaDEM
 			 * @param args additional arguments to process.
 			 */
 			template<typename... Args>
-				ONIKA_HOST_DEVICE_FUNC inline void operator () (Args&... args) const
+				inline void operator () (Args&... args) const
 				{
 					do_nothing(m_gen(args)...);
 				}
@@ -225,8 +225,8 @@ namespace exaDEM
 			mutable Func m_gen;                    /**< functor used to generate value. */
 
 			// this function is only used to apply m_gen on parametes, note that m_gen can't return void. 
-			template<typename... Args>
-				void do_nothing(Args... args) const
+			template<typename... Args> 
+                                void do_nothing(Args... args) const
 				{}
 
 			/**
@@ -236,7 +236,7 @@ namespace exaDEM
 			 * @param args additional arguments to process.
 			 */
 			template<typename... Args>
-				ONIKA_HOST_DEVICE_FUNC inline void operator () (double rx, double ry, double rz, const uint64_t id, Args&... args) const
+				inline void operator () (double rx, double ry, double rz, const uint64_t id, Args&... args) const
 				{
 					Vec3d r = {rx,ry,rz};
 					if( region.contains( r , id ) )
@@ -317,6 +317,36 @@ namespace exanb
 	{
 		static inline constexpr bool RequiresBlockSynchronousCall = false;
 		static inline constexpr bool CudaCompatible = true;
+	};
+
+	template<class... Ts> struct ComputeCellParticlesTraits< exaDEM::SetRegionFunctor<Ts...> >
+	{
+		static inline constexpr bool RequiresBlockSynchronousCall = false;
+		static inline constexpr bool CudaCompatible = true;
+	};
+
+	template<class... Ts> struct ComputeCellParticlesTraits< exaDEM::FilteredSetFunctor<Ts...> >
+	{
+		static inline constexpr bool RequiresBlockSynchronousCall = false;
+		static inline constexpr bool CudaCompatible = true;
+	};
+
+	template<class... Ts> struct ComputeCellParticlesTraits< exaDEM::FilteredSetRegionFunctor<Ts...> >
+	{
+		static inline constexpr bool RequiresBlockSynchronousCall = false;
+		static inline constexpr bool CudaCompatible = true;
+	};
+
+	template<class... Ts> struct ComputeCellParticlesTraits< exaDEM::GenSetRegionFunctor<Ts...> >
+	{
+		static inline constexpr bool RequiresBlockSynchronousCall = false;
+		static inline constexpr bool CudaCompatible = false;
+	};
+
+	template<class... Ts> struct ComputeCellParticlesTraits< exaDEM::GenSetFunctor<Ts...> >
+	{
+		static inline constexpr bool RequiresBlockSynchronousCall = false;
+		static inline constexpr bool CudaCompatible = false;
 	};
 }
 
