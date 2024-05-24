@@ -12,7 +12,7 @@ authors:
     orcid: 0009-0002-3808-5401
     affiliation: 1
   - name: Thierry Carrard
-    orcid: 0000-0000-0000-0000
+    orcid: 0000-0001-9396-4658
     affiliation: 2
   - name: Lhassan Amarsid
     orcid: 0009-0009-5120-1308
@@ -20,12 +20,12 @@ authors:
   - name: Vincent Richefeu
     orcid: 0000-0000-0000-0000
     affiliation: 3
+  - name: Carlo-elia Doncecchi
+    orcid: 0009-0009-6361-3131
+    affiliation: 1
   - name: Guillaume Latu
     orcid: 0009-0001-7274-1305
     affiliation: 1
-  - name: Carlo-elia Doncecchi
-    orcid: 0000-0000-0000-0000
-    affiliation:
   - name: Jean-Mathieu Vanson
     orcid: 0000-0000-0000-0000
     affiliation: 1
