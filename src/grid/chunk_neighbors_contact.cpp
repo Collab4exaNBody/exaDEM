@@ -16,7 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-
+//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
@@ -48,7 +48,7 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
-
+   
   template<class CellsT>
   struct ContactNeighborFilterFunc
   {
@@ -64,10 +64,57 @@ namespace exaDEM
       return d2 > 0.0 && d2 < rmax2 && d2 < rcut2 ;
     }
   };
+  
+  __global__ void setGPU(int* pa, 
+  			int* cella,
+  			int* pb,
+  			int* cellb,
+  			double* ftx,
+  			double* fty,
+  			double* ftz,
+  			onika::memory::CudaMMVector<int> pa2, 
+  			onika::memory::CudaMMVector<int> cella2,
+  			onika::memory::CudaMMVector<int> pb2,
+  			onika::memory::CudaMMVector<int> cellb2,
+  			onika::memory::CudaMMVector<double> ftx2,
+  			onika::memory::CudaMMVector<double> fty2,
+  			onika::memory::CudaMMVector<double> ftz2,
+  			int size)
+  {
+  	
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	if(idx < size)
+  	{
+  		
+  		auto pa3 = onika::cuda::vector_data(pa2);
+  		auto cella3 = onika::cuda::vector_data(cella2);
+  		auto pb3 = onika::cuda::vector_data(pb2);
+  		auto cellb3 = onika::cuda::vector_data(cellb2);
+  		auto ftx3 = onika::cuda::vector_data(ftx2);
+  		auto fty3 = onika::cuda::vector_data(fty2);
+  		auto ftz3 = onika::cuda::vector_data(ftz2);
+  		
+  		pa[idx] = pa3[idx];
+  		
+  		cella[idx] = cella3[idx];
+  		
+  		pb[idx] = pb3[idx];
+  		
+  		cellb[idx] = cellb3[idx];
+  		ftx[idx] = ftx3[idx];
+  		fty[idx] = fty3[idx];
+  		ftz[idx] = ftz3[idx];
+  	
+  	}
+  }
+  
 
   template<typename GridT>
   struct ChunkNeighborsContact : public OperatorNode
   {
+  
+    using intVector = onika::memory::CudaMMVector<int>;
+      
 #ifdef XSTAMP_CUDA_VERSION
     ADD_SLOT( onika::cuda::CudaContext , cuda_ctx , INPUT , OPTIONAL );
 #endif
@@ -100,9 +147,12 @@ namespace exaDEM
     	std::vector< std::vector<std::vector <int>>> id2_cell_particles_nbh;//HOOKE_FORCE_GPU
     	
     	//HOOKE_FORCE_GPU
-    	Interactions_PP& ints= *interactions_PP;
-    	Interactions_PP ints_mid = ints;
-    	ints.reset();
+    	Interactions_PP& interactions_new = *interactions_PP;
+    	Interactions_PP interactions_old = interactions_new;
+    	
+    	interactions_old.maj_friction();
+    	
+    	interactions_new.reset();
     	//HOOKE_FORCE_GPU
     
       unsigned int cs = config->chunk_size;
@@ -150,15 +200,27 @@ namespace exaDEM
       		std::vector< std::pair<int, int>> nbh= cell_particles_nbh[i][j];
       		std::vector<int> idb = id2_cell_particles_nbh[i][j];
       		if(nbh.size() > 0){
-      			ints.add_particle(particle, cell, nbh, ida, idb);
+      			interactions_new.add_particle(particle, cell, nbh, ida, idb);
       		}
       	}
       }
       
-      ints.init_GPU();
+      interactions_new.quickSort();
       
-      //HOOKE_FORCE_GPU
+      interactions_new.init_friction(interactions_old);
       
+      interactions_new.init_GPU();
+      
+      
+	int size = interactions_new.nb_interactions;
+	int blockSize = 256;
+	int numBlocks;
+	if(size % blockSize == 0){ numBlocks = size/blockSize;}
+	else if(size / blockSize < 1){ numBlocks=1; blockSize = size;}
+	else { numBlocks = int(size/blockSize)+1; }
+      
+      setGPU<<<numBlocks, blockSize>>>(interactions_new.pa_GPU2.data(), interactions_new.cella_GPU2.data(), interactions_new.pb_GPU2.data(), interactions_new.cellb_GPU2.data(), interactions_new.ftx_GPU2.data(), interactions_new.fty_GPU2.data(), interactions_new.ftz_GPU2.data(), interactions_new.pa_GPU, interactions_new.cella_GPU, interactions_new.pb_GPU, interactions_new.cellb_GPU, interactions_new.ftx_GPU, interactions_new.fty_GPU, interactions_new.ftz_GPU, size);
+      cudaDeviceSynchronize();
       printf("CHUNK FINISH\n");
       			 
     }

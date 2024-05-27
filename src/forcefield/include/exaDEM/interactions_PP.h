@@ -47,6 +47,15 @@ namespace exaDEM
 		onika::memory::CudaMMVector<double> fty_GPU;
 		onika::memory::CudaMMVector<double> ftz_GPU;
 		
+		onika::memory::CudaMMVector<int> pa_GPU2;
+		onika::memory::CudaMMVector<int> cella_GPU2;
+		onika::memory::CudaMMVector<int> pb_GPU2;
+		onika::memory::CudaMMVector<int> cellb_GPU2;
+		//Friction
+		onika::memory::CudaMMVector<double> ftx_GPU2;
+		onika::memory::CudaMMVector<double> fty_GPU2;
+		onika::memory::CudaMMVector<double> ftz_GPU2;
+		
 		//Reset the lists
 		void reset()
 		{
@@ -100,6 +109,14 @@ namespace exaDEM
 			fty_GPU.resize(0);
 			ftz_GPU.clear();
 			ftz_GPU.resize(0);
+			
+			pa_GPU2.clear();
+			cella_GPU2.clear();
+			pb_GPU2.clear();
+			cellb_GPU2.clear();
+			ftx_GPU2.clear();
+			fty_GPU2.clear();
+			ftz_GPU2.clear();
 		}
 		
 		//ADD PARTICLES
@@ -351,6 +368,22 @@ namespace exaDEM
 			}
 		}
 		
+		void maj_friction()
+		{
+			for(int i = 0; i < nb_particles; i++)
+			{
+				int z = 0;
+				for(int j = start[i]; j < end[i]; j++)
+				{
+					Vec3d ft = {ftx_GPU2[j], fty_GPU2[j], ftz_GPU2[j]};
+					ft_pair[i][z] = ft;
+					z++;
+				}
+			}
+		}
+		
+		
+		
 		//INITIALISATION DES LISTES SUR GPU
 		void init_GPU()
 		{
@@ -358,13 +391,13 @@ namespace exaDEM
 			start.resize(nb_particles);
 			end.resize(nb_particles);
 			
-			#pragma omp parallel for
+			//#pragma omp parallel for
 			for(int i = 0; i < nb_particles; i++)
 			{
 				size_nbh[i] = pb[i].size();
 			}
 			
-			#pragma omp parallel for shared(nb_interactions)
+			//#pragma omp parallel for shared(nb_interactions)
 			for(int i = 0; i < nb_particles; i++)
 			{
 				nb_interactions+= size_nbh[i];
@@ -390,7 +423,7 @@ namespace exaDEM
 			fty_GPU.resize(nb_interactions);
 			ftz_GPU.resize(nb_interactions);
 			
-			#pragma omp parallel for
+			//#pragma omp parallel for
 			for(int i = 0; i < nb_particles; i++)
 			{
 				int p_a = pa[i];
@@ -413,6 +446,14 @@ namespace exaDEM
 					z++;
 				}
 			}
+			
+			pa_GPU2.resize(nb_interactions);
+			cella_GPU2.resize(nb_interactions);
+			pb_GPU2.resize(nb_interactions);
+			cellb_GPU2.resize(nb_interactions);
+			ftx_GPU2.resize(nb_interactions);
+			fty_GPU2.resize(nb_interactions);
+			ftz_GPU2.resize(nb_interactions);
 		}
 		
 		

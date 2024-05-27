@@ -160,28 +160,19 @@ namespace exaDEM
 {
 	using namespace exanb;
 	
-	template< class GridT > __global__ void HookeForceGPU(GridT* cells, Interactions_PP I, HookeParams hp, double dt, Mat3d xform, int size, 
-								double* fx_GPU,
-								double* fy_GPU,
-								double* fz_GPU,
-								double* momx,
-								double* momy,
-								double* momz,
-								double* homothety,
-								double* ftx_GPU2,
-								double* fty_GPU2,
-								double* ftz_GPU2)
+	template< class GridT > __global__ void HookeForceGPU(GridT* cells, HookeParams hp, double dt, Mat3d xform, int size,
+								int* pa_GPU,
+								int* cella_GPU,
+								int* pb_GPU,
+								int* cellb_GPU,
+								double* ftx_GPU,
+								double* fty_GPU,
+								double* ftz_GPU
+								)
 	{
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		if(idx < size)
 		{
-			auto pa_GPU = onika::cuda::vector_data(I.pa_GPU);
-			auto cella_GPU = onika::cuda::vector_data(I.cella_GPU);
-			auto pb_GPU = onika::cuda::vector_data(I.pb_GPU);
-			auto cellb_GPU = onika::cuda::vector_data(I.cellb_GPU);
-			auto* ftx_GPU = onika::cuda::vector_data(I.ftx_GPU);
-			auto* fty_GPU = onika::cuda::vector_data(I.fty_GPU);
-			auto* ftz_GPU = onika::cuda::vector_data(I.ftz_GPU);
 			
 			int pa = pa_GPU[idx];
 			int cella = cella_GPU[idx];
@@ -191,6 +182,7 @@ namespace exaDEM
 			double fty = fty_GPU[idx];
 			double ftz = ftz_GPU[idx];
 			Vec3d ft = {ftx, fty, ftz}; 
+	
 			
 			double rx = cells[cella][field::rx][pa];
 			double ry = cells[cella][field::ry][pa];
@@ -205,6 +197,7 @@ namespace exaDEM
 			double fz = 0;
 			Vec3d mom = {0., 0., 0.};
 			Vec3d vrot = cells[cella][field::vrot][pa];
+
 					
 			double rx_nbh = cells[cellb][field::rx][pb];
 			double ry_nbh = cells[cellb][field::ry][pb];
@@ -219,7 +212,7 @@ namespace exaDEM
 			double fx_nbh(0.0), fy_nbh(0.0), fz_nbh(0.0);
 			Vec3d mom_nbh = {0,0,0};
 			Vec3d dr = xform * Vec3d{rx_nbh - rx, ry_nbh - ry, rz_nbh - rz};
-					
+
 			exaDEM::compute_hooke_force(
 				hp.dncut, dt, hp.m_kn, hp.m_kt, hp.m_kr,
 				hp.m_fc, hp.m_mu, hp.m_damp_rate,
@@ -234,22 +227,22 @@ namespace exaDEM
 				mass_nbh, radius_nbh,
 				fx_nbh, fy_nbh, fz_nbh,
 				mom_nbh, vrot_nbh
-			);		
-
-			ftx_GPU2[idx] = ft.x;
-			fty_GPU2[idx] = ft.y;
-			ftz_GPU2[idx] = ft.z;
+			);
 			
-			fx_GPU[idx] = fx;
-			fy_GPU[idx] = fy;
-			fz_GPU[idx] = fz;
-			momx[idx] = mom.x;
-			momy[idx] = mom.y;
-			momz[idx] = mom.z;
-			homothety[idx] = ft.x * ft.x + ft.y * ft.y + ft.z * ft.z;					
+			ftx_GPU[idx] = ft.x;
+			fty_GPU[idx] = ft.y;
+			ftz_GPU[idx] = ft.z;
+
+			atomicAdd(&cells[cella][field::fx][pa], fx);
+			atomicAdd(&cells[cella][field::fy][pa], fy);
+			atomicAdd(&cells[cella][field::fz][pa], fz);
+			atomicAdd(&cells[cella][field::mom][pa].x, mom.x);
+			atomicAdd(&cells[cella][field::mom][pa].y, mom.y);
+			atomicAdd(&cells[cella][field::mom][pa].z, mom.z);			
 		}
 	}
-			
+	
+	
 
 	template<
 		class GridT,
@@ -268,6 +261,16 @@ namespace exaDEM
 							ADD_SLOT( double                , dt                , INPUT , REQUIRED );
 							
 							ADD_SLOT( Interactions_PP       , interactions_PP   , INPUT_OUTPUT );//HOOKE_FORCE_GPU
+							
+							ADD_SLOT(int*, pa_array, INPUT_OUTPUT);
+							ADD_SLOT(int*, cella_array, INPUT_OUTPUT);
+							ADD_SLOT(int*, pb_array, INPUT_OUTPUT);
+							ADD_SLOT(int*, cellb_array, INPUT_OUTPUT);
+							ADD_SLOT(double*, ftx_array, INPUT_OUTPUT);
+							ADD_SLOT(double*, fty_array, INPUT_OUTPUT);
+							ADD_SLOT(double*, ftz_array, INPUT_OUTPUT);
+							ADD_SLOT(int, size_interactions, INPUT_OUTPUT);
+							
 
 							// shortcut to the Compute buffer used (and passed to functor) by compute_pair_singlemat
 							static constexpr bool UseNbhId = true;
@@ -324,98 +327,16 @@ namespace exaDEM
 								if(size % blockSize == 0){ numBlocks = size/blockSize;}
 								else if(size / blockSize < 1){ numBlocks=1; blockSize = size;}
 								else { numBlocks = int(size/blockSize)+1; }
-					
-								onika::memory::CudaMMVector<double> fx_GPU;
-								fx_GPU.resize(ints.nb_interactions);
-								auto* fx_array = fx_GPU.data();
-
-								onika::memory::CudaMMVector<double> fy_GPU;
-								fy_GPU.resize(ints.nb_interactions);
-								auto* fy_array = fy_GPU.data();
-
-								onika::memory::CudaMMVector<double> fz_GPU;
-								fz_GPU.resize(ints.nb_interactions);
-								auto* fz_array = fz_GPU.data();
-
-								onika::memory::CudaMMVector<double> momx;
-								momx.resize(ints.nb_interactions);
-								auto* momx_array = momx.data();
-
-								onika::memory::CudaMMVector<double> momy;
-								momy.resize(ints.nb_interactions);
-								auto* momy_array = momy.data();
-
-								onika::memory::CudaMMVector<double> momz;
-								momz.resize(ints.nb_interactions);
-								auto* momz_array = momz.data();
-
-								onika::memory::CudaMMVector<double> homothety;
-								homothety.resize(ints.nb_interactions);
-								auto* homothety_array = homothety.data();
-
-								onika::memory::CudaMMVector<double> ftx;
-								ftx.resize(ints.nb_interactions);
-								auto* ftx_array = ftx.data();
-
-								onika::memory::CudaMMVector<double> fty;
-								fty.resize(ints.nb_interactions);
-								auto* fty_array = fty.data();
-
-								onika::memory::CudaMMVector<double> ftz;
-								ftz.resize(ints.nb_interactions);
-								auto* ftz_array = ftx.data();
-
 								
-								HookeForceGPU<<<numBlocks, blockSize>>>(cells, ints,  *config, *dt, domain->xform(), size, fx_array, fy_array, fz_array, momx_array, momy_array, momz_array, homothety_array, ftx_array, fty_array, ftz_array);
-
+								onika::memory::CudaMMVector<double> fx;
+								fx.resize(1);
 								
-								#pragma omp parallel for
-								for(int i = 0; i < ints.nb_interactions; i++)
-								{
-									ints.ftx_GPU[i] = ftx[i];
-									ints.fty_GPU[i] = fty[i];
-									ints.ftz_GPU[i] = ftz[i];
-								}
+								HookeForceGPU<<<numBlocks, blockSize>>>(cells, *config, *dt, domain->xform(), size, ints.pa_GPU2.data(), ints.cella_GPU2.data(), ints.pb_GPU2.data(), ints.cellb_GPU2.data(), ints.ftx_GPU2.data(), ints.fty_GPU2.data(), ints.ftz_GPU2.data());
 								
-								#pragma omp parallel for
-								for(int i = 0; i < ints.nb_particles; i++)
-								{
-									int pa = ints.pa[i];
-									int cella = ints.cella[i];
-									
-									double fx = 0;
-									double fy = 0;
-									double fz = 0;
-									double mom_x = 0;
-									double mom_y = 0;
-									double mom_z = 0;
-									double homo = 0;
-									
-									for(int j = ints.start[i]; j < ints.end[i]; j++)
-									{
-										fx+= fx_GPU[j];
-										fy+= fy_GPU[j];
-										fz+= fz_GPU[j];
-										mom_x+= momx[j];
-										mom_y+= momy[j];
-										mom_z+= momz[j];
-										homo+= homothety[j];
-									}
-									
-									cells[cella][field::fx][pa]+= fx;
-									cells[cella][field::fy][pa]+= fy;
-									cells[cella][field::fz][pa]+= fz;
-									Vec3d mom = {mom_x, mom_y, mom_z};
-									cells[cella][field::mom][pa]+= mom;
-									cells[cella][field::homothety][pa]+= homo;
-								}
+								
 								//HOOKE_FORCE_GPU
 								
-								//HOOKE_FORCE_CPU
-								
-								//HOOKE_FORCE_CPU	
-								
-								if( domain->xform_is_identity() )
+								/*if( domain->xform_is_identity() )
 								{
 									//printf("NULLXFORM\n");
 									auto optional = make_compute_pair_optional_args( nbh_it, cp_friction, NullXForm{}, cp_locks );
@@ -426,7 +347,7 @@ namespace exaDEM
 									//printf("LINEARXFORM\n");
 									auto optional = make_compute_pair_optional_args( nbh_it, cp_friction , LinearXForm{ domain->xform() }, cp_locks );
 									compute_cell_particle_pairs( *grid, rcut, *ghost, optional, force_buf, force_op, compute_fields, DefaultPositionFields{}, parallel_execution_context() );
-								}
+								}*/
 								
 							}
 
