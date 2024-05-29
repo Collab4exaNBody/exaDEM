@@ -332,7 +332,152 @@ ONIKA_HOST_DEVICE_FUNC inline
 					}
 
 				}
-	
+
+ONIKA_HOST_DEVICE_FUNC inline 
+	void compute_hooke_force_GPU(
+			const double dncut,
+			const double dt,
+			const double kn,
+			const double kt,
+			const double kr,
+			const double fc,
+			const double mu,
+			const double dampRate,
+			Vec3d& ft, // tangential force between particle i and j
+			double rx_i, double ry_i, double rz_i, // positions i
+			double vx_i, double vy_i, double vz_i, // positions i
+			double mass_i, 	// mass i
+			double r_i, 	// raduis i
+			double& fx_i, double& fy_i, double& fz_i, // forces i
+			Vec3d & mom_i, // moments i
+			const Vec3d& vrot_i, // angular velocities i
+			double rx_j, double ry_j, double rz_j, // positions j
+			double vx_j, double vy_j, double vz_j, // positions j
+			double mass_j, 	// mass j
+			double r_j, 	// raduis j
+			double& fx_j, double& fy_j, double& fz_j, // forces j
+			Vec3d& mom_j, // moments j
+			const Vec3d& vrot_j // angular velocities j
+				)
+				{
+					// === normal n from j to i
+					const double dist_x = rx_i - rx_j;
+					const double dist_y = ry_i - ry_j;
+					const double dist_z = rz_i - rz_j;
+
+					// === compute norm
+					const double dist_norm =  sqrt( dist_x*dist_x + dist_y*dist_y + dist_z*dist_z );
+
+					// === inv norm
+					const double inv_dist_norm = 1.0 / dist_norm;
+
+					// === normal vector
+					const double n_x = dist_x * inv_dist_norm;
+					const double n_y = dist_y * inv_dist_norm;
+					const double n_z = dist_z * inv_dist_norm;
+
+					// === compute r_i + r_j 
+					const double R = r_i + r_j;
+
+					// === compute overlap in dn
+					const double dn = dist_norm - R;
+					
+					int b1 = (dn <= 0.0);
+					
+					int b2 = (dn <= dncut) && !b1;
+					
+					int b3 = (dncut == 0.0) && !b2;
+					
+					//bool b4 = !b3;
+					
+					//const auto n = Vec3d{n_x, n_y, n_z};
+					///const double fn_value = (fc/dncut) * dn - fc;
+					//const Vec3d fn = fn_value * n;
+
+					//if(dn <= 0.0) 
+					//{
+						const double meff = compute_effective_mass(mass_i, mass_j);
+						const double damp = compute_damp(dampRate, kn,  meff);
+
+						// === contact position
+						const double posx = rx_i - n_x *(r_i + 0.5*dn); // dn < 0
+						const double posy = ry_i - n_y *(r_i + 0.5*dn);
+						const double posz = rz_i - n_z *(r_i + 0.5*dn);
+
+						// === using vec3d
+						const Vec3d vel_i = {vx_i, vy_i, vz_i};
+						const Vec3d pos_i = {rx_i, ry_i, rz_i};
+
+						const Vec3d vel_j = {vx_j, vy_j, vz_j};
+						const Vec3d pos_j = {rx_j, ry_j, rz_j};
+
+						const Vec3d contact_position = {posx,posy,posz};
+
+						// === Relative velocity (j relative to i)
+						auto vel = compute_relative_velocity(
+								contact_position,
+								pos_i, vel_i, vrot_i,
+								pos_j, vel_j, vrot_j
+								);
+
+						// compute relative velocity
+						const double vn = exanb::dot(Vec3d{n_x, n_y, n_z}, vel);
+
+						const auto n = Vec3d{n_x,n_y,n_z};
+
+						// === Normal force (elatic contact + viscous damping)
+						const double fn_value = (compute_normal_force_value_with_cohesive_force(kn, fc, damp, dn, vn))*b1 + ((fc/dncut) * dn - fc)*b3 ; // fc ==> cohesive force
+						const Vec3d fn = fn_value * n; 
+
+						// === Tangential force (friction)
+						//Vec3d ft 		= exaDEM::compute_tangential_force(kt, dt, vn, n, vel);
+						ft	 		+= exaDEM::compute_tangential_force(kt, dt, vn, n, vel);
+
+
+						// fit tangential force
+						//auto threshold_ft 	= exaDEM::compute_threshold_ft(mu, kn, dn);
+						auto threshold_ft 	= exaDEM::compute_threshold_ft_with_cohesive_force(mu, fn_value, fc);
+						exaDEM::fit_tangential_force(threshold_ft, ft);
+						
+						ft = {ft.x * b1, ft.y * b1, ft.z * b1};
+
+						// === sum forces
+						const auto f = fn + ft;
+
+						// === update forces
+						fx_i += f.x*b1 + fn.x*b3;  
+						fy_i += f.y*b1 + fn.y*b3; 
+						fz_i += f.z*b1 + fn.z*b3;
+
+						// === update moments
+						const Vec3d mom = kr * (vrot_j - vrot_i) * dt;
+						const auto Ci = (contact_position - pos_i);
+						const auto Pimoment = exanb::cross(Ci, f) + mom;
+						mom_i += Pimoment*b1;
+					//}
+					//else if(dncut == 0.0)
+					//{
+						// do nothing
+					//	ft = {0,0,0}; // no friction if no contact
+					//}
+					//else if(dn <= dncut)
+					//{
+					//	const auto n = Vec3d{n_x,n_y,n_z};
+					//	const double fn_value = (fc/dncut) * dn - fc;
+					//	const Vec3d fn = fn_value * n; 
+
+						// === update forces
+					//	fx_i += fn.x;  
+					//	fy_i += fn.y; 
+					//	fz_i += fn.z;
+					//	ft = {0,0,0}; // no friction if no contact
+					//}
+					//else
+					//{
+					//	ft = {0,0,0}; // no friction if no contact
+					//}
+
+				}	
 
 				
 

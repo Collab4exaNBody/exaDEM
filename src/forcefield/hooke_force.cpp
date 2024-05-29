@@ -173,6 +173,7 @@ namespace exaDEM
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		if(idx < size)
 		{
+			//printf("POURQUOI?\n");
 			
 			int pa = pa_GPU[idx];
 			int cella = cella_GPU[idx];
@@ -238,7 +239,16 @@ namespace exaDEM
 			atomicAdd(&cells[cella][field::fz][pa], fz);
 			atomicAdd(&cells[cella][field::mom][pa].x, mom.x);
 			atomicAdd(&cells[cella][field::mom][pa].y, mom.y);
-			atomicAdd(&cells[cella][field::mom][pa].z, mom.z);			
+			atomicAdd(&cells[cella][field::mom][pa].z, mom.z);
+			
+			//("PA: %d, CELLA: %d, PB:%d, CELLB:%d, FX:%f, FY:%f, FZ:%f, MOMX:%f, MOMY:%f, MOMZ:%f, FTX:%f, FTY:%f, FTZ:%f\n", pa, cella, pb, cellb, fx, fy, fz, mom.x, mom.y, mom.z, ft.x, ft.y, ft.z);
+			
+			atomicAdd(&cells[cellb][field::fx][pb], -fx);
+			atomicAdd(&cells[cellb][field::fy][pb], -fy);
+			atomicAdd(&cells[cellb][field::fz][pb], -fz);
+			atomicAdd(&cells[cellb][field::mom][pb].x, mom.x);
+			atomicAdd(&cells[cellb][field::mom][pb].y, mom.y);
+			atomicAdd(&cells[cellb][field::mom][pb].z, mom.z);
 		}
 	}
 	
@@ -322,7 +332,7 @@ namespace exaDEM
 								
 								//HOOKE_FORCE_GPU
 								int size = ints.nb_interactions;
-								int blockSize = 256;
+								int blockSize = 128;
 								int numBlocks;
 								if(size % blockSize == 0){ numBlocks = size/blockSize;}
 								else if(size / blockSize < 1){ numBlocks=1; blockSize = size;}
@@ -333,6 +343,7 @@ namespace exaDEM
 								
 								HookeForceGPU<<<numBlocks, blockSize>>>(cells, *config, *dt, domain->xform(), size, ints.pa_GPU2.data(), ints.cella_GPU2.data(), ints.pb_GPU2.data(), ints.cellb_GPU2.data(), ints.ftx_GPU2.data(), ints.fty_GPU2.data(), ints.ftz_GPU2.data());
 								
+								//sgetchar();
 								
 								//HOOKE_FORCE_GPU
 								

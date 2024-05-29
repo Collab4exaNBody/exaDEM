@@ -204,16 +204,24 @@ namespace exaDEM
       		}
       	}
       }
-      
+     //interactions_new.test();
       interactions_new.quickSort();
       
+      int p = interactions_new.print();
+      
+      interactions_new.set();
+      
+      int p2 = interactions_new.print();
+      
+      printf("OLD: %d NEW: %d\n", p, p2);
+            
       interactions_new.init_friction(interactions_old);
       
       interactions_new.init_GPU();
       
       
 	int size = interactions_new.nb_interactions;
-	int blockSize = 256;
+	int blockSize = 128;
 	int numBlocks;
 	if(size % blockSize == 0){ numBlocks = size/blockSize;}
 	else if(size / blockSize < 1){ numBlocks=1; blockSize = size;}
