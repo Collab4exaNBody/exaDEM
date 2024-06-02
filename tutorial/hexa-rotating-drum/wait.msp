@@ -3,7 +3,6 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_polyhedra.msp
 
-
 input_data:
   - read_shape_file:
      filename: alpha3.shp
@@ -14,7 +13,7 @@ input_data:
 setup_drivers:
   - add_cylinder:
      id: 0
-     center: [10, 10, 10]
+     center: [10, 3.75, 10]
      axis: [1, 0, 1]
      radius: 16
      angular_velocity: [0,0,0]
