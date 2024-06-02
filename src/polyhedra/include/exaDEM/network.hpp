@@ -130,6 +130,14 @@ namespace exaDEM
 			 */
 			std::pair <KeyType, StorageType> operator () ( exaDEM::Interaction& I)
 			{
+				// === build contact network key
+				IdType i = {I.cell_i, I.p_i};
+				IdType j = {I.cell_j, I.p_j};
+				KeyType key = {i,j};
+
+				// === only interactions between polyhedron are considered
+				if(I.type > 3) { return { key, ForceType(0) }; }
+
 				// === positions
 				const Vec3d ri = get_position(I.cell_i, I.p_i);
 				const Vec3d rj = get_position(I.cell_j, I.p_j);
@@ -156,11 +164,6 @@ namespace exaDEM
 
 				// === make detection
 				auto [contact, dn, n, contact_position] = detection[I.type](vertices_i, I.sub_i, shp_i, vertices_j, I.sub_j, shp_j);
-
-				// === build contact network key
-				IdType i = {I.cell_i, I.p_i};
-				IdType j = {I.cell_j, I.p_j};
-				KeyType key = {i,j};
 
 				// if contact detection, compute contact law
 				if(contact)
@@ -211,6 +214,7 @@ namespace exaDEM
 					auto [couple, value] = this->operator()( I[i] );
 
 					// value = 0 means that the contact detection has failled
+					if ( value == 0) continue;
 					if ( value == 0) continue;
 
 					// update key
