@@ -204,16 +204,11 @@ namespace exaDEM
       		}
       	}
       }
-     //interactions_new.test();
+    
+    
       interactions_new.quickSort();
       
-      int p = interactions_new.print();
-      
       interactions_new.set();
-      
-      int p2 = interactions_new.print();
-      
-      printf("OLD: %d NEW: %d\n", p, p2);
             
       interactions_new.init_friction(interactions_old);
       
