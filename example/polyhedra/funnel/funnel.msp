@@ -8,7 +8,7 @@ input_data:
       structure: SC
       types: [ 0 ]
       size: [ 1.5 , 1.5 , 1.5 ]
-      repeats: [ 200 , 200 , 100 ]
+      repeats: [ 200 , 200 , 150 ]
       enlarge_bounds: 0.0 m
       region: FUNNEL and BZ
   - read_shape_file:
@@ -42,7 +42,7 @@ particle_regions:
           - scale: [120, 120, 1]
           - translate: [150,150, 0]
    - BZ:
-      bounds: [[0, 0, 110],[300,300, 160]]
+      bounds: [[0, 0, 110],[300,300, 210]]
 
 compute_force:
   - gravity_force
@@ -51,7 +51,7 @@ compute_force:
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 8000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
 
 domain:
-  cell_size: 4 m
+  cell_size: 2 m
   periodic: [false,false,false]
 
 write_vtklegacy:
@@ -59,10 +59,10 @@ write_vtklegacy:
   ghost: false
 
 global:
-  simulation_dump_frequency: -1
-  simulation_end_iteration: 500000
+  simulation_dump_frequency: 100000
+  simulation_end_iteration: 200000
   simulation_log_frequency: 100
   simulation_paraview_frequency: 1000
   dt: 0.0001 s 
-  rcut_inc: 0.2 m
+  rcut_inc: 0.8 m
   enable_stl_mesh: true
