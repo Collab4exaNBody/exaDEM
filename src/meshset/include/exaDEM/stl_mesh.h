@@ -114,7 +114,10 @@ namespace exaDEM
 					nf++;
 				}
 			}
-			std::cout << "Mesh: " << file_name << " - number of vertices: " << nv << " - number of faces: " << nf << std::endl;
+      lout << "========= STL Mesh ==============" << std::endl;
+			lout << "Name     = " << file_name << std::endl;
+      lout << "Vertices = " << nv << std::endl;
+      lout << "Faces    = " << nf << std::endl;
 		}
 
 		/**

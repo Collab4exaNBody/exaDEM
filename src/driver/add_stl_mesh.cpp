@@ -79,6 +79,7 @@ namespace exaDEM
 			shp.increase_obb (*rcut_inc);
 			exaDEM::Stl_mesh driver= {*center, *velocity, *angular_velocity, shp};
 			drivers->add_driver(*id, driver);
+			lout << "=================================" << std::endl;
 		}
 	};
 
