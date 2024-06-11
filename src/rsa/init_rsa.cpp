@@ -91,13 +91,16 @@ using namespace exanb;
 
       size_t seed = 0;
       algorithm::uniform_generate<DIM, method>(rsa_domain, *radius, 6000, 10, seed);
-      auto& cells = rsa_domain.get_grid();
-      remove_ghost(cells);
+			auto spheres = rsa_domain.extract_spheres();
 
 			if(rank==0)
 			{
 				compute_domain_bounds(*domain,*bounds_mode,*enlarge_bounds, b, b, *pbc_adjust_xform );
 			}
+
+			// compute indexes
+			int ns = spheres.size();
+			MPI_Exscan( MPI_IN_PLACE, &ns, 1, MPI_INT, MPI_SUM, *mpi);
 
 			//send bounds and size_box values to all cores
 			MPI_Bcast( & (*domain), sizeof(Domain), MPI_CHARACTER, 0, *mpi );
@@ -107,24 +110,17 @@ using namespace exanb;
 			grid->set_cell_size( domain->cell_size() );
 			grid->set_dimension( domain->grid_dimension() );
 
+
 			// add particles
 			std::vector<ParticleTupleIO> particle_data;
 			ParticleTupleIO pt;
-			for (int c = 0 ; c < cells.get_size() ; c++ )
+			for (size_t s = 0 ; s < spheres.size() ; s++)
 			{
-				auto& cell = cells.get_data(c);
-				for (size_t s = 0 ; s < cell.get_size() ; s++)
-				{
-					Vec3d pos;
-					pos.x = cell.get_center(s, 0);
-					pos.y = cell.get_center(s, 1);
-					pos.z = cell.get_center(s, 2);
-					auto id = cell.get_id(s);
-					pt = ParticleTupleIO( pos.x + b.bmin.x, pos.y + b.bmin.y, pos.z + b.bmin.z, id, *type );
-					particle_data.push_back(pt);
-				}
+				auto pos = spheres[s].center;
+				auto id = ns + s;
+				pt = ParticleTupleIO( pos[0], pos[1], pos[2], id, *type );
+				particle_data.push_back(pt);
 			}
-
 
 			// Fill grid, particles will migrate accross mpi processed via the operator migrate_cell_particles
 			for( auto p : particle_data )
