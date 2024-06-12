@@ -96,7 +96,7 @@ All these functionalities are likely to evolve to accomodate new development nee
 
 # Future of `ExaDEM`
 
-In the upcoming years, we plan to add several `DEM` features such as complex geometries (propeller), particle fragmentation, and additional diagnostics/outputs. On the other hand, we will develop other parallel strategies, especially on `GPU`, to run on future supercomputers. A specific focus will be done for handling properly polyhedron particles. `ExaDEM` is available under an APACHE 2 license at https://github.com/Collab4exaNBody/exaDEM.git and the documentation is available at https://github.com/Collab4exaNBody/doc_exaDEM.git.
+In the upcoming years, we plan to add several `DEM` features such as complex geometries (propeller), particle fragmentation, and additional diagnostics/outputs. On the other hand, we will develop other parallel strategies, especially on `GPU`, to run on future supercomputers. A specific focus will be done for handling properly polyhedron particles. `ExaDEM` is available under an APACHE 2 license at \url{https://github.com/Collab4exaNBody/exaDEM.git} and the documentation is available at \url{https://github.com/Collab4exaNBody/doc_exaDEM.git}.
 
 # Acknowledgements
 
