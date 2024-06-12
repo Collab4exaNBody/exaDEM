@@ -1,3 +1,6 @@
+//#pragma xstamp_cuda_enable
+
+
 /*
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
@@ -32,15 +35,351 @@ under the License.
 #include <iomanip>
 
 #include <exanb/compute/compute_cell_particles.h>
-#include <exaDEM/face.h>
-#include <exaDEM/stl_mesh.h>
-#include <exaDEM/hooke_stl_meshes.h>
+//#include <exaDEM/face.h>
+//#include <exaDEM/stl_mesh.h>
+//#include <exaDEM/hooke_stl_meshes.h>
+#include <exaDEM/interaction.h>
+
+#include <onika/cuda/cuda.h> // mots cles specifiques
+#include <onika/memory/allocator.h> // cudaMMVector
+
+#include <exaDEM/common_compute_kernels.h>
+#include <exaDEM/compute_hooke_force.h>
 
 #include <mpi.h>
 
 namespace exaDEM
 {
   using namespace exanb;
+  
+  ONIKA_HOST_DEVICE_FUNC
+  void normalize (Vec3d& in)
+  {
+  	const double norm = exanb::norm (in);
+  	in = in / norm;
+  }
+  
+  ONIKA_HOST_DEVICE_FUNC
+  double length2(Vec3d& v) {return std::sqrt(v.x*v.x+v.y*v.y+v.z*v.z);}
+  
+  ONIKA_HOST_DEVICE_FUNC
+  double length2(const Vec3d& v) {return std::sqrt(v.x*v.x+v.y*v.y+v.z*v.z);}
+  
+  
+  template<class GridT>__global__ void ApplyHookeSTLMesh_GPU(GridT* cells, 
+									int* pa,
+									int* cella,
+									int* faces,
+									double* nx,
+									double* ny,
+									double* nz,
+									double* offsets,
+									int* num_vertices,
+									int* contacts,
+									int* which_particle,
+									int* add,
+									double* vx,
+									double* vy,
+									double* vz,
+									double* px,
+									double* py,
+									double* pz,
+									int size)
+		{
+		
+		//Index of the particle in the interaction's list
+		int idx = threadIdx.x + blockIdx.x * blockDim.x;
+		
+		if(idx < size){
+			
+			int p_a = pa[idx];
+			int cell_a = cella[idx];
+			
+			double n_x = nx[idx];
+			double n_y = ny[idx];
+			double n_z = nz[idx];
+			
+			Vec3d normal = {n_x, n_y, n_z};
+			
+			double off = offsets[idx];
+			
+			int face_idx = faces[idx];
+			
+			int num = num_vertices[idx];
+			
+			int s = face_idx;
+			int e = s + num;
+			
+			double rx = cells[cell_a][field::rx][p_a];
+			double ry = cells[cell_a][field::ry][p_a];
+			double rz = cells[cell_a][field::rz][p_a];
+			double radius = cells[cell_a][field::radius][p_a];
+			
+			bool contact = false;
+			bool potential = false;
+			Vec3d position = {0, 0, 0};
+			bool do_edge;
+			
+			const Vec3d center = {rx, ry, rz};
+			double p = exanb::dot(center, normal) - off;
+			
+			if(abs(p) <= radius)
+			{
+				potential = true;
+				const Vec3d& pa = { vx[s], vy[s], vz[s] };
+				const Vec3d& pb = { vx[s + 1], vy[s + 1], vz[s + 1] };
+				const Vec3d& pc = { vx[e - 1], vy[e - 1], vz[e - 1] };
+					Vec3d v1 = pb - pa;
+					Vec3d v2 = pc - pa;
+					normalize(v1);
+					Vec3d n = exanb::cross(v1,v2);
+					normalize(n);
+					Vec3d iv = center;// - pa;
+					double dist = exanb::dot(iv,n);
+					if(dist < 0.0)
+					{
+						dist= -dist;
+						n= -n;
+					}
+
+					// test if the sphere intersects the surface 
+					int intersections = 0;
+
+					// from rockable
+					Vec3d P = iv - dist * n;
+					v2 = exanb::cross(n, v1);
+					double ori1 = exanb::dot(P,v1);
+					double ori2 = exanb::dot(P,v2);
+
+					for (int iva = 0; iva < num ; ++iva) {
+						int ivb = iva + 1;
+						if (ivb == num) ivb = 0;
+						const Vec3d& posNodeA_jv = { vx[s + iva], vy[s + iva], vz[s + iva] };
+						const Vec3d& posNodeB_jv = { vx[s + ivb], vy[s + ivb], vz[s + ivb] };
+						double pa1 = exanb::dot(posNodeA_jv , v1);
+						double pb1 = exanb::dot(posNodeB_jv , v1);
+						double pa2 = exanb::dot(posNodeA_jv , v2);
+						double pb2 = exanb::dot(posNodeB_jv , v2);
+
+				// @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
+				// @see http://alienryderflex.com/polygon/
+						if ((pa2 < ori2 && pb2 >= ori2) || (pb2 < ori2 && pa2 >= ori2)) {
+							if (pa1 + (ori2 - pa2) / (pb2 - pa2) * (pb1 - pa1) < ori1) {
+								intersections = 1 - intersections;
+							}
+						}
+					}
+
+					if(intersections == 1) // ODD 
+					{
+						position = normal*off;
+						contact= true;
+				}
+
+			}
+			
+			if(contact)
+			{
+				px[idx] = position.x;
+				py[idx] = position.y;
+				pz[idx] = position.z;
+				contacts[idx] = 1;
+			}
+			
+			int particle = which_particle[idx];
+			
+			if(contact || potential) atomicAdd(&add[particle], 1);		
+				
+			}
+		}
+		
+		
+		template<class GridT>__global__ void ApplyHookeSTLMesh_GPU2(GridT* cells, 
+									int* pa,
+									int* cella,
+									int* faces,
+									double* nx,
+									double* ny,
+									double* nz,
+									double* offsets,
+									int* num_vertices,
+									int* contacts,
+									int* which_particle,
+									int* add,
+									double* vx,
+									double* vy,
+									double* vz,
+									double* px,
+									double* py,
+									double* pz,
+									int size)
+		{
+		
+		int idx = threadIdx.x + blockIdx.x * blockDim.x;
+		
+		if(idx < size)
+		{
+			int particle = which_particle[idx];
+			if(add[particle] == 0)
+			{
+				int p_a = pa[idx];
+				int cell_a = cella[idx];
+			
+				double n_x = nx[idx];
+				double n_y = ny[idx];
+				double n_z = nz[idx];
+			
+				Vec3d normal = {n_x, n_y, n_z};
+			
+				double off = offsets[idx];
+			
+				int face_idx = faces[idx];
+			
+				int num = num_vertices[idx];
+				
+				int s = face_idx;
+				int e = s + num;
+			
+				double rx = cells[cell_a][field::rx][p_a];
+				double ry = cells[cell_a][field::ry][p_a];
+				double rz = cells[cell_a][field::rz][p_a];
+				double radius = cells[cell_a][field::radius][p_a];
+				
+				bool contact = false;
+				Vec3d position = {0, 0, 0};
+				
+				const Vec3d center = {rx, ry, rz};
+				for (size_t j = 0; j < num; ++j) {
+						Vec3d p1 = { vx[s + j], vy[s + j], vz[s + j] };
+						Vec3d p2 = { vx[s + ((j + 1) % num)], vy[s + ((j + 1) % num)], vz[s + ((j + 1) % num)] };
+						Vec3d edge = p2 - p1;
+						Vec3d sphereToEdge = center - p1;
+
+						double distanceToEdge = length2(exanb::cross(edge, sphereToEdge)) / length2(edge);
+
+						if (distanceToEdge <= radius && exanb::dot(sphereToEdge, edge) > 0 && exanb::dot(sphereToEdge - edge, edge) < 0) {
+							auto n_edge = edge / exanb::norm(edge);
+							Vec3d contact_position = p1 + n_edge * dot(sphereToEdge, n_edge);
+							contact = true;
+							position = contact_position;
+						}
+				}
+				
+				if(contact)
+				{
+					contacts[idx] = 1;
+					px[idx] = position.x;
+					py[idx] = position.y;
+					pz[idx] = position.z;
+				}
+				
+			}
+		}
+		
+		}
+		
+		
+		template<class GridT>__global__ void ApplyHookeSTLMesh_GPU3(GridT* cells, 
+									int* pa,
+									int* cella,
+									double* nx,
+									double* ny,
+									double* nz,
+									double* offsets,
+									int* contacts,
+									double* px,
+									double* py,
+									double* pz,
+									double* ftx,
+									double* fty,
+									double* ftz,
+									int* add,
+									int* which_particle,
+									double dt, 
+									double kt, 
+									double kn, 
+									double kr, 
+									double mu, 
+									double damprate,
+									int size)
+		{
+			int idx = threadIdx.x + blockIdx.x * blockDim.x;
+			if(idx < size)
+			{
+				if(contacts[idx] == 1)
+				{
+					int p_a = pa[idx];
+					int cell_a = cella[idx];
+					
+					int particle = which_particle[idx];
+					
+					Vec3d mom = cells[cell_a][field::mom][p_a];
+					Vec3d ft = {ftx[idx], fty[idx], ftz[idx]};
+					Vec3d vrot = cells[cell_a][field::vrot][p_a];
+					
+					double rx = cells[cell_a][field::rx][p_a];
+					double ry = cells[cell_a][field::ry][p_a];
+					double rz = cells[cell_a][field::rz][p_a];
+					
+					double vx = cells[cell_a][field::vx][p_a];
+					double vy = cells[cell_a][field::vy][p_a];
+					double vz = cells[cell_a][field::vz][p_a];
+					
+					double radius = cells[cell_a][field::radius][p_a];
+					
+					Vec3d pos_proj;
+					double m_vel = 0;
+					Vec3d pos = {rx, ry, rz};
+					Vec3d vel = {vx, vy, vz};
+					
+					Vec3d normal = {nx[idx], ny[idx], nz[idx]};
+					
+					if(add[particle] == 0)
+					{
+						pos_proj = dot(pos, normal) * normal;
+					}
+					else
+					{
+						pos_proj = pos;
+					}
+					
+					Vec3d position = {px[idx], py[idx], pz[idx]};
+					
+					Vec3d vec_n = pos_proj - position;
+					double n = norm(vec_n);
+					vec_n = vec_n / n;
+					const double dn = n - radius;
+					Vec3d rigid_surface_center = position;
+					const Vec3d rigid_surface_velocity = normal * m_vel;
+					constexpr Vec3d rigid_surface_angular_velocity = {0.0, 0.0, 0.0};
+					
+					Vec3d f = {0.0, 0.0, 0.0};
+					constexpr double meff = 1;
+					
+					hooke_force_core_v2(
+						dn, vec_n,
+						dt, kn, kt, kr, mu, damprate, meff,
+						ft, position, pos_proj, vel, f, mom, vrot,
+						rigid_surface_center, rigid_surface_velocity, rigid_surface_angular_velocity
+						);
+					
+					ftx[idx] = ft.x;
+					fty[idx] = ft.y;
+					ftz[idx] = ft.z;
+					
+					atomicAdd(&cells[cell_a][field::mom][p_a].x, mom.x);
+					atomicAdd(&cells[cell_a][field::mom][p_a].y, mom.y);
+					atomicAdd(&cells[cell_a][field::mom][p_a].z, mom.z);
+					atomicAdd(&cells[cell_a][field::fx][p_a], f.x);
+					atomicAdd(&cells[cell_a][field::fy][p_a], f.y);
+					atomicAdd(&cells[cell_a][field::fz][p_a], f.z);
+				}
+			}
+		}
+  
+  
+  
+  
   template<
     class GridT,
 	  class = AssertGridHasFields< GridT, field::_fx, field::_fy, field::_fz >
@@ -53,13 +392,14 @@ namespace exaDEM
 	      ADD_SLOT( MPI_Comm , mpi                         , INPUT        , MPI_COMM_WORLD);
 	      ADD_SLOT( GridT    , grid                        , INPUT_OUTPUT );
 	      ADD_SLOT( Domain   , domain                      , INPUT        , REQUIRED );
-	      ADD_SLOT( std::vector<stl_mesh> , stl_collection , INPUT_OUTPUT , DocString{"list of verticies"});
+	      //ADD_SLOT( std::vector<stl_mesh> , stl_collection , INPUT_OUTPUT , DocString{"list of verticies"});
 	      ADD_SLOT( double                , dt             , INPUT        , REQUIRED , DocString{"Timestep of the simulation"});
 	      ADD_SLOT( double                , kt             , INPUT        , REQUIRED , DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
 	      ADD_SLOT( double                , kn             , INPUT        , REQUIRED , DocString{"Parameter of the force law used to model contact cyclinder/sphere"} );
 	      ADD_SLOT( double                , kr             , INPUT        , REQUIRED , DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
 	      ADD_SLOT( double                , mu             , INPUT        , REQUIRED , DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
 	      ADD_SLOT( double                , damprate       , INPUT        , REQUIRED , DocString{"Parameter of the force law used to model contact cyclinder/sphere"});
+	      ADD_SLOT(Interactions, Int, INPUT_OUTPUT, DocString{"List of interactions between the particles and the faces of the STL meshes"});
 
 	      public:
 	      inline std::string documentation() const override final
@@ -70,8 +410,26 @@ namespace exaDEM
 
 	      inline void execute () override final
 	      {
-		ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
-		compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+		//ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
+		//compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+		auto& g = *grid;
+								const auto cells = g.cells();
+								
+								auto& I = *Int;
+								
+								int size = I.nb_interactions;
+								int blockSize = 128;
+								int numBlocks;
+								if(size % blockSize == 0){ numBlocks = size/blockSize;}
+								else if(size / blockSize < 1) { numBlocks=1; blockSize = size;}
+								else  { numBlocks= int(size/blockSize)+1; }
+								
+								
+								ApplyHookeSTLMesh_GPU<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.faces_idx_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.num_vertices_GPU2.data(), I.contact.data(), I.which_particle2.data(), I.add_particle.data(), I.vx_GPU2.data(), I.vy_GPU2.data(), I.vz_GPU2.data(), I.posx.data(), I.posy.data(), I.posz.data(), size);
+								
+								ApplyHookeSTLMesh_GPU2<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.faces_idx_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.num_vertices_GPU2.data(), I.contact.data(), I.which_particle2.data(), I.add_particle.data(), I.vx_GPU2.data(), I.vy_GPU2.data(), I.vz_GPU2.data(), I.posx.data(), I.posy.data(), I.posz.data(), size);
+								
+								ApplyHookeSTLMesh_GPU3<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.contact.data(), I.posx.data(), I.posy.data(), I.posz.data(), I.ftx_GPU2.data(), I.fty_GPU2.data(), I.ftz_GPU2.data(), I.add_particle.data(), I.which_particle2.data(), *dt, *kt, *kn, *kr, *mu, *damprate, size); 
 	      }
 	    };
 

@@ -32,8 +32,9 @@ under the License.
 #include <iomanip>
 
 #include <exanb/compute/compute_cell_particles.h>
-#include <exaDEM/face.h>
-#include <exaDEM/stl_mesh.h>
+//#include <exaDEM/face.h>
+//#include <exaDEM/stl_mesh.h>
+#include <exaDEM/stl_meshes.h>
 
 #include <mpi.h>
 
@@ -48,7 +49,8 @@ namespace exaDEM
 		ADD_SLOT( GridT    , grid     , INPUT_OUTPUT );
 		ADD_SLOT( Domain   , domain   , INPUT , REQUIRED );
 		ADD_SLOT( std::string , filename, INPUT , REQUIRED , DocString{"Inpute filename"});
-		ADD_SLOT( std::vector<exaDEM::stl_mesh> , stl_collection, INPUT_OUTPUT , DocString{"Collection of meshes from stl files"});
+		//ADD_SLOT( std::vector<exaDEM::stl_mesh> , stl_collection, INPUT_OUTPUT , DocString{"Collection of meshes from stl files"});
+		ADD_SLOT( exaDEM::stl_meshes, meshes, INPUT_OUTPUT, DocString{"Collection of meshes from stl files"});
 
 		public:
 		inline std::string documentation() const override final
@@ -59,11 +61,12 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
-			auto& collection = *stl_collection;
-			stl_mesh mesh;
+			auto& mesh = *meshes;
+			//auto& collection = *stl_collection;
+			//stl_mesh mesh;
 			mesh.read_stl(*filename);
-			mesh.build_boxes();
-			collection.push_back(mesh);
+			//mesh.build_boxes();
+			//collection.push_back(mesh);
 		};
 	};
 
