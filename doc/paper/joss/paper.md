@@ -33,7 +33,7 @@ authors:
     orcid: 0000-0002-5764-0928
     affiliation: 1
 affiliations:
- - name: CEA, DES.IRESNE.DEC, Cadarache F 13108 St-Paul-Lez-Durance
+ - name: CEA, DES, IRESNE, DEC, Cadarache F 13108 St-Paul-Lez-Durance
    index: 1
  - name: CEA, DAM, DIF, F-91297 Arpajon, France
    index: 2
