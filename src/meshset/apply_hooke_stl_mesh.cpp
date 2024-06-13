@@ -354,6 +354,8 @@ namespace exaDEM
 					
 					Vec3d contact_position = {px[idx], py[idx], pz[idx]};
 					
+					printf("POSITIONS: RX:%f RY:%f RZ:%f CPX:%f CPY:%f CPZ:%f PROJX:%f PROJY:%f PROJZ:%f\n", rx, ry, rz, px[idx], py[idx], pz[idx], pos_proj.x, pos_proj.y, pos_proj.z);
+					
 					Vec3d vec_n = pos_proj - contact_position;
 					double n = norm(vec_n);
 					vec_n = vec_n / n;
@@ -389,6 +391,8 @@ namespace exaDEM
 							pos_i, vel_i, vrot_i,
 							pos_j, vel_j, vrot_j
 							);
+							
+						printf("VELOCITY : (%f, %f, %f)\n", vel.x, vel.y, vel.z);
 
 						// compute relative velocity
 						const double vn = exanb::dot(vec_n, vel);
@@ -396,7 +400,7 @@ namespace exaDEM
 						// === Normal force (elatic contact + viscous damping)
 						const Vec3d fn = compute_normal_force(kn, damp, dn, vn, vec_n); // fc ==> cohesive force
 						
-						printf("########################################### FNX:%f FNY:%f FNZ:%f KN:%f DAMP:%f DN:%f VN:%f VECN(%f, %f, %f)\n", fn.x, fn.y, fn.z, kn, damp, dn, vn, vec_n.x, vec_n.y, vec_n.z);
+						printf("FNX:%f FNY:%f FNZ:%f KN:%f DAMP:%f DN:%f VN:%f VECN(%f, %f, %f)\n", fn.x, fn.y, fn.z, kn, damp, dn, vn, vec_n.x, vec_n.y, vec_n.z);
 
 						// === Tangential force (friction)
 						ft	 		+= exaDEM::compute_tangential_force(kt, dt, vn, vec_n, vel);
@@ -434,7 +438,7 @@ namespace exaDEM
 					fty[idx] = ft.y;
 					ftz[idx] = ft.z;
 					
-					printf("******************************** FX:%f FY:%f FZ:%f FTX:%f FTY:%f FTZ:%f\n", cells[cell_a][field::fx][p_a], cells[cell_a][field::fy][p_a], cells[cell_a][field::fz][p_a], ft.x, ft.y, ft.z);
+					printf("FX:%f FY:%f FZ:%f FTX:%f FTY:%f FTZ:%f\n", cells[cell_a][field::fx][p_a], cells[cell_a][field::fy][p_a], cells[cell_a][field::fz][p_a], ft.x, ft.y, ft.z);
 					
 					atomicAdd(&cells[cell_a][field::mom][p_a].x, momx);
 					atomicAdd(&cells[cell_a][field::mom][p_a].y, momy);
@@ -443,8 +447,20 @@ namespace exaDEM
 					atomicAdd(&cells[cell_a][field::fy][p_a], fy);
 					atomicAdd(&cells[cell_a][field::fz][p_a], fz);
 					
-					printf("??????????????????????????????????????????????????? MOMX:%f MOMY:%f MOMZ:%f FX:%f FY:%f FZ:%f\n", momx, momy, momz, fx, fy, fz);
+					printf("MOMX:%f MOMY:%f MOMZ:%f FX:%f FY:%f FZ:%f\n", momx, momy, momz, fx, fy, fz);
 				}
+				
+				contacts[idx] = 0;
+			}
+		}
+		
+		__global__ void set(int* add, int* pot, int size)
+		{
+			int idx = threadIdx.x + blockIdx.x * blockDim.x;
+			if(idx < size)
+			{
+				add[idx] = 0;
+				pot[idx] = 0;
 			}
 		}
   
@@ -502,7 +518,16 @@ namespace exaDEM
 								
 								ApplyHookeSTLMesh_GPU2<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.faces_idx_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.num_vertices_GPU2.data(), I.contact.data(), I.which_particle2.data(), I.add_particle.data(), I.potentiels.data(), I.vx_GPU2.data(), I.vy_GPU2.data(), I.vz_GPU2.data(), I.posx.data(), I.posy.data(), I.posz.data(), size);
 								
-								ApplyHookeSTLMesh_GPU3<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.contact.data(), I.posx.data(), I.posy.data(), I.posz.data(), I.ftx_GPU2.data(), I.fty_GPU2.data(), I.ftz_GPU2.data(), I.add_particle.data(), I.which_particle2.data(), *dt, *kt, *kn, *kr, *mu, *damprate, size); 
+								ApplyHookeSTLMesh_GPU3<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.contact.data(), I.posx.data(), I.posy.data(), I.posz.data(), I.ftx_GPU2.data(), I.fty_GPU2.data(), I.ftz_GPU2.data(), I.add_particle.data(), I.which_particle2.data(), *dt, *kt, *kn, *kr, *mu, *damprate, size);
+								
+								int size2 = I.nb_particles;
+								if(size2 % blockSize == 0){ numBlocks = size2/blockSize;}
+								else if(size2 / blockSize < 1) { numBlocks=1; blockSize = size2;}
+								else  { numBlocks= int(size2/blockSize)+1; }
+								
+								set<<<numBlocks, blockSize>>>(I.add_particle.data(), I.potentiels.data(), size2);
+								
+								 
 		
 		printf("APPLY END\n");
 	      }
