@@ -51,7 +51,7 @@ compute_force:
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 8000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2 m
+  cell_size: 4 m
   periodic: [false,false,false]
 
 write_vtklegacy:
@@ -64,5 +64,5 @@ global:
   simulation_log_frequency: 100
   simulation_paraview_frequency: 1000
   dt: 0.0001 s 
-  rcut_inc: 0.8 m
+  rcut_inc: 0.4 m
   enable_stl_mesh: true
