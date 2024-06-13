@@ -45,7 +45,7 @@ namespace exaDEM
 	{
 		ADD_SLOT( GridT , grid ,INPUT);
 		ADD_SLOT( CellCosts , cell_costs ,OUTPUT );
-		ADD_SLOT( GridCellParticleInteraction , ges               , INPUT , DocString{"Interaction list"} );
+		ADD_SLOT( GridCellParticleInteraction , ges , INPUT_OUTPUT , DocString{"Interaction list"} );
 
 		public:
 
