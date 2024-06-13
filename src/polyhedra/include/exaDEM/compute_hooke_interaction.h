@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+	 Licensed to the Apache Software Foundation (ASF) under one
+	 or more contributor license agreements.  See the NOTICE file
+	 distributed with this work for additional information
+	 regarding copyright ownership.  The ASF licenses this file
+	 to you under the Apache License, Version 2.0 (the
+	 "License"); you may not use this file except in compliance
+	 with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 #pragma once
 
 #include <exaDEM/shape/shape.hpp>
@@ -24,83 +24,207 @@ under the License.
 
 namespace exaDEM
 {
-
-		// C for cell and D for driver
-		template<typename C, typename D>
-			ONIKA_HOST_DEVICE_FUNC void compute_driver(C& cell, D& driver, const HookeParams& hkp, const shape* shp, Interaction& I, const double time, mutexes& locker)
+	using namespace exanb;
+	struct hooke_law_polyhedra
+	{
+		template<typename Cell>
+			ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_r(Cell& cell, const int p_id) const
 			{
-				const size_t p   = I.p_i;
-				const size_t sub = I.sub_i;
+				const Vec3d res = {
+					cell[field::rx][p_id],
+					cell[field::ry][p_id],
+					cell[field::rz][p_id]};
+				return res;
+			};
+
+		template<typename Cell>
+			ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_v(Cell& cell, const int p_id) const
+			{
+				const Vec3d res = {
+					cell[field::vx][p_id],
+					cell[field::vy][p_id],
+					cell[field::vz][p_id]};
+				return res;
+			};
+
+		template<typename Cells>
+			ONIKA_HOST_DEVICE_FUNC inline void operator()(Interaction& item, Cells& cells, const HookeParams& hkp, const shapes& shps, const double time, mutexes& locker) const
+			{
+				// === cell
+				auto& cell_i =  cells[item.cell_i];
+				auto& cell_j =  cells[item.cell_j];
+
 				// === positions
-				const Vec3d r       = { cell[field::rx][p], cell[field::ry][p], cell[field::rz][p] };
+				const Vec3d ri = get_r(cell_i, item.p_i);
+				const Vec3d rj = get_r(cell_j, item.p_j);
+
 				// === vrot
-				const Vec3d& vrot  = cell[field::vrot][p];
+				const Vec3d& vrot_i = cell_i[field::vrot][item.p_i];
+				const Vec3d& vrot_j = cell_j[field::vrot][item.p_j];
+
+				// === type
+				const auto& type_i = cell_i[field::type][item.p_i];
+				const auto& type_j = cell_j[field::type][item.p_j];
+
 				// === vertex array
-				const auto& vertices =  cell[field::vertices][p];
+				const auto& vertices_i =  cell_i[field::vertices][item.p_i];
+				const auto& vertices_j =  cell_j[field::vertices][item.p_j];
 
-				auto [contact, dn, n, contact_position] = exaDEM::detector_vertex_driver(driver, vertices, sub, shp);
+				// === shapes
+				const shape* shp_i = shps[type_i];
+				const shape* shp_j = shps[type_j];
 
+				auto [contact, dn, n, contact_position] = detect[item.type](vertices_i, item.sub_i, shp_i, vertices_j, item.sub_j, shp_j);
 				if(contact)
 				{
-					constexpr Vec3d null = {0,0,0};
-					auto& mom = cell[field::mom][p];
-					const Vec3d v = { cell[field::vx][p], cell[field::vy][p], cell[field::vz][p] };
-					const double meff = cell[field::mass][p];
-					Vec3d f = null;
+					const Vec3d vi = get_v(cell_i, item.p_i);
+					const Vec3d vj = get_v(cell_j, item.p_j);
+					const auto& m_i = cell_i[field::mass][item.p_i];
+					const auto& m_j = cell_j[field::mass][item.p_j];
+
+					// temporary vec3d to store forces.
+					Vec3d f = {0,0,0};
+					const double meff = compute_effective_mass(m_i, m_j);
+
 					hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 							hkp.m_mu, hkp.m_damp_rate, meff,
-							I.friction, contact_position,
-							r, v, f, I.moment, vrot,  // particle i
-							driver.center, driver.vel, driver.vrot // particle j
+							item.friction, contact_position,
+							ri, vi, f, item.moment, vrot_i,  // particle 1
+							rj, vj, vrot_j // particle nbh
 							);
 
-					// === update informations
-					locker.lock(I.cell_i, p);
-					mom += compute_moments(contact_position, r, f, I.moment);
-					cell[field::fx][p] += f.x;
-					cell[field::fy][p] += f.y;
-					cell[field::fz][p] += f.z;
-					locker.unlock(I.cell_i, p);
+
+					// === update particle informations
+					// ==== Particle i
+					locker.lock(item.cell_i, item.p_i);
+
+					auto& mom_i = cell_i[field::mom][item.p_i];
+					mom_i += compute_moments(contact_position, ri, f, item.moment);
+					cell_i[field::fx][item.p_i] += f.x;
+					cell_i[field::fy][item.p_i] += f.y;
+					cell_i[field::fz][item.p_i] += f.z;
+
+					locker.unlock(item.cell_i, item.p_i);
+
+					// ==== Particle j
+					locker.lock(item.cell_j, item.p_j);
+
+					auto& mom_j = cell_j[field::mom][item.p_j];
+					mom_j += compute_moments(contact_position, rj, -f, -item.moment);
+					cell_j[field::fx][item.p_j] -= f.x;
+					cell_j[field::fy][item.p_j] -= f.y;
+					cell_j[field::fz][item.p_j] -= f.z;
+
+					locker.unlock(item.cell_j, item.p_j);
 				}
 				else
 				{
-					I.reset();
+					item.reset();
 				}
 			}
+		typedef decltype (&(exaDEM::detection_vertex_vertex_precompute)) Detector;
+		const std::array<Detector,4> detect = { 
+			exaDEM::detection_vertex_vertex_precompute,
+			exaDEM::detection_vertex_edge_precompute,
+			exaDEM::detection_vertex_face_precompute,
+			exaDEM::detection_edge_edge_precompute};
+	};
 
-		struct stl_mesh_dectector
+	// C for cell and D for driver
+	template<typename TMPLD>
+		struct hooke_law_driver
 		{
-			ONIKA_HOST_DEVICE_FUNC std::tuple<bool, double, Vec3d, Vec3d> operator() (
-					const uint16_t type,
-					const Vec3d& pi, const int i, const shape* shpi, const exanb::Quaternion& oi,
-					const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj) const
-			{
-			 	#define __params__     pi, i, shpi, oi, pj, j, shpj, oj
-			 	#define __inv_params__ pj, j, shpj, oj, pi, i, shpi, oi
-				assert( type >= 7 && type <= 12 );
-				switch (type)
+			template<typename Cells>
+				ONIKA_HOST_DEVICE_FUNC inline void operator()(Interaction& item, Cells& cells, Drivers& drvs, const HookeParams& hkp, const shapes& shps, const double time, mutexes& locker) const
 				{
-					case 7: return exaDEM::detection_vertex_vertex ( __params__ );
-					case 8: return exaDEM::detection_vertex_edge ( __params__ );
-					case 9: return exaDEM::detection_vertex_face ( __params__ );
-					case 10: return exaDEM::detection_edge_edge ( __params__ );
-					case 11: return exaDEM::detection_vertex_edge ( __params__ );
-					case 12: return exaDEM::detection_vertex_face ( __inv_params__ );
-				}
-				#undef __params__
-				#undef __inv_params__
-				return std::tuple<bool, double, Vec3d, Vec3d>();
-			}
+					const int driver_idx = item.id_j; //
+					auto& driver = std::get<TMPLD>(drvs.data(driver_idx)) ;
+					auto& cell = cells[item.cell_i];
+					const auto type = cell[field::type][item.p_i];
+					auto* shp = shps[type];
 
+					const size_t p   = item.p_i;
+					const size_t sub = item.sub_i;
+					// === positions
+					const Vec3d r       = { cell[field::rx][p], cell[field::ry][p], cell[field::rz][p] };
+					// === vertex array
+					const auto& vertices =  cell[field::vertices][p];
+
+					auto [contact, dn, n, contact_position] = exaDEM::detector_vertex_driver(driver, vertices, sub, shp);
+
+					if(contact)
+					{
+						// === vrot
+						const Vec3d& vrot  = cell[field::vrot][p];
+
+						constexpr Vec3d null = {0,0,0};
+						auto& mom = cell[field::mom][p];
+						const Vec3d v = { cell[field::vx][p], cell[field::vy][p], cell[field::vz][p] };
+						const double meff = cell[field::mass][p];
+						Vec3d f = null;
+						hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+								hkp.m_mu, hkp.m_damp_rate, meff,
+								item.friction, contact_position,
+								r, v, f, item.moment, vrot,  // particle i
+								driver.center, driver.get_vel(), driver.vrot // particle j
+								);
+
+						// === update informations
+						locker.lock(item.cell_i, p);
+						mom += compute_moments(contact_position, r, f, item.moment);
+						cell[field::fx][p] += f.x;
+						cell[field::fy][p] += f.y;
+						cell[field::fz][p] += f.z;
+						locker.unlock(item.cell_i, p);
+					}
+					else
+					{
+						item.reset();
+					}
+				}
 		};
 
-		template<typename C>
-			ONIKA_HOST_DEVICE_FUNC void compute_driver_stl(C& cell, Stl_mesh& driver, const HookeParams& hkp, const shape* shp_i, Interaction& I, const double time, mutexes& locker)
+	struct stl_mesh_detector
+	{
+		ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator() (
+				const uint16_t type,
+				const Vec3d& pi, const int i, const shape* shpi, const exanb::Quaternion& oi,
+				const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj) const
+		{
+#define __params__     pi, i, shpi, oi, pj, j, shpj, oj
+#define __inv_params__ pj, j, shpj, oj, pi, i, shpi, oi
+			assert( type >= 7 && type <= 12 );
+			switch (type)
 			{
-				const stl_mesh_dectector func;
-				const size_t p_i   = I.p_i;
-				const size_t sub_i = I.sub_i;
-				const size_t sub_j = I.sub_j;
+				case 7: return exaDEM::detection_vertex_vertex ( __params__ );
+				case 8: return exaDEM::detection_vertex_edge ( __params__ );
+				case 9: return exaDEM::detection_vertex_face ( __params__ );
+				case 10: return exaDEM::detection_edge_edge ( __params__ );
+				case 11: return exaDEM::detection_vertex_edge ( __params__ );
+				case 12: return exaDEM::detection_vertex_face ( __inv_params__ );
+			}
+#undef __params__
+#undef __inv_params__
+			return std::tuple<bool, double, Vec3d, Vec3d>();
+		}
+
+	};
+
+	struct hooke_law_stl
+	{
+		template<typename Cells>
+			ONIKA_HOST_DEVICE_FUNC inline void operator()( Interaction& item, Cells& cells, Drivers& drvs, const HookeParams& hkp, const shapes shps, const double time, mutexes& locker) const
+			{
+				const int driver_idx = item.id_j; //
+				auto& driver = std::get<Stl_mesh>(drvs.data(driver_idx)) ;
+				auto& cell = cells[item.cell_i];
+				const auto type = cell[field::type][item.p_i];
+				auto* shp_i = shps[type];
+
+				const size_t p_i   = item.p_i;
+				const size_t sub_i = item.sub_i;
+				const size_t sub_j = item.sub_j;
+
 				// === positions
 				const Vec3d r_i       = { cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i] };
 				// === vrot
@@ -108,9 +232,8 @@ namespace exaDEM
 				const Quaternion& orient_i  = cell[field::orient][p_i];
 				const auto& shp_j = driver.shp;
 
-				// WARNING
 				const Quaternion orient_j = {1.0,0.0,0.0,0.0};
-				auto [contact, dn, n, contact_position] = func(I.type, r_i, sub_i, shp_i, orient_i, driver.center, sub_j, &shp_j, orient_j);
+				auto [contact, dn, n, contact_position] = func(item.type, r_i, sub_i, shp_i, orient_i, driver.center, sub_j, &shp_j, orient_j);
 
 				if(contact)
 				{
@@ -121,65 +244,68 @@ namespace exaDEM
 					Vec3d f = null;
 					hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 							hkp.m_mu, hkp.m_damp_rate, meff,
-							I.friction, contact_position,
-							r_i, v_i, f, I.moment, vrot_i,  // particle i
+							item.friction, contact_position,
+							r_i, v_i, f, item.moment, vrot_i,  // particle i
 							driver.center, driver.vel, driver.vrot // particle j
 							);
 
 					// === update informations
-					locker.lock(I.cell_i, p_i);
-					mom += compute_moments(contact_position, r_i, f, I.moment);
+					locker.lock(item.cell_i, p_i);
+					mom += compute_moments(contact_position, r_i, f, item.moment);
 					cell[field::fx][p_i] += f.x;
 					cell[field::fy][p_i] += f.y;
 					cell[field::fz][p_i] += f.z;
-					locker.unlock(I.cell_i, p_i);
+					locker.unlock(item.cell_i, p_i);
 				}
 				else
 				{
-					I.reset();
+					item.reset();
 				}
 			}
-
-
-
-		template<class GridT>
-			struct HookeForceInteractionFunctor
-			{
-				GridT& cells;
-				mutexes& locker;
-				const shapes & shps;
-				const HookeParams params;
-				const double time;
-
-				inline const Vec3d get_r(const int cell_id, const int p_id)
-				{
-					const Vec3d res = {
-						cells[cell_id][field::rx][p_id],
-						cells[cell_id][field::ry][p_id],
-						cells[cell_id][field::rz][p_id]};
-					return res;
-				};
-
-				inline const Vec3d get_v(const int cell_id, const int p_id)
-				{
-					const Vec3d res = {
-						cells[cell_id][field::vx][p_id],
-						cells[cell_id][field::vy][p_id],
-						cells[cell_id][field::vz][p_id]};
-					return res;
-				};
-
-				ONIKA_HOST_DEVICE_FUNC inline void compute_force_interaction (  )
-				{
-				}
-
-				ONIKA_HOST_DEVICE_FUNC inline void operator () ( Interaction * __restrict__ ptr, const size_t size) const
-				{
-				}
-
-				ONIKA_HOST_DEVICE_FUNC inline void operator () ( Interaction& it) const
-				{
-				}
-			};
-
+		const stl_mesh_detector func;
+	};
 }
+
+/*
+
+	 template<class GridT>
+	 struct HookeForceInteractionFunctor
+	 {
+	 GridT& cells;
+	 mutexes& locker;
+	 const shapes & shps;
+	 const HookeParams params;
+	 const double time;
+
+	 inline const Vec3d get_r(const int cell_id, const int p_id)
+	 {
+	 const Vec3d res = {
+	 cells[cell_id][field::rx][p_id],
+	 cells[cell_id][field::ry][p_id],
+	 cells[cell_id][field::rz][p_id]};
+	 return res;
+	 };
+
+	 inline const Vec3d get_v(const int cell_id, const int p_id)
+	 {
+	 const Vec3d res = {
+	 cells[cell_id][field::vx][p_id],
+	 cells[cell_id][field::vy][p_id],
+	 cells[cell_id][field::vz][p_id]};
+	 return res;
+	 };
+
+	 ONIKA_HOST_DEVICE_FUNC inline void compute_force_interaction (  )
+	 {
+	 }
+
+	 ONIKA_HOST_DEVICE_FUNC inline void operator () ( Interaction * __restrict__ ptr, const size_t size) const
+	 {
+	 }
+
+	 ONIKA_HOST_DEVICE_FUNC inline void operator () ( Interaction& it) const
+	 {
+	 }
+	 };
+
+ */
