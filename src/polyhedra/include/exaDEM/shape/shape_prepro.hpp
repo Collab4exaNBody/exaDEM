@@ -144,7 +144,7 @@ namespace exaDEM
 		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center);
 		const exanb::Quaternion onull = {1,0,0,0};
 
-		lout << "build " << size << " obb [vertices]" << std::endl;
+		lout << "obb [vertices] = " << size << std::endl;
 
 #pragma omp parallel for schedule (static)
 		for ( size_t i = 0 ; i < size ; i++)
@@ -162,7 +162,7 @@ namespace exaDEM
 		//const exanb::Vec3d vnull      = {0,0,0};
 		const exanb::Quaternion onull = {1,0,0,0};
 		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center);
-		lout << "build " << size << " obb [edges]" << std::endl;
+		lout << "obb [edges]    = " << size << std::endl;
 #pragma omp parallel for schedule(static)
 		for ( size_t i = 0 ; i < size ; i++)
 		{
@@ -178,7 +178,7 @@ namespace exaDEM
 		//const exanb::Vec3d vnull      = {0,0,0};
 		const exanb::Quaternion onull = {1,0,0,0};
 		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center);
-		lout << "build " << size << " obb [faces]" << std::endl;
+		lout << "obb [faces]    = " << size << std::endl;
 
 #pragma omp parallel for schedule(static)
 		for ( size_t i = 0 ; i < size ; i++)
