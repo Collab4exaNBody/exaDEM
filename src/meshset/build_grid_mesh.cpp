@@ -237,12 +237,14 @@ namespace exaDEM
 		}
 		
 		__global__ void setGPU2(int* add,
+					int* pot,
 					int size)
 		{
 			int idx = threadIdx.x + blockIdx.x * blockDim.x;
 			if(idx < size)
 			{
 				add[idx] = 0;
+				pot[idx] = 0;
 			}
 		}
 		
@@ -293,6 +295,8 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
+		
+			printf("BUILD START\n");
 			//auto& collection = *stl_collection;
 			auto& mesh= *meshes;
 			const double rad = *rcut_max;
@@ -305,9 +309,15 @@ namespace exaDEM
 			Interactions& interactions_new = *Int;
 			Interactions interactions_old = interactions_new;
 			
+			//printf("ICI-UN\n");
+			
 			interactions_old.maj_friction();
+
+			//printf("ICI-DEUX\n");
 			
 			interactions_new.reset();
+			
+			//printf("ICI-TROIS\n");
 			
 			auto& ind2 = mesh.indexes2;
 			auto& obb_faces = mesh.m_obbs;
@@ -315,12 +325,17 @@ namespace exaDEM
 			//mesh.build_boxes();
 			mesh.build_obbs();
 			
+			//printf("ICI-QUATRE\n");
+			
 			std::vector< std::vector< std::vector< int>>> cell_particles_faces;
 			std::vector< std::vector<int>> id_cell_particles_faces;
-								
+			
+			//printf("ICI-CINQ\n");
 				
 			cell_particles_faces.resize(n_cells);
 			id_cell_particles_faces.resize(n_cells);
+			
+			//printf("ICI\n");
 				
 
 #     pragma omp parallel
@@ -366,6 +381,29 @@ namespace exaDEM
 			}
 			GRID_OMP_FOR_END
 			
+			//printf("ICI2\n");
+			
+			/*int rs = 0;
+			
+			for(int i = 0; i < cell_particles_faces.size(); i++)
+			{
+				int cell = i;
+				for(int j = 0; j < cell_particles_faces[i].size(); j++)
+				{
+					int particle = j;
+					auto ida = id_cell_particles_faces[i][j];
+					auto faces = cell_particles_faces[i][j];
+					if(faces.size() > 0)
+					{
+						rs++;
+					}
+				}
+			}
+			
+			interactions_new.resize(rs);*/
+			
+			
+			
 			for(int i = 0; i < cell_particles_faces.size(); i++)
 			{
 				int cell = i;
@@ -381,11 +419,19 @@ namespace exaDEM
 				}
 			}
 			
+			//printf("ICI3\n");
+			
 			interactions_new.quickSort();
+			
+			//printf("ICI4\n");
 				
 			interactions_new.init_friction(interactions_old);
+			
+			//printf("ICI5\n");
 				
 			interactions_new.init_GPU(mesh);
+			
+			//printf("ICI6\n");
 				
 			int size = interactions_new.nb_interactions;
 			int blockSize = 128;
@@ -403,7 +449,7 @@ namespace exaDEM
 			else if(size2 / blockSize < 1){ numBlocks=1; blockSize = size2;}
 			else{ numBlocks = int(size2/blockSize)+1; }
 				
-			setGPU2<<<numBlocks, blockSize>>>(interactions_new.add_particle.data(), size2);
+			setGPU2<<<numBlocks, blockSize>>>(interactions_new.add_particle.data(), interactions_new.potentiels.data(), size2);
 				
 			int size3 = interactions_new.vx_GPU.size();
 			if(size3 % blockSize == 0){ numBlocks = size3/blockSize;}
@@ -412,6 +458,8 @@ namespace exaDEM
 				
 			setGPU3<<<numBlocks, blockSize>>>(interactions_new.vx_GPU2.data(), interactions_new.vy_GPU2.data(), interactions_new.vz_GPU2.data(),
 							interactions_new.vx_GPU, interactions_new.vy_GPU, interactions_new.vz_GPU, size3);
+							
+			printf("BUILD END\n");
 				
 		};
 	};

@@ -28,6 +28,7 @@ namespace exaDEM
 	struct Interactions
 	{
 		int nb_particles;//Number of particles
+		int nb_particles_flow;
 		
 		std::vector<int> pa;
 		std::vector<int> cella;
@@ -83,6 +84,7 @@ namespace exaDEM
 		onika::memory::CudaMMVector<int> which_particle2;
 		
 		onika::memory::CudaMMVector<int> add_particle;
+		onika::memory::CudaMMVector<int> potentiels;
 		
 		std::vector<int> start;
 		std::vector<int> end;
@@ -92,17 +94,198 @@ namespace exaDEM
 		
 		//Reset the attributes
 		void reset(){
+			
 			nb_particles = 0;
+	
+			nb_interactions = 0;
 			
 			
+			pa.clear();
+			pa.shrink_to_fit();
+			
+			cella.clear();
+			cella.shrink_to_fit();
+			
+			id_a.clear();
+			id_a.shrink_to_fit();
+			
+			faces_idx.clear();
+			faces_idx.shrink_to_fit();
+			
+			nx.clear();
+			nx.shrink_to_fit();
+			
+			ny.clear();
+			ny.shrink_to_fit();
+			
+			nz.clear();
+			nz.shrink_to_fit();
+			
+			offsets.clear();
+			offsets.shrink_to_fit();
+			
+			num_vertices.clear();
+			num_vertices.shrink_to_fit();
+			
+			ftx.clear();
+			ftx.shrink_to_fit();
+			
+			fty.clear();
+			fty.shrink_to_fit();
+			
+			ftz.clear();
+			ftz.shrink_to_fit();
+			
+			pa_GPU.clear();
+			pa_GPU.shrink_to_fit();
+			
+			cella_GPU.clear();
+			cella_GPU.shrink_to_fit();
+			
+			faces_idx_GPU.clear();
+			faces_idx_GPU.shrink_to_fit();
+			
+			faces_build_GPU.clear();
+			faces_build_GPU.shrink_to_fit();
+			
+			nx_GPU.clear();
+			nx_GPU.shrink_to_fit();
+			
+			ny_GPU.clear();
+			ny_GPU.shrink_to_fit();
+			
+			nz_GPU.clear();
+			nz_GPU.shrink_to_fit();
+			
+			offsets_GPU.clear();
+			offsets_GPU.shrink_to_fit();
+			
+			num_vertices_GPU.clear();
+			num_vertices_GPU.shrink_to_fit();
+			
+			ftx_GPU.clear();
+			ftx_GPU.shrink_to_fit();
+			
+			fty_GPU.clear();
+			fty_GPU.shrink_to_fit();
+			
+			ftz_GPU.clear();
+			ftz_GPU.shrink_to_fit();
+			
+			vx_GPU.clear();
+			vx_GPU.shrink_to_fit();
+			
+			vy_GPU.clear();
+			vy_GPU.shrink_to_fit();
+			
+			vz_GPU.clear();
+			vz_GPU.shrink_to_fit();
+			
+			pa_GPU2.clear();
+			pa_GPU2.shrink_to_fit();
+			
+			cella_GPU2.clear();
+			cella_GPU2.shrink_to_fit();
+			
+			faces_idx_GPU2.clear();
+			faces_idx_GPU2.shrink_to_fit();
+			
+			nx_GPU2.clear();
+			nx_GPU2.shrink_to_fit();
+			
+			ny_GPU2.clear();
+			ny_GPU2.shrink_to_fit();
+			
+			nz_GPU2.clear();
+			nz_GPU2.shrink_to_fit();
+			
+			offsets_GPU2.clear();
+			offsets_GPU2.shrink_to_fit();
+			
+			num_vertices_GPU2.clear();
+			num_vertices_GPU2.shrink_to_fit();
+			
+			ftx_GPU2.clear();
+			ftx_GPU2.shrink_to_fit();
+			
+			fty_GPU2.clear();
+			fty_GPU2.shrink_to_fit();
+			
+			ftz_GPU2.clear();
+			ftz_GPU2.shrink_to_fit();
+			
+			vx_GPU2.clear();
+			vx_GPU2.shrink_to_fit();
+			
+			vy_GPU2.clear();
+			vy_GPU2.shrink_to_fit();
+			
+			vz_GPU2.clear();
+			vz_GPU2.shrink_to_fit();
+			
+			posx.clear();
+			posx.shrink_to_fit();
+			
+			posy.clear();
+			posy.shrink_to_fit();
+			
+			posz.clear();
+			posz.shrink_to_fit();
+			
+			contact.clear();
+			contact.shrink_to_fit();
+			
+			which_particle.clear();
+			which_particle.shrink_to_fit();
+			
+			which_particle2.clear();
+			which_particle2.shrink_to_fit();
+			
+			add_particle.clear();
+			add_particle.shrink_to_fit();
+			
+			start.clear();
+			start.shrink_to_fit();
+			
+			end.clear();
+			end.shrink_to_fit();
+			
+			num_faces.clear();
+			num_faces.shrink_to_fit();
+			
+			potentiels.clear();
+			potentiels.shrink_to_fit();
+			
+		}
+		
+		void resize(int rs)
+		{
+			nb_particles =rs;
+			
+			pa.resize(rs);
+			cella.resize(rs);
+			id_a.resize(rs);
+			
+			faces_idx.resize(rs);
+			nx.resize(rs);
+			ny.resize(rs);
+			nz.resize(rs);
+			offsets.resize(rs);
+			num_vertices.resize(rs);
+			ftx.resize(rs);
+			fty.resize(rs);
+			ftz.resize(rs);
 		}
 		
 		
 		void add_particle_func(int p, int cell, std::vector<int> faces, int ida, stl_meshes meshes)
 		{
 			pa.push_back(p);
+			//pa[nb_particles_flow] = p;
 			cella.push_back(cell);
+			//cella[nb_particles_flow] = cell;
 			id_a.push_back(ida);
+			//id_a[nb_particles_flow] = ida;
 			
 			faces_idx.resize(nb_particles + 1);
 			nx.resize(nb_particles + 1);
@@ -124,21 +307,33 @@ namespace exaDEM
 			auto& fty2 = fty[nb_particles];
 			auto& ftz2 = ftz[nb_particles];
 			
-			for(int i = 0; i < faces.size(); i++)
+			int fsize = faces.size();
+			faces2.resize(fsize);
+			nx2.resize(fsize);
+			ny2.resize(fsize);
+			nz2.resize(fsize);
+			offsets2.resize(fsize);
+			n_vertices.resize(fsize);
+			ftx2.resize(fsize);
+			fty2.resize(fsize);
+			ftz2.resize(fsize);
+			
+			for(int i = 0; i < fsize; i++)
 			{
 				int idx = faces[i];
-				faces2.push_back(idx);
-				nx2.push_back(meshes.nx[idx]);
-				ny2.push_back(meshes.ny[idx]);
-				nz2.push_back(meshes.nz[idx]);
-				offsets2.push_back(meshes.offsets[idx]);
-				n_vertices.push_back(meshes.nb_vertices[idx]);
-				ftx2.push_back(0);
-				fty2.push_back(0);
-				ftz2.push_back(0);
+				faces2[i] = idx;
+				nx2[i] = meshes.nx[idx];
+				ny2[i] = meshes.ny[idx];
+				nz2[i] = meshes.nz[idx];
+				offsets2[i] = meshes.offsets[idx];
+				n_vertices[i] = meshes.nb_vertices[idx];
+				ftx2[i] = 0;
+				fty2[i] = 0;
+				ftz2[i] = 0;
 			}
 			
 			nb_particles++;
+			//printf("ADD END\n");
 		}
 		
 		void swap_a(int i, int j)
@@ -326,11 +521,13 @@ namespace exaDEM
 						{
 							if(faces_idx[a][a2] == old.faces_idx[b][b2])
 							{
+								//printf("INIT\n");
 								ftx[a][a2] = old.ftx[b][b2];
 								fty[a][a2] = old.fty[b][b2];
 								ftz[a][a2] = old.ftz[b][b2];
 								a2++;
-								b2;;
+								b2++;
+								//printf("INIT END\n");
 							} else if(faces_idx[a][a2] > old.faces_idx[b][b2])
 							{
 								b2++;
@@ -361,11 +558,11 @@ namespace exaDEM
 			for(int i = 0; i < nb_particles; i++)
 			{
 				int z = 0;
-				for(int j = start[z]; j < end[z]; j++)
+				for(int j = start[i]; j < end[i]; j++)
 				{
-					ftx[i][z] = ftx_GPU[j];
-					fty[i][z] = fty_GPU[j];
-					ftz[i][z] = ftz_GPU[j];
+					ftx[i][z] = ftx_GPU2[j];
+					fty[i][z] = fty_GPU2[j];
+					ftz[i][z] = ftz_GPU2[j];
 					z++;
 				}
 			}
@@ -403,7 +600,7 @@ namespace exaDEM
 				{
 					index.push_back(idx);
 					start_meshes.push_back(vx_GPU.size());
-					faces_build_GPU.push_back(vx_GPU.size());
+					faces_build_GPU[i] = vx_GPU.size();
 					int start = meshes.start[idx];
 					int end = meshes.end[idx];
 					
@@ -419,6 +616,8 @@ namespace exaDEM
 		
 		void init_GPU(stl_meshes meshes)
 		{
+			if(nb_particles > 0)
+			{
 			start.resize(nb_particles);
 			end.resize(nb_particles);
 			num_faces.resize(nb_particles);
@@ -428,16 +627,26 @@ namespace exaDEM
 				num_faces[i] = faces_idx[i].size();
 			}
 			
+			//printf("SLT\n");
+			
 			for(int i = 0; i < nb_particles; i++)
 			{
 				nb_interactions+= num_faces[i];
 			}
+			//printf("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII : %d\n", nb_interactions);
+			//getchar();
 			
+			//printf("SLT2\n");
+			//printf("NB PARTICULES : %d\n", nb_particles);
 			start[0] = 0;
+			//printf("NB PARTICULES : %d\n", nb_particles);
 			for(int i = 1; i < nb_particles; i++)
 			{
+				//printf("III : %d\n", i);
 				start[i] = num_faces[i - 1] + start[i - 1];
 			}
+			
+			//printf("SLT3\n");
 			
 			end[nb_particles - 1] = nb_interactions;
 			for(int i = 0; i < nb_particles - 1; i++)
@@ -445,6 +654,7 @@ namespace exaDEM
 				end[i] = start[i + 1];
 			}
 			
+			//printf("SLT4\n");
 			
 			pa_GPU.resize(nb_interactions);
 			cella_GPU.resize(nb_interactions);
@@ -508,10 +718,12 @@ namespace exaDEM
 			posz.resize(nb_interactions);
 			
 			add_particle.resize(nb_particles);
+			potentiels.resize(nb_particles);
 			
 			vx_GPU2.resize(vx_GPU.size());
 			vy_GPU2.resize(vy_GPU.size());
 			vz_GPU2.resize(vz_GPU.size());
+			}
 			
 		}
 		

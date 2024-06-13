@@ -118,6 +118,8 @@ namespace exaDEM
 					reset(ft); // no friction if no contact
 				}
 			}
+			
+	
 
 
 ONIKA_HOST_DEVICE_FUNC inline 

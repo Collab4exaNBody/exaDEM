@@ -331,7 +331,7 @@ namespace exaDEM
 								ParticleNeighborFrictionIterator cp_friction{ nbh_friction->m_cell_friction.data() };
 								
 								//HOOKE_FORCE_GPU
-								int size = ints.nb_interactions;
+								/*int size = ints.nb_interactions;
 								int blockSize = 128;
 								int numBlocks;
 								if(size % blockSize == 0){ numBlocks = size/blockSize;}
@@ -341,13 +341,13 @@ namespace exaDEM
 								onika::memory::CudaMMVector<double> fx;
 								fx.resize(1);
 								
-								HookeForceGPU<<<numBlocks, blockSize>>>(cells, *config, *dt, domain->xform(), size, ints.pa_GPU2.data(), ints.cella_GPU2.data(), ints.pb_GPU2.data(), ints.cellb_GPU2.data(), ints.ftx_GPU2.data(), ints.fty_GPU2.data(), ints.ftz_GPU2.data());
+								HookeForceGPU<<<numBlocks, blockSize>>>(cells, *config, *dt, domain->xform(), size, ints.pa_GPU2.data(), ints.cella_GPU2.data(), ints.pb_GPU2.data(), ints.cellb_GPU2.data(), ints.ftx_GPU2.data(), ints.fty_GPU2.data(), ints.ftz_GPU2.data());*/
 								
 								//sgetchar();
 								
 								//HOOKE_FORCE_GPU
 								
-								/*if( domain->xform_is_identity() )
+								if( domain->xform_is_identity() )
 								{
 									//printf("NULLXFORM\n");
 									auto optional = make_compute_pair_optional_args( nbh_it, cp_friction, NullXForm{}, cp_locks );
@@ -358,7 +358,7 @@ namespace exaDEM
 									//printf("LINEARXFORM\n");
 									auto optional = make_compute_pair_optional_args( nbh_it, cp_friction , LinearXForm{ domain->xform() }, cp_locks );
 									compute_cell_particle_pairs( *grid, rcut, *ghost, optional, force_buf, force_op, compute_fields, DefaultPositionFields{}, parallel_execution_context() );
-								}*/
+								}
 								
 							}
 

@@ -78,6 +78,7 @@ namespace exaDEM
 									int* contacts,
 									int* which_particle,
 									int* add,
+									int* pot,
 									double* vx,
 									double* vy,
 									double* vz,
@@ -86,7 +87,7 @@ namespace exaDEM
 									double* pz,
 									int size)
 		{
-		
+		//printf("INCLUDERE\n");
 		//Index of the particle in the interaction's list
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		
@@ -174,7 +175,7 @@ namespace exaDEM
 					{
 						position = normal*off;
 						contact= true;
-				}
+					}
 
 			}
 			
@@ -184,11 +185,14 @@ namespace exaDEM
 				py[idx] = position.y;
 				pz[idx] = position.z;
 				contacts[idx] = 1;
+				//printf("VAIIIIIII\n");
 			}
 			
 			int particle = which_particle[idx];
 			
-			if(contact || potential) atomicAdd(&add[particle], 1);		
+			if(contact){ atomicAdd(&add[particle], 1); }
+			
+			if(potential){ atomicAdd(&pot[particle], 1); }		
 				
 			}
 		}
@@ -206,6 +210,7 @@ namespace exaDEM
 									int* contacts,
 									int* which_particle,
 									int* add,
+									int* pot,
 									double* vx,
 									double* vy,
 									double* vz,
@@ -220,7 +225,7 @@ namespace exaDEM
 		if(idx < size)
 		{
 			int particle = which_particle[idx];
-			if(add[particle] == 0)
+			if(add[particle] == 0 && pot[idx] > 0)
 			{
 				int p_a = pa[idx];
 				int cell_a = cella[idx];
@@ -271,6 +276,7 @@ namespace exaDEM
 					px[idx] = position.x;
 					py[idx] = position.y;
 					pz[idx] = position.z;
+					//printf("DOOOOOOOOOOOOOVE\n");
 				}
 				
 			}
@@ -300,7 +306,7 @@ namespace exaDEM
 									double kn, 
 									double kr, 
 									double mu, 
-									double damprate,
+									double dampRate,
 									int size)
 		{
 			int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -308,12 +314,13 @@ namespace exaDEM
 			{
 				if(contacts[idx] == 1)
 				{
+					
 					int p_a = pa[idx];
 					int cell_a = cella[idx];
 					
 					int particle = which_particle[idx];
 					
-					Vec3d mom = cells[cell_a][field::mom][p_a];
+					//Vec3d mom = cells[cell_a][field::mom][p_a];
 					Vec3d ft = {ftx[idx], fty[idx], ftz[idx]};
 					Vec3d vrot = cells[cell_a][field::vrot][p_a];
 					
@@ -327,6 +334,8 @@ namespace exaDEM
 					
 					double radius = cells[cell_a][field::radius][p_a];
 					
+					
+					
 					Vec3d pos_proj;
 					double m_vel = 0;
 					Vec3d pos = {rx, ry, rz};
@@ -334,7 +343,7 @@ namespace exaDEM
 					
 					Vec3d normal = {nx[idx], ny[idx], nz[idx]};
 					
-					if(add[particle] == 0)
+					if(add[particle] > 0)
 					{
 						pos_proj = dot(pos, normal) * normal;
 					}
@@ -343,36 +352,98 @@ namespace exaDEM
 						pos_proj = pos;
 					}
 					
-					Vec3d position = {px[idx], py[idx], pz[idx]};
+					Vec3d contact_position = {px[idx], py[idx], pz[idx]};
 					
-					Vec3d vec_n = pos_proj - position;
+					Vec3d vec_n = pos_proj - contact_position;
 					double n = norm(vec_n);
 					vec_n = vec_n / n;
 					const double dn = n - radius;
-					Vec3d rigid_surface_center = position;
+					Vec3d rigid_surface_center = contact_position;
 					const Vec3d rigid_surface_velocity = normal * m_vel;
 					constexpr Vec3d rigid_surface_angular_velocity = {0.0, 0.0, 0.0};
 					
-					Vec3d f = {0.0, 0.0, 0.0};
+					//Vec3d f_i = {0.0, 0.0, 0.0};
+					double fx=0;
+					double fy=0;
+					double fz=0;
+					double momx = 0;
+					double momy=0;
+					double momz=0;
 					constexpr double meff = 1;
 					
-					hooke_force_core_v2(
-						dn, vec_n,
-						dt, kn, kt, kr, mu, damprate, meff,
-						ft, position, pos_proj, vel, f, mom, vrot,
-						rigid_surface_center, rigid_surface_velocity, rigid_surface_angular_velocity
-						);
+					auto pos_i = pos_proj;
+					auto vel_i = vel;
+					auto vrot_i = vrot;
+					auto pos_j = rigid_surface_center;
+					auto vel_j = rigid_surface_velocity;
+					auto vrot_j = rigid_surface_angular_velocity;
+					
+					if(dn <= 0.0) 
+					{
+						printf("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+						const double damp = compute_damp(dampRate, kn,  meff);
+
+						// === Relative velocity (j relative to i)
+						auto vel = compute_relative_velocity(
+							contact_position,
+							pos_i, vel_i, vrot_i,
+							pos_j, vel_j, vrot_j
+							);
+
+						// compute relative velocity
+						const double vn = exanb::dot(vec_n, vel);
+
+						// === Normal force (elatic contact + viscous damping)
+						const Vec3d fn = compute_normal_force(kn, damp, dn, vn, vec_n); // fc ==> cohesive force
+						
+						printf("########################################### FNX:%f FNY:%f FNZ:%f KN:%f DAMP:%f DN:%f VN:%f VECN(%f, %f, %f)\n", fn.x, fn.y, fn.z, kn, damp, dn, vn, vec_n.x, vec_n.y, vec_n.z);
+
+						// === Tangential force (friction)
+						ft	 		+= exaDEM::compute_tangential_force(kt, dt, vn, vec_n, vel);
+
+
+						// fit tangential force
+						auto threshold_ft 	= exaDEM::compute_threshold_ft(mu, kn, dn);
+						exaDEM::fit_tangential_force(threshold_ft, ft);
+
+						// === sum forces
+						const auto f = fn + ft;
+
+						// === update forces
+						//f_i += f;
+						//f_i += f;
+						fx = f.x;
+						fy = f.y;
+						fz = f.z;
+
+						// === update moments
+						const Vec3d mom = kr * (vrot_j - vrot_i) * dt;
+						const auto Ci = (contact_position - pos_i);
+						const auto Pimoment = exanb::cross(Ci, f) + mom;
+						//mom_i += Pimoment;
+						momx = Pimoment.x;
+						momy = Pimoment.y;
+						momz = Pimoment.z;
+					}
+					else
+					{
+						reset(ft); // no friction if no contact
+					}
 					
 					ftx[idx] = ft.x;
 					fty[idx] = ft.y;
 					ftz[idx] = ft.z;
 					
-					atomicAdd(&cells[cell_a][field::mom][p_a].x, mom.x);
-					atomicAdd(&cells[cell_a][field::mom][p_a].y, mom.y);
-					atomicAdd(&cells[cell_a][field::mom][p_a].z, mom.z);
-					atomicAdd(&cells[cell_a][field::fx][p_a], f.x);
-					atomicAdd(&cells[cell_a][field::fy][p_a], f.y);
-					atomicAdd(&cells[cell_a][field::fz][p_a], f.z);
+					printf("******************************** FX:%f FY:%f FZ:%f FTX:%f FTY:%f FTZ:%f\n", cells[cell_a][field::fx][p_a], cells[cell_a][field::fy][p_a], cells[cell_a][field::fz][p_a], ft.x, ft.y, ft.z);
+					
+					atomicAdd(&cells[cell_a][field::mom][p_a].x, momx);
+					atomicAdd(&cells[cell_a][field::mom][p_a].y, momy);
+					atomicAdd(&cells[cell_a][field::mom][p_a].z, momz);
+					atomicAdd(&cells[cell_a][field::fx][p_a], fx);
+					atomicAdd(&cells[cell_a][field::fy][p_a], fy);
+					atomicAdd(&cells[cell_a][field::fz][p_a], fz);
+					
+					printf("??????????????????????????????????????????????????? MOMX:%f MOMY:%f MOMZ:%f FX:%f FY:%f FZ:%f\n", momx, momy, momz, fx, fy, fz);
 				}
 			}
 		}
@@ -410,13 +481,15 @@ namespace exaDEM
 
 	      inline void execute () override final
 	      {
+	      	printf("APPLY START\n");
 		//ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
 		//compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 		auto& g = *grid;
 								const auto cells = g.cells();
 								
 								auto& I = *Int;
-								
+								printf("INTERACTIONS : %d\n", I.nb_interactions);
+								//if(I.nb_interactions > 0) getchar();
 								int size = I.nb_interactions;
 								int blockSize = 128;
 								int numBlocks;
@@ -425,11 +498,13 @@ namespace exaDEM
 								else  { numBlocks= int(size/blockSize)+1; }
 								
 								
-								ApplyHookeSTLMesh_GPU<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.faces_idx_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.num_vertices_GPU2.data(), I.contact.data(), I.which_particle2.data(), I.add_particle.data(), I.vx_GPU2.data(), I.vy_GPU2.data(), I.vz_GPU2.data(), I.posx.data(), I.posy.data(), I.posz.data(), size);
+								ApplyHookeSTLMesh_GPU<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.faces_idx_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.num_vertices_GPU2.data(), I.contact.data(), I.which_particle2.data(), I.add_particle.data(), I.potentiels.data(), I.vx_GPU2.data(), I.vy_GPU2.data(), I.vz_GPU2.data(), I.posx.data(), I.posy.data(), I.posz.data(), size);
 								
-								ApplyHookeSTLMesh_GPU2<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.faces_idx_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.num_vertices_GPU2.data(), I.contact.data(), I.which_particle2.data(), I.add_particle.data(), I.vx_GPU2.data(), I.vy_GPU2.data(), I.vz_GPU2.data(), I.posx.data(), I.posy.data(), I.posz.data(), size);
+								ApplyHookeSTLMesh_GPU2<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.faces_idx_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.num_vertices_GPU2.data(), I.contact.data(), I.which_particle2.data(), I.add_particle.data(), I.potentiels.data(), I.vx_GPU2.data(), I.vy_GPU2.data(), I.vz_GPU2.data(), I.posx.data(), I.posy.data(), I.posz.data(), size);
 								
 								ApplyHookeSTLMesh_GPU3<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.contact.data(), I.posx.data(), I.posy.data(), I.posz.data(), I.ftx_GPU2.data(), I.fty_GPU2.data(), I.ftz_GPU2.data(), I.add_particle.data(), I.which_particle2.data(), *dt, *kt, *kn, *kr, *mu, *damprate, size); 
+		
+		printf("APPLY END\n");
 	      }
 	    };
 

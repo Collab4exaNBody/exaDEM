@@ -192,7 +192,7 @@ namespace exaDEM
       }
       
       //HOOKE_FORCE_GPU
-      for(int i= 0; i < cell_particles_nbh.size(); i++){
+     /* for(int i= 0; i < cell_particles_nbh.size(); i++){
       	int cell= i;
       	for(int j= 0; j < cell_particles_nbh[i].size(); j++){
       		int particle= j;
@@ -223,7 +223,7 @@ namespace exaDEM
 	else { numBlocks = int(size/blockSize)+1; }
       
       setGPU<<<numBlocks, blockSize>>>(interactions_new.pa_GPU2.data(), interactions_new.cella_GPU2.data(), interactions_new.pb_GPU2.data(), interactions_new.cellb_GPU2.data(), interactions_new.ftx_GPU2.data(), interactions_new.fty_GPU2.data(), interactions_new.ftz_GPU2.data(), interactions_new.pa_GPU, interactions_new.cella_GPU, interactions_new.pb_GPU, interactions_new.cellb_GPU, interactions_new.ftx_GPU, interactions_new.fty_GPU, interactions_new.ftz_GPU, size);
-      cudaDeviceSynchronize();
+      cudaDeviceSynchronize();*/
       printf("CHUNK FINISH\n");
       			 
     }
