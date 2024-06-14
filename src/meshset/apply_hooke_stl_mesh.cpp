@@ -70,6 +70,7 @@ namespace exaDEM
 
 	      inline void execute () override final
 	      {
+std::cout << "Je suis là aussi " << std::endl;
 		ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
 		compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 	      }

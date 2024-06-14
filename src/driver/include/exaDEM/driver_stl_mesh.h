@@ -20,6 +20,7 @@ under the License.
 #include <exanb/core/basic_types.h>
 #include <exaDEM/driver_base.h>
 #include <exaDEM/shape/shape.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 
 namespace exaDEM
 {
@@ -125,5 +126,73 @@ namespace exaDEM
       lout << "Faces    (Total/Max)   = " << nb_f          << " / " << max_f << std::endl;
       lout << "================================="                            << std::endl;
     }
-  };
+
+		std::vector<exaDEM::Interaction> detection_sphere_driver(
+				const size_t cell, 
+				const size_t p, 
+				const uint64_t id,
+				const size_t drv_id, 
+				const double rx, 
+				const double ry, 
+				const double rz, 
+				const double rVerlet)
+		{
+			std::vector<exaDEM::Interaction> res;
+			exaDEM::Interaction item;
+			item.cell_i = cell;
+			item.p_i = p;
+			item.id_i = id;
+			item.id_j = drv_id;
+			item.sub_i = 0; // not used
+			assert ( cell_a < mesh.grid_indexes.size() );
+
+			auto& list = grid_indexes[cell];
+			const size_t stl_nv = list.vertices.size();
+			const size_t stl_ne = list.edges.size();
+			const size_t stl_nf = list.faces.size();
+
+			OBB* __restrict__ stl_obb_vertices = onika::cuda::vector_data( shp.m_obb_vertices );
+			OBB* __restrict__ stl_obb_edges = onika::cuda::vector_data( shp.m_obb_edges );
+			OBB* __restrict__ stl_obb_faces = onika::cuda::vector_data( shp.m_obb_faces );
+
+			vec3r v = {rx, ry, rz};
+			// vertex - vertex
+			item.type = 7;
+			for( size_t j = 0 ; j < stl_nv ; j++ )
+			{
+				size_t idx = list.vertices[j];
+				OBB& obb = stl_obb_vertices[idx];
+				if ( obb.intersect( v ))
+				{
+					item.sub_j = idx;
+					res.push_back(item);
+				}
+			}
+			// vertex - edge
+			item.type = 8;
+			for( size_t j = 0 ; j < stl_ne ; j++ )
+			{
+				size_t idx = list.edges[j];
+				OBB& obb = stl_obb_edges[idx];
+				if ( obb.intersect(v) )
+				{
+					item.sub_j = idx;
+					res.push_back(item);
+				}
+			}
+			// vertex - face
+			item.type = 9;
+			for( size_t j = 0 ; j < stl_nf ; j++ )
+			{
+				size_t idx = list.faces[j];
+				OBB& obb = stl_obb_faces[idx];
+				if ( obb.intersect(v) )
+				{
+					item.sub_j = idx;
+					res.push_back(item);
+				}
+			}
+			return res;
+		}
+	};
 }

@@ -23,9 +23,6 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 
-#include <exanb/particle_neighbors/chunk_neighbors.h>
-#include <exanb/particle_neighbors/chunk_neighbors_apply.h>
-
 #include <memory>
 
 #include <exaDEM/hooke_force_parameters.h>
@@ -39,13 +36,19 @@ under the License.
 #include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/compute_hooke_interaction.h>
+#include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/drivers.h>
+#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shape_detection.hpp>
+
+
 
 namespace exaDEM
 {
   using namespace exanb;
 
-  template<typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
-    class ComputeHookeInteraction : public OperatorNode
+  template<bool sym, typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
+    class ComputeHookeInteractionSphere : public OperatorNode
   {
     // attributes processed during computation
     using ComputeFields = FieldSet< field::_vrot, field::_arot >;
@@ -53,7 +56,6 @@ namespace exaDEM
 
     ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
     ADD_SLOT( GridCellParticleInteraction , ges  , INPUT_OUTPUT , DocString{"Interaction list"} );
-    ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
     ADD_SLOT( HookeParams , config            , INPUT , REQUIRED ); // can be re-used for to dump contact network
     ADD_SLOT( HookeParams , config_driver     , INPUT , OPTIONAL ); // can be re-used for to dump contact network
     ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
@@ -78,7 +80,6 @@ namespace exaDEM
 
 			const auto cells = grid->cells();
 			auto & cell_interactions = ges->m_data;
-			auto & shps = *shapes_collection;
 			const HookeParams params = *config;
 			HookeParams hkp_drvs;
 			const double time = *dt;
@@ -90,13 +91,9 @@ namespace exaDEM
 				hkp_drvs = *config_driver;
 			}
 
-			const hooke_law_polyhedra poly;
-			const hooke_law_driver<Cylinder> cyli;
-			const hooke_law_driver<Surface>  surf;
-			const hooke_law_driver<Ball>     ball;
-			const hooke_law_stl stlm = {};
-
-#pragma omp parallel for schedule(dynamic)
+			const hooke_law_sphere<sym> sphe;
+			//const hooke_law_stl stlm = {};
+#pragma omp parallel for schedule(guided)
 			for( size_t ci = 0 ; ci < indexes.size() ; ci ++ )
 			{
 				size_t current_cell = indexes[ci];  
@@ -109,37 +106,28 @@ namespace exaDEM
 				{
 					Interaction& item = data_ptr[it];
 
-					if( item.type < 4 ) // polyhedra
+					if( item.type == 0 ) // sphere-sphere
 					{
-						poly(item, cells, params, shps, time, locker);
+						sphe(item, cells, params, time, locker);
 					}
-					else if(item.type == 4) // cylinder
-					{
-						cyli(item, cells, drvs, hkp_drvs, shps, time, locker);
+					/*					else if(item.type >= 7 && item.type <= 12) // stl
+											{
+					//stlm(item, cells, drvs, hkp_drvs, shps, time, locker);
 					}
-					else if( item.type == 5) // wall
-					{
-						surf(item, cells, drvs, hkp_drvs, shps, time, locker);
-					}
-					else if(item.type == 6) // sphere
-					{
-						ball(item, cells, drvs, hkp_drvs, shps, time, locker);	
-					}
-					else if(item.type >= 7 && item.type <= 12) // stl
-					{
-						stlm(item, cells, drvs, hkp_drvs, shps, time, locker);
-					}
+					 */
 				}
 			}
 		}
 	};
 
-	template<class GridT> using ComputeHookeInteractionTmpl = ComputeHookeInteraction<GridT>;
+	template<class GridT> using ComputeHookeInteractionSphereSymTmpl = ComputeHookeInteractionSphere<true,GridT>;
+	template<class GridT> using ComputeHookeInteractionSphereNoSymTmpl = ComputeHookeInteractionSphere<false,GridT>;
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "compute_hooke_interaction", make_grid_variant_operator< ComputeHookeInteractionTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "compute_hooke_interaction_sphere_no_sym", make_grid_variant_operator< ComputeHookeInteractionSphereNoSymTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "compute_hooke_interaction_sphere_sym", make_grid_variant_operator< ComputeHookeInteractionSphereSymTmpl > );
 	}
 }
 

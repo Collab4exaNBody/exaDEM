@@ -25,6 +25,102 @@ under the License.
 namespace exaDEM
 {
 	using namespace exanb;
+	template<bool sym>
+		struct hooke_law_sphere
+		{
+			template<typename Cell>
+				ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_r(Cell& cell, const int p_id) const
+				{
+					const Vec3d res = {
+						cell[field::rx][p_id],
+						cell[field::ry][p_id],
+						cell[field::rz][p_id]};
+					return res;
+				};
+
+			template<typename Cell>
+				ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_v(Cell& cell, const int p_id) const
+				{
+					const Vec3d res = {
+						cell[field::vx][p_id],
+						cell[field::vy][p_id],
+						cell[field::vz][p_id]};
+					return res;
+				};
+
+			template<typename Cells>
+				ONIKA_HOST_DEVICE_FUNC inline void operator()(Interaction& item, Cells& cells, const HookeParams& hkp, const double time, mutexes& locker) const
+				{
+					// === cell
+					auto& cell_i =  cells[item.cell_i];
+					auto& cell_j =  cells[item.cell_j];
+
+					// === positions
+					const Vec3d ri = get_r(cell_i, item.p_i);
+					const Vec3d rj = get_r(cell_j, item.p_j);
+
+					// === positions
+					const double rad_i = cell_i[field::radius][item.p_i];
+					const double rad_j = cell_j[field::radius][item.p_j];
+
+					// === vrot
+					const Vec3d& vrot_i = cell_i[field::vrot][item.p_i];
+					const Vec3d& vrot_j = cell_j[field::vrot][item.p_j];
+
+					auto [contact, dn, n, contact_position] = detection_vertex_vertex_core(ri, rad_i, rj, rad_j); 
+
+					if(contact)
+					{
+						const Vec3d vi = get_v(cell_i, item.p_i);
+						const Vec3d vj = get_v(cell_j, item.p_j);
+						const auto& m_i = cell_i[field::mass][item.p_i];
+						const auto& m_j = cell_j[field::mass][item.p_j];
+
+						// temporary vec3d to store forces.
+						Vec3d f = {0,0,0};
+						const double meff = compute_effective_mass(m_i, m_j);
+
+						hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+								hkp.m_mu, hkp.m_damp_rate, meff,
+								item.friction, contact_position,
+								ri, vi, f, item.moment, vrot_i,  // particle 1
+								rj, vj, vrot_j // particle nbh
+								);
+
+
+						// === update particle informations
+						// ==== Particle i
+						if constexpr (sym) locker.lock(item.cell_i, item.p_i);
+
+						auto& mom_i = cell_i[field::mom][item.p_i];
+						mom_i += compute_moments(contact_position, ri, f, item.moment);
+						cell_i[field::fx][item.p_i] += f.x;
+						cell_i[field::fy][item.p_i] += f.y;
+						cell_i[field::fz][item.p_i] += f.z;
+
+						if constexpr (sym) locker.unlock(item.cell_i, item.p_i);
+
+						if constexpr (sym)
+						{
+							// ==== Particle j
+							locker.lock(item.cell_j, item.p_j);
+
+							auto& mom_j = cell_j[field::mom][item.p_j];
+							mom_j += compute_moments(contact_position, rj, -f, -item.moment);
+							cell_j[field::fx][item.p_j] -= f.x;
+							cell_j[field::fy][item.p_j] -= f.y;
+							cell_j[field::fz][item.p_j] -= f.z;
+
+							locker.unlock(item.cell_j, item.p_j);
+						}
+					}
+					else
+					{
+						item.reset();
+					}
+				}
+		};
+
 	struct hooke_law_polyhedra
 	{
 		template<typename Cell>

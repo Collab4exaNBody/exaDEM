@@ -70,6 +70,7 @@ namespace exaDEM
 				auto& ind = mesh.indexes;
 				ind.resize(n_cells);
 				mesh.build_boxes();
+				std::cout << " JE SUIS LA " << std::endl;
 #     pragma omp parallel
 				{
 					GRID_OMP_FOR_BEGIN(dims-2*gl,_,block_loc, schedule(dynamic))
