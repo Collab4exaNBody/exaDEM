@@ -89,6 +89,16 @@ namespace exaDEM
 		return detection_vertex_vertex_core(vi, shpi->m_radius, vj, shpj->m_radius);
 	}
 
+	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex(
+			const Vec3d& pi, const double radius,
+			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
+	{
+
+		// === compute vertex position
+		Vec3d vj = shpj->get_vertex(j, pj, oj);
+		return detection_vertex_vertex_core(pi, radius, vj, shpj->m_radius);
+	}
+
 	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex_precompute(
 			const VertexArray& vai, const int i, const shape* shpi,
 			const VertexArray& vaj, const int j, const shape* shpj)
@@ -141,6 +151,15 @@ namespace exaDEM
 		Vec3d vi = shpi->get_vertex(i, pi, oi);
 		Vec3d vj = shpj->get_vertex(j, pj, oj);
 		return filter_vertex_vertex( rVerlet, vi, shpi->m_radius, vj, shpj->m_radius);
+	}
+
+	inline bool filter_vertex_vertex( const double rVerlet,
+			const Vec3d& pi, const double radius,
+			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
+	{
+		// === compute vertex position
+		Vec3d vj = shpj->get_vertex(j, pj, oj);
+		return filter_vertex_vertex( rVerlet, pi, radius, vj, shpj->m_radius);
 	}
 
 	inline bool filter_vertex_vertex( const double rVerlet,
@@ -241,6 +260,18 @@ namespace exaDEM
 		double ri = shpi->m_radius;
 		double rj = shpj->m_radius;
 		return detection_vertex_edge_core( vi, ri, vf, vs, rj);
+	}
+
+	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_edge(
+			const Vec3d& pi, const double radius,
+			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
+	{
+		// === compute vertice positions
+		auto [first, second] = shpj->get_edge(j);
+		const Vec3d vf = shpj->get_vertex (first, pj, oj); 
+		const Vec3d vs = shpj->get_vertex (second, pj, oj); 
+		double rj = shpj->m_radius;
+		return detection_vertex_edge_core( pi, radius, vf, vs, rj);
 	}
 
 	// API detection_vertex_edge
@@ -373,6 +404,78 @@ namespace exaDEM
 		return {ODD == 1, dn, n, contact_position};
 	}
 
+	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_face(
+			const Vec3d& pi, const double radius,
+			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
+	{
+		double ri = radius;
+		double rj = shpj->m_radius;
+
+		// === compute vertices
+		const Vec3d vi = pi;
+		auto [data, nf] = shpj->get_face(j);
+		assert(nf >= 3);
+		Vec3d va = shpj->get_vertex(data[0], pj, oj);
+		Vec3d vb = shpj->get_vertex(data[1], pj, oj);
+		const Vec3d vc = shpj->get_vertex(data[nf-1], pj, oj);
+
+		const Vec3d v  = vi - va; 
+		Vec3d v1 = vb - va; 
+		Vec3d v2 = vc - va; 
+		normalize(v1);
+		//			v2 = normalize(v2);
+
+		// === compute normal vector
+		Vec3d n = cross(v1,v2);
+		normalize(n);
+
+		// === eliminate possibility
+		double dist = exanb::dot(n, v);
+
+		if(dist < 0) 
+		{
+			n = n * (-1);
+			dist = -dist;
+		}
+
+		if( dist > (ri + rj)) return {false, 0.0, Vec3d(), Vec3d()}; 
+
+		const Vec3d P = vi - n * dist;
+
+		int ODD = 0;
+		v2 = cross(n, v1);
+		double ori1 = exanb::dot(P, v1);
+		double ori2 = exanb::dot(P, v2);
+		double pa1, pa2;
+		double pb1, pb2;
+		int iva, ivb;
+		for (iva = 0; iva < nf; ++iva) {
+			ivb = iva + 1;
+			if (ivb == nf) ivb = 0;
+			va = shpj->get_vertex(data[iva], pj, oj);
+			vb = shpj->get_vertex(data[ivb], pj, oj);
+			pa1 = exanb::dot(va, v1);
+			pb1 = exanb::dot(vb, v1);
+			pa2 = exanb::dot(va, v2);
+			pb2 = exanb::dot(vb, v2);
+
+			// @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
+			// @see http://alienryderflex.com/polygon/
+			if ((pa2 < ori2 && pb2 >= ori2) || (pb2 < ori2 && pa2 >= ori2)) {
+				if (pa1 + (ori2 - pa2) / (pb2 - pa2) * (pb1 - pa1) < ori1) {
+					ODD = 1 - ODD;
+				}
+			}
+		}
+
+		// === compute overlap in dn
+		const double dn = dist  - (ri + rj);
+
+		// === compute contact position
+		const Vec3d contact_position = vi - n * (ri + 0.5 * dn);
+
+		return {ODD == 1, dn, n, contact_position};
+	}
 	/**
 	 * @brief Detects vertex-face interactions and computes contact information.
 	 * @param vai The array of vertices of polyhedron i.

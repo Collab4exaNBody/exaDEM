@@ -140,6 +140,9 @@ namespace exaDEM
 
             // Get data pointers 
             const uint64_t* __restrict__ id_a = cells[cell_a][ field::id ]; ONIKA_ASSUME_ALIGNED(id_a);
+            const double* __restrict__ rx = cells[cell_a][ field::rx ]; ONIKA_ASSUME_ALIGNED(rx);
+            const double* __restrict__ ry = cells[cell_a][ field::ry ]; ONIKA_ASSUME_ALIGNED(ry);
+            const double* __restrict__ rz = cells[cell_a][ field::rz ]; ONIKA_ASSUME_ALIGNED(rz);
 
             // Fill particle ids in the interaction storage
             for( size_t it = 0 ; it < n_particles ; it++)
@@ -166,7 +169,12 @@ namespace exaDEM
 								DRIVER_TYPE type = drvs.type(drvs_idx);
 								if(type == DRIVER_TYPE::STL_MESH)
 								{ 
-									//auto& driver = std::get<DRIVER_TYPE::STL_MESH>(drvs.data(drvs_idx));
+									auto& driver = std::get<DRIVER_TYPE::STL_MESH>(drvs.data(drvs_idx));
+									for(size_t p = 0 ; p < n_particles ; p++)
+									{
+										auto items = driver.detection_sphere_driver(cell_a, p, id_a[p], drvs_idx, rx[p], ry[p], rz[p], rVerlet);
+										for(auto& it : items) manager.add_item(p, it);
+									}
 
 								}
 							}

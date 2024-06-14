@@ -47,6 +47,7 @@ namespace exaDEM
 			ADD_SLOT( double            , rad              , INPUT , default_radius	, DocString{"default radius value for all particles"} );
 			ADD_SLOT( ParticleRegions   , particle_regions , INPUT , OPTIONAL );
 			ADD_SLOT( ParticleRegionCSG , region           , INPUT , OPTIONAL );
+		  ADD_SLOT( double            , rcut_max         , INPUT_OUTPUT ,  DocString{"rcut_max"});
 
 			public:
 
@@ -59,6 +60,15 @@ namespace exaDEM
 
 			inline void execute () override final
 			{
+				if(rcut_max.has_value())
+				{
+					*rcut_max = std::max(*rcut_max, *rad);
+				}
+				else
+				{
+					*rcut_max = *rad;
+				}
+				
 				if( region.has_value() )
 				{
 					if( !particle_regions.has_value() )

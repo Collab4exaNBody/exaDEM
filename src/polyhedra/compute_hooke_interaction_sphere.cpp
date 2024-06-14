@@ -92,7 +92,7 @@ namespace exaDEM
 			}
 
 			const hooke_law_sphere<sym> sphe;
-			//const hooke_law_stl stlm = {};
+			const exaDEM::sphere::hooke_law_stl stlm = {};
 #pragma omp parallel for schedule(guided)
 			for( size_t ci = 0 ; ci < indexes.size() ; ci ++ )
 			{
@@ -110,11 +110,11 @@ namespace exaDEM
 					{
 						sphe(item, cells, params, time, locker);
 					}
-					/*					else if(item.type >= 7 && item.type <= 12) // stl
-											{
-					//stlm(item, cells, drvs, hkp_drvs, shps, time, locker);
+					else if(item.type >= 7 && item.type <= 12) // stl
+					{
+						stlm(item, cells, drvs, hkp_drvs, time, locker);
 					}
-					 */
+
 				}
 			}
 		}
