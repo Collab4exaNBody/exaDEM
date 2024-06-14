@@ -90,6 +90,8 @@ namespace exaDEM
 		std::vector<int> end;
 		std::vector<int> num_faces;
 		
+		onika::memory::CudaMMVector<int> start_GPU;
+		
 		int nb_interactions = 0;
 		
 		//Reset the attributes
@@ -255,6 +257,9 @@ namespace exaDEM
 			
 			potentiels.clear();
 			potentiels.shrink_to_fit();
+			
+			start_GPU.clear();
+			start_GPU.shrink_to_fit();
 			
 		}
 		
@@ -560,9 +565,9 @@ namespace exaDEM
 				int z = 0;
 				for(int j = start[i]; j < end[i]; j++)
 				{
-					ftx[i][z] = ftx_GPU2[j];
-					fty[i][z] = fty_GPU2[j];
-					ftz[i][z] = ftz_GPU2[j];
+					ftx[i][z] = ftx_GPU[j];
+					fty[i][z] = fty_GPU[j];
+					ftz[i][z] = ftz_GPU[j];
 					z++;
 				}
 			}
@@ -668,7 +673,7 @@ namespace exaDEM
 			fty_GPU.resize(nb_interactions);
 			ftz_GPU.resize(nb_interactions);
 			which_particle.resize(nb_interactions);
-			
+			start_GPU.resize(nb_interactions);
 			
 			for(int i= 0; i < nb_particles; i++)
 			{
@@ -690,6 +695,13 @@ namespace exaDEM
 					offsets_GPU[j] = offsets[i][z];
 					int nb = num_vertices[i][z];
 					num_vertices_GPU[j] = nb;
+					start_GPU[j] = vx_GPU.size();
+					/*for(int idx = meshes.start[faces_idx_GPU[j]]; idx < meshes.start[faces_idx_GPU[j]] + nb; idx++)
+					{
+						vx_GPU.push_back(meshes.vx[idx]);
+						vy_GPU.push_back(meshes.vy[idx]);
+						vz_GPU.push_back(meshes.vz[idx]);
+					}*/
 					ftx_GPU[j] = ftx[i][z];
 					fty_GPU[j] = fty[i][z];
 					ftz_GPU[j] = ftz[i][z];
@@ -725,6 +737,75 @@ namespace exaDEM
 			vz_GPU2.resize(vz_GPU.size());
 			}
 			
+		}
+		
+		void test(stl_meshes mesh)
+		{
+			printf("SIZE:%d\n", vx_GPU.size());
+			for(int i = 0; i < vx_GPU.size(); i++)
+			{
+				printf("VX[%d] = %f  ", i, vx_GPU[i]);
+			}
+			printf("\n");
+			for(int i = 0; i < vx_GPU.size(); i++)
+			{
+				printf("VY[%d] = %f   ", i, vy_GPU[i]);
+			}
+			printf("\n");
+			for(int i = 0; i < vx_GPU.size(); i++)
+			{
+				printf("VZ[%d] = %f   ", i, vz_GPU[i]);
+			}
+			printf("\n");
+			if(nb_interactions > 0)
+			{
+			for(int i = 0; i < nb_interactions; i++)
+			{
+				printf("INTERACTION START\n");
+				int idx = faces_idx_GPU[i];
+				printf("INDEX UN:%d\n", idx);
+				int start = mesh.start[idx];
+				int end = mesh.end[idx];
+				for(int j = start; j < end; j++)
+				{
+					printf("MESH OLD VERTEX(%f, %f, %f)\n", mesh.vx[j], mesh.vy[j], mesh.vz[j]);	
+				}
+				
+				int idx2 = faces_build_GPU[i];
+				int num = num_vertices_GPU[i];
+				printf("INDEX DEUX:%d NUMERO:%d\n", idx2, num);
+				for(int j = idx2; j < num; j++)
+				{
+					printf("NEEEEW VERTEX(%f, %f, %f)\n", vx_GPU[j], vy_GPU[j], vz_GPU[j]);
+				}
+				printf("INTERACTION END\n");
+			}
+			getchar();
+			}
+		}
+		
+		void putParticles()
+		{
+			for(int i = 0; i < nb_interactions; i++)
+			{
+				contact[i] = 0;
+			}
+			
+			for(int i = 0; i < nb_particles; i++)
+			{
+				add_particle[i] = 0;
+				potentiels[i] = 0;
+			}
+		}
+		
+		void printParticles()
+		{
+			for(int i = 0; i < nb_interactions; i++)
+			{	
+				printf("(PA:%d, CELLA%d)\n", pa_GPU[i], cella_GPU[i]); 
+			}
+			
+			if(nb_interactions > 0) getchar();
 		}
 		
 	};

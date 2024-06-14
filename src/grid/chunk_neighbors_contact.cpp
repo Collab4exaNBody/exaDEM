@@ -192,7 +192,7 @@ namespace exaDEM
       }
       
       //HOOKE_FORCE_GPU
-     /* for(int i= 0; i < cell_particles_nbh.size(); i++){
+     /*for(int i= 0; i < cell_particles_nbh.size(); i++){
       	int cell= i;
       	for(int j= 0; j < cell_particles_nbh[i].size(); j++){
       		int particle= j;

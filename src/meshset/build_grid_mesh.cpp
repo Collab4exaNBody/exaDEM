@@ -296,7 +296,7 @@ namespace exaDEM
 		inline void execute () override final
 		{
 		
-			printf("BUILD START\n");
+			//printf("BUILD START\n");
 			//auto& collection = *stl_collection;
 			auto& mesh= *meshes;
 			const double rad = *rcut_max;
@@ -431,6 +431,13 @@ namespace exaDEM
 				
 			interactions_new.init_GPU(mesh);
 			
+			//interactions_new.putParticles();
+			
+			//interactions_new.printParticles();
+			
+			
+			//interactions_new.test(mesh);
+			
 			//printf("ICI6\n");
 				
 			int size = interactions_new.nb_interactions;
@@ -459,7 +466,7 @@ namespace exaDEM
 			setGPU3<<<numBlocks, blockSize>>>(interactions_new.vx_GPU2.data(), interactions_new.vy_GPU2.data(), interactions_new.vz_GPU2.data(),
 							interactions_new.vx_GPU, interactions_new.vy_GPU, interactions_new.vz_GPU, size3);
 							
-			printf("BUILD END\n");
+			//printf("BUILD END\n");
 				
 		};
 	};
