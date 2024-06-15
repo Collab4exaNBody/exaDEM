@@ -6,7 +6,7 @@ includes:
 chunk_neighbors_impl:
   - chunk_neighbors_contact
   - unclassify_interactions
-  - update_grid_interaction
+  - nbh_polyhedron
   - classify_interactions
   - update_mutexes
   - resize_particle_locks
@@ -39,7 +39,7 @@ setup_drivers:
 
 compute_force:
   - gravity_force
-  - compute_hooke_classify_interaction:
+  - hooke_classifier:
      config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
 

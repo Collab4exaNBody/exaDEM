@@ -38,14 +38,13 @@ under the License.
 #include <exaDEM/shape/shape_detection_driver.hpp>
 #include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/compute_hooke_interaction.h>
 
 namespace exaDEM
 {
   using namespace exanb;
 
   template<typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
-    class UnclassifyInteractions : public OperatorNode
+    class ClassifyInteractions : public OperatorNode
   {
     // attributes processed during computation
     using ComputeFields = FieldSet< field::_vrot, field::_arot >;
@@ -67,17 +66,17 @@ namespace exaDEM
     {
       //using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
       if( grid->number_of_cells() == 0 ) { return; }
-			if(!ic.has_value()) return;
-			ic->unclassify(*ges);
+			if(!ic.has_value()) ic->initialize();
+			ic->classify(*ges);
     }
   };
 
-  template<class GridT> using UnclassifyInteractionsTmpl = UnclassifyInteractions<GridT>;
+  template<class GridT> using ClassifyInteractionsTmpl = ClassifyInteractions<GridT>;
 
   // === register factories ===  
   CONSTRUCTOR_FUNCTION
   {
-    OperatorNodeFactory::instance()->register_factory( "unclassify_interactions", make_grid_variant_operator< UnclassifyInteractionsTmpl > );
+    OperatorNodeFactory::instance()->register_factory( "classify_interactions", make_grid_variant_operator< ClassifyInteractionsTmpl > );
   }
 }
 

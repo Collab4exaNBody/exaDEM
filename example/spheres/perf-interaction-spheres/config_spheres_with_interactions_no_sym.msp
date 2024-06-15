@@ -16,7 +16,7 @@ update_stl_mesh: trigger_update_stl_mesh
 #     basename: polyhedra
 
 +chunk_neighbors_impl:
-  - update_contact_interaction_sphere_no_sym
+  - nbh_sphere_no_sym
   - update_mutexes
   - resize_particle_locks
 

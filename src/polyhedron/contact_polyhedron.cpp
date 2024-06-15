@@ -562,7 +562,7 @@ namespace exaDEM
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "update_grid_interaction", make_grid_variant_operator< UpdateGridCellInteraction > );
+		OperatorNodeFactory::instance()->register_factory( "nbh_polyhedron", make_grid_variant_operator< UpdateGridCellInteraction > );
 	}
 }
 

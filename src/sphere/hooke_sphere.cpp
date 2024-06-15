@@ -28,40 +28,36 @@ under the License.
 #include <exaDEM/hooke_force_parameters.h>
 #include <exaDEM/compute_hooke_force.h>
 #include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/shape/shape_detection_driver.hpp>
 #include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/compute_hooke_interaction.h>
-#include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/drivers.h>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
-
-
+#include <exaDEM/hooke_sphere.h>
 
 namespace exaDEM
 {
   using namespace exanb;
+	using namespace sphere;
 
-  template<bool sym, typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
-    class ComputeHookeInteractionSphere : public OperatorNode
-  {
-    // attributes processed during computation
-    using ComputeFields = FieldSet< field::_vrot, field::_arot >;
-    static constexpr ComputeFields compute_field_set {};
+	template<bool sym, typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
+		class ComputeHookeInteractionSphere : public OperatorNode
+	{
+		// attributes processed during computation
+		using ComputeFields = FieldSet< field::_vrot, field::_arot >;
+		static constexpr ComputeFields compute_field_set {};
 
-    ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
-    ADD_SLOT( GridCellParticleInteraction , ges  , INPUT_OUTPUT , DocString{"Interaction list"} );
-    ADD_SLOT( HookeParams , config            , INPUT , REQUIRED ); // can be re-used for to dump contact network
-    ADD_SLOT( HookeParams , config_driver     , INPUT , OPTIONAL ); // can be re-used for to dump contact network
-    ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
-    ADD_SLOT( double      , dt                , INPUT , REQUIRED );
-    ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers"});
-		ADD_SLOT( std::vector<size_t> , idxs              , INPUT_OUTPUT , DocString{"List of non empty cells"});
+		ADD_SLOT( GridT                       , grid          , INPUT_OUTPUT , REQUIRED );
+		ADD_SLOT( GridCellParticleInteraction , ges           , INPUT_OUTPUT , DocString{"Interaction list"} );
+		ADD_SLOT( HookeParams                 , config        , INPUT        , REQUIRED ); // can be re-used for to dump contact network
+		ADD_SLOT( HookeParams                 , config_driver , INPUT        , OPTIONAL ); // can be re-used for to dump contact network
+		ADD_SLOT( mutexes                     , locks         , INPUT_OUTPUT );
+		ADD_SLOT( double                      , dt            , INPUT        , REQUIRED );
+		ADD_SLOT( Drivers                     , drivers       , INPUT        , DocString{"List of Drivers"});
+		ADD_SLOT( std::vector<size_t>         , idxs          , INPUT_OUTPUT , DocString{"List of non empty cells"});
 
 		public:
 
@@ -91,7 +87,7 @@ namespace exaDEM
 				hkp_drvs = *config_driver;
 			}
 
-			const hooke_law_sphere<sym> sph;
+			const hooke_law<sym> sph;
 			const exaDEM::sphere::hooke_law_stl stl = {};
 			const exaDEM::sphere::hooke_law_driver<Cylinder> cyl;
 			const exaDEM::sphere::hooke_law_driver<Surface> surf;
@@ -141,8 +137,8 @@ namespace exaDEM
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "compute_hooke_interaction_sphere_no_sym", make_grid_variant_operator< ComputeHookeInteractionSphereNoSymTmpl > );
-		OperatorNodeFactory::instance()->register_factory( "compute_hooke_interaction_sphere_sym", make_grid_variant_operator< ComputeHookeInteractionSphereSymTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "hooke_sphere_no_sym", make_grid_variant_operator< ComputeHookeInteractionSphereNoSymTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "hooke_sphere_sym", make_grid_variant_operator< ComputeHookeInteractionSphereSymTmpl > );
 	}
 }
 

@@ -38,11 +38,12 @@ under the License.
 #include <exaDEM/shape/shape_detection_driver.hpp>
 #include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/compute_hooke_interaction.h>
+#include <exaDEM/hooke_polyhedron.h>
 
 namespace exaDEM
 {
   using namespace exanb;
+	using namespace polyhedron;
 
   template<typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
     class ComputeHookeInteraction : public OperatorNode
@@ -90,7 +91,8 @@ namespace exaDEM
 				hkp_drvs = *config_driver;
 			}
 
-			const hooke_law_polyhedra poly;
+
+			const hooke_law poly;
 			const hooke_law_driver<Cylinder> cyli;
 			const hooke_law_driver<Surface>  surf;
 			const hooke_law_driver<Ball>     ball;
@@ -139,7 +141,7 @@ namespace exaDEM
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "compute_hooke_interaction", make_grid_variant_operator< ComputeHookeInteractionTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "hooke_polyhedron", make_grid_variant_operator< ComputeHookeInteractionTmpl > );
 	}
 }
 

@@ -49,8 +49,8 @@ namespace exaDEM
 	{
     ADD_SLOT( GridT                       , grid              , INPUT_OUTPUT , REQUIRED );
     ADD_SLOT( exanb::GridChunkNeighbors   , chunk_neighbors   , INPUT        , OPTIONAL , DocString{"Neighbor list"} );
-		ADD_SLOT( Drivers     , drivers         , INPUT_OUTPUT,            DocString{"List of Drivers"});
-    ADD_SLOT( double      , rcut_inc        , INPUT       , DocString{"value added to the search distance to update neighbor list less frequently. in physical space"} );
+		ADD_SLOT( Drivers                     , drivers           , INPUT_OUTPUT , DocString{"List of Drivers"});
+    ADD_SLOT( double                      , rcut_inc          , INPUT        , DocString{"value added to the search distance to update neighbor list less frequently. in physical space"} );
     ADD_SLOT( std::vector<size_t>         , idxs              , INPUT_OUTPUT , DocString{"List of non empty cells"});
     ADD_SLOT( GridCellParticleInteraction , ges               , INPUT_OUTPUT , DocString{"Interaction list"} );
 
@@ -289,8 +289,8 @@ namespace exaDEM
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "update_contact_interaction_sphere_sym", make_grid_variant_operator< UpdateContactInteractionSphereSymTmpl > );
-		OperatorNodeFactory::instance()->register_factory( "update_contact_interaction_sphere_no_sym", make_grid_variant_operator< UpdateContactInteractionSphereNoSymTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "nbh_sphere_sym", make_grid_variant_operator< UpdateContactInteractionSphereSymTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "nbh_sphere_no_sym", make_grid_variant_operator< UpdateContactInteractionSphereNoSymTmpl > );
 	}
 }
 

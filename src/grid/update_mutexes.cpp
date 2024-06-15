@@ -22,18 +22,8 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-
-#include <exanb/particle_neighbors/chunk_neighbors.h>
-#include <exanb/particle_neighbors/chunk_neighbors_apply.h>
-
-#include <memory>
-
-#include <exaDEM/hooke_force_parameters.h>
-#include <exaDEM/compute_hooke_force.h>
-#include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/mutexes.h>
+#include <memory>
 
 namespace exaDEM
 {

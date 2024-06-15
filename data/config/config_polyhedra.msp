@@ -23,7 +23,7 @@ trigger_move_particles:
 
 
 +chunk_neighbors_impl:
-  - update_grid_interaction
+  - nbh_polyhedron
   - update_mutexes
   - resize_particle_locks
 
