@@ -93,6 +93,14 @@ namespace exaDEM
 			return detector( shpi->m_radius, vertexes[i]);
 		}
 
+	template <typename Driver> 
+		inline std::tuple<bool, double, Vec3d, Vec3d> detector_vertex_driver(
+				Driver& driver, const Vec3d& position, const double radius)
+		{
+			detector_driver<Driver> detector = {driver};
+			return detector(radius, position);
+		}
+
 	// Second Detections
 	////////////////////////// CYLINDER /////////////////////////////////////////
 	/**

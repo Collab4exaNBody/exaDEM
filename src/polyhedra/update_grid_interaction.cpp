@@ -359,7 +359,7 @@ namespace exaDEM
                 else if ( drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
                 {
                   item.type = 6; 
-                  Ball& driver =  std::get<BALL>(drvs.data(drvs_idx)) ; 
+                  Ball& driver =  std::get<Ball>(drvs.data(drvs_idx)) ; 
                   add_driver_interaction( driver, add_contact,
                       item, n_particles, rVerlet, 
                       t_a, id_a, vertices_a, shps);

@@ -49,7 +49,12 @@ namespace exaDEM
 				};
 
 			template<typename Cells>
-				ONIKA_HOST_DEVICE_FUNC inline void operator()(Interaction& item, Cells& cells, const HookeParams& hkp, const double time, mutexes& locker) const
+				ONIKA_HOST_DEVICE_FUNC inline void operator()(
+						Interaction& item, 
+						Cells& cells, 
+						const HookeParams& hkp, 
+						const double time, 
+						mutexes& locker) const
 				{
 					// === cell
 					auto& cell_i =  cells[item.cell_i];
@@ -90,7 +95,7 @@ namespace exaDEM
 
 						// === update particle informations
 						// ==== Particle i
-						if constexpr (sym) locker.lock(item.cell_i, item.p_i);
+						locker.lock(item.cell_i, item.p_i);
 
 						auto& mom_i = cell_i[field::mom][item.p_i];
 						mom_i += compute_moments(contact_position, ri, f, item.moment);
@@ -98,7 +103,7 @@ namespace exaDEM
 						cell_i[field::fy][item.p_i] += f.y;
 						cell_i[field::fz][item.p_i] += f.z;
 
-						if constexpr (sym) locker.unlock(item.cell_i, item.p_i);
+						locker.unlock(item.cell_i, item.p_i);
 
 						if constexpr (sym)
 						{
@@ -364,6 +369,58 @@ namespace exaDEM
 
 	namespace sphere
 	{
+
+		// C for cell and D for driver
+		template<typename TMPLD>
+			struct hooke_law_driver
+			{
+				template<typename Cells>
+					ONIKA_HOST_DEVICE_FUNC inline void operator()(Interaction& item, Cells& cells, Drivers& drvs, const HookeParams& hkp, const double time, mutexes& locker) const
+					{
+						const int driver_idx = item.id_j; //
+						TMPLD& driver = std::get<TMPLD>(drvs.data(driver_idx)) ;
+						auto& cell = cells[item.cell_i];
+						const size_t p   = item.p_i;
+						// === positions
+						const Vec3d r       = { cell[field::rx][p], cell[field::ry][p], cell[field::rz][p] };
+						const double rad    = cell[field::radius][p];
+						// === vertex array
+
+						auto [contact, dn, n, contact_position] = exaDEM::detector_vertex_driver(driver, r, rad);
+
+						if(contact)
+						{
+							// === vrot
+							const Vec3d& vrot  = cell[field::vrot][p];
+
+							constexpr Vec3d null = {0,0,0};
+							auto& mom = cell[field::mom][p];
+							const Vec3d v = { cell[field::vx][p], cell[field::vy][p], cell[field::vz][p] };
+							const double meff = cell[field::mass][p];
+							Vec3d f = null;
+							hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+									hkp.m_mu, hkp.m_damp_rate, meff,
+									item.friction, contact_position,
+									r, v, f, item.moment, vrot,  // particle i
+									driver.center, driver.get_vel(), driver.vrot // particle j
+									);
+
+							// === update informations
+							locker.lock(item.cell_i, p);
+							mom += compute_moments(contact_position, r, f, item.moment);
+							cell[field::fx][p] += f.x;
+							cell[field::fy][p] += f.y;
+							cell[field::fz][p] += f.z;
+							locker.unlock(item.cell_i, p);
+						}
+						else
+						{
+							item.reset();
+						}
+					}
+			};
+
+
 		struct stl_mesh_detector
 		{
 			ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator() (

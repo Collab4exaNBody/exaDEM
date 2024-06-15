@@ -125,7 +125,11 @@ namespace exaDEM
                   storage.m_data.data()
                   ));
 
-            if(n_particles == 0) continue;
+            if(n_particles == 0) 
+						{
+            	storage.initialize(0);
+							continue;
+						}
 
             // Extract history before reset it
             const size_t data_size = storage.m_data.size();
@@ -143,6 +147,7 @@ namespace exaDEM
             const double* __restrict__ rx = cells[cell_a][ field::rx ]; ONIKA_ASSUME_ALIGNED(rx);
             const double* __restrict__ ry = cells[cell_a][ field::ry ]; ONIKA_ASSUME_ALIGNED(ry);
             const double* __restrict__ rz = cells[cell_a][ field::rz ]; ONIKA_ASSUME_ALIGNED(rz);
+            const double* __restrict__ rad = cells[cell_a][ field::radius ]; ONIKA_ASSUME_ALIGNED(rad);
 
             // Fill particle ids in the interaction storage
             for( size_t it = 0 ; it < n_particles ; it++)
@@ -150,6 +155,9 @@ namespace exaDEM
               info_particles[it].pid = id_a[it];
             }
 
+						item.moment = Vec3d{0,0,0};
+						item.friction = Vec3d{0,0,0};
+						item.cell_i = cell_a;
 
 						// First, interaction between a sphere and a driver
 						if ( drivers.has_value() )
@@ -162,28 +170,76 @@ namespace exaDEM
 							item.cell_j = -1;
 							item.p_j = -1;
 
-							// TODO LATER
 							for( size_t drvs_idx = 0 ; drvs_idx < drvs.get_size() ; drvs_idx++ )
 							{
 								item.id_j = drvs_idx; // we store the driver idx
 								DRIVER_TYPE type = drvs.type(drvs_idx);
-								if(type == DRIVER_TYPE::STL_MESH)
-								{ 
-									auto& driver = std::get<DRIVER_TYPE::STL_MESH>(drvs.data(drvs_idx));
+								if(type == DRIVER_TYPE::CYLINDER)
+								{
+									item.type = 4;
+									item.id_j = drvs_idx;
+									Cylinder& driver = std::get<Cylinder>(drvs.data(drvs_idx));
 									for(size_t p = 0 ; p < n_particles ; p++)
 									{
-										auto items = driver.detection_sphere_driver(cell_a, p, id_a[p], drvs_idx, rx[p], ry[p], rz[p], rVerlet);
+										const Vec3d r = {rx[p], ry[p], rz[p]};
+										const double rVerletMax = rad[p] + rVerlet;
+										if(driver.filter(rVerletMax, r))
+										{
+											item.p_i = p;
+											item.id_i = id_a[p];
+											manager.add_item(p, item);
+										}
+									}
+								}
+								else if(type == DRIVER_TYPE::SURFACE)
+								{
+									item.type = 5;
+									item.id_j = drvs_idx;
+									Surface& driver = std::get<Surface>(drvs.data(drvs_idx));
+									for(size_t p = 0 ; p < n_particles ; p++)
+									{
+										const Vec3d r = {rx[p], ry[p], rz[p]};
+										const double rVerletMax = rad[p] + rVerlet;
+										if(driver.filter(rVerletMax, r))
+										{
+											item.p_i = p;
+											item.id_i = id_a[p];
+											manager.add_item(p, item);
+										}
+									}
+								}
+								else if(type == DRIVER_TYPE::BALL)
+								{
+									item.type = 6;
+									item.id_j = drvs_idx;
+									Ball& driver = std::get<Ball>(drvs.data(drvs_idx));
+									for(size_t p = 0 ; p < n_particles ; p++)
+									{
+										const Vec3d r = {rx[p], ry[p], rz[p]};
+										const double rVerletMax = rad[p] + rVerlet;
+										if(driver.filter(rVerletMax, r))
+										{
+											item.p_i = p;
+											item.id_i = id_a[p];
+											manager.add_item(p, item);
+										}
+									}
+								}
+								else if(type == DRIVER_TYPE::STL_MESH)
+								{ 
+									auto& driver = std::get<Stl_mesh>(drvs.data(drvs_idx));
+									for(size_t p = 0 ; p < n_particles ; p++)
+									{
+										// a sphere can have multiple interactions with a stl mesh
+										auto items = driver.detection_sphere_driver(cell_a, p, id_a[p], drvs_idx, rx[p], ry[p], rz[p], rad[p] + rVerlet);
 										for(auto& it : items) manager.add_item(p, it);
 									}
 
 								}
 							}
 						}
-						item.moment = Vec3d{0,0,0};
-						item.friction = Vec3d{0,0,0};
-						item.cell_i = cell_a;
-						item.type = 0; // === Vertex - Vertex
 
+						item.type = 0; // === Vertex - Vertex
 						// symetric = true seems to be wrong
 						integral_constant<bool,false> symetric;
 						//integral_constant<bool,sym> symetric;

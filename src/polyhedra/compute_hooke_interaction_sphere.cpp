@@ -91,8 +91,11 @@ namespace exaDEM
 				hkp_drvs = *config_driver;
 			}
 
-			const hooke_law_sphere<sym> sphe;
-			const exaDEM::sphere::hooke_law_stl stlm = {};
+			const hooke_law_sphere<sym> sph;
+			const exaDEM::sphere::hooke_law_stl stl = {};
+			const exaDEM::sphere::hooke_law_driver<Cylinder> cyl;
+			const exaDEM::sphere::hooke_law_driver<Surface> surf;
+			const exaDEM::sphere::hooke_law_driver<Ball>    ball;
 #pragma omp parallel for schedule(guided)
 			for( size_t ci = 0 ; ci < indexes.size() ; ci ++ )
 			{
@@ -106,13 +109,25 @@ namespace exaDEM
 				{
 					Interaction& item = data_ptr[it];
 
-					if( item.type == 0 ) // sphere-sphere
+					if(item.type == 0) // sphere-sphere
 					{
-						sphe(item, cells, params, time, locker);
+						sph(item, cells, params, time, locker);
+					}
+					else if(item.type == 4) // stl
+					{
+						cyl(item, cells, drvs, hkp_drvs, time, locker);
+					}
+					else if(item.type == 5) // stl
+					{
+						surf(item, cells, drvs, hkp_drvs, time, locker);
+					}
+					else if(item.type == 6) // stl
+					{
+						ball(item, cells, drvs, hkp_drvs, time, locker);
 					}
 					else if(item.type >= 7 && item.type <= 12) // stl
 					{
-						stlm(item, cells, drvs, hkp_drvs, time, locker);
+						stl(item, cells, drvs, hkp_drvs, time, locker);
 					}
 
 				}

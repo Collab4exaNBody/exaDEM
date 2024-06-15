@@ -127,6 +127,7 @@ namespace exaDEM
       lout << "================================="                            << std::endl;
     }
 
+		// rVerletMax = rVerlet + sphere radius
 		std::vector<exaDEM::Interaction> detection_sphere_driver(
 				const size_t cell, 
 				const size_t p, 
@@ -135,7 +136,7 @@ namespace exaDEM
 				const double rx, 
 				const double ry, 
 				const double rz, 
-				const double rVerlet)
+				const double rVerletMax)
 		{
 			std::vector<exaDEM::Interaction> res;
 			exaDEM::Interaction item;
@@ -161,7 +162,8 @@ namespace exaDEM
 			for( size_t j = 0 ; j < stl_nv ; j++ )
 			{
 				size_t idx = list.vertices[j];
-				OBB& obb = stl_obb_vertices[idx];
+				OBB obb = stl_obb_vertices[idx];
+				obb.enlarge(rVerletMax);
 				if ( obb.intersect( v ))
 				{
 					item.sub_j = idx;
@@ -173,7 +175,8 @@ namespace exaDEM
 			for( size_t j = 0 ; j < stl_ne ; j++ )
 			{
 				size_t idx = list.edges[j];
-				OBB& obb = stl_obb_edges[idx];
+				OBB obb = stl_obb_edges[idx];
+				obb.enlarge(rVerletMax);
 				if ( obb.intersect(v) )
 				{
 					item.sub_j = idx;
@@ -185,7 +188,8 @@ namespace exaDEM
 			for( size_t j = 0 ; j < stl_nf ; j++ )
 			{
 				size_t idx = list.faces[j];
-				OBB& obb = stl_obb_faces[idx];
+				OBB obb = stl_obb_faces[idx];
+				obb.enlarge(rVerletMax);
 				if ( obb.intersect(v) )
 				{
 					item.sub_j = idx;
