@@ -58,6 +58,7 @@ namespace exaDEM
 		ADD_SLOT( double                      , dt            , INPUT        , REQUIRED );
 		ADD_SLOT( Drivers                     , drivers       , INPUT        , DocString{"List of Drivers"});
 		ADD_SLOT( std::vector<size_t>         , idxs          , INPUT_OUTPUT , DocString{"List of non empty cells"});
+		ADD_SLOT( double                      , rcut_max      , INPUT_OUTPUT , 0.0 );
 
 		public:
 
@@ -69,23 +70,26 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
-			if( grid->number_of_cells() == 0 ) { return; }
-
 			Drivers empty;
 			Drivers& drvs =  drivers.has_value() ? *drivers : empty;
+			const double rcut = config->rcut;
+			*rcut_max = std::max( *rcut_max , rcut );
+
+			if( grid->number_of_cells() == 0 ) { return; }
 
 			const auto cells = grid->cells();
 			auto & cell_interactions = ges->m_data;
 			const HookeParams params = *config;
-			HookeParams hkp_drvs;
 			const double time = *dt;
 			mutexes& locker = *locks;
 			auto& indexes = *idxs;
-
+			HookeParams hkp_drvs;
 			if ( drivers->get_size() > 0 &&  config_driver.has_value() )
 			{
 				hkp_drvs = *config_driver;
+				*rcut_max = std::max( *rcut_max , hkp_drvs.rcut );
 			}
+
 
 			const hooke_law<sym> sph;
 			const exaDEM::sphere::hooke_law_stl stl = {};
@@ -109,23 +113,22 @@ namespace exaDEM
 					{
 						sph(item, cells, params, time, locker);
 					}
-					else if(item.type == 4) // stl
+					else if(item.type == 4) // cylinder
 					{
 						cyl(item, cells, drvs, hkp_drvs, time, locker);
 					}
-					else if(item.type == 5) // stl
+					else if(item.type == 5) // surface
 					{
 						surf(item, cells, drvs, hkp_drvs, time, locker);
 					}
-					else if(item.type == 6) // stl
+					else if(item.type == 6) // ball
 					{
 						ball(item, cells, drvs, hkp_drvs, time, locker);
 					}
-					else if(item.type >= 7 && item.type <= 12) // stl
+					else if(item.type >= 7 && item.type <= 9) // stl
 					{
 						stl(item, cells, drvs, hkp_drvs, time, locker);
 					}
-
 				}
 			}
 		}
@@ -137,8 +140,8 @@ namespace exaDEM
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "hooke_sphere_no_sym", make_grid_variant_operator< ComputeHookeInteractionSphereNoSymTmpl > );
 		OperatorNodeFactory::instance()->register_factory( "hooke_sphere_sym", make_grid_variant_operator< ComputeHookeInteractionSphereSymTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "hooke_sphere_no_sym", make_grid_variant_operator< ComputeHookeInteractionSphereNoSymTmpl > );
 	}
 }
 

@@ -62,11 +62,11 @@ namespace exaDEM
 			{
 				if(rcut_max.has_value())
 				{
-					*rcut_max = std::max(*rcut_max, *rad);
+					*rcut_max = std::max(*rcut_max, 2*(*rad));
 				}
 				else
 				{
-					*rcut_max = *rad;
+					*rcut_max = 2*(*rad);
 				}
 				
 				if( region.has_value() )

@@ -45,13 +45,13 @@ namespace exaDEM
 	}
 
 	// This function returns : if there is a contact, interpenetration value, normal vector, and the contact position
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex_core( const Vec3d& vi, double ri,  const Vec3d& vj, double rj)
+	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex_core( const Vec3d& pi, double ri,  const Vec3d& pj, double rj)
 	{
 		// sphero-polyhedron
 		double R = ri + rj;
 
 		// === compute distance
-		const Vec3d dist = vi - vj;
+		const Vec3d dist = pi - pj;
 
 		// === compute norm
 		const double dist_norm = sqrt(exanb::dot(dist, dist));
@@ -72,7 +72,7 @@ namespace exaDEM
 			const Vec3d n = dist * inv_dist_norm;
 
 			// === compute contact position
-			const Vec3d contact_position = vi - n * (ri + 0.5 * dn);
+			const Vec3d contact_position = pi - n * (ri + 0.5 * dn);
 
 			return {true, dn, n, contact_position};
 		}
