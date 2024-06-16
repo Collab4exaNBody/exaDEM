@@ -104,7 +104,6 @@ namespace exaDEM
         std::abort();
       }
 
-			std::cout << "rcut " << *nbh_dist_lab << std::endl;
       //const bool gpu_enabled = parallel_execution_context()->has_gpu_context();
 
 			bool gpu_enabled = ( global_cuda_ctx() != nullptr );
