@@ -31,8 +31,6 @@ input_data:
      grid_subdiv: 15
      value: [1, 0, 0, 20]
      region: GEYSERE
-  - write_grid_vtk:
-     filename: my_grid
 
 +update_particles_full_body:
   - set_cell_values:
@@ -44,7 +42,7 @@ input_data:
 setup_drivers:
   - add_stl_mesh:
      id: 0
-     filename: shift.stl
+     filename: mesh.stl
      minskowski: 0.001
 
 update_nbh_friction:

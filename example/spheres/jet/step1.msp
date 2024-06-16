@@ -17,7 +17,6 @@ reader1:
       repeats: [ 300 , 300 , 60 ]
       enlarge_bounds: 0.0 m
       region: CYLINDER and not GEYSERE2
-#      region: CYLINDER and BOX and not GEYSERE
   - set_radius:
      rad: 0.5
   - set_quaternion
@@ -34,7 +33,7 @@ reader1:
 setup_drivers:
   - add_stl_mesh:
      id: 0
-     filename: shift.stl
+     filename: mesh.stl
      minskowski: 0.001
 
 input_data:
@@ -64,7 +63,7 @@ input_data:
      value: [1, 0, 0, 20]
      region: GEYSERE
   - write_grid_vtk:
-     filename: my_grid
+     filename: fluid
 #  - reader2
 
 +update_particles_full_body:
@@ -80,7 +79,7 @@ compute_force:
   - quadratic_force:
      cx: 0.38
      mu: 0.0000015
-  - compute_hooke_interaction_sphere_sym:
+  - hooke__sphere_sym:
       config: { rcut: 1.0 m , dncut: 1.0 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.1, mu: 0.1, damp_rate: 0.9} 
       config_driver: { rcut: 1.0 m , dncut: 1.0 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.1, mu: 0.3, damp_rate: 0.9} 
   - sphere_fluid_friction:
