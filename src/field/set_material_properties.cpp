@@ -72,6 +72,8 @@ namespace exaDEM
         const double coeff  = ((4.0)/(3.0)) * pi * d;    
         const double mass = coeff * r * r * r; // 4/3 * pi * r^3 * d 
 
+        const uint32_t t = *type;
+
         if( region.has_value() )
         {
           if( !particle_regions.has_value() )
@@ -87,12 +89,12 @@ namespace exaDEM
 
           ParticleRegionCSGShallowCopy prcsg = *region;
 
-          FilteredSetRegionFunctor<double, double, Quaternion> func { prcsg, *type, {r, mass, *quat}};
+          FilteredSetRegionFunctor<double, double, Quaternion> func { prcsg, t, {r, mass, *quat}};
           compute_cell_particles( *grid , false , func , compute_region_field_set , parallel_execution_context() );
         }
         else
         {
-          FilteredSetFunctor<double, double, Quaternion> func { *type, {r, mass, *quat}};
+          FilteredSetFunctor<double, double, Quaternion> func { t, {r, mass, *quat}};
           compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
         }
       }

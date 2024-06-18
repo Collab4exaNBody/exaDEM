@@ -39,6 +39,19 @@ message(STATUS "Maximum number of vertices per polyhedron: ${EXADEM_MAX_VERTICES
 add_compile_options(-DEXADEM_MAX_VERTICES=${EXADEM_MAX_VERTICES})
 
 # ======================================
+# === ExaDEM Package Option          ===
+# ======================================
+
+option(USE_RSA "Add RSA Package" OFF)
+
+if(USE_RSA)
+	find_package(rsa_mpi REQUIRED)
+	message( STATUS "rsa_mpi is used, header location: ${rsa_mpi_INCLUDE_DIRS}")
+	message( STATUS "rsa_mpi is used, rsa_mpi_DIR: ${rsa_mpi_DIR}")
+  include_directories(${rsa_mpi_INCLUDE_DIRS})
+endif(USE_RSA)
+
+# ======================================
 # === exaNBody application framework ===
 # ======================================
 find_package(exaNBody)

@@ -89,6 +89,7 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
+			const auto cells = grid->cells();
 			const size_t n_cells = grid->number_of_cells(); // nbh.size();
 			const IJK dims = grid->dimension();
 			const int gl = grid->ghost_layers();
@@ -112,6 +113,8 @@ namespace exaDEM
 						{
 							IJK loc_a = block_loc + gl;
 							size_t cell_a = grid_ijk_to_index( dims , loc_a );
+							const int n_particles = cells[cell_a].size();
+							if (n_particles == 0) continue;
 							auto cb = grid->cell_bounds(loc_a);
 							auto center = (cb.bmin + cb.bmax) / 2;
 							bx.center = { center.x , center.y, center.z};

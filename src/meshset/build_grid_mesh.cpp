@@ -305,13 +305,23 @@ namespace exaDEM
 			const size_t n_cells = grid->number_of_cells(); // nbh.size();
 			const IJK dims = grid->dimension();
 			const int gl = grid->ghost_layers();
-			
-			Interactions& interactions_new = *Int;
-			Interactions interactions_old = interactions_new;
-			
-			//printf("ICI-UN\n");
-			
-			interactions_old.maj_friction();
+
+			for(auto &mesh : collection)
+			{
+				auto& ind = mesh.indexes;
+				ind.resize(n_cells);
+				mesh.build_boxes();
+				std::cout << " JE SUIS LA " << std::endl;
+#     pragma omp parallel
+				{
+					GRID_OMP_FOR_BEGIN(dims-2*gl,_,block_loc, schedule(dynamic))
+					{
+						IJK loc_a = block_loc + gl;
+						size_t cell_a = grid_ijk_to_index( dims , loc_a );
+						ind[cell_a].clear();
+						auto cb = grid->cell_bounds(loc_a);
+						Box bx = { cb.bmin - rad , cb.bmax + rad };
+
 
 			//printf("ICI-DEUX\n");
 			
