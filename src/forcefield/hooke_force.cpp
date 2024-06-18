@@ -160,7 +160,7 @@ namespace exaDEM
 {
 	using namespace exanb;
 	
-	template< class GridT > __global__ void HookeForceGPU(GridT* cells, HookeParams hp, double dt, Mat3d xform, int size,
+	/*template< class GridT > __global__ void HookeForceGPU(GridT* cells, HookeParams hp, double dt, Mat3d xform, int size,
 								int* pa_GPU,
 								int* cella_GPU,
 								int* pb_GPU,
@@ -250,7 +250,7 @@ namespace exaDEM
 			atomicAdd(&cells[cellb][field::mom][pb].y, mom.y);
 			atomicAdd(&cells[cellb][field::mom][pb].z, mom.z);
 		}
-	}
+	}*/
 	
 	
 
@@ -271,15 +271,6 @@ namespace exaDEM
 							ADD_SLOT( double                , dt                , INPUT , REQUIRED );
 							
 							ADD_SLOT( Interactions_PP       , interactions_PP   , INPUT_OUTPUT );//HOOKE_FORCE_GPU
-							
-							ADD_SLOT(int*, pa_array, INPUT_OUTPUT);
-							ADD_SLOT(int*, cella_array, INPUT_OUTPUT);
-							ADD_SLOT(int*, pb_array, INPUT_OUTPUT);
-							ADD_SLOT(int*, cellb_array, INPUT_OUTPUT);
-							ADD_SLOT(double*, ftx_array, INPUT_OUTPUT);
-							ADD_SLOT(double*, fty_array, INPUT_OUTPUT);
-							ADD_SLOT(double*, ftz_array, INPUT_OUTPUT);
-							ADD_SLOT(int, size_interactions, INPUT_OUTPUT);
 							
 
 							// shortcut to the Compute buffer used (and passed to functor) by compute_pair_singlemat
@@ -331,15 +322,15 @@ namespace exaDEM
 								ParticleNeighborFrictionIterator cp_friction{ nbh_friction->m_cell_friction.data() };
 								
 								//HOOKE_FORCE_GPU
-								int size = ints.nb_interactions;
+								/*int size = ints.nb_interactions;
 								int blockSize = 128;
 								int numBlocks;
 								if(size % blockSize == 0){ numBlocks = size/blockSize;}
 								else if(size / blockSize < 1){ numBlocks=1; blockSize = size;}
-								else { numBlocks = int(size/blockSize)+1; }
+								else { numBlocks = int(size/blockSize)+1; }*/
 								
-								onika::memory::CudaMMVector<double> fx;
-								fx.resize(1);
+								//onika::memory::CudaMMVector<double> fx;
+								//fx.resize(1);
 								
 								//HookeForceGPU<<<numBlocks, blockSize>>>(cells, *config, *dt, domain->xform(), size, ints.pa_GPU2.data(), ints.cella_GPU2.data(), ints.pb_GPU2.data(), ints.cellb_GPU2.data(), ints.ftx_GPU2.data(), ints.fty_GPU2.data(), ints.ftz_GPU2.data());
 								

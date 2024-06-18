@@ -65,7 +65,7 @@ namespace exaDEM
     }
   };
   
-  __global__ void setGPU(int* pa, 
+  /*__global__ void setGPU(int* pa, 
   			int* cella,
   			int* pb,
   			int* cellb,
@@ -108,6 +108,23 @@ namespace exaDEM
   	}
   }
   
+  __global__ void cellGPU(int* cell,
+  			int* cell_size,
+  			onika::memory::CudaMMVector<int> cell2,
+  			onika::memory::CudaMMVector<int> cell_size2,
+  			int size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	if(idx < size)
+  	{
+  		auto cell3 = onika::cuda::vector_data(cell2);
+  		auto cell_size3 = onika::cuda::vector_data(cell_size2);
+  		
+  		cell[idx] = cell3[idx];
+  		cell_size[idx] = cell_size3[idx];
+  	}
+  }*/
+  
 
   template<typename GridT>
   struct ChunkNeighborsContact : public OperatorNode
@@ -131,6 +148,7 @@ namespace exaDEM
     ADD_SLOT( ChunkNeighborsScratchStorage, chunk_neighbors_scratch, PRIVATE );
     
     ADD_SLOT( Interactions_PP     , interactions_PP , INPUT_OUTPUT);//HOOKE_FORCE_GPU
+    //ADD_SLOT( std::vector<int>, cells_non_empty, INPUT_OUTPUT);
 
 		inline std::string documentation() const override final
 		{
@@ -141,18 +159,22 @@ namespace exaDEM
 
     inline void execute () override final
     {
-    	printf("CHUNK START\n");
+    	//printf("CHUNK START\n");
     	std::vector< std::vector< std::vector< std::pair<int,int>>>> cell_particles_nbh;//HOOKE_FORCE_GPU
     	std::vector< std::vector<int>> id_cell_particles_nbh;//HOOKE_FORCE_GPU
     	std::vector< std::vector<std::vector <int>>> id2_cell_particles_nbh;//HOOKE_FORCE_GPU
     	
+    	//auto& cells_use = cells_non_empty;
+    	
+    	//cells_use.clear();
+    	
     	//HOOKE_FORCE_GPU
-    	Interactions_PP& interactions_new = *interactions_PP;
-    	Interactions_PP interactions_old = interactions_new;
+    	//Interactions_PP& interactions_new = *interactions_PP;
+    	//Interactions_PP interactions_old = interactions_new;
     	
-    	interactions_old.maj_friction();
+    	//interactions_old.maj_friction();
     	
-    	interactions_new.reset();
+    	//interactions_new.reset();
     	//HOOKE_FORCE_GPU
     
       unsigned int cs = config->chunk_size;
@@ -194,6 +216,11 @@ namespace exaDEM
       //HOOKE_FORCE_GPU
      /*for(int i= 0; i < cell_particles_nbh.size(); i++){
       	int cell= i;
+      	if(cell_particles_nbh[i].size() > 0)
+      	{ 
+      		interactions_new.add_cell(cell, cell_particles_nbh[i].size());
+      		//cells_use.push_back(cell);
+      	}
       	for(int j= 0; j < cell_particles_nbh[i].size(); j++){
       		int particle= j;
       		auto ida = id_cell_particles_nbh[i][j];
@@ -223,8 +250,15 @@ namespace exaDEM
 	else { numBlocks = int(size/blockSize)+1; }
       
       setGPU<<<numBlocks, blockSize>>>(interactions_new.pa_GPU2.data(), interactions_new.cella_GPU2.data(), interactions_new.pb_GPU2.data(), interactions_new.cellb_GPU2.data(), interactions_new.ftx_GPU2.data(), interactions_new.fty_GPU2.data(), interactions_new.ftz_GPU2.data(), interactions_new.pa_GPU, interactions_new.cella_GPU, interactions_new.pb_GPU, interactions_new.cellb_GPU, interactions_new.ftx_GPU, interactions_new.fty_GPU, interactions_new.ftz_GPU, size);
+      
+      int size2 = interactions_new.init_GPU_size;
+      if(size2 % blockSize == 0){ numBlocks = size2/blockSize;}
+      else if(size2 / blockSize < 1){ numBlocks=1; blockSize = size2;}
+      else { numBlocks = int(size2/blockSize)+1; }
+      cellGPU<<<numBlocks, blockSize>>>(interactions_new.cells_gravity_GPU.data(), interactions_new.cells_gravity_size_GPU.data(), interactions_new.cells_gravity, interactions_new.cells_gravity_size, size2);
+      
       cudaDeviceSynchronize();*/
-      printf("CHUNK FINISH\n");
+      //printf("CHUNK FINISH\n");
       			 
     }
 

@@ -56,6 +56,15 @@ namespace exaDEM
 		onika::memory::CudaMMVector<double> fty_GPU2;
 		onika::memory::CudaMMVector<double> ftz_GPU2;
 		
+		onika::memory::CudaMMVector<int> cells_gravity;
+		onika::memory::CudaMMVector<int> cells_gravity_size;
+		int max_cells_gravity_size;
+		
+		onika::memory::CudaMMVector<int> cells_gravity_GPU;
+		//std::vector<int> cells_gravity_GPU;
+		onika::memory::CudaMMVector<int> cells_gravity_size_GPU;
+		int init_GPU_size;
+		
 		//Reset the lists
 		void reset()
 		{
@@ -117,6 +126,11 @@ namespace exaDEM
 			ftx_GPU2.clear();
 			fty_GPU2.clear();
 			ftz_GPU2.clear();
+			
+			cells_gravity.clear();
+			cells_gravity_size.clear();
+			max_cells_gravity_size = 0;
+			init_GPU_size = 0;
 		}
 		
 		int binarySearch(std::vector<int> arr, int size, int target, int cell, int p, bool b, int idx) {
@@ -169,6 +183,15 @@ namespace exaDEM
 				idb_.push_back(idb[i]);
 			}
 			nb_particles++;
+		}
+		
+		void add_cell(int cell, int size)
+		{	
+			init_GPU_size++;
+			cells_gravity.push_back(cell);
+			cells_gravity_size.push_back(size);
+			if(size > max_cells_gravity_size) max_cells_gravity_size = size;
+			//printf("CELLULE\n");
 		}
 		
 		int print()
@@ -573,6 +596,9 @@ namespace exaDEM
 			ftx_GPU2.resize(nb_interactions);
 			fty_GPU2.resize(nb_interactions);
 			ftz_GPU2.resize(nb_interactions);
+			
+			cells_gravity_GPU.resize(init_GPU_size);
+			cells_gravity_size_GPU.resize(init_GPU_size);
 		}
 		
 		

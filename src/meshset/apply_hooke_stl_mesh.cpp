@@ -66,7 +66,7 @@ namespace exaDEM
   double length2(const Vec3d& v) {return std::sqrt(v.x*v.x+v.y*v.y+v.z*v.z);}
   
   
-  template<class GridT>__global__ void ApplyHookeSTLMesh_GPU(GridT* cells, 
+  /*template<class GridT>__global__ void ApplyHookeSTLMesh_GPU(GridT* cells, 
 									int* pa,
 									int* cella,
 									int* faces,
@@ -187,6 +187,7 @@ namespace exaDEM
 				pz[idx] = position.z;
 				contacts[idx] = 1;
 				//printf("VAIIIIIII\n");
+				printf("CONTACT\n");
 			}
 			
 			int particle = which_particle[idx];
@@ -281,6 +282,7 @@ namespace exaDEM
 					py[idx] = position.y;
 					pz[idx] = position.z;
 					//printf("DOOOOOOOOOOOOOVE\n");
+					printf("CONTACT\n");
 				}
 				
 			}
@@ -474,7 +476,7 @@ namespace exaDEM
 				add[idx] = 0;
 				pot[idx] = 0;
 			}
-		}
+		}*/
   
   
   
@@ -512,7 +514,7 @@ namespace exaDEM
 	      	//printf("APPLY START\n");
 		//ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
 		//compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
-		auto& g = *grid;
+		/*auto& g = *grid;
 								const auto cells = g.cells();
 								
 								auto& I = *Int;

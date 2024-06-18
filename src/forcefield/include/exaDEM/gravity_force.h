@@ -19,6 +19,7 @@ under the License.
 #pragma once
 
 #include <exanb/core/basic_types.h>
+//#include <exanb/compute/compute_cell_particles2.h>
 #include <exanb/compute/compute_cell_particles.h>
 
 namespace exaDEM
@@ -26,7 +27,7 @@ namespace exaDEM
   struct GravityForceFunctor
   {
     exanb::Vec3d g = { 0.0 , 0.0 , -9.807};
-    ONIKA_HOST_DEVICE_FUNC inline void operator () (double mass, double& fx, double& fy, double& fz ) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator () (const size_t cell_idx, double mass, double& fx, double& fy, double& fz ) const
     {
       fx += g.x * mass;
       fy += g.y * mass;
@@ -41,6 +42,11 @@ namespace exanb
   {
     static inline constexpr bool RequiresBlockSynchronousCall = false;
     static inline constexpr bool CudaCompatible = true;
+  };
+  
+  template<> struct ComputeCellParticlesTraitsUseCellIdx<exaDEM::GravityForceFunctor>
+  {
+	static inline constexpr bool UseCellIdx = true;
   };
 }
 

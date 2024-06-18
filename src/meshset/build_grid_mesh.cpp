@@ -170,7 +170,7 @@ namespace exaDEM
 			return res;
 	}
 	
-		__global__ void setGPU(int* pa,
+		/*__global__ void setGPU(int* pa,
 					int* cella,
 					int* faces,
 					double* nx,
@@ -267,7 +267,7 @@ namespace exaDEM
 				vy[idx] = vy3[idx];
 				vz[idx] = vz3[idx];
 			}
-		}	
+		}	*/
 	
 	
 		
@@ -296,7 +296,7 @@ namespace exaDEM
 		inline void execute () override final
 		{
 		
-			//printf("BUILD START\n");
+			/*printf("BUILD START\n");
 			//auto& collection = *stl_collection;
 			auto& mesh= *meshes;
 			const double rad = *rcut_max;
@@ -404,7 +404,7 @@ namespace exaDEM
 			
 			
 			
-			for(int i = 0; i < cell_particles_faces.size(); i++)
+			/*for(int i = 0; i < cell_particles_faces.size(); i++)
 			{
 				int cell = i;
 				for(int j = 0; j < cell_particles_faces[i].size(); j++)
@@ -466,7 +466,7 @@ namespace exaDEM
 			setGPU3<<<numBlocks, blockSize>>>(interactions_new.vx_GPU2.data(), interactions_new.vy_GPU2.data(), interactions_new.vz_GPU2.data(),
 							interactions_new.vx_GPU, interactions_new.vy_GPU, interactions_new.vz_GPU, size3);
 							
-			//printf("BUILD END\n");
+			printf("BUILD END\n");*/
 				
 		};
 	};
