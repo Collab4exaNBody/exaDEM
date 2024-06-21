@@ -19,7 +19,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
+/*#include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
@@ -481,7 +481,7 @@ namespace exaDEM
   
   
   
-  template<
+  /*template<
     class GridT,
 	  class = AssertGridHasFields< GridT, field::_fx, field::_fy, field::_fz >
 	    >
@@ -982,7 +982,7 @@ namespace exaDEM
 									//getchar();
 								}
 								}*/
-							};
+							//};
 								
 								 
 								
@@ -990,7 +990,7 @@ namespace exaDEM
 		
 		//printf("APPLY END\n")
 
-std::cout << "Je suis là aussi " << std::endl;
+/*std::cout << "Je suis là aussi " << std::endl;
 		ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
 		compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
 	      }
@@ -1006,5 +1006,5 @@ std::cout << "Je suis là aussi " << std::endl;
   {
     OperatorNodeFactory::instance()->register_factory( "apply_hooke_stl_meshes", make_grid_variant_operator< ApplyHookeSTLMeshesOperatorTemplate > );
   }
-}
+}*/
 

@@ -160,7 +160,8 @@ namespace exaDEM
 {
 	using namespace exanb;
 	
-	/*template< class GridT > __global__ void HookeForceGPU(GridT* cells, HookeParams hp, double dt, Mat3d xform, int size,
+	
+	template< class GridT > __global__ void HookeForceGPU(GridT* cells, HookeParams hp, double dt, Mat3d xform, int size,
 								int* pa_GPU,
 								int* cella_GPU,
 								int* pb_GPU,
@@ -173,7 +174,6 @@ namespace exaDEM
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		if(idx < size)
 		{
-			//printf("POURQUOI?\n");
 			
 			int pa = pa_GPU[idx];
 			int cella = cella_GPU[idx];
@@ -234,23 +234,21 @@ namespace exaDEM
 			fty_GPU[idx] = ft.y;
 			ftz_GPU[idx] = ft.z;
 
-			atomicAdd(&cells[cella][field::fx][pa], fx);
+			/*atomicAdd(&cells[cella][field::fx][pa], fx);
 			atomicAdd(&cells[cella][field::fy][pa], fy);
 			atomicAdd(&cells[cella][field::fz][pa], fz);
 			atomicAdd(&cells[cella][field::mom][pa].x, mom.x);
 			atomicAdd(&cells[cella][field::mom][pa].y, mom.y);
-			atomicAdd(&cells[cella][field::mom][pa].z, mom.z);
+			atomicAdd(&cells[cella][field::mom][pa].z, mom.z);*/
 			
-			//("PA: %d, CELLA: %d, PB:%d, CELLB:%d, FX:%f, FY:%f, FZ:%f, MOMX:%f, MOMY:%f, MOMZ:%f, FTX:%f, FTY:%f, FTZ:%f\n", pa, cella, pb, cellb, fx, fy, fz, mom.x, mom.y, mom.z, ft.x, ft.y, ft.z);
-			
-			atomicAdd(&cells[cellb][field::fx][pb], -fx);
+			/*atomicAdd(&cells[cellb][field::fx][pb], -fx);
 			atomicAdd(&cells[cellb][field::fy][pb], -fy);
 			atomicAdd(&cells[cellb][field::fz][pb], -fz);
 			atomicAdd(&cells[cellb][field::mom][pb].x, mom.x);
 			atomicAdd(&cells[cellb][field::mom][pb].y, mom.y);
-			atomicAdd(&cells[cellb][field::mom][pb].z, mom.z);
+			atomicAdd(&cells[cellb][field::mom][pb].z, mom.z);*/
 		}
-	}*/
+	}
 	
 	
 
@@ -304,6 +302,7 @@ namespace exaDEM
 								//HOOKE_FORCE_GPU
 								auto& g = *grid;
 								const auto cells = g.cells();
+								const auto cells2 = g.cells();
 								//HOOKE_FORCE_GPU
 
 								const double rcut = config->rcut;
@@ -322,23 +321,23 @@ namespace exaDEM
 								ParticleNeighborFrictionIterator cp_friction{ nbh_friction->m_cell_friction.data() };
 								
 								//HOOKE_FORCE_GPU
-								/*int size = ints.nb_interactions;
-								int blockSize = 128;
+								int size = ints.nb_interactions;
+								int blockSize = 256;
 								int numBlocks;
 								if(size % blockSize == 0){ numBlocks = size/blockSize;}
 								else if(size / blockSize < 1){ numBlocks=1; blockSize = size;}
-								else { numBlocks = int(size/blockSize)+1; }*/
+								else { numBlocks = int(size/blockSize)+1; }
 								
-								//onika::memory::CudaMMVector<double> fx;
-								//fx.resize(1);
+								onika::memory::CudaMMVector<double> fx;
+								fx.resize(1);
 								
-								//HookeForceGPU<<<numBlocks, blockSize>>>(cells, *config, *dt, domain->xform(), size, ints.pa_GPU2.data(), ints.cella_GPU2.data(), ints.pb_GPU2.data(), ints.cellb_GPU2.data(), ints.ftx_GPU2.data(), ints.fty_GPU2.data(), ints.ftz_GPU2.data());
-								
+								HookeForceGPU<<<numBlocks, blockSize>>>(cells, *config, *dt, domain->xform(), size, ints.pa_GPU.data(), ints.cella_GPU.data(), ints.pb_GPU.data(), ints.cellb_GPU.data(), ints.ftx_GPU.data(), ints.fty_GPU.data(), ints.ftz_GPU2.data());			
+
 								//sgetchar();
 								
 								//HOOKE_FORCE_GPU
 								
-								if( domain->xform_is_identity() )
+								/*if( domain->xform_is_identity() )
 								{
 									//printf("NULLXFORM\n");
 									auto optional = make_compute_pair_optional_args( nbh_it, cp_friction, NullXForm{}, cp_locks );
@@ -349,7 +348,7 @@ namespace exaDEM
 									//printf("LINEARXFORM\n");
 									auto optional = make_compute_pair_optional_args( nbh_it, cp_friction , LinearXForm{ domain->xform() }, cp_locks );
 									compute_cell_particle_pairs( *grid, rcut, *ghost, optional, force_buf, force_op, compute_fields, DefaultPositionFields{}, parallel_execution_context() );
-								}
+								}*/
 								
 							}
 

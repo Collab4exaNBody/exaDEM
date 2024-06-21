@@ -18,7 +18,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
+/*#include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
@@ -273,7 +273,7 @@ namespace exaDEM
 		
 	
 	
-	using namespace exanb;
+	/*using namespace exanb;
 	template<	class GridT, class = AssertGridHasFields< GridT >> class BuildGridSTLMeshOperator : public OperatorNode
 	{
 		using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz>;
@@ -294,7 +294,7 @@ namespace exaDEM
 		}
 
 		inline void execute () override final
-		{
+		{*/
 		
 			/*printf("BUILD START\n");
 			//auto& collection = *stl_collection;
@@ -486,15 +486,15 @@ namespace exaDEM
 							
 			printf("BUILD END\n");*/
 				
-		};
-	};
+		//};
+	//};
 
 	// this helps older versions of gcc handle the unnamed default second template parameter
-	template <class GridT> using BuildGridSTLMeshOperatorTemplate = BuildGridSTLMeshOperator<GridT>;
+	/*template <class GridT> using BuildGridSTLMeshOperatorTemplate = BuildGridSTLMeshOperator<GridT>;
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
 		OperatorNodeFactory::instance()->register_factory( "build_grid_stl_mesh", make_grid_variant_operator< BuildGridSTLMeshOperatorTemplate > );
 	}
-}
+}*/

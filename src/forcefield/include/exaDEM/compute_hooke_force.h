@@ -251,6 +251,12 @@ ONIKA_HOST_DEVICE_FUNC inline
 
 					// === compute overlap in dn
 					const double dn = dist_norm - R;
+					
+					ft = {0, 0, 0};
+					
+					bool dn0 = (dn <= 0.0);
+					
+					
 
 					if(dn <= 0.0) 
 					{

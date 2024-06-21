@@ -512,9 +512,40 @@ namespace exaDEM
 	      inline void execute () override final
 	      {
 
-std::cout << "Je suis là aussi " << std::endl;
-		ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
-		compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+	      	//printf("APPLY START\n");
+		//ApplyHookeSTLMeshesFunctor func { *stl_collection, *dt, *kt, *kn, *kr, *mu, *damprate};
+		//compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+		/*auto& g = *grid;
+								const auto cells = g.cells();
+								
+								auto& I = *Int;
+								//printf("INTERACTIONS : %d\n", I.nb_interactions);
+								//if(I.nb_interactions > 0) getchar();
+								int size = I.nb_interactions;
+								int blockSize = 128;
+								int numBlocks;
+								if(size % blockSize == 0){ numBlocks = size/blockSize;}
+								else if(size / blockSize < 1) { numBlocks=1; blockSize = size;}
+								else  { numBlocks= int(size/blockSize)+1; }
+								
+								onika::memory::CudaMMVector<int> tata;
+								tata.resize(1);
+								
+								
+								ApplyHookeSTLMesh_GPU<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.faces_idx_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.num_vertices_GPU2.data(), I.contact.data(), I.which_particle2.data(), I.add_particle.data(), I.potentiels.data(), I.vx_GPU2.data(), I.vy_GPU2.data(), I.vz_GPU2.data(), I.posx.data(), I.posy.data(), I.posz.data(), size);
+								
+								ApplyHookeSTLMesh_GPU2<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.faces_idx_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.num_vertices_GPU2.data(), I.contact.data(), I.which_particle2.data(), I.add_particle.data(), I.potentiels.data(), I.vx_GPU2.data(), I.vy_GPU2.data(), I.vz_GPU2.data(), I.posx.data(), I.posy.data(), I.posz.data(), size);
+								
+								ApplyHookeSTLMesh_GPU3<<<numBlocks, blockSize>>>(cells, I.pa_GPU2.data(), I.cella_GPU2.data(), I.nx_GPU2.data(), I.ny_GPU2.data(), I.nz_GPU2.data(), I.offsets_GPU2.data(), I.contact.data(), I.posx.data(), I.posy.data(), I.posz.data(), I.ftx_GPU2.data(), I.fty_GPU2.data(), I.ftz_GPU2.data(), I.add_particle.data(), I.which_particle2.data(), *dt, *kt, *kn, *kr, *mu, *damprate, size);
+								
+								int size2 = I.nb_particles;
+								if(size2 % blockSize == 0){ numBlocks = size2/blockSize;}
+								else if(size2 / blockSize < 1) { numBlocks=1; blockSize = size2;}
+								else  { numBlocks= int(size2/blockSize)+1; }
+								
+								set<<<numBlocks, blockSize>>>(I.add_particle.data(), I.potentiels.data(), size2);
+								*/
+							
 	      }
 
 	    };

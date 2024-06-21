@@ -267,7 +267,7 @@ namespace exaDEM
 				vy[idx] = vy3[idx];
 				vz[idx] = vz3[idx];
 			}
-		}	*/
+		}*/	
 	
 	
 		
@@ -306,21 +306,13 @@ namespace exaDEM
 			const IJK dims = grid->dimension();
 			const int gl = grid->ghost_layers();
 
-			for(auto &mesh : collection)
-			{
-				auto& ind = mesh.indexes;
-				ind.resize(n_cells);
-				mesh.build_boxes();
-				std::cout << " JE SUIS LA " << std::endl;
-#     pragma omp parallel
-				{
-					GRID_OMP_FOR_BEGIN(dims-2*gl,_,block_loc, schedule(dynamic))
-					{
-						IJK loc_a = block_loc + gl;
-						size_t cell_a = grid_ijk_to_index( dims , loc_a );
-						ind[cell_a].clear();
-						auto cb = grid->cell_bounds(loc_a);
-						Box bx = { cb.bmin - rad , cb.bmax + rad };
+			
+			Interactions& interactions_new = *Int;
+			Interactions interactions_old = interactions_new;
+			
+			//printf("ICI-UN\n");
+			
+			interactions_old.maj_friction();
 
 
 			//printf("ICI-DEUX\n");
@@ -393,7 +385,7 @@ namespace exaDEM
 			
 			//printf("ICI2\n");
 			
-			/*int rs = 0;
+			int rs = 0;
 			
 			for(int i = 0; i < cell_particles_faces.size(); i++)
 			{
@@ -410,11 +402,11 @@ namespace exaDEM
 				}
 			}
 			
-			interactions_new.resize(rs);*/
+			interactions_new.resize(rs);
 			
 			
 			
-			/*for(int i = 0; i < cell_particles_faces.size(); i++)
+			for(int i = 0; i < cell_particles_faces.size(); i++)
 			{
 				int cell = i;
 				for(int j = 0; j < cell_particles_faces[i].size(); j++)
@@ -478,7 +470,7 @@ namespace exaDEM
 							
 			printf("BUILD END\n");*/
 				
-		};
+		}
 	};
 
 	// this helps older versions of gcc handle the unnamed default second template parameter

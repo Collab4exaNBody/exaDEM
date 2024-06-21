@@ -47,7 +47,7 @@ namespace exaDEM
 {
   using namespace exanb;
   
- /* template< class GridT > __global__ void GravityForceGPU(GridT* cells,
+ template< class GridT > __global__ void GravityForceGPU(GridT* cells,
   							int* cells2,
   							int* cells_size,
   							Vec3d g)
@@ -68,7 +68,7 @@ namespace exaDEM
   		
   		
   	}
-  }*/
+  }
 
   template<typename GridT
     , class = AssertGridHasFields< GridT, field::_mass, field::_fx,field::_fy,field::_fz >
@@ -96,7 +96,7 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
-			Interactions_PP& ints= *interactions_PP;
+			//Interactions_PP& ints= *interactions_PP;
 			//auto& g = *grid;
 			//const auto cells = g.cells();
 			//printf("POISON\n");
@@ -106,6 +106,7 @@ namespace exaDEM
 			//int blockSize = 256;
 			//printf("PARTICULES: %d\n", ints.max_cells_gravity_size);
 			//int numBlocks = ints.init_GPU_size;
+			//printf("NUMBER OF NO EMPTY CELLS:%d\n", numBlocks);
 			
 			//GravityForceGPU<<<numBlocks, blockSize>>>(cells, ints.cells_gravity_GPU.data(), ints.cells_gravity_size_GPU.data(), *gravity);
 		}

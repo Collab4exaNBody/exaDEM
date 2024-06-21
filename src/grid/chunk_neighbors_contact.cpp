@@ -65,7 +65,7 @@ namespace exaDEM
     }
   };
   
-  /*__global__ void setGPU(int* pa, 
+  __global__ void setGPU(int* pa, 
   			int* cella,
   			int* pb,
   			int* cellb,
@@ -108,7 +108,7 @@ namespace exaDEM
   	}
   }
   
-  __global__ void cellGPU(int* cell,
+  /*__global__ void cellGPU(int* cell,
   			int* cell_size,
   			onika::memory::CudaMMVector<int> cell2,
   			onika::memory::CudaMMVector<int> cell_size2,
@@ -169,12 +169,14 @@ namespace exaDEM
     	//cells_use.clear();
     	
     	//HOOKE_FORCE_GPU
-    	//Interactions_PP& interactions_new = *interactions_PP;
-    	//Interactions_PP interactions_old = interactions_new;
+    	Interactions_PP& interactions_new = *interactions_PP;
+    	Interactions_PP interactions_old = interactions_new;
     	
-    	//interactions_old.maj_friction();
     	
-    	//interactions_new.reset();
+    	
+    	interactions_old.maj_friction();
+    	
+    	interactions_new.reset();
     	//HOOKE_FORCE_GPU
     
       unsigned int cs = config->chunk_size;
@@ -213,51 +215,50 @@ namespace exaDEM
         chunk_neighbors_execute2(ldbg,*chunk_neighbors,*grid,*amr,*amr_grid_pairs,*config,*chunk_neighbors_scratch,cs,cs_log2,*nbh_dist_lab, xform, gpu_enabled, no_z_order, cell_particles_nbh , id_cell_particles_nbh, id2_cell_particles_nbh, nbh_filter );
       }
       
+      
       //HOOKE_FORCE_GPU
-     /*for(int i= 0; i < cell_particles_nbh.size(); i++){
+      
+      //interactions_new.add_cells(cell_particles_nbh);
+      
+     for(int i= 0; i < cell_particles_nbh.size(); i++){
       	int cell= i;
       	if(cell_particles_nbh[i].size() > 0)
       	{ 
       		interactions_new.add_cell(cell, cell_particles_nbh[i].size());
-      		//cells_use.push_back(cell);
       	}
       	for(int j= 0; j < cell_particles_nbh[i].size(); j++){
       		int particle= j;
       		auto ida = id_cell_particles_nbh[i][j];
-      		std::vector< std::pair<int, int>> nbh= cell_particles_nbh[i][j];
-      		std::vector<int> idb = id2_cell_particles_nbh[i][j];
+      		std::vector< std::pair<int, int>>& nbh= cell_particles_nbh[i][j];
+      		std::vector<int>& idb = id2_cell_particles_nbh[i][j];
       		if(nbh.size() > 0){
       			interactions_new.add_particle(particle, cell, nbh, ida, idb);
       		}
       	}
       }
     
-    
       interactions_new.quickSort();
-      
-      interactions_new.set();
             
       interactions_new.init_friction(interactions_old);
       
       interactions_new.init_GPU();
       
-      
-	int size = interactions_new.nb_interactions;
+	/*int size = interactions_new.nb_interactions;
 	int blockSize = 128;
 	int numBlocks;
 	if(size % blockSize == 0){ numBlocks = size/blockSize;}
 	else if(size / blockSize < 1){ numBlocks=1; blockSize = size;}
 	else { numBlocks = int(size/blockSize)+1; }
       
-      setGPU<<<numBlocks, blockSize>>>(interactions_new.pa_GPU2.data(), interactions_new.cella_GPU2.data(), interactions_new.pb_GPU2.data(), interactions_new.cellb_GPU2.data(), interactions_new.ftx_GPU2.data(), interactions_new.fty_GPU2.data(), interactions_new.ftz_GPU2.data(), interactions_new.pa_GPU, interactions_new.cella_GPU, interactions_new.pb_GPU, interactions_new.cellb_GPU, interactions_new.ftx_GPU, interactions_new.fty_GPU, interactions_new.ftz_GPU, size);
+      setGPU<<<numBlocks, blockSize>>>(interactions_new.pa_GPU2.data(), interactions_new.cella_GPU2.data(), interactions_new.pb_GPU2.data(), interactions_new.cellb_GPU2.data(), interactions_new.ftx_GPU2.data(), interactions_new.fty_GPU2.data(), interactions_new.ftz_GPU2.data(), interactions_new.pa_GPU, interactions_new.cella_GPU, interactions_new.pb_GPU, interactions_new.cellb_GPU, interactions_new.ftx_GPU, interactions_new.fty_GPU, interactions_new.ftz_GPU, size);*/
       
-      int size2 = interactions_new.init_GPU_size;
-      if(size2 % blockSize == 0){ numBlocks = size2/blockSize;}
-      else if(size2 / blockSize < 1){ numBlocks=1; blockSize = size2;}
-      else { numBlocks = int(size2/blockSize)+1; }
-      cellGPU<<<numBlocks, blockSize>>>(interactions_new.cells_gravity_GPU.data(), interactions_new.cells_gravity_size_GPU.data(), interactions_new.cells_gravity, interactions_new.cells_gravity_size, size2);
+     //int size2 = interactions_new.init_GPU_size;
+      //if(size2 % blockSize == 0){ numBlocks = size2/blockSize;}
+      //else if(size2 / blockSize < 1){ numBlocks=1; blockSize = size2;}
+      //else { numBlocks = int(size2/blockSize)+1; }
+      //xcellGPU<<<numBlocks, blockSize>>>(interactions_new.cells_gravity_GPU.data(), interactions_new.cells_gravity_size_GPU.data(), interactions_new.cells_gravity, interactions_new.cells_gravity_size, size2);
       
-      cudaDeviceSynchronize();*/
+      //cudaDeviceSynchronize();
       //printf("CHUNK FINISH\n");
       			 
     }

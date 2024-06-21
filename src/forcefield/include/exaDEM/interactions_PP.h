@@ -65,6 +65,19 @@ namespace exaDEM
 		onika::memory::CudaMMVector<int> cells_gravity_size_GPU;
 		int init_GPU_size;
 		
+		int iteration = 0;
+		
+		void resize(int size)
+		{
+			pa.resize(size);
+			cella.resize(size);
+			id_a.resize(size);
+			pb.resize(size);
+			cellb.resize(size);
+			ft_pair.resize(size);
+			id_b.resize(size);
+		}
+		
 		//Reset the lists
 		void reset()
 		{
@@ -133,6 +146,8 @@ namespace exaDEM
 			init_GPU_size = 0;
 		}
 		
+		
+		
 		int binarySearch(std::vector<int> arr, int size, int target, int cell, int p, bool b, int idx) {
 		
    			int low = 0;
@@ -162,6 +177,10 @@ namespace exaDEM
 			cella.push_back(cell);
 			id_a.push_back(ida);
 			
+			/*pa[nb_particles] = p;
+			cella[nb_particles] = cell;
+			id_a[nb_particles] = ida;*/
+			
 			//nb_particles++;
 			
 			pb.resize(nb_particles+1);
@@ -175,15 +194,33 @@ namespace exaDEM
 			auto& ft= ft_pair[nb_particles];
 			auto& idb_ = id_b[nb_particles];
 			
+			p_b.resize(nbh.size());
+			cell_b.resize(nbh.size());
+			ft.resize(nbh.size());
+			idb_.resize(nbh.size());
+			
 			for(int i = 0; i < nbh.size(); i++)
 			{
-				p_b.push_back(nbh[i].first);
-				cell_b.push_back(nbh[i].second);
-				ft.push_back({0, 0, 0});
-				idb_.push_back(idb[i]);
+				//p_b.push_back(nbh[i].first);
+				p_b[i] = nbh[i].first;
+				//cell_b.push_back(nbh[i].second);
+				cell_b[i] = nbh[i].second;
+				//ft.push_back({0, 0, 0});
+				ft[i] = {0, 0, 0};
+				//idb_.push_back(idb[i]);
+				idb_[i] = idb[i];
 			}
 			nb_particles++;
 		}
+		
+		void add_particle2(int p, int cell, int ida, std::vector<int> pb, std::vector<int> cellb, std::vector<int> idb)
+		{
+			//pa.push_back(p);
+			//cella.push_back(cell);
+			
+		}
+		
+		
 		
 		void add_cell(int cell, int size)
 		{	
@@ -325,16 +362,16 @@ namespace exaDEM
 			id_a[j] = temp_ida;
 			//if(id_a[i] == id_a[j]) printf("FLOOOOOOOOOOOOOOOOO\n");
 			
-			pb[i].clear();
+			//pb[i].clear();
 			pb[i].resize(size_j);
 			
-			cellb[i].clear();
+			//cellb[i].clear();
 			cellb[i].resize(size_j);
 			
-			id_b[i].clear();
+			//id_b[i].clear();
 			id_b[i].resize(size_j);
 			
-			ft_pair[i].clear();
+			//ft_pair[i].clear();
 			ft_pair[i].resize(size_j);
 			
 			for(int z = 0; z < size_j; z++)
@@ -345,16 +382,16 @@ namespace exaDEM
 				ft_pair[i][z] = ft_pair[j][z];
 			}
 			
-			pb[j].clear();
+			//pb[j].clear();
 			pb[j].resize(size_i);
 			
-			cellb[j].clear();
+			//cellb[j].clear();
 			cellb[j].resize(size_i);
 			
-			id_b[j].clear();
+			//id_b[j].clear();
 			id_b[j].resize(size_i);
 			
-			ft_pair[j].clear();
+			//ft_pair[j].clear();
 			ft_pair[j].resize(size_i);
 			
 			for(int z = 0; z < size_i; z++)
@@ -512,6 +549,7 @@ namespace exaDEM
 		
 		void maj_friction()
 		{
+			//#pragma omp parallel for
 			for(int i = 0; i < nb_particles; i++)
 			{
 				int z = 0;
@@ -564,6 +602,8 @@ namespace exaDEM
 			ftx_GPU.resize(nb_interactions);
 			fty_GPU.resize(nb_interactions);
 			ftz_GPU.resize(nb_interactions);
+			
+			
 			
 			//#pragma omp parallel for
 			for(int i = 0; i < nb_particles; i++)
