@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 //#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 #include "exanb/core/operator.h"
 #include "exanb/core/operator_slot.h"
@@ -44,13 +44,14 @@ namespace exaDEM
 
   using namespace exanb;
 
-  template<bool sym, typename GridT>
+  template<typename GridT>
     class UpdateContactInteractionSphere : public OperatorNode
   {
     ADD_SLOT( GridT                       , grid              , INPUT_OUTPUT , REQUIRED );
     ADD_SLOT( exanb::GridChunkNeighbors   , chunk_neighbors   , INPUT        , OPTIONAL , DocString{"Neighbor list"} );
     ADD_SLOT( Drivers                     , drivers           , INPUT_OUTPUT , DocString{"List of Drivers"});
     ADD_SLOT( double                      , rcut_inc          , INPUT        , DocString{"value added to the search distance to update neighbor list less frequently. in physical space"} );
+    ADD_SLOT( bool                        , symetric          , INPUT        , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"} );
     ADD_SLOT( std::vector<size_t>         , idxs              , INPUT_OUTPUT , DocString{"List of non empty cells"});
     ADD_SLOT( GridCellParticleInteraction , ges               , INPUT_OUTPUT , DocString{"Interaction list"} );
 
@@ -73,6 +74,7 @@ namespace exaDEM
       const int gl = g.ghost_layers();
       auto & interactions = ges->m_data;
       double rVerlet = *rcut_inc;
+      bool sym = *symetric;
       // if grid structure (dimensions) changed, we invalidate thie whole data
       if( interactions.size() != n_cells )
       {
@@ -100,7 +102,6 @@ namespace exaDEM
         if( n_particles > 0 ) indexes.push_back(cell_a);
       }
       GRID_FOR_END
-
 
 
 #     pragma omp parallel
@@ -239,57 +240,71 @@ namespace exaDEM
           }
 
           item.type = 0; // === Vertex - Vertex
-                         // symetric = true seems to be wrong
-                         //integral_constant<bool,false> symetric;
-                         //integral_constant<bool,sym> symetric;
 
-                         // Second, we add interactions between two spheres.   
-          apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-              [&g, &manager, &cells, cell_a, &item, id_a]
-              (int p_a, size_t cell_b, unsigned int p_b , size_t p_nbh_index ){
-              // default value of the interaction studied (A or i -> B or j)
-              const uint64_t id_nbh = cells[cell_b][field::id][p_b];
-              if constexpr(sym)
-              {
-              if( id_a[p_a] >= id_nbh)
-              {
-              if ( !g.is_ghost_cell(cell_b) ) return;
-              }
-              }
 
-              // Add interactions
-              item.id_i = id_a[p_a];
-              item.p_i = p_a;
-              item.id_j = id_nbh;
-              item.p_j = p_b;
-              item.cell_j = cell_b;
-              manager.add_item(p_a, item);
-              });
-          manager.update_extra_storage <true> ( storage );
+          if(sym)
+					{
+						// Second, we add interactions between two spheres.   
+						apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
+								[&g, &manager, &cells, cell_a, &item, id_a]
+								(int p_a, size_t cell_b, unsigned int p_b , size_t p_nbh_index ){
+								// default value of the interaction studied (A or i -> B or j)
+								const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+								if( id_a[p_a] >= id_nbh)
+								{
+								if ( !g.is_ghost_cell(cell_b) ) return;
+								}
 
-          assert (
-              interaction_test::check_extra_interaction_storage_consistency(
-                storage.number_of_particles(),
-                storage.m_info.data(),
-                storage.m_data.data()
-                ));
+								// Add interactions
+								item.id_i = id_a[p_a];
+								item.p_i = p_a;
+								item.id_j = id_nbh;
+								item.p_j = p_b;
+								item.cell_j = cell_b;
+								manager.add_item(p_a, item);
+								});
+					}
+					else
+					{
+						// Second, we add interactions between two spheres.   
+						apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
+								[&g, &manager, &cells, cell_a, &item, id_a]
+								(int p_a, size_t cell_b, unsigned int p_b , size_t p_nbh_index ){
+								// default value of the interaction studied (A or i -> B or j)
+								const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+								// Add interactions
+								item.id_i = id_a[p_a];
+								item.p_i = p_a;
+								item.id_j = id_nbh;
+								item.p_j = p_b;
+								item.cell_j = cell_b;
+								manager.add_item(p_a, item);
+								});
+					}
 
-          assert( migration_test::check_info_value ( storage.m_info.data(), storage.m_info.size(), 1e6 ) );
-        } //    GRID_OMP_FOR_END
+					manager.update_extra_storage <true> ( storage );
 
-      }
+					assert (
+							interaction_test::check_extra_interaction_storage_consistency(
+								storage.number_of_particles(),
+								storage.m_info.data(),
+								storage.m_data.data()
+								));
 
-    }
-  };
+					assert( migration_test::check_info_value ( storage.m_info.data(), storage.m_info.size(), 1e6 ) );
+				} //    GRID_OMP_FOR_END
 
-  template<class GridT> using UpdateContactInteractionSphereSymTmpl = UpdateContactInteractionSphere<true, GridT>;
-  template<class GridT> using UpdateContactInteractionSphereNoSymTmpl = UpdateContactInteractionSphere<false,GridT>;
+			}
 
-  // === register factories ===  
-  CONSTRUCTOR_FUNCTION
-  {
-    OperatorNodeFactory::instance()->register_factory( "nbh_sphere_sym", make_grid_variant_operator< UpdateContactInteractionSphereSymTmpl > );
-    OperatorNodeFactory::instance()->register_factory( "nbh_sphere_no_sym", make_grid_variant_operator< UpdateContactInteractionSphereNoSymTmpl > );
-  }
+		}
+	};
+
+	template<class GridT> using UpdateContactInteractionSphereTmpl = UpdateContactInteractionSphere<GridT>;
+
+	// === register factories ===  
+	CONSTRUCTOR_FUNCTION
+	{
+		OperatorNodeFactory::instance()->register_factory( "nbh_sphere", make_grid_variant_operator< UpdateContactInteractionSphereTmpl > );
+	}
 }
 

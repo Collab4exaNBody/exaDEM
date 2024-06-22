@@ -1,5 +1,5 @@
 includes:
-  - config_spheres_sym.msp
+  - config_spheres.msp
 
 move_particles_extra_data: 
   - unclassify_interactions
@@ -8,7 +8,8 @@ move_particles_extra_data:
 chunk_neighbors_impl:
   - chunk_neighbors_contact
   - unclassify_interactions
-  - nbh_sphere_sym
+  - nbh_sphere:
+     symetric: true
   - classify_interactions
   - update_mutexes
   - resize_particle_locks

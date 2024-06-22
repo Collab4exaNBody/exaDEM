@@ -56,7 +56,7 @@ namespace exaDEM
   using namespace exanb;
   using namespace sphere;
 
-  template<bool Sym, typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
+  template<typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
     class ComputeHookeClassifierSphereGPU : public OperatorNode
   {
     // attributes processed during computation
@@ -68,7 +68,8 @@ namespace exaDEM
     ADD_SLOT( HookeParams , config_driver     , INPUT , OPTIONAL ); // can be re-used for to dump contact network
     ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
     ADD_SLOT( double      , dt                , INPUT , REQUIRED );
-    ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers"});
+    ADD_SLOT( bool        , symetric          , INPUT , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"});
+    ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
     ADD_SLOT( Classifier  , ic                , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
 
 
@@ -100,15 +101,22 @@ namespace exaDEM
       mutexes& locker = *locks;
       auto& classifier = *ic;
 
-      hooke_law<Sym> sph;
       hooke_law_driver<Cylinder> cyli;
       hooke_law_driver<Surface>  surf;
       hooke_law_driver<Ball>     ball;
       hooke_law_stl stlm = {};
 
-cudaDeviceSynchronize();
-//      gpuErrchk( cudaPeekAtLastError() );
-      run_contact_law(0, classifier, sph, cells, hkp, time);  
+      cudaDeviceSynchronize();
+      if(*symetric)
+			{
+        hooke_law<true> sph;
+        run_contact_law(0, classifier, sph, cells, hkp, time);  
+      }
+      else
+      {
+        hooke_law<false> sph;
+        run_contact_law(0, classifier, sph, cells, hkp, time);  
+      }
       run_contact_law(4, classifier, cyli, cells, drvs->ptr<Cylinder>(), hkp_drvs, time);  
       run_contact_law(5, classifier, surf, cells, drvs->ptr<Surface>(), hkp_drvs, time);  
       run_contact_law(6, classifier, ball, cells, drvs->ptr<Ball>(), hkp_drvs, time);  
@@ -116,23 +124,16 @@ cudaDeviceSynchronize();
       {
         run_contact_law(w, classifier, stlm, cells, drvs, hkp_drvs, time);  
       }
-cudaDeviceSynchronize();
-//      gpuErrchk( cudaPeekAtLastError() );
-//     gpuErrchk( cudaDeviceSynchronize() );
-//      gpuErrchk( cudaPeekAtLastError() );
-			
-
+      cudaDeviceSynchronize();
     }
   };
 
-  template<class GridT> using ComputeHookeClassifierSymGPUTmpl = ComputeHookeClassifierSphereGPU<true, GridT>;
-  template<class GridT> using ComputeHookeClassifierNoSymGPUTmpl = ComputeHookeClassifierSphereGPU<false, GridT>;
+  template<class GridT> using ComputeHookeClassifierGPUTmpl = ComputeHookeClassifierSphereGPU<GridT>;
 
   // === register factories ===  
   CONSTRUCTOR_FUNCTION
   {
-    OperatorNodeFactory::instance()->register_factory( "hooke_classifer_sphere_sym_gpu", make_grid_variant_operator< ComputeHookeClassifierSymGPUTmpl > );
-    OperatorNodeFactory::instance()->register_factory( "hooke_classifer_sphere_no_sym_gpu", make_grid_variant_operator< ComputeHookeClassifierNoSymGPUTmpl > );
+    OperatorNodeFactory::instance()->register_factory( "hooke_classifer_sphere_gpu", make_grid_variant_operator< ComputeHookeClassifierGPUTmpl > );
   }
 }
 

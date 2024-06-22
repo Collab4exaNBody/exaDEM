@@ -43,7 +43,7 @@ namespace exaDEM
   using namespace exanb;
   using namespace sphere;
 
-  template<bool sym, typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
+  template<typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
     class ComputeHookeInteractionSphere : public OperatorNode
   {
     // attributes processed during computation
@@ -56,6 +56,7 @@ namespace exaDEM
     ADD_SLOT( HookeParams                 , config_driver , INPUT        , OPTIONAL ); // can be re-used for to dump contact network
     ADD_SLOT( mutexes                     , locks         , INPUT_OUTPUT );
     ADD_SLOT( double                      , dt            , INPUT        , REQUIRED );
+    ADD_SLOT( bool                        , symetric      , INPUT        , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"} );
     ADD_SLOT( Drivers                     , drivers       , INPUT        , DocString{"List of Drivers"});
     ADD_SLOT( double                      , rcut_max      , INPUT_OUTPUT , 0.0 );
     ADD_SLOT( vector_t<size_t>            , idxs          , INPUT_OUTPUT , DocString{"List of non empty cells"});
@@ -90,61 +91,108 @@ namespace exaDEM
         *rcut_max = std::max( *rcut_max , hkp_drvs.rcut );
       }
 
-
-      const hooke_law<sym> sph;
-      const exaDEM::sphere::hooke_law_stl stl = {};
-      const exaDEM::sphere::hooke_law_driver<Cylinder> cyl;
-      const exaDEM::sphere::hooke_law_driver<Surface> surf;
-      const exaDEM::sphere::hooke_law_driver<Ball>    ball;
-      size_t idxs_size = onika::cuda::vector_size( indexes );
-      size_t *idxs_data = onika::cuda::vector_data( indexes ); 
-
-#pragma omp parallel for schedule(dynamic)
-      for( size_t ci = 0 ; ci < idxs_size ; ci ++ )
+      // TODO later refactoring
+      if(*symetric)
       {
-        size_t current_cell = idxs_data[ci];  
+        const hooke_law<true> sph;
+        const exaDEM::sphere::hooke_law_stl stl = {};
+        const exaDEM::sphere::hooke_law_driver<Cylinder> cyl;
+        const exaDEM::sphere::hooke_law_driver<Surface> surf;
+        const exaDEM::sphere::hooke_law_driver<Ball>    ball;
+        size_t idxs_size = onika::cuda::vector_size( indexes );
+        size_t *idxs_data = onika::cuda::vector_data( indexes ); 
 
-        auto& interactions = cell_interactions[current_cell];
-        const unsigned int data_size = onika::cuda::vector_size( interactions.m_data );
-        exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data ); 
-
-        for( size_t it = 0; it < data_size ; it++ )
+#pragma omp parallel for schedule(guided)
+        for( size_t ci = 0 ; ci < idxs_size ; ci ++ )
         {
-          Interaction& item = data_ptr[it];
+          size_t current_cell = idxs_data[ci];  
 
-          if(item.type == 0) // sphere-sphere
+          auto& interactions = cell_interactions[current_cell];
+          const unsigned int data_size = onika::cuda::vector_size( interactions.m_data );
+          exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data ); 
+
+          for( size_t it = 0; it < data_size ; it++ )
           {
-            sph(item, cells, params, time, locker);
+            Interaction& item = data_ptr[it];
+
+            if(item.type == 0) // sphere-sphere
+            {
+              sph(item, cells, params, time, locker);
+            }
+            else if(item.type == 4) // cylinder
+            {
+              cyl(item, cells, drvs, hkp_drvs, time, locker);
+            }
+            else if(item.type == 5) // surface
+            {
+              surf(item, cells, drvs, hkp_drvs, time, locker);
+            }
+            else if(item.type == 6) // ball
+            {
+              ball(item, cells, drvs, hkp_drvs, time, locker);
+            }
+            else if(item.type >= 7 && item.type <= 9) // stl
+            {
+              stl(item, cells, drvs, hkp_drvs, time, locker);
+            }
           }
-          else if(item.type == 4) // cylinder
+        }
+      }
+      else
+      {
+        const hooke_law<false> sph;
+        const exaDEM::sphere::hooke_law_stl stl = {};
+        const exaDEM::sphere::hooke_law_driver<Cylinder> cyl;
+        const exaDEM::sphere::hooke_law_driver<Surface> surf;
+        const exaDEM::sphere::hooke_law_driver<Ball>    ball;
+        size_t idxs_size = onika::cuda::vector_size( indexes );
+        size_t *idxs_data = onika::cuda::vector_data( indexes ); 
+
+#pragma omp parallel for schedule(guided)
+        for( size_t ci = 0 ; ci < idxs_size ; ci ++ )
+        {
+          size_t current_cell = idxs_data[ci];  
+
+          auto& interactions = cell_interactions[current_cell];
+          const unsigned int data_size = onika::cuda::vector_size( interactions.m_data );
+          exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data ); 
+
+          for( size_t it = 0; it < data_size ; it++ )
           {
-            cyl(item, cells, drvs, hkp_drvs, time, locker);
-          }
-          else if(item.type == 5) // surface
-          {
-            surf(item, cells, drvs, hkp_drvs, time, locker);
-          }
-          else if(item.type == 6) // ball
-          {
-            ball(item, cells, drvs, hkp_drvs, time, locker);
-          }
-          else if(item.type >= 7 && item.type <= 9) // stl
-          {
-            stl(item, cells, drvs, hkp_drvs, time, locker);
+            Interaction& item = data_ptr[it];
+
+            if(item.type == 0) // sphere-sphere
+            {
+              sph(item, cells, params, time, locker);
+            }
+            else if(item.type == 4) // cylinder
+            {
+              cyl(item, cells, drvs, hkp_drvs, time, locker);
+            }
+            else if(item.type == 5) // surface
+            {
+              surf(item, cells, drvs, hkp_drvs, time, locker);
+            }
+            else if(item.type == 6) // ball
+            {
+              ball(item, cells, drvs, hkp_drvs, time, locker);
+            }
+            else if(item.type >= 7 && item.type <= 9) // stl
+            {
+              stl(item, cells, drvs, hkp_drvs, time, locker);
+            }
           }
         }
       }
     }
   };
 
-  template<class GridT> using ComputeHookeInteractionSphereSymTmpl = ComputeHookeInteractionSphere<true,GridT>;
-  template<class GridT> using ComputeHookeInteractionSphereNoSymTmpl = ComputeHookeInteractionSphere<false,GridT>;
+  template<class GridT> using ComputeHookeInteractionSphereTmpl = ComputeHookeInteractionSphere<GridT>;
 
   // === register factories ===  
   CONSTRUCTOR_FUNCTION
   {
-    OperatorNodeFactory::instance()->register_factory( "hooke_sphere_sym", make_grid_variant_operator< ComputeHookeInteractionSphereSymTmpl > );
-    OperatorNodeFactory::instance()->register_factory( "hooke_sphere_no_sym", make_grid_variant_operator< ComputeHookeInteractionSphereNoSymTmpl > );
+    OperatorNodeFactory::instance()->register_factory( "hooke_sphere", make_grid_variant_operator< ComputeHookeInteractionSphereTmpl > );
   }
 }
 
