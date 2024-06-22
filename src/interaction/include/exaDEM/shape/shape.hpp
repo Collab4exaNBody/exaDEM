@@ -63,11 +63,15 @@ namespace exaDEM
 		std::string m_name = "undefined";
 
 		// functions in shape_prepro.hpp
+/*		ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_vertices();
+		ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_edges();
+		ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_faces();
+    ONIKA_HOST_DEVICE_FUNC inline void increase_obb ( const double value );
+*/
 		inline void pre_compute_obb_vertices();
 		inline void pre_compute_obb_edges();
 		inline void pre_compute_obb_faces();
     inline void increase_obb ( const double value );
-
 
 		ONIKA_HOST_DEVICE_FUNC
 		inline double get_volume() const
@@ -182,18 +186,20 @@ namespace exaDEM
 			}
 
 		// returns the pointor on data and the number of vertex in the faces
-		const std::pair<int*, int> get_face(const int i)
-		{
-			assert(i < m_faces[0]);
-			int * ptr = this->get_faces() + 1;
-			for(int it = i ; it > 0 ; it --)
+		ONIKA_HOST_DEVICE_FUNC
+			const std::pair<int*, int> get_face(const int i)
 			{
-				ptr += ptr[0]+1;
+				assert(i < m_faces[0]);
+				int * ptr = this->get_faces() + 1;
+				for(int it = i ; it > 0 ; it --)
+				{
+					ptr += ptr[0]+1;
+				}
+				return { ptr + 1, ptr[0] };
 			}
-			return { ptr + 1, ptr[0] };
-		}
 
 		// returns the pointor on data and the number of vertex in the faces
+		ONIKA_HOST_DEVICE_FUNC
 		const std::pair<int*, int> get_face(const int i) const
 		{
 			assert(i < m_faces[0]);
@@ -205,6 +211,7 @@ namespace exaDEM
 			return { ptr + 1, ptr[0] };
 		}
 
+		ONIKA_HOST_DEVICE_FUNC
 		inline OBB get_obb_edge(const exanb::Vec3d& position, const size_t index, exanb::Quaternion orientation) const
 		{
 			OBB res = m_obb_edges[index];
@@ -213,6 +220,7 @@ namespace exaDEM
 			return res;
 		}
 
+		ONIKA_HOST_DEVICE_FUNC
 		inline OBB get_obb_face(const exanb::Vec3d& position, const size_t index, exanb::Quaternion orientation) const
 		{
 			OBB res = m_obb_faces[index];

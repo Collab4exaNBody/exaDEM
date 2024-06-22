@@ -59,17 +59,17 @@ namespace exaDEM
 
 					if(key == "obb.e1")
 					{
-						input >> obb.e[0].x >> obb.e[0].y >> obb.e[0].z;
+						input >> obb.e1.x >> obb.e1.y >> obb.e1.z;
 					}
 
 					if(key == "obb.e2")
 					{
-						input >> obb.e[1].x >> obb.e[1].y >> obb.e[1].z;
+						input >> obb.e2.x >> obb.e2.y >> obb.e2.z;
 					}
 
 					if(key == "obb.e3")
 					{
-						input >> obb.e[2].x >> obb.e[2].y >> obb.e[2].z;
+						input >> obb.e3.x >> obb.e3.y >> obb.e3.z;
 					}
 
 					// 

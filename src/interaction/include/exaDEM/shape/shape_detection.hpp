@@ -38,14 +38,14 @@ namespace exaDEM
 	 * @note The input vector is modified in-place, and the normalized vector is also returned.
 	 * @note It is recommended to ensure that the input vector is non-zero before calling this function.
 	 */
-	inline void normalize (Vec3d& in)
+	ONIKA_HOST_DEVICE_FUNC inline void normalize (Vec3d& in)
 	{
 		const double norm = exanb::norm (in);
 		in = in / norm ;
 	}
 
 	// This function returns : if there is a contact, interpenetration value, normal vector, and the contact position
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex_core( const Vec3d& pi, double ri,  const Vec3d& pj, double rj)
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex_core( const Vec3d& pi, double ri,  const Vec3d& pj, double rj)
 	{
 		// sphero-polyhedron
 		double R = ri + rj;
@@ -78,7 +78,7 @@ namespace exaDEM
 		}
 	}
 
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex(
 			const Vec3d& pi, const int i, const shape* shpi, const exanb::Quaternion& oi, 
 			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
 	{
@@ -89,7 +89,7 @@ namespace exaDEM
 		return detection_vertex_vertex_core(vi, shpi->m_radius, vj, shpj->m_radius);
 	}
 
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex(
 			const Vec3d& pi, const double radius,
 			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
 	{
@@ -99,7 +99,7 @@ namespace exaDEM
 		return detection_vertex_vertex_core(pi, radius, vj, shpj->m_radius);
 	}
 
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex_precompute(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_vertex_precompute(
 			const VertexArray& vai, const int i, const shape* shpi,
 			const VertexArray& vaj, const int j, const shape* shpj)
 	{
@@ -118,7 +118,7 @@ namespace exaDEM
 	 * @param rj The radius of the second vertex.
 	 * @return True if the distance between the vertices is less than or equal to the Verlet radius + shape radii, false otherwise.
 	 */
-	inline bool filter_vertex_vertex( const double rVerlet, const Vec3d& vi, double ri,  const Vec3d& vj, double rj)
+	ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex( const double rVerlet, const Vec3d& vi, double ri,  const Vec3d& vj, double rj)
 	{
 		// sphero-polyhedron
 		double R = ri + rj + rVerlet;
@@ -143,7 +143,7 @@ namespace exaDEM
 	 * @param oj The orientation of the second vertex.
 	 * @return True if the distance between the vertices is less than or equal to the Verlet radius + shape radii, false otherwise.
 	 */
-	inline bool filter_vertex_vertex( const double rVerlet,
+	ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex( const double rVerlet,
 			const Vec3d& pi, const int i, const shape* shpi, const exanb::Quaternion& oi, 
 			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
 	{
@@ -153,7 +153,7 @@ namespace exaDEM
 		return filter_vertex_vertex( rVerlet, vi, shpi->m_radius, vj, shpj->m_radius);
 	}
 
-	inline bool filter_vertex_vertex( const double rVerlet,
+	ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex( const double rVerlet,
 			const Vec3d& pi, const double radius,
 			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
 	{
@@ -162,7 +162,7 @@ namespace exaDEM
 		return filter_vertex_vertex( rVerlet, pi, radius, vj, shpj->m_radius);
 	}
 
-	inline bool filter_vertex_vertex( const double rVerlet,
+	ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex( const double rVerlet,
 			const VertexArray& vai, const int i, const shape* shpi, 
 			const VertexArray& vaj, const int j, const shape* shpj)
 	{
@@ -180,7 +180,7 @@ namespace exaDEM
 	 * @return True if the interaction passes the filtering condition, false otherwise.
 	 */
 	template<bool SKIP>
-		inline bool filter_vertex_edge(const OBB& obb_vertex, const Vec3d& position, const int index, const shape* shp, const exanb::Quaternion& orientation)
+		ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge(const OBB& obb_vertex, const Vec3d& position, const int index, const shape* shp, const exanb::Quaternion& orientation)
 		{
 			if constexpr (SKIP)
 			{
@@ -212,7 +212,7 @@ namespace exaDEM
 	 *         - The normal vector of the contact.
 	 *         - The contact position.
 	 */
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_edge_core(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_edge_core(
 			const Vec3d& vi, 
 			const double ri, 
 			const Vec3d& vf, 
@@ -248,7 +248,7 @@ namespace exaDEM
 	}
 
 	// API detection_vertex_edge
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_edge(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_edge(
 			const Vec3d& pi, const int i, const shape* shpi, const exanb::Quaternion& oi, 
 			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
 	{
@@ -262,7 +262,7 @@ namespace exaDEM
 		return detection_vertex_edge_core( vi, ri, vf, vs, rj);
 	}
 
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_edge(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_edge(
 			const Vec3d& pi, const double radius,
 			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
 	{
@@ -275,7 +275,7 @@ namespace exaDEM
 	}
 
 	// API detection_vertex_edge
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_edge_precompute( 
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_edge_precompute( 
 			const VertexArray& vai, const int i, const shape* shpi,
 			const VertexArray& vaj, const int j, const shape* shpj)
 	{
@@ -300,7 +300,7 @@ namespace exaDEM
 	 * @return True if the interaction passes the filtering condition, false otherwise.
 	 */
 	template<bool SKIP>
-		inline bool filter_vertex_face(const OBB& obb_vertex, const Vec3d& position, const int index, const shape* shp, const exanb::Quaternion& orientation)
+		ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(const OBB& obb_vertex, const Vec3d& position, const int index, const shape* shp, const exanb::Quaternion& orientation)
 		{
 			if constexpr (SKIP)
 			{
@@ -331,7 +331,7 @@ namespace exaDEM
 	 *         - The normal vector of the contact.
 	 *         - The contact position.
 	 */
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_face(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_face(
 			const Vec3d& pi, const int i, const shape* shpi, const exanb::Quaternion& oi, 
 			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
 	{
@@ -404,7 +404,7 @@ namespace exaDEM
 		return {ODD == 1, dn, n, contact_position};
 	}
 
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_face(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_face(
 			const Vec3d& pi, const double radius,
 			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
 	{
@@ -491,7 +491,7 @@ namespace exaDEM
 	 *         - The normal vector of the contact.
 	 *         - The contact position.
 	 */
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_face_precompute(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_vertex_face_precompute(
 			const VertexArray& vai, const int i, const shape* shpi,
 			const VertexArray& vaj, const int j, const shape* shpj)
 	{
@@ -579,7 +579,7 @@ namespace exaDEM
 	 *         - The normal vector of the contact.
 	 *         - The contact position.
 	 */
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_edge_edge_core(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_edge_edge_core(
 			const Vec3d& vfi, const Vec3d& vsi, const double ri,
 			const Vec3d& vfj, const Vec3d& vsj, const double rj)
 	{
@@ -635,7 +635,7 @@ namespace exaDEM
 	}
 
 	// API edge - edge
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_edge_edge(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_edge_edge(
 			const Vec3d& pi, const int i, const shape* shpi, const exanb::Quaternion& oi, 
 			const Vec3d& pj, const int j, const shape* shpj, const exanb::Quaternion& oj)
 	{
@@ -653,7 +653,7 @@ namespace exaDEM
 	}
 
 	// API edge - edge
-	inline std::tuple<bool, double, Vec3d, Vec3d> detection_edge_edge_precompute(
+	ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_edge_edge_precompute(
 			const VertexArray& vai, const int i, const shape* shpi,
 			const VertexArray& vaj, const int j, const shape* shpj)
 	{

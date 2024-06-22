@@ -58,7 +58,7 @@ namespace exaDEM
     /**
      * @brief return driver velocity
      */
-    inline Vec3d& get_vel()
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d& get_vel()
     {
       return vel;
     }
@@ -69,7 +69,7 @@ namespace exaDEM
      * @param vi The vector representing the point to check.
      * @return True if the point is within the cut-off radius of the cylinder, false otherwise.
      */
-    inline bool filter( const double rcut, const Vec3d& vi)
+    ONIKA_HOST_DEVICE_FUNC inline bool filter( const double rcut, const Vec3d& vi)
     {
       const Vec3d proj = vi * axis;
 
@@ -99,7 +99,7 @@ namespace exaDEM
      *   - The contact point between the vertex and the cylinder.
      */
     // rcut = r shape
-    inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d& pi)
+    ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d& pi)
     {
       // === project the vertex in the plan as the cylinder center
       const Vec3d proj = pi * axis;

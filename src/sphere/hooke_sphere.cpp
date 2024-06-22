@@ -41,107 +41,110 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
-	using namespace sphere;
+  using namespace sphere;
 
-	template<bool sym, typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
-		class ComputeHookeInteractionSphere : public OperatorNode
-	{
-		// attributes processed during computation
-		using ComputeFields = FieldSet< field::_vrot, field::_arot >;
-		static constexpr ComputeFields compute_field_set {};
+  template<bool sym, typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
+    class ComputeHookeInteractionSphere : public OperatorNode
+  {
+    // attributes processed during computation
+    using ComputeFields = FieldSet< field::_vrot, field::_arot >;
+    static constexpr ComputeFields compute_field_set {};
 
-		ADD_SLOT( GridT                       , grid          , INPUT_OUTPUT , REQUIRED );
-		ADD_SLOT( GridCellParticleInteraction , ges           , INPUT_OUTPUT , DocString{"Interaction list"} );
-		ADD_SLOT( HookeParams                 , config        , INPUT        , REQUIRED ); // can be re-used for to dump contact network
-		ADD_SLOT( HookeParams                 , config_driver , INPUT        , OPTIONAL ); // can be re-used for to dump contact network
-		ADD_SLOT( mutexes                     , locks         , INPUT_OUTPUT );
-		ADD_SLOT( double                      , dt            , INPUT        , REQUIRED );
-		ADD_SLOT( Drivers                     , drivers       , INPUT        , DocString{"List of Drivers"});
-		ADD_SLOT( std::vector<size_t>         , idxs          , INPUT_OUTPUT , DocString{"List of non empty cells"});
-		ADD_SLOT( double                      , rcut_max      , INPUT_OUTPUT , 0.0 );
+    ADD_SLOT( GridT                       , grid          , INPUT_OUTPUT , REQUIRED );
+    ADD_SLOT( GridCellParticleInteraction , ges           , INPUT_OUTPUT , DocString{"Interaction list"} );
+    ADD_SLOT( HookeParams                 , config        , INPUT        , REQUIRED ); // can be re-used for to dump contact network
+    ADD_SLOT( HookeParams                 , config_driver , INPUT        , OPTIONAL ); // can be re-used for to dump contact network
+    ADD_SLOT( mutexes                     , locks         , INPUT_OUTPUT );
+    ADD_SLOT( double                      , dt            , INPUT        , REQUIRED );
+    ADD_SLOT( Drivers                     , drivers       , INPUT        , DocString{"List of Drivers"});
+    ADD_SLOT( double                      , rcut_max      , INPUT_OUTPUT , 0.0 );
+    ADD_SLOT( vector_t<size_t>            , idxs          , INPUT_OUTPUT , DocString{"List of non empty cells"});
 
-		public:
+    public:
 
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
                 )EOF";
-		}
+    }
 
-		inline void execute () override final
-		{
-			Drivers empty;
-			Drivers& drvs =  drivers.has_value() ? *drivers : empty;
-			const double rcut = config->rcut;
-			*rcut_max = std::max( *rcut_max , rcut );
+    inline void execute () override final
+    {
+      Drivers empty;
+      Drivers& drvs =  drivers.has_value() ? *drivers : empty;
+      const double rcut = config->rcut;
+      *rcut_max = std::max( *rcut_max , rcut );
 
-			if( grid->number_of_cells() == 0 ) { return; }
+      if( grid->number_of_cells() == 0 ) { return; }
 
-			const auto cells = grid->cells();
-			auto & cell_interactions = ges->m_data;
-			const HookeParams params = *config;
-			const double time = *dt;
-			mutexes& locker = *locks;
-			auto& indexes = *idxs;
-			HookeParams hkp_drvs;
-			if ( drivers->get_size() > 0 &&  config_driver.has_value() )
-			{
-				hkp_drvs = *config_driver;
-				*rcut_max = std::max( *rcut_max , hkp_drvs.rcut );
-			}
+      const auto cells = grid->cells();
+      auto & cell_interactions = ges->m_data;
+      const HookeParams params = *config;
+      const double time = *dt;
+      mutexes& locker = *locks;
+      auto& indexes = *idxs;
+      HookeParams hkp_drvs;
+      if ( drivers->get_size() > 0 &&  config_driver.has_value() )
+      {
+        hkp_drvs = *config_driver;
+        *rcut_max = std::max( *rcut_max , hkp_drvs.rcut );
+      }
 
 
-			const hooke_law<sym> sph;
-			const exaDEM::sphere::hooke_law_stl stl = {};
-			const exaDEM::sphere::hooke_law_driver<Cylinder> cyl;
-			const exaDEM::sphere::hooke_law_driver<Surface> surf;
-			const exaDEM::sphere::hooke_law_driver<Ball>    ball;
-#pragma omp parallel for schedule(guided)
-			for( size_t ci = 0 ; ci < indexes.size() ; ci ++ )
-			{
-				size_t current_cell = indexes[ci];  
+      const hooke_law<sym> sph;
+      const exaDEM::sphere::hooke_law_stl stl = {};
+      const exaDEM::sphere::hooke_law_driver<Cylinder> cyl;
+      const exaDEM::sphere::hooke_law_driver<Surface> surf;
+      const exaDEM::sphere::hooke_law_driver<Ball>    ball;
+      size_t idxs_size = onika::cuda::vector_size( indexes );
+      size_t *idxs_data = onika::cuda::vector_data( indexes ); 
 
-				auto& interactions = cell_interactions[current_cell];
-				const unsigned int data_size = onika::cuda::vector_size( interactions.m_data );
-				exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data ); 
+#pragma omp parallel for schedule(dynamic)
+      for( size_t ci = 0 ; ci < idxs_size ; ci ++ )
+      {
+        size_t current_cell = idxs_data[ci];  
 
-				for( size_t it = 0; it < data_size ; it++ )
-				{
-					Interaction& item = data_ptr[it];
+        auto& interactions = cell_interactions[current_cell];
+        const unsigned int data_size = onika::cuda::vector_size( interactions.m_data );
+        exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data ); 
 
-					if(item.type == 0) // sphere-sphere
-					{
-						sph(item, cells, params, time, locker);
-					}
-					else if(item.type == 4) // cylinder
-					{
-						cyl(item, cells, drvs, hkp_drvs, time, locker);
-					}
-					else if(item.type == 5) // surface
-					{
-						surf(item, cells, drvs, hkp_drvs, time, locker);
-					}
-					else if(item.type == 6) // ball
-					{
-						ball(item, cells, drvs, hkp_drvs, time, locker);
-					}
-					else if(item.type >= 7 && item.type <= 9) // stl
-					{
-						stl(item, cells, drvs, hkp_drvs, time, locker);
-					}
-				}
-			}
-		}
-	};
+        for( size_t it = 0; it < data_size ; it++ )
+        {
+          Interaction& item = data_ptr[it];
 
-	template<class GridT> using ComputeHookeInteractionSphereSymTmpl = ComputeHookeInteractionSphere<true,GridT>;
-	template<class GridT> using ComputeHookeInteractionSphereNoSymTmpl = ComputeHookeInteractionSphere<false,GridT>;
+          if(item.type == 0) // sphere-sphere
+          {
+            sph(item, cells, params, time, locker);
+          }
+          else if(item.type == 4) // cylinder
+          {
+            cyl(item, cells, drvs, hkp_drvs, time, locker);
+          }
+          else if(item.type == 5) // surface
+          {
+            surf(item, cells, drvs, hkp_drvs, time, locker);
+          }
+          else if(item.type == 6) // ball
+          {
+            ball(item, cells, drvs, hkp_drvs, time, locker);
+          }
+          else if(item.type >= 7 && item.type <= 9) // stl
+          {
+            stl(item, cells, drvs, hkp_drvs, time, locker);
+          }
+        }
+      }
+    }
+  };
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "hooke_sphere_sym", make_grid_variant_operator< ComputeHookeInteractionSphereSymTmpl > );
-		OperatorNodeFactory::instance()->register_factory( "hooke_sphere_no_sym", make_grid_variant_operator< ComputeHookeInteractionSphereNoSymTmpl > );
-	}
+  template<class GridT> using ComputeHookeInteractionSphereSymTmpl = ComputeHookeInteractionSphere<true,GridT>;
+  template<class GridT> using ComputeHookeInteractionSphereNoSymTmpl = ComputeHookeInteractionSphere<false,GridT>;
+
+  // === register factories ===  
+  CONSTRUCTOR_FUNCTION
+  {
+    OperatorNodeFactory::instance()->register_factory( "hooke_sphere_sym", make_grid_variant_operator< ComputeHookeInteractionSphereSymTmpl > );
+    OperatorNodeFactory::instance()->register_factory( "hooke_sphere_no_sym", make_grid_variant_operator< ComputeHookeInteractionSphereNoSymTmpl > );
+  }
 }
 

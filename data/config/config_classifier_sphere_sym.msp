@@ -1,5 +1,9 @@
 includes:
-  - config_spheres.msp
+  - config_spheres_sym.msp
+
+move_particles_extra_data: 
+  - unclassify_interactions
+  - move_particles_interaction
 
 chunk_neighbors_impl:
   - chunk_neighbors_contact

@@ -121,14 +121,25 @@ namespace exaDEM
       inline const data_t& data(size_t idx) const
       {
         assert( idx < m_data.size());
-        return m_data[idx];
+        const auto* const ptr = onika::cuda::vector_data(m_data);
+        return ptr[idx];
       }
 
     ONIKA_HOST_DEVICE_FUNC 
       inline data_t& data(size_t idx)
       {
         assert( idx < m_data.size());
-        return m_data[idx];
+        auto* const ptr = onika::cuda::vector_data(m_data);
+        return ptr[idx];
+      }
+
+		template<typename Driver>
+    ONIKA_HOST_DEVICE_FUNC 
+      inline Driver* ptr()
+      {
+        assert( idx < m_data.size());
+        auto* const ptr = onika::cuda::vector_data(m_data);
+        return (Driver*)ptr;
       }
 
     /**
