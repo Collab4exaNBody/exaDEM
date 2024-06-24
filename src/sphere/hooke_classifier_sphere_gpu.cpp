@@ -100,27 +100,27 @@ namespace exaDEM
 
 //      cudaDeviceSynchronize();
 
-      auto* pctx = parallel_execution_context();
+//      auto* pctx = parallel_execution_context();
 
       if(*symetric)
 			{
         hooke_law<true> sph;
         //run_contact_law(0, classifier, sph, cells, hkp, time);  
-        run_contact_law(pctx, 0, classifier, sph, cells, hkp, time);  
-        //run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);  
+        //run_contact_law(pctx, 0, classifier, sph, cells, hkp, time);  
+        run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);  
       }
       else
       {
         hooke_law<false> sph;
         //run_contact_law(0, classifier, sph, cells, hkp, time);  
-        run_contact_law(pctx, 0, classifier, sph, cells, hkp, time);  
+        run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);  
       }
-      run_contact_law(pctx, 4, classifier, cyli, cells, drvs->ptr<Cylinder>(), hkp_drvs, time);  
-      run_contact_law(pctx, 5, classifier, surf, cells, drvs->ptr<Surface>(), hkp_drvs, time);  
-      run_contact_law(pctx, 6, classifier, ball, cells, drvs->ptr<Ball>(), hkp_drvs, time);  
+      run_contact_law(parallel_execution_context(), 4, classifier, cyli, cells, drvs->ptr<Cylinder>(), hkp_drvs, time);  
+      run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs->ptr<Surface>(), hkp_drvs, time);  
+      run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs->ptr<Ball>(), hkp_drvs, time);  
       for(int w = 7 ; w <= 9 ; w++)
       {
-        run_contact_law(pctx, w, classifier, stlm, cells, drvs, hkp_drvs, time);  
+        run_contact_law(parallel_execution_context(), w, classifier, stlm, cells, drvs, hkp_drvs, time);  
       }
 //      cudaDeviceSynchronize();
     }

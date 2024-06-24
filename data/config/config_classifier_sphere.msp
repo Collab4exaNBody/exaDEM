@@ -1,5 +1,5 @@
 includes:
-  - config_spheres.msp
+  - config_sphere_interaction.msp
 
 move_particles_extra_data: 
   - unclassify_interactions
@@ -14,3 +14,15 @@ chunk_neighbors_impl:
   - update_mutexes
   - resize_particle_locks
 
+dump_data_particles:
+  - timestep_file: "exaDEM_%09d.dump"
+  - message: { mesg: "Write dump " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - unclassify_interactions
+  - stats_interactions
+  - compress_interaction
+  - write_dump_particle_interaction
+  - chunk_neighbors_impl #redbuild interactions
