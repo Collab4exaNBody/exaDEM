@@ -1,4 +1,4 @@
-######### POLYHEDRA mode ####################
+######### SPHERE mode ####################
 
 ######## STL Mesh ##########################
 
@@ -11,12 +11,9 @@ update_stl_mesh: trigger_update_stl_mesh
 
 ######### Move Particles ###################
 
-#+dump_data_paraview:
-#  - write_paraview_polyhedra:
-#     basename: polyhedra
-
 +chunk_neighbors_impl:
-  - nbh_sphere_sym
+  - nbh_sphere:
+     symetric: true
   - update_mutexes
   - resize_particle_locks
 

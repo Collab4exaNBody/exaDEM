@@ -16,6 +16,8 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
+
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
@@ -40,16 +42,6 @@ under the License.
 #include <exaDEM/drivers.h>
 #include <exaDEM/hooke_sphere.h>
 #include <exaDEM/classifier_gpu.h>
-
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
-{
-   if (code != cudaSuccess) 
-   {
-      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-      if (abort) exit(code);
-   }
-}
 
 namespace exaDEM
 {
@@ -90,7 +82,7 @@ namespace exaDEM
 
       const auto cells = grid->cells();
       const HookeParams hkp = *config;
-      HookeParams hkp_drvs;
+      HookeParams hkp_drvs{};
 
       if ( drivers->get_size() > 0 &&  config_driver.has_value() )
       {
@@ -106,25 +98,31 @@ namespace exaDEM
       hooke_law_driver<Ball>     ball;
       hooke_law_stl stlm = {};
 
-      cudaDeviceSynchronize();
+//      cudaDeviceSynchronize();
+
+      auto* pctx = parallel_execution_context();
+
       if(*symetric)
 			{
         hooke_law<true> sph;
-        run_contact_law(0, classifier, sph, cells, hkp, time);  
+        //run_contact_law(0, classifier, sph, cells, hkp, time);  
+        run_contact_law(pctx, 0, classifier, sph, cells, hkp, time);  
+        //run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);  
       }
       else
       {
         hooke_law<false> sph;
-        run_contact_law(0, classifier, sph, cells, hkp, time);  
+        //run_contact_law(0, classifier, sph, cells, hkp, time);  
+        run_contact_law(pctx, 0, classifier, sph, cells, hkp, time);  
       }
-      run_contact_law(4, classifier, cyli, cells, drvs->ptr<Cylinder>(), hkp_drvs, time);  
-      run_contact_law(5, classifier, surf, cells, drvs->ptr<Surface>(), hkp_drvs, time);  
-      run_contact_law(6, classifier, ball, cells, drvs->ptr<Ball>(), hkp_drvs, time);  
+      run_contact_law(pctx, 4, classifier, cyli, cells, drvs->ptr<Cylinder>(), hkp_drvs, time);  
+      run_contact_law(pctx, 5, classifier, surf, cells, drvs->ptr<Surface>(), hkp_drvs, time);  
+      run_contact_law(pctx, 6, classifier, ball, cells, drvs->ptr<Ball>(), hkp_drvs, time);  
       for(int w = 7 ; w <= 9 ; w++)
       {
-        run_contact_law(w, classifier, stlm, cells, drvs, hkp_drvs, time);  
+        run_contact_law(pctx, w, classifier, stlm, cells, drvs, hkp_drvs, time);  
       }
-      cudaDeviceSynchronize();
+//      cudaDeviceSynchronize();
     }
   };
 
