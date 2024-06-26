@@ -32,13 +32,13 @@ under the License.
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
+#include <exaDEM/interaction/classifier_for_all.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/shape/shape_detection_driver.hpp>
 #include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/hooke_sphere.h>
-#include <exaDEM/classifier_gpu.h>
 
 namespace exaDEM
 {

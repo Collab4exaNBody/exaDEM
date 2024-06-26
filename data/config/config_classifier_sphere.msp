@@ -10,12 +10,10 @@ compress_data:
 
 chunk_neighbors_impl:
   - chunk_neighbors_contact
-  - stats_interactions
   - unclassify_interactions
   - nbh_sphere:
      symetric: true
   - classify_interactions
-  - stats_interactions
   - update_mutexes
   - resize_particle_locks
 
@@ -27,7 +25,7 @@ dump_data_particles:
       body:
         - message: { endl: true }
   - unclassify_interactions
-  - stats_interactions
   - compress_interaction
+  - stats_interactions
   - write_dump_particle_interaction
   - chunk_neighbors_impl #redbuild interactions
