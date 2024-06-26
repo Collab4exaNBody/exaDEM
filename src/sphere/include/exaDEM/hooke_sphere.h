@@ -25,13 +25,12 @@ under the License.
 namespace exaDEM
 {
 	ONIKA_HOST_DEVICE_FUNC
-//		__device__
 	inline void lockAndAdd(double& val, double add)
 		{
 			ONIKA_CU_ATOMIC_ADD(val, add);
 		}
+
 	ONIKA_HOST_DEVICE_FUNC
-//		__device__
 	inline void lockAndAdd(Vec3d& val, Vec3d&& add)
 		{
 			ONIKA_CU_ATOMIC_ADD(val.x, add.x);

@@ -1,0 +1,31 @@
+######### SPHERE mode ####################
+
+######## STL Mesh ##########################
+
+includes:
+  - config_polyhedra.msp
+
+
+compress_data: 
+  - unclassify_interactions
+  - compress_interaction
+
+chunk_neighbors_impl:
+  - chunk_neighbors_contact
+  - unclassify_interactions
+  - nbh_polyhedron
+  - classify_interactions
+  - resize_particle_locks
+
+dump_data_particles:
+  - timestep_file: "exaDEM_%09d.dump"
+  - message: { mesg: "Write dump " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - unclassify_interactions
+  - compress_interaction
+  - stats_interactions
+  - write_dump_particle_interaction
+  - chunk_neighbors_impl #redbuild interactions

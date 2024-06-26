@@ -55,9 +55,9 @@ namespace exaDEM
     ADD_SLOT( GridT       , grid                , INPUT_OUTPUT , REQUIRED );
     ADD_SLOT( GridCellParticleInteraction , ges , INPUT_OUTPUT , DocString{"Interaction list"} );
     ADD_SLOT( shapes      , shapes_collection   , INPUT_OUTPUT , DocString{"Collection of shapes"});
+		ADD_SLOT( mutexes     , locks               , INPUT_OUTPUT );
     ADD_SLOT( HookeParams , config              , INPUT , REQUIRED , DocString{"Hooke law parameters used to model interactions sphere/driver"}); // can be re-used for to dump contact network
     ADD_SLOT( HookeParams , config_driver       , INPUT , OPTIONAL , DocString{"Hooke law parameters used to model interactions sphere/driver"}); // can be re-used for to dump contact network
-    ADD_SLOT( mutexes     , locks               , INPUT_OUTPUT , DocString{"Grid of mutexes, one per particles"});
     ADD_SLOT( double      , dt                  , INPUT , REQUIRED , DocString{"Timestep"});
     ADD_SLOT( Drivers     , drivers             , INPUT , DocString{"List of Drivers"});
 		ADD_SLOT( std::vector<size_t> , idxs        , INPUT_OUTPUT , DocString{"List of non empty cells"});
