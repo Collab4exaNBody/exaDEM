@@ -1,16 +1,21 @@
 includes:
   - config_sphere_interaction.msp
 
-move_particles_extra_data: 
+compress_data: 
   - unclassify_interactions
-  - move_particles_interaction
+  - compress_interaction
+
+#move_particles_extra_data: 
+#  - move_particles_interaction
 
 chunk_neighbors_impl:
   - chunk_neighbors_contact
+  - stats_interactions
   - unclassify_interactions
   - nbh_sphere:
      symetric: true
   - classify_interactions
+  - stats_interactions
   - update_mutexes
   - resize_particle_locks
 

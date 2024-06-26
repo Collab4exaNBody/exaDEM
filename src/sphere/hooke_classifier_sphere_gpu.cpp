@@ -25,9 +25,6 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 
-#include <exanb/particle_neighbors/chunk_neighbors.h>
-#include <exanb/particle_neighbors/chunk_neighbors_apply.h>
-
 #include <memory>
 
 #include <exaDEM/hooke_force_parameters.h>
@@ -58,7 +55,6 @@ namespace exaDEM
     ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
     ADD_SLOT( HookeParams , config            , INPUT , REQUIRED ); // can be re-used for to dump contact network
     ADD_SLOT( HookeParams , config_driver     , INPUT , OPTIONAL ); // can be re-used for to dump contact network
-    ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
     ADD_SLOT( double      , dt                , INPUT , REQUIRED );
     ADD_SLOT( bool        , symetric          , INPUT , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"});
     ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
@@ -77,9 +73,7 @@ namespace exaDEM
     {
       if( grid->number_of_cells() == 0 ) { return; }
 
-      Drivers empty;
-      Drivers* drvs =  drivers.has_value() ? &(*drivers) : nullptr;
-
+      Drivers* drvs =  drivers.get_pointer();
       const auto cells = grid->cells();
       const HookeParams hkp = *config;
       HookeParams hkp_drvs{};
@@ -90,7 +84,6 @@ namespace exaDEM
       }
 
       const double time = *dt;
-      mutexes& locker = *locks;
       auto& classifier = *ic;
 
       hooke_law_driver<Cylinder> cyli;
@@ -98,31 +91,23 @@ namespace exaDEM
       hooke_law_driver<Ball>     ball;
       hooke_law_stl stlm = {};
 
-//      cudaDeviceSynchronize();
-
-//      auto* pctx = parallel_execution_context();
-
       if(*symetric)
 			{
         hooke_law<true> sph;
-        //run_contact_law(0, classifier, sph, cells, hkp, time);  
-        //run_contact_law(pctx, 0, classifier, sph, cells, hkp, time);  
         run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);  
       }
       else
       {
         hooke_law<false> sph;
-        //run_contact_law(0, classifier, sph, cells, hkp, time);  
         run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);  
       }
       run_contact_law(parallel_execution_context(), 4, classifier, cyli, cells, drvs->ptr<Cylinder>(), hkp_drvs, time);  
       run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs->ptr<Surface>(), hkp_drvs, time);  
       run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs->ptr<Ball>(), hkp_drvs, time);  
-      for(int w = 7 ; w <= 9 ; w++)
+      for(int type = 7 ; type <= 9 ; type++)
       {
-        run_contact_law(parallel_execution_context(), w, classifier, stlm, cells, drvs, hkp_drvs, time);  
+        run_contact_law(parallel_execution_context(), type, classifier, stlm, cells, drvs, hkp_drvs, time);  
       }
-//      cudaDeviceSynchronize();
     }
   };
 

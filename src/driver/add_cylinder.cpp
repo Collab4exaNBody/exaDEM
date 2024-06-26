@@ -62,7 +62,9 @@ namespace exaDEM
 
       inline void execute () override final
       {
-        exaDEM::Cylinder driver = {*radius, *axis, *center, *velocity, *angular_velocity};
+				// proj center over axis
+				Vec3d c = (*center) * (*axis);
+        exaDEM::Cylinder driver = {*radius, *axis, c, *velocity, *angular_velocity};
         drivers->add_driver(*id, driver);
       }
     };

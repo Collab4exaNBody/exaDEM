@@ -293,6 +293,10 @@ namespace exaDEM
 
 							// === update informations
 							lockAndAdd(mom, compute_moments(contact_position, r, f, item.moment));
+							//cell[field::fx][p] += f.x;
+							//cell[field::fy][p] += f.y;
+							//cell[field::fz][p] += f.z;
+							//mom += compute_moments(contact_position, r, f, item.moment);
 							lockAndAdd(cell[field::fx][p], f.x);
 							lockAndAdd(cell[field::fy][p], f.y);
 							lockAndAdd(cell[field::fz][p], f.z);
@@ -391,23 +395,21 @@ namespace exaDEM
 					const size_t p_i   = item.p_i;
 					const size_t sub_j = item.sub_j;
 
-					// === positions
+					// === particle i
 					const Vec3d r_i       = { cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i] };
-					// === vrot
-					const Vec3d& vrot_i  = cell[field::vrot][p_i];
-					const double radius_i  = cell[field::radius][p_i];
-					const auto& shp_j = driver.shp;
-
+					const Vec3d& vrot_i   = cell[field::vrot][p_i];
+					const double radius_i = cell[field::radius][p_i];
+          // === driver j
+					const auto& shp_j         = driver.shp;
 					const Quaternion orient_j = {1.0,0.0,0.0,0.0};
 					auto [contact, dn, n, contact_position] = func(item.type, r_i, radius_i, driver.center, sub_j, &shp_j, orient_j);
 
 					if(contact)
 					{
-						constexpr Vec3d null = {0,0,0};
-						auto& mom = cell[field::mom][p_i];
-						const Vec3d v_i = { cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i] };
+						auto& mom         = cell[field::mom][p_i];
+						const Vec3d v_i   = { cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i] };
 						const double meff = cell[field::mass][p_i];
-						Vec3d f = null;
+						Vec3d f           = {0,0,0};
 						hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 								hkp.m_mu, hkp.m_damp_rate, meff,
 								item.friction, contact_position,
