@@ -13,7 +13,7 @@ authors:
     affiliation: 1
   - name: Thierry Carrard
     orcid: 0000-0001-9396-4658
-    affiliation: 2,3
+    affiliation: "2,3"
   - name: Lhassan Amarsid
     orcid: 0009-0009-5120-1308
     affiliation: 1
@@ -25,7 +25,7 @@ authors:
     affiliation: 1
   - name: Paul Lafourcade
     orcid: 0000-0002-4416-6091
-    affiliation: 2,3
+    affiliation: "2,3"
   - name: Guillaume Latu
     orcid: 0009-0001-7274-1305
     affiliation: 1
