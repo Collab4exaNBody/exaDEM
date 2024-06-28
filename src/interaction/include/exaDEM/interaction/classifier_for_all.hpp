@@ -1,6 +1,7 @@
 #pragma once
 #include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/block_parallel_for.h>
+#include <onika/parallel/parallel_for.h>
 
 
 namespace exaDEM
@@ -24,11 +25,12 @@ namespace exaDEM
 		struct WrapperForAll
 		{
 			T* const ptr;
+      uint64_t size;
 			const K kernel;
-			const std::tuple<Args...> params;
+			std::tuple<Args...> params;
 
-			WrapperForAll(T* p, K& k, Args... args) 
-				: ptr(p), 
+			WrapperForAll(T* p, uint64_t s, K& k, Args... args) 
+				: ptr(p), size(s), 
 				kernel(k), 
 				params(std::tuple<Args...>(args...)) 
 			{} 
@@ -51,7 +53,7 @@ namespace onika
 {
   namespace parallel
 	{
-  	template<typename T, typename K, typename... Args> struct BlockParallelForFunctorTraits < exaDEM::WrapperForAll <T,K,Args... > >
+  	template<typename T, typename K, typename... Args> struct ParallelForFunctorTraits < exaDEM::WrapperForAll <T,K,Args... > >
   	{
 	  	static inline constexpr bool CudaCompatible = true;
 	  };
@@ -61,11 +63,11 @@ namespace onika
 namespace exaDEM
 {
 	using namespace onika::parallel;
-	template<typename... Args>
-		static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext * exec_ctx, int type, Classifier& ic, Args&&... args)
+	template<typename Kernel, typename... Args>
+		static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext * exec_ctx, int type, Classifier& ic, Kernel& kernel, Args&&... args)
 		{
 			auto [ptr, size] = ic.get_info(type);
-			WrapperForAll func(ptr,  args...);
-			return block_parallel_for( size, func, exec_ctx);
+			WrapperForAll func(ptr, size, kernel, args...);
+			return parallel_for( size, func, exec_ctx);
 		}
 }

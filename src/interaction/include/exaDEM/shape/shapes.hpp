@@ -28,7 +28,7 @@ namespace exaDEM
 		template <typename T> using VectorT =  onika::memory::CudaMMVector<T>; 
 		VectorT<shape> m_data;
 
-		inline const shape* const data() const
+		inline const shape* data() const
     {
 			return onika::cuda::vector_data( m_data );
     }

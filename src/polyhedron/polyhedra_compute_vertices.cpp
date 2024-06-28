@@ -16,6 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
@@ -54,7 +55,8 @@ namespace exaDEM
 			public:
 			inline void execute () override final
 			{
-        PolyhedraComputeVerticesFunctor func {*shapes_collection};
+        const shape* shps = shapes_collection->data();
+        PolyhedraComputeVerticesFunctor func {shps};
         compute_cell_particles( *grid , true , func , compute_field_set , parallel_execution_context() );
 			}
 		};

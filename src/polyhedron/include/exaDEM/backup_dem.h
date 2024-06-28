@@ -43,7 +43,7 @@ namespace exaDEM
 	{
 		const DEMBackupData::CellDEMBackupVector * m_backup_data = nullptr;
 		const double m_threshold_sqr = 0.0;
-		const shapes& shps;
+		const shape* shps;
 
 		ONIKA_HOST_DEVICE_FUNC inline void operator () (unsigned long long int & count_over_dist2 , IJK cell_loc, size_t cell, size_t j, double rx, double ry, double rz , uint32_t type, const exanb::Quaternion& orientation, reduce_thread_local_t={} ) const
 		{
@@ -52,13 +52,13 @@ namespace exaDEM
 			Vec3d old_center = {rb[j*7+0], rb[j*7+1], rb[j*7+2]};
 			Vec3d new_center = {rx, ry, rz};
 
-			auto shp = shps[type];
-			const int nv = shp->get_number_of_vertices();
+			auto& shp = shps[type];
+			const int nv = shp.get_number_of_vertices();
 			for( int v = 0 ; v < nv ; v++)
 			{
 
-				const Vec3d old_vertex = shp->get_vertex(v, old_center, old_orientation);
-				const Vec3d new_vertex = shp->get_vertex(v, new_center, orientation);
+				const Vec3d old_vertex = shp.get_vertex(v, old_center, old_orientation);
+				const Vec3d new_vertex = shp.get_vertex(v, new_center, orientation);
 				const Vec3d dr = new_vertex - old_vertex;
 				if( exanb::dot(dr,dr) >= m_threshold_sqr )
 				{

@@ -74,7 +74,7 @@ namespace exaDEM
       if( grid->number_of_cells() == 0 ) { return; }
 
       Drivers* drvs =  drivers.get_pointer();
-      const auto cells = grid->cells();
+      auto* cells = grid->cells();
       const HookeParams hkp = *config;
       HookeParams hkp_drvs{};
 
@@ -90,6 +90,8 @@ namespace exaDEM
       hooke_law_driver<Surface>  surf;
       hooke_law_driver<Ball>     ball;
       hooke_law_stl stlm = {};
+
+      cudaDeviceSynchronize();
 
       if(*symetric)
 			{
@@ -108,6 +110,7 @@ namespace exaDEM
       {
         run_contact_law(parallel_execution_context(), type, classifier, stlm, cells, drvs, hkp_drvs, time);  
       }
+      cudaDeviceSynchronize();
     }
   };
 

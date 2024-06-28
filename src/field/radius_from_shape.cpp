@@ -16,6 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+//#pragma xstamp_cuda_enable // DO NOT REMOVE THIS LINE
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
@@ -34,7 +35,7 @@ namespace exaDEM
   struct UpdateRadiusPolyhedronFunctor
   {
     const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
-		onika::memory::CudaMMVector<double> list_of_radius; /** filled in PolyhedraDefineRadius. */
+		double* list_of_radius; /** filled in PolyhedraDefineRadius. */
 
     ONIKA_HOST_DEVICE_FUNC inline void operator () (uint32_t type, double& radius) const
     {
@@ -114,7 +115,7 @@ namespace exaDEM
         if( region.has_value() )
         {
         	ParticleRegionCSGShallowCopy prcsg = *region;
-        	UpdateRadiusPolyhedronFunctor func = {prcsg, r};
+        	UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};
           if( !particle_regions.has_value() )
           {
             fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
@@ -130,7 +131,7 @@ namespace exaDEM
         else
         {
         	ParticleRegionCSGShallowCopy prcsg;
-        	UpdateRadiusPolyhedronFunctor func = {prcsg, r};
+        	UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};
           compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
         }
 			}

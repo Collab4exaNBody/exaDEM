@@ -94,6 +94,7 @@ namespace exaDEM
 
 		void unclassify(GridCellParticleInteraction& ges)
 		{
+			Vec3d null = {0,0,0};
 			auto& ces = ges.m_data; // cells
 			for(int w = 0 ; w < types ; w++)
 			{
@@ -103,16 +104,19 @@ namespace exaDEM
 				for(size_t it = 0 ; it < n1 ; it++) 
 				{
 					exaDEM::Interaction& item1 = wave[it];
-					auto& cell = ces[item1.cell_i];
-					const unsigned int  n2 = onika::cuda::vector_size( cell.m_data );
-					exaDEM::Interaction* data_ptr = onika::cuda::vector_data( cell.m_data );
-					for(size_t it2 = 0; it2 < n2 ; it2++)
-					{
-						exaDEM::Interaction& item2 = data_ptr[it2];
-						if(item1 == item2)
+					if( item1.friction != null && item1.moment != null)
+					{ 
+						auto& cell = ces[item1.cell_i];
+						const unsigned int  n2 = onika::cuda::vector_size( cell.m_data );
+						exaDEM::Interaction* data_ptr = onika::cuda::vector_data( cell.m_data );
+						for(size_t it2 = 0; it2 < n2 ; it2++)
 						{
-							item2.update_friction_and_moment(item1);
-							break;
+							exaDEM::Interaction& item2 = data_ptr[it2];
+							if(item1 == item2)
+							{
+								item2.update_friction_and_moment(item1);
+								break;
+							}
 						}
 					}
 				}
