@@ -167,4 +167,5 @@ ctest --test-dir example
 `ExaDEM` is part of the `PLEIADES` platform which has been developped in collaboration with the French nuclear industry - mainly `CEA`, `EDF`, and `Framatome` - for simulation of fuel1 elements.
 
 ## License
-For open source projects, say how it is licensed.
+
+See `LICENSE.txt`
