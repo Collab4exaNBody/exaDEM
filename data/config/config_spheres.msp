@@ -1,23 +1,37 @@
-######### SPHERES mode ####################
+######### SPHERE mode ####################
 
-################## trigger stl mesh update ########################
+######## STL Mesh ##########################
 
 trigger_update_stl_mesh:
   condition: enable_stl_mesh AND trigger_load_balance
   body:
-    - build_grid_stl_mesh
+    - update_grid_stl_mesh
 
 update_stl_mesh: trigger_update_stl_mesh
 
-################# Move spheres ####################################
+######### Move Particles ###################
+
+chunk_neighbors_impl:
+  - chunk_neighbors_contact
+  - unclassify_interactions
+  - nbh_sphere:
+     symetric: true
+  - classify_interactions
+  - update_mutexes
+  - resize_particle_locks
+
 migrate_particles:
-    - migrate_cell_particles_friction
-    - rebuild_amr
-    - backup_r
+  - migrate_cell_particles_interaction
+  - rebuild_amr
+  - backup_r
 
-move_particles_extra_data: move_particles_friction
+cost_model: dem_cost_model
 
-reorder_extra_data: reorder_neighbor_friction
+move_particles_extra_data: move_particles_interaction
+
+compress_data: compress_interaction
+
+reorder_extra_data: nop
 
 dump_data_particles:
   - timestep_file: "exaDEM_%09d.dump"
@@ -26,6 +40,12 @@ dump_data_particles:
       rebind: { mesg: filename }
       body:
         - message: { endl: true }
-  - compact_neighbor_friction
-  - write_dump_particles
-  - reorder_neighbor_friction
+  - unclassify_interactions
+  - compress_interaction
+  - stats_interactions
+  - write_dump_particle_interaction
+  - chunk_neighbors_impl #redbuild interactions
+
+compress_data: 
+  - unclassify_interactions
+  - compress_interaction

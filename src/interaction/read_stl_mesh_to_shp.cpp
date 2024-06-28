@@ -34,7 +34,7 @@ under the License.
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/stl_mesh_to_driver.h>
 #include <exanb/compute/compute_cell_particles.h>
-#include <exaDEM/stl_mesh.h>
+//#include <exaDEM/stl_mesh.h>
 #include <exaDEM/stl_mesh_to_driver.h>
 
 #include <mpi.h>

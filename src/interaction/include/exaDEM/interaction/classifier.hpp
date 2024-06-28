@@ -165,7 +165,7 @@ namespace exaDEM
       Vec3d null = {0,0,0};
       auto& ces = ges.m_data; // Reference to cells containing interactions
                               // Iterate through each wave
-      for(int w = 0 ; w < types ; w++)i
+      for(int w = 0 ; w < types ; w++)
       {
         auto& wave = waves[w];
         const unsigned int n1 = wave.size();
