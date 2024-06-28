@@ -16,15 +16,11 @@ trigger_move_particles:
   body:
     - vertex_displ_over
 
-#+dump_data_paraview:
-#  - write_paraview_polyhedra:
-#     basename: polyhedra
-
-
-
-+chunk_neighbors_impl:
+chunk_neighbors_impl:
+  - chunk_neighbors_contact
+  - unclassify_interactions
   - nbh_polyhedron
-  - update_mutexes
+  - classify_interactions
   - resize_particle_locks
 
 migrate_particles:
@@ -38,7 +34,9 @@ move_particles_extra_data: move_particles_interaction
 
 compute_new_vertices: polyhedra_compute_vertices
 
-compress_data: compress_interaction
+compress_data: 
+  - unclassify_interactions
+  - compress_interaction
 
 reorder_extra_data: nop
 
@@ -49,6 +47,7 @@ dump_data_particles:
       rebind: { mesg: filename }
       body:
         - message: { endl: true }
+  - unclassify_interactions
   - compress_interaction
   - stats_interactions
   - write_dump_particle_interaction

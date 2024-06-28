@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,9 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
+//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
+
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
@@ -23,126 +25,95 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 
-#include <exanb/particle_neighbors/chunk_neighbors.h>
-#include <exanb/particle_neighbors/chunk_neighbors_apply.h>
-
 #include <memory>
 
 #include <exaDEM/hooke_force_parameters.h>
 #include <exaDEM/compute_hooke_force.h>
 #include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/interaction/classifier.hpp>
+#include <exaDEM/interaction/classifier_for_all.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/shape/shape_detection_driver.hpp>
-#include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/hooke_polyhedron.h>
 
 namespace exaDEM
 {
   using namespace exanb;
-	using namespace polyhedron;
+  using namespace polyhedron;
 
   template<typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
-    class ComputeHookeInteraction : public OperatorNode
+    class ComputeHookeClassifierPolyhedronGPU : public OperatorNode
   {
-    // attributes processed during computation
-    using ComputeFields = FieldSet< field::_vrot, field::_arot >;
-    static constexpr ComputeFields compute_field_set {};
+    ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
+    ADD_SLOT( HookeParams , config            , INPUT , REQUIRED ); // can be re-used for to dump contact network
+    ADD_SLOT( HookeParams , config_driver     , INPUT , OPTIONAL ); // can be re-used for to dump contact network
+    ADD_SLOT( double      , dt                , INPUT , REQUIRED );
+    ADD_SLOT( bool        , symetric          , INPUT , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"});
+    ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
+    ADD_SLOT( Classifier  , ic                , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
+    ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
 
-    ADD_SLOT( GridT       , grid                , INPUT_OUTPUT , REQUIRED );
-    ADD_SLOT( GridCellParticleInteraction , ges , INPUT_OUTPUT , DocString{"Interaction list"} );
-    ADD_SLOT( shapes      , shapes_collection   , INPUT_OUTPUT , DocString{"Collection of shapes"});
-    ADD_SLOT( HookeParams , config              , INPUT , REQUIRED , DocString{"Hooke law parameters used to model interactions sphere/driver"}); // can be re-used for to dump contact network
-    ADD_SLOT( HookeParams , config_driver       , INPUT , OPTIONAL , DocString{"Hooke law parameters used to model interactions sphere/driver"}); // can be re-used for to dump contact network
-    ADD_SLOT( mutexes     , locks               , INPUT_OUTPUT , DocString{"Grid of mutexes, one per particles"});
-    ADD_SLOT( double      , dt                  , INPUT , REQUIRED , DocString{"Timestep"});
-    ADD_SLOT( Drivers     , drivers             , INPUT , DocString{"List of Drivers"});
-		ADD_SLOT( std::vector<size_t> , idxs        , INPUT_OUTPUT , DocString{"List of non empty cells"});
 
-		public:
+    public:
 
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
-                  Apply Hooke's law between spheres and between spheres with drivers. This operator requires interactions to have been calculated using the nbh_sphere_sym or nbh_spere_no_sym operators.
-                )EOF";
-		}
+    inline std::string documentation() const override final
+    {
+      return R"EOF(This operator computes forces between particles and particles/drivers using the Hooke's law.)EOF";
+    }
 
-		inline void execute () override final
-		{
-			if( grid->number_of_cells() == 0 ) { return; }
+    inline void execute () override final
+    {
+      if( grid->number_of_cells() == 0 ) { return; }
 
-			Drivers empty;
-			Drivers& drvs =  drivers.has_value() ? *drivers : empty;
+      Drivers* drvs =  drivers.get_pointer();
+      const auto cells = grid->cells();
+      const HookeParams hkp = *config;
+      HookeParams hkp_drvs{};
+			const shape* const shps = shapes_collection->data();
 
-			const auto cells = grid->cells();
-			auto & cell_interactions = ges->m_data;
-			auto & shps = *shapes_collection;
-			const HookeParams params = *config;
-			HookeParams hkp_drvs;
-			const double time = *dt;
-			mutexes& locker = *locks;
-			auto& indexes = *idxs;
+      if ( drivers->get_size() > 0 &&  config_driver.has_value() )
+      {
+        hkp_drvs = *config_driver;
+      }
 
-			if ( drivers->get_size() > 0 &&  config_driver.has_value() )
+      const double time = *dt;
+      auto& classifier = *ic;
+
+      hooke_law_driver<Cylinder> cyli;
+      hooke_law_driver<Surface>  surf;
+      hooke_law_driver<Ball>     ball;
+      hooke_law_stl stlm = {};
+
+      if(*symetric == false) 
+      {
+        lout << "The parameter symetric in hooke classifier polyhedron has to be set to true." << std::endl;
+        std::abort();
+      }
+
+			hooke_law poly;
+			for(size_t type = 0 ; type <= 3 ; type++)
 			{
-				hkp_drvs = *config_driver;
+				run_contact_law(parallel_execution_context(), type, classifier, poly, cells, hkp, shps, time);
 			}
-
-
-			const hooke_law poly;
-			const hooke_law_driver<Cylinder> cyli;
-			const hooke_law_driver<Surface>  surf;
-			const hooke_law_driver<Ball>     ball;
-			const hooke_law_stl stlm = {};
-
-#pragma omp parallel for schedule(dynamic)
-			for( size_t ci = 0 ; ci < indexes.size() ; ci ++ )
+			run_contact_law(parallel_execution_context(), 4, classifier, cyli, cells, drvs->ptr<Cylinder>(), hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs->ptr<Surface>(), hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs->ptr<Ball>(), hkp_drvs, shps, time);  
+			for(int type = 7 ; type <= 12 ; type++)
 			{
-				size_t current_cell = indexes[ci];  
-
-				auto& interactions = cell_interactions[current_cell];
-				const unsigned int data_size = onika::cuda::vector_size( interactions.m_data );
-				exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data ); 
-
-				for( size_t it = 0; it < data_size ; it++ )
-				{
-					Interaction& item = data_ptr[it];
-
-					if( item.type < 4 ) // polyhedra
-					{
-						poly(item, cells, params, shps, time, locker);
-					}
-					else if(item.type == 4) // cylinder
-					{
-						cyli(item, cells, drvs, hkp_drvs, shps, time, locker);
-					}
-					else if( item.type == 5) // wall
-					{
-						surf(item, cells, drvs, hkp_drvs, shps, time, locker);
-					}
-					else if(item.type == 6) // sphere
-					{
-						ball(item, cells, drvs, hkp_drvs, shps, time, locker);	
-					}
-					else if(item.type >= 7 && item.type <= 12) // stl
-					{
-						stlm(item, cells, drvs, hkp_drvs, shps, time, locker);
-					}
-				}
+				run_contact_law(parallel_execution_context(), type, classifier, stlm, cells, drvs, hkp_drvs, shps, time);  
 			}
 		}
 	};
 
-	template<class GridT> using ComputeHookeInteractionTmpl = ComputeHookeInteraction<GridT>;
+	template<class GridT> using ComputeHookeClassifierPolyGPUTmpl = ComputeHookeClassifierPolyhedronGPU<GridT>;
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "hooke_polyhedron", make_grid_variant_operator< ComputeHookeInteractionTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "hooke_polyhedron", make_grid_variant_operator< ComputeHookeClassifierPolyGPUTmpl > );
 	}
 }
 

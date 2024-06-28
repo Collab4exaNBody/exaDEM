@@ -45,7 +45,7 @@ namespace exaDEM
 		/**
 		 * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
 		 */
-		void reset()
+		ONIKA_HOST_DEVICE_FUNC void reset()
 		{
 			friction = {0, 0, 0};
 			moment = {0, 0, 0};
@@ -59,7 +59,7 @@ namespace exaDEM
 		 *
 		 * @return True if the interaction is active (moment vector or friction vector is non-zero), false otherwise.
 		 */
-		inline bool is_active() const
+		ONIKA_HOST_DEVICE_FUNC bool is_active() const
 		{
 			constexpr exanb::Vec3d null = {0,0,0};
 			bool res = (moment != null) || (friction != null);
@@ -91,7 +91,7 @@ namespace exaDEM
 		/**
 		 * @brief return true if particles id and particles sub id are equals.
 		 */
-		bool operator==(Interaction& I)
+		ONIKA_HOST_DEVICE_FUNC bool operator==(Interaction& I)
 		{
 			if( this->id_i == I.id_i && 
 					this->id_j == I.id_j && 
@@ -110,7 +110,7 @@ namespace exaDEM
 		/**
 		 * @brief return true if particles id and particles sub id are equals.
 		 */
-		bool operator==(const Interaction& I) const
+		ONIKA_HOST_DEVICE_FUNC bool operator==(const Interaction& I) const
 		{
 			if( this->id_i == I.id_i && 
 					this->id_j == I.id_j && 
@@ -126,7 +126,7 @@ namespace exaDEM
 			}
 		}
 
-		bool operator<(const Interaction& I) const
+		ONIKA_HOST_DEVICE_FUNC bool operator<(const Interaction& I) const
 		{
 			if ( this->id_i < I.id_i ) { return true; }
 			else if ( this->id_i == I.id_i && this->id_j < I.id_j ) { return true; }
@@ -136,7 +136,7 @@ namespace exaDEM
 			else return false;
 		}
 
-		void update(Interaction& I)
+		ONIKA_HOST_DEVICE_FUNC void update(Interaction& I)
 		{
 			this->cell_i = I.cell_i;
 			this->cell_j = I.cell_j;
@@ -144,7 +144,7 @@ namespace exaDEM
 			this->p_j = I.p_j;
 		}
 
-		void update_friction_and_moment(Interaction& I)
+		ONIKA_HOST_DEVICE_FUNC void update_friction_and_moment(Interaction& I)
 		{
 			this->friction = I.friction;
 			this->moment = I.moment;

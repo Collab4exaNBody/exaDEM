@@ -72,7 +72,7 @@ namespace exaDEM
     /**
      * @brief Print information about the STL mesh.
      */
-    inline void initialize ()
+    ONIKA_HOST_DEVICE_FUNC inline void initialize ()
     {
       // checks
     }
@@ -83,7 +83,7 @@ namespace exaDEM
      * @details This function calculates the new position of the object using the formula:
      *          newPosition = oldPosition + (timeStep * velocity)
      */
-    inline void update_position ( const double t )
+    ONIKA_HOST_DEVICE_FUNC inline void update_position ( const double t )
     {
       center = center + t * vel; 
     }
@@ -91,7 +91,7 @@ namespace exaDEM
     /**
      * @brief return driver velocity
      */
-    inline Vec3d& get_vel()
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d& get_vel()
     {
       return vel;
     }

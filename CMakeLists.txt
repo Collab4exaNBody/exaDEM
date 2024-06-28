@@ -124,6 +124,13 @@ endif()
 # =======================================
 exaNBodyStartApplication()
 
+# ======================================
+# === add compiler option with CUDA  ===
+# ======================================
+if(XNB_BUILD_CUDA)
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+endif()
+
 
 # ==========================================
 # === build application plugins and libs ===

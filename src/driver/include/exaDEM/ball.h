@@ -56,7 +56,7 @@ namespace exaDEM
      * @brief Initialize the ball.
      * @details This function asserts that the radius of the ball is greater than 0.
      */
-    inline void initialize ()
+    ONIKA_HOST_DEVICE_FUNC inline void initialize ()
     {
       assert (radius > 0 );
     }
@@ -64,7 +64,7 @@ namespace exaDEM
     /**
      * @brief return driver velocity
      */
-    inline Vec3d& get_vel()
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d& get_vel()
     {
       return vel;
     }
@@ -73,7 +73,7 @@ namespace exaDEM
      * @brief Initialize the ball.
      * @details This function asserts that the radius of the ball is greater than 0.
      */
-    inline void update_radius (const double incr)
+    ONIKA_HOST_DEVICE_FUNC inline void update_radius (const double incr)
     {
       radius += incr;
     }
@@ -82,7 +82,7 @@ namespace exaDEM
      * @brief Update the position of the ball.
      * @param t The time step.
      */
-    inline void update_position ( const double t )
+    ONIKA_HOST_DEVICE_FUNC inline void update_position ( const double t )
     {
       center = center + t * vel; 
     }
@@ -93,7 +93,7 @@ namespace exaDEM
      * @param p The point to check.
      * @return True if the point is within the cut-off radius of the ball, false otherwise.
      */
-    inline bool filter( const double rcut , const exanb::Vec3d& p)
+    ONIKA_HOST_DEVICE_FUNC inline bool filter( const double rcut , const exanb::Vec3d& p)
     {
       const Vec3d dist = center - p;
       double d = radius - norm ( dist );
@@ -110,7 +110,7 @@ namespace exaDEM
      *         - The normal vector pointing from the collision point to the center of the ball.
      *         - The contact position on the surface of the ball.
      */
-    inline std::tuple<bool, double, Vec3d, Vec3d> detector( const double rcut , const Vec3d& p)
+    ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector( const double rcut , const Vec3d& p)
     {
       Vec3d point_to_center = center - p;
       double d = norm ( point_to_center );

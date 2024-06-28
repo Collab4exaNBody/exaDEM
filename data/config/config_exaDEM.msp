@@ -54,8 +54,6 @@ preinit_rcut_max:
     - compute_force
     - nbh_dist
 
-initialize_friction: reorder_neighbor_friction
-
 setup_drivers: nop
 init_particle_regions: nop
 
@@ -63,7 +61,6 @@ first_iteration:
   - setup_drivers
   - init_particle_regions
   - init_particles
-  - initialize_friction
   - reset_force_moment
   - compute_force
 #  - force_to_accel

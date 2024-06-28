@@ -25,17 +25,17 @@ namespace exaDEM
 {
   struct PolyhedraComputeVerticesFunctor
   {
-    shapes& shps;
+    const shape* shps;
     ONIKA_HOST_DEVICE_FUNC inline void operator () (const uint32_t type, const double rx, const double ry, const double rz, const double h, const exanb::Quaternion& orient, ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>& vertices ) const
     {
 			// h will be used in a next development
 			const auto& shp = shps[type];
-			const unsigned int nv = shp -> get_number_of_vertices();
+			const unsigned int nv = shp. get_number_of_vertices();
 			const exanb::Vec3d position = {rx, ry, rz};
-			assert ( nv < 8 );
+      assert(nv < EXADEM_MAX_VERTICES );
 			for ( size_t i = 0 ; i < nv ; i++ )
 			{
-				vertices[i] = shp -> get_vertex (i, position, orient);
+				vertices[i] = shp.get_vertex (i, position, orient);
 			} 
     }
   };
@@ -46,7 +46,7 @@ namespace exanb
   template<> struct ComputeCellParticlesTraits<exaDEM::PolyhedraComputeVerticesFunctor>
   {
     static inline constexpr bool RequiresBlockSynchronousCall = false;
-    static inline constexpr bool CudaCompatible = false;
+    static inline constexpr bool CudaCompatible = true;
   };
 }
 

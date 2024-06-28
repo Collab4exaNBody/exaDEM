@@ -91,9 +91,9 @@ namespace exaDEM
 		// minimum and maximum, and the extents be half of the
 		// difference between the minimum and maximum
 		obb.center = eigvec * (0.5 * (maxim + minim));
-		obb.e[0] = r;
-		obb.e[1] = u;
-		obb.e[2] = f;
+		obb.e1 = r;
+		obb.e2 = u;
+		obb.e3 = f;
 		obb.extent = 0.5 * (maxim - minim);
 
 		obb.enlarge(radius);  // Add the Minskowski radius
