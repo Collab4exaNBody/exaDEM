@@ -65,9 +65,7 @@ namespace exaDEM
 
     inline std::string documentation() const override final
     {
-      return R"EOF(
-
-                )EOF";
+      return R"EOF(This operators compute forces between particles and particles/drivers using the Hooke's law.)EOF";
     }
 
     inline void execute () override final
@@ -92,8 +90,6 @@ namespace exaDEM
       hooke_law_driver<Ball>     ball;
       hooke_law_stl stlm = {};
 
-      cudaDeviceSynchronize();
-
       if(*symetric)
 			{
         hooke_law<true> sph;
@@ -111,7 +107,6 @@ namespace exaDEM
       {
         run_contact_law(parallel_execution_context(), type, classifier, stlm, cells, drvs, hkp_drvs, time);  
       }
-      cudaDeviceSynchronize();
     }
   };
 

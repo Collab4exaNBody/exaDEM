@@ -28,12 +28,28 @@ namespace exaDEM
   namespace polyhedron
   {
     using namespace exanb;
+
+    /**
+     * @brief Atomically adds a value to a double variable.
+     *
+     * This function atomically adds the specified value to the given double variable.
+     *
+     * @param val Reference to the double variable to be modified.
+     * @param add Value to add atomically to the variable.
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline void lockAndAdd(double& val, double add)
       {
         ONIKA_CU_ATOMIC_ADD(val, add);
       }
 
+
+    /**
+     * @brief Atomically adds components of a Vec3d to another Vec3d variable.
+     *
+     * @param val Reference to the destination Vec3d variable.
+     * @param add Rvalue reference to the source Vec3d whose components are to be added.
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline void lockAndAdd(Vec3d& val, Vec3d&& add)
       {
@@ -42,13 +58,33 @@ namespace exaDEM
         ONIKA_CU_ATOMIC_ADD(val.z, add.z);
       }
 
+
+
+    /**
+     * @struct hooke_law
+     * @brief Structure defining Hooke's law interactions for particles (polyhedra).
+     */
     struct hooke_law
     {
- 
-     hooke_law(){}
+      /**
+       * @brief Default constructor for hooke_law struct.
+       */ 
+      hooke_law(){}
 
-     template<typename Cell>
-        ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_r(Cell& cell, const int p_id) const
+      /**
+       * @brief Retrieves the position vector of a particle from a cell.
+       *
+       * This function retrieves the position vector of a particle identified
+       * by `p_id` from the given cell using field indices `field::rx`, `field::ry`,
+       * and `field::rz`.
+       *
+       * @tparam TMPLC Type of the cell.
+       * @param cell Reference to the cell containing particle data.
+       * @param p_id Index of the particle.
+       * @return Vec3d Position vector of the particle.
+       */
+      template<typename TMPLC>
+        ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_r(TMPLC& cell, const int p_id) const
         {
           const Vec3d res = {
             cell[field::rx][p_id],
@@ -57,8 +93,20 @@ namespace exaDEM
           return res;
         };
 
-      template<typename Cell>
-        ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_v(Cell& cell, const int p_id) const
+      /**
+       * @brief Retrieves the velocity vector of a particle from a cell.
+       *
+       * This function retrieves the velocity vector of a particle identified
+       * by `p_id` from the given cell using field indices `field::vx`, `field::vy`,
+       * and `field::vz`.
+       *
+       * @tparam TMPLC Type of the cell.
+       * @param cell Reference to the cell containing particle data.
+       * @param p_id Index of the particle.
+       * @return Vec3d Velocity vector of the particle.
+       */
+      template<typename TMPLC>
+        ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_v(TMPLC& cell, const int p_id) const
         {
           const Vec3d res = {
             cell[field::vx][p_id],
@@ -67,31 +115,83 @@ namespace exaDEM
           return res;
         };
 
-			struct polyhedron_detector
-			{
+      /**
+       * @struct polyhedron_detector
+       * @brief Structure for detecting interactions between polyhedrons in exaDEM.
+       *
+       * This structure provides methods to detect interactions between polyhedrons
+       * based on the specified type using precomputed data.
+       */
+      struct polyhedron_detector
+      {
+        /**
+         * @brief Default constructor for polyhedron_detector struct.
+         */
         polyhedron_detector() {}
-				ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator() (
-						const uint16_t type,
-						const VertexArray& pi, const int i, const shape* shpi,
-						const VertexArray& pj, const int j, const shape* shpj) const
-				{
+
+        /**
+         * @brief Detects interactions between polyhedrons based on the specified type.
+         *
+         * This function detects interactions between polyhedrons based on the specified
+         * type using precomputed data. It returns a tuple indicating whether an interaction
+         * was detected, the distance between the polyhedrons, norm and contact point.
+         *
+         * @param type Type of interaction to detect:
+         *             - 0: Vertex-Vertex interaction
+         *             - 1: Vertex-Edge interaction
+         *             - 2: Vertex-Face interaction
+         *             - 3: Edge-Edge interaction
+         * @param pi Vertex array of the first polyhedron.
+         * @param i Index of the vertex or edge in the first polyhedron.
+         * @param shpi Shape data of the first polyhedron.
+         * @param pj Vertex array of the second polyhedron.
+         * @param j Index of the vertex or edge in the second polyhedron.
+         * @param shpj Shape data of the second polyhedron.
+         * @return std::tuple<bool, double, Vec3d, Vec3d> Tuple
+         */
+        ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator() (
+            const uint16_t type,
+            const VertexArray& pi, const int i, const shape* shpi,
+            const VertexArray& pj, const int j, const shape* shpj) const
+        {
 #define __params__     pi, i, shpi, pj, j, shpj
-					assert( type >= 0 && type <= 4 );
-					switch (type)
-					{
-				    case 0 : return exaDEM::detection_vertex_vertex_precompute(__params__);
-				    case 1 : return exaDEM::detection_vertex_edge_precompute(__params__);
-				    case 2 : return exaDEM::detection_vertex_face_precompute(__params__);
-				    case 3 : return exaDEM::detection_edge_edge_precompute(__params__);
-					}
+          assert( type >= 0 && type <= 4 );
+          switch (type)
+          {
+            case 0 : return exaDEM::detection_vertex_vertex_precompute(__params__);
+            case 1 : return exaDEM::detection_vertex_edge_precompute(__params__);
+            case 2 : return exaDEM::detection_vertex_face_precompute(__params__);
+            case 3 : return exaDEM::detection_edge_edge_precompute(__params__);
+          }
 #undef __params__
-					return std::tuple<bool, double, Vec3d, Vec3d>();
-				}
+          return std::tuple<bool, double, Vec3d, Vec3d>();
+        }
 
-			};
+      };
 
-      template<typename Cells>
-        ONIKA_HOST_DEVICE_FUNC inline void operator()(Interaction& item, Cells& cells, const HookeParams& hkp, const shapes& shps, const double time, mutexes& locker) const
+      /**
+       * @brief Operator function for performing interactions between particles.
+       *
+       * This function performs interactions between particles.
+       * It uses precomputed shapes (`shps`) and synchronization (`locker`) for thread safety.
+       *
+       * @tparam TMPLC Type of the cells or particles container.
+       * @param item Reference to the Interaction object representing the interaction details.
+       * @param cells Reference to the cells or particles container.
+       * @param hkp Reference to the HookeParams object containing interaction parameters.
+       * @param shps Reference to the shapes object providing shape information for interactions.
+       * @param dt Simulation dt increment.
+       * @param locker Reference to mutexes object for synchronization.
+       */
+      template<typename TMPLC>
+        ONIKA_HOST_DEVICE_FUNC 
+        inline void operator()(
+            Interaction& item, 
+            TMPLC& cells, 
+            const HookeParams& hkp,
+            const shapes& shps, 
+            const double dt, 
+            mutexes& locker) const
         {
           // === cell
           auto& cell_i =  cells[item.cell_i];
@@ -129,7 +229,7 @@ namespace exaDEM
             Vec3d f = {0,0,0};
             const double meff = compute_effective_mass(m_i, m_j);
 
-            hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+            hooke_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
                 hkp.m_mu, hkp.m_damp_rate, meff,
                 item.friction, contact_position,
                 ri, vi, f, item.moment, vrot_i,  // particle 1
@@ -164,9 +264,25 @@ namespace exaDEM
           {
             item.reset();
           }
-        }
-			template<typename Cells>
-				ONIKA_HOST_DEVICE_FUNC inline void operator()(Interaction& item, Cells* const cells, const HookeParams& hkp, const shape* const shps, const double time) const
+				}
+
+			/**
+			 * @brief Operator function for performing interactions between particles (polyhedra).
+			 *
+			 * @tparam TMPLC Type of the cells or particles container.
+			 * @param item Reference to the Interaction object representing the interaction details.
+			 * @param cells Pointer to the cells or particles container.
+			 * @param hkp Reference to the HookeParams object containing interaction parameters.
+			 * @param shps Pointer to the shapes array providing shape information for interactions.
+			 * @param dt Time increment for the simulation step.
+			 */
+			template<typename TMPLC>
+				ONIKA_HOST_DEVICE_FUNC inline void operator()(
+						Interaction& item, 
+						TMPLC* const cells, 
+						const HookeParams& hkp, 
+						const shape* const shps, 
+						const double dt) const
 				{
 					// === cell
 					auto& cell_i =  cells[item.cell_i];
@@ -204,7 +320,7 @@ namespace exaDEM
 						Vec3d f = {0,0,0};
 						const double meff = compute_effective_mass(m_i, m_j);
 
-						hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+						hooke_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 								hkp.m_mu, hkp.m_damp_rate, meff,
 								item.friction, contact_position,
 								ri, vi, f, item.moment, vrot_i,  // particle 1
@@ -232,16 +348,44 @@ namespace exaDEM
 						item.reset();
 					}
 				}
-
 			const polyhedron_detector detect;
 		};
 
-		// C for cell and D for driver
+
+/**
+ * @brief Struct for applying Hooke's law interactions driven by drivers.
+ * @tparam TMPLD Type of the drivers.
+ */
 		template<typename TMPLD>
 			struct hooke_law_driver
 			{
-				template<typename Cells>
-					ONIKA_HOST_DEVICE_FUNC inline void operator()(Interaction& item, Cells& cells, Drivers& drvs, const HookeParams& hkp, const shapes& shps, const double time, mutexes& locker) const
+
+				/**
+				 * @brief Functor for applying Hooke's law interactions driven by drivers.
+				 *
+				 * This functor applies Hooke's law interactions between particles or cells, driven by
+				 * specified drivers (`drvs`). It uses interaction parameters (`hkp`), precomputed shapes
+				 * (`shps`), and a time increment (`dt`) for simulation. Synchronization (`locker`) is used
+				 * for thread safety.
+				 *
+				 * @tparam TMPLC Type of the cells or particles container.
+				 * @param item Reference to the Interaction object representing the interaction details.
+				 * @param cells Reference to the cells or particles container.
+				 * @param drvs Reference to the Drivers object providing driving forces.
+				 * @param hkp Reference to the HookeParams object containing interaction parameters.
+				 * @param shps Reference to the shapes object providing shape information for interactions.
+				 * @param dt Time increment for the simulation step.
+				 * @param locker Reference to mutexes object for synchronization.
+				 */
+				template<typename TMPLC>
+					ONIKA_HOST_DEVICE_FUNC inline void operator()(
+							Interaction& item, 
+							TMPLC& cells, 
+							Drivers& drvs, 
+							const HookeParams& hkp, 
+							const shapes& shps,
+							const double dt, 
+							mutexes& locker) const
 					{
 						const int driver_idx = item.id_j; //
 						auto& driver = std::get<TMPLD>(drvs.data(driver_idx)) ;
@@ -268,7 +412,7 @@ namespace exaDEM
 							const Vec3d v = { cell[field::vx][p], cell[field::vy][p], cell[field::vz][p] };
 							const double meff = cell[field::mass][p];
 							Vec3d f = null;
-							hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+							hooke_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 									hkp.m_mu, hkp.m_damp_rate, meff,
 									item.friction, contact_position,
 									r, v, f, item.moment, vrot,  // particle i
@@ -289,8 +433,29 @@ namespace exaDEM
 						}
 					}
 
-				template<typename Cells>
-					ONIKA_HOST_DEVICE_FUNC inline void operator()(Interaction& item, Cells* cells, TMPLD* const drvs, const HookeParams& hkp, const shape* const shps, const double time) const
+				/**
+				 * @brief Functor for applying Hooke's law interactions driven by drivers.
+				 *
+				 * This functor applies Hooke's law interactions between particles or cells, driven by
+				 * specified drivers (`drvs`). It uses interaction parameters (`hkp`), precomputed shapes
+				 * (`shps`), and a time increment (`dt`) for simulation.
+				 *
+				 * @tparam TMPLC Type of the cells or particles container.
+				 * @param item Reference to the Interaction object representing the interaction details.
+				 * @param cells Pointer to the cells or particles container.
+				 * @param drvs Pointer to the Drivers object providing driving forces.
+				 * @param hkp Reference to the HookeParams object containing interaction parameters.
+				 * @param shps Pointer to the shapes array providing shape information for interactions.
+				 * @param dt Time increment for the simulation step.
+				 */
+				template<typename TMPLC>
+					ONIKA_HOST_DEVICE_FUNC inline void operator()(
+							Interaction& item, 
+							TMPLC* cells, 
+							TMPLD* const drvs, 
+							const HookeParams& hkp, 
+							const shape* shps, 
+							const double dt) const
 					{
 						const int driver_idx = item.id_j; //
 						TMPLD& driver        = drvs[driver_idx] ;
@@ -317,7 +482,7 @@ namespace exaDEM
 							const Vec3d v = { cell[field::vx][p], cell[field::vy][p], cell[field::vz][p] };
 							const double meff = cell[field::mass][p];
 							Vec3d f = null;
-							hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+							hooke_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 									hkp.m_mu, hkp.m_damp_rate, meff,
 									item.friction, contact_position,
 									r, v, f, item.moment, vrot,  // particle i
@@ -337,8 +502,40 @@ namespace exaDEM
 					}
 			};
 
+
+		/**
+		 * @brief Functor for detecting interactions between two objects in an STL mesh.
+		 *
+		 * This functor detects interactions between two objects represented by vertices,
+		 * edges, or faces in an STL mesh. It returns a tuple indicating whether an interaction
+		 * occurred, the distance between the objects, and the interaction details.
+		 * Type of interaction to detect:
+		 *             - 7: Vertex-Vertex
+		 *             - 8: Vertex-Edge
+		 *             - 9: Vertex-Face
+		 *             - 10: Edge-Edge
+		 *             - 11: Edge-Vertex (inverted order of Vertex-Edge)
+		 *             - 12: Face-Vertex (inverted order of Vertex-Face)
+		 */
 		struct stl_mesh_detector
 		{
+			/**
+			 * @brief Detects interactions between two objects based on the specified type.
+			 *
+			 * This function detects interactions between two objects in an STL mesh based
+			 * on the provided interaction type. It uses the positions, indices, shape
+			 * information, and orientations of the objects to determine the interaction.
+			 *
+			 * @param type Type of interaction to detect.
+			 * @param pi Position of the first object's vertex or edge vertex.
+			 * @param i Index of the vertex or edge vertex in the first object.
+			 * @param shpi Pointer to the shape information of the first object.
+			 * @param oi Orientation of the first object.
+			 * @param pj Position of the second object's vertex or edge vertex.
+			 * @param j Index of the vertex or edge vertex in the second object.
+			 * @param shpj Pointer to the shape information of the second object.
+			 * @param oj Orientation of the second object.
+			 */
 			ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator() (
 					const uint16_t type,
 					const Vec3d& pi, const int i, const shape* shpi, const exanb::Quaternion& oi,
@@ -353,6 +550,7 @@ namespace exaDEM
 					case 8: return exaDEM::detection_vertex_edge ( __params__ );
 					case 9: return exaDEM::detection_vertex_face ( __params__ );
 					case 10: return exaDEM::detection_edge_edge ( __params__ );
+									 //case 11: return exaDEM::detection_vertex_edge ( __params__ );
 					case 11: return exaDEM::detection_vertex_edge ( __params__ );
 					case 12: return exaDEM::detection_vertex_face ( __inv_params__ );
 				}
@@ -363,10 +561,35 @@ namespace exaDEM
 
 		};
 
+		/**
+		 * @brief Functor for applying Hooke's law interactions with STL mesh objects.
+		 */
 		struct hooke_law_stl
 		{
-			template<typename Cells>
-				ONIKA_HOST_DEVICE_FUNC inline void operator()( Interaction& item, Cells& cells, Drivers& drvs, const HookeParams& hkp, const shapes shps, const double time, mutexes& locker) const
+    /**
+     * @brief Operator function for applying Hooke's law interactions with STL mesh objects.
+     *
+     * This function applies Hooke's law interactions between particles or cells and STL mesh objects,
+     * driven by specified drivers (`drvs`). It uses interaction parameters (`hkp`), precomputed shapes
+     * (`shps`), and a time increment (`dt`) for simulation. Synchronization (`locker`) is used for thread safety.
+     *
+     * @tparam TMPLC Type of the cells or particles container.
+     * @param item Reference to the Interaction object representing the interaction details.
+     * @param cells Reference to the cells or particles container.
+     * @param drvs Reference to the Drivers object providing driving forces.
+     * @param hkp Reference to the HookeParams object containing interaction parameters.
+     * @param shps Reference to the shapes object providing shape information for interactions.
+     * @param dt Time increment for the simulation step.
+     * @param locker Reference to mutexes object for synchronization.
+     */
+			template<typename TMPLC>
+				ONIKA_HOST_DEVICE_FUNC inline void operator()( 
+						Interaction& item, 
+						TMPLC& cells, 
+						Drivers& drvs, 
+						const HookeParams& hkp, 
+						const shapes shps, 
+						const double dt, mutexes& locker) const
 				{
 					const int driver_idx = item.id_j; //
 					auto& driver = std::get<Stl_mesh>(drvs.data(driver_idx)) ;
@@ -395,7 +618,7 @@ namespace exaDEM
 						const Vec3d v_i = { cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i] };
 						const double meff = cell[field::mass][p_i];
 						Vec3d f = null;
-						hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+						hooke_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 								hkp.m_mu, hkp.m_damp_rate, meff,
 								item.friction, contact_position,
 								r_i, v_i, f, item.moment, vrot_i,  // particle i
@@ -416,8 +639,23 @@ namespace exaDEM
 					}
 				}
 
-			template<typename Cells>
-				ONIKA_HOST_DEVICE_FUNC inline void operator()( Interaction& item, Cells& cells, Drivers* const drvs, const HookeParams& hkp, const shape* const shps, const double time) const
+			/**
+			 * @brief Operator function for applying Hooke's law interactions with STL mesh objects.
+			 *
+			 * This function applies Hooke's law interactions between particles or cells and STL mesh objects,
+			 * driven by specified drivers (`drvs`). It uses interaction parameters (`hkp`), precomputed shapes
+			 * (`shps`), and a time increment (`dt`) for simulation.
+			 *
+			 * @tparam TMPLC Type of the cells or particles container.
+			 * @param item Reference to the Interaction object representing the interaction details.
+			 * @param cells Pointer to the cells or particles container.
+			 * @param drvs Pointer to the Drivers object providing driving forces.
+			 * @param hkp Reference to the HookeParams object containing interaction parameters.
+			 * @param shps Pointer to the shapes array providing shape information for interactions.
+			 * @param dt Time increment for the simulation step.
+			 */
+			template<typename TMPLC>
+				ONIKA_HOST_DEVICE_FUNC inline void operator()( Interaction& item, TMPLC* cells, Drivers* const drvs, const HookeParams& hkp, const shape* const shps, const double dt) const
 				{
 					const int driver_idx = item.id_j; //
 					auto& driver = std::get<Stl_mesh>(drvs->data(driver_idx)) ;
@@ -446,7 +684,7 @@ namespace exaDEM
 						const Vec3d v_i = { cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i] };
 						const double meff = cell[field::mass][p_i];
 						Vec3d f = null;
-						hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+						hooke_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 								hkp.m_mu, hkp.m_damp_rate, meff,
 								item.friction, contact_position,
 								r_i, v_i, f, item.moment, vrot_i,  // particle i
