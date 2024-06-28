@@ -28,12 +28,18 @@ reader1:
      density: 2500
   - set_rand_vrot_arot
   - update_inertia
-  - read_stl:
-     filename: mesh.stl
-  - read_stl:
-     filename: cube.stl
   - replicate_domain
 
+setup_drivers:
+  - add_stl_mesh:
+     id: 0
+     filename: mesh.stl
+     minskowski: 0.0001
+  - add_stl_mesh:
+     id: 1
+     filename: cube.stl
+     minskowski: 0.0001
+  - update_grid_stl_mesh
 
 input_data:
   - reader1
