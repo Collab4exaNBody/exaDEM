@@ -36,24 +36,16 @@ input_data:
 update_nbh_friction:
   rcut: 0.003 m
 
-trigger_apply_hooke_stl_meshes:
-  condition: enable_stl_mesh
-  body:
-    - apply_hooke_stl_meshes:
-       kt: 100000
-       kn: 100000
-       kr : 0
-       mu: 0.3
-       damprate: 0.3
 
 compute_force:
-  - trigger_apply_hooke_stl_meshes
   - gravity_force
   - quadratic_force:
      cx: 0.38
      mu: 0.0000015
-  - hooke_force:
-      config: { rcut: 0.003 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
+  - hooke_sphere:
+     symetric: true
+     config: { rcut: 0.003 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
+     config_driver: { rcut: 0.003 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.3} 
 
 domain:
   cell_size: 0.005 m
