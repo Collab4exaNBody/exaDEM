@@ -48,12 +48,12 @@ using namespace exanb;
 
   public:
 
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
-        This operator computes particle quaternion values from orientation, angular velocities and angular accelerations. 
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
+        This operator computes particleorientation from angular velocities and angular accelerations.
         )EOF";
-		}
+    }
 
     inline void execute () override final
     {

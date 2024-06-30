@@ -35,23 +35,22 @@ namespace exaDEM
    * @tparam K Type of the kernel function.
    * @tparam Args Types of additional parameters passed to the kernel function.
    */
-  template<typename T, typename K, typename... Args>
+  template<typename K, typename... Args>
     struct WrapperForAll
     {
-      T* const ptr;              /**< Pointer to the array of elements. */
-      const K kernel;            /**< Kernel function to be applied. */
+      InteractionWrapper data;    /**< Wrapper that contains a pointer to the array of elements. */
+      const K kernel;             /**< Kernel function to be applied. */
       std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
-
 
       /**
        * @brief Constructor to initialize the WrapperForAll struct.
        *
-       * @param p Pointer to the array of elements.
+       * @param d Wrapper that contains the array of elements.
        * @param k Kernel function to be applied.
        * @param args Additional parameters passed to the kernel function.
        */
-      WrapperForAll(T* p, K& k, Args... args) 
-        : ptr(p),
+      WrapperForAll(InteractionWrapper& d, K& k, Args... args) 
+        : data(std::move(d)),
         kernel(k), 
         params(std::tuple<Args...>(args...)) 
       {} 
@@ -65,7 +64,7 @@ namespace exaDEM
        * @param indexes Index sequence to unpack the parameter tuple.
        */
       template <size_t... Is>
-        ONIKA_HOST_DEVICE_FUNC inline void apply(T& item, tuple_helper::index<Is...> indexes) const
+        ONIKA_HOST_DEVICE_FUNC inline void apply(exaDEM::Interaction& item, tuple_helper::index<Is...> indexes) const
         {
           kernel(item, std::get<Is>(params)...);
         }
@@ -78,7 +77,7 @@ namespace exaDEM
        */
       ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const 
       {
-        T& item = ptr[i];
+        exaDEM::Interaction& item = data(i);
         apply(item, tuple_helper::gen_seq<sizeof...(Args)>{});
       }
     };
@@ -102,7 +101,8 @@ namespace exaDEM
     static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext * exec_ctx, int type, Classifier& ic, Kernel& kernel, Args&&... args)
     {
       auto [ptr, size] = ic.get_info(type);
-      WrapperForAll func(ptr, kernel, args...);
+      InteractionWrapper interactions = {type, ptr};
+      WrapperForAll func(interactions, kernel, args...);
       return parallel_for( size, func, exec_ctx);
     }
 }

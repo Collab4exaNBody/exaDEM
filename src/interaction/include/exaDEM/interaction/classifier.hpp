@@ -6,6 +6,24 @@
 
 namespace exaDEM
 {
+
+  struct InteractionWrapper
+  {
+    const int m_type;
+    exaDEM::Interaction* const m_data;
+    ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction& operator()(const uint64_t idx) const
+    {
+      return m_data[idx];
+    }
+    ONIKA_HOST_DEVICE_FUNC inline uint8_t type() { return m_type; }
+    ONIKA_HOST_DEVICE_FUNC inline size_t pi      (const uint64_t idx) { return m_data[idx].p_i; }
+    ONIKA_HOST_DEVICE_FUNC inline size_t pj      (const uint64_t idx) { return m_data[idx].p_j; }
+    ONIKA_HOST_DEVICE_FUNC inline size_t celli   (const uint64_t idx) { return m_data[idx].cell_i; }
+    ONIKA_HOST_DEVICE_FUNC inline size_t cellj   (const uint64_t idx) { return m_data[idx].cell_j; }
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d& moment  (const uint64_t idx) { return m_data[idx].moment; }
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d& friction(const uint64_t idx) { return m_data[idx].friction; }
+  };
+
   /**
    * @brief Classifier for managing interactions categorized into different types.
    *

@@ -38,7 +38,7 @@ namespace exaDEM
         (M.x - (inertia.z - inertia.y) * omega.y * omega.z) / inertia.x,
         (M.y - (inertia.x - inertia.z) * omega.z * omega.x) / inertia.y,
         (M.z - (inertia.y - inertia.x) * omega.x * omega.y) / inertia.z};
-	arot = Q * domega;  // Express arot in the global framework
+	    arot = Q * domega;  // Express arot in the global framework
     }
   };
 }
