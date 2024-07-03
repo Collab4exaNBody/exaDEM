@@ -43,7 +43,7 @@ jobs:
         root: ${{github.workspace}}
 
     - name: Generate a code coverage report
-      run: gcovr --html-details coverage.html
+      run: gcovr --gcov-ignore-errors=no_working_dir_found --html-details coverage.html
       
     - name: Archive code coverage results
       uses: actions/upload-artifact@v4
