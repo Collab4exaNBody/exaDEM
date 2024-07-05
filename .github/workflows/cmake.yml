@@ -44,7 +44,7 @@ jobs:
         root: ${{github.workspace}}
 
     - name: Generate a code coverage report part2
-      run: gcovr --gcov-ignore-errors=no_working_dir_found --merge-mode-functions=MERGE_MODE --html-details coverage.html
+      run: gcovr --exclude-directories='.*/exanb*' --exclude-directories='.*/onika*' --html-details coverage.html
       
     - name: Archive code coverage results
       uses: actions/upload-artifact@v4
