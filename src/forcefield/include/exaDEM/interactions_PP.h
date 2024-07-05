@@ -34,6 +34,13 @@ namespace exaDEM
 		std::vector<int> start;
 		std::vector<int> end;
 		
+		onika::memory::CudaMMVector<int> cell_nbh_id;
+		onika::memory::CudaMMVector<int> cell_nbh_size;
+		onika::memory::CudaMMVector<int> cell_start;
+		onika::memory::CudaMMVector<int> cell_tot;
+		onika::memory::CudaMMVector<int> cell_result;
+		onika::memory::CudaMMVector<int> cell_result_start;
+		
 		
 		int nb_interactions=0;//Numbe of interactions
 		
@@ -65,7 +72,20 @@ namespace exaDEM
 		onika::memory::CudaMMVector<int> cells_gravity_size_GPU;
 		int init_GPU_size;
 		
+		int nb_cells_clusters;
+		
 		int iteration = 0;
+		
+		
+		onika::memory::CudaMMVector<int> cells_GPU_ids;
+		onika::memory::CudaMMVector<int> cells_GPU_size;
+		onika::memory::CudaMMVector<int> cells_GPU_nbh;
+		onika::memory::CudaMMVector<int> cells_GPU_nbh_size;
+		onika::memory::CudaMMVector<int> cells_GPU_start;
+		onika::memory::CudaMMVector<int> cells_GPU_total;
+		onika::memory::CudaMMVector<int> cells_GPU_nbh_incr;
+		onika::memory::CudaMMVector<int> cells_GPU_nb_nbh;
+		int cells_GPU = 0;
 		
 		void resize(int size)
 		{
@@ -81,6 +101,17 @@ namespace exaDEM
 		//Reset the lists
 		void reset()
 		{
+		
+			cells_GPU_ids.clear();
+			cells_GPU_size.clear();
+			cells_GPU_nbh.clear();
+			cells_GPU_nbh_size.clear();
+			cells_GPU_start.clear();
+			cells_GPU_total.clear();
+			cells_GPU_nbh_incr.clear();
+			cells_GPU_nb_nbh.clear();
+			cells_GPU = 0;
+			
 			nb_particles= 0;
 			pa.clear();
 			pa.resize(0);
@@ -213,23 +244,75 @@ namespace exaDEM
 			nb_particles++;
 		}
 		
-		void add_particle2(int p, int cell, int ida, std::vector<int> pb, std::vector<int> cellb, std::vector<int> idb)
+		
+		void add_cell(int cell, int size, onika::memory::CudaMMVector<int> nbh, onika::memory::CudaMMVector<int> nbh_size)
+		{	
+			
+			//cells_gravity.push_back(cell);
+			cells_GPU_ids.push_back(cell);
+			//cells_gravity_size.push_back(size);
+			cells_GPU_size.push_back(size);
+			
+			//printf("CELL : %d, CELL SIZE : %d\n", cell, size);
+			
+			
+			if(size > max_cells_gravity_size) max_cells_gravity_size = size;
+			
+			int start = 0;
+			
+			int s = 0;
+			
+			int tot = 0;
+			
+			int incr = 0;
+			
+			
+			
+			for(int i = 0; i < nbh.size(); i++)
+			{
+				
+				//cell_nbh_id.push_back(nbh[i]);
+				cells_GPU_nbh.push_back(nbh[i]);
+				//cell_nbh_size.push_back(nbh_size[i]);
+				cells_GPU_nbh_size.push_back(nbh_size[i]);
+				incr+= nbh_size[i];
+				cells_GPU_nbh_incr.push_back(incr);
+				s++;
+			}
+			
+			if(cells_GPU > 0)
+			{
+				//start = cell_start[init_GPU_size - 1] + s;
+				start = cells_GPU_start[cells_GPU - 1] + cells_GPU_nb_nbh[cells_GPU - 1];
+			}
+			
+			//printf("CELL : %d  START_UN : %d START_DEUX : %d\n", cell, cell_start[cells_GPU - 1] + s, cells_GPU_start[cells_GPU] + cells_GPU_nb_nbh[cells_GPU]);
+			
+			//cell_start.push_back(start);
+			cells_GPU_start.push_back(start);
+			
+			//cell_tot.push_back(s);
+			cells_GPU_total.push_back(incr);
+			
+			cells_GPU_nb_nbh.push_back(s);
+			
+			//init_GPU_size++;
+			cells_GPU++;
+			//printf("CELLULE\n");
+		}
+		
+
+		
+		void print_GPU()
 		{
-			//pa.push_back(p);
-			//cella.push_back(cell);
+			for(int i = 0; i < init_GPU_size; i++)
+			{
+				printf("CELL : %d  SIZE : %d  NBH : %d\n", cells_gravity[i], cells_gravity_size[i], cell_tot[i]);
+			}
 			
 		}
 		
-		
-		
-		void add_cell(int cell, int size)
-		{	
-			init_GPU_size++;
-			cells_gravity.push_back(cell);
-			cells_gravity_size.push_back(size);
-			if(size > max_cells_gravity_size) max_cells_gravity_size = size;
-			//printf("CELLULE\n");
-		}
+
 		
 		int print()
 		{
@@ -555,7 +638,7 @@ namespace exaDEM
 				int z = 0;
 				for(int j = start[i]; j < end[i]; j++)
 				{
-					Vec3d ft = {ftx_GPU2[j], fty_GPU2[j], ftz_GPU2[j]};
+					Vec3d ft = {ftx_GPU[j], fty_GPU[j], ftz_GPU[j]};
 					ft_pair[i][z] = ft;
 					z++;
 				}
@@ -604,6 +687,7 @@ namespace exaDEM
 			ftz_GPU.resize(nb_interactions);
 			
 			
+			//int start = 0;
 			
 			//#pragma omp parallel for
 			for(int i = 0; i < nb_particles; i++)
@@ -639,6 +723,8 @@ namespace exaDEM
 			
 			cells_gravity_GPU.resize(init_GPU_size);
 			cells_gravity_size_GPU.resize(init_GPU_size);
+			
+			//printf("INTERACTIONS CORRECTES : %d  INTERACTIONS FAUSSES : %d\n", nb_interactions, zzz);
 		}
 		
 		

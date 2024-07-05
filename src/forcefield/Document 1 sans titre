@@ -1,0 +1,24 @@
+template< class GridT > __global__ void neighbor_GPU(GridT* cells, 
+ 							int* cells2,
+ 							int* cells_size,
+ 							int* cells_start,
+ 							int* cells_tot
+  							)
+  {
+  	int cell = cells2[blockIdx.x];
+  	int size = cells_size[blockIdx.x];
+  	int start = cells_start[blockIdx.x];
+  	int tot = cells_tot[blockIdx.x];
+  	
+  	if(threadIdx.x < size)
+  	{
+  		for(int i = start; i < start + tot; i++)
+  		{
+  			for(int j = 0; j < cells_b[i]; j++)
+  			{
+  				
+  			}
+  		}
+  	}
+  	
+  }

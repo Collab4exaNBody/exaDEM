@@ -69,7 +69,8 @@ namespace exaDEM
   		
   	}
   }
-
+  
+ 
   template<typename GridT
     , class = AssertGridHasFields< GridT, field::_mass, field::_fx,field::_fy,field::_fz >
     >
@@ -96,19 +97,30 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
-			//Interactions_PP& ints= *interactions_PP;
-			//auto& g = *grid;
-			//const auto cells = g.cells();
+			//printf("GRSTART\n");
+			Interactions_PP& ints= *interactions_PP;
+			auto& g = *grid;
+			const auto cells = g.cells();
 			//printf("POISON\n");
 			GravityForceFunctor func { *gravity};
-			//compute_cell_particles2( *grid , false , func , compute_field_set , parallel_execution_context(), ints.cells_gravity_GPU.data(), ints.init_GPU_size );
+			//compute_cell_particles2( *grid , false , func , compute_field_set , parallel_execution_context(), ints.cells_gravity.data(), ints.init_GPU_size );
 			compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+			
+			//onika::memory::CudaMMVector<double> fx;
+			//fx.resize(1);
+			
 			//int blockSize = 256;
 			//printf("PARTICULES: %d\n", ints.max_cells_gravity_size);
 			//int numBlocks = ints.init_GPU_size;
 			//printf("NUMBER OF NO EMPTY CELLS:%d\n", numBlocks);
 			
-			//GravityForceGPU<<<numBlocks, blockSize>>>(cells, ints.cells_gravity_GPU.data(), ints.cells_gravity_size_GPU.data(), *gravity);
+			//GravityForceGPU<<<numBlocks, blockSize>>>(cells, ints.cells_gravity.data(), ints.cells_gravity_size.data(), *gravity);
+			
+								
+			//getchar();
+			//printf("GRNED\n");
+			
+			
 		}
 	};
 

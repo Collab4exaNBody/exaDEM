@@ -21,6 +21,7 @@ under the License.
 #include <exanb/core/basic_types.h>
 //#include <exanb/compute/compute_cell_particles2.h>
 #include <exanb/compute/compute_cell_particles.h>
+//#include <exanb/compute/compute_cell_particles3.h>
 
 namespace exaDEM
 {
@@ -41,7 +42,7 @@ namespace exanb
   template<> struct ComputeCellParticlesTraits<exaDEM::GravityForceFunctor>
   {
     static inline constexpr bool RequiresBlockSynchronousCall = false;
-    static inline constexpr bool CudaCompatible = true;
+    static inline constexpr bool CudaCompatible = false;
   };
   
   template<> struct ComputeCellParticlesTraitsUseCellIdx<exaDEM::GravityForceFunctor>
