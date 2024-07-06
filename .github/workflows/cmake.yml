@@ -43,9 +43,10 @@ jobs:
       with:
         root: ${{github.workspace}}/build/src/
         excludes: |
-          exaNBody/src/*
+          exaNBody
 
     - name: Generate a code coverage report part2
+      working-directory: ${{github.workspace}}/build/src/
       run: gcovr --exclude-directories='.*/exanb*' --exclude-directories='.*/onika*' --exclude-directories='exaNBody' --html-details coverage.html
 
     - name: Archive code coverage results
