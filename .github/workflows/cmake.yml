@@ -46,11 +46,11 @@ jobs:
           exaNBody
 
     - name: Generate a code coverage report part2
-      working-directory: ${{github.workspace}}/build/src/
+      working-directory: ${{github.workspace}}/build/
       run: gcovr --exclude-directories='.*/exanb*' --exclude-directories='.*/onika*' --exclude-directories='exaNBody' --html-details coverage.html
 
     - name: Archive code coverage results
       uses: actions/upload-artifact@v4
       with:
         name: code-coverage-report
-        path: ${{github.workspace}}/build/src/coverage.html        
+        path: ${{github.workspace}}/build/coverage.html        
