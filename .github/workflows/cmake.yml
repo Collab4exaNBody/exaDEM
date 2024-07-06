@@ -41,11 +41,13 @@ jobs:
     - name: Generate a code coverage repor part1
       uses: threeal/gcovr-action@v1.0.0
       with:
-        root: ${{github.workspace}}
+        root: ${{github.workspace}}/build
 
     - name: Generate a code coverage report part2
       run: gcovr --exclude-directories='.*/exanb*' --exclude-directories='.*/onika*' --html-details coverage.html
-      
+      with:
+        root: ${{github.workspace}}/build
+
     - name: Archive code coverage results
       uses: actions/upload-artifact@v4
       with:
