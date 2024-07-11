@@ -125,83 +125,7 @@ namespace exaDEM
       const double rmax2 = rmax * rmax;
       return d2 > 0.0 && d2 < rmax2 && d2 < rcut2 ;
   }
-  
-  
- template< class GridT > __global__ void neighbor_GPU(GridT* cells, 
- 							int* cells2,
- 							int* cells_size,
- 							int* cells_start,
- 							int* cells_tot,
- 							Mat3d xform,
- 							const double dist_lab,
- 							double rcut_inc,
- 							int* cells_b,
- 							int* cells_b_size,
- 							int* result,
- 							int* result_start
-  							)
-  {
-  	int cell = cells2[blockIdx.x];
-  	int size = cells_size[blockIdx.x];
-  	int start = cells_start[blockIdx.x];
-  	int tot = cells_tot[blockIdx.x];
-  	int res_start = result_start[blockIdx.x];
-  	
-  	if(threadIdx.x < size)
-  	{
-  		int p_a = threadIdx.x;
-  		
-  		for(int i = start; i < start + tot; i++)
-  		{
-  			int cell_b = cells_b[i];
-  			
-  			for(int p_b = 0; p_b < cells_b_size[i]; p_b++)
-  			{
-  				double rcut2 = dist_lab * dist_lab;
-  				
-  			 	const Vec3d dr = { cells[cell][field::rx][p_a] - cells[cell_b][field::rx][p_b] , cells[cell][field::ry][p_a] - cells[cell_b][field::ry][p_b] , cells[cell][field::rz][p_a] - cells[cell_b][field::ry][p_b] };
-                    		double d2 = norm2(xform * dr );
-  				if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) { /*result[res_start + threadIdx.x * p_b] = 1;*/}
-  				else{ /*result[res_start + threadIdx.x * p_b] = 0;*/}
-  				
-  				result_start[blockIdx.x]++;
-  				
-  			}
-  		}
-  	}
-  	
-  }
-  
-  template< class GridT > __global__ void kernel_GPU(GridT* cells,
-  							int cell,
-  							int size,
-  							int* result,
-  							int* cellb,
-  							int* pb,
-  							const double dist_lab,
-  							Mat3d xform,
-  							double rcut_inc)
-  {
-  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  	if(idx < size)
-  	{
-  		int p_a = (int)(threadIdx.x/size);
-  		int nbh = threadIdx.x - (p_a * size);
-  		
-  		int cell_b = cellb[nbh];
-  		int p_b = pb[nbh];
-  		
-  		double rcut2 = dist_lab * dist_lab;
-  		
-  		const Vec3d dr = { cells[cell][field::rx][p_a] - cells[cell_b][field::rx][p_b] , cells[cell][field::ry][p_a] - cells[cell_b][field::ry][p_b] , cells[cell][field::rz][p_a] - cells[cell_b][field::ry][p_b] };
-                double d2 = norm2(xform * dr );
-  		
-  		if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) { result[idx] = 1;}
-  		else{ result[idx] = 1;}
-  		
-  	}
-  }
- 
+
   
   template< class GridT > __global__ void kernel_GPU2(GridT* cells,
   							int size,
@@ -234,9 +158,18 @@ namespace exaDEM
   	int start = cells_start[blockIdx.x];
   	int div = cells_256_div[blockIdx.x];
   	int interactions = 0;
+  	int total_interactions = 0;
+  	int total_interactions2 = 0;
+  	
+  	//__shared__ int shared_threads[256];
+  	__shared__ int shared_threads[256];
+	
+	shared_threads[threadIdx.x] = 0;
+	__syncthreads();
   	
   	for(int i = 0; i < div; i++)
   	{
+  		//int idx = 256*i + threadIdx.x
   		int idx = 256*i + threadIdx.x;
   		if(idx < total_size)
   		{
@@ -259,49 +192,88 @@ namespace exaDEM
   				}
   				
   				incr3+= cells_nbh_size[j];
+  			
   			}
   			
   			double rcut2 = dist_lab * dist_lab;
   		
   			const Vec3d dr = { cells[cell][field::rx][p_a] - cells[cell_b][field::rx][p_b] , cells[cell][field::ry][p_a] - cells[cell_b][field::ry][p_b] , cells[cell][field::rz][p_a] - cells[cell_b][field::rz][p_b] };
                 	double d2 = norm2( xform * dr );
-                
-                	//printf("IDX : %d PA: %d, CELLA: %d CELLB: %d, PB: %d\n", idx, p_a, cell, cell_b, p_b);
+                	
   			if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) 
   			{ 
-  				//printf("CARLO\n");
-  				pa[incr + interactions + div*threadIdx.x] = p_a;
-  				cella[incr + interactions + div*threadIdx.x] = cell;
-  				pb[incr + interactions + div*threadIdx.x] = p_b;
-  				cellb[incr + interactions + div*threadIdx.x] = cell_b;
+  		
   				atomicAdd(&nb_interactions[0], 1);
-  				interactions++;
+  				atomicAdd(&interactions_blocks[blockIdx.x], 1);
+  				shared_threads[threadIdx.x] = 1;
   			}
+  			
+  			__syncthreads();
+  			
+  			int index = 0;
+  			
+  			if(shared_threads[threadIdx.x] == 1)
+  			{
+  				
+  				for(int i = 0; i < threadIdx.x; i++)
+  				{
+  					if(shared_threads[i] == 1) index++;
+  				}
+  				
+  				pa[ incr + total_interactions + index ] = p_a;
+  				cella[ incr + total_interactions + index ] = cell;
+  				pb[ incr + total_interactions + index ] = p_b;
+  				cellb[ incr + total_interactions + index ] = cell_b;
+  				
+  			}
+  			
+  			__syncthreads();
+  			
+  			total_interactions= interactions_blocks[blockIdx.x];
+  			
+  			shared_threads[threadIdx.x] = 0;
+  			
+  			__syncthreads();
+  			
   		}
   		
   		
-  	}
-  	
-  	interactions_threads[ 256*blockIdx.x + threadIdx.x ] = interactions;
-  	atomicAdd(&interactions_blocks[blockIdx.x], interactions);
+  	}  	
   	 
   }
-  		
-  		
-  __global__ void kernel_GPU3( int* cells_incr, int* incr_threads, int* interactions_threads, int* cells_256_div, int* pa, int* cella, int* pb, int* cellb, int* cella_final, int* pa_final, int* cellb_final, int* pb_final, int nb_interactions )
+  
+  __global__ void kernel_GPU4(int* cells_incr,int* pa, int* cella, int* pb, int* cellb, int* interactions_blocks, int* pa_final, int* cella_final, int* pb_final, int* cellb_final)
   {
+  	int incr = 0;
   	
-  	int incr = cells_incr[blockIdx.x];
-  	int div = cells_256_div[blockIdx.x];
-  	
-  	for(int i = 0; i < interactions_threads[ 256*blockIdx.x + threadIdx.x ]; i++)
+  	for(int i = 0; i < blockIdx.x ; i++)
   	{
-  		pa_final[ nb_interactions + incr_threads[256*blockIdx.x + threadIdx.x] + i ] = 0;//pa[incr + i + div*threadIdx.x];
-  		//pb_final[ nb_interactions + incr_threads[256*blockIdx.x + threadIdx.x] ] = pb[incr + i + div*threadIdx.x];
-  		//cella_final[ nb_interactions + incr_threads[256*blockIdx.x + threadIdx.x] ] = cella[incr + i + div*threadIdx.x];
-  		//cellb_final[ nb_interactions + incr_threads[256*blockIdx.x + threadIdx.x] ] = cellb[incr + i + div*threadIdx.x];
+  		incr+= interactions_blocks[i];
+  	}
+  	
+  	int incr2 = cells_incr[blockIdx.x];
+  	
+  	int nb_int = interactions_blocks[blockIdx.x];
+  	
+  	//int div = (int)(nb_int/256) + 1;
+  	int div = (int)(nb_int/256) + 1;
+  	
+  	for(int i = 0; i < div; i++)
+  	{
+  		//int idx = 256*i + threadIdx.x;
+  		int idx = 256*i + threadIdx.x;
+  		
+  		if(idx < nb_int)
+  		{
+  			pa_final[incr + idx] = pa[incr2 + idx];
+  			cella_final[incr + idx] = cella[incr2 + idx];
+  			pb_final[incr + idx] = pb[incr2 + idx];
+  			cellb_final[incr + idx] = cellb[incr2 + idx];
+  		} 
   	}
   }
+  
+
   		
   template<typename GridT>
   struct ChunkNeighborsContact : public OperatorNode
@@ -411,7 +383,7 @@ namespace exaDEM
       	{ 
       		interactions_new.add_cell(cell, cell_particles_nbh[i].size(), cell_particles_neighbors[i], cell_particles_neighbors_size[i]);
       	}
-      	/*for(int j= 0; j < cell_particles_nbh[i].size(); j++){
+      	for(int j= 0; j < cell_particles_nbh[i].size(); j++){
       		int particle= j;
       		auto ida = id_cell_particles_nbh[i][j];
       		std::vector< std::pair<int, int>>& nbh= cell_particles_nbh[i][j];
@@ -419,15 +391,17 @@ namespace exaDEM
       		if(nbh.size() > 0){
       			interactions_new.add_particle(particle, cell, nbh, ida, idb);
       		}
-      	}*/
+      	}
       }
       
       //getchar();
       
       
-      int incr_cells = 500;
+      int incr_cells = interactions_new.cells_GPU;//*/10000;
       
       int interactions_zzz = 0;
+      
+      //interactions_new.cells_GPU = incr_cells;
       
       onika::memory::CudaMMVector<int> cella_final;
       onika::memory::CudaMMVector<int> pa_final;
@@ -469,9 +443,12 @@ namespace exaDEM
 	interactions_blocks.resize(nb_cells);
 	
 	onika::memory::CudaMMVector<int> interactions_threads;
-	interactions_threads.resize( 256*nb_cells );
+	//interactions_threads.resize( 256*nb_cells );
+	interactions_threads.resize( 256*nb_cells);
 	
 	int incr = 0;
+	
+	int div2 = 0;
 	
 	int z = 0;
 	int start2 = 0;
@@ -488,13 +465,20 @@ namespace exaDEM
       		cells_total_size[z] = total;
       		cells_total[z] = total_cell;
       		cells_nb_nbh[z] = interactions_new.cells_GPU_nb_nbh[j];
+      		cells_incr[z] = size;
       		
       		int start = interactions_new.cells_GPU_start[j];
       		int nb = interactions_new.cells_GPU_nb_nbh[j];
       		
+      		
+      		
       		start2+= nb;
       		
+      		
+      		//int div = (int)(total/256);
       		int div = (int)(total/256);
+      		
+      		div2+= div;
       		
       		cells_256_div[z] = div + 1;
         		
@@ -505,7 +489,22 @@ namespace exaDEM
       			cells_nbh_size.push_back(interactions_new.cells_GPU_nbh_size[t]);
       		}
       		
-      		size+= total;
+      		if(total < 100)
+      		{
+      			//printf("INDEX CELL: %d\n", j);
+      			size+= (int)(total);
+      		}
+      		else if(j > 18000)
+      		{
+      			//printf("TOTAL 12M: %d\n", total);
+      			size+= (int)(total);
+      		}
+      		else
+      		{
+      			size+= (int)(total/10);
+      		}
+      		
+      			
       		
       		z++;
       		
@@ -513,7 +512,9 @@ namespace exaDEM
       	}
       	
       	printf("SIZE: %d\n", size);
-
+      	
+      	printf("DIV2: %d\n", div2);
+      
       	onika::memory::CudaMMVector<int> pa;
       	onika::memory::CudaMMVector<int> cella;
       	onika::memory::CudaMMVector<int> pb;
@@ -523,10 +524,12 @@ namespace exaDEM
       	cella.resize(size);
       	pb.resize(size);
       	cellb.resize(size);
-
+      	
+     	
+      	//int blockSize = 256;
       	int blockSize = 256;
-	int numBlocks = nb_cells;
-	
+      	int numBlocks = nb_cells;
+      	
 	onika::memory::CudaMMVector<int> nb_interactions;
 	nb_interactions.resize(1);
 
@@ -534,47 +537,48 @@ namespace exaDEM
       	
       	cudaDeviceSynchronize();
       	
-      	/*onika::memory::CudaMMVector<int> incr_blocks;
-      	incr_blocks.resize(nb_cells);
-      	incr_blocks[0] = 0;
-      	
-      	for(int j = 1; j < nb_cells; j++)
-      	{
-      		incr_blocks[j] = incr_blocks[j - 1] + interactions_blocks[j - 1];
-      	}*/
-      	
-      	onika::memory::CudaMMVector<int> incr_threads;
-      	incr_threads.resize(256 * nb_cells);
-      	incr_threads[0] = 0;
-      	
-      	for(int j = 1; j < 256 * nb_cells; j++)
-      	{
-      		incr_threads[j] = incr_threads[j - 1] + interactions_threads[j - 1];
-      	}
-      	
+      	/*for(int i = 1000000;  i < 1001000; i++)
+      {
+      	printf("INTERACTIONS%d A(%d, %d) B(%d, %d)\n", i, cella[i], pa[i], cellb[i], pb[i]);
+      }*/
+
       	cella_final.resize(interactions_zzz + nb_interactions[0]);
       	pa_final.resize(interactions_zzz + nb_interactions[0]);
       	cellb_final.resize(interactions_zzz + nb_interactions[0]);
       	pb_final.resize(interactions_zzz + nb_interactions[0]);
       	
-      	kernel_GPU3<<<numBlocks, blockSize>>>( cells_incr.data(), incr_threads.data(), interactions_threads.data(), cells_256_div.data(), pa.data(), cella.data(), pb.data(), cellb.data(), cella_final.data(), pa_final.data(), cellb_final.data(), pb_final.data(), interactions_zzz );
-      
-      	printf("APRÈS CUDA %d\n", i);
-      	
-      	printf("NB_INTERACTIONS : %d\n", nb_interactions[0]);
+      	kernel_GPU4<<<numBlocks, blockSize>>>( cells_incr.data(), pa.data(), cella.data(), pb.data(), cellb.data(), interactions_blocks.data(), pa_final.data(), cella_final.data(), pb_final.data(), cellb_final.data() );
 
-	//getchar();
+      	cudaDeviceSynchronize();
+
 	interactions_zzz+= nb_interactions[0];
       	
       }
       
-      //printf("ICICICICICICICICICICICICICI\n");
-    
+      for(int i = 1000000;  i < 1001000; i++)
+      {
+      	printf("INTERACTIONS%d A(%d, %d) B(%d, %d)\n", i, cella_final[i], pa_final[i], cellb_final[i], pb_final[i]);
+      }
+
       //interactions_new.quickSort();
             
       //interactions_new.init_friction(interactions_old);
       
-      //interactions_new.init_GPU();
+      interactions_new.init_GPU();
+      
+      if(interactions_new.nb_interactions == cella_final.size())
+      {
+      	printf("ON AVANCE\n");
+      	
+      	for(int i = 0; i < /*interactions_new.nb_interactions*/cella_final.size(); i++)
+      	{
+      		if(interactions_new.cella_GPU[i] != cella_final[i] ||  interactions_new.pa_GPU[i] != pa_final[i] || interactions_new.cellb_GPU[i] != cellb_final[i] || interactions_new.pb_GPU[i] != pb_final[i])
+      		{
+      			printf("ERREUR: %d\n", i);
+      		}
+      	}
+      	
+      }
       
       printf("TOTAL INTERACTIONS : %d\n", interactions_zzz);
       
