@@ -21,10 +21,11 @@ jobs:
     - uses: actions/setup-node@v4
     - name: Get Yaml cpp
       run: sudo apt install libyaml-cpp-dev
+    - name: Install
+      run: sudo apt-get update && sudo apt-get install lcov
     - uses: mpi4py/setup-mpi@v1
     - name: Get ExaNBody
       run: git clone https://github.com/Collab4exaNBody/exaNBody.git
-
       
     - name: Configure CMake
       run: cmake -DCMAKE_CXX_FLAGS="--coverage -g" -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DexaNBody_DIR=${{github.workspace}}/exaNBody
@@ -37,16 +38,19 @@ jobs:
       working-directory: ${{github.workspace}}/build
       run: make UpdatePluginDataBase && ctest --test-dir example -C --rerun-failed --output-on-failure ${{env.BUILD_TYPE}}
 
-#    - name: Generate a code coverage report
-#      uses: threeal/gcovr-action@v1.0.0
-#      with:
-#        root: ${{github.workspace}}
+    - name: Generate a code coverage repor part1
+      uses: threeal/gcovr-action@v1.0.0
+      with:
+        root: ${{github.workspace}}/build/src/
+        excludes: |
+          exaNBody
 
-#    - name: Generate a code coverage report
-#      run: gcovr --html-details coverage.html
-      
-#    - name: Archive code coverage results
-#      uses: actions/upload-artifact@v4
-#      with:
-#        name: code-coverage-report
-#        path: coverage.html        
+    - name: Generate a code coverage report part2
+      working-directory: ${{github.workspace}}/
+      run: gcovr --exclude='exanb/*' --exclude='onika/*' --exclude='exaNBody/*' --exclude='build/*' --html-details coverage.html
+
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v4
+      with:
+        name: code-coverage-report
+        path: ${{github.workspace}}/coverage.html        
