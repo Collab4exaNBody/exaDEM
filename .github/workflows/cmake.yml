@@ -47,7 +47,7 @@ jobs:
 
     - name: Generate a code coverage report part2
       working-directory: ${{github.workspace}}/
-      run: gcovr --exclude='exanb/*' --exclude='onika/*' --exclude='exaNBody/*' --html-details coverage.html
+      run: gcovr --exclude='exanb/*' --exclude='onika/*' --exclude='exaNBody/*' --exclude='build/*' --html-details coverage.html
 
     - name: Archive code coverage results
       uses: actions/upload-artifact@v4
