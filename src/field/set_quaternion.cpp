@@ -67,7 +67,6 @@ namespace exaDEM
 
 			if(is_random)
 			{
-	std::cout << "eznoigejz" << std::endl;
 				if( region.has_value() )
 				{
 					if( !particle_regions.has_value() )
