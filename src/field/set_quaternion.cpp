@@ -29,6 +29,7 @@ under the License.
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/grid_cell_particles/particle_region.h>
 #include <exaDEM/set_fields.h>
+#include <exaDEM/random_quaternion.h>
 
 
 namespace exaDEM
@@ -55,33 +56,64 @@ namespace exaDEM
 		inline std::string documentation() const override final
 		{
 			return R"EOF(
-        This operator sets the orientation value for every particles.
+        This operator sets the orientation value for every particles. Random option is available.
         )EOF";
 		}
 
 		inline void execute () override final
 		{
-			if( region.has_value() )
+
+			bool is_random = *random;
+
+			if(is_random)
 			{
-				if( !particle_regions.has_value() )
+				if( region.has_value() )
 				{
-					fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+					if( !particle_regions.has_value() )
+					{
+						fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+					}
+
+					if( region->m_nb_operands==0 )
+					{
+						ldbg << "rebuild CSG from expr "<< region->m_user_expr << std::endl;
+						region->build_from_expression_string( particle_regions->data() , particle_regions->size() );
+					}
+					ParticleRegionCSGShallowCopy prcsg = *region;
+					RandomQuaternionFunctor func = {prcsg};
+
+					compute_cell_particles( *grid , false , func , compute_region_field_set , parallel_execution_context() );
 				}
-
-        if( region->m_nb_operands==0 )
-        {
-          ldbg << "rebuild CSG from expr "<< region->m_user_expr << std::endl;
-          region->build_from_expression_string( particle_regions->data() , particle_regions->size() );
-        }
-
-				ParticleRegionCSGShallowCopy prcsg = *region;
-				SetRegionFunctor<Quaternion> func = { prcsg, *quat };
-				compute_cell_particles( *grid , false , func , compute_region_field_set , parallel_execution_context() );
+				else
+				{
+					RandomQuaternionFunctor func = {};
+					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+				}
 			}
 			else
 			{
-				SetFunctor<Quaternion> func = {*quat };
-				compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+				if( region.has_value() )
+				{
+					if( !particle_regions.has_value() )
+					{
+						fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+					}
+
+					if( region->m_nb_operands==0 )
+					{
+						ldbg << "rebuild CSG from expr "<< region->m_user_expr << std::endl;
+						region->build_from_expression_string( particle_regions->data() , particle_regions->size() );
+					}
+
+					ParticleRegionCSGShallowCopy prcsg = *region;
+					SetRegionFunctor<Quaternion> func = { prcsg, *quat };
+					compute_cell_particles( *grid , false , func , compute_region_field_set , parallel_execution_context() );
+				}
+				else
+				{
+					SetFunctor<Quaternion> func = {*quat };
+					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+				}
 			}
 		}
 	};

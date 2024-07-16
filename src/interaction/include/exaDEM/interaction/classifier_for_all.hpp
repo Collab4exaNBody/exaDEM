@@ -100,9 +100,11 @@ namespace exaDEM
   template<typename Kernel, typename... Args>
     static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext * exec_ctx, int type, Classifier& ic, Kernel& kernel, Args&&... args)
     {
+      ParallelForOptions opts;
+      opts.omp_scheduling = OMP_SCHED_STATIC;
       auto [ptr, size] = ic.get_info(type);
       InteractionWrapper interactions = {type, ptr};
       WrapperForAll func(interactions, kernel, args...);
-      return parallel_for( size, func, exec_ctx);
+      return parallel_for( size, func, exec_ctx, opts);
     }
 }

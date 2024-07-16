@@ -283,6 +283,7 @@ class quat
     }
      */
 
+    ONIKA_HOST_DEVICE_FUNC inline 
     void randomize(bool seedTime = false) {
       // @see http://hub.jmonkeyengine.org/t/random-quaternions/8431
       static std::default_random_engine engine;

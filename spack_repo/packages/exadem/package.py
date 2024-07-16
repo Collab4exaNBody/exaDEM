@@ -13,6 +13,7 @@ class Exadem(CMakePackage):
 
     depends_on("cmake@3.27.9")
     depends_on("yaml-cpp@0.6.3")
+    depends_on("openmpi")
     depends_on("exanbody")
     depends_on("cuda", when="+cuda")
 
