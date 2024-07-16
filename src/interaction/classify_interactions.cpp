@@ -51,8 +51,10 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set {};
 
     ADD_SLOT( GridT                       , grid , INPUT_OUTPUT , REQUIRED );
-    ADD_SLOT( GridCellParticleInteraction , ges  , INPUT_OUTPUT , DocString{"Interaction list"} );
-		ADD_SLOT( Classifier                  , ic   , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
+    ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
+    ADD_SLOT( Classifier                  , ic   , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
+    ADD_SLOT( std::vector<size_t>         , idxs , INPUT , DocString{"List of non empty cells"});
+
 
     public:
 
@@ -64,10 +66,9 @@ namespace exaDEM
 
     inline void execute () override final
     {
-      //using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
       if( grid->number_of_cells() == 0 ) { return; }
-			if(!ic.has_value()) ic->initialize();
-			ic->classify(*ges);
+      if(!ic.has_value()) ic->initialize();
+      ic->classify(*ges, *idxs);
     }
   };
 

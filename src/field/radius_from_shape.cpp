@@ -58,7 +58,7 @@ namespace exanb
   template<> struct ComputeCellParticlesTraits<exaDEM::UpdateRadiusPolyhedronFunctor>
   {
     static inline constexpr bool RequiresBlockSynchronousCall = false;
-    static inline constexpr bool CudaCompatible = true;
+    static inline constexpr bool CudaCompatible = false;//true;
   };
 }
 
