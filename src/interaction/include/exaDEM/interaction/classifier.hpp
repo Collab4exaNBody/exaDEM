@@ -98,96 +98,60 @@ namespace exaDEM
      *
      * @param ges Reference to the GridCellParticleInteraction object containing interactions to classify.
      */
-    void classify(GridCellParticleInteraction& ges)
+    void classify(GridCellParticleInteraction& ges, std::vector<size_t>& idxs)
     {
       reset_waves(); // Clear existing waves
-                     // Arrays to store sizes and shifts for each interaction type
-      std::array<int, types> sizes;
-      std::array<int, types> shifts;
-
-      for(int  w = 0 ; w < types ; w++) 
-      {
-        sizes[w]  = 0; 
-        shifts[w] = 0;
-      }
-
       auto& ces = ges.m_data; // Reference to cells containing interactions
 
-      //#pragma omp parallel
-      //      {
-      // Calculate number of interactions per type
-      std::array<int, types> ls; // Local storage for thread-local accumulation
-      for(int  w = 0 ; w < types ; w++) 
+#pragma omp parallel
       {
-        ls[w]=0;
-      }
-
-      // Loop through cells to count interactions
-      //#pragma omp for
-      for(size_t c = 0 ; c < ces.size() ; c++)
-      {
-        auto& interactions = ces[c];
-        const unsigned int  n_interactions_in_cell = interactions.m_data.size();
-        exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data );
-
-        for( size_t it = 0; it < n_interactions_in_cell ; it++ )
+        std::array<std::vector<exaDEM::Interaction>,types> tmp; ///< Storage for interactions categorized by type.
+#pragma omp for schedule(dynamic) nowait
+        for(size_t c = 0 ; c < idxs.size() ; c++)
         {
-          Interaction& item = data_ptr[it];
-          ls[item.type]++;
-        }
-      }
-      //#pragma omp critical
-      {
-        for(int w = 0 ; w < types ; w++) sizes[w] += ls[w];
-      }
-      //      }
+          auto& interactions = ces[idxs[c]];
+          const unsigned int  n_interactions_in_cell = interactions.m_data.size();
+          exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data );
+          // Place interactions into their respective waves  
+          for( size_t it = 0; it < n_interactions_in_cell ; it++ )
+          {
+            Interaction& item = data_ptr[it];
+            const int t = item.type;
+            tmp[t].push_back(item);
+					}
+				}
 
-      // Resize waves according to counted sizes
-      for(int w = 0 ; w < types ; w++) 
-      {
-        if(sizes[w] == 0) waves[w].clear();
-        else waves[w].resize(sizes[w]);
-      }
 
-      // serial here, could be //  
-      // Store interactions into categorized waves
-      for(size_t c = 0 ; c < ces.size() ; c++)
-      {
-        auto& interactions = ces[c];
-        const unsigned int  n_interactions_in_cell = interactions.m_data.size();
-        exaDEM::Interaction* const __restrict__ data_ptr = onika::cuda::vector_data( interactions.m_data );
-        // Place interactions into their respective waves  
-        for( size_t it = 0; it < n_interactions_in_cell ; it++ )
-        {
-          Interaction& item = data_ptr[it];
-          const int t = item.type;
-          auto& wave = waves[t];
-          auto& shift = shifts[t];
-          wave[shift++] = item;
-        }
-      }
-    }
+				for(int w = 0 ; w < types ; w++ )
+				{
+#pragma omp critical
+					{
+						waves[w].insert(waves[w].end(), tmp[w].begin(), tmp[w].end());
+					}
+				}
+			}
+		}
 
-    /**
-     * @brief Restores friction and moment data for interactions from categorized waves to cell interactions.
-     *
-     * This function restores friction and moment data from categorized waves back to their corresponding
-     * interactions in cell data (`ges.m_data`). It iterates through each wave, retrieves interactions
-     * with non-zero friction and moment from the wave, and updates the corresponding interaction in the
-     * cell data.
-     *
-     * @param ges Reference to the GridCellParticleInteraction object containing cell interactions.
-     */
-    void unclassify(GridCellParticleInteraction& ges)
-    {
-      Vec3d null = {0,0,0};
-      auto& ces = ges.m_data; // Reference to cells containing interactions
-                              // Iterate through each wave
-      for(int w = 0 ; w < types ; w++)
-      {
-        auto& wave = waves[w];
-        const unsigned int n1 = wave.size();
-        // Parallel loop to process interactions within a wave
+		/**
+		 * @brief Restores friction and moment data for interactions from categorized waves to cell interactions.
+		 *
+		 * This function restores friction and moment data from categorized waves back to their corresponding
+		 * interactions in cell data (`ges.m_data`). It iterates through each wave, retrieves interactions
+		 * with non-zero friction and moment from the wave, and updates the corresponding interaction in the
+		 * cell data.
+		 *
+		 * @param ges Reference to the GridCellParticleInteraction object containing cell interactions.
+		 */
+		void unclassify(GridCellParticleInteraction& ges)
+		{
+			Vec3d null = {0,0,0};
+			auto& ces = ges.m_data; // Reference to cells containing interactions
+															// Iterate through each wave
+			for(int w = 0 ; w < types ; w++)
+			{
+				auto& wave = waves[w];
+				const unsigned int n1 = wave.size();
+				// Parallel loop to process interactions within a wave
 #pragma omp parallel for
         for(size_t it = 0 ; it < n1 ; it++) 
         {
