@@ -193,7 +193,7 @@ namespace exaDEM
         {
           exaDEM::Interaction& item1 = wave[it];
           // Check if interaction in wave has non-zero friction and moment
-          if( item1.friction != null && item1.moment != null)
+          if( item1.friction != null || item1.moment != null)
           { 
             auto& cell = ces[item1.cell_i];
             const unsigned int  n2 = onika::cuda::vector_size( cell.m_data );
