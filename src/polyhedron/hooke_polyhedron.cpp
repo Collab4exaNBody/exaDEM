@@ -33,6 +33,7 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
 #include <exaDEM/interaction/classifier_for_all.hpp>
+#include <exaDEM/storage_interaction.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/shape/shape_detection_driver.hpp>
@@ -92,7 +93,7 @@ namespace exaDEM
       const double time = *dt;
       auto& classifier = *ic;
 
-      /** Hooke force kernels */
+      /** Hooke fexaDEM/orce kernels */
       hooke_law_driver<Cylinder> cyli;
       hooke_law_driver<Surface>  surf;
       hooke_law_driver<Ball>     ball;
@@ -116,6 +117,13 @@ namespace exaDEM
 			{
 				run_contact_law(parallel_execution_context(), type, classifier, stlm, write_interactions, cells, drvs, hkp_drvs, shps, time);  
 			}
+
+      if(write_interactions)
+      {
+        auto stream = create_buffer(classifier);
+        std::string ts = std::to_string(*timestep);
+        write_file(stream, "Interaction" + ts);        
+      }
 		}
 	};
 
