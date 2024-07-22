@@ -59,11 +59,12 @@ add_generated_particles: nop
 update_stl_mesh: nop
 
 parallel_update_particles:
+#  - mpi_barrier
   - particle_generator:
       condition: trigger_generator
-      body: 
+      body:
+         - message: { mesg: "Add particles", endl: true} 
          - add_generated_particles
-#  - mpi_barrier
   - migrate_particles
   - ghost_full_update
   - grid_post_processing

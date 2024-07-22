@@ -126,509 +126,299 @@ namespace exaDEM
         /**
          * @brief Handles particle interactions using Hooke's law parameters.
          *
-         * This function applies Hooke's law to calculate forces between interacting spherical particles.
-         * It updates the interaction item based on the specified parameters and uses mutexes for thread safety.
-         *
-         * @tparam Cells The type representing the collection of cells in the simulation.
-         * @param item Reference to the interaction item to be updated.
-         * @param cells Reference to the collection of cells containing the particles.
-         * @param hkp Reference to the Hooke's law parameters.
-         * @param time Increment simulation.
-         * @param locker Reference to the mutexes used for thread safety.
-         */
-        template<typename Cells>
-          ONIKA_HOST_DEVICE_FUNC inline void operator()(
-              Interaction& item, 
-              Cells& cells, 
-              const HookeParams& hkp, 
-              const double time, 
-              mutexes& locker) const
-          {
-            // === cell
-            auto& cell_i =  cells[item.cell_i];
-            auto& cell_j =  cells[item.cell_j];
-
-            // === positions
-            const Vec3d ri = get_r(cell_i, item.p_i);
-            const Vec3d rj = get_r(cell_j, item.p_j);
-
-            // === positions
-            const double rad_i = cell_i[field::radius][item.p_i];
-            const double rad_j = cell_j[field::radius][item.p_j];
-
-            // === vrot
-            const Vec3d& vrot_i = cell_i[field::vrot][item.p_i];
-            const Vec3d& vrot_j = cell_j[field::vrot][item.p_j];
-
-            auto [contact, dn, n, contact_position] = detection_vertex_vertex_core(ri, rad_i, rj, rad_j); 
-
-            if(contact)
-            {
-              const Vec3d vi = get_v(cell_i, item.p_i);
-              const Vec3d vj = get_v(cell_j, item.p_j);
-              const auto& m_i = cell_i[field::mass][item.p_i];
-              const auto& m_j = cell_j[field::mass][item.p_j];
-
-              // temporary vec3d to store forces.
-              Vec3d f = {0,0,0};
-              const double meff = compute_effective_mass(m_i, m_j);
-
-              hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
-                  hkp.m_mu, hkp.m_damp_rate, meff,
-                  item.friction, contact_position,
-                  ri, vi, f, item.moment, vrot_i,  // particle 1
-                  rj, vj, vrot_j // particle nbh
-                  );
-
-
-              // === update particle informations
-              // ==== Particle i
-              locker.lock(item.cell_i, item.p_i);
-
-              auto& mom_i = cell_i[field::mom][item.p_i];
-              mom_i += compute_moments(contact_position, ri, f, item.moment);
-              cell_i[field::fx][item.p_i] += f.x;
-              cell_i[field::fy][item.p_i] += f.y;
-              cell_i[field::fz][item.p_i] += f.z;
-
-              locker.unlock(item.cell_i, item.p_i);
-
-              if constexpr (sym)
-              {
-                // ==== Particle j
-                locker.lock(item.cell_j, item.p_j);
-
-                auto& mom_j = cell_j[field::mom][item.p_j];
-                mom_j += compute_moments(contact_position, rj, -f, -item.moment);
-                cell_j[field::fx][item.p_j] -= f.x;
-                cell_j[field::fy][item.p_j] -= f.y;
-                cell_j[field::fz][item.p_j] -= f.z;
-
-                locker.unlock(item.cell_j, item.p_j);
-              }
-            }
-            else
-            {
-              item.reset();
-            }
-          }
-
-        /**
-         * @brief Handles particle interactions using Hooke's law parameters.
-         *
          * This function applies Hooke's law to calculate forces between interacting particles
          * within the given cells. It updates the interaction item based on the specified
          * parameters and uses mutexes for thread safety.
          *
-         * @tparam Cells The type representing the collection of cells in the simulation.
+         * @tparam TMPC The type representing the collection of cells in the simulation.
          * @param item Reference to the interaction item to be updated.
          * @param cells Pointer to the collection of cells containing the particles.
          * @param hkp Reference to the Hooke's law parameters.
          * @param time Increment simulation time.
          */
-        template<typename Cells>
-          ONIKA_HOST_DEVICE_FUNC inline void operator()(
-              Interaction& item, 
-              Cells* cells, 
-              const HookeParams& hkp, 
-              const double time) const
-          {
-            // === cell
-            auto& cell_i =  cells[item.cell_i];
-            auto& cell_j =  cells[item.cell_j];
+				template<typename TMPC>
+					ONIKA_HOST_DEVICE_FUNC 
+					inline std::tuple<Vec3d, Vec3d, Vec3d> operator()(
+							Interaction& item, 
+							TMPC* cells, 
+							const HookeParams& hkp, 
+							const double time) const
+					{
+						// === cell
+						auto& cell_i =  cells[item.cell_i];
+						auto& cell_j =  cells[item.cell_j];
 
-            // === positions
-            const Vec3d ri = get_r(cell_i, item.p_i);
-            const Vec3d rj = get_r(cell_j, item.p_j);
+						// === positions
+						const Vec3d ri = get_r(cell_i, item.p_i);
+						const Vec3d rj = get_r(cell_j, item.p_j);
 
-            // === positions
-            const double rad_i = cell_i[field::radius][item.p_i];
-            const double rad_j = cell_j[field::radius][item.p_j];
+						// === positions
+						const double rad_i = cell_i[field::radius][item.p_i];
+						const double rad_j = cell_j[field::radius][item.p_j];
 
-            // === vrot
-            const Vec3d& vrot_i = cell_i[field::vrot][item.p_i];
-            const Vec3d& vrot_j = cell_j[field::vrot][item.p_j];
+						// === vrot
+						const Vec3d& vrot_i = cell_i[field::vrot][item.p_i];
+						const Vec3d& vrot_j = cell_j[field::vrot][item.p_j];
 
-            auto [contact, dn, n, contact_position] = detection_vertex_vertex_core(ri, rad_i, rj, rad_j); 
+						auto [contact, dn, n, contact_position] = detection_vertex_vertex_core(ri, rad_i, rj, rad_j); 
+						Vec3d fn = {0,0,0};
 
-            if(contact)
-            {
-              const Vec3d vi = get_v(cell_i, item.p_i);
-              const Vec3d vj = get_v(cell_j, item.p_j);
-              const auto& m_i = cell_i[field::mass][item.p_i];
-              const auto& m_j = cell_j[field::mass][item.p_j];
+						if(contact)
+						{
+							const Vec3d vi = get_v(cell_i, item.p_i);
+							const Vec3d vj = get_v(cell_j, item.p_j);
+							const auto& m_i = cell_i[field::mass][item.p_i];
+							const auto& m_j = cell_j[field::mass][item.p_j];
 
-              // temporary vec3d to store forces.
-              Vec3d f = {0,0,0};
-              const double meff = compute_effective_mass(m_i, m_j);
+							// temporary vec3d to store forces.
+							Vec3d f = {0,0,0};
+							const double meff = compute_effective_mass(m_i, m_j);
 
-              hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
-                  hkp.m_mu, hkp.m_damp_rate, meff,
-                  item.friction, contact_position,
-                  ri, vi, f, item.moment, vrot_i,  // particle 1
-                  rj, vj, vrot_j // particle nbh
-                  );
+							hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+									hkp.m_mu, hkp.m_damp_rate, meff,
+									item.friction, contact_position,
+									ri, vi, f, item.moment, vrot_i,  // particle 1
+									rj, vj, vrot_j // particle nbh
+									);
 
+							// === For analysis
+							fn = f - item.friction;
 
-              // === update particle informations
-              // ==== Particle i
-              auto& mom_i = cell_i[field::mom][item.p_i];
-              lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment));
-              lockAndAdd(cell_i[field::fx][item.p_i], f.x);
-              lockAndAdd(cell_i[field::fy][item.p_i], f.y);
-              lockAndAdd(cell_i[field::fz][item.p_i], f.z);
+							// === update particle informations
+							// ==== Particle i
+							auto& mom_i = cell_i[field::mom][item.p_i];
+							lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment));
+							lockAndAdd(cell_i[field::fx][item.p_i], f.x);
+							lockAndAdd(cell_i[field::fy][item.p_i], f.y);
+							lockAndAdd(cell_i[field::fz][item.p_i], f.z);
 
-              if constexpr (sym)
-              {
-                // ==== Particle j
-                auto& mom_j = cell_j[field::mom][item.p_j];
-                lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment));
-                lockAndAdd(cell_j[field::fx][item.p_j], -f.x);
-                lockAndAdd(cell_j[field::fy][item.p_j], -f.y);
-                lockAndAdd(cell_j[field::fz][item.p_j], -f.z);
-              }
-            }
-            else
-            {
-              item.reset();
-            }
-          }
-      };
+							if constexpr (sym)
+							{
+								// ==== Particle j
+								auto& mom_j = cell_j[field::mom][item.p_j];
+								lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment));
+								lockAndAdd(cell_j[field::fx][item.p_j], -f.x);
+								lockAndAdd(cell_j[field::fy][item.p_j], -f.y);
+								lockAndAdd(cell_j[field::fz][item.p_j], -f.z);
+							}
+						}
+						else
+						{
+							item.reset();
+						}
+						return {contact_position, fn, item.friction};
+					}
+			};
 
-    /**
-     * @struct hooke_law_driver
-     * @brief Template structure for Hooke's law force calculations with various drivers.
-     *
-     * This structure provides methods for calculating forces according to Hooke's law
-     * in a simulation environment. The calculations can involve various types of drivers
-     * such as cylinders, spheres, surfaces, or mesh faces (STL).
-     *
-     * @tparam TMPLD Template parameter for specifying the type of driver.
-     */
-    template<typename TMPLD>
-      struct hooke_law_driver
-      {
+		/**
+		 * @struct hooke_law_driver
+		 * @brief Template structure for Hooke's law force calculations with various drivers.
+		 *
+		 * This structure provides methods for calculating forces according to Hooke's law
+		 * in a simulation environment. The calculations can involve various types of drivers
+		 * such as cylinders, spheres, surfaces, or mesh faces (STL).
+		 *
+		 * @tparam TMPLD Template parameter for specifying the type of driver.
+		 */
+		template<typename TMPLD>
+			struct hooke_law_driver
+			{
+				/**
+				 * @brief Handles particle interactions using Hooke's law parameters and various drivers.
+				 *
+				 * @tparam TMPLC The type representing the collection of cells in the simulation.
+				 * @param item Reference to the interaction item to be updated.
+				 * @param cells Pointer to the collection of cells containing the particles.
+				 * @param drvs Pointer to the collection of drivers, which can include cylinders,
+				 *             spheres, surfaces, or mesh faces (STL).
+				 * @param hkp Reference to the Hooke's law parameters.
+				 * @param time Increment simulation time.
+				 */
+				template<typename TMPLC>
+					ONIKA_HOST_DEVICE_FUNC 
+					inline std::tuple<Vec3d, Vec3d, Vec3d> operator()(
+							Interaction& item, 
+							TMPLC* cells, 
+							TMPLD* drvs, 
+							const HookeParams& hkp, 
+							const double time) const
+					{
+						const int driver_idx = item.id_j; //
+						TMPLD& driver = drvs[driver_idx];
+						auto& cell = cells[item.cell_i];
+						const size_t p   = item.p_i;
+						// === positions
+						const Vec3d r       = { cell[field::rx][p], cell[field::ry][p], cell[field::rz][p] };
+						const double rad    = cell[field::radius][p];
+						// === vertex array
+						constexpr Vec3d null = {0,0,0};
+						auto [contact, dn, n, contact_position] = exaDEM::detector_vertex_driver(driver, r, rad);
+						Vec3d fn = null;
 
+						if(contact)
+						{
+							// === vrot
+							const Vec3d& vrot  = cell[field::vrot][p];
 
-        /**
-         * @brief Handles particle interactions using Hooke's law parameters and various drivers.
-         *
-         * @tparam TMPLC The type representing the collection of cells in the simulation.
-         * @param item Reference to the interaction item to be updated.
-         * @param cells Reference to the collection of cells containing the particles.
-         * @param drvs Reference to the collection of drivers, which can include cylinders,
-         *             spheres, surfaces, or mesh faces (STL).
-         * @param hkp Reference to the Hooke's law parameters.
-         * @param time The current simulation time.
-         * @param locker Reference to the mutexes used for thread safety.
-         */
-        template<typename TMPLC>
-          ONIKA_HOST_DEVICE_FUNC inline void operator()(
-              Interaction& item, 
-              TMPLC& cells, 
-              Drivers& drvs, 
-              const HookeParams& hkp, 
-              const double time, 
-              mutexes& locker) const
-          {
-            const int driver_idx = item.id_j; //
-            TMPLD& driver = std::get<TMPLD>(drvs.data(driver_idx)) ;
-            auto& cell = cells[item.cell_i];
-            const size_t p   = item.p_i;
-            // === positions
-            const Vec3d r       = { cell[field::rx][p], cell[field::ry][p], cell[field::rz][p] };
-            const double rad    = cell[field::radius][p];
-            // === vertex array
+							auto& mom = cell[field::mom][p];
+							const Vec3d v = { cell[field::vx][p], cell[field::vy][p], cell[field::vz][p] };
+							const double meff = cell[field::mass][p];
+							Vec3d f = null;
+							hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+									hkp.m_mu, hkp.m_damp_rate, meff,
+									item.friction, contact_position,
+									r, v, f, item.moment, vrot,  // particle i
+									driver.center, driver.get_vel(), driver.vrot // particle j
+									);
 
-            auto [contact, dn, n, contact_position] = exaDEM::detector_vertex_driver(driver, r, rad);
+							// === For analysis
+							fn = f - item.friction;
 
-            if(contact)
-            {
-              // === vrot
-              const Vec3d& vrot  = cell[field::vrot][p];
+							// === update informations
+							lockAndAdd(mom, compute_moments(contact_position, r, f, item.moment));
+							lockAndAdd(cell[field::fx][p], f.x);
+							lockAndAdd(cell[field::fy][p], f.y);
+							lockAndAdd(cell[field::fz][p], f.z);
+						}
+						else
+						{
+							item.reset();
+						}
+						return {contact_position, fn, item.friction};
+					}
+			};
 
-              constexpr Vec3d null = {0,0,0};
-              auto& mom = cell[field::mom][p];
-              const Vec3d v = { cell[field::vx][p], cell[field::vy][p], cell[field::vz][p] };
-              const double meff = cell[field::mass][p];
-              Vec3d f = null;
-              hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
-                  hkp.m_mu, hkp.m_damp_rate, meff,
-                  item.friction, contact_position,
-                  r, v, f, item.moment, vrot,  // particle i
-                  driver.center, driver.get_vel(), driver.vrot // particle j
-                  );
-
-              // === update informations
-              locker.lock(item.cell_i, p);
-              mom += compute_moments(contact_position, r, f, item.moment);
-              cell[field::fx][p] += f.x;
-              cell[field::fy][p] += f.y;
-              cell[field::fz][p] += f.z;
-              locker.unlock(item.cell_i, p);
-            }
-            else
-            {
-              item.reset();
-            }
-          }
-
-
-        /**
-         * @brief Handles particle interactions using Hooke's law parameters and various drivers.
-         *
-         * @tparam TMPLC The type representing the collection of cells in the simulation.
-         * @param item Reference to the interaction item to be updated.
-         * @param cells Pointer to the collection of cells containing the particles.
-         * @param drvs Pointer to the collection of drivers, which can include cylinders,
-         *             spheres, surfaces, or mesh faces (STL).
-         * @param hkp Reference to the Hooke's law parameters.
-         * @param time Increment simulation time.
-         */
-        template<typename TMPLC>
-          ONIKA_HOST_DEVICE_FUNC inline void operator()(
-              Interaction& item, 
-              TMPLC* cells, 
-              TMPLD* drvs, 
-              const HookeParams& hkp, 
-              const double time) const
-          {
-            const int driver_idx = item.id_j; //
-            TMPLD& driver = drvs[driver_idx];
-            auto& cell = cells[item.cell_i];
-            const size_t p   = item.p_i;
-            // === positions
-            const Vec3d r       = { cell[field::rx][p], cell[field::ry][p], cell[field::rz][p] };
-            const double rad    = cell[field::radius][p];
-            // === vertex array
-
-            auto [contact, dn, n, contact_position] = exaDEM::detector_vertex_driver(driver, r, rad);
-
-            if(contact)
-            {
-              // === vrot
-              const Vec3d& vrot  = cell[field::vrot][p];
-
-              constexpr Vec3d null = {0,0,0};
-              auto& mom = cell[field::mom][p];
-              const Vec3d v = { cell[field::vx][p], cell[field::vy][p], cell[field::vz][p] };
-              const double meff = cell[field::mass][p];
-              Vec3d f = null;
-              hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
-                  hkp.m_mu, hkp.m_damp_rate, meff,
-                  item.friction, contact_position,
-                  r, v, f, item.moment, vrot,  // particle i
-                  driver.center, driver.get_vel(), driver.vrot // particle j
-                  );
-
-              // === update informations
-              lockAndAdd(mom, compute_moments(contact_position, r, f, item.moment));
-              lockAndAdd(cell[field::fx][p], f.x);
-              lockAndAdd(cell[field::fy][p], f.y);
-              lockAndAdd(cell[field::fz][p], f.z);
-            }
-            else
-            {
-              item.reset();
-            }
-          }
-      };
-
-    /**
-     * @struct stl_mesh_detector
-     * @brief Structure for detecting interactions between particles and STL mesh elements.
-     *
-     * This structure provides methods for detecting interactions between particles and
-     * STL mesh elements such as vertices, edges, and faces. It uses specific detection
-     * functions based on the type of interaction specified.
-     */
-    struct stl_mesh_detector
-    {
-      /**
-       * @brief Detects interactions between particles and STL mesh elements.
-       *
-       * This function detects interactions between a particle and an STL mesh element
-       * based on the specified type. It returns information about the interaction,
-       * including whether an interaction occurred, penetration depth, and contact points.
-       *
-       * @param type The type of interaction to detect:
-       *             - 7: Vertex-Vertex interaction
-       *             - 8: Vertex-Edge interaction
-       *             - 9: Vertex-Face interaction
-       * @param pi Position of the particle.
-       * @param radius Radius of the particle.
-       * @param pj Position of the mesh element (vertex, edge, or face).
-       * @param j Index of the mesh element.
-       * @param shpj Pointer to the shape of the mesh element.
-       * @param oj Orientation of the mesh element (Quaternion).
-       * @return A tuple containing:
-       *         - bool: Whether an interaction occurred.
-       *         - double: Penetration depth (if applicable).
-       *         - Vec3d: Contact point on the particle.
-       *         - Vec3d: Contact point on the mesh element.
-       */
-      ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator() (
-          const uint16_t type,
-          const Vec3d& pi, 
-          const double radius,
-          const Vec3d& pj, 
-          const int j, 
-          const shape* const shpj, 
-          const exanb::Quaternion& oj) const
-      {
+		/**
+		 * @struct stl_mesh_detector
+		 * @brief Structure for detecting interactions between particles and STL mesh elements.
+		 *
+		 * This structure provides methods for detecting interactions between particles and
+		 * STL mesh elements such as vertices, edges, and faces. It uses specific detection
+		 * functions based on the type of interaction specified.
+		 */
+		struct stl_mesh_detector
+		{
+			/**
+			 * @brief Detects interactions between particles and STL mesh elements.
+			 *
+			 * This function detects interactions between a particle and an STL mesh element
+			 * based on the specified type. It returns information about the interaction,
+			 * including whether an interaction occurred, penetration depth, and contact points.
+			 *
+			 * @param type The type of interaction to detect:
+			 *             - 7: Vertex-Vertex interaction
+			 *             - 8: Vertex-Edge interaction
+			 *             - 9: Vertex-Face interaction
+			 * @param pi Position of the particle.
+			 * @param radius Radius of the particle.
+			 * @param pj Position of the mesh element (vertex, edge, or face).
+			 * @param j Index of the mesh element.
+			 * @param shpj Pointer to the shape of the mesh element.
+			 * @param oj Orientation of the mesh element (Quaternion).
+			 * @return A tuple containing:
+			 *         - bool: Whether an interaction occurred.
+			 *         - double: Penetration depth (if applicable).
+			 *         - Vec3d: Contact point on the particle.
+			 *         - Vec3d: Contact point on the mesh element.
+			 */
+			ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator() (
+					const uint16_t type,
+					const Vec3d& pi, 
+					const double radius,
+					const Vec3d& pj, 
+					const int j, 
+					const shape* const shpj, 
+					const exanb::Quaternion& oj) const
+			{
 #define __params__     pi, radius, pj, j, shpj, oj
-        assert( type >= 7 && type <= 12 ); // Asserting valid interaction type range
-        switch (type)
-        {
-          case 7: return exaDEM::detection_vertex_vertex ( __params__ );
-          case 8: return exaDEM::detection_vertex_edge ( __params__ );
-          case 9: return exaDEM::detection_vertex_face ( __params__ );
-        }
+				assert( type >= 7 && type <= 12 ); // Asserting valid interaction type range
+				switch (type)
+				{
+					case 7: return exaDEM::detection_vertex_vertex ( __params__ );
+					case 8: return exaDEM::detection_vertex_edge ( __params__ );
+					case 9: return exaDEM::detection_vertex_face ( __params__ );
+				}
 #undef __params__
-        return std::tuple<bool, double, Vec3d, Vec3d>(); // Default return if type is invalid
-      }
+				return std::tuple<bool, double, Vec3d, Vec3d>(); // Default return if type is invalid
+			}
 
-    };
+		};
 
-    /**
-     * @struct hooke_law_stl
-     * @brief Structure for applying Hooke's law interactions with STL drivers.
-     *
-     * This structure provides methods for applying Hooke's law interactions between
-     * particles and STL drivers (such as cylinders, spheres, surfaces, or mesh faces).
-     */
-    struct hooke_law_stl
-    {
-      const stl_mesh_detector func; ///< STL mesh detector function object.
-      /**
-       * @brief Applies Hooke's law interactions with STL drivers.
-       *
-       * This function applies Hooke's law interactions between particles and STL drivers
-       * within the given cells. It updates the interaction item based on the specified
-       * parameters and uses mutexes for thread safety.
-       *
-       * @tparam TMPLC The type representing the collection of cells in the simulation.
-       * @param item Reference to the interaction item to be updated.
-       * @param cells Reference to the collection of cells containing the particles.
-       * @param drvs Reference to the collection of drivers, which can include cylinders,
-       *             spheres, surfaces, or mesh faces (STL).
-       * @param hkp Reference to the Hooke's law parameters.
-       * @param time Increment simulation time.
-       * @param locker Reference to the mutexes used for thread safety.
-       */
-      template<typename TMPLC>
-        ONIKA_HOST_DEVICE_FUNC inline void operator()( 
-            Interaction& item, 
-            TMPLC& cells, 
-            Drivers& drvs, 
-            const HookeParams& hkp, 
-            const double time, 
-            mutexes& locker) const
-        {
-          const int driver_idx = item.id_j; //
-          auto& driver = std::get<Stl_mesh>(drvs.data(driver_idx)) ;
-          auto& cell = cells[item.cell_i];
+		/**
+		 * @struct hooke_law_stl
+		 * @brief Structure for applying Hooke's law interactions with STL drivers.
+		 *
+		 * This structure provides methods for applying Hooke's law interactions between
+		 * particles and STL drivers (such as cylinders, spheres, surfaces, or mesh faces).
+		 */
+		struct hooke_law_stl
+		{
+			const stl_mesh_detector func; ///< STL mesh detector function object.
+			/**
+			 * @brief Applies Hooke's law interactions with STL drivers.
+			 *
+			 * @tparam TMPLC The type representing the collection of cells in the simulation.
+			 * @param item Reference to the interaction item to be updated.
+			 * @param cells Pointer to the collection of cells containing the particles.
+			 * @param drvs Pointer to the collection of drivers, which can include cylinders,
+			 *             spheres, surfaces, or mesh faces (STL).
+			 * @param hkp Reference to the Hooke's law parameters.
+			 * @param time The simulation time increment.
+			 */
+			template<typename TMPC>
+				ONIKA_HOST_DEVICE_FUNC inline std::tuple<Vec3d, Vec3d, Vec3d> operator()( 
+						Interaction& item, 
+						TMPC* cells, 
+						Drivers* drvs, 
+						const HookeParams& hkp, 
+						const double time) const
+				{
+					const int driver_idx = item.id_j; //
+					auto& driver = std::get<Stl_mesh>(drvs->data(driver_idx)) ;
+					auto& cell = cells[item.cell_i];
 
-          const size_t p_i   = item.p_i;
-          const size_t sub_j = item.sub_j;
+					const size_t p_i   = item.p_i;
+					const size_t sub_j = item.sub_j;
 
-          // === positions
-          const Vec3d r_i       = { cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i] };
-          // === vrot
-          const Vec3d& vrot_i  = cell[field::vrot][p_i];
-          const double radius_i  = cell[field::radius][p_i];
-          const auto& shp_j = driver.shp;
+					// === particle i
+					const Vec3d r_i       = { cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i] };
+					const Vec3d& vrot_i   = cell[field::vrot][p_i];
+					const double radius_i = cell[field::radius][p_i];
+					// === driver j
+					const auto& shp_j         = driver.shp;
+					const Quaternion orient_j = {1.0,0.0,0.0,0.0};
+					auto [contact, dn, n, contact_position] = func(item.type, r_i, radius_i, driver.center, sub_j, &shp_j, orient_j);
+					Vec3d fn                  = {0,0,0};
 
-          const Quaternion orient_j = {1.0,0.0,0.0,0.0};
-          auto [contact, dn, n, contact_position] = func(item.type, r_i, radius_i, driver.center, sub_j, &shp_j, orient_j);
+					if(contact)
+					{
+						auto& mom         = cell[field::mom][p_i];
+						const Vec3d v_i   = { cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i] };
+						const double meff = cell[field::mass][p_i];
+						Vec3d f           = {0,0,0};
+						hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+								hkp.m_mu, hkp.m_damp_rate, meff,
+								item.friction, contact_position,
+								r_i, v_i, f, item.moment, vrot_i,  // particle i
+								driver.center, driver.vel, driver.vrot // particle j
+								);
 
-          if(contact)
-          {
-            constexpr Vec3d null = {0,0,0};
-            auto& mom = cell[field::mom][p_i];
-            const Vec3d v_i = { cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i] };
-            const double meff = cell[field::mass][p_i];
-            Vec3d f = null;
-            hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
-                hkp.m_mu, hkp.m_damp_rate, meff,
-                item.friction, contact_position,
-                r_i, v_i, f, item.moment, vrot_i,  // particle i
-                driver.center, driver.vel, driver.vrot // particle j
-                );
+						// === For analysis
+						fn = f - item.friction;
 
-            // === update informations
-            locker.lock(item.cell_i, p_i);
-            mom += compute_moments(contact_position, r_i, f, item.moment);
-            cell[field::fx][p_i] += f.x;
-            cell[field::fy][p_i] += f.y;
-            cell[field::fz][p_i] += f.z;
-            locker.unlock(item.cell_i, p_i);
-          }
-          else
-          {
-            item.reset();
-          }
-        }
+						// === update informations
+						lockAndAdd(mom, compute_moments(contact_position, r_i, f, item.moment));
+						lockAndAdd(cell[field::fx][p_i], f.x);
+						lockAndAdd(cell[field::fy][p_i], f.y);
+						lockAndAdd(cell[field::fz][p_i], f.z);
+					}
+					else
+					{
+						item.reset();
+					}
 
-      /**
-       * @brief Applies Hooke's law interactions with STL drivers.
-       *
-       * @tparam TMPLC The type representing the collection of cells in the simulation.
-       * @param item Reference to the interaction item to be updated.
-       * @param cells Pointer to the collection of cells containing the particles.
-       * @param drvs Pointer to the collection of drivers, which can include cylinders,
-       *             spheres, surfaces, or mesh faces (STL).
-       * @param hkp Reference to the Hooke's law parameters.
-       * @param time The simulation time increment.
-       */
-      template<typename Cells>
-        ONIKA_HOST_DEVICE_FUNC inline void operator()( 
-            Interaction& item, 
-            Cells* cells, 
-            Drivers* drvs, 
-            const HookeParams& hkp, 
-            const double time) const
-        {
-          const int driver_idx = item.id_j; //
-          auto& driver = std::get<Stl_mesh>(drvs->data(driver_idx)) ;
-          auto& cell = cells[item.cell_i];
-
-          const size_t p_i   = item.p_i;
-          const size_t sub_j = item.sub_j;
-
-          // === particle i
-          const Vec3d r_i       = { cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i] };
-          const Vec3d& vrot_i   = cell[field::vrot][p_i];
-          const double radius_i = cell[field::radius][p_i];
-          // === driver j
-          const auto& shp_j         = driver.shp;
-          const Quaternion orient_j = {1.0,0.0,0.0,0.0};
-          auto [contact, dn, n, contact_position] = func(item.type, r_i, radius_i, driver.center, sub_j, &shp_j, orient_j);
-
-          if(contact)
-          {
-            auto& mom         = cell[field::mom][p_i];
-            const Vec3d v_i   = { cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i] };
-            const double meff = cell[field::mass][p_i];
-            Vec3d f           = {0,0,0};
-            hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
-                hkp.m_mu, hkp.m_damp_rate, meff,
-                item.friction, contact_position,
-                r_i, v_i, f, item.moment, vrot_i,  // particle i
-                driver.center, driver.vel, driver.vrot // particle j
-                );
-
-            // === update informations
-            lockAndAdd(mom, compute_moments(contact_position, r_i, f, item.moment));
-            lockAndAdd(cell[field::fx][p_i], f.x);
-            lockAndAdd(cell[field::fy][p_i], f.y);
-            lockAndAdd(cell[field::fz][p_i], f.z);
-          }
-          else
-          {
-            item.reset();
-          }
-        }
-    };
-  }
+					return {contact_position, fn, item.friction};
+				}
+		};
+	}
 }

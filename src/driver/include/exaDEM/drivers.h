@@ -137,7 +137,6 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC 
       inline Driver* ptr()
       {
-        assert( idx < m_data.size());
         auto* const ptr = onika::cuda::vector_data(m_data);
         return (Driver*)ptr;
       }
