@@ -33,7 +33,7 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
 #include <exaDEM/interaction/classifier_for_all.hpp>
-#include <exaDEM/storage_interaction.hpp>
+#include <exaDEM/interaction/classifier_analyses.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/shape/shape_detection_driver.hpp>
@@ -120,9 +120,9 @@ namespace exaDEM
 
       if(write_interactions)
       {
-        auto stream = create_buffer(classifier);
+        auto stream = create_buffer(*grid, classifier);
         std::string ts = std::to_string(*timestep);
-        write_file(stream, "Interaction" + ts);        
+        write_file(stream, "Interaction_" + ts);        
       }
 		}
 	};

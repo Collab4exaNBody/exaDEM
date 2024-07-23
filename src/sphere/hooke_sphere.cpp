@@ -33,6 +33,7 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
 #include <exaDEM/interaction/classifier_for_all.hpp>
+#include <exaDEM/interaction/classifier_analyses.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/shape/shape_detection_driver.hpp>
@@ -114,6 +115,13 @@ namespace exaDEM
       for(int type = 7 ; type <= 9 ; type++)
       {
         run_contact_law(parallel_execution_context(), type, classifier, stlm, write_interactions, cells, drvs, hkp_drvs, time);  
+      }
+
+      if(write_interactions)
+      {
+        auto stream = create_buffer(*grid, classifier);
+        std::string ts = std::to_string(*timestep);
+        write_file(stream, "Interaction_" + ts);        
       }
     }
   };
