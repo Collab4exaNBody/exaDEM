@@ -17,7 +17,6 @@ includes:
   - config_move_particles.msp
   - config_numerical_schemes.msp
   - config_globals.msp
-  - config_analysis.msp
   - config_iteration_log.msp
   - config_iteration_dump.msp
   - config_end_iteration.msp
@@ -111,7 +110,6 @@ simulation:
     - hw_device_init   # provides MPI_COMM_WORLD as a default communicator
     - make_empty_grid
     - global
-    - analysis
     - preinit_rcut_max
     - domain
     - init_prolog

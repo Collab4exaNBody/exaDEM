@@ -8,17 +8,22 @@ print('Hello, this is a small script offering basic analyses of interactions. Th
 print(' - plot the number of interactions per types in function of the timestep (types.pdf)')
 print(' - plot the number of interactions in function of the timestep (count.pdf)')
 
+## variable
+#dt = float(1)
+
 ntypes = int(13)
 basename = 'Interaction_'
 directories = list(os.walk('.'))[0][1]
+print(
+
+## Get files
 dirs = [x for x in directories if 'Interaction' in x]
 ntimesteps = len(dirs)
 print("The number of files is:", ntimesteps)
-
+	
 ## Get timestep
 timesteps = [int(x.removeprefix(basename)) for x in dirs]
 timesteps.sort()
-print(timesteps)
 xaxis = range(0, len(timesteps)) 
 
 
@@ -39,9 +44,7 @@ for i in xaxis:
 	for filename in files:
 		file_path = dirname + "/" + filename
 		file_size = os.stat(file_path).st_size
-		if(file_size == 0):
-			print("skip file (no data):", file_path)
-		else:
+		if(file_size > 0):
 			tmp = pd.read_csv(file_path, sep=',',header=None)
 			data = pd.DataFrame(tmp)
 			ctype = data[4]
@@ -50,9 +53,9 @@ for i in xaxis:
 				if(count.get(t)):				
 					types[t, i] = count.get(t)
 					check_type[t]=1
+#		else:
+#			print("skip file (no data):", file_path)
 		
-print(types)
-
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 from matplotlib.ticker import FormatStrFormatter
@@ -86,12 +89,13 @@ for t in range(0, ntypes):
 		yplot = types[t,:]
 		ax.plot(xplot,yplot, label=labels[t])
 	
-#plt.show()
 plt.grid()
 plt.legend()
 fig.savefig("types.pdf")
+print("write type.pdf")
 
 plt.clf()
+fig, ax = plt.subplots()
 
 ### Plot the number of interactions
 for t in range(0, ntypes):
@@ -99,7 +103,8 @@ for t in range(0, ntypes):
 		yplot = yplot + types[t,:]
 
 ax.set_ylabel('#interactions')
+ax.set_xlabel('timesteps')
 ax.plot(xplot,yplot)
 plt.grid()
-plt.legend()
 fig.savefig("count.pdf")
+print("write count.pdf")
