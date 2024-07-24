@@ -14,7 +14,6 @@ print(' - plot the number of interactions in function of the timestep (count.pdf
 ntypes = int(13)
 basename = 'Interaction_'
 directories = list(os.walk('.'))[0][1]
-print(
 
 ## Get files
 dirs = [x for x in directories if 'Interaction' in x]

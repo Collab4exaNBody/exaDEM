@@ -67,7 +67,7 @@ namespace exaDEM
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     std::string directory = "ExaDEMOutputDir";
-    std::string subdirectory = directory + "/ExaDEMAnalysis";
+    std::string subdirectory = directory + "/ExaDEMAnalyses";
     std::string subsubdirectory = subdirectory + "/" + filename;
     if(rank == 0)
     {
