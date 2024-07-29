@@ -18,7 +18,8 @@ input_data:
      var: 0.01
      mean: [0.0,0.0,0.0]
   - set_rand_vrot_arot
-  - set_quaternion
+  - set_quaternion:
+     random: true
   - inertia_from_shape
 
 setup_drivers:
