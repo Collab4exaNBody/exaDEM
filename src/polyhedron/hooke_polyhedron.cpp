@@ -74,7 +74,7 @@ namespace exaDEM
 
       /** Analysis */
       const long frequency = *analysis_interaction_dump_frequency;
-      bool write_interactions = ( (*timestep) % frequency == 0);
+      bool write_interactions = ( frequency > 0 && (*timestep) % frequency == 0);
 
       /** Get driver and particles data */
       Drivers* drvs =  drivers.get_pointer();
