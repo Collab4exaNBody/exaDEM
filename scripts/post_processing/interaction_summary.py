@@ -18,7 +18,7 @@ directories = list(os.walk('.'))[0][1]
 ## Get files
 dirs = [x for x in directories if 'Interaction' in x]
 ntimesteps = len(dirs)
-print("The number of files is:", ntimesteps)
+print("The number of directories is:", ntimesteps)
 	
 ## Get timestep
 timesteps = [int(x.removeprefix(basename)) for x in dirs]

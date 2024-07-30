@@ -32,10 +32,12 @@ namespace exaDEM
     VectorT<Vec3d>  cp;
     VectorT<Vec3d>  fn;
     VectorT<Vec3d>  ft;
+
     void resize (const int size)
     {
       if( size != 0 ) 
       {
+
         dn.resize(size);
         cp.resize(size);
         fn.resize(size);

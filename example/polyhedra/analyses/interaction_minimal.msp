@@ -8,9 +8,8 @@ input_data:
       structure: SC
       types: [ 0 ]
       size: [ 1.0 , 1.0 , 1.0 ]
-      repeats: [ 128 , 8 , 128 ]
+      repeats: [ 5 , 5 , 5 ]
       enlarge_bounds: 0.0 m
-      region: CYLINDER
   - read_shape_file:
      filename: shapes.shp
   - radius_from_shape
@@ -26,27 +25,17 @@ input_data:
 setup_drivers:
   - add_cylinder:
      id: 0
-     center: [64, 4, 64]
+     center: [2.5, 2.5, 2.5]
      axis: [1, 0, 1]
-     radius: 64
+     radius: 4
      angular_velocity: [0,0,0]
 
 compute_force:
   - gravity_force
   - hooke_polyhedron:
      symetric: true
-     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
-     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.4, damp_rate: 0.999} 
-
-
-particle_regions:
-  - CYLINDER:
-     quadric:
-        shape: cyly
-        transform:
-          - scale: [63.5,4,63.5] 
-          - translate: [64, 1, 64]
-
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
+     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
 
 domain:
   cell_size: 2.5 m
@@ -58,9 +47,9 @@ write_vtklegacy:
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 200000
-  simulation_log_frequency: 10000
-  simulation_paraview_frequency: 10000
+  simulation_end_iteration: 20000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: -1
   analysis_interaction_dump_frequency: 5000
   dt: 0.00005 s 
   rcut_inc: 0.1 m

@@ -253,6 +253,7 @@ namespace exaDEM
             item.reset();
             dn = 0;
           }
+
           return {dn, contact_position, fn, item.friction};
         }
       const polyhedron_detector detect;
