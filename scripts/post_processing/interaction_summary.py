@@ -50,7 +50,7 @@ for i in xaxis:
 			count = Counter(ctype)
 			for t in range(0, ntypes):
 				if(count.get(t)):				
-					types[t, i] = count.get(t)
+					types[t, i] = types[t, i] + count.get(t)
 					check_type[t]=1
 #		else:
 #			print("skip file (no data):", file_path)
