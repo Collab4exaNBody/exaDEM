@@ -33,6 +33,7 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
 #include <exaDEM/interaction/classifier_for_all.hpp>
+#include <exaDEM/interaction/classifier_analyses.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/shape/shape_detection_driver.hpp>
@@ -55,6 +56,9 @@ namespace exaDEM
     ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
     ADD_SLOT( Classifier  , ic                , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
     ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
+    // analysis
+    ADD_SLOT( long        , timestep          , INPUT , REQUIRED );
+    ADD_SLOT( long        , analysis_interaction_dump_frequency , INPUT , REQUIRED, DocString{"Write an interaction dump file"});
 
 
     public:
@@ -68,8 +72,15 @@ namespace exaDEM
     {
       if( grid->number_of_cells() == 0 ) { return; }
 
+      /** Analysis */
+      const long frequency = *analysis_interaction_dump_frequency;
+      bool write_interactions = ( (*timestep) % frequency == 0);
+
+      /** Get driver and particles data */
       Drivers* drvs =  drivers.get_pointer();
       const auto cells = grid->cells();
+
+      /** Get Hooke Parameters and Shape */
       const HookeParams hkp = *config;
       HookeParams hkp_drvs{};
 			const shape* const shps = shapes_collection->data();
@@ -82,6 +93,7 @@ namespace exaDEM
       const double time = *dt;
       auto& classifier = *ic;
 
+      /** Hooke fexaDEM/orce kernels */
       hooke_law_driver<Cylinder> cyli;
       hooke_law_driver<Surface>  surf;
       hooke_law_driver<Ball>     ball;
@@ -96,15 +108,22 @@ namespace exaDEM
 			hooke_law poly;
 			for(size_t type = 0 ; type <= 3 ; type++)
 			{
-				run_contact_law(parallel_execution_context(), type, classifier, poly, cells, hkp, shps, time);
+				run_contact_law(parallel_execution_context(), type, classifier, poly, write_interactions, cells, hkp, shps, time);
 			}
-			run_contact_law(parallel_execution_context(), 4, classifier, cyli, cells, drvs->ptr<Cylinder>(), hkp_drvs, shps, time);  
-			run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs->ptr<Surface>(), hkp_drvs, shps, time);  
-			run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs->ptr<Ball>(), hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 4, classifier, cyli, write_interactions, cells, drvs->ptr<Cylinder>(), hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 5, classifier, surf, write_interactions, cells, drvs->ptr<Surface>(), hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 6, classifier, ball, write_interactions, cells, drvs->ptr<Ball>(), hkp_drvs, shps, time);  
 			for(int type = 7 ; type <= 12 ; type++)
 			{
-				run_contact_law(parallel_execution_context(), type, classifier, stlm, cells, drvs, hkp_drvs, shps, time);  
+				run_contact_law(parallel_execution_context(), type, classifier, stlm, write_interactions, cells, drvs, hkp_drvs, shps, time);  
 			}
+
+      if(write_interactions)
+      {
+        auto stream = create_buffer(*grid, classifier);
+        std::string ts = std::to_string(*timestep);
+        write_file(stream, "Interaction_" + ts);        
+      }
 		}
 	};
 

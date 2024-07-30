@@ -24,6 +24,26 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC inline Vec3d& friction(const uint64_t idx) { return m_data[idx].friction; }
   };
 
+
+  struct analysis_buffers
+  {
+    template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
+    VectorT<double> dn;
+    VectorT<Vec3d>  cp;
+    VectorT<Vec3d>  fn;
+    VectorT<Vec3d>  ft;
+    void resize (const int size)
+    {
+      if( size != 0 ) 
+      {
+        dn.resize(size);
+        cp.resize(size);
+        fn.resize(size);
+        ft.resize(size);
+      }
+    }
+  };
+
   /**
    * @brief Classifier for managing interactions categorized into different types.
    *
@@ -35,18 +55,19 @@ namespace exaDEM
     static constexpr int types = 13;
     template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
     std::vector<VectorT<exaDEM::Interaction>> waves; ///< Storage for interactions categorized by type.
+    std::vector<analysis_buffers> buffers; ///< Storage for analysis. Empty if there is no analysis
 
     /**
      * @brief Default constructor.
      *
      * Initializes the waves vector to hold interactions for each type.
      */
-    Classifier() { waves.resize(types); }
+    Classifier() { waves.resize(types); buffers.resize(types) ; }
 
     /**
      * @brief Initializes the waves vector to hold interactions for each type.
      */
-    void initialize() { waves.resize(types); }
+    void initialize() { waves.resize(types); buffers.resize(types) ; }
 
 
     /**
@@ -79,6 +100,19 @@ namespace exaDEM
       const unsigned int  data_size = onika::cuda::vector_size( waves[id]);
       exaDEM::Interaction* const data_ptr = onika::cuda::vector_data( waves[id] );
       return {data_ptr, data_size};
+    }
+
+    std::tuple<double*, Vec3d*,Vec3d*,Vec3d*> buffer_p(int id)
+    {
+      auto& analysis = buffers[id]; 
+			// fit size if needed
+      const int size = onika::cuda::vector_size( waves[id] );
+      analysis.resize(size);
+      double* const dnp = onika::cuda::vector_data( analysis.dn ); 
+      Vec3d*  const cpp = onika::cuda::vector_data( analysis.cp ); 
+      Vec3d*  const fnp = onika::cuda::vector_data( analysis.fn ); 
+      Vec3d*  const ftp = onika::cuda::vector_data( analysis.ft );
+      return {dnp, cpp, fnp, ftp}; 
     }
 
     /**

@@ -27,7 +27,7 @@ write_paraview_generic:
 #  fields: ["vx","vy","vz","id","radius"]
 
 dump_data_paraview:
-  - timestep_file: "paraview/output_%010d"
+  - timestep_file: "ExaDEMOutputDir/paraview/output_%010d"
   - message: { mesg: "Write paraview " , endl: false }
   - print_dump_file:
       rebind: { mesg: filename }

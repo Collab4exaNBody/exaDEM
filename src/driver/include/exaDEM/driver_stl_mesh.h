@@ -145,7 +145,6 @@ namespace exaDEM
 			item.id_i = id;
 			item.id_j = drv_id;
 			item.sub_i = 0; // not used
-			assert ( cell_a < mesh.grid_indexes.size() );
 
 			auto& list = grid_indexes[cell];
 			const size_t stl_nv = list.vertices.size();
