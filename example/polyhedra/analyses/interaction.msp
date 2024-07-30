@@ -47,6 +47,7 @@ particle_regions:
           - scale: [63.5,4,63.5] 
           - translate: [64, 1, 64]
 
+
 domain:
   cell_size: 2.5 m
   periodic: [false,true,false]

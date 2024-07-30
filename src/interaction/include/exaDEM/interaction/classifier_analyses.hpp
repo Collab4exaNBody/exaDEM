@@ -34,14 +34,13 @@ namespace exaDEM
       for( int i = 0 ; i < ntypes ; i++ )  
       {
         auto [i_ptr, size] = ic.get_info(i);
-        auto [co_ptr, fn_ptr, ft_ptr] = ic.buffer_p(i); 
+        auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.buffer_p(i); 
 
         for(size_t idx = 0 ; idx < size ; idx++)
         {
-          Vec3d fn = fn_ptr[idx];
-          Vec3d ft = ft_ptr[idx];
+          double dn = dn_ptr[idx];
           /** filter empty interactions */
-          if(fn != Vec3d{0,0,0} || ft != Vec3d{0,0,0})
+          if(dn < 0)
           {
             auto& I = i_ptr[idx];
             /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
@@ -50,9 +49,10 @@ namespace exaDEM
               stream << I.id_i  << "," << I.id_j << ","; 
               stream << I.sub_i << "," << I.sub_j << ","; 
               stream << I.type << ","; 
-              stream << co_ptr[idx] << ","; 
-              stream << fn << ","; 
-              stream << ft << std::endl;
+              stream << dn << ",";
+              stream << cp_ptr[idx] << ","; 
+              stream << fn_ptr[idx] << ","; 
+              stream << ft_ptr[idx] << std::endl;
             }
           }
         }

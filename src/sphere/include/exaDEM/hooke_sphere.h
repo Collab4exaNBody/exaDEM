@@ -138,7 +138,7 @@ namespace exaDEM
          */
 				template<typename TMPC>
 					ONIKA_HOST_DEVICE_FUNC 
-					inline std::tuple<Vec3d, Vec3d, Vec3d> operator()(
+					inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
 							Interaction& item, 
 							TMPC* cells, 
 							const HookeParams& hkp, 
@@ -205,8 +205,9 @@ namespace exaDEM
 						else
 						{
 							item.reset();
+              dn = 0;
 						}
-						return {contact_position, fn, item.friction};
+						return {dn, contact_position, fn, item.friction};
 					}
 			};
 
@@ -236,7 +237,7 @@ namespace exaDEM
 				 */
 				template<typename TMPLC>
 					ONIKA_HOST_DEVICE_FUNC 
-					inline std::tuple<Vec3d, Vec3d, Vec3d> operator()(
+					inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
 							Interaction& item, 
 							TMPLC* cells, 
 							TMPLD* drvs, 
@@ -283,8 +284,9 @@ namespace exaDEM
 						else
 						{
 							item.reset();
+              dn = 0;
 						}
-						return {contact_position, fn, item.friction};
+						return {dn, contact_position, fn, item.friction};
 					}
 			};
 
@@ -366,7 +368,7 @@ namespace exaDEM
 			 * @param time The simulation time increment.
 			 */
 			template<typename TMPC>
-				ONIKA_HOST_DEVICE_FUNC inline std::tuple<Vec3d, Vec3d, Vec3d> operator()( 
+				ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()( 
 						Interaction& item, 
 						TMPC* cells, 
 						Drivers* drvs, 
@@ -415,9 +417,9 @@ namespace exaDEM
 					else
 					{
 						item.reset();
+            dn = 0;
 					}
-
-					return {contact_position, fn, item.friction};
+					return {dn, contact_position, fn, item.friction};
 				}
 		};
 	}
