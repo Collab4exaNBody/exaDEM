@@ -28,14 +28,16 @@ namespace exaDEM
   struct analysis_buffers
   {
     template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
-    VectorT<Vec3d> co;
-    VectorT<Vec3d> fn;
-    VectorT<Vec3d> ft;
+    VectorT<double> dn;
+    VectorT<Vec3d>  cp;
+    VectorT<Vec3d>  fn;
+    VectorT<Vec3d>  ft;
     void resize (const int size)
     {
       if( size != 0 ) 
       {
-        co.resize(size);
+        dn.resize(size);
+        cp.resize(size);
         fn.resize(size);
         ft.resize(size);
       }
@@ -100,16 +102,17 @@ namespace exaDEM
       return {data_ptr, data_size};
     }
 
-    std::tuple<Vec3d*,Vec3d*,Vec3d*> buffer_p(int id)
+    std::tuple<double*, Vec3d*,Vec3d*,Vec3d*> buffer_p(int id)
     {
       auto& analysis = buffers[id]; 
 			// fit size if needed
       const int size = onika::cuda::vector_size( waves[id] );
       analysis.resize(size);
-      Vec3d* const cop = onika::cuda::vector_data( analysis.co ); 
-      Vec3d* const fnp = onika::cuda::vector_data( analysis.fn ); 
-      Vec3d* const ftp = onika::cuda::vector_data( analysis.ft );
-      return {cop, fnp, ftp}; 
+      double* const dnp = onika::cuda::vector_data( analysis.dn ); 
+      Vec3d*  const cpp = onika::cuda::vector_data( analysis.cp ); 
+      Vec3d*  const fnp = onika::cuda::vector_data( analysis.fn ); 
+      Vec3d*  const ftp = onika::cuda::vector_data( analysis.ft );
+      return {dnp, cpp, fnp, ftp}; 
     }
 
     /**

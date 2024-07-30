@@ -31,21 +31,24 @@ namespace exaDEM
 
   struct AnalysisDataPacker
   {
-    Vec3d* cop;
-    Vec3d* fnp;
-    Vec3d* ftp;
+    double* dnp;
+    Vec3d*  cpp;
+    Vec3d*  fnp;
+    Vec3d*  ftp;
 
     AnalysisDataPacker(Classifier& ic, int type)
     {
-      auto [_cop, _fnp, _ftp] = ic.buffer_p(type);
-      cop = _cop;
+      auto [_dnp, _cpp, _fnp, _ftp] = ic.buffer_p(type);
+      dnp = _dnp;
+      cpp = _cpp;
       fnp = _fnp;
       ftp = _ftp;
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline void operator() (const uint64_t idx, const Vec3d& contact, const Vec3d& fn, const Vec3d& ft) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator() (const uint64_t idx, const double dn, const Vec3d& contact, const Vec3d& fn, const Vec3d& ft) const
     { 
-      cop[idx] = contact;
+      dnp[idx] = dn;
+      cpp[idx] = contact;
       fnp[idx] = fn;
       ftp[idx] = ft;
     }
@@ -98,8 +101,8 @@ namespace exaDEM
         ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const
         {
           exaDEM::Interaction& item = data(i);
-          const auto [pos, fn, ft] = kernel(item, std::get<Is>(params)...); 
-          packer(i, pos, fn, ft); // packer is used to store interaction data 
+          const auto [dn, pos, fn, ft] = kernel(item, std::get<Is>(params)...); 
+          packer(i, dn, pos, fn, ft); // packer is used to store interaction data 
         }
 
 

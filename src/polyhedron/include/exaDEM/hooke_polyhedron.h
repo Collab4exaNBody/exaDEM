@@ -137,7 +137,7 @@ namespace exaDEM
          * was detected, the distance between the polyhedrons, norm and contact point.
          *
          * @param type Type of interaction to detect:
-         *             - 0: Vertex-Vertex interaction
+         *             - 0; Vertex-Vertex interaction
          *             - 1: Vertex-Edge interaction
          *             - 2: Vertex-Face interaction
          *             - 3: Edge-Edge interaction
@@ -180,7 +180,7 @@ namespace exaDEM
        * @param dt Time increment for the simulation step.
        */
       template<typename TMPLC>
-        ONIKA_HOST_DEVICE_FUNC inline std::tuple<Vec3d, Vec3d, Vec3d> operator()(
+        ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
             Interaction& item, 
             TMPLC* const cells, 
             const HookeParams& hkp, 
@@ -251,8 +251,9 @@ namespace exaDEM
           else
           {
             item.reset();
+            dn = 0;
           }
-          return {contact_position, fn, item.friction};
+          return {dn, contact_position, fn, item.friction};
         }
       const polyhedron_detector detect;
     };
@@ -281,7 +282,7 @@ namespace exaDEM
          * @param dt Time increment for the simulation step.
          */
         template<typename TMPLC>
-          ONIKA_HOST_DEVICE_FUNC inline std::tuple<Vec3d, Vec3d, Vec3d> operator()(
+          ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
               Interaction& item, 
               TMPLC* cells, 
               TMPLD* const drvs, 
@@ -334,8 +335,9 @@ namespace exaDEM
             else
             {
               item.reset();
+              dn = 0;
             }
-            return {contact_position, fn, item.friction};
+            return {dn, contact_position, fn, item.friction};
           }
       };
 
@@ -419,7 +421,7 @@ namespace exaDEM
        * @param dt Time increment for the simulation step.
        */
       template<typename TMPLC>
-        ONIKA_HOST_DEVICE_FUNC inline std::tuple<Vec3d, Vec3d, Vec3d> operator()( 
+        ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()( 
             Interaction& item, 
             TMPLC* cells, 
             Drivers* const drvs, 
@@ -474,8 +476,9 @@ namespace exaDEM
           else
           {
             item.reset();
+            dn = 0;
           }
-          return {contact_position, fn, item.friction};
+          return {dn, contact_position, fn, item.friction};
         }
       const stl_mesh_detector func;
     };
