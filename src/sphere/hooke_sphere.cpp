@@ -62,6 +62,7 @@ namespace exaDEM
     ADD_SLOT( Classifier  , ic                , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
     // analysis
     ADD_SLOT( long        , timestep          , INPUT , REQUIRED );
+    ADD_SLOT( bool        , save_interactions , INPUT , false           , DocString{"Store interactions into the classifier"});
     ADD_SLOT( long        , analysis_interaction_dump_frequency , INPUT , REQUIRED, DocString{"Write an interaction dump file"});
 
 
@@ -78,7 +79,7 @@ namespace exaDEM
 
       /** Analysis */
       const long frequency = *analysis_interaction_dump_frequency;
-      bool write_interactions = ( frequency > 0 && (*timestep) % frequency == 0);
+      bool write_interactions = *save_interactions || ( frequency > 0 && (*timestep) % frequency == 0);
 
       /** Get Driver */
       Drivers* drvs =  drivers.get_pointer();
