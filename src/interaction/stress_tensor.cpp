@@ -56,14 +56,13 @@ namespace exaDEM
     ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
     ADD_SLOT( Classifier                  , ic   , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
     ADD_SLOT( double                      , volume , INPUT, REQUIRED , DocString{"Volume of the domain simulation. >0 "} );
-    ADD_SLOT( bool                        , write_tensors , false , DocString{"Write an Output file containing stress tensors. Not Implemented"} );
     ADD_SLOT( Mat3d                       , stress_tensor , OUTPUT , DocString{"Write an Output file containing stress tensors."} );
 
     public:
 
     inline std::string documentation() const override final
     {
-      return R"EOF( This operator computes the total stress tensor and the stress tensor for each particles (write_tensors to activate it). )EOF";
+      return R"EOF( This operator computes the total stress tensor and the stress tensor for each particles. )EOF";
     }
 
     inline void execute () override final

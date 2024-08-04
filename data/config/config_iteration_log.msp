@@ -25,3 +25,8 @@ trigger_dump_thermo:
   body:
     - nth_timestep: { first: false }
 
+# define when the stress tensor is dumped
+trigger_write_stress_tensor:
+  rebind: { freq: analysis_dump_stress_tensor_frequency , result: trigger_write_stress_tensor }
+  body:
+    - nth_timestep: { first: true }

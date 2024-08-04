@@ -58,9 +58,8 @@ namespace exaDEM
     ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
     // analysis
     ADD_SLOT( long        , timestep          , INPUT , REQUIRED );
-    ADD_SLOT( bool        , save_interactions , INPUT , false           , DocString{"Store interactions into the classifier"});
     ADD_SLOT( long        , analysis_interaction_dump_frequency , INPUT , REQUIRED, DocString{"Write an interaction dump file"});
-
+    ADD_SLOT( long        , analysis_dump_stress_tensor_frequency, INPUT, REQUIRED, DocString{"Compute avg Stress Tensor."});
 
     public:
 
@@ -74,8 +73,13 @@ namespace exaDEM
       if( grid->number_of_cells() == 0 ) { return; }
 
       /** Analysis */
-      const long frequency = *analysis_interaction_dump_frequency;
-      bool write_interactions = *save_interactions || ( frequency > 0 && (*timestep) % frequency == 0);
+      const long frequency_interaction = *analysis_interaction_dump_frequency;
+      bool write_interactions = ( frequency_interaction > 0 && (*timestep) % frequency_interaction == 0 );
+      
+      const long frequency_stress_tensor = *analysis_dump_stress_tensor_frequency;
+      bool compute_stress_tensor = ( frequency_stress_tensor > 0 && (*timestep) % frequency_stress_tensor == 0);
+
+      bool store_interactions = write_interactions || compute_stress_tensor;
 
       /** Get driver and particles data */
       Drivers* drvs =  drivers.get_pointer();
@@ -109,14 +113,14 @@ namespace exaDEM
 			hooke_law poly;
 			for(size_t type = 0 ; type <= 3 ; type++)
 			{
-				run_contact_law(parallel_execution_context(), type, classifier, poly, write_interactions, cells, hkp, shps, time);
+				run_contact_law(parallel_execution_context(), type, classifier, poly, store_interactions, cells, hkp, shps, time);
 			}
-			run_contact_law(parallel_execution_context(), 4, classifier, cyli, write_interactions, cells, drvs->ptr<Cylinder>(), hkp_drvs, shps, time);  
-			run_contact_law(parallel_execution_context(), 5, classifier, surf, write_interactions, cells, drvs->ptr<Surface>(), hkp_drvs, shps, time);  
-			run_contact_law(parallel_execution_context(), 6, classifier, ball, write_interactions, cells, drvs->ptr<Ball>(), hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 4, classifier, cyli, store_interactions, cells, drvs->ptr<Cylinder>(), hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 5, classifier, surf, store_interactions, cells, drvs->ptr<Surface>(), hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 6, classifier, ball, store_interactions, cells, drvs->ptr<Ball>(), hkp_drvs, shps, time);  
 			for(int type = 7 ; type <= 12 ; type++)
 			{
-				run_contact_law(parallel_execution_context(), type, classifier, stlm, write_interactions, cells, drvs, hkp_drvs, shps, time);  
+				run_contact_law(parallel_execution_context(), type, classifier, stlm, store_interactions, cells, drvs, hkp_drvs, shps, time);  
 			}
 
       if(write_interactions)
