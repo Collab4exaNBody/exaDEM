@@ -78,8 +78,8 @@ namespace exaDEM
         }
         double t = (*dt) * (*timestep);
         file << t << " " 
-            << stress.m11 <<  " " << stress.m12 << " " << stress.m13 
-            << stress.m21 <<  " " << stress.m22 << " " << stress.m23 
+            << stress.m11 <<  " " << stress.m12 << " " << stress.m13 << " " 
+            << stress.m21 <<  " " << stress.m22 << " " << stress.m23 << " "
             << stress.m31 <<  " " << stress.m32 << " " << stress.m33 << std::endl;
       }
 		}

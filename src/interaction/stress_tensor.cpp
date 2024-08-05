@@ -85,6 +85,7 @@ namespace exaDEM
 			}
 
 			size_t types = cf.number_of_waves();
+      bool sym = true;
 
 # pragma omp parallel
 			{
@@ -101,10 +102,19 @@ namespace exaDEM
 						auto& cell     = cells[I.cell_i];
 						Vec3d fij      = fnp[i] + ftp[i];
 						Vec3d pos_i    = { cell[ field::rx ][I.p_i], cell[ field::ry ][I.p_i], cell[ field::rz ][I.p_i] };
-						Vec3d cij      = pos_i - cpp[i];
+						Vec3d cij      = cpp[i] - pos_i;
+						TLS += exanb::tensor( fij, cij );
+
+            if(I.type <= 3 && sym == true) // polyhedron - polyhedron || sphere - sphere
+            {
+						  auto& cellj    = cells[I.cell_j];
+              Vec3d fji      = -fij;
+              Vec3d pos_j    = { cellj[ field::rx ][I.p_j], cellj[ field::ry ][I.p_j], cellj[ field::rz ][I.p_j] };
+              Vec3d cji      = cpp[i] - pos_j;
+						  TLS += exanb::tensor( fji, cji );
+            }
 
             // compute tensor
-						TLS += exanb::tensor( fij, cij );
 					}
 				}
 #pragma omp critical

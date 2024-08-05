@@ -41,7 +41,7 @@ dump_stress_tensor_if_triggered:
     - domain_volume
     - stress_tensor
     - write_stress_tensor
-    - message: { mesg: "Update Avg Stress" , endl: true }
+#    - message: { mesg: "Update Avg Stress" , endl: true }
 
 ## This operator is defined in spheres or polyhedra . msp
 dump_data_particles: nop
