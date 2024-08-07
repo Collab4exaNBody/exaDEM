@@ -8,14 +8,14 @@ input_data:
       structure: SC
       types: [ 0 ]
       size: [ 1.0 , 1.0 , 1.0 ]
-      repeats: [ 5 , 5 , 5 ]
+      repeats: [ 27 , 27 , 27 ]
       enlarge_bounds: 0.0 m
   - read_shape_file:
      filename: shapes.shp
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:
-     var: 0.01
+     var: 0.1
      mean: [0.0,0.0,0.0]
   - set_rand_vrot_arot
   - set_quaternion:
@@ -23,12 +23,11 @@ input_data:
   - inertia_from_shape
 
 setup_drivers:
-  - add_cylinder:
+  - add_stl_mesh:
      id: 0
-     center: [2.5, 2.5, 2.5]
-     axis: [1, 0, 1]
-     radius: 4
-     angular_velocity: [0,0,0]
+     filename: box_avg_stress.stl
+     minskowski: 0.01
+  - update_grid_stl_mesh
 
 compute_force:
   - gravity_force
@@ -39,7 +38,10 @@ compute_force:
 
 domain:
   cell_size: 2.5 m
-  periodic: [false,true,false]
+  periodic: [false,false,false]
+
+compute_volume:
+  - volume: 21952 # 28x28x28 
 
 write_vtklegacy:
   ascii: true
@@ -47,9 +49,10 @@ write_vtklegacy:
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 200000
+  simulation_end_iteration: 150000
   simulation_log_frequency: 1000
-  simulation_paraview_frequency: -1
-  analysis_dump_stress_tensor_frequency: 100
+  simulation_paraview_frequency: 10000
+  analysis_dump_stress_tensor_frequency: 1000
+  enable_stl_mesh: true
   dt: 0.00005 s 
   rcut_inc: 0.1 m
