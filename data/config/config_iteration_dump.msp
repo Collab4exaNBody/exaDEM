@@ -35,11 +35,18 @@ dump_data_paraview:
         - message: { endl: true }
   - write_paraview_generic
 
+
+compute_volume:
+  - domain_volume
+
+compute_stress_tensor:
+  - stress_tensor
+
 dump_stress_tensor_if_triggered:
   condition: trigger_write_stress_tensor
   body:
-    - domain_volume
-    - stress_tensor
+    - compute_volume
+    - compute_stress_tensor
     - write_stress_tensor
 #    - message: { mesg: "Update Avg Stress" , endl: true }
 

@@ -40,8 +40,12 @@ domain:
   cell_size: 2.5 m
   periodic: [false,false,false]
 
-compute_volume:
-  - volume: 21952 # 28x28x28 
+
+compute_volume: nop
+
+compute_stress_tensor:
+  - stress_tensor:
+     volume: 21952
 
 write_vtklegacy:
   ascii: true
