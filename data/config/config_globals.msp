@@ -22,6 +22,7 @@ global:
   simulation_generator_frequency: -1
   trigger_generator: false
   analysis_interaction_dump_frequency: -1 
+  analysis_dump_stress_tensor_frequency: -1
 
 # default grid variant we use
 grid_flavor: grid_flavor_full

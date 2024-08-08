@@ -25,9 +25,11 @@ end_iteration:
   - trigger_print_log
   - trigger_dump_thermo
   - trigger_thermo_state
+  - trigger_write_stress_tensor
   - thermo_state_if_triggered
   - dump_data_if_triggered
   - dump_paraview_if_triggered
   - print_log_if_triggered
   - dump_thermo_if_triggered
+  - dump_stress_tensor_if_triggered
 
