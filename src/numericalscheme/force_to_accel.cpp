@@ -27,6 +27,7 @@ under the License.
 #include <exanb/compute/compute_cell_particles.h>
 #include <memory>
 #include <exaDEM/force_to_accel.h>
+#include <exaDEM/cell_list_wrapper.hpp>
 
 namespace exaDEM
 {
@@ -41,7 +42,8 @@ using namespace exanb;
     using ComputeFields = FieldSet< field::_mass, field::_fx ,field::_fy ,field::_fz >;
     static constexpr ComputeFields compute_field_set {};
 
-    ADD_SLOT( GridT  , grid     , INPUT_OUTPUT );
+    ADD_SLOT( GridT           , grid      , INPUT_OUTPUT );
+    ADD_SLOT( CellListWrapper , cell_list , INPUT , DocString{"list of non empty cells within the current grid"});
 
   public:
 
@@ -54,8 +56,9 @@ using namespace exanb;
 
 		inline void execute () override final
 		{
+      auto [cell_ptr, cell_size] = cell_list->info();
 			ForceToAccelFunctor func {};
-			compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+			compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() , cell_ptr, cell_size );
 		}
 	};
 

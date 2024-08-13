@@ -26,6 +26,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <memory>
 #include <exanb/compute/compute_cell_particles.h>
+#include <exaDEM/cell_list_wrapper.hpp>
 #include <exaDEM/quadratic_force.h>
 
 namespace exaDEM
@@ -41,9 +42,10 @@ namespace exaDEM
 			using ComputeFields = FieldSet< field::_fx,field::_fy, field::_fz, field::_vx , field::_vy , field::_vz >;
 			static constexpr ComputeFields compute_field_set {};
 
-			ADD_SLOT( GridT  , grid     , INPUT_OUTPUT );
-			ADD_SLOT( double  , cx  , INPUT , REQUIRED , DocString{"aerodynamic coefficient."});
-			ADD_SLOT( double  , mu  , INPUT , REQUIRED , DocString{"drag coefficient. air = 0.000015"});
+			ADD_SLOT( GridT           , grid      , INPUT_OUTPUT );
+			ADD_SLOT( double          , cx        , INPUT , REQUIRED , DocString{"aerodynamic coefficient."});
+			ADD_SLOT( double          , mu        , INPUT , REQUIRED , DocString{"drag coefficient. air = 0.000015"});
+      ADD_SLOT( CellListWrapper , cell_list , INPUT, DocString{"list of non empty cells within the current grid"});
 
 			public:
 
@@ -56,8 +58,9 @@ namespace exaDEM
 
 			inline void execute () override final
 			{
+        auto [cell_ptr, cell_size] = cell_list->info();
 				QuadraticForceFunctor func { (*cx) * (*mu)};
-				compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+				compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context(), cell_ptr, cell_size );
 			}
 		};
 

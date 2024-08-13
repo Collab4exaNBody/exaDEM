@@ -134,7 +134,7 @@ namespace exaDEM
      *
      * @param ges Reference to the GridCellParticleInteraction object containing interactions to classify.
      */
-    void classify(GridCellParticleInteraction& ges, std::vector<size_t>& idxs)
+    void classify(GridCellParticleInteraction& ges, size_t* idxs, size_t size)
     {
       reset_waves(); // Clear existing waves
       auto& ces = ges.m_data; // Reference to cells containing interactions
@@ -143,7 +143,7 @@ namespace exaDEM
       {
         std::array<std::vector<exaDEM::Interaction>,types> tmp; ///< Storage for interactions categorized by type.
 #pragma omp for schedule(dynamic) nowait
-        for(size_t c = 0 ; c < idxs.size() ; c++)
+        for(size_t c = 0 ; c < size ; c++)
         {
           auto& interactions = ces[idxs[c]];
           const unsigned int  n_interactions_in_cell = interactions.m_data.size();

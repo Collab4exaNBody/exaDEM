@@ -38,6 +38,8 @@ under the License.
 #include <exaDEM/shape/shape_detection_driver.hpp>
 #include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
+#include <exaDEM/cell_list_wrapper.hpp>
+
 
 namespace exaDEM
 {
@@ -50,11 +52,10 @@ namespace exaDEM
     using ComputeFields = FieldSet< field::_vrot, field::_arot >;
     static constexpr ComputeFields compute_field_set {};
 
-    ADD_SLOT( GridT                       , grid , INPUT_OUTPUT , REQUIRED );
-    ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
-    ADD_SLOT( Classifier                  , ic   , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
-    ADD_SLOT( std::vector<size_t>         , idxs , INPUT , DocString{"List of non empty cells"});
-
+    ADD_SLOT( GridT                       , grid      , INPUT_OUTPUT , REQUIRED );
+    ADD_SLOT( GridCellParticleInteraction , ges       , INPUT        , DocString{"Interaction list"} );
+    ADD_SLOT( Classifier                  , ic        , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
+    ADD_SLOT( CellListWrapper             , cell_list , INPUT        , DocString{"list of non empty cells within the current grid"});
 
     public:
 
@@ -67,8 +68,9 @@ namespace exaDEM
     inline void execute () override final
     {
       if( grid->number_of_cells() == 0 ) { return; }
+      auto [cell_ptr, cell_size] = cell_list->info();
       if(!ic.has_value()) ic->initialize();
-      ic->classify(*ges, *idxs);
+      ic->classify(*ges, cell_ptr, cell_size);
     }
   };
 

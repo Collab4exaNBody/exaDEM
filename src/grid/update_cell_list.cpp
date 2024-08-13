@@ -16,59 +16,62 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
-
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
-#include <exanb/core/quaternion_operators.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <exanb/compute/compute_cell_particles.h>
-#include <memory>
-
 #include <exaDEM/cell_list_wrapper.hpp>
-#include <exaDEM/angular_acceleration.h>
+#include <memory>
 
 namespace exaDEM
 {
 	using namespace exanb;
 
 	template<typename GridT
-		, class = AssertGridHasFields< GridT, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia >
+		, class = AssertGridHasFields< GridT >
 		>
-		class PushToAngularAcceleration : public OperatorNode
+		class UpdateCellList : public OperatorNode
 		{
-			// attributes processed during computation
-			using ComputeFields = FieldSet< field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia >;
+			using ComputeFields = FieldSet<>;
 			static constexpr ComputeFields compute_field_set {};
+      template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
 
-			ADD_SLOT( GridT           , grid      , INPUT_OUTPUT );
-      ADD_SLOT( CellListWrapper , cell_list , INPUT , DocString{"list of non empty cells within the current grid"});
+			ADD_SLOT( GridT           , grid      , INPUT_OUTPUT , REQUIRED );
+			ADD_SLOT( CellListWrapper , cell_list , INPUT_OUTPUT , DocString{"list of non empty cells within the current grid"});
+
 
 			public:
+
 			inline std::string documentation() const override final
 			{
-				return R"EOF(
-        This operator computes the new values of angular acceleration from moments, orientations, angular velocities, angular accelerations and inertia.
-        )EOF";
+				return R"EOF( This operator update the list of non-empty cells. This operator should be called as long as a particle move from a cell to another cell.
+				        )EOF";
 			}
 
 			inline void execute () override final
 			{
-        auto [cell_ptr, cell_size] = cell_list->info();
-				PushToAngularAccelerationFunctor func {};
-				compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() , cell_ptr, cell_size );
+				const auto& cells    = grid->cells();
+				const int n_cells    = grid->number_of_cells();
+        auto& cl = cell_list->m_data;
+        // reset list
+        cl.clear();
+
+        // get the list of cell with at least one particle
+				for (int c = 0 ; c < n_cells ; c++)
+				{
+          if( cells[c].size() > 0 ) cl.push_back(c);
+				}	
 			}
 		};
 
-	template<class GridT> using PushToAngularAccelerationTmpl = PushToAngularAcceleration<GridT>;
+	template<class GridT> using UpdateCellListTmpl = UpdateCellList<GridT>;
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "push_to_angular_acceleration", make_grid_variant_operator< PushToAngularAccelerationTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "update_cell_list", make_grid_variant_operator< UpdateCellListTmpl > );
 	}
 }
 
