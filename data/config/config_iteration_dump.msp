@@ -35,6 +35,21 @@ dump_data_paraview:
         - message: { endl: true }
   - write_paraview_generic
 
+
+compute_volume:
+  - domain_volume
+
+compute_stress_tensor:
+  - stress_tensor
+
+dump_stress_tensor_if_triggered:
+  condition: trigger_write_stress_tensor
+  body:
+    - compute_volume
+    - compute_stress_tensor
+    - write_stress_tensor
+#    - message: { mesg: "Update Avg Stress" , endl: true }
+
 ## This operator is defined in spheres or polyhedra . msp
 dump_data_particles: nop
 
