@@ -68,6 +68,7 @@ parallel_update_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
+  - update_cell_list
   - update_stl_mesh
   - update_particle_neighbors
 

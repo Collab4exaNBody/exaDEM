@@ -1,0 +1,22 @@
+#pragma once
+
+struct CellListWrapper
+{
+  template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
+  VectorT<size_t> m_data;
+
+  size_t* data()
+  {
+    return onika::cuda::vector_data(m_data);  
+  }
+
+  size_t size()
+  {
+    return onika::cuda::vector_size(m_data);
+  }
+
+  std::tuple<size_t*, size_t> info()
+  {
+    return {this->data(), this->size()};
+  }
+};

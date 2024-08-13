@@ -29,6 +29,7 @@ under the License.
 #include <memory>
 
 #include <exaDEM/push_to_quaternion.h>
+#include <exaDEM/cell_list_wrapper.hpp>
 
 namespace exaDEM
 {
@@ -43,8 +44,9 @@ using namespace exanb;
     using ComputeFields = FieldSet< field::_orient, field::_vrot, field::_arot >;
     static constexpr ComputeFields compute_field_set {};
 
-    ADD_SLOT( GridT  , grid , INPUT_OUTPUT );
-    ADD_SLOT( double , dt   , INPUT, DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT( GridT           , grid      , INPUT_OUTPUT );
+    ADD_SLOT( double          , dt        , INPUT, DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT( CellListWrapper , cell_list , INPUT , DocString{"list of non empty cells within the current grid"});
 
   public:
 
@@ -61,7 +63,8 @@ using namespace exanb;
       const double dt_2 = 0.5 * dt;
       const double dt2_2 = dt_2 * dt;
       PushToQuaternionFunctor func {dt, dt_2, dt2_2};
-      compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+      auto [cell_ptr, cell_size] = cell_list->info();
+      compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() , cell_ptr, cell_size );
     }
   };
   

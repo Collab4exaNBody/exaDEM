@@ -31,6 +31,7 @@ under the License.
 
 #include <exaDEM/angular_acceleration.h>
 #include <exaDEM/angular_velocity.h>
+#include <exaDEM/cell_list_wrapper.hpp>
 #include <exanb/defbox/push_vec3_1st_order.h>
 //#include <exanb/defbox/push_vec3_1st_order_xform.h>
 
@@ -100,15 +101,17 @@ namespace exaDEM
 			using ComputeFields = FieldSet< field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz >;
 			static constexpr ComputeFields compute_field_set {};
 
-			ADD_SLOT( GridT  , grid     , INPUT_OUTPUT );
-			ADD_SLOT( Domain , domain     , INPUT , REQUIRED );
-			ADD_SLOT( double , dt           , INPUT );
+			ADD_SLOT( GridT           , grid      , INPUT_OUTPUT );
+			ADD_SLOT( Domain          , domain    , INPUT , REQUIRED );
+			ADD_SLOT( double          , dt        , INPUT );
+      ADD_SLOT( CellListWrapper , cell_list , INPUT , DocString{"list of non empty cells within the current grid"});
 
 			public:
 			inline void execute () override final
 			{
 				const double delta_t = *dt;
 				const double half_delta_t = delta_t * 0.5;
+        auto [cell_ptr, cell_size] = cell_list->info();
 
 				if( domain->xform_is_identity() )
 				{
@@ -116,7 +119,7 @@ namespace exaDEM
 					PushToAngularVelocityFunctor func2 { half_delta_t };
 					PushVec3FirstOrderFunctor func3 { half_delta_t };
 					CombinedEpilogFunctor func { func1, func2, func3 };
-					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context(), cell_ptr, cell_size );
 				}
 				else
 				{
@@ -125,7 +128,7 @@ namespace exaDEM
 					PushToAngularVelocityFunctor func2 { half_delta_t };
 					PushVec3FirstOrderXFormFunctor func3 { inv_xform , half_delta_t };
 					CombinedEpilogXFormFunctor func { func1, func2, func3 };
-					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context(), cell_ptr, cell_size );
 				}
 
 			}

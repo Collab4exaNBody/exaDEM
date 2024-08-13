@@ -30,10 +30,9 @@ under the License.
 #include <memory>
 
 #include <exaDEM/push_to_quaternion.h>
+#include <exaDEM/cell_list_wrapper.hpp>
 #include <exanb/defbox/push_vec3_2nd_order.h>
-//#include <exanb/defbox/push_vec3_2nd_order_xform.h>
 #include <exanb/defbox/push_vec3_1st_order.h>
-//#include <exanb/defbox/push_vec3_1st_order_xform.h>
 
 namespace exaDEM
 {
@@ -104,18 +103,20 @@ namespace exaDEM
     using ComputeFields = FieldSet< field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_orient, field::_vrot, field::_arot >;
     static constexpr ComputeFields compute_field_set {};
 
-    ADD_SLOT( GridT  , grid     , INPUT_OUTPUT );
-    ADD_SLOT( Domain , domain     , INPUT , REQUIRED );
-    ADD_SLOT( double , dt           , INPUT );
+    ADD_SLOT( GridT           , grid      , INPUT_OUTPUT );
+    ADD_SLOT( Domain          , domain    , INPUT , REQUIRED );
+    ADD_SLOT( double          , dt        , INPUT );
+    ADD_SLOT( CellListWrapper , cell_list , INPUT , DocString{"list of non empty cells within the current grid"});
 
   public:
     inline void execute () override final
     {
+      // compute coefficients
       const double half_delta_t = (*dt) * 0.5;
-      //const double half_delta_t2 = half_delta_t * half_delta_t * 0.5;
-
       const double delta_t = *dt;
       const double delta_t2_2 = delta_t * delta_t * 0.5;
+      // get non-empty cells
+      auto [cell_ptr, cell_size] = cell_list->info();
 
       if( domain->xform_is_identity() )
       {
@@ -123,7 +124,7 @@ namespace exaDEM
         PushVec3FirstOrderFunctor func2 { half_delta_t };
         PushToQuaternionFunctor func3 { delta_t, half_delta_t, delta_t2_2 };
         CombinedPrologFunctor func { func1, func2, func3 };
-        compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+        compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context(), cell_ptr, cell_size );
       }
       else
       {
@@ -132,7 +133,7 @@ namespace exaDEM
         PushVec3FirstOrderXFormFunctor func2 { inv_xform , half_delta_t };
         PushToQuaternionFunctor func3 { delta_t, half_delta_t, delta_t2_2 };
         CombinedPrologXFormFunctor func { func1, func2, func3 };
-        compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
+        compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context(), cell_ptr, cell_size );
       }
 
     }
