@@ -36,7 +36,7 @@ under the License.
 
 #include <exaDEM/simulation_state.h>
 #include <exaDEM/dem_simulation_state.h>
-
+#include <exaDEM/cell_list_wrapper.hpp>
 
 // ================== Thermodynamic state compute operator ======================
 namespace exaDEM
@@ -50,8 +50,8 @@ namespace exaDEM
 		ADD_SLOT( MPI_Comm           , mpi                 , INPUT , MPI_COMM_WORLD);
 		ADD_SLOT( GridT              , grid                , INPUT , REQUIRED);
 		ADD_SLOT( Domain             , domain              , INPUT , REQUIRED);
-//		ADD_SLOT( double             , potential_energy_shift , INPUT , 0.0 );
-		ADD_SLOT( SimulationState    , simulation_state , OUTPUT );
+    ADD_SLOT( CellListWrapper    , cell_list , INPUT   , DocString{"list of non empty cells within the current grid"});
+		ADD_SLOT( SimulationState    , simulation_state    , OUTPUT );
 
 		static constexpr FieldSet<field::_vx ,field::_vy ,field::_vz, field::_mass> reduce_field_set {};
 		static constexpr FieldSet<field::_vx> reduce_vx_field_set {};
@@ -68,9 +68,10 @@ namespace exaDEM
 			double mass = 0.;
 			unsigned long long int total_particles = 0;
 
+      auto [cell_ptr, cell_size] = cell_list->info();
 			exaDEM::simulation_state_variables sim {}; //kinetic_energy, momentum, mass, potential_energy, total_particles};
 			ReduceSimulationStateFunctor func = {};
-			reduce_cell_particles( *grid , false , func , sim, reduce_field_set , parallel_execution_context() );
+			reduce_cell_particles( *grid , false , func , sim, reduce_field_set , parallel_execution_context() , {} , cell_ptr, cell_size );
 
 			// reduce partial sums and share the result
 			{

@@ -17,6 +17,8 @@ struct CellListWrapper
 
   std::tuple<size_t*, size_t> info()
   {
-    return {this->data(), this->size()};
+    const size_t s = this->size();
+    if( s == 0 ) return {nullptr, 0};
+    else return {this->data(), this->size()};
   }
 };
