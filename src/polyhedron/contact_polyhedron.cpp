@@ -34,6 +34,7 @@ under the License.
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/shape/shape_detection_driver.hpp>
+#include <exaDEM/cell_list_wrapper.hpp>
 
 #include<cassert>
 
@@ -57,8 +58,7 @@ namespace exaDEM
       ADD_SLOT( shapes                      , shapes_collection , INPUT        , DocString{"Collection of shapes"});
       ADD_SLOT(double                       , rcut_inc          , INPUT_OUTPUT , DocString{"value added to the search distance to update neighbor list less frequently. in physical space"} );
       ADD_SLOT( Drivers                     , drivers           , INPUT        , DocString{"List of Drivers"});
-      ADD_SLOT( std::vector<size_t>         , idxs              , INPUT_OUTPUT , DocString{"List of non empty cells"});
-
+      ADD_SLOT( CellListWrapper             , cell_list         , INPUT        , DocString{"list of non empty cells within the current grid"});
 
       public:
 
@@ -230,7 +230,6 @@ namespace exaDEM
         const auto cells = g.cells();
         const size_t n_cells = g.number_of_cells(); // nbh.size();
         const IJK dims = g.dimension();
-        const int gl = g.ghost_layers();
         auto & interactions = ges->m_data;
         auto & shps = *shapes_collection;
         double rVerlet = *rcut_inc;
@@ -254,18 +253,7 @@ namespace exaDEM
         // use OBB for vertex/edge and vertex/faces
         constexpr bool skip_obb = false;
 
-        // build the list of non-empty cells, use later to avoid useless computations
-        auto& indexes = *idxs;
-        indexes.clear();
-        GRID_FOR_BEGIN(dims-2*gl,_,loc)
-        {
-          IJK loc_a = loc + gl;
-          size_t cell_a = grid_ijk_to_index( dims , loc_a );
-          const unsigned int n_particles = cells[cell_a].size();
-          if( n_particles > 0 ) indexes.push_back(cell_a);
-        }
-        GRID_FOR_END
-
+        auto [cell_ptr, cell_size] = cell_list->info();
 
 #     pragma omp parallel
         {
@@ -273,9 +261,9 @@ namespace exaDEM
           Interaction item;
           interaction_manager manager;
 #pragma omp for schedule(dynamic)
-          for(size_t ci = 0 ; ci < indexes.size() ; ci++)
+          for(size_t ci = 0 ; ci < cell_size ; ci++)
           {
-            size_t cell_a = indexes[ci];
+            size_t cell_a = cell_ptr[ci];
             IJK loc_a = grid_index_to_ijk( dims , cell_a );
 
             const unsigned int n_particles = cells[cell_a].size();
