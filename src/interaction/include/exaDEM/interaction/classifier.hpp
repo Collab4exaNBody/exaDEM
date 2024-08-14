@@ -71,7 +71,6 @@ namespace exaDEM
      */
     void initialize() { waves.resize(types); buffers.resize(types) ; }
 
-
     /**
      * @brief Clears all stored interactions in the waves vector.
      */
@@ -104,11 +103,28 @@ namespace exaDEM
       return {data_ptr, data_size};
     }
 
+    /**
+     * @brief This function returns the total number of classifier interactions.
+     */
+    uint64_t number_of_interactions(bool sym)
+    {
+      uint64_t res = 0 ;
+#pragma omp parallel for reduction(+: res )
+      for(size_t i = 0 ; i < waves.size() ; i++ )
+      {
+        auto [ptr, size] = get_info(i);
+        if( i < 4 && sym == true ) res += 2 * size;
+        else res += size;
+      }
+      ldbg << " number_of_interactions " << res << std::endl;
+      return res;
+    }
+
     std::tuple<double*, Vec3d*,Vec3d*,Vec3d*> buffer_p(int id)
     {
       auto& analysis = buffers[id]; 
-			// fit size if needed
-      const int size = onika::cuda::vector_size( waves[id] );
+      // fit size if needed
+      const size_t size = onika::cuda::vector_size( waves[id] );
       analysis.resize(size);
       double* const dnp = onika::cuda::vector_data( analysis.dn ); 
       Vec3d*  const cpp = onika::cuda::vector_data( analysis.cp ); 
@@ -117,12 +133,59 @@ namespace exaDEM
       return {dnp, cpp, fnp, ftp}; 
     }
 
+
+    /**
+     * @brief This functions returns the number of active interactions; i.e. if two particles are overlapped by themselves.
+     */
+    uint64_t get_active_interactions(bool sym)
+    {
+      // Warning, this function has to be called when the analysis buffer is set (in hooke operators).
+      // TODO : Implement a GPU version
+      uint64_t res = 0;
+      for( size_t i = 0 ; i < types ; i++ )
+      {
+        // number of iteractions per wave
+        auto& analysis = buffers[i]; 
+        const double* const dnp = onika::cuda::vector_data( analysis.dn ); 
+        const size_t size = onika::cuda::vector_size( analysis.dn );
+        uint64_t coef = 1;
+        if( i < 4 && sym == true) coef = 2; 
+#pragma omp parallel for reduction(+: res)
+        for( size_t j = 0 ; j < size ; j++ )
+        {
+          if( dnp[j] < 0 ) res += coef;
+        }
+      }
+      ldbg << " get_active_interactions " << res << std::endl;
+      return res;
+    }
+
+    double get_min_dn ()
+    {
+      // TODO : Implement a GPU version
+      double res = 0;
+      for( size_t i = 0 ; i < types ; i++ )
+      {
+        // number of iteractions per wave
+        auto& analysis = buffers[i]; 
+        const double* const dnp = onika::cuda::vector_data( analysis.dn ); 
+        const size_t size = onika::cuda::vector_size( analysis.dn );
+#pragma omp parallel for reduction(min: res)
+        for( size_t j = 0 ; j < size ; j++ )
+        {
+          const double dn = dnp[j];
+          if( dn < res ) res = dn;
+        }
+      }
+      return res;
+    }
+
     /**
      * @brief Returns the number of interaction types managed by the classifier.
      *
      * @return Number of interaction types.
      */
-    size_t number_of_waves() {return waves.size();}
+    size_t number_of_waves() { assert(types == waves.size()) ; return waves.size();}
 
     /**
      * @brief Classifies interactions into categorized waves based on their types.
@@ -154,40 +217,39 @@ namespace exaDEM
             Interaction& item = data_ptr[it];
             const int t = item.type;
             tmp[t].push_back(item);
-					}
-				}
+          }
+        }
 
-
-				for(int w = 0 ; w < types ; w++ )
-				{
+        for(int w = 0 ; w < types ; w++ )
+        {
 #pragma omp critical
-					{
-						waves[w].insert(waves[w].end(), tmp[w].begin(), tmp[w].end());
-					}
-				}
-			}
-		}
+          {
+            waves[w].insert(waves[w].end(), tmp[w].begin(), tmp[w].end());
+          }
+        }
+      }
+    }
 
-		/**
-		 * @brief Restores friction and moment data for interactions from categorized waves to cell interactions.
-		 *
-		 * This function restores friction and moment data from categorized waves back to their corresponding
-		 * interactions in cell data (`ges.m_data`). It iterates through each wave, retrieves interactions
-		 * with non-zero friction and moment from the wave, and updates the corresponding interaction in the
-		 * cell data.
-		 *
-		 * @param ges Reference to the GridCellParticleInteraction object containing cell interactions.
-		 */
-		void unclassify(GridCellParticleInteraction& ges)
-		{
-			Vec3d null = {0,0,0};
-			auto& ces = ges.m_data; // Reference to cells containing interactions
-															// Iterate through each wave
-			for(int w = 0 ; w < types ; w++)
-			{
-				auto& wave = waves[w];
-				const unsigned int n1 = wave.size();
-				// Parallel loop to process interactions within a wave
+    /**
+     * @brief Restores friction and moment data for interactions from categorized waves to cell interactions.
+     *
+     * This function restores friction and moment data from categorized waves back to their corresponding
+     * interactions in cell data (`ges.m_data`). It iterates through each wave, retrieves interactions
+     * with non-zero friction and moment from the wave, and updates the corresponding interaction in the
+     * cell data.
+     *
+     * @param ges Reference to the GridCellParticleInteraction object containing cell interactions.
+     */
+    void unclassify(GridCellParticleInteraction& ges)
+    {
+      Vec3d null = {0,0,0};
+      auto& ces = ges.m_data; // Reference to cells containing interactions
+                              // Iterate through each wave
+      for(int w = 0 ; w < types ; w++)
+      {
+        auto& wave = waves[w];
+        const unsigned int n1 = wave.size();
+        // Parallel loop to process interactions within a wave
 #pragma omp parallel for
         for(size_t it = 0 ; it < n1 ; it++) 
         {

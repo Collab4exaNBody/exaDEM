@@ -57,7 +57,9 @@ namespace exaDEM
 			double conv_temperature = 1.e4 * legacy_constant::atomicMass / legacy_constant::boltzmann ;
 			//double conv_energy = 1.e4 * legacy_constant::atomicMass / legacy_constant::elementaryCharge;
 			//static const std::string header = "     Step     Time (ps)     Particles   Mv/Ext/Imb.  Tot. E. (eV/part)  Kin. E. (eV/part)  Pot. E. (eV/part)  Temperature   Pressure     sMises     Volume       Mass";
-			static const std::string header = "     Step     Time (ps)     Particles   Mv/Ext/Imb. Temperature     Volume       Mass  Part/timestep/s";
+			static const std::string header = "     Step     Time (ps)     Particles  Mv/Ext/Imb.       |dn|  avg. act. I     avg. I  Temperature     Volume       Mass  Throughput";
+
+
 
 			if( *internal_units )
 			{
@@ -121,12 +123,20 @@ namespace exaDEM
 			double throughput = sim_info.compute_particles_throughput (new_timepoint, new_timestep);
 			simulation_state->update_timestep_timepoint (new_timepoint, new_timestep);
 
+      auto active_interactions = sim_info.active_interaction_count();
+      auto total_interactions  = sim_info.interaction_count();
 
-			lout<<format_string("%9ld % .6e %13ld  %c %c %8s % 11.3f % .3e % .3e      % .4e",
+      double avg_act_I = double(active_interactions) / sim_info.particle_count();
+      double avg_I = double(total_interactions) / sim_info.particle_count();
+
+			lout<<format_string("%9ld % .6e %13ld  %c %c %8s %.3e    %9.3f  %9.3f  % 11.3f % .3e % .3e % .4e",
 					*timestep, // %9ld
 					*physical_time, // %.6e
 					sim_info.particle_count(), // %13ld 
 					lb_move_char,domext_char,lb_value, // %c %c %.8s
+          std::abs(sim_info.dn()),
+          avg_act_I,
+          avg_I,
 					sim_info.temperature_scal() / sim_info.particle_count() * conv_temperature, //%11.3f
 					sim_info.volume(),
 					sim_info.mass(),

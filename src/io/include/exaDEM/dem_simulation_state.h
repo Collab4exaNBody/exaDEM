@@ -44,8 +44,17 @@ namespace exaDEM
 		inline void set_volume(double x) { m_volume = x; }
 		inline double volume() const { return m_volume; }
 
-		inline void set_particle_count(size_t x) { m_particle_count = x; }
-		inline size_t particle_count() const { return m_particle_count; }
+		inline void set_particle_count(uint64_t x) { m_particle_count = x; }
+		inline uint64_t particle_count() const { return m_particle_count; }
+
+		inline void set_active_interaction_count(uint64_t x) { m_active_interactions = x; }
+		inline uint64_t active_interaction_count() const { return m_active_interactions; }
+
+		inline void set_interaction_count(uint64_t x) { m_interaction_count = x; }
+		inline uint64_t interaction_count() const { return m_interaction_count; }
+
+		inline void set_dn(double x) { m_dn = x; }
+		inline double dn() const { return m_dn; }
 
 		inline size_t compute_particles_throughput(std::chrono::time_point<std::chrono::steady_clock> new_timepoint, int new_timestep) const 
 		{
@@ -59,9 +68,13 @@ namespace exaDEM
 		Vec3d m_temperature;
 		double m_mass = 0.;
 		double m_volume = 0.;
-		size_t m_particle_count = 0;
+		uint64_t m_particle_count = 0;
+    uint64_t m_active_interactions = 0;
+    uint64_t m_interaction_count = 0;
+    double m_dn = 0;
 		int m_last_timestep = -1;
 		std::chrono::time_point<std::chrono::steady_clock> m_last_timepoint;
+    
 	};
 
 }
