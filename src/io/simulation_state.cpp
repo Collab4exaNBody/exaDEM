@@ -38,6 +38,7 @@ under the License.
 #include <exaDEM/dem_simulation_state.h>
 #include <exaDEM/cell_list_wrapper.hpp>
 #include <exaDEM/interaction/classifier.hpp>
+#include <exaDEM/itools/itools.hpp>
 
 // ================== Thermodynamic state compute operator ======================
 namespace exaDEM
@@ -79,10 +80,10 @@ namespace exaDEM
 			reduce_cell_particles( *grid , false , func , sim, reduce_field_set , parallel_execution_context() , {} , cell_ptr, cell_size );
 
       // get interaction informations
-      Classifier& classifier = *ic;
-     	uint64_t active_interactions = classifier.get_active_interactions(*symetric);
-     	uint64_t total_interactions  = classifier.number_of_interactions(*symetric);
-      double dn                    = classifier.get_min_dn();
+      const Classifier& classifier = *ic;
+     	uint64_t active_interactions = itools::get_act_interaction_size(*grid, classifier, *symetric);
+     	uint64_t total_interactions  = itools::get_tot_interaction_size(*grid, classifier, *symetric);
+      double dn                    = itools::get_min_dn(classifier);
 
 			// reduce partial sums and share the result
 			{

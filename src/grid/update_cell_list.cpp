@@ -53,16 +53,22 @@ namespace exaDEM
 			inline void execute () override final
 			{
 				const auto& cells    = grid->cells();
+        IJK dims = grid->dimension();
+        const ssize_t gl = grid->ghost_layers();
 				const int n_cells    = grid->number_of_cells();
         auto& cl = cell_list->m_data;
         // reset list
         cl.clear();
 
-        // get the list of cell with at least one particle
-				for (int c = 0 ; c < n_cells ; c++)
-				{
-          if( cells[c].size() > 0 ) cl.push_back(c);
-				}	
+
+        GRID_OMP_FOR_BEGIN( dims-2*gl, _, loc_no_gl )
+        {
+          const IJK loc = loc_no_gl + gl;
+          const size_t i = grid_ijk_to_index( dims , loc );
+	        const size_t n_particles = cells[i].size();
+          if( n_particles > 0 ) cl.push_back(i);
+        }
+        GRID_OMP_FOR_END
 			}
 		};
 
