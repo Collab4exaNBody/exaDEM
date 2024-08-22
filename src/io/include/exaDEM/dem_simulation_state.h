@@ -34,9 +34,9 @@ namespace exaDEM
 		inline const Vec3d& kinetic_energy() const { return m_kinetic_energy; }
 		inline double kinetic_energy_scal() const { return m_kinetic_energy.x + m_kinetic_energy.y + m_kinetic_energy.z; }
 
-		inline void set_temperature(const Vec3d& x) { m_temperature = x; }
-		inline const Vec3d& temperature() const { return m_temperature; }
-		inline double temperature_scal() const { return ( m_temperature.x + m_temperature.y + m_temperature.z ) / 3. ; }
+		inline void set_rotation_energy(const Vec3d& x) { m_rotation_energy = x; }
+		inline const Vec3d& rotation_energy() const { return m_rotation_energy; }
+		inline double rotation_energy_scal() const { return m_rotation_energy.x + m_rotation_energy.y + m_rotation_energy.z; }
 
 		inline void set_mass(double x) { m_mass = x; }
 		inline double mass() const { return m_mass; }
@@ -65,6 +65,7 @@ namespace exaDEM
 
 		private:
 		Vec3d m_kinetic_energy;
+		Vec3d m_rotation_energy;
 		Vec3d m_temperature;
 		double m_mass = 0.;
 		double m_volume = 0.;
@@ -76,5 +77,4 @@ namespace exaDEM
 		std::chrono::time_point<std::chrono::steady_clock> m_last_timepoint;
     
 	};
-
 }

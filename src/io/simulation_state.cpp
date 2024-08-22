@@ -45,7 +45,7 @@ namespace exaDEM
 {
 	using namespace exanb;
 
-	template<class GridT ,	class = AssertGridHasFields< GridT, field::_vx, field::_vy, field::_vz, field::_mass >> struct SimulationStateNode : public OperatorNode
+	template<class GridT ,	class = AssertGridHasFields< GridT, field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass >> struct SimulationStateNode : public OperatorNode
 	{
 		// compile time constant indicating if grid has type field
 
@@ -59,23 +59,19 @@ namespace exaDEM
     ADD_SLOT( Classifier         , ic                  , INPUT , DocString{"Interaction lists classified according to their types"} );
     ADD_SLOT( bool               , symetric            , INPUT , REQUIRED , DocString{"Use of symetric feature (contact law)"});
 
-		static constexpr FieldSet<field::_vx ,field::_vy ,field::_vz, field::_mass> reduce_field_set {};
-		static constexpr FieldSet<field::_vx> reduce_vx_field_set {};
-		static constexpr FieldSet<field::_vy> reduce_vy_field_set {};
-		static constexpr FieldSet<field::_vz> reduce_vz_field_set {};
-		static constexpr FieldSet<field::_mass> reduce_mass_field_set {};
+		static constexpr FieldSet<field::_vx ,field::_vy ,field::_vz, field::_vrot, field::_mass> reduce_field_set {};
 		inline void execute () override final
 		{
 			MPI_Comm comm = *mpi;
 			SimulationState& sim_info = *simulation_state;
 
-			Vec3d momentum;  // constructs itself with 0s
 			Vec3d kinetic_energy;  // constructs itself with 0s
+			Vec3d rotation_energy;  // constructs itself with 0s
 			double mass = 0.;
 			uint64_t total_particles = 0;
 
       auto [cell_ptr, cell_size] = cell_list->info();
-			exaDEM::simulation_state_variables sim {}; //kinetic_energy, momentum, mass, potential_energy, total_particles};
+			exaDEM::simulation_state_variables sim {}; //kinetic_energy, rotation_energy, mass, potential_energy, total_particles};
 			ReduceSimulationStateFunctor func = {};
 			reduce_cell_particles( *grid , false , func , sim, reduce_field_set , parallel_execution_context() , {} , cell_ptr, cell_size );
 
@@ -88,29 +84,26 @@ namespace exaDEM
 			// reduce partial sums and share the result
 			{
 				double tmpDouble[8] = {
-					sim.momentum.x, sim.momentum.y, sim.momentum.z,
+					sim.rotation_energy.x, sim.rotation_energy.y, sim.rotation_energy.z,
 					sim.kinetic_energy.x, sim.kinetic_energy.y, sim.kinetic_energy.z,
 					sim.mass , dn };
         uint64_t tmpUInt64T[3] = {sim.n_particles, active_interactions , total_interactions};
 				MPI_Allreduce(MPI_IN_PLACE, tmpDouble, 8, MPI_DOUBLE, MPI_SUM, comm);
 				MPI_Allreduce(MPI_IN_PLACE, tmpUInt64T, 3, MPI_UINT64_T, MPI_SUM, comm);
 
-				momentum.x       = tmpDouble[0];
-				momentum.y       = tmpDouble[1];
-				momentum.z       = tmpDouble[2];
-				kinetic_energy.x = tmpDouble[3];
-				kinetic_energy.y = tmpDouble[4];
-				kinetic_energy.z = tmpDouble[5];
-				mass             = tmpDouble[6];
-				dn               = tmpDouble[7];
+				rotation_energy.x = tmpDouble[0];
+				rotation_energy.y = tmpDouble[1];
+				rotation_energy.z = tmpDouble[2];
+				kinetic_energy.x  = tmpDouble[3];
+				kinetic_energy.y  = tmpDouble[4];
+				kinetic_energy.z  = tmpDouble[5];
+				mass              = tmpDouble[6];
+				dn                = tmpDouble[7];
 
 				total_particles     = tmpUInt64T[0];
 				active_interactions = tmpUInt64T[1];
 				total_interactions  = tmpUInt64T[2];
 			}
-
-			// temperature
-			Vec3d temperature = 2. * ( kinetic_energy - 0.5 * momentum * momentum / mass );
 
 			// Volume
 			double volume = 1.0;
@@ -125,7 +118,8 @@ namespace exaDEM
 			volume *= bounds_volume( domain->bounds() );
 
 			// write results to output
-			sim_info.set_temperature( temperature );
+			sim_info.set_kinetic_energy( kinetic_energy );
+			sim_info.set_rotation_energy( rotation_energy );
 			sim_info.set_mass( mass );
 			sim_info.set_volume( volume );
 			sim_info.set_particle_count( total_particles );
