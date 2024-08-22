@@ -63,9 +63,11 @@ namespace exaDEM
     // analysis
     ADD_SLOT( long        , timestep          , INPUT , REQUIRED );
     ADD_SLOT( bool        , save_interactions , INPUT , false           , DocString{"Store interactions into the classifier"});
-    ADD_SLOT( long        , analysis_interaction_dump_frequency  , INPUT , REQUIRED, DocString{"Write an interaction dump file"});
-    ADD_SLOT( long        , analysis_dump_stress_tensor_frequency, INPUT, REQUIRED, DocString{"Compute avg Stress Tensor."});
-    ADD_SLOT( long        , simulation_log_frequency             , INPUT, REQUIRED, DocString{"Log frequency."});
+    ADD_SLOT( long        , analysis_interaction_dump_frequency  , INPUT , REQUIRED , DocString{"Write an interaction dump file"});
+    ADD_SLOT( long        , analysis_dump_stress_tensor_frequency, INPUT , REQUIRED , DocString{"Compute avg Stress Tensor."});
+    ADD_SLOT( long        , simulation_log_frequency             , INPUT , REQUIRED , DocString{"Log frequency."});
+    ADD_SLOT( std::string , dir_name                             , INPUT , REQUIRED , DocString{"Output directory name."} );
+    ADD_SLOT( std::string , interaction_basename                 , INPUT , REQUIRED , DocString{"Write an Output file containing interactions." } );
 
 
     public:
@@ -132,7 +134,7 @@ namespace exaDEM
       {
         auto stream = itools::create_buffer(*grid, classifier);
         std::string ts = std::to_string(*timestep);
-        itools::write_file(stream, "Interaction_" + ts);        
+        itools::write_file(stream, *dir_name, (*interaction_basename) + ts);        
       }
     }
   };
