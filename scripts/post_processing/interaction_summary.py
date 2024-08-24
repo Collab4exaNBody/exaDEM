@@ -12,11 +12,11 @@ print(' - plot the number of interactions in function of the timestep (count.pdf
 #dt = float(1)
 
 ntypes = int(13)
-basename = 'Interaction_'
+basename = 'InteractionOutputDir-'
 directories = list(os.walk('.'))[0][1]
 
 ## Get files
-dirs = [x for x in directories if 'Interaction' in x]
+dirs = [x for x in directories if basename in x]
 ntimesteps = len(dirs)
 print("The number of directories is:", ntimesteps)
 	
@@ -35,7 +35,7 @@ types = np.zeros((ntypes, ntimesteps))
 check_type = np.zeros((ntypes))
 
 for i in xaxis:
-	dirname = 'Interaction_' + str(timesteps[i])
+	dirname = basename + str(timesteps[i])
 	files = list(os.walk(dirname))[0][2]
 	## clean current data frame
   # nope

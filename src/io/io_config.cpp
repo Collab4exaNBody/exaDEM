@@ -47,7 +47,9 @@ namespace exaDEM
       lout << "Directory Name:             "  << dirName << std::endl;
       lout << "Log Filename:               "  << logName << std::endl;
       lout << "Avg Stress Tensor Filename: "  << avgStressTensorName << std::endl;
-      lout << "Interaction Basename Dir  : "  << interactionBasename << std::endl;
+      lout << "Interaction Basename Dir:   "  << interactionBasename << std::endl;
+      lout << "Paraview Files Directory:   "  << dirName + "/ParaviewOutputs/" << std::endl;
+      lout << "Checkpoint Files Directory: "  << dirName + "/CheckpointFiles/" << std::endl;
 			lout << std::endl;
 		}
 

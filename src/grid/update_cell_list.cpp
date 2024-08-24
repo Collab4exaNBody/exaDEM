@@ -38,7 +38,7 @@ namespace exaDEM
 			static constexpr ComputeFields compute_field_set {};
       template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
 
-			ADD_SLOT( GridT           , grid      , INPUT_OUTPUT , REQUIRED );
+			ADD_SLOT( GridT           , grid      , INPUT        , REQUIRED );
 			ADD_SLOT( CellListWrapper , cell_list , INPUT_OUTPUT , DocString{"list of non empty cells within the current grid"});
 
 
@@ -55,12 +55,12 @@ namespace exaDEM
 				const auto& cells    = grid->cells();
         IJK dims = grid->dimension();
         const ssize_t gl = grid->ghost_layers();
-				const int n_cells    = grid->number_of_cells();
         auto& cl = cell_list->m_data;
-        // reset list
+
+        // reset the cell list
         cl.clear();
 
-
+        // iterate over "real" cells
         GRID_OMP_FOR_BEGIN( dims-2*gl, _, loc_no_gl )
         {
           const IJK loc = loc_no_gl + gl;
