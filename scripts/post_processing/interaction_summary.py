@@ -82,6 +82,11 @@ labels = np.array([
 
 xplot = timesteps
 
+## take into account of the symetrization for particle to particle interactions
+
+for t in range(0, 3):
+	types[t,:] = 2 * types[t,:]
+
 ### Display interactions
 for t in range(0, ntypes):
 	if(check_type[t] == 1):

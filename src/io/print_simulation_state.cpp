@@ -24,6 +24,8 @@ under the License.
 #include <exanb/core/physics_constants.h>
 
 #include <exaDEM/dem_simulation_state.h>
+#include <mpi.h>
+#include <filesystem> // C++17
 
 namespace exaDEM
 {
@@ -31,7 +33,9 @@ namespace exaDEM
 
 	class PrintSimulationStateNode : public OperatorNode
 	{  
-		// thermodynamic state & physics data
+    ADD_SLOT( MPI_Comm           , mpi                 , INPUT , MPI_COMM_WORLD);
+
+		// physics data
 		ADD_SLOT( long               , timestep            , INPUT , REQUIRED );
 		ADD_SLOT( double             , physical_time       , INPUT , REQUIRED );
 		ADD_SLOT( SimulationState    , simulation_state    , INPUT , REQUIRED );
@@ -39,6 +43,11 @@ namespace exaDEM
 		// printing options
 		ADD_SLOT( bool               , print_header        , INPUT, false );
 		ADD_SLOT( bool               , internal_units      , INPUT, false );
+
+    // save file
+    ADD_SLOT( std::string        , dir_name  , INPUT , "ExaDEMOutputDir", DocString{"Write an Output file containing stress tensors."} );
+    ADD_SLOT( std::string        , file_name , INPUT , "log.txt"        , DocString{"Write an Output file containing log lines."} );
+		ADD_SLOT( bool               , save_file , INPUT , true             , DocString{"Save line logs into a file, default behavior is true."} );
 
 		// LB and particle movement statistics
 		ADD_SLOT( long               , lb_counter          , INPUT_OUTPUT );
@@ -54,15 +63,7 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
-			double conv_temperature = 1.e4 * legacy_constant::atomicMass / legacy_constant::boltzmann ;
-			//double conv_energy = 1.e4 * legacy_constant::atomicMass / legacy_constant::elementaryCharge;
-			//static const std::string header = "     Step     Time (ps)     Particles   Mv/Ext/Imb.  Tot. E. (eV/part)  Kin. E. (eV/part)  Pot. E. (eV/part)  Temperature   Pressure     sMises     Volume       Mass";
-			static const std::string header = "     Step     Time (ps)     Particles   Mv/Ext/Imb. Temperature     Volume       Mass  Part/timestep/s";
-
-			if( *internal_units )
-			{
-				conv_temperature = 1.0;
-			}
+			static const std::string header = "     Step     Time          Particles  Mv/Ext/Imb.       |dn|  avg. act. I     avg. I   avg. Ec   avg. Erot     Volume       Mass  Throughput";
 
 			bool lb_flag = (*lb_counter) > 0 ;
 			long move_count = *move_counter ;
@@ -121,18 +122,46 @@ namespace exaDEM
 			double throughput = sim_info.compute_particles_throughput (new_timepoint, new_timestep);
 			simulation_state->update_timestep_timepoint (new_timepoint, new_timestep);
 
+      auto active_interactions = sim_info.active_interaction_count();
+      auto total_interactions  = sim_info.interaction_count();
 
-			lout<<format_string("%9ld % .6e %13ld  %c %c %8s % 11.3f % .3e % .3e      % .4e",
+      double avg_act_I = double(active_interactions) / sim_info.particle_count();
+      double avg_I = double(total_interactions) / sim_info.particle_count();
+
+			std::string line = format_string("%9ld % .6e %13ld  %c %c %8s %.3e    %9.3f  %9.3f % .3e % .3e % .3e % .3e % .4e",
 					*timestep, // %9ld
 					*physical_time, // %.6e
 					sim_info.particle_count(), // %13ld 
 					lb_move_char,domext_char,lb_value, // %c %c %.8s
-					sim_info.temperature_scal() / sim_info.particle_count() * conv_temperature, //%11.3f
+          std::abs(sim_info.dn()),
+          avg_act_I,
+          avg_I,
+					sim_info.kinetic_energy_scal() / sim_info.particle_count(),
+					sim_info.rotation_energy_scal() / sim_info.particle_count(),
 					sim_info.volume(),
 					sim_info.mass(),
 					throughput) ;
 
+      lout << line ;
 			lout << std::endl;
+
+      if(*save_file)
+			{
+				namespace fs = std::filesystem;
+				std::string full_path = (*dir_name) + "/" + (*file_name);
+				fs::path path(full_path);
+				int rank;
+				MPI_Comm_rank(*mpi, &rank);
+				fs::create_directory(*dir_name);
+
+				if ( rank == 0 )
+				{
+					fs::create_directory(*dir_name);
+				  std::fstream file(full_path, std::ios::out | std::ios::in | std::ios::app); 
+          if(*print_header) file << header << std::endl;
+					file << line << std::endl;
+				}
+			}
 		}
 
 	};

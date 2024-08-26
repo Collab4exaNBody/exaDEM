@@ -33,7 +33,7 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
 #include <exaDEM/interaction/classifier_for_all.hpp>
-#include <exaDEM/interaction/classifier_analyses.hpp>
+#include <exaDEM/itools/itools.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/shape/shape_detection_driver.hpp>
@@ -52,14 +52,15 @@ namespace exaDEM
     ADD_SLOT( HookeParams , config            , INPUT , REQUIRED ); // can be re-used for to dump contact network
     ADD_SLOT( HookeParams , config_driver     , INPUT , OPTIONAL ); // can be re-used for to dump contact network
     ADD_SLOT( double      , dt                , INPUT , REQUIRED );
-    ADD_SLOT( bool        , symetric          , INPUT , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"});
+    ADD_SLOT( bool        , symetric          , INPUT_OUTPUT , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"});
     ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
     ADD_SLOT( Classifier  , ic                , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
     ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
     // analysis
     ADD_SLOT( long        , timestep          , INPUT , REQUIRED );
-    ADD_SLOT( long        , analysis_interaction_dump_frequency , INPUT , REQUIRED, DocString{"Write an interaction dump file"});
+    ADD_SLOT( long        , analysis_interaction_dump_frequency  , INPUT, REQUIRED, DocString{"Write an interaction dump file"});
     ADD_SLOT( long        , analysis_dump_stress_tensor_frequency, INPUT, REQUIRED, DocString{"Compute avg Stress Tensor."});
+    ADD_SLOT( long        , simulation_log_frequency             , INPUT, REQUIRED, DocString{"Log frequency."});
 
     public:
 
@@ -79,7 +80,10 @@ namespace exaDEM
       const long frequency_stress_tensor = *analysis_dump_stress_tensor_frequency;
       bool compute_stress_tensor = ( frequency_stress_tensor > 0 && (*timestep) % frequency_stress_tensor == 0);
 
-      bool store_interactions = write_interactions || compute_stress_tensor;
+      const long log_frequency = *simulation_log_frequency;
+      bool need_interactions_for_log_frequency = (*timestep) % log_frequency;
+
+      bool store_interactions = write_interactions || compute_stress_tensor || need_interactions_for_log_frequency;
 
       /** Get driver and particles data */
       Drivers* drvs =  drivers.get_pointer();
@@ -125,9 +129,9 @@ namespace exaDEM
 
       if(write_interactions)
       {
-        auto stream = create_buffer(*grid, classifier);
+        auto stream = itools::create_buffer(*grid, classifier);
         std::string ts = std::to_string(*timestep);
-        write_file(stream, "Interaction_" + ts);        
+        itools::write_file(stream, "Interaction_" + ts);        
       }
 		}
 	};

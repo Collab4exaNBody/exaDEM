@@ -54,8 +54,7 @@ namespace exaDEM
 
 		inline std::string documentation() const override final
 		{
-			return R"EOF(
-				        )EOF";
+			return R"EOF( This operator displays DEM simulation data for a given frequency.)EOF";
 		}
 
 		inline void execute () override final
