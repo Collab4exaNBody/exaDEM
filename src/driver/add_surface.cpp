@@ -57,7 +57,7 @@ namespace exaDEM
 
       inline void execute () override final
       {
-        exaDEM::Surface driver = {*offset, *normal, null, *velocity, *vrot}; // 
+        exaDEM::Surface driver = {*offset, *normal, Vec3d{0.0,0.0,0.0}, *velocity, *vrot}; // 
         driver.initialize();
         drivers->add_driver(*id, driver);
       }
