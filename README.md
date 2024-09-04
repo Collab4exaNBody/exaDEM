@@ -13,7 +13,7 @@ Documentation is available here:
 
 - Website: [ExaDEM Website](https://collab4exanbody.github.io/exaDEM/)
 - Github: [ExaDEM Documentation](https://github.com/Collab4exaNBody/doc_exaDEM.git)
-- 
+
 ## Authors and acknowledgment
 
 `ExaDEM` is part of the `PLEIADES` platform which has been developped in collaboration with the French nuclear industry - mainly `CEA`, `EDF`, and `Framatome` - for simulation of fuel1 elements.
