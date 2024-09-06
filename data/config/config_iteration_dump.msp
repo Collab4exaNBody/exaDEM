@@ -23,7 +23,7 @@ write_paraview_generic:
   binary: false
   write_ghost: false
   write_box: true
-  fields: ["type","vx","vy","vz","id","orient"]
+  fields: ["radius", "type","vx","vy","vz","id","orient"]
 #  fields: ["vx","vy","vz","id","radius"]
 
 dump_data_paraview:
