@@ -128,7 +128,8 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC 
       inline data_t& data(size_t idx)
       {
-        assert( idx < m_data.size());
+        //assert( idx < m_data.size());
+        assert( idx < onika::cuda::vector_size(m_data));
         auto* const ptr = onika::cuda::vector_data(m_data);
         return ptr[idx];
       }
