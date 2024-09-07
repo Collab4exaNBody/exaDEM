@@ -39,11 +39,13 @@ namespace exaDEM
   template<typename GridT>
     class AddSurface : public OperatorNode
     {
-      ADD_SLOT( Drivers , drivers   , INPUT_OUTPUT               , DocString{"List of Drivers"});
-      ADD_SLOT( int     , id        , INPUT , REQUIRED           , DocString{"Driver index"});
-      ADD_SLOT( double  , offset    , INPUT , 0.0                , DocString{"Offset from the origin (0,0,0) of the rigid surface"} );
-      ADD_SLOT( double  , velocity  , INPUT , 0.0                , DocString{"Surface velocity"});
-      ADD_SLOT( Vec3d   , normal    , INPUT , Vec3d{0.0,0.0,1.0} , DocString{"Normal vector of the rigid surface"});
+      ADD_SLOT( Drivers , drivers          , INPUT_OUTPUT , REQUIRED    , DocString{"List of Drivers"});
+      ADD_SLOT( size_t  , id               , INPUT , REQUIRED           , DocString{"Driver index"});
+      ADD_SLOT( double  , offset           , INPUT , 0.0                , DocString{"Offset from the origin (0,0,0) of the rigid surface"} );
+      ADD_SLOT( double  , velocity         , INPUT , 0.0                , DocString{"Surface velocity"});
+      ADD_SLOT( Vec3d   , center           , INPUT , Vec3d{0.0,0.0,0.0} , DocString{"Normal vector of the rigid surface"});
+      ADD_SLOT( Vec3d   , normal           , INPUT , Vec3d{0.0,0.0,1.0} , DocString{"Normal vector of the rigid surface"});
+      ADD_SLOT( Vec3d   , angular_velocity , INPUT , Vec3d{0.0,0.0,0.0} , DocString{"Angular velocity of the surface, default is 0 m.s-"});
 
       public:
 
@@ -57,8 +59,8 @@ namespace exaDEM
       inline void execute () override final
       {
         constexpr Vec3d null= { 0.0, 0.0, 0.0 };
-        exaDEM::Surface driver = {*offset, *normal, null, *velocity, null}; // 
-        driver.initialize();
+        exaDEM::Surface driver = {*offset, *normal, *center, *velocity, *angular_velocity}; // 
+        driver.initialize(); // initialize some values from input parameters such as the projected center of the surface (normal line)
         drivers->add_driver(*id, driver);
       }
     };

@@ -43,7 +43,7 @@ namespace exaDEM
 	{
 		static constexpr Vec3d null= { 0.0, 0.0, 0.0 };
 
-		ADD_SLOT( Drivers     , drivers         , INPUT_OUTPUT,            DocString{"List of Drivers"});
+    ADD_SLOT( Drivers     , drivers         , INPUT_OUTPUT, REQUIRED , DocString{"List of Drivers"});
 		ADD_SLOT( int         , id              , INPUT       , REQUIRED , DocString{"Driver index"});
 		ADD_SLOT( std::string , filename        , INPUT       , REQUIRED , DocString{"Input filename"});
 		ADD_SLOT( Vec3d       , center          , INPUT       , null     , DocString{"Defined but not used"});

@@ -85,6 +85,7 @@ namespace exaDEM
             m_type[i] = DRIVER_TYPE::UNDEFINED;
             m_data[i] = exaDEM::UndefinedDriver();
           }
+          std::cout << idx << std::endl; Driver.print();
           m_type[idx] = t;
           m_data[idx] = Driver;
         }
@@ -134,6 +135,13 @@ namespace exaDEM
         return ptr[idx];
       }
 
+    ONIKA_HOST_DEVICE_FUNC 
+      inline data_t* get_data_ptr() 
+      {
+        auto* const res = onika::cuda::vector_data(m_data);
+        return res;
+      }
+
 		template<typename Driver>
     ONIKA_HOST_DEVICE_FUNC 
       inline Driver* ptr()
@@ -155,13 +163,49 @@ namespace exaDEM
     }
 
     /**
+     * @brief Prints Drivers informations.
+     */
+    void print_drivers()
+    {
+      for (size_t i = 0 ; i < this->get_size() ; i++)
+      {
+        auto type = m_type[i];
+        if(type != DRIVER_TYPE::UNDEFINED)
+        {
+          lout << "Driver [" << i << "]:" << std::endl;
+          if( type == DRIVER_TYPE::CYLINDER )
+          {
+            auto& drv = std::get<Cylinder>(m_data[i]);
+            drv.print();
+          }
+          if( type == DRIVER_TYPE::SURFACE )
+          {
+            auto& drv = std::get<Surface>(m_data[i]);
+            drv.print();
+          }
+          if( type == DRIVER_TYPE::BALL )
+          {
+            auto& drv = std::get<Ball>(m_data[i]);
+            drv.print();
+          }
+          if( type == DRIVER_TYPE::STL_MESH )
+          {
+            auto& drv = std::get<Stl_mesh>(m_data[i]);
+            drv.print();
+          }
+        } 
+      }
+    }
+
+    /**
      * @brief Prints statistics about the drivers in the collection.
      * @details This function prints the total number of drivers and the count of each driver type.
      */
     void stats_drivers()
     {
-      int Count [DRIVER_TYPE_SIZE]; // defined in driver_base.h
-      for( auto& it : m_type ) Count[it]++;
+      std::array<int, DRIVER_TYPE_SIZE> Count; // defined in driver_base.h
+      for( auto& it : Count ){ it = 0; }
+      for( auto& it : m_type ){ Count[it]++;}
       std::cout << "Drivers Stats" << std::endl;
       std::cout << "Number of drivers: " << m_type.size() << std::endl;
       for( int t = 0 ; t < DRIVER_TYPE_SIZE ; t++)

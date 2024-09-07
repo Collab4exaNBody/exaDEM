@@ -58,7 +58,6 @@ setup_drivers: nop
 init_particle_regions: nop
 
 first_iteration:
-  - setup_drivers
   - init_particle_regions
   - init_particles
   - reset_force_moment
@@ -110,6 +109,8 @@ simulation:
     - hw_device_init   # provides MPI_COMM_WORLD as a default communicator
     - make_empty_grid
     - global
+    - init_drivers
+    - setup_drivers
     - preinit_rcut_max
     - domain
     - init_prolog

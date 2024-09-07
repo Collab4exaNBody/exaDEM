@@ -41,7 +41,7 @@ namespace exaDEM
     {
       static constexpr Vec3d null= { 0.0, 0.0, 0.0 };
 
-      ADD_SLOT( Drivers , drivers    , INPUT_OUTPUT, DocString{"List of Drivers"});
+      ADD_SLOT( Drivers , drivers    , INPUT_OUTPUT , REQUIRED    , DocString{"List of Drivers"});
       ADD_SLOT( int     , id         , INPUT       , REQUIRED , DocString{"Driver index"});
       ADD_SLOT( double  , radius     , INPUT       , REQUIRED , DocString{"Radius of the ball, positive and should be superior to the biggest sphere radius in the ball"});
       ADD_SLOT( Vec3d   , center     , INPUT       , REQUIRED , DocString{"Center of the ball"});

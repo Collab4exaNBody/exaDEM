@@ -162,6 +162,9 @@ namespace exaDEM
             {
               item.id_j = drvs_idx; // we store the driver idx
               DRIVER_TYPE type = drvs.type(drvs_idx);
+
+              if(type == DRIVER_TYPE::UNDEFINED) { continue; }
+
               if(type == DRIVER_TYPE::CYLINDER)
               {
                 item.type = 4;

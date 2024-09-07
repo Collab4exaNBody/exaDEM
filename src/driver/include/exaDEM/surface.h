@@ -34,6 +34,7 @@ namespace exaDEM
     exanb::Vec3d center;    /**< Center position of the surface. */
     double vel;             /**< Velocity of the surface. */
     exanb::Vec3d vrot;      /**< Angular velocity of the surface. */
+    exanb::Vec3d center_proj; /**< Center position projected on the norm. */
 
     /**
      * @brief Get the type of the driver (in this case, SURFACE).
@@ -49,8 +50,9 @@ namespace exaDEM
       lout << "Driver Type: Surface" << std::endl;
       lout << "Offset: " << offset   << std::endl;
       lout << "Normal: " << normal   << std::endl;
-      lout << "Vel   : " << vel << std::endl;
-      lout << "AngVel: " << vrot << std::endl;
+      lout << "Center: " << center   << std::endl;
+      lout << "Vel   : " << vel      << std::endl;
+      lout << "AngVel: " << vrot     << std::endl;
     }
 
     /**
@@ -59,8 +61,10 @@ namespace exaDEM
      */
     ONIKA_HOST_DEVICE_FUNC inline void initialize ()
     {
-      center = normal * offset;
+      center_proj = normal * offset;
+
       // checks
+      if( exanb::dot(center,normal) != exanb::dot(center_proj, normal)) lout << "Warning, center point (surface) is not correctly defined" << std::endl;
       //if( exanb::dot(normal,normal) != 1 )  lout << "Warning, normal vector (surface) is not correctly defined" << std::endl;
     }
 
@@ -90,7 +94,7 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC inline bool filter( const double rcut , const exanb::Vec3d& p)
     {
       Vec3d proj = dot(p , normal) * normal;
-      double d = norm ( proj - center );
+      double d = norm ( proj - center_proj );
       return d <= rcut;
     }
 
@@ -107,7 +111,7 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector( const double rcut , const Vec3d& p)
     {
       Vec3d proj = dot(p , normal) * normal;
-      Vec3d surface_to_point = center - proj;
+      Vec3d surface_to_point =  -(center_proj - proj);
       double d = norm ( surface_to_point );
       double dn = d - rcut;
       if( dn > 0 )

@@ -54,11 +54,11 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set {};
 
     ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
-    ADD_SLOT( HookeParams , config            , INPUT , REQUIRED , DocString{"Hooke parameters for sphere interactions"}); // can be re-used for to dump contact network
-    ADD_SLOT( HookeParams , config_driver     , INPUT , OPTIONAL , DocString{"Hooke parameters for drivers, optional"}); // can be re-used for to dump contact network
-    ADD_SLOT( double      , dt                , INPUT , REQUIRED , DocString{"Time step value"});
+    ADD_SLOT( HookeParams , config            , INPUT        , REQUIRED , DocString{"Hooke parameters for sphere interactions"}); // can be re-used for to dump contact network
+    ADD_SLOT( HookeParams , config_driver     , INPUT        , OPTIONAL , DocString{"Hooke parameters for drivers, optional"}); // can be re-used for to dump contact network
+    ADD_SLOT( double      , dt                , INPUT        , REQUIRED , DocString{"Time step value"});
     ADD_SLOT( bool        , symetric          , INPUT_OUTPUT , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"});
-    ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
+    ADD_SLOT( Drivers     , drivers           , INPUT        , REQUIRED ,DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
     ADD_SLOT( Classifier  , ic                , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
     // analysis
     ADD_SLOT( long        , timestep          , INPUT , REQUIRED );
@@ -120,9 +120,9 @@ namespace exaDEM
         hooke_law<false> sph;
         run_contact_law(parallel_execution_context(), 0, classifier, sph, store_interactions, cells, hkp, time);  
       }
-      run_contact_law(parallel_execution_context(), 4, classifier, cyli, store_interactions, cells, drvs->ptr<Cylinder>(), hkp_drvs, time);  
-      run_contact_law(parallel_execution_context(), 5, classifier, surf, store_interactions, cells, drvs->ptr<Surface>(), hkp_drvs, time);  
-      run_contact_law(parallel_execution_context(), 6, classifier, ball, store_interactions, cells, drvs->ptr<Ball>(), hkp_drvs, time);  
+      run_contact_law(parallel_execution_context(), 4, classifier, cyli, store_interactions, cells, drvs, hkp_drvs, time);  
+      run_contact_law(parallel_execution_context(), 5, classifier, surf, store_interactions, cells, drvs, hkp_drvs, time);  
+      run_contact_law(parallel_execution_context(), 6, classifier, ball, store_interactions, cells, drvs, hkp_drvs, time);  
       for(int type = 7 ; type <= 9 ; type++)
       {
         run_contact_law(parallel_execution_context(), type, classifier, stlm, store_interactions, cells, drvs, hkp_drvs, time);  

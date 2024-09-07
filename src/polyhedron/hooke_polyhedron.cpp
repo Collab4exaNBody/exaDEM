@@ -53,7 +53,7 @@ namespace exaDEM
     ADD_SLOT( HookeParams , config_driver     , INPUT , OPTIONAL ); // can be re-used for to dump contact network
     ADD_SLOT( double      , dt                , INPUT , REQUIRED );
     ADD_SLOT( bool        , symetric          , INPUT_OUTPUT , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"});
-    ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
+    ADD_SLOT( Drivers     , drivers           , INPUT , REQUIRED , DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
     ADD_SLOT( Classifier  , ic                , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
     ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
     // analysis
@@ -119,9 +119,9 @@ namespace exaDEM
 			{
 				run_contact_law(parallel_execution_context(), type, classifier, poly, store_interactions, cells, hkp, shps, time);
 			}
-			run_contact_law(parallel_execution_context(), 4, classifier, cyli, store_interactions, cells, drvs->ptr<Cylinder>(), hkp_drvs, shps, time);  
-			run_contact_law(parallel_execution_context(), 5, classifier, surf, store_interactions, cells, drvs->ptr<Surface>(), hkp_drvs, shps, time);  
-			run_contact_law(parallel_execution_context(), 6, classifier, ball, store_interactions, cells, drvs->ptr<Ball>(), hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 4, classifier, cyli, store_interactions, cells, drvs, hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 5, classifier, surf, store_interactions, cells, drvs, hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 6, classifier, ball, store_interactions, cells, drvs, hkp_drvs, shps, time);  
 			for(int type = 7 ; type <= 12 ; type++)
 			{
 				run_contact_law(parallel_execution_context(), type, classifier, stlm, store_interactions, cells, drvs, hkp_drvs, shps, time);  
