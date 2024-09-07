@@ -30,8 +30,6 @@ setup_drivers:
      id: 0
      filename: box_for_octa.stl
      minskowski: 0.01
-  - update_grid_stl_mesh
-
 
 compute_force:
   - gravity_force

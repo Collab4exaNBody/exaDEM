@@ -39,7 +39,6 @@ setup_drivers:
      id: 1
      filename: cube.stl
      minskowski: 0.0001
-  - update_grid_stl_mesh
 
 input_data:
   - reader1
