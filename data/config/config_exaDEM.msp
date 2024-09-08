@@ -58,7 +58,6 @@ setup_drivers: nop
 init_particle_regions: nop
 
 first_iteration:
-  - setup_drivers
   - init_particle_regions
   - init_particles
   - reset_force_moment
@@ -104,7 +103,18 @@ compute_loop:
 
 # You can tune the output directories here:
 output_configuration:
-   - io_config
+  - io_config:
+     dir_name: "ExaDEMOutputDir"
+     log_name: "log.txt"
+     avg_stress_tensor_name: "AvgStressTensor.txt"
+     interaction_basename: "InteractionOutputDir-"      
+
+# Add your drivers by overriding setup_drivers
+setup_drivers: nop
+drivers:
+  - init_drivers
+  - setup_drivers
+  - print_drivers
 
 ######## simulation program description #################
 simulation:
@@ -115,6 +125,7 @@ simulation:
     - make_empty_grid
     - global
     - output_configuration
+    - drivers
     - preinit_rcut_max
     - domain
     - init_prolog

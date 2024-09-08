@@ -29,10 +29,10 @@ namespace exanb
 
   class TimeStepParaviewFileNameOperator : public OperatorNode
   {  
-    ADD_SLOT( long        , timestep , INPUT , REQUIRED );
-    ADD_SLOT( std::string , format   , INPUT , REQUIRED );
-    ADD_SLOT( std::string , dir_name , INPUT , REQUIRED , DocString{"Output directory name."} );
-    ADD_SLOT( std::string , filename , OUTPUT );
+    ADD_SLOT( long        , timestep  , INPUT , REQUIRED );
+    ADD_SLOT( std::string , format    , INPUT , REQUIRED );
+    ADD_SLOT( std::string , dir_name  , INPUT , REQUIRED , DocString{"Output directory name."} );
+    ADD_SLOT( std::string , filename  , OUTPUT );
 
   public:
     inline void execute() override final

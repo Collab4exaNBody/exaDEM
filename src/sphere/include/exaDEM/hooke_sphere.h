@@ -240,12 +240,12 @@ namespace exaDEM
 					inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
 							Interaction& item, 
 							TMPLC* cells, 
-							TMPLD* drvs, 
+						  Drivers* drvs, 
 							const HookeParams& hkp, 
 							const double time) const
 					{
 						const int driver_idx = item.id_j; //
-						TMPLD& driver = drvs[driver_idx];
+						TMPLD& driver = std::get<TMPLD>(drvs->data(driver_idx));
 						auto& cell = cells[item.cell_i];
 						const size_t p   = item.p_i;
 						// === positions

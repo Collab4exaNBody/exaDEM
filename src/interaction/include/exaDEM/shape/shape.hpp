@@ -189,7 +189,8 @@ namespace exaDEM
 		ONIKA_HOST_DEVICE_FUNC
 			const std::pair<int*, int> get_face(const int i)
 			{
-				assert(i < m_faces[0]);
+				//assert(i < m_faces[0]);
+				assert(i < onika::cuda::vector_data(m_faces)[0]);
 				int * ptr = this->get_faces() + 1;
 				for(int it = i ; it > 0 ; it --)
 				{
@@ -202,7 +203,8 @@ namespace exaDEM
 		ONIKA_HOST_DEVICE_FUNC
 		const std::pair<int*, int> get_face(const int i) const
 		{
-			assert(i < m_faces[0]);
+			//assert(i < m_faces[0]);
+			assert(i < onika::cuda::vector_data(m_faces)[0]);
 			int * ptr = this->get_faces() + 1;
 			for(int it = i ; it > 0 ; it --)
 			{
@@ -394,6 +396,7 @@ namespace exaDEM
 
 		inline void print()
 		{
+      lout << std::endl;
 			lout << "======= Shape Configuration =====" << std::endl;
 			lout << "Shape Name        = " << this->m_name << std::endl;
 			lout << "Shape Radius      = " << this->m_radius << std::endl;

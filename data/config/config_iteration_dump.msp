@@ -13,7 +13,7 @@ write_paraview_generic:
   binary: false
   write_ghost: false
   write_box: true
-  fields: ["type","vx","vy","vz","id","orient"]
+  fields: ["radius", "type","vx","vy","vz","id","orient"]
 #  fields: ["vx","vy","vz","id","radius"]
 
 dump_data_paraview:
@@ -45,7 +45,7 @@ compress_data:
   - compress_interaction
 
 dump_data_particles:
-  - timestep_paraview_file: "CheckpointFiles/exadem_%010d"
+  - timestep_paraview_file: "CheckpointFiles/exadem_%010d.dump"
   - message: { mesg: "Write dump " , endl: false }
   - print_dump_file:
       rebind: { mesg: filename }

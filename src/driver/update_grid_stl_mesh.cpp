@@ -45,10 +45,10 @@ namespace exaDEM
 	{
 		using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz>;
 		static constexpr ComputeFields compute_field_set {};
-		ADD_SLOT( MPI_Comm , mpi      , INPUT , MPI_COMM_WORLD , DocString{"MPI communicator for parallel processing."});
+		ADD_SLOT( MPI_Comm , mpi      , INPUT        , MPI_COMM_WORLD , DocString{"MPI communicator for parallel processing."});
 		ADD_SLOT( GridT    , grid     , INPUT_OUTPUT , DocString{"Grid used for computations."} );
-		ADD_SLOT( Drivers     , drivers         , INPUT_OUTPUT,            DocString{"List of Drivers"});
-		ADD_SLOT( double     , rcut_max         , INPUT, REQUIRED,           DocString{"rcut_max"});
+		ADD_SLOT( Drivers  , drivers  , INPUT_OUTPUT , DocString{"List of Drivers"});
+		ADD_SLOT( double   , rcut_max , INPUT        , REQUIRED , DocString{"rcut_max"});
 
 		public:
 		inline std::string documentation() const override final

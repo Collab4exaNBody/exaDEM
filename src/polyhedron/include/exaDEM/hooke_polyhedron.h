@@ -286,13 +286,13 @@ namespace exaDEM
           ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
               Interaction& item, 
               TMPLC* cells, 
-              TMPLD* const drvs, 
+              Drivers* const drvs, 
               const HookeParams& hkp, 
               const shape* shps, 
               const double dt) const
           {
             const int driver_idx = item.id_j; //
-            TMPLD& driver        = drvs[driver_idx] ;
+            TMPLD& driver        = std::get<TMPLD>(drvs->data(driver_idx)) ;
             auto& cell           = cells[item.cell_i];
             const auto type      = cell[field::type][item.p_i];
             auto& shp            = shps[type];
