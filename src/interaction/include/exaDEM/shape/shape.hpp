@@ -396,6 +396,7 @@ namespace exaDEM
 
 		inline void print()
 		{
+      lout << std::endl;
 			lout << "======= Shape Configuration =====" << std::endl;
 			lout << "Shape Name        = " << this->m_name << std::endl;
 			lout << "Shape Radius      = " << this->m_radius << std::endl;

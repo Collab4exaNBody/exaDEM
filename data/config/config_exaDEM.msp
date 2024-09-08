@@ -101,6 +101,21 @@ compute_loop:
     - next_time_step
     - compute_loop_stop
 
+# You can tune the output directories here:
+io_tree:
+  - io_config:
+     dir_name: "ExaDEMOutputDir"
+     log_name: "log.txt"
+     avg_stress_tensor_name: "AvgStressTensor.txt"
+     interaction_basename: "InteractionOutputDir-"      
+
+# Add your drivers by overriding setup_drivers
+setup_drivers: nop
+drivers:
+  - init_drivers
+  - setup_drivers
+  - print_drivers
+
 ######## simulation program description #################
 simulation:
   name: sim
@@ -109,8 +124,8 @@ simulation:
     - hw_device_init   # provides MPI_COMM_WORLD as a default communicator
     - make_empty_grid
     - global
-    - init_drivers
-    - setup_drivers
+    - io_tree
+    - drivers
     - preinit_rcut_max
     - domain
     - init_prolog

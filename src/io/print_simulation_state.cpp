@@ -45,9 +45,9 @@ namespace exaDEM
 		ADD_SLOT( bool               , internal_units      , INPUT, false );
 
     // save file
-    ADD_SLOT( std::string        , dir_name  , INPUT , "ExaDEMOutputDir", DocString{"Write an Output file containing stress tensors."} );
-    ADD_SLOT( std::string        , file_name , INPUT , "log.txt"        , DocString{"Write an Output file containing log lines."} );
-		ADD_SLOT( bool               , save_file , INPUT , true             , DocString{"Save line logs into a file, default behavior is true."} );
+    ADD_SLOT( std::string        , dir_name  , INPUT , REQUIRED , DocString{"Output directory name."} );
+    ADD_SLOT( std::string        , log_name  , INPUT , REQUIRED , DocString{"Write an Output file containing log lines."} );
+		ADD_SLOT( bool               , save_file , INPUT , true     , DocString{"Save line logs into a file, default behavior is true."} );
 
 		// LB and particle movement statistics
 		ADD_SLOT( long               , lb_counter          , INPUT_OUTPUT );
@@ -148,7 +148,7 @@ namespace exaDEM
       if(*save_file)
 			{
 				namespace fs = std::filesystem;
-				std::string full_path = (*dir_name) + "/" + (*file_name);
+				std::string full_path = (*dir_name) + "/" + (*log_name);
 				fs::path path(full_path);
 				int rank;
 				MPI_Comm_rank(*mpi, &rank);

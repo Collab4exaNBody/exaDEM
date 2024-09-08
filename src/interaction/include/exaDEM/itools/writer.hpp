@@ -49,13 +49,12 @@ namespace exaDEM
         return stream;
       }
 
-    void write_file(std::stringstream& stream, std::string filename)
+    void write_file(std::stringstream& stream, std::string directory, std::string filename)
     {
       int rank, size;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);
       MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-      std::string directory = "ExaDEMOutputDir";
       std::string subdirectory = directory + "/ExaDEMAnalyses";
       std::string subsubdirectory = subdirectory + "/" + filename;
       if(rank == 0)

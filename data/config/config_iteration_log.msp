@@ -29,4 +29,4 @@ trigger_dump_thermo:
 trigger_write_stress_tensor:
   rebind: { freq: analysis_dump_stress_tensor_frequency , result: trigger_write_stress_tensor }
   body:
-    - nth_timestep: { first: true }
+    - nth_timestep: { first: false }
