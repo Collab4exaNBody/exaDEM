@@ -74,7 +74,7 @@ namespace exaDEM
 
     inline std::string documentation() const override final
     {
-      return R"EOF(This operators compute forces between particles and particles/drivers using the Hooke's law.)EOF";
+      return R"EOF(This operator computes forces between particles and particles/drivers using the Hooke's law.)EOF";
     }
 
     inline void execute () override final

@@ -102,7 +102,7 @@ compute_loop:
     - compute_loop_stop
 
 # You can tune the output directories here:
-output_configuration:
+io_tree:
   - io_config:
      dir_name: "ExaDEMOutputDir"
      log_name: "log.txt"
@@ -124,7 +124,7 @@ simulation:
     - hw_device_init   # provides MPI_COMM_WORLD as a default communicator
     - make_empty_grid
     - global
-    - output_configuration
+    - io_tree
     - drivers
     - preinit_rcut_max
     - domain
