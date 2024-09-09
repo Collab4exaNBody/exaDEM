@@ -59,7 +59,7 @@ namespace exaDEM
      * @brief Initialize the surface.
      * @details Calculates the center position based on the normal and offset.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void initialize ()
+    inline void initialize ()
     {
       center_proj = normal * offset;
 
