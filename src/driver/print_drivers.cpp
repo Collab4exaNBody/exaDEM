@@ -53,8 +53,13 @@ namespace exaDEM
       inline void execute () override final
       {
         auto& drvs = *drivers;
+        lout << std::endl;
+        lout << "==================== Driver Configuraions =======================" << std::endl;
+        lout << "===== Summary" << std::endl;
         drvs.stats_drivers();
+        lout << "===== List Of Drivers" << std::endl;
         drvs.print_drivers();
+        lout << "=================================================================" << std::endl;
       }
     };
 

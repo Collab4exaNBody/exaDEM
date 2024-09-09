@@ -38,12 +38,12 @@ namespace exaDEM
     using ComputeFields = FieldSet< field::_vrot, field::_arot >;
     static constexpr ComputeFields compute_field_set {};
 
-    ADD_SLOT( MPI_Comm                    , mpi  , INPUT , MPI_COMM_WORLD);
-    ADD_SLOT( Mat3d                       , stress_tensor , INPUT , REQUIRED , DocString{"Write an Output file containing stress tensors."} );
-    ADD_SLOT( std::string                 , dir_name  , INPUT , "ExaDEMOutputDir", DocString{"Write an Output file containing stress tensors."} );
-    ADD_SLOT( std::string                 , file_name , INPUT , "AvgStresTensor.txt", DocString{"Write an Output file containing stress tensors."} );
-    ADD_SLOT( long                        , timestep  , INPUT , REQUIRED , DocString{"Iteration number"} );
-    ADD_SLOT( double                      , dt        , INPUT , REQUIRED );
+    ADD_SLOT( MPI_Comm                    , mpi                    , INPUT , MPI_COMM_WORLD);
+    ADD_SLOT( Mat3d                       , stress_tensor          , INPUT , REQUIRED , DocString{"Write an Output file containing stress tensors."} );
+    ADD_SLOT( std::string                 , dir_name               , INPUT , REQUIRED , DocString{"Write an Output file containing stress tensors."} );
+    ADD_SLOT( std::string                 , avg_stress_tensor_name , INPUT , REQUIRED , DocString{"Write an Output file containing stress tensors."} );
+    ADD_SLOT( long                        , timestep               , INPUT , REQUIRED , DocString{"Iteration number"} );
+    ADD_SLOT( double                      , dt                     , INPUT , REQUIRED );
 
     public:
 
@@ -55,7 +55,7 @@ namespace exaDEM
     inline void execute () override final
     {
       namespace fs = std::filesystem;
-			std::string full_path = (*dir_name) + "/" + (*file_name);
+			std::string full_path = (*dir_name) + "/" + (*avg_stress_tensor_name);
       fs::path path(full_path);
 			const Mat3d& stress = *stress_tensor;
 

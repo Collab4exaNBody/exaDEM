@@ -85,7 +85,6 @@ namespace exaDEM
             m_type[i] = DRIVER_TYPE::UNDEFINED;
             m_data[i] = exaDEM::UndefinedDriver();
           }
-          std::cout << idx << std::endl; Driver.print();
           m_type[idx] = t;
           m_data[idx] = Driver;
         }

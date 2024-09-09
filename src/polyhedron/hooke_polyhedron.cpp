@@ -53,14 +53,16 @@ namespace exaDEM
     ADD_SLOT( HookeParams , config_driver     , INPUT , OPTIONAL ); // can be re-used for to dump contact network
     ADD_SLOT( double      , dt                , INPUT , REQUIRED );
     ADD_SLOT( bool        , symetric          , INPUT_OUTPUT , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"});
-    ADD_SLOT( Drivers     , drivers           , INPUT , REQUIRED , DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
+    ADD_SLOT( Drivers     , drivers           , INPUT , DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
     ADD_SLOT( Classifier  , ic                , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
     ADD_SLOT( shapes      , shapes_collection , INPUT_OUTPUT , DocString{"Collection of shapes"});
-    // analysis
+    // analyses
     ADD_SLOT( long        , timestep          , INPUT , REQUIRED );
-    ADD_SLOT( long        , analysis_interaction_dump_frequency  , INPUT, REQUIRED, DocString{"Write an interaction dump file"});
-    ADD_SLOT( long        , analysis_dump_stress_tensor_frequency, INPUT, REQUIRED, DocString{"Compute avg Stress Tensor."});
-    ADD_SLOT( long        , simulation_log_frequency             , INPUT, REQUIRED, DocString{"Log frequency."});
+    ADD_SLOT( long        , analysis_interaction_dump_frequency  , INPUT , REQUIRED , DocString{"Write an interaction dump file"});
+    ADD_SLOT( long        , analysis_dump_stress_tensor_frequency, INPUT , REQUIRED , DocString{"Compute avg Stress Tensor."});
+    ADD_SLOT( long        , simulation_log_frequency             , INPUT , REQUIRED , DocString{"Log frequency."});
+    ADD_SLOT( std::string , dir_name                             , INPUT , REQUIRED , DocString{"Output directory name."} );
+    ADD_SLOT( std::string , interaction_basename                 , INPUT , REQUIRED , DocString{"Write an Output file containing interactions." } );
 
     public:
 
@@ -131,7 +133,7 @@ namespace exaDEM
       {
         auto stream = itools::create_buffer(*grid, classifier);
         std::string ts = std::to_string(*timestep);
-        itools::write_file(stream, "Interaction_" + ts);        
+        itools::write_file(stream, (*dir_name), (*interaction_basename) + ts);        
       }
 		}
 	};

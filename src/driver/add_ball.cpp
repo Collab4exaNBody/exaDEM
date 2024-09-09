@@ -45,8 +45,8 @@ namespace exaDEM
       ADD_SLOT( int     , id         , INPUT       , REQUIRED , DocString{"Driver index"});
       ADD_SLOT( double  , radius     , INPUT       , REQUIRED , DocString{"Radius of the ball, positive and should be superior to the biggest sphere radius in the ball"});
       ADD_SLOT( Vec3d   , center     , INPUT       , REQUIRED , DocString{"Center of the ball"});
-      ADD_SLOT( Vec3d   , angular_velocity, INPUT  , null     , DocString{"Angular velocity of the ball, default is 0 m.s-"});
       ADD_SLOT( Vec3d   , velocity   , INPUT       , null     , DocString{"Ball velocity"});
+      ADD_SLOT( Vec3d   , vrot       , INPUT       , null     , DocString{"Angular velocity of the ball, default is 0 m.s-"});
 
       public:
 
@@ -59,7 +59,7 @@ namespace exaDEM
 
       inline void execute () override final
       {
-        exaDEM::Ball driver = {*radius, *center, *velocity, *angular_velocity};
+        exaDEM::Ball driver = {*radius, *center, *velocity, *vrot};
 				driver.initialize();
         drivers->add_driver(*id, driver);
       }
