@@ -123,7 +123,7 @@ namespace exaDEM
 		 * @return Number of interaction types.
 		 */
 		size_t number_of_waves() { assert(types == waves.size()) ; return types;}
-		const size_t number_of_waves() const { assert(types == waves.size()) ; return types;}
+		size_t number_of_waves() const { assert(types == waves.size()) ; return types;}
 
 		/**
 		 * @brief Classifies interactions into categorized waves based on their types.
