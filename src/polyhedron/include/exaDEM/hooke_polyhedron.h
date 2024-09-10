@@ -267,6 +267,7 @@ namespace exaDEM
     template<typename TMPLD>
       struct hooke_law_driver
       {
+        using driven_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
         /**
          * @brief Functor for applying Hooke's law interactions driven by drivers.
          *
@@ -286,13 +287,13 @@ namespace exaDEM
           ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
               Interaction& item, 
               TMPLC* cells, 
-              Drivers* const drvs, 
+              driven_t* const drvs, 
               const HookeParams& hkp, 
               const shape* shps, 
               const double dt) const
           {
             const int driver_idx = item.id_j; //
-            TMPLD& driver        = std::get<TMPLD>(drvs->data(driver_idx)) ;
+            TMPLD& driver        = std::get<TMPLD>(drvs[driver_idx]) ;
             auto& cell           = cells[item.cell_i];
             const auto type      = cell[field::type][item.p_i];
             auto& shp            = shps[type];
@@ -406,6 +407,7 @@ namespace exaDEM
      */
     struct hooke_law_stl
     {
+      using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
       /**
        * @brief Operator function for applying Hooke's law interactions with STL mesh objects.
        *
@@ -425,13 +427,13 @@ namespace exaDEM
         ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()( 
             Interaction& item, 
             TMPLC* cells, 
-            Drivers* const drvs, 
+            driver_t* const drvs, 
             const HookeParams& hkp, 
             const shape* const shps, 
             const double dt) const
         {
           const int driver_idx = item.id_j; //
-          auto& driver = std::get<Stl_mesh>(drvs->data(driver_idx)) ;
+          auto& driver = std::get<Stl_mesh>(drvs[driver_idx]) ;
           auto& cell = cells[item.cell_i];
           const auto type = cell[field::type][item.p_i];
           auto& shp_i = shps[type];

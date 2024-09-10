@@ -48,6 +48,7 @@ namespace exaDEM
   template<typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
     class ComputeHookeClassifierPolyhedronGPU : public OperatorNode
   {
+    using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
     ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
     ADD_SLOT( HookeParams , config            , INPUT , REQUIRED ); // can be re-used for to dump contact network
     ADD_SLOT( HookeParams , config_driver     , INPUT , OPTIONAL ); // can be re-used for to dump contact network
@@ -88,13 +89,13 @@ namespace exaDEM
       bool store_interactions = write_interactions || compute_stress_tensor || need_interactions_for_log_frequency;
 
       /** Get driver and particles data */
-      Drivers* drvs =  drivers.get_pointer();
+      driver_t* drvs =  drivers->data();
       const auto cells = grid->cells();
 
       /** Get Hooke Parameters and Shape */
       const HookeParams hkp = *config;
       HookeParams hkp_drvs{};
-			const shape* const shps = shapes_collection->data();
+      const shape* const shps = shapes_collection->data();
 
       if ( drivers->get_size() > 0 &&  config_driver.has_value() )
       {
