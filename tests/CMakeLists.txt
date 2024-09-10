@@ -2,7 +2,7 @@ enable_testing()
 
 find_package(OpenMP REQUIRED)
 
-list(APPEND TLIST compute_hooke gravity init_fields)
+list(APPEND TLIST compute_contact gravity init_fields)
 
 foreach(varTest IN LISTS TLIST)
 	add_executable(demTest_${varTest} test_${varTest}.cpp)

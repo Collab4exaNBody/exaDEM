@@ -21,8 +21,8 @@ under the License.
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
-#include <exaDEM/hooke_force_parameters.h>
-#include <exaDEM/compute_hooke_force.h>
+#include <exaDEM/contact_force_parameters.h>
+#include <exaDEM/compute_contact_force.h>
 #include <vector>
 #include <tuple>
 #include <algorithm>
@@ -50,7 +50,7 @@ namespace exaDEM
 			// Members
 			typename GridT::CellParticles* cells;          ///< Pointer to the cells of the grid.
 			shapes& shps;                                  ///< Reference to the list of shapes.
-			HookeParams params;                            ///< Parameters for Hooke operations.
+			ContactParams params;                            ///< Parameters for Contact operations.
 			double time;                                   ///< Incrementation time value
 
 
@@ -85,7 +85,7 @@ namespace exaDEM
 			 * @param config Reference to the configuration parameters.
 			 * @param t Time parameter.
 			 */
-			NetworkFunctor(GridT& g, shapes& s, HookeParams& config, double t) : cells(g.cells()), shps(s), params(config), time(t) {}
+			NetworkFunctor(GridT& g, shapes& s, ContactParams& config, double t) : cells(g.cells()), shps(s), params(config), time(t) {}
 
 			/**
 			 * @brief Gets the position vector of a particle in a specified cell.
@@ -124,7 +124,7 @@ namespace exaDEM
 			};
 
 			/**
-			 * @brief Computes the normal force value according to Hooke's law and stores it based on the pair of polyhedra considered.
+			 * @brief Computes the normal force value according to Contact's law and stores it based on the pair of polyhedra considered.
 			 * @param I The Interaction object representing the pair of polyhedra and associated interaction data.
 			 * @return A key-value pair representing the processed interaction data (pair of polyhedra and normal force value).
 			 */
@@ -173,13 +173,13 @@ namespace exaDEM
 					const auto& m_i = cell_i[field::mass][I.p_i];
 					const auto& m_j = cell_j[field::mass][I.p_j];
 
-					// === Utilize temporary values to avoid updating friction and moment in hooke_force_core. 
+					// === Utilize temporary values to avoid updating friction and moment in contact_force_core. 
 					Vec3d f = {0,0,0};
 					Vec3d fr = I.friction;
 					Vec3d mom = I.moment;
 					const double meff = compute_effective_mass(m_i, m_j);
 
-					hooke_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr,
+					contact_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr,
 							params.m_mu, params.m_damp_rate, meff,
 							fr, contact_position,
 							ri, vi, f, mom, vrot_i,  // particle 1

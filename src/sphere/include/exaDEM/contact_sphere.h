@@ -70,16 +70,16 @@ namespace exaDEM
     using namespace exanb;
 
     /**
-     * @struct hooke_law
-     * @brief Template structure for Hooke's law force calculations.
+     * @struct contact_law
+     * @brief Template structure for Contact's law force calculations.
      *
-     * This structure provides methods for calculating forces according to Hooke's law
+     * This structure provides methods for calculating forces according to Contact's law
      * in a simulation environment. It supports both symmetric and asymmetric cases.
      *
      * @tparam sym Boolean indicating whether the calculations should be symmetric.
      */
     template<bool sym>
-      struct hooke_law
+      struct contact_law
       {
 
         /**
@@ -124,16 +124,16 @@ namespace exaDEM
           };
 
         /**
-         * @brief Handles particle interactions using Hooke's law parameters.
+         * @brief Handles particle interactions using Contact's law parameters.
          *
-         * This function applies Hooke's law to calculate forces between interacting particles
+         * This function applies Contact's law to calculate forces between interacting particles
          * within the given cells. It updates the interaction item based on the specified
          * parameters and uses mutexes for thread safety.
          *
          * @tparam TMPC The type representing the collection of cells in the simulation.
          * @param item Reference to the interaction item to be updated.
          * @param cells Pointer to the collection of cells containing the particles.
-         * @param hkp Reference to the Hooke's law parameters.
+         * @param hkp Reference to the Contact's law parameters.
          * @param time Increment simulation time.
          */
 				template<typename TMPC>
@@ -141,7 +141,7 @@ namespace exaDEM
 					inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
 							Interaction& item, 
 							TMPC* cells, 
-							const HookeParams& hkp, 
+							const ContactParams& hkp, 
 							const double time) const
 					{
 						// === cell
@@ -174,7 +174,7 @@ namespace exaDEM
 							Vec3d f = {0,0,0};
 							const double meff = compute_effective_mass(m_i, m_j);
 
-							hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+							contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 									hkp.m_mu, hkp.m_damp_rate, meff,
 									item.friction, contact_position,
 									ri, vi, f, item.moment, vrot_i,  // particle 1
@@ -212,27 +212,27 @@ namespace exaDEM
 			};
 
 		/**
-		 * @struct hooke_law_driver
-		 * @brief Template structure for Hooke's law force calculations with various drivers.
+		 * @struct contact_law_driver
+		 * @brief Template structure for Contact's law force calculations with various drivers.
 		 *
-		 * This structure provides methods for calculating forces according to Hooke's law
+		 * This structure provides methods for calculating forces according to Contact's law
 		 * in a simulation environment. The calculations can involve various types of drivers
 		 * such as cylinders, spheres, surfaces, or mesh faces (STL).
 		 *
 		 * @tparam TMPLD Template parameter for specifying the type of driver.
 		 */
 		template<typename TMPLD>
-			struct hooke_law_driver
+			struct contact_law_driver
 			{
 				/**
-				 * @brief Handles particle interactions using Hooke's law parameters and various drivers.
+				 * @brief Handles particle interactions using Contact's law parameters and various drivers.
 				 *
 				 * @tparam TMPLC The type representing the collection of cells in the simulation.
 				 * @param item Reference to the interaction item to be updated.
 				 * @param cells Pointer to the collection of cells containing the particles.
 				 * @param drvs Pointer to the collection of drivers, which can include cylinders,
 				 *             spheres, surfaces, or mesh faces (STL).
-				 * @param hkp Reference to the Hooke's law parameters.
+				 * @param hkp Reference to the Contact's law parameters.
 				 * @param time Increment simulation time.
 				 */
 				template<typename TMPLC>
@@ -241,7 +241,7 @@ namespace exaDEM
 							Interaction& item, 
 							TMPLC* cells, 
 						  Drivers* drvs, 
-							const HookeParams& hkp, 
+							const ContactParams& hkp, 
 							const double time) const
 					{
 						const int driver_idx = item.id_j; //
@@ -265,7 +265,7 @@ namespace exaDEM
 							const Vec3d v = { cell[field::vx][p], cell[field::vy][p], cell[field::vz][p] };
 							const double meff = cell[field::mass][p];
 							Vec3d f = null;
-							hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+							contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 									hkp.m_mu, hkp.m_damp_rate, meff,
 									item.friction, contact_position,
 									r, v, f, item.moment, vrot,  // particle i
@@ -347,24 +347,24 @@ namespace exaDEM
 		};
 
 		/**
-		 * @struct hooke_law_stl
-		 * @brief Structure for applying Hooke's law interactions with STL drivers.
+		 * @struct contact_law_stl
+		 * @brief Structure for applying Contact's law interactions with STL drivers.
 		 *
-		 * This structure provides methods for applying Hooke's law interactions between
+		 * This structure provides methods for applying Contact's law interactions between
 		 * particles and STL drivers (such as cylinders, spheres, surfaces, or mesh faces).
 		 */
-		struct hooke_law_stl
+		struct contact_law_stl
 		{
 			const stl_mesh_detector func; ///< STL mesh detector function object.
 			/**
-			 * @brief Applies Hooke's law interactions with STL drivers.
+			 * @brief Applies Contact's law interactions with STL drivers.
 			 *
 			 * @tparam TMPLC The type representing the collection of cells in the simulation.
 			 * @param item Reference to the interaction item to be updated.
 			 * @param cells Pointer to the collection of cells containing the particles.
 			 * @param drvs Pointer to the collection of drivers, which can include cylinders,
 			 *             spheres, surfaces, or mesh faces (STL).
-			 * @param hkp Reference to the Hooke's law parameters.
+			 * @param hkp Reference to the Contact's law parameters.
 			 * @param time The simulation time increment.
 			 */
 			template<typename TMPC>
@@ -372,7 +372,7 @@ namespace exaDEM
 						Interaction& item, 
 						TMPC* cells, 
 						Drivers* drvs, 
-						const HookeParams& hkp, 
+						const ContactParams& hkp, 
 						const double time) const
 				{
 					const int driver_idx = item.id_j; //
@@ -398,7 +398,7 @@ namespace exaDEM
 						const Vec3d v_i   = { cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i] };
 						const double meff = cell[field::mass][p_i];
 						Vec3d f           = {0,0,0};
-						hooke_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+						contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
 								hkp.m_mu, hkp.m_damp_rate, meff,
 								item.friction, contact_position,
 								r_i, v_i, f, item.moment, vrot_i,  // particle i

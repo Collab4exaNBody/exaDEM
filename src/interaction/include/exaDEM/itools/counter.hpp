@@ -55,7 +55,7 @@ namespace exaDEM
 		template <typename GridT>
 			uint64_t get_act_interaction_size( const GridT& grid, const Classifier& classifier, const bool sym)
 			{
-				// Warning, this function has to be called when the buffs buffer is set (in hooke operators).
+				// Warning, this function has to be called when the buffs buffer is set (in contact operators).
 				// TODO : Implement a GPU version
 				uint64_t res = 0;
 

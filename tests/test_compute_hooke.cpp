@@ -1,8 +1,8 @@
-#include <exaDEM/compute_hooke_force.h>
+#include <exaDEM/compute_contact_force.h>
 
 int main()
 {
-	using exaDEM::compute_hooke_force;
+	using exaDEM::compute_contact_force;
 	using exanb::Vec3d;
 
 	Vec3d ft = {0.0,0.0,0.0};
@@ -59,7 +59,7 @@ int main()
 	const double mu = 0.0;
 	const double dampRate = 0.0;
 
-	compute_hooke_force(
+	compute_contact_force(
 			dncut, dt, kn, kt, kr, fc, mu, dampRate, ft,
 			rxi, ryi, rzi, vxi, vyi, vzi, massi, Ri, fxi, fyi, fzi, momi, angveli,
 			rxj, ryj, rzj, vxj, vyj, vzj, massj, Rj, fxj, fyj, fzj, momj, angvelj
