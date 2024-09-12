@@ -22,6 +22,7 @@ under the License.
 #include <exaDEM/shape/shape.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/interaction/interactionSOA.hpp>
 
 namespace exaDEM
 {
@@ -181,6 +182,8 @@ namespace exaDEM
        */
       template<typename TMPLC>
         ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
+            uint64_t id,
+            InteractionSOA& itemSOA,
             Interaction& item, 
             TMPLC* const cells, 
             const HookeParams& hkp, 
@@ -285,6 +288,8 @@ namespace exaDEM
          */
         template<typename TMPLC>
           ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
+              uint64_t id,
+              InteractionSOA& itemSOA,
               Interaction& item, 
               TMPLC* cells, 
               driven_t* const drvs, 
@@ -424,7 +429,9 @@ namespace exaDEM
        * @param dt Time increment for the simulation step.
        */
       template<typename TMPLC>
-        ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()( 
+        ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
+            uint64_t id,
+            InteractionSOA& itemSOA, 
             Interaction& item, 
             TMPLC* cells, 
             driver_t* const drvs, 

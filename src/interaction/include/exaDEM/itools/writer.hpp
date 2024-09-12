@@ -31,7 +31,8 @@ namespace exaDEM
             /** filter empty interactions */
             if(dn < 0)
             {
-              auto& I = i_ptr[idx];
+              //auto& I = i_ptr[idx];
+              auto I = i_ptr[idx];
               /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
               if(filter_duplicates(grid, I))
               {

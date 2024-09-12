@@ -100,8 +100,10 @@ namespace exaDEM
       template <size_t... Is>
         ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const
         {
-          exaDEM::Interaction& item = data(i);
-          const auto [dn, pos, fn, ft] = kernel(item, std::get<Is>(params)...); 
+          //exaDEM::Interaction& item = data(i);
+          InteractionSOA& itemSOA = data.m_data;
+          exaDEM::Interaction item = data(i);
+          const auto [dn, pos, fn, ft] = kernel(i, itemSOA, item, std::get<Is>(params)...); 
           packer(i, dn, pos, fn, ft); // packer is used to store interaction data 
         }
 

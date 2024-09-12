@@ -21,6 +21,7 @@ under the License.
 #include <exaDEM/shape/shape.hpp>
 #include <exaDEM/shape/shape_detection.hpp>
 #include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/interaction/interactionSOA.hpp>
 
 namespace exaDEM
 {
@@ -139,6 +140,8 @@ namespace exaDEM
       template<typename TMPC>
         ONIKA_HOST_DEVICE_FUNC 
         inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
+            uint64_t id,
+            InteractionSOA& itemSOA,
             Interaction& item, 
             TMPC* cells, 
             const HookeParams& hkp, 
@@ -204,7 +207,8 @@ namespace exaDEM
           }
           else
           {
-            item.reset();
+            //item.reset();
+            itemSOA.reset(id);
             dn = 0;
           }
           return {dn, contact_position, fn, item.friction};
@@ -239,6 +243,8 @@ namespace exaDEM
         template<typename TMPLC>
           ONIKA_HOST_DEVICE_FUNC 
           inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
+              uint64_t id,
+              InteractionSOA& itemSOA,
               Interaction& item, 
               TMPLC* cells, 
               driver_t* drvs, 
@@ -284,7 +290,8 @@ namespace exaDEM
             }
             else
             {
-              item.reset();
+              //item.reset();
+              itemSOA.reset(id);
               dn = 0;
             }
             return {dn, contact_position, fn, item.friction};
@@ -371,6 +378,8 @@ namespace exaDEM
        */
       template<typename TMPC>
         ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()( 
+            uint64_t id,
+            InteractionSOA& itemSOA,
             Interaction& item, 
             TMPC* cells, 
             driver_t* drvs, 

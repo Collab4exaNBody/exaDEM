@@ -98,7 +98,8 @@ namespace exaDEM
 					for(size_t i = 0 ; i < size ; i++)
 					{
             // get fij and cij
-						Interaction& I = Ip[i];
+						//Interaction& I = Ip[i];
+						Interaction I = Ip[i];
 						auto& cell     = cells[I.cell_i];
 						Vec3d fij      = fnp[i] + ftp[i];
 						Vec3d pos_i    = { cell[ field::rx ][I.p_i], cell[ field::ry ][I.p_i], cell[ field::rz ][I.p_i] };
