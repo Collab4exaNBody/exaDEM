@@ -18,7 +18,6 @@ under the License.
 */
 //#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 
-
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
@@ -44,6 +43,7 @@ under the License.
 namespace exaDEM
 {
 	using namespace exanb;
+  using namespace exaDEM::itools;
 
 	template<class GridT ,	class = AssertGridHasFields< GridT, field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass >> struct SimulationStateNode : public OperatorNode
 	{
@@ -60,6 +60,42 @@ namespace exaDEM
     ADD_SLOT( bool               , symetric            , INPUT , REQUIRED , DocString{"Use of symetric feature (contact law)"});
 
 		static constexpr FieldSet<field::_vx ,field::_vy ,field::_vz, field::_vrot, field::_mass> reduce_field_set {};
+
+		inline IOSimInteractionResult reduce_sim_io(const Classifier& classifier, bool symetric)
+		{
+			IOSimInteractionResult res;
+			VectorT<IOSimInteractionResult> results;
+			int types = classifier.number_of_waves();
+			results.resize(types);
+			{
+				//std::vector<ParallelExecutionWrapper> pexw;
+				//pexw.resize(types);
+				for(int i = 0 ; i < types ; i++)
+				{
+					const auto& buffs       = classifier.buffers[i];
+					auto [ptr, size]        = classifier.get_info(i);
+					const double* const dnp = onika::cuda::vector_data( buffs.dn );
+
+					int coef = 1;
+					if( i < 4 && symetric ) coef *= 2;
+
+					IOSimInteractionFunctor func = {dnp, coef};
+
+					if ( size > 0 && dnp != nullptr ) // skip it if forces has not been computed
+					{
+						//pexw[i] = exaDEM::itools::reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
+						reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
+					}
+				}
+			} // synchronize 
+
+			for(int i = 0 ; i < types ; i++)
+			{ 
+				res.update(results[i]);
+			}
+			return res;
+		}
+
 		inline void execute () override final
 		{
 			MPI_Comm comm = *mpi;
@@ -77,17 +113,17 @@ namespace exaDEM
 
       // get interaction informations
       const Classifier& classifier = *ic;
-     	uint64_t active_interactions = itools::get_act_interaction_size(*grid, classifier, *symetric);
-     	uint64_t total_interactions  = itools::get_tot_interaction_size(*grid, classifier, *symetric);
-      double dn                    = itools::get_min_dn(classifier);
+      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric );
 
 			// reduce partial sums and share the result
+      uint64_t active_interactions, total_interactions;
+      double dn;
 			{
 				double tmpDouble[8] = {
 					sim.rotation_energy.x, sim.rotation_energy.y, sim.rotation_energy.z,
 					sim.kinetic_energy.x, sim.kinetic_energy.y, sim.kinetic_energy.z,
-					sim.mass , dn };
-        uint64_t tmpUInt64T[3] = {sim.n_particles, active_interactions , total_interactions};
+					sim.mass , red.min_dn };
+        uint64_t tmpUInt64T[3] = {sim.n_particles, red.n_act_interaction, red.n_tot_interaction};
 				MPI_Allreduce(MPI_IN_PLACE, tmpDouble, 8, MPI_DOUBLE, MPI_SUM, comm);
 				MPI_Allreduce(MPI_IN_PLACE, tmpUInt64T, 3, MPI_UINT64_T, MPI_SUM, comm);
 
