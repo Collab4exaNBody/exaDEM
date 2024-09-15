@@ -136,7 +136,6 @@ namespace exaDEM
 				ONIKA_CU_ATOMIC_ADD(global.n_act_interaction, local.n_act_interaction);
 				ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction, local.n_tot_interaction);
 				EXADEM_CU_ATOMIC_MIN(global.min_dn, local.min_dn);
-				//ONIKA_CU_ATOMIC_ADD(global.min_dn, local.min_dn);
 			}
 		};
 
@@ -159,7 +158,7 @@ namespace exaDEM
 
 namespace exanb
 {
-	template<> struct ReduceCellParticlesTraits<exaDEM::itools::IOSimInteractionFunctor>
+	template<> struct ReduceCellParticlesTraits<exaDEM::itools::ReduceTFunctor>
 	{
 		static inline constexpr bool RequiresBlockSynchronousCall = false;
 		static inline constexpr bool RequiresCellParticleIndex = false;
