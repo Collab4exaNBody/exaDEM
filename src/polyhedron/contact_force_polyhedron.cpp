@@ -48,6 +48,7 @@ namespace exaDEM
   template<typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
     class ComputeContactClassifierPolyhedronGPU : public OperatorNode
   {
+    using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
     ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
     ADD_SLOT( ContactParams , config            , INPUT , REQUIRED ); // can be re-used for to dump contact network
     ADD_SLOT( ContactParams , config_driver     , INPUT , OPTIONAL ); // can be re-used for to dump contact network
@@ -68,7 +69,7 @@ namespace exaDEM
 
     inline std::string documentation() const override final
     {
-      return R"EOF(This operator computes forces between particles and particles/drivers using the Contact's law.)EOF";
+      return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF";
     }
 
     inline void execute () override final
@@ -88,7 +89,7 @@ namespace exaDEM
       bool store_interactions = write_interactions || compute_stress_tensor || need_interactions_for_log_frequency;
 
       /** Get driver and particles data */
-      Drivers* drvs =  drivers.get_pointer();
+      driver_t* drvs =  drivers->data();
       const auto cells = grid->cells();
 
       /** Get Contact Parameters and Shape */

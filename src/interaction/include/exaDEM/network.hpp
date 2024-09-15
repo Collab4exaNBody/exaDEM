@@ -124,7 +124,7 @@ namespace exaDEM
 			};
 
 			/**
-			 * @brief Computes the normal force value according to Contact's law and stores it based on the pair of polyhedra considered.
+			 * @brief Computes the normal force value according to contact law and stores it based on the pair of polyhedra considered.
 			 * @param I The Interaction object representing the pair of polyhedra and associated interaction data.
 			 * @return A key-value pair representing the processed interaction data (pair of polyhedra and normal force value).
 			 */

@@ -135,7 +135,7 @@ namespace exaDEM
       }
 
     ONIKA_HOST_DEVICE_FUNC 
-      inline data_t* get_data_ptr() 
+      inline data_t* data() 
       {
         auto* const res = onika::cuda::vector_data(m_data);
         return res;
