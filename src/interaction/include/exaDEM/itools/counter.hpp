@@ -158,7 +158,7 @@ namespace exaDEM
 
 namespace exanb
 {
-	template<> struct ReduceCellParticlesTraits<exaDEM::itools::ReduceTFunctor>
+	template<typename T, typename Func, typename RestulT> struct ReduceCellParticlesTraits<exaDEM::itools::ReduceTFunctor<T, Func, RestulT>>
 	{
 		static inline constexpr bool RequiresBlockSynchronousCall = false;
 		static inline constexpr bool RequiresCellParticleIndex = false;
