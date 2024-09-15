@@ -53,7 +53,7 @@ namespace exaDEM
 	}
 
 	ONIKA_HOST_DEVICE_FUNC inline 
-	void hooke_force_core_v2(
+	void contact_force_core_v2(
 			const double dn,
 			const Vec3d& n, // normal
 			const double dt,
@@ -121,7 +121,7 @@ namespace exaDEM
 
 
 ONIKA_HOST_DEVICE_FUNC inline 
-	void hooke_force_core(
+	void contact_force_core(
 			const double dn,
 			const Vec3d& n, // -normal
 			const double dt,
@@ -202,7 +202,7 @@ ONIKA_HOST_DEVICE_FUNC inline
 
 
 ONIKA_HOST_DEVICE_FUNC inline 
-	void compute_hooke_force(
+	void compute_contact_force(
 			const double dncut,
 			const double dt,
 			const double kn,

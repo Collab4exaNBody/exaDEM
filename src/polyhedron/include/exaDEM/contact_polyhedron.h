@@ -61,15 +61,15 @@ namespace exaDEM
 
 
     /**
-     * @struct hooke_law
-     * @brief Structure defining Hooke's law interactions for particles (polyhedra).
+     * @struct contact_law
+     * @brief Structure defining contact law interactions for particles (polyhedra).
      */
-    struct hooke_law
+    struct contact_law
     {
       /**
-       * @brief Default constructor for hooke_law struct.
+       * @brief Default constructor for contact_law struct.
        */ 
-      hooke_law(){}
+      contact_law(){}
 
       /**
        * @brief Retrieves the position vector of a particle from a cell.
@@ -175,7 +175,7 @@ namespace exaDEM
        * @tparam TMPLC Type of the cells or particles container.
        * @param item Reference to the Interaction object representing the interaction details.
        * @param cells Pointer to the cells or particles container.
-       * @param hkp Reference to the HookeParams object containing interaction parameters.
+       * @param hkp Reference to the ContactParams object containing interaction parameters.
        * @param shps Pointer to the shapes array providing shape information for interactions.
        * @param dt Time increment for the simulation step.
        */
@@ -183,7 +183,7 @@ namespace exaDEM
         ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
             Interaction& item, 
             TMPLC* const cells, 
-            const HookeParams& hkp, 
+            const ContactParams& hkp, 
             const shape* const shps, 
             const double dt) const
         {
@@ -224,7 +224,7 @@ namespace exaDEM
 
             const double meff = compute_effective_mass(m_i, m_j);
 
-            hooke_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+            contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
                 hkp.m_mu, hkp.m_damp_rate, meff,
                 item.friction, contact_position,
                 ri, vi, f, item.moment, vrot_i,  // particle 1
@@ -261,17 +261,17 @@ namespace exaDEM
 
 
     /**
-     * @brief Struct for applying Hooke's law interactions driven by drivers.
+     * @brief Struct for applying contact law interactions driven by drivers.
      * @tparam TMPLD Type of the drivers.
      */
     template<typename TMPLD>
-      struct hooke_law_driver
+      struct contact_law_driver
       {
         using driven_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
         /**
-         * @brief Functor for applying Hooke's law interactions driven by drivers.
+         * @brief Functor for applying contact law interactions driven by drivers.
          *
-         * This functor applies Hooke's law interactions between particles or cells, driven by
+         * This functor applies contact law interactions between particles or cells, driven by
          * specified drivers (`drvs`). It uses interaction parameters (`hkp`), precomputed shapes
          * (`shps`), and a time increment (`dt`) for simulation.
          *
@@ -279,7 +279,7 @@ namespace exaDEM
          * @param item Reference to the Interaction object representing the interaction details.
          * @param cells Pointer to the cells or particles container.
          * @param drvs Pointer to the Drivers object providing driving forces.
-         * @param hkp Reference to the HookeParams object containing interaction parameters.
+         * @param hkp Reference to the ContactParams object containing interaction parameters.
          * @param shps Pointer to the shapes array providing shape information for interactions.
          * @param dt Time increment for the simulation step.
          */
@@ -288,7 +288,7 @@ namespace exaDEM
               Interaction& item, 
               TMPLC* cells, 
               driven_t* const drvs, 
-              const HookeParams& hkp, 
+              const ContactParams& hkp, 
               const shape* shps, 
               const double dt) const
           {
@@ -318,7 +318,7 @@ namespace exaDEM
               auto& mom = cell[field::mom][p];
               const Vec3d v = { cell[field::vx][p], cell[field::vy][p], cell[field::vz][p] };
               const double meff = cell[field::mass][p];
-              hooke_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+              contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
                   hkp.m_mu, hkp.m_damp_rate, meff,
                   item.friction, contact_position,
                   r, v, f, item.moment, vrot,  // particle i
@@ -403,15 +403,15 @@ namespace exaDEM
     };
 
     /**
-     * @brief Functor for applying Hooke's law interactions with STL mesh objects.
+     * @brief Functor for applying contact law interactions with STL mesh objects.
      */
-    struct hooke_law_stl
+    struct contact_law_stl
     {
       using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
       /**
-       * @brief Operator function for applying Hooke's law interactions with STL mesh objects.
+       * @brief Operator function for applying contact law interactions with STL mesh objects.
        *
-       * This function applies Hooke's law interactions between particles or cells and STL mesh objects,
+       * This function applies contact law interactions between particles or cells and STL mesh objects,
        * driven by specified drivers (`drvs`). It uses interaction parameters (`hkp`), precomputed shapes
        * (`shps`), and a time increment (`dt`) for simulation.
        *
@@ -419,7 +419,7 @@ namespace exaDEM
        * @param item Reference to the Interaction object representing the interaction details.
        * @param cells Pointer to the cells or particles container.
        * @param drvs Pointer to the Drivers object providing driving forces.
-       * @param hkp Reference to the HookeParams object containing interaction parameters.
+       * @param hkp Reference to the ContactParams object containing interaction parameters.
        * @param shps Pointer to the shapes array providing shape information for interactions.
        * @param dt Time increment for the simulation step.
        */
@@ -428,7 +428,7 @@ namespace exaDEM
             Interaction& item, 
             TMPLC* cells, 
             driver_t* const drvs, 
-            const HookeParams& hkp, 
+            const ContactParams& hkp, 
             const shape* const shps, 
             const double dt) const
         {
@@ -460,7 +460,7 @@ namespace exaDEM
             auto& mom = cell[field::mom][p_i];
             const Vec3d v_i = { cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i] };
             const double meff = cell[field::mass][p_i];
-            hooke_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
+            contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr,
                 hkp.m_mu, hkp.m_damp_rate, meff,
                 item.friction, contact_position,
                 r_i, v_i, f, item.moment, vrot_i,  // particle i
