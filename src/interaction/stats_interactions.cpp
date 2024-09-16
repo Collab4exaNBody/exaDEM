@@ -30,8 +30,8 @@ under the License.
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
 
-#include <exaDEM/hooke_force_parameters.h>
-#include <exaDEM/compute_hooke_force.h>
+#include <exaDEM/contact_force_parameters.h>
+#include <exaDEM/compute_contact_force.h>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/shape/shapes.hpp>

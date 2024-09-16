@@ -53,7 +53,7 @@ compute_force:
   - quadratic_force:
      cx: 0.38
      mu: 0.0000015
-  - hooke_sphere:
+  - contact_sphere:
      symetric: true
      config: { rcut: 1.0 m , dncut: 1.0 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.1, mu: 0.1, damp_rate: 0.9} 
      config_driver: { rcut: 1.0 m , dncut: 1.0 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.1, mu: 0.3, damp_rate: 0.9} 

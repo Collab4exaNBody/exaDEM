@@ -29,8 +29,8 @@ under the License.
 #include <memory>
 #include <mpi.h>
 
-#include <exaDEM/hooke_force_parameters.h>
-#include <exaDEM/compute_hooke_force.h>
+#include <exaDEM/contact_force_parameters.h>
+#include <exaDEM/compute_contact_force.h>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
@@ -93,7 +93,7 @@ namespace exaDEM
 				for( size_t type = 0 ; type < types ; type++ )
 				{
 					auto [Ip, size]           = cf.get_info(type); // get interactions
-					auto [dnp, cpp, fnp, ftp] = cf.buffer_p(type); // get forces (fn, ft) and contact positions (cp) computed into the hooke force operators.
+					auto [dnp, cpp, fnp, ftp] = cf.buffer_p(type); // get forces (fn, ft) and contact positions (cp) computed into the contact force operators.
 #pragma omp for schedule(static)
 					for(size_t i = 0 ; i < size ; i++)
 					{

@@ -54,7 +54,7 @@ namespace exaDEM
 			ADD_SLOT( GridT    , grid       , INPUT_OUTPUT , REQUIRED );
 			ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
 			ADD_SLOT( shapes                , shapes_collection       , INPUT , DocString{"Collection of shapes"});
-			ADD_SLOT( HookeParams , config  , INPUT );
+			ADD_SLOT( ContactParams , config  , INPUT );
 			ADD_SLOT( double      , dt      , INPUT );
 			ADD_SLOT( std::string , basename, INPUT , REQUIRED  , DocString{"Output filename"});
 			ADD_SLOT( std::string , basedir , INPUT , "network" , DocString{"Output directory, default is network"});

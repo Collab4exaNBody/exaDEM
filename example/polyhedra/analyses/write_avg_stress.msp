@@ -31,7 +31,7 @@ setup_drivers:
 
 compute_force:
   - gravity_force
-  - hooke_polyhedron:
+  - contact_polyhedron:
      symetric: true
      config: { rcut: 0.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 

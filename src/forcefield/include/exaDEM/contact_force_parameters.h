@@ -16,12 +16,14 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#pragma once
-#include <exanb/core/basic_types.h>
+#pragma once 
+
+#include <yaml-cpp/yaml.h>
+#include <exanb/core/quantity_yaml.h>
 
 namespace exaDEM
 {
-  struct HookeParams
+  struct ContactParams
   {
     double rcut;
     double dncut;
@@ -31,34 +33,20 @@ namespace exaDEM
     double m_fc;
     double m_mu;
     double m_damp_rate;
-
-		std::string convert_to_string() const
-		{
-			std::string res = "{";
-			res += "rcut: " + std::to_string(rcut) + "m, ";
-			res += "dncut: " + std::to_string(dncut) + ", ";
-			res += "kn: " + std::to_string(m_kn) + ", ";
-			res += "kt: " + std::to_string(m_kt) + ", ";
-			res += "kr: " + std::to_string(m_kr) + ", ";
-			res += "fc: " + std::to_string(m_fc) + ", ";
-			res += "mu: " + std::to_string(m_mu) + ", ";
-			res += "damp_rate: " + std::to_string(m_damp_rate) + "}";
-			return res;
-		}
   };
 }
 
 // Yaml conversion operators, allows to read potential parameters from config file
 namespace YAML
 {
-  using exaDEM::HookeParams;
+  using exaDEM::ContactParams;
   using exanb::UnityConverterHelper;
   using exanb::Quantity;
   using exanb::lerr;
 
-  template<> struct convert<HookeParams>
+  template<> struct convert<ContactParams>
   {
-    static bool decode(const Node& node, HookeParams& v)
+    static bool decode(const Node& node, ContactParams& v)
     {    
       if( !node.IsMap() ) { return false; }
       if( ! node["rcut"] ) { lerr<<"rcut is missing\n"; return false; }
@@ -70,7 +58,7 @@ namespace YAML
       if( ! node["mu"] ) { lerr<<"mu is missing\n"; return false; }
       if( ! node["damp_rate"] ) { lerr<<"damp_rate is missing\n"; return false; }
 
-      v = HookeParams{}; // initializes defaults values
+      v = ContactParams{}; // initializes defaults values
 
       v.rcut = node["rcut"].as<Quantity>().convert();
       v.dncut = node["dncut"].as<Quantity>().convert();
@@ -83,5 +71,5 @@ namespace YAML
 
       return true;
     }
-	};
+  };
 }
