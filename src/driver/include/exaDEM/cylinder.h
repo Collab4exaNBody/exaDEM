@@ -46,12 +46,12 @@ namespace exaDEM
      */
     void print()
     {
-      std::cout << "Driver Type: Cylinder" << std::endl;
-      std::cout << "Radius: " << radius << std::endl;
-      std::cout << "Axis  : " << axis << std::endl;
-      std::cout << "Center: " << center << std::endl;
-      std::cout << "Vel   : " << vel << std::endl;
-      std::cout << "AngVel: " << vrot << std::endl;
+      lout << "Driver Type: Cylinder" << std::endl;
+      lout << "Radius: " << radius << std::endl;
+      lout << "Axis  : " << axis << std::endl;
+      lout << "Center: " << center << std::endl;
+      lout << "Vel   : " << vel << std::endl;
+      lout << "AngVel: " << vrot << std::endl;
     }
 
 

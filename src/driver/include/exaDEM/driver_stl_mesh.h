@@ -60,13 +60,13 @@ namespace exaDEM
      */
     void print()
     {
-      std::cout << "Driver Type: MESH STL" << std::endl;
-      std::cout << "center : " << center   << std::endl;
-      std::cout << "Vel    : " << vel << std::endl;
-      std::cout << "AngVel : " << vrot << std::endl;
-      std::cout << "Number of faces    : " << shp.get_number_of_faces() << std::endl;
-      std::cout << "Number of edges    : " << shp.get_number_of_edges() << std::endl;
-      std::cout << "Number of vertices : " << shp.get_number_of_vertices() << std::endl;
+      lout << "Driver Type: MESH STL" << std::endl;
+      lout << "center : " << center   << std::endl;
+      lout << "Vel    : " << vel << std::endl;
+      lout << "AngVel : " << vrot << std::endl;
+      lout << "Number of faces    : " << shp.get_number_of_faces() << std::endl;
+      lout << "Number of edges    : " << shp.get_number_of_edges() << std::endl;
+      lout << "Number of vertices : " << shp.get_number_of_vertices() << std::endl;
     }
 
     /**

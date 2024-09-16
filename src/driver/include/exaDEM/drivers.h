@@ -69,7 +69,7 @@ namespace exaDEM
           DRIVER_TYPE current_type = type(idx);
           if ( current_type != DRIVER_TYPE::UNDEFINED )
           {
-            std::cout << "You are currently removing a driver at index " << idx << std::endl ;
+            lout << "You are currently removing a driver at index " << idx << std::endl ;
             Driver.print();
           }
           m_type[idx] = t;
@@ -205,12 +205,12 @@ namespace exaDEM
       std::array<int, DRIVER_TYPE_SIZE> Count; // defined in driver_base.h
       for( auto& it : Count ){ it = 0; }
       for( auto& it : m_type ){ Count[it]++;}
-      std::cout << "Drivers Stats" << std::endl;
-      std::cout << "Number of drivers: " << m_type.size() << std::endl;
+      lout << "Drivers Stats" << std::endl;
+      lout << "Number of drivers: " << m_type.size() << std::endl;
       for( int t = 0 ; t < DRIVER_TYPE_SIZE ; t++)
       {
         DRIVER_TYPE tmp = DRIVER_TYPE(t);
-        std::cout << "Number of " << print(tmp) << "s: " << Count[t] << std::endl;
+        lout << "Number of " << print(tmp) << "s: " << Count[t] << std::endl;
       }
     }
   };

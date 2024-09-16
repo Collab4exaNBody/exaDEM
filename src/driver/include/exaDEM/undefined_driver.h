@@ -36,7 +36,7 @@ namespace exaDEM
      */
     void print()
     {
-      std::cout << "Driver Type: UNDEFINED" << std::endl;
+      lout << "Driver Type: UNDEFINED" << std::endl;
     }
   };
 }
