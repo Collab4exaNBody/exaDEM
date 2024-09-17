@@ -38,7 +38,7 @@ init_rcut_max:
   profiling: false
   rebind: { grid: null_grid, chunk_neighbors: null_neighbors }
   body:
-    - compute_force    # executed on an empty grid, just here to update rcut_max
+    - dem_rcut_max
     - nbh_dist:        # compute neighborhood distance in grid space (nbh_dist),
         verbose: true  # also computes maximum particle move tolerance in grid space (max_displ)
                        # and ghost_dist, a constant scaling of of nbh_dist using scale factor nbh_ghost_scale
@@ -51,7 +51,6 @@ preinit_rcut_max:
     - domain:
         cell_size: 0.0
         grid_dims: [ 0 , 0 , 0 ]
-    - compute_force
     - nbh_dist
 
 setup_drivers: nop
@@ -126,7 +125,7 @@ simulation:
     - global
     - io_tree
     - drivers
-    - preinit_rcut_max
+    #- preinit_rcut_max
     - domain
     - init_prolog
     - grid_flavor
@@ -135,7 +134,7 @@ simulation:
     - grid_post_processing
     - init_rcut_max
     - print_domain
-    - performance_adviser: { verbose: true }
+    #- performance_adviser: { verbose: true }
     - init_epilog
     - first_iteration
     - compute_loop
