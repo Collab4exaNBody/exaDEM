@@ -51,8 +51,8 @@ preinit_rcut_max:
     - domain:
         cell_size: 0.0
         grid_dims: [ 0 , 0 , 0 ]
-    - compute_force
-    - nbh_dist
+#    - compute_force
+#    - nbh_dist
 
 setup_drivers: nop
 init_particle_regions: nop
@@ -126,12 +126,12 @@ simulation:
     - global
     - io_tree
     - drivers
-    - preinit_rcut_max
     - domain
     - init_prolog
     - grid_flavor
     - particle_regions
     - input_data
+    - init_prolog
     - grid_post_processing
     - init_rcut_max
     - print_domain
