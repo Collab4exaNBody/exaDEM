@@ -29,18 +29,15 @@ reader1:
 input_data:
   - reader1
 
-update_nbh_friction:
-  rcut: 0.003 m
-
 setup_drivers:
   - add_stl_mesh:
      id: 0
      filename: mesh.stl
-     minskowski: 0.0001
+     minskowski: 0.0001 m
   - add_stl_mesh:
      id: 1
      filename: cube.stl
-     minskowski: 0.0001
+     minskowski: 0.0001 m
 
 compute_force:
   - gravity_force
@@ -55,10 +52,6 @@ compute_force:
 domain:
   cell_size: 0.005 m
   periodic: [false,false,false]
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1

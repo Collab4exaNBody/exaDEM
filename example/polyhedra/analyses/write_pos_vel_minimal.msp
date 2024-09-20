@@ -4,6 +4,7 @@ includes:
   - config_polyhedra.msp
 
 input_data:
+  - init_rcb_grid
   - lattice:
       structure: SC
       types: [ 0 ]
@@ -40,6 +41,9 @@ compute_force:
 domain:
   cell_size: 2.5 m
   periodic: [false,true,false]
+  grid_dims: [2, 2, 2]
+  bounds: [[0 m ,0 m, 0 m], [5 m, 5 m, 5 m]]
+  expandable: true
 
 write_vtklegacy:
   ascii: true

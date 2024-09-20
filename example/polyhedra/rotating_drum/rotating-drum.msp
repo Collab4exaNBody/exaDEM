@@ -4,11 +4,11 @@ includes:
   - config_polyhedra.msp
 
 input_data:
+  - init_rcb_grid
   - lattice:
       structure: SC
       types: [ 0 ]
-      size: [ 1.0 , 1.0 , 1.0 ]
-      repeats: [ 5 , 5 , 5 ]
+      size: [ 1.0 m , 1.0 m , 1.0 m ]
       enlarge_bounds: 0.0 m
   - read_shape_file:
      filename: shapes.shp
@@ -24,9 +24,9 @@ input_data:
 setup_drivers:
   - add_cylinder:
      id: 0
-     center: [2.5, 2.5, 2.5]
+     center: [2.5 m, 2.5 m , 2.5 m ]
      axis: [1, 0, 1]
-     radius: 4
+     radius: 4 m
      angular_velocity: [0,0,0]
 
 compute_force:
@@ -37,8 +37,11 @@ compute_force:
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2.5 m
+  cell_size: 2.0 m
   periodic: [false,true,false]
+  grid_dims: [4, 4, 4]
+  bounds: [[0 m ,0 m, 0 m],[8 m, 8 m, 8 m]]
+  expandable: true
 
 write_vtklegacy:
   ascii: true

@@ -4,12 +4,11 @@ includes:
   - config_polyhedra.msp
 
 input_data:
+  - init_rcb_grid
   - lattice:
       structure: SC
       types: [ 0 ]
       size: [ 1.5 , 1.5 , 1.5 ]
-      repeats: [ 12 , 12 , 50 ]
-      enlarge_bounds: 0.0 m
   - read_shape_file:
      filename: alpha3.shp
   - radius_from_shape
@@ -41,6 +40,9 @@ compute_force:
 domain:
   cell_size: 2 m
   periodic: [false,false,false]
+  grid_dims: [9, 9, 38]
+  bounds: [[0 m ,0 m, 0 m], [18 m, 18 m, 76 m]]
+  expandable: true
 
 write_vtklegacy:
   ascii: true
