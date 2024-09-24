@@ -56,7 +56,23 @@ ghost_full_update:
 ## These operator should be define by your particle mode (spheres or polyhedra)
 migrate_particles: nop
 add_generated_particles: nop
-update_stl_mesh: nop
+
+trigger_update_stl_mesh_full:
+  condition: trigger_update_stl_mesh
+  body:
+    - update_grid_stl_mesh
+
+trigger_update_stl_mesh_fast:
+  condition: not trigger_update_stl_mesh
+  body:
+    - update_grid_stl_mesh_fast
+
+update_stl_mesh:
+  - combineSTL:
+      rebind: { in1: enable_stl_mesh , in2: trigger_load_balance, result: trigger_update_stl_mesh}
+      body: [ boolean_and ]  
+  - trigger_update_stl_mesh_full 
+#  - trigger_update_stl_mesh_fast
 
 parallel_update_particles:
 #  - mpi_barrier
@@ -77,7 +93,13 @@ init_particles:
   - move_particles # standard move_particles, even if friction is enabled. just re-order particles in cells, if needed
   - extend_domain
   - load_balance
-  - parallel_update_particles
+#  - parallel_update_particles
+  - migrate_particles
+  - ghost_full_update
+  - grid_post_processing
+  - update_cell_list
+  - update_grid_stl_mesh
+  - update_particle_neighbors
 ###########################################################################
 
 ########################### Load balancing ############################
