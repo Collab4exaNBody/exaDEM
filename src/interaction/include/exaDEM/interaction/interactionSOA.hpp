@@ -27,48 +27,38 @@ under the License.
 namespace exaDEM
 {
 	/**
-	 * @brief Structure representing an interaction in a Discrete Element Method (DEM) simulation.
+	 * @brief Structure representing the Structure of Arrays data structure for the interactions in a Discrete Element Method (DEM) simulation.
 	 */
 	struct InteractionSOA
 	{
 		template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
 		
-		VectorT<double> ft_x;
-		VectorT<double> ft_y;
-		VectorT<double> ft_z;
+		VectorT<double> ft_x;  /**< List of the x coordinate for the friction.  */
+		VectorT<double> ft_y;  /**< List of the y coordinate for the friction.  */
+		VectorT<double> ft_z;  /**< List of the z coordinate for the friction.  */
 		
-		VectorT<double> mom_x;
-		VectorT<double> mom_y;
-		VectorT<double> mom_z;
+		VectorT<double> mom_x;  /**< List of the x coordinate for the moment.  */
+		VectorT<double> mom_y;  /**< List of the y coordinate for the moment.  */
+		VectorT<double> mom_z;  /**< List of the z coordinate for the moment.  */
 		
-		VectorT<size_t> id_i;
-		VectorT<size_t> id_j;
+		VectorT<uint64_t> id_i;  /**< List of the ids of the first particle involved in the interaction.  */
+		VectorT<uint64_t> id_j;  /**< List of the ids of the second particle involved in the interaction.  */
 		
-		VectorT<size_t> cell_i;
-		VectorT<size_t> cell_j;
+		VectorT<uint32_t> cell_i;  /**< List of the indexes of the cell for the first particle involved in the interaction.  */
+		VectorT<uint32_t> cell_j;  /**< List of the indexes of the cell for the second particle involved in the interaction.  */
 		
-		VectorT<int> p_i;
-		VectorT<int> p_j;
+		VectorT<uint16_t> p_i;  /**< List of the indexes of the particle within its cell for the first particle involved in the interaction. */
+		VectorT<uint16_t> p_j;  /**< List of the indexes of the particle within its cell for the second particle involved in the interaction.  */
 		
-		VectorT<size_t> sub_i;
-		VectorT<size_t> sub_j;
+		VectorT<uint16_t> sub_i;  /**< List of the sub-particle indexes for the first particle involved in the interaction.  */
+		VectorT<uint16_t> sub_j;  /**< List of the sub-particle indexes for the first particle involved in the interaction.  */
 		
 		uint16_t type;          /**< Type of the interaction (e.g., contact type). */
 
+
 		/**
-		 * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
-		 */
-		ONIKA_HOST_DEVICE_FUNC void reset( size_t id )
-		{
-			onika::cuda::vector_data(ft_x)[id] = 0;
-			onika::cuda::vector_data(ft_y)[id] = 0;
-			onika::cuda::vector_data(ft_z)[id] = 0;
-			
-			onika::cuda::vector_data(mom_x)[id] = 0;
-			onika::cuda::vector_data(mom_y)[id] = 0;
-			onika::cuda::vector_data(mom_z)[id] = 0;
-		}
-		
+		 *@briefs CLears all the lists.
+		 */		
 		void clear()
 		{
 			ft_x.clear();
@@ -92,6 +82,10 @@ namespace exaDEM
 			sub_j.clear();
 		}
 		
+		
+		/**
+		 *briefs Returns the number of interactions.
+		 */
 		const ONIKA_HOST_DEVICE_FUNC size_t size() const
 		{
 			return onika::cuda::vector_size(ft_x);
@@ -102,6 +96,10 @@ namespace exaDEM
 			return onika::cuda::vector_size(ft_x);
 		}
 		
+		
+		/**
+		 *@briefs Fills the lists.
+		 */
 		void insert( std::vector<exaDEM::Interaction> tmp )
 		{
 			for(auto interaction : tmp)
@@ -128,33 +126,12 @@ namespace exaDEM
 			}
 		}
 		
-		/*const void insert( std::vector<exaDEM::Interaction> tmp ) const
-		{
-			for(auto interaction : tmp)
-			{
-				ft_x.push_back(interaction.friction.x);
-				ft_y.push_back(interaction.friction.y);
-				ft_z.push_back(interaction.friction.z);
-			
-				mom_x.push_back(interaction.moment.x);
-				mom_y.push_back(interaction.moment.y);
-				mom_z.push_back(interaction.moment.z);
-			
-				id_i.push_back(interaction.id_i);
-				id_j.push_back(interaction.id_j);
-			
-				cell_i.push_back(interaction.cell_i);
-				cell_j.push_back(interaction.cell_j);
-			
-				p_i.push_back(interaction.p_i);
-				p_j.push_back(interaction.p_j);
-			
-				sub_i.push_back(interaction.sub_i);
-				sub_j.push_back(interaction.sub_j);
-			}
-		}*/
 		
-		ONIKA_HOST_DEVICE_FUNC exaDEM::Interaction operator[](size_t id)
+		
+		/**
+		 *@briefs Return the interaction for a given list.
+		 */
+		ONIKA_HOST_DEVICE_FUNC exaDEM::Interaction operator[](uint64_t id)
 		{
 			return { {onika::cuda::vector_data(ft_x)[id], onika::cuda::vector_data(ft_y)[id], onika::cuda::vector_data(ft_z)[id]}, 
 				{onika::cuda::vector_data(mom_x)[id], onika::cuda::vector_data(mom_y)[id], onika::cuda::vector_data(mom_z)[id]},
@@ -165,16 +142,11 @@ namespace exaDEM
 				 type};
 		}
 		
-		const exaDEM::Interaction operator[](size_t id) const
-		{
-			return { {ft_x[id], ft_y[id], ft_z[id]}, {mom_x[id], mom_y[id], mom_z[id]}, id_i[id], id_j[id], cell_i[id], cell_j[id], p_i[id], p_j[id], sub_i[id], sub_j[id], type};
-		}
 		
-		exaDEM::Interaction get_interaction( size_t id )
-		{
-			return { {ft_x[id], ft_y[id], ft_z[id]}, {mom_x[id], mom_y[id], mom_z[id]}, id_i[id], id_j[id], cell_i[id], cell_j[id], p_i[id], p_j[id], sub_i[id], sub_j[id], type};
-		}
 		
+		/**
+		 *@briefs Updates the friction and moment of a given interaction.
+		 */
 		ONIKA_HOST_DEVICE_FUNC void update(size_t id, exaDEM::Interaction item)
 		{
 			onika::cuda::vector_data(ft_x)[id] = item.friction.x;
@@ -186,14 +158,6 @@ namespace exaDEM
 			onika::cuda::vector_data(mom_z)[id] = item.moment.z;
 		}
 		
-		void print()
-		{
-			for(int i = 0; i < 1000; i++)
-			{
-				printf("INTERACTION: %d ID_I: %d ID_J: %d\n", i, id_i[i], id_j[i]);
-			}
-		}
-
 
 	};
 }
