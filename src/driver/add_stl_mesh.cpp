@@ -42,6 +42,7 @@ namespace exaDEM
 		class AddSTLMesh : public OperatorNode
 	{
 		static constexpr Vec3d null= { 0.0, 0.0, 0.0 };
+		static constexpr Quaternion default_quat= { 1.0 , 0.0, 0.0, 0.0 };
 
     ADD_SLOT( Drivers     , drivers         , INPUT_OUTPUT, REQUIRED , DocString{"List of Drivers"});
 		ADD_SLOT( int         , id              , INPUT       , REQUIRED , DocString{"Driver index"});
@@ -49,6 +50,7 @@ namespace exaDEM
 		ADD_SLOT( Vec3d       , center          , INPUT       , null     , DocString{"Defined but not used"});
 		ADD_SLOT( Vec3d       , angular_velocity, INPUT       , null     , DocString{"Defined but not used"});
 		ADD_SLOT( Vec3d       , velocity        , INPUT       , null     , DocString{"Defined but not used"});
+		ADD_SLOT( Quaternion  , orientation     , INPUT       , default_quat , DocString{"Defined but not used"});
     ADD_SLOT( double      , minskowski      , INPUT       , REQUIRED , DocString{"Minskowski radius value"} );
     ADD_SLOT( double      , rcut_inc        , INPUT       , DocString{"value added to the search distance to update neighbor list less frequently. in physical space"} );
 
@@ -76,7 +78,7 @@ namespace exaDEM
 			shape shp = build_shape(mesh, output_name_vtk);
 			shp.m_radius = *minskowski;
 			shp.increase_obb (*rcut_inc);
-			exaDEM::Stl_mesh driver= {*center, *velocity, *angular_velocity, shp};
+			exaDEM::Stl_mesh driver= {*center, *velocity, *angular_velocity, *orientation, shp};
 			drivers->add_driver(*id, driver);
 			lout << "=================================" << std::endl;
 		}

@@ -68,9 +68,9 @@ namespace exaDEM
 		ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_faces();
     ONIKA_HOST_DEVICE_FUNC inline void increase_obb ( const double value );
 */
-		inline void pre_compute_obb_vertices();
-		inline void pre_compute_obb_edges();
-		inline void pre_compute_obb_faces();
+		inline void pre_compute_obb_vertices(const exanb::Vec3d& particle_center, const exanb::Quaternion& particle_quat);
+		inline void pre_compute_obb_edges(const exanb::Vec3d& particle_center, const exanb::Quaternion& particle_quat);
+		inline void pre_compute_obb_faces(const exanb::Vec3d& particle_center, const exanb::Quaternion& particle_quat);
     inline void increase_obb ( const double value );
 
 		ONIKA_HOST_DEVICE_FUNC
@@ -407,6 +407,7 @@ namespace exaDEM
 			print_faces();
 			lout << "=================================" << std::endl << std::endl;
 		}
+
 		inline void write_paraview()
 		{
 			lout << " writting paraview for shape " << this->m_name << std::endl;
@@ -447,10 +448,52 @@ namespace exaDEM
 			};
 			for_all_faces(writer_f, outFile);
 		}
-		/*
-			 inline void print();
-			 inline void write_paraview();
-		 */
+
+
+
+		inline void write_move_paraview(std::string path, int timestep, Vec3d& center, Quaternion& quat)
+		{
+      std::string time = std::to_string(timestep);
+			lout << " writting paraview for shape " << this->m_name << " timestep: " << time << std::endl;
+			std::string name = path + m_name + "_" + time + ".vtk";
+			std::ofstream outFile(name);
+			if (!outFile) {
+				std::cerr << "Erreur : impossible de créer le fichier de sortie ! Filename: " << name << std::endl;
+				return;
+			}
+			outFile << "# vtk DataFile Version 3.0" << std::endl;
+			outFile << "Spheres" << std::endl;
+			outFile << "ASCII" << std::endl;
+			outFile << "DATASET POLYDATA"<<std::endl;
+			outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
+			auto writer_v = [] (const exanb::Vec3d& v, const exanb::Vec3d& center, const exanb::Quaternion& Q, std::ofstream& out) 
+			{
+        exanb::Vec3d Vertex = center + Q * v;
+				out << Vertex.x << " " << Vertex.y << " " << Vertex.z << std::endl;
+			};
+
+			for_all_vertices(writer_v, center, quat, outFile);
+
+			outFile << std::endl;
+			int count_polygon_size = this->get_number_of_faces();
+			int count_polygon_table_size = 0;
+			int* ptr = this->m_faces.data() + 1;
+			for(int it = 0 ; it < count_polygon_size ; it++)
+			{
+				count_polygon_table_size += ptr[0] + 1; // number of vertices + vertex idexes
+				ptr += ptr[0] + 1; // -> next face 
+			}
+
+			outFile << "POLYGONS "<<count_polygon_size<< " " << count_polygon_table_size << std::endl;
+			auto writer_f = [] (const size_t size, const int * data,  std::ofstream& out)
+			{
+				out << size;
+				for (size_t it = 0 ; it < size ; it++) out << " " << data[it];
+				out << std::endl;
+			};
+			for_all_faces(writer_f, outFile);
+		}
+
 	};
 
 	inline int contact_possibilities (const shape* s1, const shape* s2)

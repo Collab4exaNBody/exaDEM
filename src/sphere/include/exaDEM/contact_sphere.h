@@ -391,7 +391,7 @@ namespace exaDEM
           const double radius_i = cell[field::radius][p_i];
           // === driver j
           const auto& shp_j         = driver.shp;
-          const Quaternion orient_j = {1.0,0.0,0.0,0.0};
+          const Quaternion orient_j = driver.quat;
           auto [contact, dn, n, contact_position] = func(item.type, r_i, radius_i, driver.center, sub_j, &shp_j, orient_j);
           Vec3d fn                  = {0,0,0};
 

@@ -8,6 +8,7 @@ numerical_scheme_verlet_macro(compute_force_op):
 #    - push_f_v: { dt_scale: 0.5 }
 #    - push_to_quaternion: { dt_scale: 1.0 }
     - combined_compute_prolog
+    - push_to_quaternion_stl_mesh
     - mpi_barrier
     - check_and_update_particles
     - reset_force_moment

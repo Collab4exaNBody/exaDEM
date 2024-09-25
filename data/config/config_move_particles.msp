@@ -65,7 +65,8 @@ trigger_update_stl_mesh_full:
 trigger_update_stl_mesh_fast:
   condition: not trigger_update_stl_mesh
   body:
-    - update_grid_stl_mesh_fast
+#    - update_grid_stl_mesh_fast
+    - update_grid_stl_mesh_v2
 
 update_stl_mesh:
   - combineSTL:
@@ -85,7 +86,8 @@ parallel_update_particles:
   - ghost_full_update
   - grid_post_processing
   - update_cell_list
-  - update_stl_mesh
+#  - update_stl_mesh
+  - update_grid_stl_mesh_v2
   - update_particle_neighbors
 
 # define actions to initialize particles at startup, just after file read
@@ -98,7 +100,8 @@ init_particles:
   - ghost_full_update
   - grid_post_processing
   - update_cell_list
-  - update_grid_stl_mesh
+#  - update_grid_stl_mesh
+  - update_grid_stl_mesh_v2
   - update_particle_neighbors
 ###########################################################################
 
