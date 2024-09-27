@@ -1,8 +1,6 @@
 #pragma once
 
 #include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/interaction/interactionAOS.hpp>
-#include <exaDEM/interaction/interactionSOA.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/itools/buffer.hpp>
 
@@ -22,103 +20,22 @@ namespace exaDEM
       return true;
     }
 
-  //template< typename T >
+
   struct InteractionWrapper
   {
-  
-    bool aos;
-  	
-    exaDEM::Interaction* interactions;
-    
-    double* ft_x;
-    double* ft_y;
-    double* ft_z;
-    
-    double* mom_x;
-    double* mom_y;
-    double* mom_z;
-    
-    uint64_t* id_i;
-    uint64_t* id_j;
-    
-    uint32_t* cell_i;
-    uint32_t* cell_j;
-    
-    uint16_t* p_i;
-    uint16_t* p_j;
-    
-    uint16_t* sub_i;
-    uint16_t* sub_j;
-    
-    uint16_t m_type;
- 
-    void initialize( InteractionAOS& data )
+    const int m_type;
+    exaDEM::Interaction* const m_data;
+    ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction& operator()(const uint64_t idx) const
     {
-    	aos = true;
-    	
-    	interactions = onika::cuda::vector_data(data.interactions); 
+      return m_data[idx];
     }
-    
-    void initialize( InteractionSOA& data )	
-    {
-    	aos = false;
-    	
-    	ft_x = onika::cuda::vector_data(data.ft_x);
-    	ft_y = onika::cuda::vector_data(data.ft_y);
-    	ft_z = onika::cuda::vector_data(data.ft_z);
-    	
-    	mom_x = onika::cuda::vector_data(data.mom_x);
-    	mom_y = onika::cuda::vector_data(data.mom_y);
-    	mom_z = onika::cuda::vector_data(data.mom_z);
-    	
-    	id_i = onika::cuda::vector_data(data.id_i);
-    	id_j = onika::cuda::vector_data(data.id_j);
-    	
-    	cell_i = onika::cuda::vector_data(data.cell_i);
-    	cell_j = onika::cuda::vector_data(data.cell_j);
-    	
-    	p_i = onika::cuda::vector_data(data.p_i);
-    	p_j = onika::cuda::vector_data(data.p_j);
-    	
-    	sub_i = onika::cuda::vector_data(data.sub_i);
-    	sub_j = onika::cuda::vector_data(data.sub_j);
-    }
-    
-    ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
-    {
-    	exaDEM::Interaction res;
-    	
-    	if(aos)
-    	{
-    		res = interactions[idx];
-    	}
-    	else
-    	{
-    		res = { {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}, id_i[idx], id_j[idx], cell_i[idx], cell_j[idx], p_i[idx], p_j[idx], sub_i[idx], sub_j[idx], m_type };
-    	}
-    	
-    	return res;
-    }
-    
-    ONIKA_HOST_DEVICE_FUNC void update( const uint64_t idx, exaDEM::Interaction item ) const
-    {
-    	if(aos)
-    	{
-    		auto& item2 = interactions[idx];
-    		item2.update_friction_and_moment(item);
-    	}
-    	else
-    	{
-    		ft_x[idx] = item.friction.x;
-    		ft_y[idx] = item.friction.y;
-    		ft_z[idx] = item.friction.z;
-    		
-    		mom_x[idx] = item.moment.x;
-    		mom_y[idx] = item.moment.y;
-    		mom_z[idx] = item.moment.z;
-    	}
-    }
-    
+    ONIKA_HOST_DEVICE_FUNC inline uint8_t type() { return m_type; }
+    ONIKA_HOST_DEVICE_FUNC inline size_t pi      (const uint64_t idx) { return m_data[idx].p_i; }
+    ONIKA_HOST_DEVICE_FUNC inline size_t pj      (const uint64_t idx) { return m_data[idx].p_j; }
+    ONIKA_HOST_DEVICE_FUNC inline size_t celli   (const uint64_t idx) { return m_data[idx].cell_i; }
+    ONIKA_HOST_DEVICE_FUNC inline size_t cellj   (const uint64_t idx) { return m_data[idx].cell_j; }
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d& moment  (const uint64_t idx) { return m_data[idx].moment; }
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d& friction(const uint64_t idx) { return m_data[idx].friction; }
   };
 
 
@@ -128,11 +45,11 @@ namespace exaDEM
    * The Classifier struct manages interactions categorized into different types (up to 13 types).
    * It provides functionalities to store interactions in CUDA memory-managed vectors (`VectorT`).
    */
-  template< typename T >
   struct Classifier
   {
     static constexpr int types = 13;
-    std::vector< T > waves; ///< Storage for interactions categorized by type.
+    template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
+    std::vector< VectorT< exaDEM::Interaction >> waves; ///< Storage for interactions categorized by type.
     std::vector< itools::interaction_buffers > buffers; ///< Storage for analysis. Empty if there is no analysis
 
     /**
@@ -164,8 +81,8 @@ namespace exaDEM
      * @param id Type identifier for the interaction wave.
      * @return Reference to the CUDA memory-managed vector storing interactions of the specified type.
      */
-    T& get_wave(size_t id) {return waves[id];}
-    const T get_wave(size_t id) const {return waves[id];}
+    VectorT<exaDEM::Interaction>& get_wave(size_t id) {return waves[id];}
+    const VectorT<exaDEM::Interaction>& get_wave(size_t id) const {return waves[id];}
 
     /**
      * @brief Retrieves the pointer and size of the data stored in the CUDA memory-managed vector for a specific type.
@@ -173,26 +90,25 @@ namespace exaDEM
      * @param id Type identifier for the interaction wave.
      * @return Pair containing the pointer to the interaction data and the size of the data.
      */
-
-    std::pair<T&, size_t> get_info(size_t id)
+    std::pair<exaDEM::Interaction*, size_t> get_info(size_t id) 
     {
-    	const unsigned int data_size = waves[id].size();
-    	T& data_ptr = waves[id];
-    	return {data_ptr, data_size};
+      const unsigned int  data_size = onika::cuda::vector_size( waves[id]);
+      exaDEM::Interaction* const data_ptr = onika::cuda::vector_data( waves[id] );
+      return {data_ptr, data_size};
     }
-    
-    const std::pair<const T, const size_t> get_info(size_t id) const
+
+    const std::pair< const exaDEM::Interaction* const , const size_t> get_info(size_t id) const
     {
-    	const unsigned int data_size = waves[id].size();
-    	const T data_ptr = waves[id];
-    	return {data_ptr, data_size};
+      const unsigned int  data_size = onika::cuda::vector_size( waves[id]);
+      const exaDEM::Interaction* const data_ptr = onika::cuda::vector_data( waves[id] );
+      return {data_ptr, data_size};
     }
 
 		std::tuple<double*, Vec3d*,Vec3d*,Vec3d*> buffer_p(int id)
 		{
 			auto& analysis = buffers[id]; 
 			// fit size if needed
-			const size_t size = waves[id].size();
+			const size_t size = onika::cuda::vector_size( waves[id] );
 			analysis.resize(size);
 			double* const dnp = onika::cuda::vector_data( analysis.dn ); 
 			Vec3d*  const cpp = onika::cuda::vector_data( analysis.cp ); 
@@ -246,7 +162,7 @@ namespace exaDEM
 				{
 #pragma omp critical
 					{
-						waves[w].insert(tmp[w]);
+						waves[w].insert(waves[w].end(), tmp[w].begin(), tmp[w].end());
 					}
 				}
 			}
@@ -275,7 +191,7 @@ namespace exaDEM
 #pragma omp parallel for
 				for(size_t it = 0 ; it < n1 ; it++) 
 				{
-					exaDEM::Interaction item1 = wave[it];
+					exaDEM::Interaction& item1 = wave[it];
 					// Check if interaction in wave has non-zero friction and moment
 					if( item1.friction != null || item1.moment != null)
 					{ 

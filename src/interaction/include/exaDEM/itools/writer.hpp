@@ -15,8 +15,8 @@ namespace exaDEM
     using namespace exanb;
 
     /** CPU only */
-    template<typename GridT, typename T>
-      std::stringstream create_buffer(GridT& grid, Classifier<T>& ic)
+    template<typename GridT>
+      std::stringstream create_buffer(GridT& grid, Classifier& ic)
       {
         std::stringstream stream;
         const int ntypes = ic.number_of_waves();
@@ -31,7 +31,7 @@ namespace exaDEM
             /** filter empty interactions */
             if(dn < 0)
             {
-              auto I = i_ptr[idx];
+              auto& I = i_ptr[idx];
               /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
               if(filter_duplicates(grid, I))
               {

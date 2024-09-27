@@ -52,8 +52,7 @@ namespace exaDEM
 		 * The constructor retrieves the buffers for overlap (dn), contact points, normal forces,
 		 * and tangential forces from the classifier based on the interaction type.
 		 */
-		template< typename T >
-		AnalysisDataPacker(Classifier<T>& ic, int type)
+		AnalysisDataPacker(Classifier& ic, int type)
 		{
 			auto [_dnp, _cpp, _fnp, _ftp] = ic.buffer_p(type);
 			dnp = _dnp;
@@ -129,9 +128,8 @@ namespace exaDEM
 			template <size_t... Is>
 				ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const
 				{
-					exaDEM::Interaction item = data(i);
-					const auto [dn, pos, fn, ft] = kernel(item, std::get<Is>(params)...);
-					data.update(i, item); 
+					exaDEM::Interaction& item = data(i);
+					const auto [dn, pos, fn, ft] = kernel(item, std::get<Is>(params)...); 
 					packer(i, dn, pos, fn, ft); // packer is used to store interaction data 
 				}
 
@@ -184,14 +182,13 @@ namespace exaDEM
 	 * in parallel using the specified execution context. Depending on the `dataPacker` flag, it either
 	 * applies a null data packer or uses a data packer to process interaction data.
 	 */
-	template<typename Kernel, typename T, typename... Args>
-		static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext * exec_ctx, int type, Classifier<T>& ic, Kernel& kernel, bool dataPacker, Args&&... args)
+	template<typename Kernel, typename... Args>
+		static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext * exec_ctx, int type, Classifier& ic, Kernel& kernel, bool dataPacker, Args&&... args)
 		{
 			ParallelForOptions opts;
 			opts.omp_scheduling = OMP_SCHED_STATIC;
 			auto [ptr, size] = ic.get_info(type);
-			InteractionWrapper interactions;
-			interactions.initialize( ptr );
+			InteractionWrapper interactions = {type, ptr};
 			if( !dataPacker )
 			{
 				AnalysisDataPackerNull nop;     
