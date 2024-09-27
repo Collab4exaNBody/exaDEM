@@ -131,7 +131,6 @@ namespace exaDEM
 				{
 					exaDEM::Interaction item = data(i);
 					const auto [dn, pos, fn, ft] = kernel(item, std::get<Is>(params)...);
-					printf("FRICTION(%d,%d,%d) MOMENT(%d,%d,%d)\n", item.friction.x, item.friction.y, item.friction.z, item.moment.x, item.moment.y, item.moment.z);
 					data.update(i, item); 
 					packer(i, dn, pos, fn, ft); // packer is used to store interaction data 
 				}
@@ -191,8 +190,6 @@ namespace exaDEM
 			ParallelForOptions opts;
 			opts.omp_scheduling = OMP_SCHED_STATIC;
 			auto [ptr, size] = ic.get_info(type);
-			printf("SIZE: %d\n", size);
-			//InteractionWrapper interactions = {type, ptr};
 			InteractionWrapper interactions;
 			interactions.initialize( ptr );
 			if( !dataPacker )
