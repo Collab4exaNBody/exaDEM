@@ -139,7 +139,8 @@ namespace exaDEM
       template<typename TMPC>
         ONIKA_HOST_DEVICE_FUNC 
         inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
-            Interaction& item, 
+        //inline void operator()(
+            Interaction item, 
             TMPC* cells, 
             const ContactParams& hkp, 
             const double time) const
@@ -162,7 +163,7 @@ namespace exaDEM
 
           auto [contact, dn, n, contact_position] = detection_vertex_vertex_core(ri, rad_i, rj, rad_j); 
           Vec3d fn = {0,0,0};
-
+	  
           if(contact)
           {
             const Vec3d vi = get_v(cell_i, item.p_i);
@@ -173,35 +174,36 @@ namespace exaDEM
             // temporary vec3d to store forces.
             Vec3d f = {0,0,0};
             const double meff = compute_effective_mass(m_i, m_j);
-
+	    	
             contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
               hkp.m_mu, hkp.m_damp_rate, meff,
               item.friction, contact_position,
               ri, vi, f, item.moment, vrot_i,  // particle 1
               rj, vj, vrot_j // particle nbh
               );
-
+	     
             // === For analysis
             fn = f - item.friction;
 
             // === update particle informations
             // ==== Particle i
             auto& mom_i = cell_i[field::mom][item.p_i];
-            lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment));
-            lockAndAdd(cell_i[field::fx][item.p_i], f.x);
-            lockAndAdd(cell_i[field::fy][item.p_i], f.y);
-            lockAndAdd(cell_i[field::fz][item.p_i], f.z);
-
+            //lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment));
+            //lockAndAdd(cell_i[field::fx][item.p_i], f.x);
+            //lockAndAdd(cell_i[field::fy][item.p_i], f.y);
+            //lockAndAdd(cell_i[field::fz][item.p_i], f.z);
+	    
             if constexpr (sym)
             {
             // ==== Particle j
             auto& mom_j = cell_j[field::mom][item.p_j];
-            lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment));
-            lockAndAdd(cell_j[field::fx][item.p_j], -f.x);
-            lockAndAdd(cell_j[field::fy][item.p_j], -f.y);
-            lockAndAdd(cell_j[field::fz][item.p_j], -f.z);
+            //lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment));
+            //lockAndAdd(cell_j[field::fx][item.p_j], -f.x);
+            //lockAndAdd(cell_j[field::fy][item.p_j], -f.y);
+            //lockAndAdd(cell_j[field::fz][item.p_j], -f.z);
             }
           }
+          
           else
           {
             item.reset();
@@ -239,7 +241,7 @@ namespace exaDEM
         template<typename TMPLC>
           ONIKA_HOST_DEVICE_FUNC 
           inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
-              Interaction& item, 
+              Interaction item, 
               TMPLC* cells, 
               driver_t* drvs, 
               const ContactParams& hkp, 
