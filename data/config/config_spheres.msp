@@ -1,14 +1,5 @@
 ######### SPHERE mode ####################
 
-######## STL Mesh ##########################
-
-trigger_update_stl_mesh:
-  condition: enable_stl_mesh AND trigger_load_balance
-  body:
-    - update_grid_stl_mesh
-
-update_stl_mesh: trigger_update_stl_mesh
-
 ######### Move Particles ###################
 
 chunk_neighbors_impl:

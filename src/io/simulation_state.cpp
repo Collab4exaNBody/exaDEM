@@ -92,7 +92,6 @@ namespace exaDEM
 					}
 				}
 			} // synchronize 
-
 			for(int i = 0 ; i < types ; i++)
 			{ 
 				res.update(results[i]);

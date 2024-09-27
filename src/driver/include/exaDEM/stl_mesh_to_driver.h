@@ -25,7 +25,7 @@ under the License.
 namespace exaDEM
 {
 	using namespace exanb;
-	shape build_shape(stl_mesh& mesh, std::string name)
+	inline shape build_shape(stl_mesh& mesh, std::string name)
 	{
 		shape shp;
 		const int n_faces = mesh.m_data.size();
@@ -119,9 +119,6 @@ namespace exaDEM
 			}
 
 			shp.m_name = name;
-			shp.pre_compute_obb_vertices();
-			shp.pre_compute_obb_edges();
-			shp.pre_compute_obb_faces();
 			shp.write_paraview();
 			return shp;
 	}

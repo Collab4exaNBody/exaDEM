@@ -9,7 +9,7 @@ input_data:
       bounds_mode: FILE
   - replicate_domain: [5, 1, 15]
   - set_radius:
-     rad: 0.5
+     rad: 0.5 m
   - set_quaternion
   - set_rand_velocity:
      var: 0.1
@@ -24,14 +24,6 @@ input_data:
               shape: { plane: [ 0 , 0 , -1 , 0 ] }
               transform:
                 - translate: [ 0 , 0 , 10 m ]
-
-+simulation_epilog:
-  - memory_stats
-  - grid_stats
-  - timestep_file
-
-update_nbh_friction:
-  rcut: 1.1 m
 
 compute_loop:
   loop: true
@@ -52,7 +44,7 @@ compute_force:
   - gravity_force  
   - contact_sphere:
      symetric: true
-     config: {rcut: 1.0 m, dncut: 0.0,  kn: 100000, kt: 80000, kr: 0, fc: 0.00, mu: 0.3, damp_rate: 0.9}
+     config: {rcut: 0.0 m, dncut: 1.0,  kn: 100000, kt: 80000, kr: 0, fc: 0.00, mu: 0.3, damp_rate: 0.9}
   - transverse_velocity_slab
 
 domain:

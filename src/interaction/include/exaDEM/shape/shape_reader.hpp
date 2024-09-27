@@ -158,8 +158,8 @@ namespace exaDEM
 				{
 					new_shape.print();
 					new_shape.write_paraview();
-					new_shape.pre_compute_obb_edges();
-					new_shape.pre_compute_obb_faces();
+					new_shape.pre_compute_obb_edges(Vec3d{0,0,0}, Quaternion{1,0,0,0});
+					new_shape.pre_compute_obb_faces(Vec3d{0,0,0}, Quaternion{1,0,0,0});
 					sphs.add_shape(&new_shape);
 					do_fill = true;
 				}

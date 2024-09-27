@@ -24,7 +24,7 @@ dump_data_paraview:
       body:
         - message: { endl: true }
   - write_paraview_generic
-
+  - dump_stl_mesh
 
 compute_volume:
   - domain_volume

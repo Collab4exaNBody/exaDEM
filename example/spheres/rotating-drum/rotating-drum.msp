@@ -3,17 +3,14 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_spheres.msp
 
-replicate_domain:
-  repeat: [ 1 , 1 , 1 ]
-
 input_data:
+  - init_rcb_grid
   - lattice:
       structure: SC
       types: [ 0 ]
-      size: [ 1.0 , 1.0 , 1.0 ]
-      repeats: [ 5 , 5 , 5 ]
+      size: [ 1.0 m , 1.0 m , 1.0 m ]
   - set_radius:
-     rad: 0.5
+     rad: 0.5 m
   - set_quaternion
   - set_rand_velocity:
      var: 0.1
@@ -22,7 +19,6 @@ input_data:
      density: 0.02
   - set_rand_vrot_arot
   - update_inertia
-  - replicate_domain
 
 chunk_neighbors_contact:
   config:
@@ -31,10 +27,10 @@ chunk_neighbors_contact:
 setup_drivers:
   - add_cylinder:
      id: 0
-     radius: 9 
-     center: [4.5,4.5,4.5]
+     radius: 9 m
+     center: [4.5 m, 4.5 m,4.5 m]
      axis: [1, 0, 1]
-     angular_velocity: [0,0.5,0]
+     angular_velocity: [0, 0.5, 0]
 
 compute_force:
   - gravity_force
@@ -45,7 +41,10 @@ compute_force:
 
 domain:
   cell_size: 2.5 m
-  periodic: [false,true,false]
+  periodic: [false, true, false]
+  grid_dims: [2, 2, 2]
+  bounds: [[0 m ,0 m, 0 m],[5 m, 5 m, 5 m]]
+  expandable: true
 
 write_vtklegacy:
   ascii: true
@@ -55,7 +54,7 @@ global:
   simulation_dump_frequency: -1
   simulation_end_iteration: 20000
   simulation_log_frequency: 1000
-  simulation_paraview_frequency: -1
+  simulation_paraview_frequency: 1000
   dt: 0.0001 s 
   rcut_inc: 0.4 m
   friction_rcut: 1.1 m

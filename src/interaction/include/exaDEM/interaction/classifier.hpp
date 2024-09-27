@@ -295,6 +295,7 @@ namespace exaDEM
 					}
 				}
 			}
+			reset_waves();
 		}
 	};
 }
