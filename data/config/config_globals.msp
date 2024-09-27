@@ -8,7 +8,7 @@ global:
   compute_loop_continue: true
   simulation_end_iteration: 10000
   simulation_log_frequency: 10
-  simulation_load_balance_frequency: 100
+  simulation_load_balance_frequency: 10000
   simulation_dump_frequency: 1000         # 0 means no dump at all
   simulation_dump_thermo_frequency: 10
   timestep: 0

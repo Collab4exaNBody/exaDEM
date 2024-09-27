@@ -4,12 +4,11 @@ includes:
   - config_polyhedra.msp
 
 input_data:
+  - init_rcb_grid
   - lattice:
       structure: SC
       types: [ 0 ]
       size: [ 1.0 , 1.0 , 1.0 ]
-      repeats: [ 27 , 27 , 27 ]
-      enlarge_bounds: 0.0 m
   - read_shape_file:
      filename: shapes.shp
   - radius_from_shape
@@ -27,7 +26,6 @@ setup_drivers:
      id: 0
      filename: box_avg_stress.stl
      minskowski: 0.01
-  - update_grid_stl_mesh
 
 compute_force:
   - gravity_force
@@ -37,9 +35,11 @@ compute_force:
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2.5 m
+  cell_size: 1.0 m
   periodic: [false,false,false]
-
+  grid_dims: [27, 27, 27]
+  bounds: [[0 m ,0 m, 0 m], [27 m, 27 m, 27 m]]
+  expandable: true
 
 compute_volume: nop
 

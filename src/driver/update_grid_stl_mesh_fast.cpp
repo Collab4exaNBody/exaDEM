@@ -41,7 +41,7 @@ under the License.
 namespace exaDEM
 {
 	using namespace exanb;
-	template<	class GridT, class = AssertGridHasFields< GridT >> class UpdateGridSTLMeshOperator : public OperatorNode
+	template<	class GridT, class = AssertGridHasFields< GridT >> class UpdateGridSTLMeshFastOperator : public OperatorNode
 	{
 		using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz>;
 		static constexpr ComputeFields compute_field_set {};
@@ -87,6 +87,21 @@ namespace exaDEM
 			}
 		}
 
+    bool empty ( list_of_elements& list )
+    {
+      if( (list.vertices.size() != 0)
+       || (list.faces.size()    != 0) 
+       || (list.edges.size()    != 0))
+      {
+        return false;
+      }
+      else
+      {
+        return true;
+      }
+  
+    }
+
 		inline void execute () override final
 		{
 			const auto cells = grid->cells();
@@ -114,26 +129,29 @@ namespace exaDEM
 							IJK loc_a = block_loc + gl;
 							size_t cell_a = grid_ijk_to_index( dims , loc_a );
 							const int n_particles = cells[cell_a].size();
-							//if (n_particles == 0) continue;
-							auto cb = grid->cell_bounds(loc_a);
-							auto center = (cb.bmin + cb.bmax) / 2;
-							bx.center = { center.x , center.y, center.z};
-							update_indexes ( grid_stl[cell_a], bx, mesh.shp);							
+              if( n_particles == 0 ) continue;
+							const bool is_empty = empty(grid_stl[cell_a]);
+							if ( is_empty ) // need to be initialized
+              {
+							  auto cb = grid->cell_bounds(loc_a);
+							  auto center = (cb.bmin + cb.bmax) / 2;
+							  bx.center = { center.x , center.y, center.z};
+							  update_indexes ( grid_stl[cell_a], bx, mesh.shp);				
+              }			
 						}
 						GRID_OMP_FOR_END
 					}
-					mesh.grid_indexes_summary(); //for debug
 				}
 			}
 		};
 	};
 
 	// this helps older versions of gcc handle the unnamed default second template parameter
-	template <class GridT> using UpdateGridSTLMeshOperatorTemplate = UpdateGridSTLMeshOperator<GridT>;
+	template <class GridT> using UpdateGridSTLMeshFastOperatorTemplate = UpdateGridSTLMeshFastOperator<GridT>;
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "update_grid_stl_mesh", make_grid_variant_operator< UpdateGridSTLMeshOperatorTemplate > );
+		OperatorNodeFactory::instance()->register_factory( "update_grid_stl_mesh_fast", make_grid_variant_operator< UpdateGridSTLMeshFastOperatorTemplate > );
 	}
 }

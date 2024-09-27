@@ -113,39 +113,39 @@ namespace exaDEM
               for( size_t j = 0 ; j < stl_nv ; j++ )
               {
                 size_t idx = list.vertices[j];
-                OBB& obb = stl_obb_vertices[idx];
-                obb.enlarge( shpi->m_radius );
+                OBB obb = stl_obb_vertices[idx];
+                obb.enlarge( rVerlet );
+                //obb.enlarge( shpi->m_radius );
                 if ( obb.intersect( v ))
                 {
                   add_contact(p, item, i, idx);
                 }
-                obb.enlarge( -shpi->m_radius );
               }
               // vertex - edge
               item.type = 8;
               for( size_t j = 0 ; j < stl_ne ; j++ )
               {
                 size_t idx = list.edges[j];
-                OBB& obb = stl_obb_edges[idx];
-                obb.enlarge( shpi->m_radius );
+                OBB obb = stl_obb_edges[idx];
+                //obb.enlarge( shpi->m_radius );
+                obb.enlarge( rVerlet );
                 if ( obb.intersect(v) )
                 {
                   add_contact(p, item, i, idx);
                 }
-                obb.enlarge( -shpi->m_radius );
               }
               // vertex - face
               item.type = 9;
               for( size_t j = 0 ; j < stl_nf ; j++ )
               {
                 size_t idx = list.faces[j];
-                OBB& obb = stl_obb_faces[idx];
-                obb.enlarge( shpi->m_radius );
+                OBB obb = stl_obb_faces[idx];
+                //obb.enlarge( shpi->m_radius );
+                obb.enlarge( rVerlet );
                 if ( obb.intersect(v) )
                 {
                   add_contact(p, item, i, idx);
                 }
-                obb.enlarge( -shpi->m_radius );
               }
             }
 
@@ -154,6 +154,7 @@ namespace exaDEM
               item.type = 10;
               item.sub_i = i;
               OBB obb_edge_i = shpi->get_obb_edge(r, i, orient[i]);
+              obb_edge_i.enlarge( rVerlet );
               // edge - edge
               for(size_t j = 0; j < stl_ne ; j++)
               {
@@ -184,6 +185,7 @@ namespace exaDEM
             {
               item.sub_i = i;
               OBB obb_face_i = shpi->get_obb_face(r, i, orient[i]);
+              obb_face_i.enlarge( rVerlet );
               for(size_t j = 0; j < stl_nv ; j++)
               {
                 size_t idx = list.vertices[j];

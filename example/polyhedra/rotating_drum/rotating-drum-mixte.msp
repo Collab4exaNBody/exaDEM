@@ -4,6 +4,7 @@ includes:
   - config_polyhedra.msp
 
 input_data:
+  - init_rcb_grid
   - lattice:
       structure: BCC
       types: [ 0 , 1 ]
@@ -30,11 +31,10 @@ input_data:
 setup_drivers:
   - add_cylinder:
      id: 0
-     center: [22.5, 22.5, 22.5]
+     center: [22.5 m, 22.5 m, 22.5 m]
      axis: [1, 0, 1]
-     radius: 39
+     radius: 39 m
      angular_velocity: [0,0.05,0]
-
 
 compute_force:
   - gravity_force
@@ -44,8 +44,11 @@ compute_force:
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 8000, kr: 0.0, fc: 0.0, mu: 0.5, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2 m
+  cell_size: 2.5 m
   periodic: [false,true,false]
+  grid_dims: [18, 18, 18]
+  bounds: [[0 m ,0 m, 0 m],[45 m, 45 m, 45 m]]
+  expandable: true  
 
 write_vtklegacy:
   ascii: true

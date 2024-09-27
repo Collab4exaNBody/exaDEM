@@ -46,7 +46,9 @@ namespace exaDEM
     exanb::Vec3d center;            /**< Center position of the STL mesh. */
     exanb::Vec3d vel;               /**< Velocity of the STL mesh. */
     exanb::Vec3d vrot;              /**< Angular velocity of the STL mesh. */
+    exanb::Quaternion quat; /**< Quaternion of the STL mesh. */
     shape shp;                      /**< Shape of the STL mesh. */
+  //  vector_t<Vec3d> verticies;      /**< Collection of vertices (computed from shp, quat and center). */
     vector_t<list_of_elements> grid_indexes; /**< Grid indices of the STL mesh. */
 
     /**
@@ -64,6 +66,7 @@ namespace exaDEM
       lout << "center : " << center   << std::endl;
       lout << "Vel    : " << vel << std::endl;
       lout << "AngVel : " << vrot << std::endl;
+      lout << "Quat   : " << quat.w << " " << quat.x << " " << quat.y << " " << quat.z  << std::endl;
       lout << "Number of faces    : " << shp.get_number_of_faces() << std::endl;
       lout << "Number of edges    : " << shp.get_number_of_edges() << std::endl;
       lout << "Number of vertices : " << shp.get_number_of_vertices() << std::endl;
@@ -96,6 +99,27 @@ namespace exaDEM
       return vel;
     }
 
+    /**
+     * @brief return driver velocity
+     */
+    ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion& get_quat()
+    {
+      return quat;
+    }
+
+    inline void update_orientation(double dt)
+    {
+      using namespace exanb;
+			//std::cout << dt << " " << vrot << std::endl;
+			this->quat = this->quat + dot(this->quat, this->vrot) * dt;
+      this->quat = normalize(this->quat);
+    }
+/*
+    ONIKA_HOST_DEVICE_FUNC inline void compute_vertices(size_t id)
+    {
+      verticies[id] = shp.
+    } 
+*/
     /**
      * @brief Prints a summary of grid indices for the STL mesh.
      * @details This function prints the number of elements in the grid indexes for vertices, edges, and faces.

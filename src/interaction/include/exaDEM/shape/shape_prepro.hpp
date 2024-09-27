@@ -136,54 +136,50 @@ namespace exaDEM
 		return res;
 	}
 
-	inline void shape::pre_compute_obb_vertices()
+	inline void shape::pre_compute_obb_vertices(const Vec3d& particle_center, const exanb::Quaternion& particle_quat)
 	{
 		// This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_face`
 		const size_t size = this->get_number_of_vertices();
 		m_obb_vertices.resize(size);
-		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center);
-		const exanb::Quaternion onull = {1,0,0,0};
+		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center) + particle_center;
 
 		lout << "obb [vertices] = " << size << std::endl;
 
 #pragma omp parallel for schedule (static)
 		for ( size_t i = 0 ; i < size ; i++)
 		{
-			m_obb_vertices[i] = build_obb_vertex (center, i, this, onull);
+			m_obb_vertices[i] = build_obb_vertex (center, i, this, particle_quat);
 		}
 	}
 
-	inline void shape::pre_compute_obb_edges()
+	inline void shape::pre_compute_obb_edges(const Vec3d& particle_center, const exanb::Quaternion& particle_quat)
 	{
 		// This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_edge`
 		const size_t size = this->get_number_of_edges();
 		m_obb_edges.resize(size);
 
 		//const exanb::Vec3d vnull      = {0,0,0};
-		const exanb::Quaternion onull = {1,0,0,0};
-		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center);
+		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center) + particle_center;
 		lout << "obb [edges]    = " << size << std::endl;
 #pragma omp parallel for schedule(static)
 		for ( size_t i = 0 ; i < size ; i++)
 		{
-			m_obb_edges[i] = build_obb_edge (center, i, this, onull);
+			m_obb_edges[i] = build_obb_edge (center, i, this, particle_quat);
 		} 
 	}
 
-	inline void shape::pre_compute_obb_faces()
+	inline void shape::pre_compute_obb_faces(const Vec3d& particle_center, const exanb::Quaternion& particle_quat)
 	{
 		// This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_face`
 		const size_t size = this->get_number_of_faces();
 		m_obb_faces.resize(size);
-		//const exanb::Vec3d vnull      = {0,0,0};
-		const exanb::Quaternion onull = {1,0,0,0};
-		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center);
+		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center) + particle_center;
 		lout << "obb [faces]    = " << size << std::endl;
 
 #pragma omp parallel for schedule(static)
 		for ( size_t i = 0 ; i < size ; i++)
 		{
-			m_obb_faces[i] = build_obb_face (center, i, this, onull);
+			m_obb_faces[i] = build_obb_face (center, i, this, particle_quat);
 		}
 	}
 
