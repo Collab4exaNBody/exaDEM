@@ -60,7 +60,6 @@ namespace exaDEM
 		inline void execute () override final
 		{
 			const auto& g = *grid;
-			const auto cells = g.cells();
 			const size_t n_cells = g.number_of_cells(); // nbh.size();
 			const IJK dims = g.dimension();
 			const double Rmax = *rcut_max;

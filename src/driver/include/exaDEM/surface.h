@@ -86,6 +86,15 @@ namespace exaDEM
     }
 
     /**
+     * @brief Update the position of the ball.
+     * @param t The time step.
+     */
+    ONIKA_HOST_DEVICE_FUNC inline void push_v_to_r ( const double t )
+    {
+      center = center + t * vel; 
+    }
+
+    /**
      * @brief Filter function to check if a vertex is within a certain radius of the surface.
      * @param rcut The cut-off radius.
      * @param p The point to check.

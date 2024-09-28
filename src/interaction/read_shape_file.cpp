@@ -59,7 +59,7 @@ namespace exaDEM
 		{
 			auto& collection = *shapes_collection;
 			lout << "Read file= " << *filename << std::endl;
-			exaDEM::add_shape_from_file_shp(collection, *filename);
+			exaDEM::read_shp(collection, *filename);
 		};
 	};
 

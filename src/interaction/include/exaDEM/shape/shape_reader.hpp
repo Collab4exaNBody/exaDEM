@@ -22,7 +22,51 @@ under the License.
 
 namespace exaDEM
 {
-	void add_shape_from_file_shp(shapes& sphs, const std::string file_name)
+  void write_shp(shape& shp)
+	{
+    int nv = shp.get_number_of_vertices();
+    int ne = shp.get_number_of_edges();
+    int nf = shp.get_number_of_faces();
+
+    std::string filename = shp.m_name + ".shp";
+    std::ofstream output(filename);
+    output << std::endl << "<" << std::endl;
+    output << "name " << shp.m_name.c_str() << std::endl;
+    output << "radius " << shp.m_radius  << std::endl;
+		output << "nv " << nv << std::endl;
+    for(int i = 0; i < nv ; i++)
+    {
+      output << shp.m_vertices[i] << std::endl;
+    }
+		output << "ne " << ne << std::endl;
+    for(int i = 0; i < ne ; i++) 
+    {
+      output << shp.m_edges[2*i] << " " << shp.m_edges[2*i+1] << std::endl;
+    }
+    output << "nf " << nf << std::endl;
+    for(int i = 0; i < nf ; i++) 
+    {
+      auto [ptr, size] = shp.get_face(i);
+      output << size;
+      for(int j = 0 ; j < size ; j++)
+      {
+        output << " " << ptr[j];
+      }
+      output << std::endl;
+    }
+    output << "obb.extent " << shp.obb.extent << std::endl;
+    output << "obb.e1 " << shp.obb.e1 << std::endl;
+    output << "obb.e2 " << shp.obb.e2 << std::endl;
+    output << "obb.e3 " << shp.obb.e3 << std::endl;
+    output << "obb.center " << shp.obb.center << std::endl;
+    output << "orientation 1.0 0.0 0.0 0.0" << std::endl;
+    output << "volume " << shp.m_volume << std::endl;
+    output << "I/m " << shp.m_inertia_on_mass << std::endl;
+    output << ">" << std::endl;
+  }
+
+
+	void read_shp(shapes& sphs, const std::string file_name)
 	{
 		std::ifstream input( file_name.c_str() );
 		std::string first;

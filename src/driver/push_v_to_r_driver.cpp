@@ -38,7 +38,7 @@ namespace exaDEM
 	using namespace exanb;
 
 	template<typename GridT>
-		class PushToQuaternionSTLMesh : public OperatorNode
+		class PushVelocityToPositionDriver : public OperatorNode
 	{
 		ADD_SLOT( Drivers , drivers  , INPUT_OUTPUT, REQUIRED , DocString{"List of Drivers"});
     ADD_SLOT( double  , dt       , INPUT, DocString{"dt is the time increment of the timeloop"});
@@ -59,18 +59,18 @@ namespace exaDEM
 				if ( drivers->type(id) == DRIVER_TYPE::STL_MESH)
 				{
 					exaDEM::Stl_mesh& mesh = std::get<exaDEM::Stl_mesh> (drivers->data(id));
-					mesh.update_orientation(t);
+					mesh.push_v_to_r(t);
 				}
 			}
 		}
 	};
 
-	template<class GridT> using PushToQuaternionSTLMeshTmpl = PushToQuaternionSTLMesh<GridT>;
+	template<class GridT> using PushVelocityToPositionDriverTmpl = PushVelocityToPositionDriver<GridT>;
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "push_to_quaternion_stl_mesh", make_grid_variant_operator< PushToQuaternionSTLMeshTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "push_v_to_r_driver", make_grid_variant_operator< PushVelocityToPositionDriverTmpl > );
 	}
 }
 

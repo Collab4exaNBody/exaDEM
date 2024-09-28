@@ -46,7 +46,7 @@ namespace exaDEM
     exanb::Vec3d center;            /**< Center position of the STL mesh. */
     exanb::Vec3d vel;               /**< Velocity of the STL mesh. */
     exanb::Vec3d vrot;              /**< Angular velocity of the STL mesh. */
-    exanb::Quaternion quat; /**< Quaternion of the STL mesh. */
+    exanb::Quaternion quat;         /**< Quaternion of the STL mesh. */
     shape shp;                      /**< Shape of the STL mesh. */
   //  vector_t<Vec3d> verticies;      /**< Collection of vertices (computed from shp, quat and center). */
     vector_t<list_of_elements> grid_indexes; /**< Grid indices of the STL mesh. */
@@ -107,19 +107,22 @@ namespace exaDEM
       return quat;
     }
 
-    inline void update_orientation(double dt)
+    // angular velocity
+    inline void push_av_to_quat(double dt)
     {
       using namespace exanb;
 			//std::cout << dt << " " << vrot << std::endl;
 			this->quat = this->quat + dot(this->quat, this->vrot) * dt;
       this->quat = normalize(this->quat);
     }
-/*
-    ONIKA_HOST_DEVICE_FUNC inline void compute_vertices(size_t id)
+
+    inline void push_v_to_r(double dt)
     {
-      verticies[id] = shp.
-    } 
-*/
+      using namespace exanb;
+      this->center += this->vel * dt;
+      //this->center += this->vel * dt + this->acc * dt * dt * 0.5; // full
+    }
+
     /**
      * @brief Prints a summary of grid indices for the STL mesh.
      * @details This function prints the number of elements in the grid indexes for vertices, edges, and faces.

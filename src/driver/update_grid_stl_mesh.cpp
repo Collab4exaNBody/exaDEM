@@ -113,7 +113,7 @@ namespace exaDEM
 						{
 							IJK loc_a = block_loc + gl;
 							size_t cell_a = grid_ijk_to_index( dims , loc_a );
-							const int n_particles = cells[cell_a].size();
+							//const int n_particles = cells[cell_a].size();
 							//if (n_particles == 0) continue;
 							auto cb = grid->cell_bounds(loc_a);
 							auto center = (cb.bmin + cb.bmax) / 2;
