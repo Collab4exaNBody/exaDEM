@@ -81,17 +81,6 @@ namespace exaDEM
     }
 
     /**
-     * @brief Updates the position of the object based on its velocity.
-     * @param t The time step for the update.
-     * @details This function calculates the new position of the object using the formula:
-     *          newPosition = oldPosition + (timeStep * velocity)
-     */
-    ONIKA_HOST_DEVICE_FUNC inline void update_position ( const double t )
-    {
-      center = center + t * vel; 
-    }
-
-    /**
      * @brief return driver velocity
      */
     ONIKA_HOST_DEVICE_FUNC inline Vec3d& get_vel()
