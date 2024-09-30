@@ -37,6 +37,13 @@ namespace exaDEM
 
 	using namespace exanb;
 
+  struct func_push_av_to_quat
+  {
+    double t;
+    void operator()(exaDEM::Stl_mesh && arg){ arg.push_av_to_quat(t); }
+    void operator()(auto && arg){ /* do nothing */  }
+  };
+
 	template<typename GridT>
 		class PushAngularVelocityToQuaternionDriver : public OperatorNode
 	{
@@ -47,20 +54,17 @@ namespace exaDEM
 
 		inline std::string documentation() const override final
 		{
-			return R"EOF(
-        )EOF";
+			return R"EOF( This operator compute the new orientation using the angular velocity. )EOF";
 		}
 
 		inline void execute () override final
 		{
       double t = *dt;
+      func_push_av_to_quat func = {t};
 			for(size_t id = 0 ; id < drivers->get_size() ; id++)
 			{
-				if ( drivers->type(id) == DRIVER_TYPE::STL_MESH)
-				{
-					exaDEM::Stl_mesh& mesh = std::get<exaDEM::Stl_mesh> (drivers->data(id));
-					mesh.push_av_to_quat(t);
-				}
+        auto& driver = drivers->data(id);
+				std::visit(func, driver);
 			}
 		}
 	};
