@@ -31,6 +31,9 @@ namespace exaDEM
      */
     constexpr DRIVER_TYPE get_type() {return DRIVER_TYPE::UNDEFINED;}
 
+
+    void push_v_to_r(const double dt) {}
+
     /**
      * @brief Print information about the undefined driver.
      */

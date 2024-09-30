@@ -56,11 +56,17 @@ namespace exaDEM
       double t = *dt;
 			for(size_t id = 0 ; id < drivers->get_size() ; id++)
 			{
+        auto& driver = drivers->data(id);
+
+        std::visit([t](auto && arg){ arg.push_v_to_r(t); } , driver);
+/*
+        driver.push_v_to_r(t);
 				if ( drivers->type(id) == DRIVER_TYPE::STL_MESH)
 				{
 					exaDEM::Stl_mesh& mesh = std::get<exaDEM::Stl_mesh> (drivers->data(id));
 					mesh.push_v_to_r(t);
 				}
+*/
 			}
 		}
 	};
