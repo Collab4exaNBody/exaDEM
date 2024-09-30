@@ -27,10 +27,8 @@ under the License.
 #include "exanb/compute/compute_cell_particles.h"
 #include <mpi.h>
 #include <memory>
-#include <exaDEM/driver_base.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/driver_stl_mesh.h>
-#include <exaDEM/shape/shape.hpp>
+#include <exaDEM/stl_mesh.h>
 
 namespace exaDEM
 {

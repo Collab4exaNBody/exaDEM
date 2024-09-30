@@ -32,9 +32,8 @@ under the License.
 #include <iomanip>
 
 #include <exanb/compute/compute_cell_particles.h>
-#include <exaDEM/face.h>
-#include <exaDEM/stl_mesh.h>
 #include <exaDEM/drivers.h>
+#include <exaDEM/stl_mesh.h>
 
 #include <mpi.h>
 
@@ -53,8 +52,7 @@ namespace exaDEM
 		public:
 		inline std::string documentation() const override final
 		{
-			return R"EOF( 
-    	    			)EOF";
+			return R"EOF( Update the list of information for each cell regarding the vertex, edge, and face indices in contact with the cell in an STL mesh." )EOF";
 		}
 
 		inline void execute () override final

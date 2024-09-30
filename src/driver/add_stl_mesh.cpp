@@ -29,7 +29,7 @@ under the License.
 #include <memory>
 #include <exaDEM/driver_base.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/driver_stl_mesh.h>
+#include <exaDEM/stl_mesh.h>
 #include <exaDEM/shape/shape.hpp>
 #include <exaDEM/stl_mesh_to_driver.h>
 
@@ -65,8 +65,8 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
-			stl_mesh mesh;
-			mesh.read_stl(*filename);
+			stl_mesh_reader reader;
+			reader(*filename);
 			std::string output_name_vtk = *filename;
 			std::string old_extension = ".stl";
 
@@ -75,7 +75,7 @@ namespace exaDEM
 			{
 				output_name_vtk.erase(it, old_extension.length());
 			}
-			shape shp = build_shape(mesh, output_name_vtk);
+			shape shp = build_shape(reader, output_name_vtk);
 			shp.m_radius = *minskowski;
 			shp.increase_obb (*rcut_inc);
 			exaDEM::Stl_mesh driver= {*center, *velocity, *angular_velocity, *orientation, shp};

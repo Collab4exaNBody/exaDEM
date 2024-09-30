@@ -19,13 +19,13 @@ under the License.
 #pragma once
 
 #include <vector>
-#include <exaDEM/stl_mesh.h>
+#include <exaDEM/stl_mesh_reader.h>
 #include <exaDEM/shape/shape.hpp>
 
 namespace exaDEM
 {
 	using namespace exanb;
-	inline shape build_shape(stl_mesh& mesh, std::string name)
+	inline shape build_shape(stl_mesh_reader& mesh, std::string name)
 	{
 		shape shp;
 		const int n_faces = mesh.m_data.size();

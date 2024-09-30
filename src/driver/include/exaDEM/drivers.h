@@ -22,7 +22,7 @@ under the License.
 #include <exaDEM/cylinder.h>
 #include <exaDEM/surface.h>
 #include <exaDEM/ball.h>
-#include <exaDEM/driver_stl_mesh.h>
+#include <exaDEM/stl_mesh.h>
 #include <exaDEM/undefined_driver.h>
 #include <variant>
 
