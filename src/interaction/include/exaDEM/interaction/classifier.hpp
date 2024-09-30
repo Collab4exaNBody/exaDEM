@@ -21,15 +21,11 @@ namespace exaDEM
       }
       return true;
     }
-
-  //template< typename T >
-  struct InteractionWrapper
-  {
   
-    bool aos;
-  	
-    exaDEM::Interaction* interactions;
-    
+  template <typename T> struct InteractionWrapper;
+  
+  template<> struct InteractionWrapper<InteractionSOA>
+  {
     double* ft_x;
     double* ft_y;
     double* ft_z;
@@ -51,18 +47,9 @@ namespace exaDEM
     uint16_t* sub_j;
     
     uint16_t m_type;
- 
-    void initialize( InteractionAOS& data )
-    {
-    	aos = true;
-    	
-    	interactions = onika::cuda::vector_data(data.interactions); 
-    }
     
-    void initialize( InteractionSOA& data )	
+    InteractionWrapper(InteractionSOA& data)
     {
-    	aos = false;
-    	
     	ft_x = onika::cuda::vector_data(data.ft_x);
     	ft_y = onika::cuda::vector_data(data.ft_y);
     	ft_z = onika::cuda::vector_data(data.ft_z);
@@ -82,43 +69,50 @@ namespace exaDEM
     	
     	sub_i = onika::cuda::vector_data(data.sub_i);
     	sub_j = onika::cuda::vector_data(data.sub_j);
+    	
+    	m_type = data.type;
     }
     
     ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
     {
     	exaDEM::Interaction res;
-    	
-    	if(aos)
-    	{
-    		res = interactions[idx];
-    	}
-    	else
-    	{
-    		res = { {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}, id_i[idx], id_j[idx], cell_i[idx], cell_j[idx], p_i[idx], p_j[idx], sub_i[idx], sub_j[idx], m_type };
-    	}
-    	
+    	res = { {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}, id_i[idx], id_j[idx], cell_i[idx], cell_j[idx], p_i[idx], p_j[idx], sub_i[idx], sub_j[idx], m_type };
     	return res;
     }
     
-    ONIKA_HOST_DEVICE_FUNC void update( const uint64_t idx, exaDEM::Interaction item ) const
+    ONIKA_HOST_DEVICE_FUNC inline void update( const uint64_t idx, exaDEM::Interaction item ) const
     {
-    	if(aos)
-    	{
-    		auto& item2 = interactions[idx];
-    		item2.update_friction_and_moment(item);
-    	}
-    	else
-    	{
-    		ft_x[idx] = item.friction.x;
-    		ft_y[idx] = item.friction.y;
-    		ft_z[idx] = item.friction.z;
+    	ft_x[idx] = item.friction.x;
+    	ft_y[idx] = item.friction.y;
+    	ft_z[idx] = item.friction.z;
     		
-    		mom_x[idx] = item.moment.x;
-    		mom_y[idx] = item.moment.y;
-    		mom_z[idx] = item.moment.z;
-    	}
+    	mom_x[idx] = item.moment.x;
+    	mom_y[idx] = item.moment.y;
+    	mom_z[idx] = item.moment.z;
+    }    
+    
+    
+  };
+  
+  template<> struct InteractionWrapper<InteractionAOS>
+  {
+    exaDEM::Interaction* interactions;
+	
+    InteractionWrapper(InteractionAOS& data)
+    {
+        interactions = onika::cuda::vector_data(data.m_data);
+    }
+	
+    ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
+    {
+    	return interactions[idx];
     }
     
+    ONIKA_HOST_DEVICE_FUNC inline void update( const uint64_t idx, exaDEM::Interaction item ) const
+    {
+        auto& item2 = interactions[idx];
+    	item2.update_friction_and_moment(item);
+    }      	
   };
 
 

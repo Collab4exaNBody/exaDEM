@@ -100,7 +100,7 @@ namespace exaDEM
 		/**
 		 *@briefs Fills the lists.
 		 */
-		void insert( std::vector<exaDEM::Interaction> tmp )
+		void insert( std::vector<exaDEM::Interaction>& tmp )
 		{
 			for(auto interaction : tmp)
 			{
@@ -147,7 +147,7 @@ namespace exaDEM
 		/**
 		 *@briefs Updates the friction and moment of a given interaction.
 		 */
-		ONIKA_HOST_DEVICE_FUNC void update(size_t id, exaDEM::Interaction item)
+		ONIKA_HOST_DEVICE_FUNC void update(size_t id, exaDEM::Interaction& item)
 		{
 			onika::cuda::vector_data(ft_x)[id] = item.friction.x;
 			onika::cuda::vector_data(ft_y)[id] = item.friction.y;

@@ -140,7 +140,7 @@ namespace exaDEM
         ONIKA_HOST_DEVICE_FUNC 
         inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
         //inline void operator()(
-            Interaction item, 
+            Interaction& item, 
             TMPC* cells, 
             const ContactParams& hkp, 
             const double time) const
@@ -188,19 +188,19 @@ namespace exaDEM
             // === update particle informations
             // ==== Particle i
             auto& mom_i = cell_i[field::mom][item.p_i];
-            //lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment));
-            //lockAndAdd(cell_i[field::fx][item.p_i], f.x);
-            //lockAndAdd(cell_i[field::fy][item.p_i], f.y);
-            //lockAndAdd(cell_i[field::fz][item.p_i], f.z);
+            lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment));
+            lockAndAdd(cell_i[field::fx][item.p_i], f.x);
+            lockAndAdd(cell_i[field::fy][item.p_i], f.y);
+            lockAndAdd(cell_i[field::fz][item.p_i], f.z);
 	    
             if constexpr (sym)
             {
             // ==== Particle j
             auto& mom_j = cell_j[field::mom][item.p_j];
-            //lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment));
-            //lockAndAdd(cell_j[field::fx][item.p_j], -f.x);
-            //lockAndAdd(cell_j[field::fy][item.p_j], -f.y);
-            //lockAndAdd(cell_j[field::fz][item.p_j], -f.z);
+            lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment));
+            lockAndAdd(cell_j[field::fx][item.p_j], -f.x);
+            lockAndAdd(cell_j[field::fy][item.p_j], -f.y);
+            lockAndAdd(cell_j[field::fz][item.p_j], -f.z);
             }
           }
           
@@ -241,7 +241,7 @@ namespace exaDEM
         template<typename TMPLC>
           ONIKA_HOST_DEVICE_FUNC 
           inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
-              Interaction item, 
+              Interaction& item, 
               TMPLC* cells, 
               driver_t* drvs, 
               const ContactParams& hkp, 

@@ -27,51 +27,51 @@ under the License.
 namespace exaDEM
 {
 	/**
-	 * @brief Structure representing the Arrays of Structure data structure for the interactions in a Discrete Element Method (DEM) simulation.
+	 * @brief Structure representing the Arrays of Structure data structure for the m_data in a Discrete Element Method (DEM) simulation.
 	 */
 	struct InteractionAOS
 	{
 		template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
 		
-		VectorT<exaDEM::Interaction> interactions;  /**<  List of interactions.  */
+		VectorT<exaDEM::Interaction> m_data;  /**<  List of m_data.  */
 		
 		/**
-		 *@briefs Clears the interactions.
+		 *@briefs Clears the m_data.
 		 */
 		void clear()
 		{
-			interactions.clear();
+			m_data.clear();
 		}
 		
 		/**
-		 *@briefs Returns the number of interactions.
+		 *@briefs Returns the number of m_data.
 		 */
 		const size_t size() const
 		{
-			return interactions.size();
+			return m_data.size();
 		}
 		
 		size_t size()
 		{
-			return interactions.size();
+			return m_data.size();
 		}
 		
 		
 		/**
-		 *@briefs Fills the list of interactions.
+		 *@briefs Fills the list of m_data.
 		 */
-		void insert(std::vector<exaDEM::Interaction> tmp)
+		void insert(const std::vector<exaDEM::Interaction>& tmp)  
 		{
-			interactions.insert(interactions.end(), tmp.begin(), tmp.end());
+			m_data.insert(m_data.end(), tmp.begin(), tmp.end());
 		}
 		
 		
 		/**
-		 *@briefs Returns an interaction for a given index of the interactions's list.
+		 *@briefs Returns an interaction for a given index of the m_data's list.
 		 */
 		ONIKA_HOST_DEVICE_FUNC exaDEM::Interaction operator[](uint64_t id) const
 		{
-			auto* ints = onika::cuda::vector_data(interactions);
+			auto* ints = onika::cuda::vector_data(m_data);
 			exaDEM::Interaction item = ints[id];
 			return item;
 		}
@@ -79,9 +79,9 @@ namespace exaDEM
 		/**
 		 *@briefs Updates the friction and moment of a givne interaction.
 		 */
-		ONIKA_HOST_DEVICE_FUNC void update(size_t id, exaDEM::Interaction item)
+		ONIKA_HOST_DEVICE_FUNC void update(size_t id, exaDEM::Interaction& item)
 		{
-			exaDEM::Interaction& item2 = onika::cuda::vector_data(interactions)[id];
+			exaDEM::Interaction& item2 = onika::cuda::vector_data(m_data)[id];
 			item2.friction = item.friction;
 			item2.moment = item.moment;
 		}

@@ -96,10 +96,10 @@ namespace exaDEM
 	 * @tparam AnalysisDataPacker Used to pack any kind of data.
 	 * @tparam Args Types of additional parameters passed to the kernel function.
 	 */
-	template<typename K, typename AnalysisDataPacker, typename... Args>
+	template<typename T, typename K, typename AnalysisDataPacker, typename... Args>
 		struct WrapperForAll
 		{
-			InteractionWrapper data;    /**< Wrapper that contains a pointer to the array of elements. */
+			InteractionWrapper<T> data;
 			const K kernel;             /**< Kernel function to be applied. */
 			AnalysisDataPacker packer;  /**< Kernel function to be applied. */
 			std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
@@ -111,7 +111,7 @@ namespace exaDEM
 			 * @param k Kernel function to be applied.
 			 * @param args Additional parameters passed to the kernel function.
 			 */
-			WrapperForAll(InteractionWrapper& d, K& k, AnalysisDataPacker& p,  Args... args) 
+			WrapperForAll(InteractionWrapper<T>& d, K& k, AnalysisDataPacker& p, Args... args) 
 				: data(std::move(d)),
 				kernel(k),
 				packer(p), 
@@ -190,8 +190,7 @@ namespace exaDEM
 			ParallelForOptions opts;
 			opts.omp_scheduling = OMP_SCHED_STATIC;
 			auto [ptr, size] = ic.get_info(type);
-			InteractionWrapper interactions;
-			interactions.initialize( ptr );
+			InteractionWrapper<T> interactions(ptr);
 			if( !dataPacker )
 			{
 				AnalysisDataPackerNull nop;     
