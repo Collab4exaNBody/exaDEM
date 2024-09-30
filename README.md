@@ -19,4 +19,4 @@ Documentation is available here:
 
 ## License
 
-See `LICENSE.txt`
+See `LICENSE.txt` 
