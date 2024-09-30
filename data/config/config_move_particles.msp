@@ -57,26 +57,18 @@ ghost_full_update:
 migrate_particles: nop
 add_generated_particles: nop
 
-trigger_update_stl_mesh_full:
-  condition: trigger_update_stl_mesh
+trigger_grid_stl_mesh:
+  condition: trigger_grid_stl_mesh
   body:
-    - update_grid_stl_mesh
-
-trigger_update_stl_mesh_fast:
-  condition: not trigger_update_stl_mesh
-  body:
-#    - update_grid_stl_mesh_fast
-    - update_grid_stl_mesh_v2
+    - grid_stl_mesh
 
 update_stl_mesh:
   - combineSTL:
-      rebind: { in1: enable_stl_mesh , in2: trigger_load_balance, result: trigger_update_stl_mesh}
+      rebind: { in1: enable_stl_mesh , in2: trigger_load_balance, result: trigger_grid_stl_mesh}
       body: [ boolean_and ]  
-  - trigger_update_stl_mesh_full 
-#  - trigger_update_stl_mesh_fast
+  - trigger_grid_stl_mesh
 
 parallel_update_particles:
-#  - mpi_barrier
   - particle_generator:
       condition: trigger_generator
       body:
@@ -86,8 +78,7 @@ parallel_update_particles:
   - ghost_full_update
   - grid_post_processing
   - update_cell_list
-#  - update_stl_mesh
-  - update_grid_stl_mesh_v2
+  - grid_stl_mesh
   - update_particle_neighbors
 
 # define actions to initialize particles at startup, just after file read
@@ -95,13 +86,11 @@ init_particles:
   - move_particles # standard move_particles, even if friction is enabled. just re-order particles in cells, if needed
   - extend_domain
   - load_balance
-#  - parallel_update_particles
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
   - update_cell_list
-#  - update_grid_stl_mesh
-  - update_grid_stl_mesh_v2
+  - grid_stl_mesh
   - update_particle_neighbors
 ###########################################################################
 

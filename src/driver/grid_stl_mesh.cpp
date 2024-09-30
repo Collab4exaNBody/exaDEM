@@ -41,7 +41,7 @@ under the License.
 namespace exaDEM
 {
 	using namespace exanb;
-	template<	class GridT, class = AssertGridHasFields< GridT >> class UpdateGridSTLMeshOperatorV2 : public OperatorNode
+	template<	class GridT, class = AssertGridHasFields< GridT >> class UpdateGridSTLMeshOperator : public OperatorNode
 	{
 		using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz>;
 		static constexpr ComputeFields compute_field_set {};
@@ -162,12 +162,12 @@ namespace exaDEM
 		}
 	};
 	// this helps older versions of gcc handle the unnamed default second template parameter
-	template <class GridT> using UpdateGridSTLMeshOperatorV2Template = UpdateGridSTLMeshOperatorV2<GridT>;
+	template <class GridT> using UpdateGridSTLMeshOperatorTemplate = UpdateGridSTLMeshOperator<GridT>;
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "update_grid_stl_mesh_v2", make_grid_variant_operator< UpdateGridSTLMeshOperatorV2Template > );
+		OperatorNodeFactory::instance()->register_factory( "grid_stl_mesh", make_grid_variant_operator< UpdateGridSTLMeshOperatorTemplate > );
 	}
 }
 

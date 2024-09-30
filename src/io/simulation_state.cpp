@@ -122,7 +122,7 @@ namespace exaDEM
 					sim.kinetic_energy.x, sim.kinetic_energy.y, sim.kinetic_energy.z,
 					sim.mass };
         uint64_t tmpUInt64T[3] = {sim.n_particles, red.n_act_interaction, red.n_tot_interaction};
-				MPI_Allreduce(MPI_IN_PLACE, tmpDouble  , 8, MPI_DOUBLE, MPI_SUM, comm);
+				MPI_Allreduce(MPI_IN_PLACE, tmpDouble  , 7, MPI_DOUBLE, MPI_SUM, comm);
 				MPI_Allreduce(MPI_IN_PLACE, &red.min_dn, 1, MPI_DOUBLE, MPI_MAX, comm);
 				MPI_Allreduce(MPI_IN_PLACE, tmpUInt64T , 3, MPI_UINT64_T, MPI_SUM, comm);
 
