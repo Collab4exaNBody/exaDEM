@@ -86,6 +86,16 @@ namespace exaDEM
 			item2.moment = item.moment;
 		}
 		
+		exaDEM::Interaction* interactions_list()
+		{
+			return m_data.data();
+		}
+		
+		const exaDEM::Interaction* interactions_list() const
+		{
+			return m_data.data();
+		}
+		
 
 		
 		

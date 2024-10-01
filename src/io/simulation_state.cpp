@@ -77,7 +77,8 @@ namespace exaDEM
 				for(int i = 0 ; i < types ; i++)
 				{
 					const auto& buffs       = classifier.buffers[i];
-					auto [ptr, size]        = classifier.get_info(i);
+					//auto [ptr, size]        = classifier.get_info(i);
+					auto [ptr, size]        = classifier.get_interactions_list(i);
 					const double* const dnp = onika::cuda::vector_data( buffs.dn );
 
 					int coef = 1;
@@ -88,7 +89,7 @@ namespace exaDEM
 					if ( size > 0 && dnp != nullptr ) // skip it if forces has not been computed
 					{
 						//pexw[i] = exaDEM::itools::reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
-						//reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
+						reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
 					}
 				}
 			} // synchronize 

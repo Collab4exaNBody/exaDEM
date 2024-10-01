@@ -181,6 +181,20 @@ namespace exaDEM
     	const T data_ptr = waves[id];
     	return {data_ptr, data_size};
     }
+    
+    std::pair<exaDEM::Interaction*, size_t> get_interactions_list(size_t id)
+    {
+    	const unsigned int  data_size = waves[id].size();
+    	exaDEM::Interaction* const data_ptr = waves[id].interactions_list();
+    	return {data_ptr, data_size};
+    }
+    
+    const std::pair<const exaDEM::Interaction* const, const size_t> get_interactions_list(size_t id) const
+    {
+      	const unsigned int  data_size = waves[id].size();
+      	const exaDEM::Interaction* const data_ptr = waves[id].interactions_list();
+      	return {data_ptr, data_size};    	
+    }
 
 		std::tuple<double*, Vec3d*,Vec3d*,Vec3d*> buffer_p(int id)
 		{
