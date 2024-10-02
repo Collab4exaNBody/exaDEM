@@ -103,6 +103,7 @@ namespace exaDEM
 			//std::cout << dt << " " << vrot << std::endl;
 			this->quat = this->quat + dot(this->quat, this->vrot) * dt;
       this->quat = normalize(this->quat);
+      ldbg << "Quat[stl mesh]: " <<  this->quat.w << " " << this->quat.x << " " << this->quat.y << " " << this->quat.z << std::endl;
     }
 
     inline void push_v_to_r(double dt)

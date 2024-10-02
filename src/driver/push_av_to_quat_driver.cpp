@@ -38,8 +38,9 @@ namespace exaDEM
   struct func_push_av_to_quat
   {
     double t;
-    void operator()(exaDEM::Stl_mesh && arg){ arg.push_av_to_quat(t); }
-    void operator()(auto && arg){ /* do nothing */  }
+    template<typename T>
+    inline void operator()(T && arg){ /* do nothing */  }
+    inline void operator()(exaDEM::Stl_mesh & arg){ arg.push_av_to_quat(t); }
   };
 
 	template<typename GridT>
