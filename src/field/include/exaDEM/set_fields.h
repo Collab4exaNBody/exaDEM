@@ -316,7 +316,7 @@ namespace exanb
 	template<class... Ts> struct ComputeCellParticlesTraits< exaDEM::SetFunctor<Ts...> >
 	{
 		static inline constexpr bool RequiresBlockSynchronousCall = false;
-		static inline constexpr bool CudaCompatible = true;
+		static inline constexpr bool CudaCompatible = false;
 	};
 
 	template<class... Ts> struct ComputeCellParticlesTraits< exaDEM::SetRegionFunctor<Ts...> >

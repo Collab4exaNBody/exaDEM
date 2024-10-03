@@ -56,7 +56,7 @@ namespace exaDEM
 
     ADD_SLOT( GridT                       , grid      , INPUT_OUTPUT , REQUIRED );
     ADD_SLOT( GridCellParticleInteraction , ges       , INPUT        , DocString{"Interaction list"} );
-    ADD_SLOT( Classifier<InteractionAOS>                  , ic        , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
+    ADD_SLOT( Classifier<InteractionSOA>                  , ic        , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
     ADD_SLOT( CellListWrapper             , cell_list , INPUT        , DocString{"list of non empty cells within the current grid"});
 
     public:
