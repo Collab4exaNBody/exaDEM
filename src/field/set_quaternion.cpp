@@ -63,6 +63,7 @@ namespace exaDEM
 		{
 
 			bool is_random = *random;
+      set_gpu_enabled(false);
 
 			if(is_random)
 			{
