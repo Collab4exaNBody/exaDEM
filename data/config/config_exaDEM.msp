@@ -115,6 +115,7 @@ drivers:
   - init_drivers
   - setup_drivers
   - print_drivers
+  - backup_drivers
 
 ######## simulation program description #################
 simulation:

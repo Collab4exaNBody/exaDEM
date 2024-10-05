@@ -2,9 +2,9 @@
 
 ######### Move Particles ###################
 
-trigger_move_particles:
-  rebind: { threshold: max_displ , result: trigger_move_particles }
-  body:
+evaluate_particle_displ:
+  rebind: { threshold: max_displ , result: particle_displ }
+  body: 
     - vertex_displ_over
 
 chunk_neighbors_impl:

@@ -149,6 +149,20 @@ namespace exaDEM
         return (Driver*)ptr;
       }
 
+    void operator=(Drivers& d)
+    {
+      this->clear();
+      size_t size = d.get_size();
+      
+      m_data.resize(size); 
+      m_type.resize(size); 
+      for(size_t i = 0 ; i < size ; i++)
+      {
+        this->m_data[i] = d.m_data[i];
+        this->m_type[i] = d.m_type[i];
+      }
+    }
+
     /**
      * @brief Checks if all drivers in the collection are well-defined.
      * @return True if all drivers are well-defined, false otherwise.
