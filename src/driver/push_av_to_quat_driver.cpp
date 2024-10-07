@@ -16,17 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 #include "exanb/core/operator.h"
 #include "exanb/core/operator_slot.h"
 #include "exanb/core/operator_factory.h"
-#include "exanb/core/make_grid_variant_operator.h"
-#include "exanb/core/parallel_grid_algorithm.h"
-#include "exanb/core/grid.h"
-#include "exanb/core/domain.h"
-#include "exanb/compute/compute_cell_particles.h"
-#include <mpi.h>
-#include <memory>
 #include <exaDEM/drivers.h>
 #include <exaDEM/stl_mesh.h>
 
@@ -43,7 +35,6 @@ namespace exaDEM
     inline void operator()(exaDEM::Stl_mesh & arg){ arg.push_av_to_quat(t); }
   };
 
-	template<typename GridT>
 		class PushAngularVelocityToQuaternionDriver : public OperatorNode
 	{
 		ADD_SLOT( Drivers , drivers  , INPUT_OUTPUT, REQUIRED , DocString{"List of Drivers"});
@@ -68,12 +59,10 @@ namespace exaDEM
 		}
 	};
 
-	template<class GridT> using PushAngularVelocityToQuaternionDriverTmpl = PushAngularVelocityToQuaternionDriver<GridT>;
-
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "push_av_to_quat_driver", make_grid_variant_operator< PushAngularVelocityToQuaternionDriverTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "push_av_to_quat_driver", make_simple_operator< PushAngularVelocityToQuaternionDriver > );
 	}
 }
 
