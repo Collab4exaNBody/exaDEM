@@ -96,7 +96,6 @@ namespace exaDEM
 			return onika::cuda::vector_size(ft_x);
 		}
 		
-		
 		/**
 		 *@briefs Fills the lists.
 		 */
@@ -128,8 +127,6 @@ namespace exaDEM
 			type = w;
 		}
 		
-		
-		
 		/**
 		 *@briefs Return the interaction for a given list.
 		 */
@@ -144,8 +141,6 @@ namespace exaDEM
 				 type};
 		}
 		
-		
-		
 		/**
 		 *@briefs Updates the friction and moment of a given interaction.
 		 */
@@ -159,19 +154,5 @@ namespace exaDEM
 			onika::cuda::vector_data(mom_y)[id] = item.moment.y;
 			onika::cuda::vector_data(mom_z)[id] = item.moment.z;
 		}
-		
-		exaDEM::Interaction* interactions_list()
-		{
-			std::vector<exaDEM::Interaction> interactions;
-			
-			for(int i = 0; i < ft_x.size(); i++)
-			{
-				interactions.push_back({{ft_x[i], ft_y[i], ft_z[i]}, {mom_x[i], mom_y[i], mom_z[i]}, id_i[i], id_j[i], cell_i[i], cell_j[i], p_i[i], p_j[i], sub_i[i], sub_j[i], type});
-			}
-			
-			return interactions.data();
-		}
-		
-
 	};
 }

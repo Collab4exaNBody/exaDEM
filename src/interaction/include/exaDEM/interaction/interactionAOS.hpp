@@ -85,13 +85,5 @@ namespace exaDEM
 			item2.friction = item.friction;
 			item2.moment = item.moment;
 		}
-		
-		exaDEM::Interaction* interactions_list()
-		{
-			return m_data.data();
-		}
-
-		
-		
 	};
 }
