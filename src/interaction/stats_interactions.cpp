@@ -24,14 +24,8 @@ under the License.
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <exanb/particle_neighbors/chunk_neighbors.h>
-#include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
-
-#include <exaDEM/contact_force_parameters.h>
-#include <exaDEM/compute_contact_force.h>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/shape/shapes.hpp>
@@ -46,9 +40,9 @@ namespace exaDEM
     >
   class StatsInteractions : public OperatorNode
   {
-		ADD_SLOT( MPI_Comm  , mpi        , INPUT , MPI_COMM_WORLD );
-		ADD_SLOT( GridT  , grid     , INPUT_OUTPUT , REQUIRED );
-		ADD_SLOT( GridCellParticleInteraction , ges , INPUT_OUTPUT , DocString{"Interaction list"} );
+		ADD_SLOT( MPI_Comm                    , mpi  , INPUT        , MPI_COMM_WORLD );
+		ADD_SLOT( GridT                       , grid , INPUT_OUTPUT , REQUIRED );
+		ADD_SLOT( GridCellParticleInteraction , ges  , INPUT_OUTPUT , DocString{"Interaction list"} );
 
 		public:
 

@@ -20,26 +20,13 @@ under the License.
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-
-#include <exanb/particle_neighbors/chunk_neighbors.h>
-#include <exanb/particle_neighbors/chunk_neighbors_apply.h>
-
 #include <memory>
-
-#include <exaDEM/contact_force_parameters.h>
-#include <exaDEM/compute_contact_force.h>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
 #include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_detection.hpp>
-#include <exaDEM/shape/shape_detection_driver.hpp>
-#include <exaDEM/mutexes.h>
-#include <exaDEM/drivers.h>
 #include <exaDEM/cell_list_wrapper.hpp>
-
 
 namespace exaDEM
 {
