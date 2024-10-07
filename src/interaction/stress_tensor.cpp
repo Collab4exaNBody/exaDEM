@@ -32,6 +32,8 @@ under the License.
 #include <exaDEM/contact_force_parameters.h>
 #include <exaDEM/compute_contact_force.h>
 #include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/interaction/interactionSOA.hpp>
+#include <exaDEM/interaction/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
 #include <exaDEM/shape/shapes.hpp>
@@ -54,7 +56,7 @@ namespace exaDEM
     ADD_SLOT( MPI_Comm                    , mpi  , INPUT , MPI_COMM_WORLD);
     ADD_SLOT( GridT                       , grid , INPUT_OUTPUT , REQUIRED );
     ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
-    ADD_SLOT( Classifier                  , ic   , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
+    ADD_SLOT( Classifier<InteractionSOA>                  , ic   , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
     ADD_SLOT( double                      , volume , INPUT, REQUIRED , DocString{"Volume of the domain simulation. >0 "} );
     ADD_SLOT( Mat3d                       , stress_tensor , OUTPUT , DocString{"Write an Output file containing stress tensors."} );
 
@@ -74,7 +76,7 @@ namespace exaDEM
 
       // get slot data
 			auto cells = grid->cells();	
-			Classifier& cf = *ic;
+			Classifier<InteractionSOA>& cf = *ic;
 			exanb::Mat3d& stress = *stress_tensor;
 			stress = exanb::make_zero_matrix();
 
@@ -98,7 +100,7 @@ namespace exaDEM
 					for(size_t i = 0 ; i < size ; i++)
 					{
             // get fij and cij
-						Interaction& I = Ip[i];
+						Interaction I = Ip[i];
 						auto& cell     = cells[I.cell_i];
 						Vec3d fij      = fnp[i] + ftp[i];
 						Vec3d pos_i    = { cell[ field::rx ][I.p_i], cell[ field::ry ][I.p_i], cell[ field::rz ][I.p_i] };

@@ -97,6 +97,41 @@ namespace exaDEM
 				}
 			};
 
+		template<typename T, class FuncT, class ResultT>
+			struct ReduceTFunctorWrapper
+			{
+				InteractionWrapper<T> m_data;    /**< Pointer to the data to be reduced. */
+				const FuncT m_func;       /**< Functor that defines how reduction is performed. */
+				ResultT* m_reduced_val ;  /**< Pointer to the result of the reduction. */
+
+      /**
+       * @brief Operator to perform the reduction.
+       * @param i The index of the data to reduce.
+       */
+				ONIKA_HOST_DEVICE_FUNC inline void operator () ( uint64_t i ) const
+				{
+					ResultT local_val = ResultT();
+					m_func( local_val, i, m_data,  reduce_thread_local_t{} );
+
+					ONIKA_CU_BLOCK_SHARED onika::cuda::UnitializedPlaceHolder<ResultT> team_val_place_holder;
+					ResultT& team_val = team_val_place_holder.get_ref();
+
+					if( ONIKA_CU_THREAD_IDX == 0 ) { team_val = local_val; }
+					ONIKA_CU_BLOCK_SYNC();
+
+					if( ONIKA_CU_THREAD_IDX != 0 )
+					{
+						m_func( team_val, local_val , reduce_thread_block_t{} );
+					}
+					ONIKA_CU_BLOCK_SYNC();
+
+					if( ONIKA_CU_THREAD_IDX == 0 )
+					{
+						m_func( *m_reduced_val, team_val , reduce_global_t{} );
+					}
+				}
+			};
+
     /**
      * @struct IOSimInteractionResult
      * @brief Stores the results.
@@ -193,8 +228,84 @@ namespace exaDEM
 				ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction, local.n_tot_interaction);
 				EXADEM_CU_ATOMIC_MIN(global.min_dn, local.min_dn);
 			}
-		};
+		};		
 
+
+		struct IOSimInteractionFunctorWrapper
+		{
+			const double * const dnp; /**< Pointer to the array of overlapping distances (dn). */
+			const int coef; /**< Coefficient for symmetry (if sym -> 2 else 1) and interaction type. (driver -> 1) */
+
+      /**
+       * @brief Operator to get local interaction data.
+       * 
+       * @param local The local result.
+       * @param idx The index of the interaction.
+       * @param interactions Pointer to the interaction data.
+       * @param reduce_thread_local_t Tag for thread-local reduction.
+       * 
+       * This operator processes individual particle interactions, filtering out duplicates
+       * and counting active interactions where particles are overlapping (dn < 0).
+       */
+       		template< typename T >
+			ONIKA_HOST_DEVICE_FUNC inline void operator () ( 
+					IOSimInteractionResult& local, 
+					const uint64_t idx, 
+					//const exaDEM::Interaction* const interactions,
+					InteractionWrapper<T> interactions, 
+					reduce_thread_local_t={} ) const
+			{
+				//printf("Ciccio\n");
+				//const exaDEM::Interaction& I = interactions[idx];
+				exaDEM::Interaction I = interactions(idx);
+
+				// filter duplicate (mpi ghost)
+				if( I.id_i < I.id_j)
+				{
+					const double& dn = dnp[idx];
+					local.n_tot_interaction += coef;
+					if( dn < 0.0 )
+					{ 
+						local.n_act_interaction += coef;
+						local.min_dn = std::min(local.min_dn, dn);
+					}
+				}
+			}
+
+      /**
+       * @brief Operator to combine local results at the block level.
+       * 
+       * @param global The global result.
+       * @param local The local result.
+       * @param reduce_thread_block_t Tag for block-level reduction.
+       */
+			ONIKA_HOST_DEVICE_FUNC inline void operator () ( 
+					IOSimInteractionResult& global, 
+					IOSimInteractionResult& local, 
+					reduce_thread_block_t ) const
+			{
+				ONIKA_CU_ATOMIC_ADD(global.n_act_interaction, local.n_act_interaction);
+				ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction, local.n_tot_interaction);
+				EXADEM_CU_ATOMIC_MIN(global.min_dn, local.min_dn);
+			}
+
+      /**
+       * @brief Operator to combine results globally.
+       * 
+       * @param global The global result.
+       * @param local The local result.
+       * @param reduce_global_t Tag for global reduction.
+       */
+			ONIKA_HOST_DEVICE_FUNC inline void operator () ( 
+					IOSimInteractionResult& global, 
+					IOSimInteractionResult& local, 
+					reduce_global_t ) const
+			{
+				ONIKA_CU_ATOMIC_ADD(global.n_act_interaction, local.n_act_interaction);
+				ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction, local.n_tot_interaction);
+				EXADEM_CU_ATOMIC_MIN(global.min_dn, local.min_dn);
+			}
+		};
 
     /**
      * @brief Reduces data in parallel using a functor.
@@ -220,6 +331,23 @@ namespace exaDEM
 				ParallelForOptions opts;
 				opts.omp_scheduling = OMP_SCHED_STATIC;
 				ReduceTFunctor<T, Func, ResultT> kernel = {data, func, &result};
+				return parallel_for( size, kernel, exec_ctx, opts);
+			}
+
+		template<typename T, typename Func, typename ResultT>
+			static inline ParallelExecutionWrapper reduce_data_wrapper(
+					ParallelExecutionContext * exec_ctx, 
+					//const T* const data,
+					InteractionWrapper<T> data,
+					Func& func, 
+					uint64_t size, 
+					ResultT& result)
+			{
+				//printf("BOBOTV\n");
+				ParallelForOptions opts;
+				opts.omp_scheduling = OMP_SCHED_STATIC;
+				//ReduceTFunctor<T, Func, ResultT> kernel = {data, func, &result};
+				ReduceTFunctorWrapper<T, Func, ResultT> kernel = {data, func, &result};
 				return parallel_for( size, kernel, exec_ctx, opts);
 			}
 
