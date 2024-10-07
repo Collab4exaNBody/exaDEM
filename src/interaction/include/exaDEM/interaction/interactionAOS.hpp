@@ -60,7 +60,7 @@ namespace exaDEM
 		/**
 		 *@briefs Fills the list of m_data.
 		 */
-		void insert(const std::vector<exaDEM::Interaction>& tmp)  
+		void insert(const std::vector<exaDEM::Interaction>& tmp, int w)  
 		{
 			m_data.insert(m_data.end(), tmp.begin(), tmp.end());
 		}
@@ -90,12 +90,6 @@ namespace exaDEM
 		{
 			return m_data.data();
 		}
-		
-		const exaDEM::Interaction* interactions_list() const
-		{
-			return m_data.data();
-		}
-		
 
 		
 		

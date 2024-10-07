@@ -72,7 +72,7 @@ namespace exaDEM
     	
     	m_type = data.type;
     }
-    
+
     ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
     {
     	exaDEM::Interaction res;
@@ -175,10 +175,10 @@ namespace exaDEM
     	return {data_ptr, data_size};
     }
     
-    const std::pair<const T, const size_t> get_info(size_t id) const
+    const std::pair<const T&, const size_t> get_info(size_t id) const
     {
     	const unsigned int data_size = waves[id].size();
-    	const T data_ptr = waves[id];
+    	const T& data_ptr = waves[id];
     	return {data_ptr, data_size};
     }
     
@@ -254,7 +254,7 @@ namespace exaDEM
 				{
 #pragma omp critical
 					{
-						waves[w].insert(tmp[w]);
+						waves[w].insert(tmp[w], w);
 					}
 				}
 			}

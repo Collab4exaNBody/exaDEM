@@ -100,7 +100,7 @@ namespace exaDEM
 		/**
 		 *@briefs Fills the lists.
 		 */
-		void insert( std::vector<exaDEM::Interaction>& tmp )
+		void insert( std::vector<exaDEM::Interaction>& tmp, int w )
 		{
 			for(auto interaction : tmp)
 			{
@@ -124,6 +124,8 @@ namespace exaDEM
 				sub_i.push_back(interaction.sub_i);
 				sub_j.push_back(interaction.sub_j);
 			}
+			
+			type = w;
 		}
 		
 		
@@ -159,18 +161,6 @@ namespace exaDEM
 		}
 		
 		exaDEM::Interaction* interactions_list()
-		{
-			std::vector<exaDEM::Interaction> interactions;
-			
-			for(int i = 0; i < ft_x.size(); i++)
-			{
-				interactions.push_back({{ft_x[i], ft_y[i], ft_z[i]}, {mom_x[i], mom_y[i], mom_z[i]}, id_i[i], id_j[i], cell_i[i], cell_j[i], p_i[i], p_j[i], sub_i[i], sub_j[i], type});
-			}
-			
-			return interactions.data();
-		}
-		
-		const exaDEM::Interaction* interactions_list() const
 		{
 			std::vector<exaDEM::Interaction> interactions;
 			
