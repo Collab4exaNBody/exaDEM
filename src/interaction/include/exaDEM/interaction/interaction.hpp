@@ -76,6 +76,7 @@ namespace exaDEM
 				" [cell: "<< cell_j << ", idx " << p_j << ", particle id: " << id_j << "] : (friction: " <<
 				friction << ", moment: " << moment << ")" << std::endl;
 		}
+	
 
 		/**
 		 * @brief Displays the Interaction data.

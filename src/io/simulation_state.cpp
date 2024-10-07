@@ -56,12 +56,13 @@ namespace exaDEM
 		ADD_SLOT( SimulationState    , simulation_state    , OUTPUT );
 
     // DEM data
-    ADD_SLOT( Classifier         , ic                  , INPUT , DocString{"Interaction lists classified according to their types"} );
+    ADD_SLOT( Classifier<InteractionSOA>         , ic                  , INPUT , DocString{"Interaction lists classified according to their types"} );
     ADD_SLOT( bool               , symetric            , INPUT , REQUIRED , DocString{"Use of symetric feature (contact law)"});
 
 		static constexpr FieldSet<field::_vx ,field::_vy ,field::_vz, field::_vrot, field::_mass> reduce_field_set {};
-
-		inline IOSimInteractionResult reduce_sim_io(const Classifier& classifier, bool symetric)
+		
+		template< typename T >
+		inline IOSimInteractionResult reduce_sim_io(Classifier<T>& classifier, bool symetric)
 		{
 			IOSimInteractionResult res;
 			VectorT<IOSimInteractionResult> results;
@@ -78,12 +79,17 @@ namespace exaDEM
 
 					int coef = 1;
 					if( i < 4 && symetric ) coef *= 2;
+					
+					InteractionWrapper<T> data(ptr);
 
-					IOSimInteractionFunctor func = {dnp, coef};
-					if ( size > 0 && dnp != nullptr ) // skip it if forces have not been computed
+					//IOSimInteractionFunctor func = {dnp, coef};
+					IOSimInteractionFunctorWrapper func = {dnp, coef};
+
+					if ( size > 0 && dnp != nullptr ) // skip it if forces has not been computed
 					{
 						//pexw[i] = exaDEM::itools::reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
-						reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
+						//reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
+						reduce_data_wrapper<T, IOSimInteractionFunctorWrapper, IOSimInteractionResult>(parallel_execution_context(), data, func, size, results[i]);
 					}
 				}
 			} // synchronize 
@@ -110,7 +116,7 @@ namespace exaDEM
 			reduce_cell_particles( *grid , false , func , sim, reduce_field_set , parallel_execution_context() , {} , cell_ptr, cell_size );
 
       // get interaction informations
-      const Classifier& classifier = *ic;
+      Classifier<InteractionSOA>& classifier = *ic;
       exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric );
 
 			// reduce partial sums and share the result
@@ -173,4 +179,3 @@ namespace exaDEM
 	}
 
 }
-
