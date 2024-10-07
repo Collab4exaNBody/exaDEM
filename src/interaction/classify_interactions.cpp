@@ -31,6 +31,8 @@ under the License.
 #include <exaDEM/contact_force_parameters.h>
 #include <exaDEM/compute_contact_force.h>
 #include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/interaction/interactionSOA.hpp>
+#include <exaDEM/interaction/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
 #include <exaDEM/shape/shapes.hpp>
@@ -54,7 +56,7 @@ namespace exaDEM
 
     ADD_SLOT( GridT                       , grid      , INPUT_OUTPUT , REQUIRED );
     ADD_SLOT( GridCellParticleInteraction , ges       , INPUT        , DocString{"Interaction list"} );
-    ADD_SLOT( Classifier                  , ic        , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
+    ADD_SLOT( Classifier<InteractionSOA>                  , ic        , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
     ADD_SLOT( CellListWrapper             , cell_list , INPUT        , DocString{"list of non empty cells within the current grid"});
 
     public:

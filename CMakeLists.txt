@@ -78,7 +78,7 @@ endforeach()
 # ==============================
 # === Application version    ===
 # ==============================
-set(EXASDEM_VERSION "exaDEM-3.3") 
+set(EXASDEM_VERSION "exaDEM-1.1.0") 
 message(STATUS "Project version : ${EXASDEM_VERSION}")
 
 # ==================================

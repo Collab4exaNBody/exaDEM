@@ -139,6 +139,7 @@ namespace exaDEM
       template<typename TMPC>
         ONIKA_HOST_DEVICE_FUNC 
         inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
+        //inline void operator()(
             Interaction& item, 
             TMPC* cells, 
             const ContactParams& hkp, 
@@ -162,7 +163,7 @@ namespace exaDEM
 
           auto [contact, dn, n, contact_position] = detection_vertex_vertex_core(ri, rad_i, rj, rad_j); 
           Vec3d fn = {0,0,0};
-
+	  
           if(contact)
           {
             const Vec3d vi = get_v(cell_i, item.p_i);
@@ -173,14 +174,14 @@ namespace exaDEM
             // temporary vec3d to store forces.
             Vec3d f = {0,0,0};
             const double meff = compute_effective_mass(m_i, m_j);
-
+	    	
             contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr,
               hkp.m_mu, hkp.m_damp_rate, meff,
               item.friction, contact_position,
               ri, vi, f, item.moment, vrot_i,  // particle 1
               rj, vj, vrot_j // particle nbh
               );
-
+	     
             // === For analysis
             fn = f - item.friction;
 
@@ -191,7 +192,7 @@ namespace exaDEM
             lockAndAdd(cell_i[field::fx][item.p_i], f.x);
             lockAndAdd(cell_i[field::fy][item.p_i], f.y);
             lockAndAdd(cell_i[field::fz][item.p_i], f.z);
-
+	    
             if constexpr (sym)
             {
             // ==== Particle j
@@ -202,6 +203,7 @@ namespace exaDEM
             lockAndAdd(cell_j[field::fz][item.p_j], -f.z);
             }
           }
+          
           else
           {
             item.reset();
@@ -391,7 +393,7 @@ namespace exaDEM
           const double radius_i = cell[field::radius][p_i];
           // === driver j
           const auto& shp_j         = driver.shp;
-          const Quaternion orient_j = {1.0,0.0,0.0,0.0};
+          const Quaternion orient_j = driver.quat;
           auto [contact, dn, n, contact_position] = func(item.type, r_i, radius_i, driver.center, sub_j, &shp_j, orient_j);
           Vec3d fn                  = {0,0,0};
 

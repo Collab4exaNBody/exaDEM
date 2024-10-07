@@ -122,7 +122,7 @@ namespace exaDEM
 						}
 						GRID_OMP_FOR_END
 					}
-					//mesh.grid_indexes_summary(); for debug
+					mesh.grid_indexes_summary(); //for debug
 				}
 			}
 		};
