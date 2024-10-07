@@ -20,11 +20,6 @@ under the License.
 #include "exanb/core/operator.h"
 #include "exanb/core/operator_slot.h"
 #include "exanb/core/operator_factory.h"
-#include "exanb/core/make_grid_variant_operator.h"
-#include "exanb/core/parallel_grid_algorithm.h"
-#include "exanb/core/grid.h"
-#include "exanb/core/domain.h"
-#include "exanb/compute/compute_cell_particles.h"
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/driver_base.h>
@@ -34,34 +29,31 @@ under the License.
 namespace exaDEM
 {
 
-  using namespace exanb;
+	using namespace exanb;
 
-  template<typename GridT>
-    class InitDrivers : public OperatorNode
-    {
-      ADD_SLOT( Drivers , drivers , OUTPUT , DocString{"List of Drivers"});
+	class InitDrivers : public OperatorNode
+	{
+		ADD_SLOT( Drivers , drivers , OUTPUT , DocString{"List of Drivers"});
 
-      public:
+		public:
 
-      inline std::string documentation() const override final
-      {
-        return R"EOF(
+		inline std::string documentation() const override final
+		{
+			return R"EOF(
         This operator creates a slot for drivers.
         )EOF";
-      }
+		}
 
-      inline void execute () override final
-      {
-        // do nothing
-      }
-    };
+		inline void execute () override final
+		{
+			// do nothing
+		}
+	};
 
-  template<class GridT> using InitDriversTmpl = InitDrivers<GridT>;
-
-  // === register factories ===  
-  CONSTRUCTOR_FUNCTION
-  {
-    OperatorNodeFactory::instance()->register_factory( "init_drivers", make_grid_variant_operator< InitDriversTmpl > );
-  }
+	// === register factories ===  
+	CONSTRUCTOR_FUNCTION
+	{
+		OperatorNodeFactory::instance()->register_factory( "init_drivers", make_simple_operator< InitDrivers > );
+	}
 }
 
