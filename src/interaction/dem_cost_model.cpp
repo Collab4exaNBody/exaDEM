@@ -20,12 +20,11 @@ under the License.
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
+#include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/log.h>
 #include <exanb/core/grid.h>
-#include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/fields.h>
 #include <exanb/core/domain.h>
-
 #include <exanb/core/cell_costs.h>
 
 #include <vector>
@@ -43,9 +42,9 @@ namespace exaDEM
 	template< class GridT >
 		class DEMCostModel : public OperatorNode
 	{
-		ADD_SLOT( GridT , grid ,INPUT);
-		ADD_SLOT( CellCosts , cell_costs ,OUTPUT );
-		ADD_SLOT( GridCellParticleInteraction , ges , INPUT_OUTPUT , DocString{"Interaction list"} );
+		ADD_SLOT( GridT                       , grid       , INPUT);
+		ADD_SLOT( CellCosts                   , cell_costs , OUTPUT );
+		ADD_SLOT( GridCellParticleInteraction , ges        , INPUT_OUTPUT , DocString{"Interaction list"} );
 
 		public:
 

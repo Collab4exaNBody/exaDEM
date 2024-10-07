@@ -64,6 +64,15 @@ namespace exaDEM
     }
 
     /**
+     * @brief Update the position of the ball.
+     * @param t The time step.
+     */
+    ONIKA_HOST_DEVICE_FUNC inline void push_v_to_r ( const double t )
+    {
+      center = center + t * vel; 
+    }
+
+    /**
      * @brief Filter function to check if a point is within a certain radius of the cylinder.
      * @param rcut The cut-off radius. Note: rcut = rverlet + r shape
      * @param vi The vector representing the point to check.

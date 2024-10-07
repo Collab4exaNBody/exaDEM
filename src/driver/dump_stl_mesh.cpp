@@ -27,11 +27,8 @@ under the License.
 #include "exanb/compute/compute_cell_particles.h"
 #include <mpi.h>
 #include <memory>
-#include <exaDEM/driver_base.h>
+#include <exaDEM/stl_mesh.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/driver_stl_mesh.h>
-#include <exaDEM/shape/shape.hpp>
-#include <exaDEM/stl_mesh_to_driver.h>
 
 namespace exaDEM
 {
@@ -43,18 +40,15 @@ namespace exaDEM
 	{
 		static constexpr Vec3d null= { 0.0, 0.0, 0.0 };
 
-		ADD_SLOT( Drivers , drivers  , INPUT_OUTPUT, REQUIRED , DocString{"List of Drivers"});
-		ADD_SLOT( long    , timestep , INPUT                  , DocString{"Iteration number"});
+		ADD_SLOT( Drivers     , drivers  , INPUT_OUTPUT, REQUIRED , DocString{"List of Drivers"});
+		ADD_SLOT( long        , timestep , INPUT                  , DocString{"Iteration number"});
     ADD_SLOT( std::string , dir_name , INPUT , REQUIRED , DocString{"Main output directory."} );
-
-
 
 		public:
 
 		inline std::string documentation() const override final
 		{
-			return R"EOF(
-        )EOF";
+			return R"EOF( This operator outputs driver information. )EOF";
 		}
 
 		inline void execute () override final

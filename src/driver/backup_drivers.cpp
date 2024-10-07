@@ -22,38 +22,40 @@ under the License.
 #include "exanb/core/operator_factory.h"
 #include <mpi.h>
 #include <memory>
-#include <exaDEM/driver_base.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/surface.h>
 
 namespace exaDEM
 {
 
 	using namespace exanb;
 
-	class InitDrivers : public OperatorNode
+	class BackupDrivers : public OperatorNode
 	{
-		ADD_SLOT( Drivers , drivers , OUTPUT , DocString{"List of Drivers"});
+		ADD_SLOT( Drivers , drivers , INPUT , REQUIRED , DocString{"List of Drivers"});
+		ADD_SLOT( Drivers , backup_drvs , INPUT_OUTPUT , Drivers() , DocString{"List of backup Drivers"});
 
 		public:
 
 		inline std::string documentation() const override final
 		{
 			return R"EOF(
-        This operator creates a slot for drivers.
+        This operator creates a copy of the current drivers.
         )EOF";
 		}
 
 		inline void execute () override final
 		{
-			// do nothing
+			Drivers& drvs = *drivers;
+			Drivers& backup = *backup_drvs;
+			backup.clear();
+			backup = drvs; // deep copy 
 		}
 	};
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "init_drivers", make_simple_operator< InitDrivers > );
+		OperatorNodeFactory::instance()->register_factory( "backup_drivers", make_simple_operator<BackupDrivers> );
 	}
 }
 

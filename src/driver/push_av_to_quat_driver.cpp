@@ -16,44 +16,53 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 #include "exanb/core/operator.h"
 #include "exanb/core/operator_slot.h"
 #include "exanb/core/operator_factory.h"
-#include <mpi.h>
-#include <memory>
-#include <exaDEM/driver_base.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/surface.h>
+#include <exaDEM/stl_mesh.h>
 
 namespace exaDEM
 {
 
 	using namespace exanb;
 
-	class InitDrivers : public OperatorNode
+  struct func_push_av_to_quat
+  {
+    double t;
+    template<typename T>
+    inline void operator()(T && arg){ /* do nothing */  }
+    inline void operator()(exaDEM::Stl_mesh & arg){ arg.push_av_to_quat(t); }
+  };
+
+		class PushAngularVelocityToQuaternionDriver : public OperatorNode
 	{
-		ADD_SLOT( Drivers , drivers , OUTPUT , DocString{"List of Drivers"});
+		ADD_SLOT( Drivers , drivers  , INPUT_OUTPUT, REQUIRED , DocString{"List of Drivers"});
+    ADD_SLOT( double  , dt       , INPUT, DocString{"dt is the time increment of the timeloop"});
 
 		public:
 
 		inline std::string documentation() const override final
 		{
-			return R"EOF(
-        This operator creates a slot for drivers.
-        )EOF";
+			return R"EOF( This operator compute the new orientation using the angular velocity. )EOF";
 		}
 
 		inline void execute () override final
 		{
-			// do nothing
+      double t = *dt;
+      func_push_av_to_quat func = {t};
+			for(size_t id = 0 ; id < drivers->get_size() ; id++)
+			{
+        auto& driver = drivers->data(id);
+				std::visit(func, driver);
+			}
 		}
 	};
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "init_drivers", make_simple_operator< InitDrivers > );
+		OperatorNodeFactory::instance()->register_factory( "push_av_to_quat_driver", make_simple_operator< PushAngularVelocityToQuaternionDriver > );
 	}
 }
 

@@ -46,7 +46,7 @@ namespace exaDEM
 		/**
 		 *@briefs Returns the number of m_data.
 		 */
-		const size_t size() const
+		size_t size() const
 		{
 			return m_data.size();
 		}

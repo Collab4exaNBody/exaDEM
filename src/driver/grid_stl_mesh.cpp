@@ -32,16 +32,15 @@ under the License.
 #include <iomanip>
 
 #include <exanb/compute/compute_cell_particles.h>
-#include <exaDEM/face.h>
-#include <exaDEM/stl_mesh.h>
 #include <exaDEM/drivers.h>
+#include <exaDEM/stl_mesh.h>
 
 #include <mpi.h>
 
 namespace exaDEM
 {
 	using namespace exanb;
-	template<	class GridT, class = AssertGridHasFields< GridT >> class UpdateGridSTLMeshOperatorV2 : public OperatorNode
+	template<	class GridT, class = AssertGridHasFields< GridT >> class UpdateGridSTLMeshOperator : public OperatorNode
 	{
 		using ComputeFields = FieldSet< field::_rx ,field::_ry ,field::_rz>;
 		static constexpr ComputeFields compute_field_set {};
@@ -53,14 +52,12 @@ namespace exaDEM
 		public:
 		inline std::string documentation() const override final
 		{
-			return R"EOF( 
-    	    			)EOF";
+			return R"EOF( Update the list of information for each cell regarding the vertex, edge, and face indices in contact with the cell in an STL mesh." )EOF";
 		}
 
 		inline void execute () override final
 		{
 			const auto& g = *grid;
-			const auto cells = g.cells();
 			const size_t n_cells = g.number_of_cells(); // nbh.size();
 			const IJK dims = g.dimension();
 			const double Rmax = *rcut_max;
@@ -157,18 +154,18 @@ namespace exaDEM
 									}
 								}
 					}
-          mesh.grid_indexes_summary(); //for debug
+          //mesh.grid_indexes_summary(); //for debug
 				}
 			}
 		}
 	};
 	// this helps older versions of gcc handle the unnamed default second template parameter
-	template <class GridT> using UpdateGridSTLMeshOperatorV2Template = UpdateGridSTLMeshOperatorV2<GridT>;
+	template <class GridT> using UpdateGridSTLMeshOperatorTemplate = UpdateGridSTLMeshOperator<GridT>;
 
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "update_grid_stl_mesh_v2", make_grid_variant_operator< UpdateGridSTLMeshOperatorV2Template > );
+		OperatorNodeFactory::instance()->register_factory( "grid_stl_mesh", make_grid_variant_operator< UpdateGridSTLMeshOperatorTemplate > );
 	}
 }
 

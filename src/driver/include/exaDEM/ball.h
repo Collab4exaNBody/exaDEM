@@ -82,7 +82,7 @@ namespace exaDEM
      * @brief Update the position of the ball.
      * @param t The time step.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void update_position ( const double t )
+    ONIKA_HOST_DEVICE_FUNC inline void push_v_to_r ( const double t )
     {
       center = center + t * vel; 
     }

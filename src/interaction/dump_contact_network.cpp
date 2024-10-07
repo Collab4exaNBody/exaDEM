@@ -50,21 +50,22 @@ namespace exaDEM
 		>
 		class ContactNetwork : public OperatorNode
 		{
-			ADD_SLOT( MPI_Comm , mpi        , INPUT , MPI_COMM_WORLD);
-			ADD_SLOT( GridT    , grid       , INPUT_OUTPUT , REQUIRED );
-			ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
-			ADD_SLOT( shapes                , shapes_collection       , INPUT , DocString{"Collection of shapes"});
-			ADD_SLOT( ContactParams , config  , INPUT );
-			ADD_SLOT( double      , dt      , INPUT );
-			ADD_SLOT( std::string , basename, INPUT , REQUIRED  , DocString{"Output filename"});
-			ADD_SLOT( std::string , basedir , INPUT , "network" , DocString{"Output directory, default is network"});
-			ADD_SLOT( long        , timestep, INPUT , DocString{"Iteration number"} );
+			ADD_SLOT( MPI_Comm                    , mpi               , INPUT , MPI_COMM_WORLD);
+			ADD_SLOT( GridT                       , grid              , INPUT_OUTPUT , REQUIRED );
+			ADD_SLOT( GridCellParticleInteraction , ges               , INPUT , DocString{"Interaction list"} );
+			ADD_SLOT( shapes                      , shapes_collection , INPUT , DocString{"Collection of shapes"});
+			ADD_SLOT( ContactParams               , config            , INPUT );
+			ADD_SLOT( double                      , dt                , INPUT );
+			ADD_SLOT( std::string                 , basename          , INPUT , REQUIRED  , DocString{"Output filename"});
+			ADD_SLOT( std::string                 , basedir           , INPUT , "network" , DocString{"Output directory, default is network"});
+			ADD_SLOT( long                        , timestep          , INPUT , DocString{"Iteration number"} );
 
 			public:
 
 			inline std::string documentation() const override final
 			{
 				return R"EOF(
+                  This operator creates paraview files containing the contact network.
 				        )EOF";
 			}
 

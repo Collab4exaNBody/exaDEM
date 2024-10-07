@@ -143,7 +143,7 @@ namespace exaDEM
 		m_obb_vertices.resize(size);
 		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center) + particle_center;
 
-		lout << "obb [vertices] = " << size << std::endl;
+		ldbg << "obb [vertices] = " << size << std::endl;
 
 #pragma omp parallel for schedule (static)
 		for ( size_t i = 0 ; i < size ; i++)
@@ -160,7 +160,7 @@ namespace exaDEM
 
 		//const exanb::Vec3d vnull      = {0,0,0};
 		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center) + particle_center;
-		lout << "obb [edges]    = " << size << std::endl;
+		ldbg << "obb [edges]    = " << size << std::endl;
 #pragma omp parallel for schedule(static)
 		for ( size_t i = 0 ; i < size ; i++)
 		{
@@ -174,7 +174,7 @@ namespace exaDEM
 		const size_t size = this->get_number_of_faces();
 		m_obb_faces.resize(size);
 		const exanb::Vec3d center = conv_to_Vec3d (this->obb.center) + particle_center;
-		lout << "obb [faces]    = " << size << std::endl;
+		ldbg << "obb [faces]    = " << size << std::endl;
 
 #pragma omp parallel for schedule(static)
 		for ( size_t i = 0 ; i < size ; i++)

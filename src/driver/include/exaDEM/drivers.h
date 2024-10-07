@@ -22,7 +22,7 @@ under the License.
 #include <exaDEM/cylinder.h>
 #include <exaDEM/surface.h>
 #include <exaDEM/ball.h>
-#include <exaDEM/driver_stl_mesh.h>
+#include <exaDEM/stl_mesh.h>
 #include <exaDEM/undefined_driver.h>
 #include <variant>
 
@@ -148,6 +148,20 @@ namespace exaDEM
         auto* const ptr = onika::cuda::vector_data(m_data);
         return (Driver*)ptr;
       }
+
+    void operator=(Drivers& d)
+    {
+      this->clear();
+      size_t size = d.get_size();
+      
+      m_data.resize(size); 
+      m_type.resize(size); 
+      for(size_t i = 0 ; i < size ; i++)
+      {
+        this->m_data[i] = d.m_data[i];
+        this->m_type[i] = d.m_type[i];
+      }
+    }
 
     /**
      * @brief Checks if all drivers in the collection are well-defined.

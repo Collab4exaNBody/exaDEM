@@ -123,13 +123,14 @@ namespace exaDEM
       uint64_t active_interactions, total_interactions;
       double dn;
 			{
-				double tmpDouble[8] = {
+				double tmpDouble[7] = {
 					sim.rotation_energy.x, sim.rotation_energy.y, sim.rotation_energy.z,
 					sim.kinetic_energy.x, sim.kinetic_energy.y, sim.kinetic_energy.z,
-					sim.mass , red.min_dn };
+					sim.mass };
         uint64_t tmpUInt64T[3] = {sim.n_particles, red.n_act_interaction, red.n_tot_interaction};
-				MPI_Allreduce(MPI_IN_PLACE, tmpDouble, 8, MPI_DOUBLE, MPI_SUM, comm);
-				MPI_Allreduce(MPI_IN_PLACE, tmpUInt64T, 3, MPI_UINT64_T, MPI_SUM, comm);
+				MPI_Allreduce(MPI_IN_PLACE, tmpDouble  , 7, MPI_DOUBLE, MPI_SUM, comm);
+				MPI_Allreduce(MPI_IN_PLACE, &red.min_dn, 1, MPI_DOUBLE, MPI_MAX, comm);
+				MPI_Allreduce(MPI_IN_PLACE, tmpUInt64T , 3, MPI_UINT64_T, MPI_SUM, comm);
 
 				rotation_energy.x = tmpDouble[0];
 				rotation_energy.y = tmpDouble[1];
@@ -138,7 +139,7 @@ namespace exaDEM
 				kinetic_energy.y  = tmpDouble[4];
 				kinetic_energy.z  = tmpDouble[5];
 				mass              = tmpDouble[6];
-				dn                = tmpDouble[7];
+				dn                = red.min_dn;
 
 				total_particles     = tmpUInt64T[0];
 				active_interactions = tmpUInt64T[1];

@@ -62,9 +62,15 @@ namespace exaDEM
     inline void initialize ()
     {
       center_proj = normal * offset;
-
       // checks
       if( exanb::dot(center,normal) != exanb::dot(center_proj, normal)) lout << "Warning, center point (surface) is not correctly defined" << std::endl;
+
+      if( exanb::dot(center, normal) !=  exanb::dot(center_proj, normal))
+      {
+				center += (offset - exanb::dot(center, normal)) * normal;
+        lout << "center is re-computed because it doesn't fit with offset, new center is: " << center << " and center_proj is: " << center_proj << std::endl;
+      }
+
       //if( exanb::dot(normal,normal) != 1 )  lout << "Warning, normal vector (surface) is not correctly defined" << std::endl;
     }
 
@@ -83,6 +89,17 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC inline Vec3d get_vel()
     {
       return normal * vel;
+    }
+
+    /**
+     * @brief Update the position of the wall.
+     * @param t The time step.
+     */
+    ONIKA_HOST_DEVICE_FUNC inline void push_v_to_r ( const double t )
+    {
+      center = center + t * vel * normal; 
+      center_proj = center_proj + t * vel * normal;
+      offset += t * vel; 
     }
 
     /**

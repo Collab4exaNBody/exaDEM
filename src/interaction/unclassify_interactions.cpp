@@ -23,9 +23,6 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 
-#include <exanb/particle_neighbors/chunk_neighbors.h>
-#include <exanb/particle_neighbors/chunk_neighbors_apply.h>
-
 #include <memory>
 
 #include <exaDEM/contact_force_parameters.h>
@@ -45,7 +42,7 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  template<typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
+  template<typename GridT , class = AssertGridHasFields< GridT >>
     class UnclassifyInteractions : public OperatorNode
   {
     // attributes processed during computation

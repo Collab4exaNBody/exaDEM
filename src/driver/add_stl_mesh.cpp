@@ -16,20 +16,14 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 #include "exanb/core/operator.h"
 #include "exanb/core/operator_slot.h"
 #include "exanb/core/operator_factory.h"
-#include "exanb/core/make_grid_variant_operator.h"
-#include "exanb/core/parallel_grid_algorithm.h"
-#include "exanb/core/grid.h"
-#include "exanb/core/domain.h"
-#include "exanb/compute/compute_cell_particles.h"
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/driver_base.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/driver_stl_mesh.h>
+#include <exaDEM/stl_mesh.h>
 #include <exaDEM/shape/shape.hpp>
 #include <exaDEM/stl_mesh_to_driver.h>
 
@@ -38,7 +32,6 @@ namespace exaDEM
 
 	using namespace exanb;
 
-	template<typename GridT>
 		class AddSTLMesh : public OperatorNode
 	{
 		static constexpr Vec3d null= { 0.0, 0.0, 0.0 };
@@ -65,8 +58,8 @@ namespace exaDEM
 
 		inline void execute () override final
 		{
-			stl_mesh mesh;
-			mesh.read_stl(*filename);
+			stl_mesh_reader reader;
+			reader(*filename);
 			std::string output_name_vtk = *filename;
 			std::string old_extension = ".stl";
 
@@ -75,7 +68,7 @@ namespace exaDEM
 			{
 				output_name_vtk.erase(it, old_extension.length());
 			}
-			shape shp = build_shape(mesh, output_name_vtk);
+			shape shp = build_shape(reader, output_name_vtk);
 			shp.m_radius = *minskowski;
 			shp.increase_obb (*rcut_inc);
 			exaDEM::Stl_mesh driver= {*center, *velocity, *angular_velocity, *orientation, shp};
@@ -84,12 +77,10 @@ namespace exaDEM
 		}
 	};
 
-	template<class GridT> using AddSTLMeshTmpl = AddSTLMesh<GridT>;
-
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "add_stl_mesh", make_grid_variant_operator< AddSTLMeshTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "add_stl_mesh", make_simple_operator< AddSTLMesh > );
 	}
 }
 
