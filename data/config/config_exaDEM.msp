@@ -136,6 +136,7 @@ simulation:
     - grid_post_processing
     - init_rcut_max
     - print_domain
+    - save_shapes
     - performance_adviser: { verbose: true }
     - init_epilog
     - first_iteration

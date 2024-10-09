@@ -19,24 +19,26 @@ under the License.
 #pragma once
 #include <exaDEM/shape/shapes.hpp>
 #include <cassert>
+#include <fstream>
+#include <regex>
 
 namespace exaDEM
 {
-  void write_shp(shape& shp)
+  // this function 
+  inline void write_shp(const shape& shp, std::stringstream& output)
 	{
     int nv = shp.get_number_of_vertices();
     int ne = shp.get_number_of_edges();
     int nf = shp.get_number_of_faces();
 
-    std::string filename = shp.m_name + ".shp";
-    std::ofstream output(filename);
     output << std::endl << "<" << std::endl;
     output << "name " << shp.m_name.c_str() << std::endl;
     output << "radius " << shp.m_radius  << std::endl;
 		output << "nv " << nv << std::endl;
     for(int i = 0; i < nv ; i++)
     {
-      output << shp.m_vertices[i] << std::endl;
+      auto& v = shp.m_vertices[i] ;
+      output << v.x << " " << v.y << " " << v.z << std::endl;
     }
 		output << "ne " << ne << std::endl;
     for(int i = 0; i < ne ; i++) 
@@ -61,80 +63,74 @@ namespace exaDEM
     output << "obb.center " << shp.obb.center << std::endl;
     output << "orientation 1.0 0.0 0.0 0.0" << std::endl;
     output << "volume " << shp.m_volume << std::endl;
-    output << "I/m " << shp.m_inertia_on_mass << std::endl;
+    auto& Im = shp.m_inertia_on_mass;
+    output << "I/m " << Im.x << Im.y << Im.z << std::endl;
     output << ">" << std::endl;
   }
 
 
-	void read_shp(shapes& sphs, const std::string file_name)
+	inline void read_shp(shapes& sphs, const std::string file_name)
 	{
 		std::ifstream input( file_name.c_str() );
 		std::string first;
 		std::string key;
 		std::vector<int> tmp_face;
+    //int count = 0;
 		for( std::string line; getline( input, line ); )
 		{
+      //std::cout << count++ << std::endl;
 			input >> first;
 			if(first == "<")
 			{
 				OBB obb;
 
-				first = ""; // reset first for next shape
+				first = ""; 
 				shape new_shape;
 				bool do_fill = true;
 				while(do_fill)
 				{
 					input >> key;
+          //std::cout << "size: " << key.size() << " " << key << std::endl;
+
 					if(key == "name")
 					{
 						input >> new_shape.m_name;
 					}
-
-					// === keys relative to the OBB
-					if(key == "obb.center")
+					else if(key == "obb.center") // === keys relative to the OBB
 					{
 						input >> obb.center.x >> obb.center.y >> obb.center.z;
 					}
-
-					if(key == "obb.extent")
+					else if(key == "obb.extent")
 					{
 						input >> obb.extent.x >> obb.extent.y >> obb.extent.z;
 					}
-
-					if(key == "obb.e1")
+					else if(key == "obb.e1")
 					{
 						input >> obb.e1.x >> obb.e1.y >> obb.e1.z;
 					}
-
-					if(key == "obb.e2")
+					else if(key == "obb.e2")
 					{
 						input >> obb.e2.x >> obb.e2.y >> obb.e2.z;
 					}
-
-					if(key == "obb.e3")
+					else if(key == "obb.e3")
 					{
 						input >> obb.e3.x >> obb.e3.y >> obb.e3.z;
 					}
-
-					// 
-					if(key == "radius")
+					else if(key == "radius")
 					{
 						input >> new_shape.m_radius;
 					}
-
-					if(key == "volume")
+					else if(key == "volume")
 					{
 						input >> new_shape.m_volume;
 					}
-
-					if(key == "I/m")
+					else if(key == "I/m")
 					{
 						exanb::Vec3d Im;
-						input >> Im.x >> Im.y >> Im.z;
+						input >> Im.x >> Im.y >> Im.z; 
 						new_shape.m_inertia_on_mass = Im;
 					}
-
-					if(key == "nv")
+					else if(key == "nv")
 					{
 						int nv = 0;
 						input >> nv;
@@ -145,7 +141,7 @@ namespace exaDEM
 							lout << "=== ABORT ===" << std::endl;     
 							std::abort();
 						}
-						assert( nv !=0 );
+						assert( nv != 0 );
 						for(int i = 0; i < nv ; i++)
 						{
 							getline(input, line);
@@ -153,10 +149,8 @@ namespace exaDEM
 							input >> vertex.x >> vertex.y >> vertex.z;
 							new_shape.add_vertex(vertex);
 						}
-						continue;
 					}
-
-					if(key == "ne")
+					else if(key == "ne")
 					{
 						int ne = 0;
 						input >> ne;
@@ -168,10 +162,8 @@ namespace exaDEM
 							input >> e1 >> e2;
 							new_shape.add_edge(e1,e2);
 						}
-						continue;
 					}
-
-					if(key == "nf")
+					else if(key == "nf")
 					{
 						int nf = 0;
 						input >> nf;
@@ -189,10 +181,8 @@ namespace exaDEM
 							}
 							new_shape.add_face(tmp_face.size(), tmp_face.data());
 						}
-						continue;
 					}
-
-					if(key == ">")
+					else if(key == ">")
 					{
 						new_shape.obb = obb;
 						do_fill = false;
