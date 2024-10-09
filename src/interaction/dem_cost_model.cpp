@@ -21,7 +21,6 @@ under the License.
 #include <exanb/core/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/log.h>
 #include <exanb/core/grid.h>
 #include <exanb/fields.h>
 #include <exanb/core/domain.h>
@@ -87,12 +86,18 @@ namespace exaDEM
 						{
 							auto& type = data[i].type;
 							if(type == 0) cost += 1; // vertex - vertex
-							if(type == 1) cost += 2; // vertex - edge
-							if(type == 2) cost += 3; // vertex - face
-							if(type == 3) cost += 5; // edge - edge
+							if(type == 1) cost += 3; // vertex - edge
+							if(type == 2) cost += 5; // vertex - face
+							if(type == 3) cost += 4; // edge - edge
 							if(type == 4) cost += 1; // cylinder
 							if(type == 5) cost += 1; // wall
 							if(type == 6) cost += 1; // balls
+							if(type == 7) cost += 1; // vertex - vertex
+							if(type == 8) cost += 3; // vertex - edge
+							if(type == 9) cost += 5; // vertex - face
+							if(type == 10) cost += 4; // edge - edge
+							if(type == 11) cost += 3; // edge - vertex
+							if(type == 12) cost += 5; // face - vertex
 						}
 					}
 					cell_costs.m_costs[i] = cost;
