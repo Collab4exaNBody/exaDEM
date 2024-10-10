@@ -34,6 +34,7 @@ under the License.
 #include <exanb/compute/reduce_cell_particles.h>
 #include <exanb/mpi/particle_displ_over_async_request.h>
 #include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shapesSOA.hpp>
 #include <exaDEM/backup_dem.h>
 #include <exaDEM/cell_list_wrapper.hpp>
 
@@ -52,6 +53,7 @@ namespace exaDEM
     ADD_SLOT( double             , threshold , INPUT , 0.0 );
     ADD_SLOT( bool               , async     , INPUT , false );
     ADD_SLOT( shapes             , shapes_collection, INPUT , DocString{"Collection of shapes"});
+    ADD_SLOT( shapesSOA          , shapes_collection2, INPUT, DocString{"Collection of shapes"});
     ADD_SLOT( bool               , result    , OUTPUT );
     ADD_SLOT( DEMBackupData      , backup_dem, INPUT );
     ADD_SLOT( CellListWrapper    , cell_list , INPUT , DocString{"list of non empty cells within the current grid"});
@@ -74,6 +76,7 @@ sets result output to true if at least one particle has moved further than thres
     {
       MPI_Comm comm = *mpi;
       const shapes& shps = *shapes_collection;
+      shapesSOA& shps2 = *shapes_collection2;
 
       // interest for auto here, is to be able to easily switch between single and double precision floats if needed.
       const double max_dist = *threshold;
@@ -89,6 +92,8 @@ sets result output to true if at least one particle has moved further than thres
       particle_displ_comm->m_request_started = false;
 
       ReduceMaxVertexDisplacementFunctor func = { backup_dem->m_data.data() , max_dist2 , shps.data() };
+      
+      ReduceMaxVertexDisplacementFunctor2 func2 = { backup_dem->m_data.data() , max_dist2 , shps2 };
 
       if( *async )
       {
@@ -96,6 +101,7 @@ sets result output to true if at least one particle has moved further than thres
         particle_displ_comm->m_async_request = true;
         auto user_cb = onika::parallel::ParallelExecutionCallback{ reduction_end_callback , & (*particle_displ_comm) };
         reduce_cell_particles( *grid , false , func , particle_displ_comm->m_particles_over , reduce_field_set , parallel_execution_context() , user_cb , cell_ptr, cell_size );
+        //reduce_cell_particles( *grid , false , func2 , particle_displ_comm->m_particles_over , reduce_field_set , parallel_execution_context() , user_cb , cell_ptr, cell_size );
         particle_displ_comm->start_mpi_async_request();
         *result = false;
       }
@@ -106,11 +112,15 @@ sets result output to true if at least one particle has moved further than thres
         {
           auto user_cb = onika::parallel::ParallelExecutionCallback{};
           reduce_cell_particles( *grid , false , func , particle_displ_comm->m_particles_over , reduce_field_set , parallel_execution_context() , user_cb , cell_ptr, cell_size);
+          //reduce_cell_particles( *grid , false , func2 , particle_displ_comm->m_particles_over , reduce_field_set , parallel_execution_context() , user_cb , cell_ptr, cell_size);
         }
         MPI_Allreduce( & ( particle_displ_comm->m_particles_over ) , & ( particle_displ_comm->m_all_particles_over ) , 1 , MPI_UNSIGNED_LONG_LONG , MPI_SUM , comm );
         ldbg << "Nb part moved over "<< max_dist <<" (local/all) = "<< particle_displ_comm->m_particles_over <<" / "<< particle_displ_comm->m_all_particles_over << std::endl;
         *result = ( particle_displ_comm->m_all_particles_over > 0 ) ;
       }
+      
+      printf("CHICA\n");
+      getchar();
 
     }
 

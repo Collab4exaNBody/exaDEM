@@ -36,9 +36,9 @@ namespace exaDEM
 
 		template <typename T> using VectorT =  onika::memory::CudaMMVector<T>; 
 
-		shape() {
-			m_faces.push_back(0); // init
-		}
+		//shape() {
+		//	m_faces.push_back(0); // init
+	//	}
 
 		void clear()
 		{
@@ -61,6 +61,7 @@ namespace exaDEM
 		double m_radius; ///< use for detection
 		double m_volume; ///< use for detection
 		std::string m_name = "undefined";
+		
 
 		// functions in shape_prepro.hpp
 /*		ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_vertices();

@@ -26,6 +26,7 @@ under the License.
 #include <vector>
 #include <iomanip>
 #include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shape/shapesSOA.hpp>
 #include <exaDEM/shape/shape_reader.hpp>
 
 namespace exaDEM
@@ -35,6 +36,7 @@ namespace exaDEM
 	{
 		ADD_SLOT( std::string , filename         , INPUT , REQUIRED , DocString{"Input filename"});
 		ADD_SLOT( shapes      , shapes_collection, INPUT_OUTPUT , DocString{"Collection of shapes"});
+		ADD_SLOT( shapesSOA   , shapes_collection2, INPUT_OUTPUT, DocString{"Collection of shapes"});
 
 		public:
 		inline std::string documentation() const override final
@@ -46,8 +48,13 @@ namespace exaDEM
 		inline void execute () override final
 		{
 			auto& collection = *shapes_collection;
+			auto& collection2 = *shapes_collection2;
 			lout << "Read file= " << *filename << std::endl;
+			printf("SHAPES\n");
 			exaDEM::read_shp(collection, *filename);
+			printf("SHAPES1\n");
+			//exaDEM::read_shp2(collection2, *filename);
+			printf("SHAPES2\n");
 		};
 	};
 
