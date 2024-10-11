@@ -20,6 +20,7 @@ under the License.
 #include <exanb/core/basic_types.h>
 #include <exaDEM/driver_base.h>
 #include <exaDEM/shape/shape.hpp>
+#include <exaDEM/shape/shape_reader.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 
 namespace exaDEM
@@ -94,6 +95,20 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion& get_quat()
     {
       return quat;
+    }
+
+    void dump_driver(int id, std::string path, std::stringstream& stream)
+    {
+      std::string filename = path + this->shp.m_name + ".shp";
+      stream << "  - add_stl_mesh:"        << std::endl;
+      stream << "     id: "                << id                  << std::endl;
+      stream << "     center: ["           << this->center << "]" << std::endl;
+      stream << "     filename: "          << filename           << std::endl;
+      stream << "     minskowski: "        << this->shp.m_radius  << std::endl;
+      stream << "     velocity: ["         << this->vel  << "]"   << std::endl;
+      stream << "     angular_velocity: [" << this->vrot << "]"   << std::endl;
+      stream << "     orientation: ["      <<  quat.w << "," << quat.x << "," << quat.y << "," << quat.z << "]"   << std::endl;
+		  write_shp(this->shp, filename);
     }
 
     // angular velocity

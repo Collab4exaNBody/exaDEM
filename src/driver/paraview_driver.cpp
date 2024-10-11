@@ -20,11 +20,6 @@ under the License.
 #include "exanb/core/operator.h"
 #include "exanb/core/operator_slot.h"
 #include "exanb/core/operator_factory.h"
-#include "exanb/core/make_grid_variant_operator.h"
-#include "exanb/core/parallel_grid_algorithm.h"
-#include "exanb/core/grid.h"
-#include "exanb/core/domain.h"
-#include "exanb/compute/compute_cell_particles.h"
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/stl_mesh.h>
@@ -35,25 +30,24 @@ namespace exaDEM
 
 	using namespace exanb;
 
-	template<typename GridT>
-		class DumpSTLMesh : public OperatorNode
+	class ParaviewDriver : public OperatorNode
 	{
 		static constexpr Vec3d null= { 0.0, 0.0, 0.0 };
 
 		ADD_SLOT( Drivers     , drivers  , INPUT_OUTPUT, REQUIRED , DocString{"List of Drivers"});
 		ADD_SLOT( long        , timestep , INPUT                  , DocString{"Iteration number"});
-    ADD_SLOT( std::string , dir_name , INPUT , REQUIRED , DocString{"Main output directory."} );
+		ADD_SLOT( std::string , dir_name , INPUT , REQUIRED , DocString{"Main output directory."} );
 
 		public:
 
 		inline std::string documentation() const override final
 		{
-			return R"EOF( This operator outputs driver information. )EOF";
+			return R"EOF( This operator creates a parview file of stl meshes. )EOF";
 		}
 
 		inline void execute () override final
 		{
-      std::string path = *dir_name + "/ParaviewOutputFiles/";
+			std::string path = *dir_name + "/ParaviewOutputFiles/";
 			for(size_t id = 0 ; id < drivers->get_size() ; id++)
 			{
 				if ( drivers->type(id) == DRIVER_TYPE::STL_MESH)
@@ -65,12 +59,10 @@ namespace exaDEM
 		}
 	};
 
-	template<class GridT> using DumpSTLMeshTmpl = DumpSTLMesh<GridT>;
-
 	// === register factories ===  
 	CONSTRUCTOR_FUNCTION
 	{
-		OperatorNodeFactory::instance()->register_factory( "dump_stl_mesh", make_grid_variant_operator< DumpSTLMeshTmpl > );
+		OperatorNodeFactory::instance()->register_factory( "paraview_driver", make_simple_operator< ParaviewDriver > );
 	}
 }
 

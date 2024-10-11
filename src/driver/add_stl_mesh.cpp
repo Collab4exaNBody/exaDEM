@@ -19,6 +19,8 @@ under the License.
 #include "exanb/core/operator.h"
 #include "exanb/core/operator_slot.h"
 #include "exanb/core/operator_factory.h"
+#include <exanb/core/quaternion.h>
+#include <exanb/core/quaternion_yaml.h>
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/driver_base.h>
@@ -61,14 +63,42 @@ namespace exaDEM
 			stl_mesh_reader reader;
 			reader(*filename);
 			std::string output_name_vtk = *filename;
-			std::string old_extension = ".stl";
+			std::string old_extension_stl = ".stl";
+			std::string old_extension_shp = ".shp";
+      bool is_stl(false), is_shp(false);
+			std::string::size_type it_stl = output_name_vtk.find(old_extension_stl);
+			std::string::size_type it_shp = output_name_vtk.find(old_extension_shp);
+      if (it_stl != std::string::npos) is_stl = true;
+      if (it_shp != std::string::npos) is_shp = true;
+      if( (is_stl == false) && (is_shp == false)) 
+      {
+         lout << "Wrong file extension used in add_stl_mesh, available formats: [shp or stl]" << std::endl; 
+        std::abort();
+      }
+      if( (is_stl == true) && (is_shp == true)) 
+      { 
+        lout << "Error when checking file name, the file name contains shp and stl and this operator can't deduce the file format." << std::endl; 
+        std::abort();
+      }
 
-			std::string::size_type it = output_name_vtk.find(old_extension);
-			if(it !=  std::string::npos)
+      assert(is_stl != is_shp);
+
+      // load shape
+			shape shp; 
+
+			if (is_stl)
 			{
-				output_name_vtk.erase(it, old_extension.length());
+				output_name_vtk.erase(it_stl, old_extension_stl.length());
+        shp = build_shape(reader, output_name_vtk);
 			}
-			shape shp = build_shape(reader, output_name_vtk);
+			else if (is_shp)
+			{
+				//output_name_vtk.erase(it, old_extension_shp.length());
+        // not optimized
+        bool big_shape = true;
+        shp = read_shp(shp, output_name_vtk, big_shape);
+			}
+
 			shp.m_radius = *minskowski;
 			shp.increase_obb (*rcut_inc);
 			exaDEM::Stl_mesh driver= {*center, *velocity, *angular_velocity, *orientation, shp};
