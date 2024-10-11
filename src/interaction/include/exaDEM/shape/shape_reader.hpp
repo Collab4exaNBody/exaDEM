@@ -64,139 +64,156 @@ namespace exaDEM
     output << "orientation 1.0 0.0 0.0 0.0" << std::endl;
     output << "volume " << shp.m_volume << std::endl;
     auto& Im = shp.m_inertia_on_mass;
-    output << "I/m " << Im.x << Im.y << Im.z << std::endl;
+    output << "I/m " << Im.x << " " << Im.y << " " << Im.z << std::endl;
     output << ">" << std::endl;
   }
 
+  inline void write_shp(const shape& shp, std::string filename)
+  {
+    std::stringstream stream;
+    write_shp(shp, stream);
+    std::ofstream file(filename.c_str());
+    file << stream.rdbuf();    
+	}
 
-	inline void read_shp(shapes& sphs, const std::string file_name)
+	inline shape read_shp(std::ifstream& input, bool big_shape = false)
+	{
+		shape shp;
+		std::string key, line;
+		std::vector<int> tmp_face;
+    while(1)
+		{
+			input >> key;
+
+			if(key == "name")
+			{
+				input >> shp.m_name;
+			}
+			else if(key == "obb.center") // === keys relative to the OBB
+			{
+				input >> shp.obb.center.x >> shp.obb.center.y >> shp.obb.center.z;
+			}
+			else if(key == "obb.extent")
+			{
+				input >> shp.obb.extent.x >> shp.obb.extent.y >> shp.obb.extent.z;
+			}
+			else if(key == "obb.e1")
+			{
+				input >> shp.obb.e1.x >> shp.obb.e1.y >> shp.obb.e1.z;
+			}
+			else if(key == "obb.e2")
+			{
+				input >> shp.obb.e2.x >> shp.obb.e2.y >> shp.obb.e2.z;
+			}
+			else if(key == "obb.e3")
+			{
+				input >> shp.obb.e3.x >> shp.obb.e3.y >> shp.obb.e3.z;
+			}
+			else if(key == "radius")
+			{
+				input >> shp.m_radius;
+			}
+			else if(key == "volume")
+			{
+				input >> shp.m_volume;
+			}
+			else if(key == "I/m")
+			{
+				exanb::Vec3d Im;
+				input >> Im.x >> Im.y >> Im.z; 
+				shp.m_inertia_on_mass = Im;
+			}
+			else if(key == "nv")
+			{
+				int nv = 0;
+				input >> nv;
+				if( nv > EXADEM_MAX_VERTICES && !big_shape ) 
+				{
+					lout << "=== EXADEM ERROR ===" << std::endl;
+					lout << "=== Please, increase the maximum number of vertices: cmake ${Path_To_ExaDEM} -DEXADEM_MAX_VERTICES=" << nv << std::endl;
+					lout << "=== ABORT ===" << std::endl;     
+					std::abort();
+				}
+				assert( nv != 0 );
+				for(int i = 0; i < nv ; i++)
+				{
+					getline(input, line);
+					exanb::Vec3d vertex;
+					input >> vertex.x >> vertex.y >> vertex.z;
+					shp.add_vertex(vertex);
+				}
+			}
+			else if(key == "ne")
+			{
+				int ne = 0;
+				input >> ne;
+				//assert(ne!=0);
+				for(int i = 0; i < ne ; i++)
+				{
+					getline(input, line);
+					int e1, e2;
+					input >> e1 >> e2;
+					shp.add_edge(e1,e2);
+				}
+			}
+			else if(key == "nf")
+			{
+				int nf = 0;
+				input >> nf;
+				//assert(nf!=0);
+				for(int i = 0; i < nf ; i++)
+				{
+					getline(input, line);
+					int n = 0;
+					input >> n;
+					assert(n != 0);
+					tmp_face.resize(n);
+					for(int j = 0; j < n ; j++)
+					{
+						input>>tmp_face[j];
+					}
+					shp.add_face(tmp_face.size(), tmp_face.data());
+				}
+			}
+			else if(key == ">")
+			{
+				shp.pre_compute_obb_edges(Vec3d{0,0,0}, Quaternion{1,0,0,0});
+				shp.pre_compute_obb_faces(Vec3d{0,0,0}, Quaternion{1,0,0,0});
+				return shp;
+			}
+		}
+	}
+	inline shape read_shp(shape& shps, const std::string file_name, bool big_shape = false)
 	{
 		std::ifstream input( file_name.c_str() );
 		std::string first;
-		std::string key;
-		std::vector<int> tmp_face;
-    //int count = 0;
 		for( std::string line; getline( input, line ); )
 		{
-      //std::cout << count++ << std::endl;
 			input >> first;
 			if(first == "<")
 			{
-				OBB obb;
+				return read_shp(input, big_shape);
+			}
+		}
+    lout << "Warning, no shape find into the file " << file_name << "." << std::endl;
+    lout << "Warning, this file is ignored." << file_name << std::endl;
+    return shape();
+	}
 
-				first = ""; 
-				shape new_shape;
-				bool do_fill = true;
-				while(do_fill)
-				{
-					input >> key;
-          //std::cout << "size: " << key.size() << " " << key << std::endl;
-
-					if(key == "name")
-					{
-						input >> new_shape.m_name;
-					}
-					else if(key == "obb.center") // === keys relative to the OBB
-					{
-						input >> obb.center.x >> obb.center.y >> obb.center.z;
-					}
-					else if(key == "obb.extent")
-					{
-						input >> obb.extent.x >> obb.extent.y >> obb.extent.z;
-					}
-					else if(key == "obb.e1")
-					{
-						input >> obb.e1.x >> obb.e1.y >> obb.e1.z;
-					}
-					else if(key == "obb.e2")
-					{
-						input >> obb.e2.x >> obb.e2.y >> obb.e2.z;
-					}
-					else if(key == "obb.e3")
-					{
-						input >> obb.e3.x >> obb.e3.y >> obb.e3.z;
-					}
-					else if(key == "radius")
-					{
-						input >> new_shape.m_radius;
-					}
-					else if(key == "volume")
-					{
-						input >> new_shape.m_volume;
-					}
-					else if(key == "I/m")
-					{
-						exanb::Vec3d Im;
-						input >> Im.x >> Im.y >> Im.z; 
-						new_shape.m_inertia_on_mass = Im;
-					}
-					else if(key == "nv")
-					{
-						int nv = 0;
-						input >> nv;
-						if( nv > EXADEM_MAX_VERTICES ) 
-						{
-							lout << "=== EXADEM ERROR ===" << std::endl;
-							lout << "=== Please, increase the maximum number of vertices: cmake ${Path_To_ExaDEM} -DEXADEM_MAX_VERTICES=" << nv << std::endl;
-							lout << "=== ABORT ===" << std::endl;     
-							std::abort();
-						}
-						assert( nv != 0 );
-						for(int i = 0; i < nv ; i++)
-						{
-							getline(input, line);
-							exanb::Vec3d vertex;
-							input >> vertex.x >> vertex.y >> vertex.z;
-							new_shape.add_vertex(vertex);
-						}
-					}
-					else if(key == "ne")
-					{
-						int ne = 0;
-						input >> ne;
-						//assert(ne!=0);
-						for(int i = 0; i < ne ; i++)
-						{
-							getline(input, line);
-							int e1, e2;
-							input >> e1 >> e2;
-							new_shape.add_edge(e1,e2);
-						}
-					}
-					else if(key == "nf")
-					{
-						int nf = 0;
-						input >> nf;
-						//assert(nf!=0);
-						for(int i = 0; i < nf ; i++)
-						{
-							getline(input, line);
-							int n = 0;
-							input >> n;
-							assert(n != 0);
-							tmp_face.resize(n);
-							for(int j = 0; j < n ; j++)
-							{
-								input>>tmp_face[j];
-							}
-							new_shape.add_face(tmp_face.size(), tmp_face.data());
-						}
-					}
-					else if(key == ">")
-					{
-						new_shape.obb = obb;
-						do_fill = false;
-					}
-				}
-				if(do_fill == false)
-				{
-					new_shape.print();
-					new_shape.write_paraview();
-					new_shape.pre_compute_obb_edges(Vec3d{0,0,0}, Quaternion{1,0,0,0});
-					new_shape.pre_compute_obb_faces(Vec3d{0,0,0}, Quaternion{1,0,0,0});
-					sphs.add_shape(&new_shape);
-					do_fill = true;
-				}
+	inline void read_shp(shapes& shps, const std::string file_name, bool big_shape = false)
+	{
+		std::ifstream input( file_name.c_str() );
+		std::string first;
+		for( std::string line; getline( input, line ); )
+		{
+			input >> first;
+			if(first == "<")
+			{
+				first = ""; // reset key 
+				shape shp = read_shp(input, big_shape);
+				shps.add_shape(&shp);
+				shp.print();
+				shp.write_paraview();
 			}
 		}
 	}

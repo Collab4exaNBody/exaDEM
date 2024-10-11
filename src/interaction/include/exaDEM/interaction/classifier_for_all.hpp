@@ -189,8 +189,8 @@ namespace exaDEM
 		{
 			ParallelForOptions opts;
 			opts.omp_scheduling = OMP_SCHED_STATIC;
-			auto [ptr, size] = ic.get_info(type);
-			InteractionWrapper<T> interactions(ptr);
+			auto [data, size] = ic.get_info(type);
+			InteractionWrapper<T> interactions(data);
 			if( !dataPacker )
 			{
 				AnalysisDataPackerNull nop;     

@@ -22,7 +22,7 @@ namespace exaDEM
         const int ntypes = ic.number_of_waves();
         for( int i = 0 ; i < ntypes ; i++ )  
         {
-          auto [i_ptr, size] = ic.get_info(i);
+          auto [i_data, size] = ic.get_info(i);
           auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.buffer_p(i); 
 
           for(size_t idx = 0 ; idx < size ; idx++)
@@ -31,7 +31,7 @@ namespace exaDEM
             /** filter empty interactions */
             if(dn < 0)
             {
-              auto I = i_ptr[idx];
+              auto I = i_data[idx];
               /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
               if(filter_duplicates(grid, I))
               {

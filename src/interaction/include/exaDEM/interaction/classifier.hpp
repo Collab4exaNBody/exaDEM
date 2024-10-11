@@ -171,15 +171,15 @@ namespace exaDEM
     std::pair<T&, size_t> get_info(size_t id)
     {
     	const unsigned int data_size = waves[id].size();
-    	T& data_ptr = waves[id];
-    	return {data_ptr, data_size};
+    	T& data = waves[id];
+    	return {data, data_size};
     }
     
     const std::pair<const T&, const size_t> get_info(size_t id) const
     {
     	const unsigned int data_size = waves[id].size();
-    	const T& data_ptr = waves[id];
-    	return {data_ptr, data_size};
+    	const T& data = waves[id];
+    	return {data, data_size};
     }
  
 		std::tuple<double*, Vec3d*,Vec3d*,Vec3d*> buffer_p(int id)
