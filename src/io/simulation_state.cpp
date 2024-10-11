@@ -74,22 +74,18 @@ namespace exaDEM
 				for(int i = 0 ; i < types ; i++)
 				{
 					const auto& buffs       = classifier.buffers[i];
-					auto [ptr, size]        = classifier.get_info(i);
+					auto [data, size]        = classifier.get_info(i);
 					const double* const dnp = onika::cuda::vector_data( buffs.dn );
 
 					int coef = 1;
 					if( i < 4 && symetric ) coef *= 2;
 					
-					InteractionWrapper<T> data(ptr);
-
-					//IOSimInteractionFunctor func = {dnp, coef};
-					IOSimInteractionFunctorWrapper func = {dnp, coef};
+					InteractionWrapper<T> dataWrapper(data);
+					IOSimInteractionFunctor func = {dnp, coef};
 
 					if ( size > 0 && dnp != nullptr ) // skip it if forces has not been computed
 					{
-						//pexw[i] = exaDEM::itools::reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
-						//reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
-						reduce_data_wrapper<T, IOSimInteractionFunctorWrapper, IOSimInteractionResult>(parallel_execution_context(), data, func, size, results[i]);
+						reduce_data<T, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), dataWrapper, func, size, results[i]);
 					}
 				}
 			} // synchronize 
