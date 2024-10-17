@@ -16,9 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include "exanb/core/operator.h"
-#include "exanb/core/operator_slot.h"
-#include "exanb/core/operator_factory.h"
+#include <exanb/core/operator.h>
+#include <exanb/core/operator_slot.h>
+#include <exanb/core/operator_factory.h>
 #include <exaDEM/driver_base.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/surface.h>
@@ -28,36 +28,31 @@ namespace exaDEM
 
   using namespace exanb;
 
-	class PrintDrivers : public OperatorNode
-	{
-		ADD_SLOT( Drivers , drivers , INPUT , REQUIRED , DocString{"List of Drivers"});
+  class PrintDrivers : public OperatorNode
+  {
+    ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
 
-		public:
-
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator prints drivers.
         )EOF";
-		}
+    }
 
-		inline void execute () override final
-		{
-			auto& drvs = *drivers;
-			lout << std::endl;
-			lout << "==================== Driver Configuraions =======================" << std::endl;
-			lout << "===== Summary" << std::endl;
-			drvs.stats_drivers();
-			lout << "===== List Of Drivers" << std::endl;
-			drvs.print_drivers();
-			lout << "=================================================================" << std::endl;
-		}
-	};
+    inline void execute() override final
+    {
+      auto &drvs = *drivers;
+      lout << std::endl;
+      lout << "==================== Driver Configuraions =======================" << std::endl;
+      lout << "===== Summary" << std::endl;
+      drvs.stats_drivers();
+      lout << "===== List Of Drivers" << std::endl;
+      drvs.print_drivers();
+      lout << "=================================================================" << std::endl;
+    }
+  };
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "print_drivers", make_simple_operator< PrintDrivers > );
-	}
-}
-
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("print_drivers", make_simple_operator<PrintDrivers>); }
+} // namespace exaDEM

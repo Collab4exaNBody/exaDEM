@@ -32,43 +32,78 @@ namespace exaDEM
     double m_mu;
     double m_damp_rate;
 
-		std::string convert_to_string() const
-		{
-			std::string res = "{";
-			res += "rcut: " + std::to_string(rcut) + "m, ";
-			res += "dncut: " + std::to_string(dncut) + ", ";
-			res += "kn: " + std::to_string(m_kn) + ", ";
-			res += "kt: " + std::to_string(m_kt) + ", ";
-			res += "kr: " + std::to_string(m_kr) + ", ";
-			res += "fc: " + std::to_string(m_fc) + ", ";
-			res += "mu: " + std::to_string(m_mu) + ", ";
-			res += "damp_rate: " + std::to_string(m_damp_rate) + "}";
-			return res;
-		}
+    std::string convert_to_string() const
+    {
+      std::string res = "{";
+      res += "rcut: " + std::to_string(rcut) + "m, ";
+      res += "dncut: " + std::to_string(dncut) + ", ";
+      res += "kn: " + std::to_string(m_kn) + ", ";
+      res += "kt: " + std::to_string(m_kt) + ", ";
+      res += "kr: " + std::to_string(m_kr) + ", ";
+      res += "fc: " + std::to_string(m_fc) + ", ";
+      res += "mu: " + std::to_string(m_mu) + ", ";
+      res += "damp_rate: " + std::to_string(m_damp_rate) + "}";
+      return res;
+    }
   };
-}
+} // namespace exaDEM
 
 // Yaml conversion operators, allows to read potential parameters from config file
 namespace YAML
 {
   using exaDEM::ContactParams;
-  using exanb::UnityConverterHelper;
-  using exanb::Quantity;
   using exanb::lerr;
+  using exanb::Quantity;
+  using exanb::UnityConverterHelper;
 
-  template<> struct convert<ContactParams>
+  template <> struct convert<ContactParams>
   {
-    static bool decode(const Node& node, ContactParams& v)
-    {    
-      if( !node.IsMap() ) { return false; }
-      if( ! node["rcut"] ) { lerr<<"rcut is missing\n"; return false; }
-      if( ! node["dncut"] ) { lerr<<"dncut is missing\n"; return false; }
-      if( ! node["kn"] ) { lerr<<"kn is missing\n"; return false; }
-      if( ! node["kt"] ) { lerr<<"kt is missing\n"; return false; }
-      if( ! node["kr"] ) { lerr<<"kr is missing\n"; return false; }
-      if( ! node["fc"] ) { lerr<<"fc is missing\n"; return false; }
-      if( ! node["mu"] ) { lerr<<"mu is missing\n"; return false; }
-      if( ! node["damp_rate"] ) { lerr<<"damp_rate is missing\n"; return false; }
+    static bool decode(const Node &node, ContactParams &v)
+    {
+      if (!node.IsMap())
+      {
+        return false;
+      }
+      if (!node["rcut"])
+      {
+        lerr << "rcut is missing\n";
+        return false;
+      }
+      if (!node["dncut"])
+      {
+        lerr << "dncut is missing\n";
+        return false;
+      }
+      if (!node["kn"])
+      {
+        lerr << "kn is missing\n";
+        return false;
+      }
+      if (!node["kt"])
+      {
+        lerr << "kt is missing\n";
+        return false;
+      }
+      if (!node["kr"])
+      {
+        lerr << "kr is missing\n";
+        return false;
+      }
+      if (!node["fc"])
+      {
+        lerr << "fc is missing\n";
+        return false;
+      }
+      if (!node["mu"])
+      {
+        lerr << "mu is missing\n";
+        return false;
+      }
+      if (!node["damp_rate"])
+      {
+        lerr << "damp_rate is missing\n";
+        return false;
+      }
 
       v = ContactParams{}; // initializes defaults values
 
@@ -83,5 +118,5 @@ namespace YAML
 
       return true;
     }
-	};
-}
+  };
+} // namespace YAML

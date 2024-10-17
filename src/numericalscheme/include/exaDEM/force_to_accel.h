@@ -26,22 +26,21 @@ namespace exaDEM
 
   struct ForceToAccelFunctor
   {
-    ONIKA_HOST_DEVICE_FUNC inline void operator () (const double mass, double& fx, double& fy, double& fz ) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(const double mass, double &fx, double &fy, double &fz) const
     {
       fx /= mass;
       fy /= mass;
       fz /= mass;
     }
   };
-}
+} // namespace exaDEM
 
 namespace exanb
 {
-  template<> struct ComputeCellParticlesTraits<exaDEM::ForceToAccelFunctor>
+  template <> struct ComputeCellParticlesTraits<exaDEM::ForceToAccelFunctor>
   {
     static inline constexpr bool RequiresBlockSynchronousCall = false;
     static inline constexpr bool CudaCompatible = true;
   };
 
-}
-
+} // namespace exanb

@@ -20,13 +20,10 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
-  template<class GridT> using RegionLatticeTmpl = exanb::RegionLattice<GridT,field::_type>;
+  using namespace exanb;
+  template <class GridT> using RegionLatticeTmpl = exanb::RegionLattice<GridT, field::_type>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION
-  {
-    OperatorNodeFactory::instance()->register_factory("lattice", make_grid_variant_operator< RegionLatticeTmpl >);
-  }
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("lattice", make_grid_variant_operator<RegionLatticeTmpl>); }
 
-}
+} // namespace exaDEM

@@ -23,15 +23,11 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	// helper template to avoid bug in older g++ compilers
-	template<class GridT> using MigrateCellParticlesInteractionTmpl = MigrateCellParticlesES<GridT, exaDEM::Interaction>;
+  // helper template to avoid bug in older g++ compilers
+  template <class GridT> using MigrateCellParticlesInteractionTmpl = MigrateCellParticlesES<GridT, exaDEM::Interaction>;
 
-	// === register factory ===
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "migrate_cell_particles_interaction", make_grid_variant_operator<MigrateCellParticlesInteractionTmpl> );
-	}
-}
-
+  // === register factory ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("migrate_cell_particles_interaction", make_grid_variant_operator<MigrateCellParticlesInteractionTmpl>); }
+} // namespace exaDEM

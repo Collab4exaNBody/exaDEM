@@ -26,31 +26,27 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
-	struct RandomQuaternionFunctor
-	{
-		const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
-		ONIKA_HOST_DEVICE_FUNC inline void operator () (exanb::Quaternion& q) const
-		{
-			randomize(q);
-		}
+  struct RandomQuaternionFunctor
+  {
+    const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(exanb::Quaternion &q) const { randomize(q); }
 
-		ONIKA_HOST_DEVICE_FUNC inline void operator () (double rx, double ry, double rz, const uint64_t id, exanb::Quaternion& q) const
-		{
-			Vec3d r = {rx,ry,rz};
-			if( region.contains( r , id ) )
-			{
-				randomize(q);
-			}
-		}
-	};
-}
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(double rx, double ry, double rz, const uint64_t id, exanb::Quaternion &q) const
+    {
+      Vec3d r = {rx, ry, rz};
+      if (region.contains(r, id))
+      {
+        randomize(q);
+      }
+    }
+  };
+} // namespace exaDEM
 
 namespace exanb
 {
-	template<> struct ComputeCellParticlesTraits<exaDEM::RandomQuaternionFunctor>
-	{
-		static inline constexpr bool RequiresBlockSynchronousCall = false;
-		static inline constexpr bool CudaCompatible = false;
-	};
-}
-
+  template <> struct ComputeCellParticlesTraits<exaDEM::RandomQuaternionFunctor>
+  {
+    static inline constexpr bool RequiresBlockSynchronousCall = false;
+    static inline constexpr bool CudaCompatible = false;
+  };
+} // namespace exanb

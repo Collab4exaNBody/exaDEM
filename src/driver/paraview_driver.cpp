@@ -17,9 +17,9 @@ specific language governing permissions and limitations
 under the License.
 */
 //#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
-#include "exanb/core/operator.h"
-#include "exanb/core/operator_slot.h"
-#include "exanb/core/operator_factory.h"
+#include <exanb/core/operator.h>
+#include <exanb/core/operator_slot.h>
+#include <exanb/core/operator_factory.h>
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/stl_mesh.h>
@@ -28,41 +28,33 @@ under the License.
 namespace exaDEM
 {
 
-	using namespace exanb;
+  using namespace exanb;
 
-	class ParaviewDriver : public OperatorNode
-	{
-		static constexpr Vec3d null= { 0.0, 0.0, 0.0 };
+  class ParaviewDriver : public OperatorNode
+  {
+    static constexpr Vec3d null = {0.0, 0.0, 0.0};
 
-		ADD_SLOT( Drivers     , drivers  , INPUT_OUTPUT, REQUIRED , DocString{"List of Drivers"});
-		ADD_SLOT( long        , timestep , INPUT                  , DocString{"Iteration number"});
-		ADD_SLOT( std::string , dir_name , INPUT , REQUIRED , DocString{"Main output directory."} );
+    ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+    ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
+    ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
-		public:
+  public:
+    inline std::string documentation() const override final { return R"EOF( This operator creates a parview file of stl meshes. )EOF"; }
 
-		inline std::string documentation() const override final
-		{
-			return R"EOF( This operator creates a parview file of stl meshes. )EOF";
-		}
+    inline void execute() override final
+    {
+      std::string path = *dir_name + "/ParaviewOutputFiles/";
+      for (size_t id = 0; id < drivers->get_size(); id++)
+      {
+        if (drivers->type(id) == DRIVER_TYPE::STL_MESH)
+        {
+          exaDEM::Stl_mesh &mesh = std::get<exaDEM::Stl_mesh>(drivers->data(id));
+          mesh.shp.write_move_paraview(path, *timestep, mesh.center, mesh.quat);
+        }
+      }
+    }
+  };
 
-		inline void execute () override final
-		{
-			std::string path = *dir_name + "/ParaviewOutputFiles/";
-			for(size_t id = 0 ; id < drivers->get_size() ; id++)
-			{
-				if ( drivers->type(id) == DRIVER_TYPE::STL_MESH)
-				{
-					exaDEM::Stl_mesh& mesh = std::get<exaDEM::Stl_mesh> (drivers->data(id));
-					mesh.shp.write_move_paraview(path, *timestep, mesh.center, mesh.quat);
-				}
-			}
-		}
-	};
-
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "paraview_driver", make_simple_operator< ParaviewDriver > );
-	}
-}
-
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("paraview_driver", make_simple_operator<ParaviewDriver>); }
+} // namespace exaDEM

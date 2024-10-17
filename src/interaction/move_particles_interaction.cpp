@@ -23,12 +23,9 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	template <typename GridT> using MovePaticlesWithInteractionTmpl = exanb::MovePaticlesWithES <GridT, exaDEM::Interaction>;
-  // === register factories ===  
-  CONSTRUCTOR_FUNCTION
-  {
-    OperatorNodeFactory::instance()->register_factory( "move_particles_interaction", make_grid_variant_operator< MovePaticlesWithInteractionTmpl > );
-  }
-}
+  template <typename GridT> using MovePaticlesWithInteractionTmpl = exanb::MovePaticlesWithES<GridT, exaDEM::Interaction>;
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("move_particles_interaction", make_grid_variant_operator<MovePaticlesWithInteractionTmpl>); }
+} // namespace exaDEM

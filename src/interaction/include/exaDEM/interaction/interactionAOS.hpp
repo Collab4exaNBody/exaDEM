@@ -26,64 +26,50 @@ under the License.
 
 namespace exaDEM
 {
-	/**
-	 * @brief Structure representing the Arrays of Structure data structure for the m_data in a Discrete Element Method (DEM) simulation.
-	 */
-	struct InteractionAOS
-	{
-		template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
-		
-		VectorT<exaDEM::Interaction> m_data;  /**<  List of m_data.  */
-		
-		/**
-		 *@briefs Clears the m_data.
-		 */
-		void clear()
-		{
-			m_data.clear();
-		}
-		
-		/**
-		 *@briefs Returns the number of m_data.
-		 */
-		size_t size() const
-		{
-			return m_data.size();
-		}
-		
-		size_t size()
-		{
-			return m_data.size();
-		}
-		
-		
-		/**
-		 *@briefs Fills the list of m_data.
-		 */
-		void insert(const std::vector<exaDEM::Interaction>& tmp, int w)  
-		{
-			m_data.insert(m_data.end(), tmp.begin(), tmp.end());
-		}
-		
-		
-		/**
-		 *@briefs Returns an interaction for a given index of the m_data's list.
-		 */
-		ONIKA_HOST_DEVICE_FUNC exaDEM::Interaction operator[](uint64_t id) const
-		{
-			auto* ints = onika::cuda::vector_data(m_data);
-			exaDEM::Interaction item = ints[id];
-			return item;
-		}
-		
-		/**
-		 *@briefs Updates the friction and moment of a givne interaction.
-		 */
-		ONIKA_HOST_DEVICE_FUNC void update(size_t id, exaDEM::Interaction& item)
-		{
-			exaDEM::Interaction& item2 = onika::cuda::vector_data(m_data)[id];
-			item2.friction = item.friction;
-			item2.moment = item.moment;
-		}
-	};
-}
+  /**
+   * @brief Structure representing the Arrays of Structure data structure for the m_data in a Discrete Element Method (DEM) simulation.
+   */
+  struct InteractionAOS
+  {
+    template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
+
+    VectorT<exaDEM::Interaction> m_data; /**<  List of m_data.  */
+
+    /**
+     *@briefs Clears the m_data.
+     */
+    void clear() { m_data.clear(); }
+
+    /**
+     *@briefs Returns the number of m_data.
+     */
+    size_t size() const { return m_data.size(); }
+
+    size_t size() { return m_data.size(); }
+
+    /**
+     *@briefs Fills the list of m_data.
+     */
+    void insert(const std::vector<exaDEM::Interaction> &tmp, int w) { m_data.insert(m_data.end(), tmp.begin(), tmp.end()); }
+
+    /**
+     *@briefs Returns an interaction for a given index of the m_data's list.
+     */
+    ONIKA_HOST_DEVICE_FUNC exaDEM::Interaction operator[](uint64_t id) const
+    {
+      auto *ints = onika::cuda::vector_data(m_data);
+      exaDEM::Interaction item = ints[id];
+      return item;
+    }
+
+    /**
+     *@briefs Updates the friction and moment of a givne interaction.
+     */
+    ONIKA_HOST_DEVICE_FUNC void update(size_t id, exaDEM::Interaction &item)
+    {
+      exaDEM::Interaction &item2 = onika::cuda::vector_data(m_data)[id];
+      item2.friction = item.friction;
+      item2.moment = item.moment;
+    }
+  };
+} // namespace exaDEM

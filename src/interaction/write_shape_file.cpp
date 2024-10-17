@@ -35,30 +35,28 @@ namespace exaDEM
   using namespace exanb;
   class WriteShapeFileOperator : public OperatorNode
   {
-    ADD_SLOT( MPI_Comm    , mpi               , INPUT , MPI_COMM_WORLD);
-    ADD_SLOT( std::string , filename          , INPUT , "RestartShapeFile.shp" , DocString{"Input filename"});
-    ADD_SLOT( shapes      , shapes_collection , INPUT , DocString{"Collection of shapes"});
-    ADD_SLOT( std::string , dir_name          , INPUT , REQUIRED , DocString{"Main output directory."} );
+    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+    ADD_SLOT(std::string, filename, INPUT, "RestartShapeFile.shp", DocString{"Input filename"});
+    ADD_SLOT(shapes, shapes_collection, INPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
-    public:
-    inline std::string documentation() const override final
-    {
-      return R"EOF( This operator writes shapes data structure into a "shp" file. )EOF";
-    }
+  public:
+    inline std::string documentation() const override final { return R"EOF( This operator writes shapes data structure into a "shp" file. )EOF"; }
 
-    inline void execute () override final
+    inline void execute() override final
     {
       // get shapes
-      auto& shps = *shapes_collection;
+      auto &shps = *shapes_collection;
       // this operator does not writes data file if there is not any shape.
       size_t size = shps.get_size();
-      if(size == 0) return;
+      if (size == 0)
+        return;
       int rank;
       MPI_Comm_rank(*mpi, &rank);
       // same data for all mpi processes
-      if(rank == 0)
+      if (rank == 0)
       {
-        // define paths 
+        // define paths
         std::stringstream stream;
         std::string dir = *dir_name + "/CheckpointFiles/";
         std::string filepath = dir + *filename;
@@ -68,14 +66,15 @@ namespace exaDEM
         std::filesystem::create_directories(fspath);
         // open output file
         std::ofstream outFile(filepath);
-        if (!outFile) {
+        if (!outFile)
+        {
           std::cerr << "Error: impossible to create the output file: " << filepath << std::endl;
           return;
         }
         // fill stream with shape data
-        for(size_t i = 0 ; i < size ; i++)
+        for (size_t i = 0; i < size; i++)
         {
-          const shape * shp = shps[i];
+          const shape *shp = shps[i];
           exaDEM::write_shp(*shp, stream);
         }
         // fill output file
@@ -84,9 +83,6 @@ namespace exaDEM
     };
   };
 
-  // === register factories ===  
-  CONSTRUCTOR_FUNCTION
-  {
-    OperatorNodeFactory::instance()->register_factory( "write_shape_file", make_simple_operator< WriteShapeFileOperator > );
-  }
-}
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("write_shape_file", make_simple_operator<WriteShapeFileOperator>); }
+} // namespace exaDEM

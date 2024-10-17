@@ -23,29 +23,29 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	namespace interaction_test
-	{
-		using UIntType = uint64_t;
-    using InfoType = ExtraStorageInfo; 
-		inline bool check_extra_interaction_storage_consistency(int n_particles, InfoType* info_ptr, Interaction* data_ptr)
-		{
-			for( int p = 0 ; p < n_particles ; p++ )
-			{
-				auto [offset, size, id] = info_ptr[p];
-				for(size_t i = offset ; i < offset + size ; i++ )
-				{
-					auto& item = data_ptr[i];
-					if( item.id_i != id && item.id_j != id )
-					{
-						std::cout << "info says particle id = " << id << " and the interaction is between the particle id " << item.id_i << " and the particle id " << item.id_j << std::endl;
-						return false;
-					}
-				}
-			}
+  namespace interaction_test
+  {
+    using UIntType = uint64_t;
+    using InfoType = ExtraStorageInfo;
+    inline bool check_extra_interaction_storage_consistency(int n_particles, InfoType *info_ptr, Interaction *data_ptr)
+    {
+      for (int p = 0; p < n_particles; p++)
+      {
+        auto [offset, size, id] = info_ptr[p];
+        for (size_t i = offset; i < offset + size; i++)
+        {
+          auto &item = data_ptr[i];
+          if (item.id_i != id && item.id_j != id)
+          {
+            std::cout << "info says particle id = " << id << " and the interaction is between the particle id " << item.id_i << " and the particle id " << item.id_j << std::endl;
+            return false;
+          }
+        }
+      }
 
-			return true;
-		}
-	}
-}
+      return true;
+    }
+  } // namespace interaction_test
+} // namespace exaDEM

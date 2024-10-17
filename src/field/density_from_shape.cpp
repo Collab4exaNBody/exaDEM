@@ -26,62 +26,53 @@ under the License.
 #include <random>
 #include <exaDEM/shape/shapes.hpp>
 
-
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	template<typename GridT
-		, class = AssertGridHasFields< GridT, field::_radius, field::_mass>
-		>
-		class PolyhedraSetDensity : public OperatorNode
-		{
-			ADD_SLOT( GridT , grid  , INPUT_OUTPUT );
-			ADD_SLOT( double, density , INPUT, 1, DocString{"density value applied to all particles"});
-			ADD_SLOT( shapes  , shapes_collection, INPUT_OUTPUT , DocString{"Collection of shapes"});
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_mass>> class PolyhedraSetDensity : public OperatorNode
+  {
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(double, density, INPUT, 1, DocString{"density value applied to all particles"});
+    ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
 
-			// -----------------------------------------------
-			// ----------- Operator documentation ------------
-			inline std::string documentation() const override final
-			{
-				return R"EOF(
+    // -----------------------------------------------
+    // ----------- Operator documentation ------------
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator applies the same density to all particles. If you want to apply various densities according to their material properties, use set_densities_multiple_materials.
         )EOF";
-			}
+    }
 
-			public:
-			inline void execute () override final
-			{
-				auto cells = grid->cells();
-				const IJK dims = grid->dimension();
-				const shapes shps = *shapes_collection;
-				const double d = *density;
+  public:
+    inline void execute() override final
+    {
+      auto cells = grid->cells();
+      const IJK dims = grid->dimension();
+      const shapes shps = *shapes_collection;
+      const double d = *density;
 #     pragma omp parallel
-				{
-					GRID_OMP_FOR_BEGIN(dims,i,loc, schedule(dynamic) )
-					{
-						double* __restrict__ m = cells[i][field::mass];
-						auto* __restrict__ t = cells[i][field::type];
-						const size_t n = cells[i].size();
+      {
+        GRID_OMP_FOR_BEGIN (dims, i, loc, schedule(dynamic))
+        {
+          double *__restrict__ m = cells[i][field::mass];
+          auto *__restrict__ t = cells[i][field::type];
+          const size_t n = cells[i].size();
 #         pragma omp simd
-						for(size_t j=0;j<n;j++)
-						{
-							m[j] = d * shps[t[j]]->get_volume();
-						}
-					}
-					GRID_OMP_FOR_END
-				}
-			}
+          for (size_t j = 0; j < n; j++)
+          {
+            m[j] = d * shps[t[j]]->get_volume();
+          }
+        }
+        GRID_OMP_FOR_END
+      }
+    }
+  };
 
-		};
+  template <class GridT> using PolyhedraSetDensityTmpl = PolyhedraSetDensity<GridT>;
 
-	template<class GridT> using PolyhedraSetDensityTmpl = PolyhedraSetDensity<GridT>;
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("density_from_shape", make_grid_variant_operator<PolyhedraSetDensityTmpl>); }
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "density_from_shape", make_grid_variant_operator< PolyhedraSetDensityTmpl > );
-	}
-
-}
-
+} // namespace exaDEM

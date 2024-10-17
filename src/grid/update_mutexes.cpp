@@ -27,51 +27,41 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	template<typename GridT
-		, class = AssertGridHasFields< GridT >
-		>
-		class UpdateMutexes : public OperatorNode
-		{
-			using ComputeFields = FieldSet<>;
-			static constexpr ComputeFields compute_field_set {};
+  template <typename GridT, class = AssertGridHasFields<GridT>> class UpdateMutexes : public OperatorNode
+  {
+    using ComputeFields = FieldSet<>;
+    static constexpr ComputeFields compute_field_set{};
 
-			ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
-			ADD_SLOT( mutexes     , locks             , INPUT_OUTPUT );
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(mutexes, locks, INPUT_OUTPUT);
 
-
-			public:
-
-			inline std::string documentation() const override final
-			{
-				return R"EOF(
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
 				        )EOF";
-			}
+    }
 
-			inline void execute () override final
-			{
-				const auto& cells    = grid->cells();
-				const int n_cells    = grid->number_of_cells();
-				mutexes & cell_locks = *locks;
-				locks -> resize (n_cells) ;
-#pragma omp parallel for
-				for (int c = 0 ; c < n_cells ; c++)
-				{
-					auto& current_locks = cell_locks.get_mutexes (c); 
-					current_locks . resize (cells[c].size());
-				}	
-				cell_locks . initialize();
+    inline void execute() override final
+    {
+      const auto &cells = grid->cells();
+      const int n_cells = grid->number_of_cells();
+      mutexes &cell_locks = *locks;
+      locks->resize(n_cells);
+#     pragma omp parallel for
+      for (int c = 0; c < n_cells; c++)
+      {
+        auto &current_locks = cell_locks.get_mutexes(c);
+        current_locks.resize(cells[c].size());
+      }
+      cell_locks.initialize();
+    }
+  };
 
-			}
-		};
+  template <class GridT> using UpdateMutexesTmpl = UpdateMutexes<GridT>;
 
-	template<class GridT> using UpdateMutexesTmpl = UpdateMutexes<GridT>;
-
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "update_mutexes", make_grid_variant_operator< UpdateMutexesTmpl > );
-	}
-}
-
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("update_mutexes", make_grid_variant_operator<UpdateMutexesTmpl>); }
+} // namespace exaDEM

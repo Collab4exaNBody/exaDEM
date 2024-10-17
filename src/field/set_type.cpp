@@ -29,68 +29,60 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	template<typename GridT
-		, class = AssertGridHasFields< GridT, field::_type>
-		>
-		class SetParticleType : public OperatorNode
-		{
-			using ComputeFields = FieldSet<field::_type>;
-			using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type>;
-			static constexpr ComputeFields compute_field_set {};
-			static constexpr ComputeRegionFields compute_region_field_set {};
-			ADD_SLOT( GridT    , grid , INPUT_OUTPUT );
-			ADD_SLOT( uint32_t , type , INPUT, REQUIRED , DocString{"type value applied to all particles"});
-			ADD_SLOT( ParticleRegions   , particle_regions , INPUT , OPTIONAL );
-			ADD_SLOT( ParticleRegionCSG , region           , INPUT , OPTIONAL );
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_type>> class SetParticleType : public OperatorNode
+  {
+    using ComputeFields = FieldSet<field::_type>;
+    using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type>;
+    static constexpr ComputeFields compute_field_set{};
+    static constexpr ComputeRegionFields compute_region_field_set{};
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(uint32_t, type, INPUT, REQUIRED, DocString{"type value applied to all particles"});
+    ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+    ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
-			// -----------------------------------------------
-			// ----------- Operator documentation ------------
-			inline std::string documentation() const override final
-			{
-				return R"EOF(
+    // -----------------------------------------------
+    // ----------- Operator documentation ------------
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator fills type id to all particles. 
         )EOF";
-			}
+    }
 
-			public:
-			inline void execute () override final
-			{
-        uint32_t t = *type;
-				if( region.has_value() )
-				{
-					if( !particle_regions.has_value() )
-					{
-						fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
-					}
+  public:
+    inline void execute() override final
+    {
+      uint32_t t = *type;
+      if (region.has_value())
+      {
+        if (!particle_regions.has_value())
+        {
+          fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+        }
 
-					if( region->m_nb_operands==0 )
-					{
-						ldbg << "rebuild CSG from expr "<< region->m_user_expr << std::endl;
-						region->build_from_expression_string( particle_regions->data() , particle_regions->size() );
-					}
+        if (region->m_nb_operands == 0)
+        {
+          ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
+          region->build_from_expression_string(particle_regions->data(), particle_regions->size());
+        }
 
-					ParticleRegionCSGShallowCopy prcsg = *region;
-					SetRegionFunctor<uint32_t> func = { prcsg, t};
-					compute_cell_particles( *grid , false , func , compute_region_field_set , parallel_execution_context() );
-				}
-				else
-				{
-					SetFunctor<uint32_t> func = {t};
-					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
-				}
-			}
+        ParticleRegionCSGShallowCopy prcsg = *region;
+        SetRegionFunctor<uint32_t> func = {prcsg, t};
+        compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
+      }
+      else
+      {
+        SetFunctor<uint32_t> func = {t};
+        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context());
+      }
+    }
+  };
 
-		};
+  template <class GridT> using SetParticleTypeTmpl = SetParticleType<GridT>;
 
-	template<class GridT> using SetParticleTypeTmpl = SetParticleType<GridT>;
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_type", make_grid_variant_operator<SetParticleTypeTmpl>); }
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "set_type", make_grid_variant_operator< SetParticleTypeTmpl > );
-	}
-
-}
-
+} // namespace exaDEM

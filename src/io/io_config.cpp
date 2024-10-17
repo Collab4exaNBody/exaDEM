@@ -22,50 +22,41 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	class IOConfigNode : public OperatorNode
-	{  
+  class IOConfigNode : public OperatorNode
+  {
     // save file
-    ADD_SLOT( std::string , dir_name               , INPUT_OUTPUT , REQUIRED , DocString{"Main output directory."} );
-    ADD_SLOT( std::string , log_name               , INPUT_OUTPUT , REQUIRED , DocString{"Write an Output file containing log lines."      } );
-    ADD_SLOT( std::string , avg_stress_tensor_name , INPUT_OUTPUT , REQUIRED , DocString{"Write an Output file containing stress tensors." } );
-    ADD_SLOT( std::string , interaction_basename   , INPUT_OUTPUT , REQUIRED , DocString{"Write an Output file containing interactions."   } );
+    ADD_SLOT(std::string, dir_name, INPUT_OUTPUT, REQUIRED, DocString{"Main output directory."});
+    ADD_SLOT(std::string, log_name, INPUT_OUTPUT, REQUIRED, DocString{"Write an Output file containing log lines."});
+    ADD_SLOT(std::string, avg_stress_tensor_name, INPUT_OUTPUT, REQUIRED, DocString{"Write an Output file containing stress tensors."});
+    ADD_SLOT(std::string, interaction_basename, INPUT_OUTPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
 
-		public:
+  public:
+    inline std::string documentation() const override final { return R"EOF(This operator defines the tree structure of output files.)EOF"; }
 
-    inline std::string documentation() const override final
+    inline bool is_sink() const override final { return true; }
+
+    inline void execute() override final
     {
-      return R"EOF(This operator defines the tree structure of output files.)EOF";
-    }
 
-		inline bool is_sink() const override final { return true; }
-
-		inline void execute () override final
-		{
-
-      std::string dirName             = *dir_name;
-      std::string logName             = dirName + "/" + (*log_name);
+      std::string dirName = *dir_name;
+      std::string logName = dirName + "/" + (*log_name);
       std::string avgStressTensorName = dirName + "/" + (*avg_stress_tensor_name);
-      std::string interactionBasename = dirName + "/ExaDEMAnalyses/" +  (*interaction_basename);
+      std::string interactionBasename = dirName + "/ExaDEMAnalyses/" + (*interaction_basename);
       lout << std::endl;
       lout << "==================== IO Directory Configuration =================" << std::endl;
-      lout << "Directory Name:             "  << dirName << std::endl;
-      lout << "Log Filename:               "  << logName << std::endl;
-      lout << "Avg Stress Tensor Filename: "  << avgStressTensorName << std::endl;
-      lout << "Interaction Basename Dir:   "  << interactionBasename << std::endl;
-      lout << "Paraview Files Directory:   "  << dirName + "/ParaviewOutputs/" << std::endl;
-      lout << "Checkpoint Files Directory: "  << dirName + "/CheckpointFiles/" << std::endl;
+      lout << "Directory Name:             " << dirName << std::endl;
+      lout << "Log Filename:               " << logName << std::endl;
+      lout << "Avg Stress Tensor Filename: " << avgStressTensorName << std::endl;
+      lout << "Interaction Basename Dir:   " << interactionBasename << std::endl;
+      lout << "Paraview Files Directory:   " << dirName + "/ParaviewOutputs/" << std::endl;
+      lout << "Checkpoint Files Directory: " << dirName + "/CheckpointFiles/" << std::endl;
       lout << "=================================================================" << std::endl;
-		}
+    }
+  };
 
-	};
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("io_config", make_simple_operator<IOConfigNode>); }
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "io_config", make_simple_operator<IOConfigNode> );
-	}
-
-}
-
+} // namespace exaDEM

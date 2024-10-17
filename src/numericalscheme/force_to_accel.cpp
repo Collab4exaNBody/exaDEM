@@ -31,44 +31,36 @@ under the License.
 
 namespace exaDEM
 {
-using namespace exanb;
+  using namespace exanb;
 
-  template<typename GridT
-    , class = AssertGridHasFields< GridT, field::_mass, field::_fx,field::_fy,field::_fz >
-    >
-  class ForceToAccel : public OperatorNode
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_mass, field::_fx, field::_fy, field::_fz>> class ForceToAccel : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet< field::_mass, field::_fx ,field::_fy ,field::_fz >;
-    static constexpr ComputeFields compute_field_set {};
+    using ComputeFields = FieldSet<field::_mass, field::_fx, field::_fy, field::_fz>;
+    static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT( GridT           , grid      , INPUT_OUTPUT );
-    ADD_SLOT( CellListWrapper , cell_list , INPUT , DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
 
   public:
-
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator computes particle accelerations from forces and mass.
         )EOF";
-		}
+    }
 
-		inline void execute () override final
-		{
+    inline void execute() override final
+    {
       auto [cell_ptr, cell_size] = cell_list->info();
-			ForceToAccelFunctor func {};
-			compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() , cell_ptr, cell_size );
-		}
-	};
+      ForceToAccelFunctor func{};
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+    }
+  };
 
-	template<class GridT> using ForceToAccelTmpl = ForceToAccel<GridT>;
+  template <class GridT> using ForceToAccelTmpl = ForceToAccel<GridT>;
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "force_to_accel", make_grid_variant_operator< ForceToAccelTmpl > );
-	}
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("force_to_accel", make_grid_variant_operator<ForceToAccelTmpl>); }
 
-}
-
+} // namespace exaDEM

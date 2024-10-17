@@ -27,59 +27,51 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	template<typename GridT
-		, class = AssertGridHasFields< GridT, field::_radius, field::_mass>
-		>
-		class SetDensity : public OperatorNode
-		{
-			ADD_SLOT( GridT , grid  , INPUT_OUTPUT );
-			ADD_SLOT( double, density , INPUT, 1, DocString{"density value applied to all particles"});
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_mass>> class SetDensity : public OperatorNode
+  {
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(double, density, INPUT, 1, DocString{"density value applied to all particles"});
 
-			// -----------------------------------------------
-			// ----------- Operator documentation ------------
-			inline std::string documentation() const override final
-			{
-				return R"EOF(
+    // -----------------------------------------------
+    // ----------- Operator documentation ------------
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator applies the same density to all particles. If you want to apply various densities according to their material properties, use set_densities_multiple_materials.
         )EOF";
-			}
+    }
 
-			public:
-			inline void execute () override final
-			{
-				auto cells = grid->cells();
-				const IJK dims = grid->dimension();
+  public:
+    inline void execute() override final
+    {
+      auto cells = grid->cells();
+      const IJK dims = grid->dimension();
 #     pragma omp parallel
-				{
-					GRID_OMP_FOR_BEGIN(dims,i,loc, schedule(dynamic) )
-					{
-						double* __restrict__ m = cells[i][field::mass];
-						double* __restrict__ r = cells[i][field::radius];
-						const double d 	= (*density);
-						const double pi 	= 4*std::atan(1);
-						const double coeff	= ((4.0)/(3.0)) * pi * d; 	 
-						const size_t n = cells[i].size();
+      {
+        GRID_OMP_FOR_BEGIN (dims, i, loc, schedule(dynamic))
+        {
+          double *__restrict__ m = cells[i][field::mass];
+          double *__restrict__ r = cells[i][field::radius];
+          const double d = (*density);
+          const double pi = 4 * std::atan(1);
+          const double coeff = ((4.0) / (3.0)) * pi * d;
+          const size_t n = cells[i].size();
 #         pragma omp simd
-						for(size_t j=0;j<n;j++)
-						{
-							m[j] = coeff * r[j] * r[j] * r[j]; // 4/3 * pi * r^3 * d 
-						}
-					}
-					GRID_OMP_FOR_END
-				}
-			}
+          for (size_t j = 0; j < n; j++)
+          {
+            m[j] = coeff * r[j] * r[j] * r[j]; // 4/3 * pi * r^3 * d
+          }
+        }
+        GRID_OMP_FOR_END
+      }
+    }
+  };
 
-		};
+  template <class GridT> using SetDensityTmpl = SetDensity<GridT>;
 
-	template<class GridT> using SetDensityTmpl = SetDensity<GridT>;
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_density", make_grid_variant_operator<SetDensityTmpl>); }
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "set_density", make_grid_variant_operator< SetDensityTmpl > );
-	}
-
-}
-
+} // namespace exaDEM

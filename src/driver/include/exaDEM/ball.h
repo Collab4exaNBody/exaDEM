@@ -29,76 +29,64 @@ namespace exaDEM
    */
   struct Ball
   {
-    double radius;          /**< Radius of the ball. */
-    exanb::Vec3d center;    /**< Center position of the ball. */
-    exanb::Vec3d vel;       /**< Velocity of the ball. */
-    exanb::Vec3d vrot;      /**< Angular velocity of the ball. */
+    double radius;       /**< Radius of the ball. */
+    exanb::Vec3d center; /**< Center position of the ball. */
+    exanb::Vec3d vel;    /**< Velocity of the ball. */
+    exanb::Vec3d vrot;   /**< Angular velocity of the ball. */
 
     /**
      * @brief Get the type of the driver (in this case, BALL).
      * @return The type of the driver.
      */
-    constexpr DRIVER_TYPE get_type() {return DRIVER_TYPE::BALL;}
+    constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::BALL; }
 
     /**
      * @brief Print information about the ball.
      */
     void print()
     {
-      lout << "Driver Type: Ball"  << std::endl;
+      lout << "Driver Type: Ball" << std::endl;
       lout << "Radius: " << radius << std::endl;
       lout << "Center: " << center << std::endl;
-      lout << "Vel   : " << vel    << std::endl;
-      lout << "AngVel: " << vrot   << std::endl;
+      lout << "Vel   : " << vel << std::endl;
+      lout << "AngVel: " << vrot << std::endl;
     }
 
     /**
      * @brief Write ball data into a stream.
      */
-    void dump_driver(int id, std::stringstream& stream)
+    void dump_driver(int id, std::stringstream &stream)
     {
-      stream << "  - add_surface:"        << std::endl;
-      stream << "     id: "                << id                  << std::endl;
-      stream << "     radius: "            << this->radius        << std::endl;
-      stream << "     center: ["           << this->center << "]" << std::endl;
-      stream << "     velocity: ["         << this->vel    << "]" << std::endl;
-      stream << "     angular_velocity: [" << this->vrot   << "]" << std::endl;
+      stream << "  - add_surface:" << std::endl;
+      stream << "     id: " << id << std::endl;
+      stream << "     radius: " << this->radius << std::endl;
+      stream << "     center: [" << this->center << "]" << std::endl;
+      stream << "     velocity: [" << this->vel << "]" << std::endl;
+      stream << "     angular_velocity: [" << this->vrot << "]" << std::endl;
     }
 
     /**
      * @brief Initialize the ball.
      * @details This function asserts that the radius of the ball is greater than 0.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void initialize ()
-    {
-      assert (radius > 0 );
-    }
+    ONIKA_HOST_DEVICE_FUNC inline void initialize() { assert(radius > 0); }
 
     /**
      * @brief return driver velocity
      */
-    ONIKA_HOST_DEVICE_FUNC inline Vec3d& get_vel()
-    {
-      return vel;
-    }
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d &get_vel() { return vel; }
 
     /**
      * @brief Initialize the ball.
      * @details This function asserts that the radius of the ball is greater than 0.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void update_radius (const double incr)
-    {
-      radius += incr;
-    }
+    ONIKA_HOST_DEVICE_FUNC inline void update_radius(const double incr) { radius += incr; }
 
     /**
      * @brief Update the position of the ball.
      * @param t The time step.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void push_v_to_r ( const double t )
-    {
-      center = center + t * vel; 
-    }
+    ONIKA_HOST_DEVICE_FUNC inline void push_v_to_r(const double t) { center = center + t * vel; }
 
     /**
      * @brief Filter function to check if a point is within a certain radius of the ball.
@@ -106,10 +94,10 @@ namespace exaDEM
      * @param p The point to check.
      * @return True if the point is within the cut-off radius of the ball, false otherwise.
      */
-    ONIKA_HOST_DEVICE_FUNC inline bool filter( const double rcut , const exanb::Vec3d& p)
+    ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const exanb::Vec3d &p)
     {
       const Vec3d dist = center - p;
-      double d = radius - norm ( dist );
+      double d = radius - norm(dist);
       return std::fabs(d) <= rcut;
     }
 
@@ -123,28 +111,29 @@ namespace exaDEM
      *         - The normal vector pointing from the collision point to the center of the ball.
      *         - The contact position on the surface of the ball.
      */
-    ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector( const double rcut , const Vec3d& p)
+    ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d &p)
     {
       Vec3d point_to_center = center - p;
-      double d = norm ( point_to_center );
-      double dn; 
+      double d = norm(point_to_center);
+      double dn;
       Vec3d n = point_to_center / d;
-      if ( d > radius )
-      { 
+      if (d > radius)
+      {
         dn = d - radius - rcut;
         n = (-1) * n;
       }
-      else dn = radius - d - rcut;
+      else
+        dn = radius - d - rcut;
 
-      if( dn > 0 )
+      if (dn > 0)
       {
         return {false, 0.0, Vec3d(), Vec3d()};
       }
       else
       {
-        Vec3d contact_position = p - n * ( rcut + 0.5 * dn ); 
+        Vec3d contact_position = p - n * (rcut + 0.5 * dn);
         return {true, dn, n, contact_position};
       }
     }
   };
-}
+} // namespace exaDEM
