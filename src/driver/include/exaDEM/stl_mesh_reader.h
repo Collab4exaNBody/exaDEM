@@ -114,8 +114,8 @@ namespace exaDEM
 			}
       lout << "========= STL Mesh ==============" << std::endl;
 			lout << "Name     = " << file_name << std::endl;
-      lout << "Vertices = " << nv << std::endl;
-      lout << "Faces    = " << nf << std::endl;
+      ldbg << "Vertices = " << nv << std::endl;
+      ldbg << "Faces    = " << nf << std::endl;
 		}
 	};
 }

@@ -53,6 +53,19 @@ namespace exaDEM
     }
 
     /**
+     * @brief Write ball data into a stream.
+     */
+    void dump_driver(int id, std::stringstream& stream)
+    {
+      stream << "  - add_surface:"        << std::endl;
+      stream << "     id: "                << id                  << std::endl;
+      stream << "     radius: "            << this->radius        << std::endl;
+      stream << "     center: ["           << this->center << "]" << std::endl;
+      stream << "     velocity: ["         << this->vel    << "]" << std::endl;
+      stream << "     angular_velocity: [" << this->vrot   << "]" << std::endl;
+    }
+
+    /**
      * @brief Initialize the ball.
      * @details This function asserts that the radius of the ball is greater than 0.
      */

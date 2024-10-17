@@ -68,7 +68,7 @@ namespace exaDEM
 				{
 					*rcut_max = 2*(*rad);
 				}
-				
+
 				if( region.has_value() )
 				{
 					if( !particle_regions.has_value() )

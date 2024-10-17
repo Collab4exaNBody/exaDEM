@@ -410,7 +410,7 @@ namespace exaDEM
 
 		inline void write_paraview()
 		{
-			lout << " writting paraview for shape " << this->m_name << std::endl;
+			ldbg << " writting paraview for shape " << this->m_name << std::endl;
 			std::string name = m_name + ".vtk";
 			std::ofstream outFile(name);
 			if (!outFile) {
@@ -454,7 +454,7 @@ namespace exaDEM
 		inline void write_move_paraview(std::string path, int timestep, Vec3d& center, Quaternion& quat)
 		{
       std::string time = std::to_string(timestep);
-			lout << " writting paraview for shape " << this->m_name << " timestep: " << time << std::endl;
+			ldbg << " writting paraview for shape " << this->m_name << " timestep: " << time << std::endl;
 			std::string name = path + m_name + "_" + time + ".vtk";
 			std::ofstream outFile(name);
 			if (!outFile) {

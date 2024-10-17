@@ -56,6 +56,20 @@ namespace exaDEM
     }
 
     /**
+     * @brief Write surface data into a stream.
+     */
+    void dump_driver(int id, std::stringstream& stream)
+    {
+      stream << "  - add_surface:"        << std::endl;
+      stream << "     id: "                << id                  << std::endl;
+      stream << "     offset: "            << this->offset        << std::endl;
+      stream << "     center: ["           << this->center << "]" << std::endl;
+      stream << "     normal: ["           << this->normal << "]" << std::endl;
+      stream << "     velocity: "          << this->vel           << std::endl;
+      stream << "     angular_velocity: [" << this->vrot   << "]" << std::endl;
+    }
+
+    /**
      * @brief Initialize the surface.
      * @details Calculates the center position based on the normal and offset.
      */

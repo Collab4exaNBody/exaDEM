@@ -212,7 +212,7 @@ namespace exaDEM
 				first = ""; // reset key 
 				shape shp = read_shp(input, big_shape);
 				shps.add_shape(&shp);
-				shp.print();
+				if(!big_shape) shp.print();
 				shp.write_paraview();
 			}
 		}

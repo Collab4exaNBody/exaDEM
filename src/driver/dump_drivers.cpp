@@ -17,10 +17,10 @@ specific language governing permissions and limitations
 under the License.
 */
 //#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
-#include "exanb/core/operator.h"
-#include "exanb/core/operator_slot.h"
-#include "exanb/core/operator_factory.h"
-#include "exanb/core/parallel_grid_algorithm.h"
+#include <exanb/core/operator.h>
+#include <exanb/core/operator_slot.h>
+#include <exanb/core/operator_factory.h>
+#include <exanb/core/parallel_grid_algorithm.h>
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/stl_mesh.h>
@@ -29,53 +29,62 @@ under the License.
 
 namespace exaDEM
 {
+
+  struct DumpDriverFunc
+  {
+    int id;
+    std::string directory;
+    std::stringstream &stream;
+
+    void operator()(exaDEM::Surface &surface) { surface.dump_driver(id++, stream); }
+
+    void operator()(exaDEM::Ball &ball) { ball.dump_driver(id++, stream); }
+
+    void operator()(exaDEM::Cylinder &cylinder) { cylinder.dump_driver(id++, stream); }
+
+    void operator()(exaDEM::Stl_mesh &stl) { stl.dump_driver(id++, directory, stream); }
+
+    void operator()(auto &&others) { ldbg << "DumpDriverFunc is not defined for this driverr OR this driver is no longer defined." << std::endl; }
+  };
+
   using namespace exanb;
   class DumpDriver : public OperatorNode
   {
-    static constexpr Vec3d null= { 0.0, 0.0, 0.0 };
+    static constexpr Vec3d null = {0.0, 0.0, 0.0};
 
-    ADD_SLOT( Drivers     , drivers  , INPUT_OUTPUT, REQUIRED , DocString{"List of Drivers"});
-    ADD_SLOT( long        , timestep , INPUT                  , DocString{"Iteration number"});
-    ADD_SLOT( std::string , dir_name , INPUT       , REQUIRED , DocString{"Main output directory."} );
+    ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+    ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
+    ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
-    public:
+  public:
+    inline std::string documentation() const override final { return R"EOF( This operator outputs driver information. )EOF"; }
 
-    inline std::string documentation() const override final
+    inline void execute() override final
     {
-      return R"EOF( This operator outputs driver information. )EOF";
-    }
-
-    inline void execute () override final
-    {
-      auto& drvs = *drivers;
+      auto &drvs = *drivers;
       size_t n_drivers = drivers->get_size();
 
-      if( n_drivers == 0 ) return;
+      if (n_drivers == 0)
+        return;
 
       std::string path = *dir_name + "/CheckpointFiles/";
-      int id = 0;
-      std::stringstream data_stream; 
+      std::stringstream data_stream;
       std::string filename = path + "driver_%010d.msp";
       filename = format_string(filename, *timestep);
       data_stream << "setup_drivers:" << std::endl;
 
-      for(size_t i = 0 ; i < n_drivers ; i++)
+      DumpDriverFunc func = {0, path, data_stream};
+
+      for (size_t i = 0; i < n_drivers; i++)
       {
-        if ( drvs.type(i) == DRIVER_TYPE::STL_MESH)
-        {
-          exaDEM::Stl_mesh& mesh = std::get<exaDEM::Stl_mesh> (drvs.data(i));
-          mesh.dump_driver(id++, path, data_stream);
-        }
+        auto &drv = drvs.data(i);
+        std::visit(func, drv);
       }
       std::ofstream file(filename.c_str());
       file << data_stream.rdbuf();
     }
   };
 
-  // === register factories ===  
-  CONSTRUCTOR_FUNCTION
-  {
-    OperatorNodeFactory::instance()->register_factory( "dump_driver", make_simple_operator< DumpDriver > );
-  }
-}
-
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("dump_driver", make_simple_operator<DumpDriver>); }
+} // namespace exaDEM

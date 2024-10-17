@@ -54,6 +54,18 @@ namespace exaDEM
       lout << "AngVel: " << vrot << std::endl;
     }
 
+    /**
+     * @brief Write cylinder information into a stream.
+     */
+    void dump_driver(int id, std::stringstream& stream)
+    {
+      stream << "  - add_surface:"        << std::endl;
+      stream << "     id: "                << id                  << std::endl;
+      stream << "     axis: ["             << this->axis   << "]" << std::endl;
+      stream << "     center: ["           << this->center << "]" << std::endl;
+      stream << "     velocity: ["         << this->vel    << "]" << std::endl;
+      stream << "     angular_velocity: [" << this->vrot   << "]" << std::endl;
+    }
 
     /**
      * @brief return driver velocity

@@ -64,7 +64,8 @@ namespace exaDEM
     void print()
     {
       lout << "Driver Type: MESH STL" << std::endl;
-      lout << "center : " << center   << std::endl;
+      lout << "Name   : " << shp.m_name << std::endl;
+      lout << "Center : " << center   << std::endl;
       lout << "Vel    : " << vel << std::endl;
       lout << "AngVel : " << vrot << std::endl;
       lout << "Quat   : " << quat.w << " " << quat.x << " " << quat.y << " " << quat.z  << std::endl;

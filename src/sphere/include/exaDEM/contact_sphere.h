@@ -140,7 +140,7 @@ namespace exaDEM
         ONIKA_HOST_DEVICE_FUNC 
         inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
         //inline void operator()(
-            Interaction& item, 
+            Interaction&& item, 
             TMPC* cells, 
             const ContactParams& hkp, 
             const double time) const
@@ -241,14 +241,15 @@ namespace exaDEM
         template<typename TMPLC>
           ONIKA_HOST_DEVICE_FUNC 
           inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
-              Interaction& item, 
+              Interaction&& item, 
               TMPLC* cells, 
               driver_t* drvs, 
               const ContactParams& hkp, 
               const double time) const
           {
             const int driver_idx = item.id_j; //
-            TMPLD& driver = std::get<TMPLD>(drvs[driver_idx]);
+            //TMPLD& driver = std::get<TMPLD>(drvs[driver_idx]); // issue on GPU
+            TMPLD& driver = (TMPLD&)(drvs[driver_idx]);
             auto& cell = cells[item.cell_i];
             const size_t p   = item.p_i;
             // === positions
@@ -374,14 +375,15 @@ namespace exaDEM
 			 */
 			template<typename TMPC>
 				ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()( 
-						Interaction& item, 
+						Interaction && item, 
 						TMPC* cells, 
 						driver_t* drvs, 
 						const ContactParams& hkp, 
 						const double time) const
 				{
 					const int driver_idx = item.id_j; //
-					auto& driver = std::get<Stl_mesh>(drvs[driver_idx]) ;
+					//auto& driver = std::get<Stl_mesh>(drvs[driver_idx]) ; // issue on gpu
+					Stl_mesh& driver = (Stl_mesh&)(drvs[driver_idx]) ;
 					auto& cell = cells[item.cell_i];
 
           const size_t p_i   = item.p_i;

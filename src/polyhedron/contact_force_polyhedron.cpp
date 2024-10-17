@@ -29,6 +29,7 @@ under the License.
 
 #include <exaDEM/contact_force_parameters.h>
 #include <exaDEM/compute_contact_force.h>
+
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/interactionSOA.hpp>
 #include <exaDEM/interaction/interactionAOS.hpp>
@@ -111,7 +112,8 @@ namespace exaDEM
       contact_law_driver<Cylinder> cyli;
       contact_law_driver<Surface>  surf;
       contact_law_driver<Ball>     ball;
-      contact_law_stl stlm = {};
+      contact_law_stl stlm;
+			contact_law poly;
 
       if(*symetric == false) 
       {
@@ -119,18 +121,23 @@ namespace exaDEM
         std::abort();
       }
 
-			contact_law poly;
+#define __params__ store_interactions, cells, hkp, shps, time
+#define __params_driver__ store_interactions, cells, drvs, hkp_drvs, shps, time
+
 			for(size_t type = 0 ; type <= 3 ; type++)
 			{
-				run_contact_law(parallel_execution_context(), type, classifier, poly, store_interactions, cells, hkp, shps, time);
+				run_contact_law(parallel_execution_context(), type, classifier, poly, __params__);
 			}
-			run_contact_law(parallel_execution_context(), 4, classifier, cyli, store_interactions, cells, drvs, hkp_drvs, shps, time);  
-			run_contact_law(parallel_execution_context(), 5, classifier, surf, store_interactions, cells, drvs, hkp_drvs, shps, time);  
-			run_contact_law(parallel_execution_context(), 6, classifier, ball, store_interactions, cells, drvs, hkp_drvs, shps, time);  
+			run_contact_law(parallel_execution_context(), 4, classifier, cyli, __params_driver__);  
+			run_contact_law(parallel_execution_context(), 5, classifier, surf, __params_driver__);  
+			run_contact_law(parallel_execution_context(), 6, classifier, ball, __params_driver__);  
 			for(int type = 7 ; type <= 12 ; type++)
 			{
-				run_contact_law(parallel_execution_context(), type, classifier, stlm, store_interactions, cells, drvs, hkp_drvs, shps, time);  
+				run_contact_law(parallel_execution_context(), type, classifier, stlm, __params_driver__);  
 			}
+
+#undef __params__
+#undef __params_driver__
 
       if(write_interactions)
       {

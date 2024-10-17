@@ -116,7 +116,7 @@ namespace exaDEM
 				kernel(k),
 				packer(p), 
 				params(std::tuple<Args...>(args...)) 
-			{} 
+			{ } 
 
 
 			/**
@@ -130,11 +130,10 @@ namespace exaDEM
 				ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const
 				{
 					exaDEM::Interaction item = data(i);
-					const auto [dn, pos, fn, ft] = kernel(item, std::get<Is>(params)...);
+					const auto [dn, pos, fn, ft] = kernel(std::forward<exaDEM::Interaction>(item), std::get<Is>(params)...);
 					data.update(i, item); 
 					packer(i, dn, pos, fn, ft); // packer is used to store interaction data 
 				}
-
 
 			/**
 			 * @brief Functor operator to apply the kernel function to each element in the array.
@@ -146,7 +145,6 @@ namespace exaDEM
 				apply(i, tuple_helper::gen_seq<sizeof...(Args)>{});
 			}
 		};
-
 }
 
 
@@ -155,7 +153,7 @@ namespace onika
 {
 	namespace parallel
 	{
-		template<typename T, typename K, typename... Args> struct ParallelForFunctorTraits < exaDEM::WrapperForAll <T,K,Args... > >
+		template<typename T, typename K, typename A, typename... Args> struct ParallelForFunctorTraits < exaDEM::WrapperForAll <T, K, A, Args... > >
 		{
 			static inline constexpr bool CudaCompatible = true;
 		};
