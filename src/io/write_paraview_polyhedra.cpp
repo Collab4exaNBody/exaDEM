@@ -92,7 +92,7 @@ namespace exaDEM
       std::stringstream buff_faces;    // store faces
       std::stringstream buff_offsets;  // store face offsets
 
-#     define __PARAMS__ count_vertex, count_face, buff_vertices, buff_faces, buff_offsets;
+#     define __PARAMS__ count_vertex, count_face, buff_vertices, buff_faces, buff_offsets
       // fill string buffers
       for (size_t cell_a = 0; cell_a < n_cells; cell_a++)
       {

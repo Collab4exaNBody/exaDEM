@@ -90,7 +90,7 @@ namespace exaDEM
        */
       ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator()(const uint16_t type, const VertexArray &pi, const int i, const shape *shpi, const VertexArray &pj, const int j, const shape *shpj) const
       {
-#       define __params__     pi, i, shpi, pj, j, shpj;;
+#       define __params__     pi, i, shpi, pj, j, shpj
         assert(type >= uint16_t(0) && type <= uint16_t(4));
         switch (type)
         {
@@ -347,8 +347,8 @@ namespace exaDEM
        */
       ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator()(const uint16_t type, const Vec3d &pi, const int i, const shape *shpi, const exanb::Quaternion &oi, const Vec3d &pj, const int j, const shape *shpj, const exanb::Quaternion &oj) const
       {
-#       define __params__     pi, i, shpi, oi, pj, j, shpj, oj;;
-#       define __inv_params__ pj, j, shpj, oj, pi, i, shpi, oi;;
+#       define __params__     pi, i, shpi, oi, pj, j, shpj, oj
+#       define __inv_params__ pj, j, shpj, oj, pi, i, shpi, oi
         assert(type >= uint16_t(7) && type <= uint16_t(12));
         switch (type)
         {

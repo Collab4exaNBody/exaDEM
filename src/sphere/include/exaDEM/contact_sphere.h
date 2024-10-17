@@ -297,7 +297,7 @@ namespace exaDEM
        */
       ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator()(const uint16_t type, const Vec3d &pi, const double radius, const Vec3d &pj, const int j, const shape *const shpj, const exanb::Quaternion &oj) const
       {
-#       define __params__     pi, radius, pj, j, shpj, oj;;
+#       define __params__     pi, radius, pj, j, shpj, oj
         assert(type >= 7 && type <= 12); // Asserting valid interaction type range
         switch (type)
         {

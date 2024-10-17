@@ -119,8 +119,8 @@ namespace exaDEM
         std::abort();
       }
 
-#     define __params__ store_interactions, cells, hkp, shps, time;
-#     define __params_driver__ store_interactions, cells, drvs, hkp_drvs, shps, time;
+#     define __params__ store_interactions, cells, hkp, shps, time
+#     define __params_driver__ store_interactions, cells, drvs, hkp_drvs, shps, time
 
       for (size_t type = 0; type <= 3; type++)
       {

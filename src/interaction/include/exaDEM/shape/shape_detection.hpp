@@ -565,7 +565,7 @@ namespace exaDEM
    */
   ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detection_edge_edge_core(const Vec3d &vfi, const Vec3d &vsi, const double ri, const Vec3d &vfj, const Vec3d &vsj, const double rj)
   {
-#   define _EPSILON_VALUE_ 1.0e-12;
+#   define _EPSILON_VALUE_ 1.0e-12
     const double R = ri + rj;
 
     const Vec3d Ei = vsi - vfi;

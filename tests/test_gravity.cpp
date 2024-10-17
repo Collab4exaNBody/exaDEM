@@ -19,8 +19,8 @@ template <typename... Args> void is_equal(Args &&...a_args)
   }
 }
 
-#define NAME(Y) check_##Y;
-#define CHECK(X) is_equal(X,NAME(X));	;
+#define NAME(Y) check_##Y
+#define CHECK(X) is_equal(X,NAME(X));
 
 int main()
 {
