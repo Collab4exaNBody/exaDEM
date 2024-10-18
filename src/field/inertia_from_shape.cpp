@@ -28,59 +28,51 @@ under the License.
 
 namespace exaDEM
 {
-using namespace exanb;
+  using namespace exanb;
 
-  template<typename GridT
-    , class = AssertGridHasFields< GridT, field::_inertia, field::_radius, field::_mass>
-    >
-  class PolyhedraUpdateInertia : public OperatorNode
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_inertia, field::_radius, field::_mass>> class PolyhedraUpdateInertia : public OperatorNode
   {
-    ADD_SLOT( GridT , grid  , INPUT_OUTPUT );
-		ADD_SLOT( shapes  , shapes_collection, INPUT_OUTPUT , DocString{"Collection of shapes"});
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
 
-		public:
-		// -----------------------------------------------
-		// ----------- Operator documentation ------------
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
+  public:
+    // -----------------------------------------------
+    // ----------- Operator documentation ------------
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator updates the inertia field.
         )EOF";
-		}
+    }
 
-		inline void execute () override final
-		{
-			auto cells = grid->cells();
-			const IJK dims = grid->dimension();
-			auto& sphs = *shapes_collection; 
+    inline void execute() override final
+    {
+      auto cells = grid->cells();
+      const IJK dims = grid->dimension();
+      auto &sphs = *shapes_collection;
 
 #     pragma omp parallel
-			{
-				GRID_OMP_FOR_BEGIN(dims,i,loc, schedule(dynamic) )
-				{
-					auto* __restrict__ m = cells[i][field::mass];
-					auto* __restrict__ inertia = cells[i][field::inertia];
-					auto* __restrict__ t = cells[i][field::type];
-					const size_t n = cells[i].size();
+      {
+        GRID_OMP_FOR_BEGIN (dims, i, loc, schedule(dynamic))
+        {
+          auto *__restrict__ m = cells[i][field::mass];
+          auto *__restrict__ inertia = cells[i][field::inertia];
+          auto *__restrict__ t = cells[i][field::type];
+          const size_t n = cells[i].size();
 #         pragma omp simd
-					for(size_t j=0;j<n;j++)
-					{
+          for (size_t j = 0; j < n; j++)
+          {
 
-						inertia[j] = m[j] * sphs[t[j]]->get_Im();
-					}
-				}
-				GRID_OMP_FOR_END
-			}
-		}
+            inertia[j] = m[j] * sphs[t[j]]->get_Im();
+          }
+        }
+        GRID_OMP_FOR_END
+      }
+    }
+  };
 
-	};
+  template <class GridT> using PolyhedraUpdateInertiaTmpl = PolyhedraUpdateInertia<GridT>;
 
-	template<class GridT> using PolyhedraUpdateInertiaTmpl = PolyhedraUpdateInertia<GridT>;
-
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "inertia_from_shape", make_grid_variant_operator< PolyhedraUpdateInertiaTmpl > );
-	}
-}
-
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("inertia_from_shape", make_grid_variant_operator<PolyhedraUpdateInertiaTmpl>); }
+} // namespace exaDEM

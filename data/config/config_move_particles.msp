@@ -61,8 +61,6 @@ ghost_full_update:
   - ghost_update_all
   - compute_new_vertices
 
-  
-
 ################### parallel particle migration ############################
 
 ## These operator should be define by your particle mode (spheres or polyhedra)
@@ -95,7 +93,7 @@ parallel_update_particles:
 
 # define actions to initialize particles at startup, just after file read
 init_particles:
-  - move_particles # standard move_particles, even if friction is enabled. just re-order particles in cells, if needed
+  - move_particles 
   - extend_domain
   - load_balance
   - migrate_particles
@@ -136,12 +134,10 @@ load_balancing_if_triggered:
     - load_balance
 
 update_particles_full_body:
-#  - mpi_barrier
   - compress_data
   - move_particles_extra_data
   - trigger_load_balance
   - load_balancing_if_triggered
-#  - mpi_barrier
   - parallel_update_particles
   - reorder_extra_data
 

@@ -2,6 +2,8 @@
 
 ######### Move Particles ###################
 
+save_shapes: write_shape_file
+
 evaluate_particle_displ:
   rebind: { threshold: max_displ , result: particle_displ }
   body: 

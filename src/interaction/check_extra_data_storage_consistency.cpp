@@ -22,13 +22,10 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	template<class GridT> using CheckInfoInteractionConsistencyTmpl = CheckInfoConsistency<GridT, GridCellParticleInteraction>;
+  template <class GridT> using CheckInfoInteractionConsistencyTmpl = CheckInfoConsistency<GridT, GridCellParticleInteraction>;
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "check_info_interaction_consistency", make_grid_variant_operator< CheckInfoInteractionConsistencyTmpl > );
-	}
-}
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("check_info_interaction_consistency", make_grid_variant_operator<CheckInfoInteractionConsistencyTmpl>); }
+} // namespace exaDEM

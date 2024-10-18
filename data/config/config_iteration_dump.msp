@@ -24,7 +24,7 @@ dump_data_paraview:
       body:
         - message: { endl: true }
   - write_paraview_generic
-  - dump_stl_mesh
+  - paraview_driver
 
 compute_volume:
   - domain_volume
@@ -54,6 +54,7 @@ dump_data_particles:
   - compress_data
   - stats_interactions
   - write_dump_particle_interaction
+  - dump_driver
   - chunk_neighbors_impl #redbuild interactions
 
 iteration_dump_writer: 

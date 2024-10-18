@@ -29,17 +29,13 @@ namespace exaDEM
      * @brief Get the type of the driver (in this case, UNDEFINED).
      * @return The type of the driver.
      */
-    constexpr DRIVER_TYPE get_type() {return DRIVER_TYPE::UNDEFINED;}
-
+    constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::UNDEFINED; }
 
     void push_v_to_r(const double dt) {}
 
     /**
      * @brief Print information about the undefined driver.
      */
-    void print()
-    {
-      lout << "Driver Type: UNDEFINED" << std::endl;
-    }
+    void print() { lout << "Driver Type: UNDEFINED" << std::endl; }
   };
-}
+} // namespace exaDEM

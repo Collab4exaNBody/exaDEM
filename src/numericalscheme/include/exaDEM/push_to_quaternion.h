@@ -29,26 +29,24 @@ namespace exaDEM
     double m_dt_2;
     double m_dt2_2;
 
-    ONIKA_HOST_DEVICE_FUNC inline void operator () (exanb::Quaternion& Q, exanb::Vec3d& vrot, const exanb::Vec3d arot) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(exanb::Quaternion &Q, exanb::Vec3d &vrot, const exanb::Vec3d arot) const
     {
       using namespace exanb;
-			Q = Q + dot(Q, vrot) * m_dt;
+      Q = Q + dot(Q, vrot) * m_dt;
       Q = normalize(Q);
 
       vrot += m_dt_2 * arot;
     }
   };
-}
+} // namespace exaDEM
 
 namespace exanb
 {
 
-  template<> struct ComputeCellParticlesTraits<exaDEM::PushToQuaternionFunctor>
+  template <> struct ComputeCellParticlesTraits<exaDEM::PushToQuaternionFunctor>
   {
     static inline constexpr bool RequiresBlockSynchronousCall = false;
     static inline constexpr bool CudaCompatible = true;
   };
 
-}
-
-
+} // namespace exanb

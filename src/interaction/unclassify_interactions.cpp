@@ -42,40 +42,38 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  template<typename GridT , class = AssertGridHasFields< GridT >>
-    class UnclassifyInteractions : public OperatorNode
+  template <typename GridT, class = AssertGridHasFields<GridT>> class UnclassifyInteractions : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet< field::_vrot, field::_arot >;
-    static constexpr ComputeFields compute_field_set {};
+    using ComputeFields = FieldSet<field::_vrot, field::_arot>;
+    static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT( GridT                       , grid , INPUT_OUTPUT , REQUIRED );
-    ADD_SLOT( GridCellParticleInteraction , ges  , INPUT_OUTPUT , DocString{"Interaction list"} );
-		ADD_SLOT( Classifier<InteractionSOA>                  , ic   , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
+    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
 
-    public:
-
+  public:
     inline std::string documentation() const override final
     {
       return R"EOF(
                 )EOF";
     }
 
-    inline void execute () override final
+    inline void execute() override final
     {
-      //using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
-      if( grid->number_of_cells() == 0 ) { return; }
-			if(!ic.has_value()) return;
-			ic->unclassify(*ges);
+      // using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
+      if (grid->number_of_cells() == 0)
+      {
+        return;
+      }
+      if (!ic.has_value())
+        return;
+      ic->unclassify(*ges);
     }
   };
 
-  template<class GridT> using UnclassifyInteractionsTmpl = UnclassifyInteractions<GridT>;
+  template <class GridT> using UnclassifyInteractionsTmpl = UnclassifyInteractions<GridT>;
 
-  // === register factories ===  
-  CONSTRUCTOR_FUNCTION
-  {
-    OperatorNodeFactory::instance()->register_factory( "unclassify_interactions", make_grid_variant_operator< UnclassifyInteractionsTmpl > );
-  }
-}
-
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("unclassify_interactions", make_grid_variant_operator<UnclassifyInteractionsTmpl>); }
+} // namespace exaDEM

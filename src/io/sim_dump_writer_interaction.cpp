@@ -22,18 +22,17 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
-	using DumpFieldSet = FieldSet<field::_rx,field::_ry,field::_rz, field::_vx,field::_vy,field::_vz, field::_mass, field::_homothety, field::_radius, field::_orient , field::_mom , field::_vrot , field::_arot, field::_inertia , field::_id , field::_type >;
+  using namespace exanb;
+  using DumpFieldSet = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type>;
 
-	template<typename GridT> using SimDumpWriteParticleInteractionTmpl = SimDumpWriteParticleES<GridT, exaDEM::Interaction, DumpFieldSet>;
-	template<typename GridT> using SimDumpWriteParticleDoubleTmpl = SimDumpWriteParticleES<GridT, double, DumpFieldSet>;
+  template <typename GridT> using SimDumpWriteParticleInteractionTmpl = SimDumpWriteParticleES<GridT, exaDEM::Interaction, DumpFieldSet>;
+  template <typename GridT> using SimDumpWriteParticleDoubleTmpl = SimDumpWriteParticleES<GridT, double, DumpFieldSet>;
 
-	// === register factories ===
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "write_dump_particle_interaction" , make_grid_variant_operator<SimDumpWriteParticleInteractionTmpl> );
-		OperatorNodeFactory::instance()->register_factory( "write_dump_particle_friction" , make_grid_variant_operator<SimDumpWriteParticleDoubleTmpl> );
-	}
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION
+  {
+    OperatorNodeFactory::instance()->register_factory("write_dump_particle_interaction", make_grid_variant_operator<SimDumpWriteParticleInteractionTmpl>);
+    OperatorNodeFactory::instance()->register_factory("write_dump_particle_friction", make_grid_variant_operator<SimDumpWriteParticleDoubleTmpl>);
+  }
 
-}
-
+} // namespace exaDEM

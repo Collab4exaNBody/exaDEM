@@ -29,17 +29,17 @@ namespace exaDEM
    */
   struct Cylinder
   {
-    double radius;          /**< Radius of the cylinder. */
-    exanb::Vec3d axis;      /**< Axis direction of the cylinder. */
-    exanb::Vec3d center;    /**< Center position of the cylinder. */
-    exanb::Vec3d vel;       /**< Velocity of the cylinder. */
-    exanb::Vec3d vrot;      /**< Angular velocity of the cylinder. */
+    double radius;       /**< Radius of the cylinder. */
+    exanb::Vec3d axis;   /**< Axis direction of the cylinder. */
+    exanb::Vec3d center; /**< Center position of the cylinder. */
+    exanb::Vec3d vel;    /**< Velocity of the cylinder. */
+    exanb::Vec3d vrot;   /**< Angular velocity of the cylinder. */
 
     /**
      * @brief Get the type of the driver (in this case, CYLINDER).
      * @return The type of the driver.
      */
-    constexpr DRIVER_TYPE get_type() {return DRIVER_TYPE::CYLINDER;}
+    constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::CYLINDER; }
 
     /**
      * @brief Print information about the cylinder.
@@ -54,23 +54,29 @@ namespace exaDEM
       lout << "AngVel: " << vrot << std::endl;
     }
 
+    /**
+     * @brief Write cylinder information into a stream.
+     */
+    void dump_driver(int id, std::stringstream &stream)
+    {
+      stream << "  - add_surface:" << std::endl;
+      stream << "     id: " << id << std::endl;
+      stream << "     axis: [" << this->axis << "]" << std::endl;
+      stream << "     center: [" << this->center << "]" << std::endl;
+      stream << "     velocity: [" << this->vel << "]" << std::endl;
+      stream << "     angular_velocity: [" << this->vrot << "]" << std::endl;
+    }
 
     /**
      * @brief return driver velocity
      */
-    ONIKA_HOST_DEVICE_FUNC inline Vec3d& get_vel()
-    {
-      return vel;
-    }
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d &get_vel() { return vel; }
 
     /**
      * @brief Update the position of the ball.
      * @param t The time step.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void push_v_to_r ( const double t )
-    {
-      center = center + t * vel; 
-    }
+    ONIKA_HOST_DEVICE_FUNC inline void push_v_to_r(const double t) { center = center + t * vel; }
 
     /**
      * @brief Filter function to check if a point is within a certain radius of the cylinder.
@@ -78,7 +84,7 @@ namespace exaDEM
      * @param vi The vector representing the point to check.
      * @return True if the point is within the cut-off radius of the cylinder, false otherwise.
      */
-    ONIKA_HOST_DEVICE_FUNC inline bool filter( const double rcut, const Vec3d& vi)
+    ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const Vec3d &vi)
     {
       const Vec3d proj = vi * axis;
 
@@ -98,7 +104,7 @@ namespace exaDEM
      * intersects with a cylindrical shape defined by its center projection 'center_proj', axis 'axis',
      * and radius 'radius'.
      *
-     * @param rcut The shape radius. 
+     * @param rcut The shape radius.
      * @param pi The position of the vertex.
      *
      * @return A tuple containing:
@@ -108,7 +114,7 @@ namespace exaDEM
      *   - The contact point between the vertex and the cylinder.
      */
     // rcut = r shape
-    ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d& pi)
+    ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d &pi)
     {
       // === project the vertex in the plan as the cylinder center
       const Vec3d proj = pi * axis;
@@ -122,13 +128,13 @@ namespace exaDEM
       // === compute interpenetration
       const double dn = radius - (rcut + d);
 
-      if ( dn > 0 )
+      if (dn > 0)
       {
         return {false, 0.0, Vec3d(), Vec3d()};
       }
       else
       {
-        // === compute contact normal 
+        // === compute contact normal
         const Vec3d n = dir / d;
 
         // === compute contact point
@@ -138,4 +144,4 @@ namespace exaDEM
       }
     }
   };
-}
+} // namespace exaDEM

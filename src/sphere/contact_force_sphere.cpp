@@ -48,48 +48,45 @@ namespace exaDEM
   using namespace exanb;
   using namespace sphere;
 
-  template<typename GridT , class = AssertGridHasFields< GridT, field::_radius >>
-    class ComputeContactClassifierSphereGPU : public OperatorNode
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class ComputeContactClassifierSphereGPU : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet< field::_vrot, field::_arot >;
+    using ComputeFields = FieldSet<field::_vrot, field::_arot>;
     using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
-    static constexpr ComputeFields compute_field_set {};
+    static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
-    ADD_SLOT( ContactParams , config            , INPUT        , REQUIRED , DocString{"Contact parameters for sphere interactions"}); // can be re-used for to dump contact network
-    ADD_SLOT( ContactParams , config_driver     , INPUT        , OPTIONAL , DocString{"Contact parameters for drivers, optional"}); // can be re-used for to dump contact network
-    ADD_SLOT( double      , dt                , INPUT        , REQUIRED , DocString{"Time step value"});
-    ADD_SLOT( bool        , symetric          , INPUT_OUTPUT , REQUIRED , DocString{"Activate the use of symetric feature (contact law)"});
-    ADD_SLOT( Drivers     , drivers           , INPUT        , REQUIRED ,DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
-    ADD_SLOT( Classifier<InteractionSOA>  , ic                , INPUT_OUTPUT , DocString{"Interaction lists classified according to their types"} );
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(ContactParams, config, INPUT, REQUIRED, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
+    ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL, DocString{"Contact parameters for drivers, optional"}); // can be re-used for to dump contact network
+    ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"Time step value"});
+    ADD_SLOT(bool, symetric, INPUT_OUTPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
+    ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
+    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
     // analysis
-    ADD_SLOT( long        , timestep          , INPUT , REQUIRED );
-    ADD_SLOT( bool        , save_interactions , INPUT , false           , DocString{"Store interactions into the classifier"});
-    ADD_SLOT( long        , analysis_interaction_dump_frequency  , INPUT , REQUIRED , DocString{"Write an interaction dump file"});
-    ADD_SLOT( long        , analysis_dump_stress_tensor_frequency, INPUT , REQUIRED , DocString{"Compute avg Stress Tensor."});
-    ADD_SLOT( long        , simulation_log_frequency             , INPUT , REQUIRED , DocString{"Log frequency."});
-    ADD_SLOT( std::string , dir_name                             , INPUT , REQUIRED , DocString{"Output directory name."} );
-    ADD_SLOT( std::string , interaction_basename                 , INPUT , REQUIRED , DocString{"Write an Output file containing interactions." } );
+    ADD_SLOT(long, timestep, INPUT, REQUIRED);
+    ADD_SLOT(bool, save_interactions, INPUT, false, DocString{"Store interactions into the classifier"});
+    ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
+    ADD_SLOT(long, analysis_dump_stress_tensor_frequency, INPUT, REQUIRED, DocString{"Compute avg Stress Tensor."});
+    ADD_SLOT(long, simulation_log_frequency, INPUT, REQUIRED, DocString{"Log frequency."});
+    ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
+    ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
 
+  public:
+    inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
 
-    public:
-
-    inline std::string documentation() const override final
+    inline void execute() override final
     {
-      return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF";
-    }
-
-    inline void execute () override final
-    {
-      if( grid->number_of_cells() == 0 ) { return; }
+      if (grid->number_of_cells() == 0)
+      {
+        return;
+      }
 
       /** Analysis */
       const long frequency_interaction = *analysis_interaction_dump_frequency;
-      bool write_interactions = ( frequency_interaction > 0 && (*timestep) % frequency_interaction == 0 );
+      bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
 
       const long frequency_stress_tensor = *analysis_dump_stress_tensor_frequency;
-      bool compute_stress_tensor = ( frequency_stress_tensor > 0 && (*timestep) % frequency_stress_tensor == 0);
+      bool compute_stress_tensor = (frequency_stress_tensor > 0 && (*timestep) % frequency_stress_tensor == 0);
 
       const long log_frequency = *simulation_log_frequency;
       bool need_interactions_for_log_frequency = (*timestep) % log_frequency;
@@ -97,60 +94,56 @@ namespace exaDEM
       bool store_interactions = write_interactions || compute_stress_tensor || need_interactions_for_log_frequency;
 
       /** Get Driver */
-      driver_t* drvs =  drivers->data();
-      auto* cells = grid->cells();
+      driver_t *drvs = drivers->data();
+      auto *cells = grid->cells();
       const ContactParams hkp = *config;
       ContactParams hkp_drvs{};
 
-      if ( drivers->get_size() > 0 &&  config_driver.has_value() )
+      if (drivers->get_size() > 0 && config_driver.has_value())
       {
         hkp_drvs = *config_driver;
       }
 
       const double time = *dt;
-      auto& classifier = *ic;
+      auto &classifier = *ic;
 
       contact_law_driver<Cylinder> cyli;
-      contact_law_driver<Surface>  surf;
-      contact_law_driver<Ball>     ball;
+      contact_law_driver<Surface> surf;
+      contact_law_driver<Ball> ball;
       contact_law_stl stlm = {};
 
-      if(*symetric)
-			{
+      if (*symetric)
+      {
         contact_law<true> sph;
-        run_contact_law(parallel_execution_context(), 0, classifier, sph, store_interactions, cells, hkp, time);  
+        run_contact_law(parallel_execution_context(), 0, classifier, sph, store_interactions, cells, hkp, time);
       }
       else
       {
         contact_law<false> sph;
-        run_contact_law(parallel_execution_context(), 0, classifier, sph, store_interactions, cells, hkp, time);  
+        run_contact_law(parallel_execution_context(), 0, classifier, sph, store_interactions, cells, hkp, time);
       }
-      run_contact_law(parallel_execution_context(), 4, classifier, cyli, store_interactions, cells, drvs, hkp_drvs, time);  
-      run_contact_law(parallel_execution_context(), 5, classifier, surf, store_interactions, cells, drvs, hkp_drvs, time);  
-      run_contact_law(parallel_execution_context(), 6, classifier, ball, store_interactions, cells, drvs, hkp_drvs, time);  
-      for(int type = 7 ; type <= 9 ; type++)
+      run_contact_law(parallel_execution_context(), 4, classifier, cyli, store_interactions, cells, drvs, hkp_drvs, time);
+      run_contact_law(parallel_execution_context(), 5, classifier, surf, store_interactions, cells, drvs, hkp_drvs, time);
+      run_contact_law(parallel_execution_context(), 6, classifier, ball, store_interactions, cells, drvs, hkp_drvs, time);
+      for (int type = 7; type <= 9; type++)
       {
-        run_contact_law(parallel_execution_context(), type, classifier, stlm, store_interactions, cells, drvs, hkp_drvs, time);  
+        run_contact_law(parallel_execution_context(), type, classifier, stlm, store_interactions, cells, drvs, hkp_drvs, time);
       }
-      
-      //printf("EXECUTE\n");
-      //getchar();
 
-      if(write_interactions)
+      // printf("EXECUTE\n");
+      // getchar();
+
+      if (write_interactions)
       {
         auto stream = itools::create_buffer(*grid, classifier);
         std::string ts = std::to_string(*timestep);
-        itools::write_file(stream, *dir_name, (*interaction_basename) + ts);        
+        itools::write_file(stream, *dir_name, (*interaction_basename) + ts);
       }
     }
   };
 
-  template<class GridT> using ComputeContactClassifierGPUTmpl = ComputeContactClassifierSphereGPU<GridT>;
+  template <class GridT> using ComputeContactClassifierGPUTmpl = ComputeContactClassifierSphereGPU<GridT>;
 
-  // === register factories ===  
-  CONSTRUCTOR_FUNCTION
-  {
-    OperatorNodeFactory::instance()->register_factory( "contact_sphere", make_grid_variant_operator< ComputeContactClassifierGPUTmpl > );
-  }
-}
-
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("contact_sphere", make_grid_variant_operator<ComputeContactClassifierGPUTmpl>); }
+} // namespace exaDEM

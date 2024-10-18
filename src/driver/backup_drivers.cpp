@@ -17,9 +17,9 @@ specific language governing permissions and limitations
 under the License.
 */
 //#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
-#include "exanb/core/operator.h"
-#include "exanb/core/operator_slot.h"
-#include "exanb/core/operator_factory.h"
+#include <exanb/core/operator.h>
+#include <exanb/core/operator_slot.h>
+#include <exanb/core/operator_factory.h>
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/drivers.h>
@@ -27,35 +27,30 @@ under the License.
 namespace exaDEM
 {
 
-	using namespace exanb;
+  using namespace exanb;
 
-	class BackupDrivers : public OperatorNode
-	{
-		ADD_SLOT( Drivers , drivers , INPUT , REQUIRED , DocString{"List of Drivers"});
-		ADD_SLOT( Drivers , backup_drvs , INPUT_OUTPUT , Drivers() , DocString{"List of backup Drivers"});
+  class BackupDrivers : public OperatorNode
+  {
+    ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
+    ADD_SLOT(Drivers, backup_drvs, INPUT_OUTPUT, Drivers(), DocString{"List of backup Drivers"});
 
-		public:
-
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator creates a copy of the current drivers.
         )EOF";
-		}
+    }
 
-		inline void execute () override final
-		{
-			Drivers& drvs = *drivers;
-			Drivers& backup = *backup_drvs;
-			backup.clear();
-			backup = drvs; // deep copy 
-		}
-	};
+    inline void execute() override final
+    {
+      Drivers &drvs = *drivers;
+      Drivers &backup = *backup_drvs;
+      backup.clear();
+      backup = drvs; // deep copy
+    }
+  };
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "backup_drivers", make_simple_operator<BackupDrivers> );
-	}
-}
-
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("backup_drivers", make_simple_operator<BackupDrivers>); }
+} // namespace exaDEM

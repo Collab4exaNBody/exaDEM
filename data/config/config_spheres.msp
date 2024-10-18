@@ -2,6 +2,8 @@
 
 ######### Move Particles ###################
 
+save_shapes: nop
+
 chunk_neighbors_impl:
   - chunk_neighbors_contact
   - unclassify_interactions

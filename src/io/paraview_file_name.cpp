@@ -28,37 +28,35 @@ namespace exanb
 {
 
   class TimeStepParaviewFileNameOperator : public OperatorNode
-  {  
-    ADD_SLOT( long        , timestep  , INPUT , REQUIRED );
-    ADD_SLOT( std::string , format    , INPUT , REQUIRED );
-    ADD_SLOT( std::string , dir_name  , INPUT , REQUIRED , DocString{"Output directory name."} );
-    ADD_SLOT( std::string , filename  , OUTPUT );
+  {
+    ADD_SLOT(long, timestep, INPUT, REQUIRED);
+    ADD_SLOT(std::string, format, INPUT, REQUIRED);
+    ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
+    ADD_SLOT(std::string, filename, OUTPUT);
 
   public:
     inline void execute() override final
     {
       std::string paraview_filename = (*dir_name) + "/" + (*format);
-      *filename = format_string( paraview_filename , *timestep );
+      *filename = format_string(paraview_filename, *timestep);
     }
 
-    inline void yaml_initialize(const YAML::Node& node) override final
+    inline void yaml_initialize(const YAML::Node &node) override final
     {
       YAML::Node tmp;
-      if( node.IsScalar() )
+      if (node.IsScalar())
       {
         tmp["format"] = node;
       }
-      else { tmp = node; }
-      this->OperatorNode::yaml_initialize( tmp );
+      else
+      {
+        tmp = node;
+      }
+      this->OperatorNode::yaml_initialize(tmp);
     }
-
   };
- 
-  // === register factories ===  
-  CONSTRUCTOR_FUNCTION
-  {
-    OperatorNodeFactory::instance()->register_factory( "timestep_paraview_file", make_compatible_operator< TimeStepParaviewFileNameOperator > );
-  }
 
-}
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("timestep_paraview_file", make_compatible_operator<TimeStepParaviewFileNameOperator>); }
 
+} // namespace exanb

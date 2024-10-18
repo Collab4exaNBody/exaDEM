@@ -27,57 +27,49 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	template<typename GridT
-		, class = AssertGridHasFields< GridT >
-		>
-		class UpdateCellList : public OperatorNode
-		{
-			using ComputeFields = FieldSet<>;
-			static constexpr ComputeFields compute_field_set {};
-      template <typename T> using VectorT =  onika::memory::CudaMMVector<T>;
+  template <typename GridT, class = AssertGridHasFields<GridT>> class UpdateCellList : public OperatorNode
+  {
+    using ComputeFields = FieldSet<>;
+    static constexpr ComputeFields compute_field_set{};
+    template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
 
-			ADD_SLOT( GridT           , grid      , INPUT        , REQUIRED );
-			ADD_SLOT( CellListWrapper , cell_list , INPUT_OUTPUT , DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+    ADD_SLOT(CellListWrapper, cell_list, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
 
-
-			public:
-
-			inline std::string documentation() const override final
-			{
-				return R"EOF( This operator update the list of non-empty cells. This operator should be called as long as a particle move from a cell to another cell.
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF( This operator update the list of non-empty cells. This operator should be called as long as a particle move from a cell to another cell.
 				        )EOF";
-			}
+    }
 
-			inline void execute () override final
-			{
-				const auto& cells    = grid->cells();
-        IJK dims = grid->dimension();
-        const ssize_t gl = grid->ghost_layers();
-        auto& cl = cell_list->m_data;
+    inline void execute() override final
+    {
+      const auto &cells = grid->cells();
+      IJK dims = grid->dimension();
+      const ssize_t gl = grid->ghost_layers();
+      auto &cl = cell_list->m_data;
 
-        // reset the cell list
-        cl.clear();
+      // reset the cell list
+      cl.clear();
 
-        // iterate over "real" cells
-        GRID_OMP_FOR_BEGIN( dims-2*gl, _, loc_no_gl )
-        {
-          const IJK loc = loc_no_gl + gl;
-          const size_t i = grid_ijk_to_index( dims , loc );
-	        const size_t n_particles = cells[i].size();
-          if( n_particles > 0 ) cl.push_back(i);
-        }
-        GRID_OMP_FOR_END
-			}
-		};
+      // iterate over "real" cells
+      GRID_OMP_FOR_BEGIN (dims - 2 * gl, _, loc_no_gl)
+      {
+        const IJK loc = loc_no_gl + gl;
+        const size_t i = grid_ijk_to_index(dims, loc);
+        const size_t n_particles = cells[i].size();
+        if (n_particles > 0)
+          cl.push_back(i);
+      }
+      GRID_OMP_FOR_END
+    }
+  };
 
-	template<class GridT> using UpdateCellListTmpl = UpdateCellList<GridT>;
+  template <class GridT> using UpdateCellListTmpl = UpdateCellList<GridT>;
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "update_cell_list", make_grid_variant_operator< UpdateCellListTmpl > );
-	}
-}
-
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("update_cell_list", make_grid_variant_operator<UpdateCellListTmpl>); }
+} // namespace exaDEM

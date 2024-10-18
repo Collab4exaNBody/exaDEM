@@ -30,30 +30,27 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
   class ReadShapeFileOperator : public OperatorNode
-	{
-		ADD_SLOT( std::string , filename         , INPUT , REQUIRED , DocString{"Input filename"});
-		ADD_SLOT( shapes      , shapes_collection, INPUT_OUTPUT , DocString{"Collection of shapes"});
+  {
+    ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"Input filename"});
+    ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
 
-		public:
-		inline std::string documentation() const override final
-		{
-			return R"EOF( This operator initialize shapes data structure from a shape input file.
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF( This operator initialize shapes data structure from a shape input file.
     	    			)EOF";
-		}
+    }
 
-		inline void execute () override final
-		{
-			auto& collection = *shapes_collection;
-			lout << "Read file= " << *filename << std::endl;
-			exaDEM::read_shp(collection, *filename);
-		};
-	};
+    inline void execute() override final
+    {
+      auto &collection = *shapes_collection;
+      lout << "Read file= " << *filename << std::endl;
+      exaDEM::read_shp(collection, *filename);
+    };
+  };
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "read_shape_file", make_simple_operator< ReadShapeFileOperator > );
-	}
-}
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("read_shape_file", make_simple_operator<ReadShapeFileOperator>); }
+} // namespace exaDEM

@@ -42,140 +42,130 @@ under the License.
 // ================== Thermodynamic state compute operator ======================
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
   using namespace exaDEM::itools;
 
-	template<class GridT ,	class = AssertGridHasFields< GridT, field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass >> struct SimulationStateNode : public OperatorNode
-	{
-		// compile time constant indicating if grid has type field
+  template <class GridT, class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass>> struct SimulationStateNode : public OperatorNode
+  {
+    // compile time constant indicating if grid has type field
 
-		ADD_SLOT( MPI_Comm           , mpi                 , INPUT , MPI_COMM_WORLD);
-		ADD_SLOT( GridT              , grid                , INPUT , REQUIRED);
-		ADD_SLOT( Domain             , domain              , INPUT , REQUIRED);
-    ADD_SLOT( CellListWrapper    , cell_list , INPUT   , DocString{"list of non empty cells within the current grid"});
-		ADD_SLOT( SimulationState    , simulation_state    , OUTPUT );
+    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+    ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(SimulationState, simulation_state, OUTPUT);
 
     // DEM data
-    ADD_SLOT( Classifier<InteractionSOA>         , ic                  , INPUT , DocString{"Interaction lists classified according to their types"} );
-    ADD_SLOT( bool               , symetric            , INPUT , REQUIRED , DocString{"Use of symetric feature (contact law)"});
+    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(bool, symetric, INPUT, REQUIRED, DocString{"Use of symetric feature (contact law)"});
 
-		static constexpr FieldSet<field::_vx ,field::_vy ,field::_vz, field::_vrot, field::_mass> reduce_field_set {};
-		
-		template< typename T >
-		inline IOSimInteractionResult reduce_sim_io(Classifier<T>& classifier, bool symetric)
-		{
-			IOSimInteractionResult res;
-			VectorT<IOSimInteractionResult> results;
-			int types = classifier.number_of_waves();
-			results.resize(types);
-			{
-				//std::vector<ParallelExecutionWrapper> pexw;
-				//pexw.resize(types);
-				for(int i = 0 ; i < types ; i++)
-				{
-					const auto& buffs       = classifier.buffers[i];
-					auto [ptr, size]        = classifier.get_info(i);
-					const double* const dnp = onika::cuda::vector_data( buffs.dn );
+    static constexpr FieldSet<field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass> reduce_field_set{};
 
-					int coef = 1;
-					if( i < 4 && symetric ) coef *= 2;
-					
-					InteractionWrapper<T> data(ptr);
+    template <typename T> inline IOSimInteractionResult reduce_sim_io(Classifier<T> &classifier, bool symetric)
+    {
+      IOSimInteractionResult res;
+      VectorT<IOSimInteractionResult> results;
+      int types = classifier.number_of_waves();
+      results.resize(types);
+      {
+        // std::vector<ParallelExecutionWrapper> pexw;
+        // pexw.resize(types);
+        for (int i = 0; i < types; i++)
+        {
+          const auto &buffs = classifier.buffers[i];
+          auto [data, size] = classifier.get_info(i);
+          const double *const dnp = onika::cuda::vector_data(buffs.dn);
 
-					//IOSimInteractionFunctor func = {dnp, coef};
-					IOSimInteractionFunctorWrapper func = {dnp, coef};
+          int coef = 1;
+          if (i < 4 && symetric)
+            coef *= 2;
 
-					if ( size > 0 && dnp != nullptr ) // skip it if forces has not been computed
-					{
-						//pexw[i] = exaDEM::itools::reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
-						//reduce_data<exaDEM::Interaction, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), ptr, func, size, results[i]);
-						reduce_data_wrapper<T, IOSimInteractionFunctorWrapper, IOSimInteractionResult>(parallel_execution_context(), data, func, size, results[i]);
-					}
-				}
-			} // synchronize 
-			for(int i = 0 ; i < types ; i++)
-			{ 
-				res.update(results[i]);
-			}
-			return res;
-		}
+          InteractionWrapper<T> dataWrapper(data);
+          IOSimInteractionFunctor func = {dnp, coef};
 
-		inline void execute () override final
-		{
-			MPI_Comm comm = *mpi;
-			SimulationState& sim_info = *simulation_state;
+          if (size > 0 && dnp != nullptr) // skip it if forces has not been computed
+          {
+            reduce_data<T, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), dataWrapper, func, size, results[i]);
+          }
+        }
+      } // synchronize
+      for (int i = 0; i < types; i++)
+      {
+        res.update(results[i]);
+      }
+      return res;
+    }
 
-			Vec3d kinetic_energy;  // constructs itself with 0s
-			Vec3d rotation_energy;  // constructs itself with 0s
-			double mass = 0.;
-			uint64_t total_particles = 0;
+    inline void execute() override final
+    {
+      MPI_Comm comm = *mpi;
+      SimulationState &sim_info = *simulation_state;
+
+      Vec3d kinetic_energy;  // constructs itself with 0s
+      Vec3d rotation_energy; // constructs itself with 0s
+      double mass = 0.;
+      uint64_t total_particles = 0;
 
       auto [cell_ptr, cell_size] = cell_list->info();
-			exaDEM::simulation_state_variables sim {}; //kinetic_energy, rotation_energy, mass, potential_energy, total_particles};
-			ReduceSimulationStateFunctor func = {};
-			reduce_cell_particles( *grid , false , func , sim, reduce_field_set , parallel_execution_context() , {} , cell_ptr, cell_size );
+      exaDEM::simulation_state_variables sim{}; // kinetic_energy, rotation_energy, mass, potential_energy, total_particles};
+      ReduceSimulationStateFunctor func = {};
+      reduce_cell_particles(*grid, false, func, sim, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
 
       // get interaction informations
-      Classifier<InteractionSOA>& classifier = *ic;
-      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric );
+      Classifier<InteractionSOA> &classifier = *ic;
+      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
 
-			// reduce partial sums and share the result
+      // reduce partial sums and share the result
       uint64_t active_interactions, total_interactions;
       double dn;
-			{
-				double tmpDouble[7] = {
-					sim.rotation_energy.x, sim.rotation_energy.y, sim.rotation_energy.z,
-					sim.kinetic_energy.x, sim.kinetic_energy.y, sim.kinetic_energy.z,
-					sim.mass };
+      {
+        double tmpDouble[7] = {sim.rotation_energy.x, sim.rotation_energy.y, sim.rotation_energy.z, sim.kinetic_energy.x, sim.kinetic_energy.y, sim.kinetic_energy.z, sim.mass};
         uint64_t tmpUInt64T[3] = {sim.n_particles, red.n_act_interaction, red.n_tot_interaction};
-				MPI_Allreduce(MPI_IN_PLACE, tmpDouble  , 7, MPI_DOUBLE, MPI_SUM, comm);
-				MPI_Allreduce(MPI_IN_PLACE, &red.min_dn, 1, MPI_DOUBLE, MPI_MAX, comm);
-				MPI_Allreduce(MPI_IN_PLACE, tmpUInt64T , 3, MPI_UINT64_T, MPI_SUM, comm);
+        MPI_Allreduce(MPI_IN_PLACE, tmpDouble, 7, MPI_DOUBLE, MPI_SUM, comm);
+        MPI_Allreduce(MPI_IN_PLACE, &red.min_dn, 1, MPI_DOUBLE, MPI_MAX, comm);
+        MPI_Allreduce(MPI_IN_PLACE, tmpUInt64T, 3, MPI_UINT64_T, MPI_SUM, comm);
 
-				rotation_energy.x = tmpDouble[0];
-				rotation_energy.y = tmpDouble[1];
-				rotation_energy.z = tmpDouble[2];
-				kinetic_energy.x  = tmpDouble[3];
-				kinetic_energy.y  = tmpDouble[4];
-				kinetic_energy.z  = tmpDouble[5];
-				mass              = tmpDouble[6];
-				dn                = red.min_dn;
+        rotation_energy.x = tmpDouble[0];
+        rotation_energy.y = tmpDouble[1];
+        rotation_energy.z = tmpDouble[2];
+        kinetic_energy.x = tmpDouble[3];
+        kinetic_energy.y = tmpDouble[4];
+        kinetic_energy.z = tmpDouble[5];
+        mass = tmpDouble[6];
+        dn = red.min_dn;
 
-				total_particles     = tmpUInt64T[0];
-				active_interactions = tmpUInt64T[1];
-				total_interactions  = tmpUInt64T[2];
-			}
+        total_particles = tmpUInt64T[0];
+        active_interactions = tmpUInt64T[1];
+        total_interactions = tmpUInt64T[2];
+      }
 
-			// Volume
-			double volume = 1.0;
-			if( ! domain->xform_is_identity() )
-			{
-				Mat3d mat = domain->xform();
-				Vec3d a { mat.m11, mat.m21, mat.m31 };
-				Vec3d b { mat.m12, mat.m22, mat.m32 };
-				Vec3d c { mat.m13, mat.m23, mat.m33 };
-				volume = dot( cross(a,b) , c );
-			}
-			volume *= bounds_volume( domain->bounds() );
+      // Volume
+      double volume = 1.0;
+      if (!domain->xform_is_identity())
+      {
+        Mat3d mat = domain->xform();
+        Vec3d a{mat.m11, mat.m21, mat.m31};
+        Vec3d b{mat.m12, mat.m22, mat.m32};
+        Vec3d c{mat.m13, mat.m23, mat.m33};
+        volume = dot(cross(a, b), c);
+      }
+      volume *= bounds_volume(domain->bounds());
 
-			// write results to output
-			sim_info.set_kinetic_energy( kinetic_energy );
-			sim_info.set_rotation_energy( rotation_energy );
-			sim_info.set_mass( mass );
-			sim_info.set_volume( volume );
-			sim_info.set_particle_count( total_particles );
-      sim_info.set_active_interaction_count ( active_interactions );
-      sim_info.set_interaction_count ( total_interactions );
-      sim_info.set_dn ( dn );
-		}
-	};
+      // write results to output
+      sim_info.set_kinetic_energy(kinetic_energy);
+      sim_info.set_rotation_energy(rotation_energy);
+      sim_info.set_mass(mass);
+      sim_info.set_volume(volume);
+      sim_info.set_particle_count(total_particles);
+      sim_info.set_active_interaction_count(active_interactions);
+      sim_info.set_interaction_count(total_interactions);
+      sim_info.set_dn(dn);
+    }
+  };
 
-	template<class GridT> using SimulationStateNodeTmpl = SimulationStateNode<GridT>;
+  template <class GridT> using SimulationStateNodeTmpl = SimulationStateNode<GridT>;
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "simulation_state", make_grid_variant_operator< SimulationStateNodeTmpl > );
-	}
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("simulation_state", make_grid_variant_operator<SimulationStateNodeTmpl>); }
 
-}
+} // namespace exaDEM

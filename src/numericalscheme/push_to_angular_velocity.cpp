@@ -32,47 +32,39 @@ under the License.
 
 namespace exaDEM
 {
-using namespace exanb;
+  using namespace exanb;
 
-  template<typename GridT
-    , class = AssertGridHasFields< GridT, field::_vrot, field::_arot >
-    >
-  class PushToAngularVelocity : public OperatorNode
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_vrot, field::_arot>> class PushToAngularVelocity : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet< field::_vrot, field::_arot >;
-    static constexpr ComputeFields compute_field_set {};
+    using ComputeFields = FieldSet<field::_vrot, field::_arot>;
+    static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT( GridT           , grid      , INPUT_OUTPUT );
-    ADD_SLOT( double          , dt        , INPUT, DocString{"dt is the time increment of the timeloop"});
-    ADD_SLOT( CellListWrapper , cell_list , INPUT , DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(double, dt, INPUT, DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
 
   public:
-
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator computes particle angular velocitiy values from angular velocities and angular accelerations. 
         )EOF";
-		}
+    }
 
-    inline void execute () override final
+    inline void execute() override final
     {
       const double dt = *(this->dt);
       const double dt_2 = 0.5 * dt;
-      PushToAngularVelocityFunctor func {dt_2};
+      PushToAngularVelocityFunctor func{dt_2};
       auto [cell_ptr, cell_size] = cell_list->info();
-      compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() , cell_ptr, cell_size );
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
     }
   };
-  
-  template<class GridT> using PushToAngularVelocityTmpl = PushToAngularVelocity<GridT>;
-  
- // === register factories ===  
-  CONSTRUCTOR_FUNCTION
-  {
-   OperatorNodeFactory::instance()->register_factory( "push_to_angular_velocity", make_grid_variant_operator< PushToAngularVelocityTmpl > );
-  }
 
-}
+  template <class GridT> using PushToAngularVelocityTmpl = PushToAngularVelocity<GridT>;
 
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("push_to_angular_velocity", make_grid_variant_operator<PushToAngularVelocityTmpl>); }
+
+} // namespace exaDEM
