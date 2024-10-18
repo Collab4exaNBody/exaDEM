@@ -103,7 +103,7 @@ namespace exaDEM
   public:
     inline void execute() override final
     {
-      MPI_Comm &comm = *mpi;
+      MPI_Comm comm = *mpi;
       double &rmax = *rcut_max;
       auto cells = grid->cells();
       const size_t n_cells = grid->number_of_cells(); // nbh.size();
