@@ -23,7 +23,6 @@ under the License.
 
 namespace exaDEM
 {
-
   using namespace exanb;
 
   class PushVelocityToPositionDriver : public OperatorNode

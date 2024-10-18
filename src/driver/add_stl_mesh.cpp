@@ -83,7 +83,6 @@ namespace exaDEM
       }
 
       assert(is_stl != is_shp);
-
       // load shape
       shape shp;
 
@@ -99,7 +98,6 @@ namespace exaDEM
         bool big_shape = true;
         shp = read_shp(shp, output_name_vtk, big_shape);
       }
-
       shp.m_radius = *minskowski;
       shp.increase_obb(*rcut_inc);
       exaDEM::Stl_mesh driver = {*center, *velocity, *angular_velocity, *orientation, shp};
