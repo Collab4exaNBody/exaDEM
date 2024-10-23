@@ -25,6 +25,22 @@ under the License.
 
 namespace exaDEM
 {
+
+  struct Interaction2
+  {
+  	exanb::Vec3d friction = {0, 0, 0};
+  	exanb::Vec3d moment = {0, 0, 0};
+  	uint64_t id_i;
+  	uint64_t id_j;
+  	
+  	ONIKA_HOST_DEVICE_FUNC
+  	inline void reset()
+  	{
+  		friction = {0,0,0};
+  		moment = {0,0,0};
+  	}
+  };
+
   /**
    * @brief Structure representing an interaction in a Discrete Element Method (DEM) simulation.
    */
@@ -152,6 +168,12 @@ namespace exaDEM
     {
       this->friction = I.friction;
       this->moment = I.moment;
+    }
+    
+    ONIKA_HOST_DEVICE_FUNC void update_friction_and_moment(Interaction2& I)
+    {
+    	this->friction = I.friction;
+    	this->moment = I.moment;
     }
   };
 

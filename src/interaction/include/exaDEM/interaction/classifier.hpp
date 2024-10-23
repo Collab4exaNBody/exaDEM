@@ -89,6 +89,7 @@ namespace exaDEM
       mom_y[idx] = item.moment.y;
       mom_z[idx] = item.moment.z;
     }
+    
   };
 
   template <> struct InteractionWrapper<InteractionAOS>
@@ -98,7 +99,7 @@ namespace exaDEM
     InteractionWrapper(InteractionAOS &data) { interactions = onika::cuda::vector_data(data.m_data); }
 
     ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const { return interactions[idx]; }
-
+    
     ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction item) const
     {
       auto &item2 = interactions[idx];
