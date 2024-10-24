@@ -56,7 +56,7 @@ namespace exaDEM
     ADD_SLOT(SimulationState, simulation_state, OUTPUT);
 
     // DEM data
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier<InteractionAOS>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
     ADD_SLOT(bool, symetric, INPUT, REQUIRED, DocString{"Use of symetric feature (contact law)"});
 
     static constexpr FieldSet<field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass> reduce_field_set{};
@@ -112,7 +112,7 @@ namespace exaDEM
       reduce_cell_particles(*grid, false, func, sim, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
 
       // get interaction informations
-      Classifier<InteractionSOA> &classifier = *ic;
+      Classifier<InteractionAOS> &classifier = *ic;
       exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
 
       // reduce partial sums and share the result

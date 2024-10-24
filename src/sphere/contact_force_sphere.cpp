@@ -139,15 +139,15 @@ namespace exaDEM
   		dn = 0;
   	}	
   }
-  __global__ void kernel(//exaDEM::Interaction* interactions,
-  				double* ft_x,
+  __global__ void kernel(exaDEM::Interaction* interactions,
+  				/*double* ft_x,
   				double* ft_y,
   				double* ft_z,
   				double* mom_x,
   				double* mom_y,
   				double* mom_z,
   				uint64_t* id_i,
-  				uint64_t* id_j,
+  				uint64_t* id_j,*/
   				double* rx,
   				double* ry,
   				double* rz,
@@ -173,17 +173,23 @@ namespace exaDEM
   	
   	if(idx < size)
   	{	
-  		Interaction2 item2 = {{ft_x[idx], ft_y[idx], ft_z[idx]} ,{mom_x[idx], mom_y[idx], mom_z[idx]} ,id_i[idx] ,id_j[idx] };
+  		//Interaction2 item2 = {{ft_x[idx], ft_y[idx], ft_z[idx]} ,{mom_x[idx], mom_y[idx], mom_z[idx]} ,id_i[idx] ,id_j[idx] };
+  		
+  		Interaction& item = interactions[idx];
+  		
+  		Interaction2 item2 = {item.friction, item.moment, item.id_i, item.id_j};
   		
   		kernelContact(item2, rx, ry, rz, rad, vrotx, vroty, vrotz, vx, vy, vz, mass, momx, momy, momz, fx, fy, fz, time, hkp);
   		
-  		ft_x[idx] = item2.friction.x;
+  		/*ft_x[idx] = item2.friction.x;
   		ft_y[idx] = item2.friction.y;
   		ft_z[idx] = item2.friction.z;
   		
   		mom_x[idx] = item2.moment.x;
   		mom_y[idx] = item2.moment.y;
-  		mom_z[idx] = item2.moment.z;
+  		mom_z[idx] = item2.moment.z;*/
+  		
+  		item.update_friction_and_moment(item2);
   	}
   }  											
 
@@ -200,7 +206,7 @@ namespace exaDEM
     ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"Time step value"});
     ADD_SLOT(bool, symetric, INPUT_OUTPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
     ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier<InteractionAOS>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
     // analysis
     ADD_SLOT(long, timestep, INPUT, REQUIRED);
     ADD_SLOT(bool, save_interactions, INPUT, false, DocString{"Store interactions into the classifier"});
@@ -284,7 +290,7 @@ namespace exaDEM
         onika::memory::CudaMMVector<bool> pass;
 
         auto [data, size] = classifier.get_info(0);
-        InteractionWrapper<InteractionSOA> wrapper(data);
+        InteractionWrapper<InteractionAOS> wrapper(data);
         
         rx.resize(number_of_particles);
         ry.resize(number_of_particles);
@@ -311,6 +317,12 @@ namespace exaDEM
         fz.resize(number_of_particles);
         
         pass.resize(number_of_particles);
+        
+        #pragma omp parallel for
+        for(int i = 0; i < number_of_particles; i++)
+        {
+        	pass[i] = false;
+        }
         
         for(int i = 0; i < size; i++)
         {
@@ -388,7 +400,7 @@ namespace exaDEM
         int numBlocks = (size + 255) / 256;
         int threadsPerBlock = 256;
         
-        kernel<<<numBlocks, threadsPerBlock>>>(wrapper.ft_x, wrapper.ft_y, wrapper.ft_z, wrapper.mom_x, wrapper.mom_y, wrapper.mom_z, wrapper.id_i, wrapper.id_j, rx.data(), ry.data(), rz.data(), rad.data(), vrotx.data(), vroty.data(), vrotz.data(), vx.data(), vy.data(), vz.data(), mass.data(), momx.data(), momy.data(), momz.data(), fx.data(), fy.data(), fz.data(), time, hkp, size);
+        kernel<<<numBlocks, threadsPerBlock>>>(/*wrapper.ft_x, wrapper.ft_y, wrapper.ft_z, wrapper.mom_x, wrapper.mom_y, wrapper.mom_z, wrapper.id_i, wrapper.id_j,*/wrapper.interactions, rx.data(), ry.data(), rz.data(), rad.data(), vrotx.data(), vroty.data(), vrotz.data(), vx.data(), vy.data(), vz.data(), mass.data(), momx.data(), momy.data(), momz.data(), fx.data(), fy.data(), fz.data(), time, hkp, size);
 
         run_contact_law(parallel_execution_context(), 0, classifier, sph, store_interactions, cells, hkp, time);
       }

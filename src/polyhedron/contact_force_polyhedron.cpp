@@ -47,6 +47,32 @@ namespace exaDEM
 {
   using namespace exanb;
   using namespace polyhedron;
+  
+  
+  __device__ void kernelContactUN(Interaction2& item,
+  					double* rx,
+  					double* ry,
+  					double* rz,
+  					double* rad,
+  					double* vrotx,
+  					double* vroty,
+  					double* vrotz,
+  					double* vx,
+  					double* vy,
+  					double* vz,
+  					double* mass,
+  					double* momx,
+  					double* momy,
+  					double* momz,
+  					double* fx,
+  					double* fy,
+  					double* fz,
+  					uint32_t* type,
+  					VertexArray* vertices,
+  					const double time,
+  					const ContactParams hkp)
+  {
+  }
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class ComputeContactClassifierPolyhedronGPU : public OperatorNode
   {
@@ -122,8 +148,163 @@ namespace exaDEM
 #     define __params__ store_interactions, cells, hkp, shps, time
 #     define __params_driver__ store_interactions, cells, drvs, hkp_drvs, shps, time
 
+      int number_of_particles = grid->number_of_particles();
+
+      onika::memory::CudaMMVector<double> rx;
+      onika::memory::CudaMMVector<double> ry;
+      onika::memory::CudaMMVector<double> rz;
+      
+      onika::memory::CudaMMVector<double> rad;
+      
+      onika::memory::CudaMMVector<double> vrotx;
+      onika::memory::CudaMMVector<double> vroty;
+      onika::memory::CudaMMVector<double> vrotz;
+      
+      onika::memory::CudaMMVector<double> vx;
+      onika::memory::CudaMMVector<double> vy;
+      onika::memory::CudaMMVector<double> vz;
+      
+      onika::memory::CudaMMVector<double> mass;
+      
+      onika::memory::CudaMMVector<double> momx;
+      onika::memory::CudaMMVector<double> momy;
+      onika::memory::CudaMMVector<double> momz;
+      
+      onika::memory::CudaMMVector<double> fx;
+      onika::memory::CudaMMVector<double> fy;
+      onika::memory::CudaMMVector<double> fz;
+      
+      onika::memory::CudaMMVector<bool> pass;
+      
+      onika::memory::CudaMMVector<uint32_t> type_particule;
+      
+      onika::memory::CudaMMVector<VertexArray> vertices;
+      
+      rx.resize(number_of_particles);
+      ry.resize(number_of_particles);
+      rz.resize(number_of_particles);
+        
+      rad.resize(number_of_particles);
+        
+      vrotx.resize(number_of_particles);
+      vroty.resize(number_of_particles);
+      vrotz.resize(number_of_particles);
+        
+      vx.resize(number_of_particles);
+      vy.resize(number_of_particles);
+      vz.resize(number_of_particles);
+        
+      mass.resize(number_of_particles);
+        
+      momx.resize(number_of_particles);
+      momy.resize(number_of_particles);
+      momz.resize(number_of_particles);
+        
+      fx.resize(number_of_particles);
+      fy.resize(number_of_particles);
+      fz.resize(number_of_particles);
+        
+      pass.resize(number_of_particles);
+      
+      type_particule.resize(number_of_particles);
+      
+      vertices.resize(number_of_particles);
+      
+      #pragma omp parallel for
+      for(int i = 0; i < number_of_particles; i++)
+      {
+      	pass[i] = false;
+      }
+      
+            
+
       for (size_t type = 0; type <= 3; type++)
       {
+        auto [data, size] = classifier.get_info(type);
+        InteractionWrapper<InteractionSOA> wrapper(data);
+        
+        for(int i = 0; i < size; i++)
+        {
+        	exaDEM::Interaction item = wrapper(i);
+        	
+        	auto& cell_i = cells[item.cell_i];
+        	auto& cell_j = cells[item.cell_j];
+        	
+        	auto& p_i = item.p_i;
+        	auto& p_j = item.p_j;
+        	
+        	auto id_i = item.id_i;
+        	auto id_j = item.id_j;
+        	
+        	if(pass[id_i] = false)
+        	{
+        		rx[id_i] = cell_i[field::rx][p_i];
+        		ry[id_i] = cell_i[field::ry][p_i];
+        		rz[id_i] = cell_i[field::rz][p_i];
+        		
+        		rad[id_i] = cell_i[field::radius][p_i];
+        		
+        		vrotx[id_i] = cell_i[field::vrot][p_i].x;
+        		vroty[id_i] = cell_i[field::vrot][p_i].y;
+        		vrotz[id_i] = cell_i[field::vrot][p_i].z;
+        		
+        		vx[id_i] = cell_i[field::vx][p_i];
+        		vy[id_i] = cell_i[field::vy][p_i];
+        		vz[id_i] = cell_i[field::vz][p_i];
+        		
+        		mass[id_i] = cell_i[field::mass][p_i];
+        		
+        		momx[id_i] = cell_i[field::mom][p_i].x;
+        		momy[id_i] = cell_i[field::mom][p_i].y;
+        		momz[id_i] = cell_i[field::mom][p_i].z;
+        		
+        		fx[id_i] = cell_i[field::fx][p_i];
+        		fy[id_i] = cell_i[field::fy][p_i];
+        		fz[id_i] = cell_i[field::fz][p_i];
+        		
+        		type_particule[id_i] = cell_i[field::type][p_i];
+        		
+        		vertices[id_i] = cell_i[field::vertices][p_i];
+        		
+        		pass[id_i] = true;
+        	}
+        	
+        	if(pass[id_j] = false)
+        	{
+        		rx[id_j] = cell_i[field::rx][p_i];
+        		ry[id_j] = cell_i[field::ry][p_i];
+        		rz[id_j] = cell_i[field::rz][p_i];
+        		
+        		rad[id_j] = cell_i[field::radius][p_i];
+        		
+        		vrotx[id_j] = cell_i[field::vrot][p_i].x;
+        		vroty[id_j] = cell_i[field::vrot][p_i].y;
+        		vrotz[id_j] = cell_i[field::vrot][p_i].z;
+        		
+        		vx[id_j] = cell_i[field::vx][p_i];
+        		vy[id_j] = cell_i[field::vy][p_i];
+        		vz[id_j] = cell_i[field::vz][p_i];
+        		
+        		mass[id_j] = cell_i[field::mass][p_i];
+        		
+        		momx[id_j] = cell_i[field::mom][p_i].x;
+        		momy[id_j] = cell_i[field::mom][p_i].y;
+        		momz[id_j] = cell_i[field::mom][p_i].z;
+        		
+        		fx[id_j] = cell_i[field::fx][p_i];
+        		fy[id_j] = cell_i[field::fy][p_i];
+        		fz[id_j] = cell_i[field::fz][p_i];
+        		
+        		type_particule[id_j] = cell_i[field::type][p_i];
+        		
+        		vertices[id_j] = cell_i[field::vertices][p_i];
+        		
+        		pass[id_j] = true;
+        	}
+        }
+        
+        
+      
         run_contact_law(parallel_execution_context(), type, classifier, poly, __params__);
       }
       run_contact_law(parallel_execution_context(), 4, classifier, cyli, __params_driver__);
