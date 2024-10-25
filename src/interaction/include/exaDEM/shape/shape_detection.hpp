@@ -227,6 +227,7 @@ namespace exaDEM
       const Vec3d contact_position = vi - n * (ri + 0.5 * dn);
 
       return {true, dn, n, contact_position};
+      //return {false, 0.0, Vec3d(), Vec3d()};
     }
   }
 

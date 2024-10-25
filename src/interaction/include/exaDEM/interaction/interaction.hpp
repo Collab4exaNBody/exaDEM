@@ -32,6 +32,8 @@ namespace exaDEM
   	exanb::Vec3d moment = {0, 0, 0};
   	uint64_t id_i;
   	uint64_t id_j;
+  	uint16_t sub_i;
+  	uint16_t sub_j;
   	
   	ONIKA_HOST_DEVICE_FUNC
   	inline void reset()

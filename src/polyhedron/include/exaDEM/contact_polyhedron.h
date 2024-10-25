@@ -190,6 +190,7 @@ namespace exaDEM
         // === shapes
         const shape &shp_i = shps[type_i];
         const shape &shp_j = shps[type_j];
+        
 
         auto [contact, dn, n, contact_position] = detect(item.type, vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
         // temporary vec3d to store forces.

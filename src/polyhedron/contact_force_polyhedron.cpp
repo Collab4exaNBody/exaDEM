@@ -48,12 +48,35 @@ namespace exaDEM
   using namespace exanb;
   using namespace polyhedron;
   
+  ONIKA_HOST_DEVICE_FUNC
+  inline std::tuple<bool, double, Vec3d, Vec3d> detection_precompute(const uint16_t type, const VertexArray &pi, const int i, const shape *shpi, const VertexArray &pj, const int j, const shape *shpj)
+  {
+#       define __params__     pi, i, shpi, pj, j, shpj
+  	if(type==0)
+  	{
+  		return detection_vertex_vertex_precompute(__params__);
+  	}
+  	else if(type==1)
+  	{
+  		return detection_vertex_edge_precompute(__params__);
+  	}
+  	else if(type==2)
+  	{
+  		return detection_vertex_face_precompute(__params__);
+  	}
+  	else if(type==3)
+  	{
+  		return detection_edge_edge_precompute(__params__);
+  	}
+  	
+  	return std::tuple<bool, double, Vec3d, Vec3d>();
+  }
   
-  __device__ void kernelContactUN(Interaction2& item,
+  
+  __device__ void kernelContact1(Interaction2& item,
   					double* rx,
   					double* ry,
   					double* rz,
-  					double* rad,
   					double* vrotx,
   					double* vroty,
   					double* vrotz,
@@ -69,10 +92,691 @@ namespace exaDEM
   					double* fz,
   					uint32_t* type,
   					VertexArray* vertices,
+  					const shape *const shps,
   					const double time,
   					const ContactParams hkp)
   {
+  	auto& idi = item.id_i;
+  	auto& idj = item.id_j;
+  	
+  	auto& rx_i = rx[idi];
+  	auto& ry_i = ry[idi];
+  	auto& rz_i = rz[idi];
+  	
+  	auto& rx_j = rx[idj];
+  	auto& ry_j = ry[idj];
+  	auto& rz_j = rz[idj];
+  	
+  	Vec3d ri = {rx_i, ry_i, rz_i};
+  	Vec3d rj = {rx_j, ry_j, rz_j};
+  	
+  	auto& vrotx_i = vrotx[idi];
+  	auto& vroty_i = vroty[idi];
+  	auto& vrotz_i = vrotz[idi];
+  	
+  	auto& vrotx_j = vrotx[idj];
+  	auto& vroty_j = vroty[idj];
+  	auto& vrotz_j = vrotz[idj];
+  	
+  	Vec3d vrot_i = {vrotx_i, vroty_i, vrotz_i};
+  	Vec3d vrot_j = {vrotx_j, vroty_j, vrotz_j};
+  	
+  	auto& type_i = type[idi];
+  	auto& type_j = type[idj];
+  	
+  	auto& vertices_i = vertices[idi];
+  	auto& vertices_j = vertices[idj];
+  	
+  	const shape& shp_i = shps[type_i];
+  	const shape& shp_j = shps[type_j];
+  	
+  	auto [contact, dn, n, contact_position] = detection_vertex_vertex_precompute(vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
+  	
+  	Vec3d f = {0, 0, 0};
+  	Vec3d fn = {0, 0, 0};
+  	if(contact)
+  	{
+  		printf("CONTACT\n");
+  		const Vec3d vi = {vx[idi], vy[idi], vz[idi]};
+  		const Vec3d vj = {vx[idj], vy[idj], vz[idj]};
+  		const auto& m_i = mass[idi];
+  		const auto& m_j = mass[idj];
+  		
+  		const double meff = compute_effective_mass(m_i, m_j);
+  		
+  		contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, ri, vi, f, item.moment, vrot_i, // particle 1
+                             rj, vj, vrot_j                                                                                                                             // particle nbh
+          	);
+          	
+          	fn = f - item.friction;
+          	
+  		Vec3d mom_i = {momx[idi], momy[idi], momz[idi]};
+  		Vec3d mom_i_res = compute_moments(contact_position, ri, f, item.moment);
+  		atomicAdd(&momx[idi], mom_i_res.x);
+  		atomicAdd(&momy[idi], mom_i_res.y);
+  		atomicAdd(&momz[idi], mom_i_res.z);
+  		atomicAdd(&fx[idi], f.x);
+  		atomicAdd(&fy[idi], f.y);
+  		atomicAdd(&fz[idi], f.z);
+  			
+  		Vec3d mom_j = {momx[idj], momy[idj], momz[idj]};
+  		Vec3d mom_j_res = compute_moments(contact_position, rj, -f, -item.moment);
+  		atomicAdd(&momx[idj], mom_j_res.x);
+  		atomicAdd(&momy[idj], mom_j_res.y);
+  		atomicAdd(&momz[idj], mom_j_res.z);
+  		atomicAdd(&fx[idj], -f.x);
+  		atomicAdd(&fy[idj], -f.y);
+  		atomicAdd(&fz[idj], -f.z);            	
+  	}
+  	else
+  	{
+  		item.reset();
+  		dn = 0;
+  	}
   }
+  
+  __device__ void kernelContact2(Interaction2& item,
+  					double* rx,
+  					double* ry,
+  					double* rz,
+  					double* vrotx,
+  					double* vroty,
+  					double* vrotz,
+  					double* vx,
+  					double* vy,
+  					double* vz,
+  					double* mass,
+  					double* momx,
+  					double* momy,
+  					double* momz,
+  					double* fx,
+  					double* fy,
+  					double* fz,
+  					uint32_t* type,
+  					VertexArray* vertices,
+  					const shape *const shps,
+  					const double time,
+  					const ContactParams hkp)
+  {
+  	auto& idi = item.id_i;
+  	auto& idj = item.id_j;
+  	
+  	auto& rx_i = rx[idi];
+  	auto& ry_i = ry[idi];
+  	auto& rz_i = rz[idi];
+  	
+  	auto& rx_j = rx[idj];
+  	auto& ry_j = ry[idj];
+  	auto& rz_j = rz[idj];
+  	
+  	Vec3d ri = {rx_i, ry_i, rz_i};
+  	Vec3d rj = {rx_j, ry_j, rz_j};
+  	
+  	auto& vrotx_i = vrotx[idi];
+  	auto& vroty_i = vroty[idi];
+  	auto& vrotz_i = vrotz[idi];
+  	
+  	auto& vrotx_j = vrotx[idj];
+  	auto& vroty_j = vroty[idj];
+  	auto& vrotz_j = vrotz[idj];
+  	
+  	Vec3d vrot_i = {vrotx_i, vroty_i, vrotz_i};
+  	Vec3d vrot_j = {vrotx_j, vroty_j, vrotz_j};
+  	
+  	auto& type_i = type[idi];
+  	auto& type_j = type[idj];
+  	
+  	auto& vertices_i = vertices[idi];
+  	auto& vertices_j = vertices[idj];
+  	
+  	const shape& shp_i = shps[type_i];
+  	const shape& shp_j = shps[type_j];
+  	
+  	auto [contact, dn, n, contact_position] = detection_vertex_edge_precompute(vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
+  	
+  	//contact = false;
+  	
+  	//item.reset();
+  	
+  	Vec3d f = {0, 0, 0};
+  	Vec3d fn = {0, 0, 0};
+  	if(contact)
+  	{
+  		//const Vec3d vi = {vx[idi], vy[idi], vz[idi]};
+  		//const Vec3d vj = {vx[idj], vy[idj], vz[idj]};
+  		//const auto& m_i = mass[idi];
+  		//const auto& m_j = mass[idj];
+  		
+  		//const double meff = compute_effective_mass(m_i, m_j);
+  		
+  		/*contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, ri, vi, f, item.moment, vrot_i, // particle 1
+                             rj, vj, vrot_j                                                                                                                             // particle nbh
+          	);
+          	
+          	fn = f - item.friction;
+          	
+  		Vec3d mom_i = {momx[idi], momy[idi], momz[idi]};
+  		Vec3d mom_i_res = compute_moments(contact_position, ri, f, item.moment);
+  		atomicAdd(&momx[idi], mom_i_res.x);
+  		atomicAdd(&momy[idi], mom_i_res.y);
+  		atomicAdd(&momz[idi], mom_i_res.z);
+  		atomicAdd(&fx[idi], f.x);
+  		atomicAdd(&fy[idi], f.y);
+  		atomicAdd(&fz[idi], f.z);
+  			
+  		Vec3d mom_j = {momx[idj], momy[idj], momz[idj]};
+  		Vec3d mom_j_res = compute_moments(contact_position, rj, -f, -item.moment);
+  		atomicAdd(&momx[idj], mom_j_res.x);
+  		atomicAdd(&momy[idj], mom_j_res.y);
+  		atomicAdd(&momz[idj], mom_j_res.z);
+  		atomicAdd(&fx[idj], -f.x);
+  		atomicAdd(&fy[idj], -f.y);
+  		atomicAdd(&fz[idj], -f.z);*/          	
+  	}
+  	else
+  	{
+  		item.reset();
+  	//	dn = 0;
+  	}
+  	
+  }
+  
+  __device__ void kernelContact3(Interaction2& item,
+  					double* rx,
+  					double* ry,
+  					double* rz,
+  					double* vrotx,
+  					double* vroty,
+  					double* vrotz,
+  					double* vx,
+  					double* vy,
+  					double* vz,
+  					double* mass,
+  					double* momx,
+  					double* momy,
+  					double* momz,
+  					double* fx,
+  					double* fy,
+  					double* fz,
+  					uint32_t* type,
+  					VertexArray* vertices,
+  					const shape *const shps,
+  					const double time,
+  					const ContactParams hkp)
+  {
+  	auto& idi = item.id_i;
+  	auto& idj = item.id_j;
+  	
+  	auto& rx_i = rx[idi];
+  	auto& ry_i = ry[idi];
+  	auto& rz_i = rz[idi];
+  	
+  	auto& rx_j = rx[idj];
+  	auto& ry_j = ry[idj];
+  	auto& rz_j = rz[idj];
+  	
+  	Vec3d ri = {rx_i, ry_i, rz_i};
+  	Vec3d rj = {rx_j, ry_j, rz_j};
+  	
+  	auto& vrotx_i = vrotx[idi];
+  	auto& vroty_i = vroty[idi];
+  	auto& vrotz_i = vrotz[idi];
+  	
+  	auto& vrotx_j = vrotx[idj];
+  	auto& vroty_j = vroty[idj];
+  	auto& vrotz_j = vrotz[idj];
+  	
+  	Vec3d vrot_i = {vrotx_i, vroty_i, vrotz_i};
+  	Vec3d vrot_j = {vrotx_j, vroty_j, vrotz_j};
+  	
+  	auto& type_i = type[idi];
+  	auto& type_j = type[idj];
+  	
+  	auto& vertices_i = vertices[idi];
+  	auto& vertices_j = vertices[idj];
+  	
+  	const shape& shp_i = shps[type_i];
+  	const shape& shp_j = shps[type_j];
+  	
+  	auto [contact, dn, n, contact_position] = detection_vertex_face_precompute(vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
+  	
+  	Vec3d f = {0, 0, 0};
+  	Vec3d fn = {0, 0, 0};
+  	if(contact)
+  	{
+  		const Vec3d vi = {vx[idi], vy[idi], vz[idi]};
+  		const Vec3d vj = {vx[idj], vy[idj], vz[idj]};
+  		const auto& m_i = mass[idi];
+  		const auto& m_j = mass[idj];
+  		
+  		const double meff = compute_effective_mass(m_i, m_j);
+  		
+  		contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, ri, vi, f, item.moment, vrot_i, // particle 1
+                             rj, vj, vrot_j                                                                                                                             // particle nbh
+          	);
+          	
+          	fn = f - item.friction;
+          	
+  		Vec3d mom_i = {momx[idi], momy[idi], momz[idi]};
+  		Vec3d mom_i_res = compute_moments(contact_position, ri, f, item.moment);
+  		atomicAdd(&momx[idi], mom_i_res.x);
+  		atomicAdd(&momy[idi], mom_i_res.y);
+  		atomicAdd(&momz[idi], mom_i_res.z);
+  		atomicAdd(&fx[idi], f.x);
+  		atomicAdd(&fy[idi], f.y);
+  		atomicAdd(&fz[idi], f.z);
+  			
+  		Vec3d mom_j = {momx[idj], momy[idj], momz[idj]};
+  		Vec3d mom_j_res = compute_moments(contact_position, rj, -f, -item.moment);
+  		atomicAdd(&momx[idj], mom_j_res.x);
+  		atomicAdd(&momy[idj], mom_j_res.y);
+  		atomicAdd(&momz[idj], mom_j_res.z);
+  		atomicAdd(&fx[idj], -f.x);
+  		atomicAdd(&fy[idj], -f.y);
+  		atomicAdd(&fz[idj], -f.z);            	
+  	}
+  	else
+  	{
+  		item.reset();
+  		dn = 0;
+  	}
+  }
+  
+  __device__ void kernelContact4(Interaction2& item,
+  					double* rx,
+  					double* ry,
+  					double* rz,
+  					double* vrotx,
+  					double* vroty,
+  					double* vrotz,
+  					double* vx,
+  					double* vy,
+  					double* vz,
+  					double* mass,
+  					double* momx,
+  					double* momy,
+  					double* momz,
+  					double* fx,
+  					double* fy,
+  					double* fz,
+  					uint32_t* type,
+  					VertexArray* vertices,
+  					const shape *const shps,
+  					const double time,
+  					const ContactParams hkp)
+  {
+  	auto& idi = item.id_i;
+  	auto& idj = item.id_j;
+  	
+  	auto& rx_i = rx[idi];
+  	auto& ry_i = ry[idi];
+  	auto& rz_i = rz[idi];
+  	
+  	auto& rx_j = rx[idj];
+  	auto& ry_j = ry[idj];
+  	auto& rz_j = rz[idj];
+  	
+  	Vec3d ri = {rx_i, ry_i, rz_i};
+  	Vec3d rj = {rx_j, ry_j, rz_j};
+  	
+  	auto& vrotx_i = vrotx[idi];
+  	auto& vroty_i = vroty[idi];
+  	auto& vrotz_i = vrotz[idi];
+  	
+  	auto& vrotx_j = vrotx[idj];
+  	auto& vroty_j = vroty[idj];
+  	auto& vrotz_j = vrotz[idj];
+  	
+  	Vec3d vrot_i = {vrotx_i, vroty_i, vrotz_i};
+  	Vec3d vrot_j = {vrotx_j, vroty_j, vrotz_j};
+  	
+  	auto& type_i = type[idi];
+  	auto& type_j = type[idj];
+  	
+  	auto& vertices_i = vertices[idi];
+  	auto& vertices_j = vertices[idj];
+  	
+  	const shape& shp_i = shps[type_i];
+  	const shape& shp_j = shps[type_j];
+  	
+  	auto [contact, dn, n, contact_position] = detection_edge_edge_precompute(vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
+  	
+  	Vec3d f = {0, 0, 0};
+  	Vec3d fn = {0, 0, 0};
+  	if(contact)
+  	{
+  		const Vec3d vi = {vx[idi], vy[idi], vz[idi]};
+  		const Vec3d vj = {vx[idj], vy[idj], vz[idj]};
+  		const auto& m_i = mass[idi];
+  		const auto& m_j = mass[idj];
+  		
+  		const double meff = compute_effective_mass(m_i, m_j);
+  		
+  		contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, ri, vi, f, item.moment, vrot_i, // particle 1
+                             rj, vj, vrot_j                                                                                                                             // particle nbh
+          	);
+          	
+          	fn = f - item.friction;
+          	
+  		Vec3d mom_i = {momx[idi], momy[idi], momz[idi]};
+  		Vec3d mom_i_res = compute_moments(contact_position, ri, f, item.moment);
+  		atomicAdd(&momx[idi], mom_i_res.x);
+  		atomicAdd(&momy[idi], mom_i_res.y);
+  		atomicAdd(&momz[idi], mom_i_res.z);
+  		atomicAdd(&fx[idi], f.x);
+  		atomicAdd(&fy[idi], f.y);
+  		atomicAdd(&fz[idi], f.z);
+  			
+  		Vec3d mom_j = {momx[idj], momy[idj], momz[idj]};
+  		Vec3d mom_j_res = compute_moments(contact_position, rj, -f, -item.moment);
+  		atomicAdd(&momx[idj], mom_j_res.x);
+  		atomicAdd(&momy[idj], mom_j_res.y);
+  		atomicAdd(&momz[idj], mom_j_res.z);
+  		atomicAdd(&fx[idj], -f.x);
+  		atomicAdd(&fy[idj], -f.y);
+  		atomicAdd(&fz[idj], -f.z);
+  		            	
+  	}
+  	else
+  	{
+  		item.reset();
+  		dn = 0;
+  	}
+  }
+  
+  __device__ void kernelContactTotal(Interaction2& item,
+  					double* rx,
+  					double* ry,
+  					double* rz,
+  					double* vrotx,
+  					double* vroty,
+  					double* vrotz,
+  					double* vx,
+  					double* vy,
+  					double* vz,
+  					double* mass,
+  					double* momx,
+  					double* momy,
+  					double* momz,
+  					double* fx,
+  					double* fy,
+  					double* fz,
+  					uint32_t* type,
+  					VertexArray* vertices,
+  					const shape *const shps,
+  					const double time,
+  					const ContactParams hkp,
+  					int type2)
+  {
+  	auto& idi = item.id_i;
+  	auto& idj = item.id_j;
+  	
+  	auto& rx_i = rx[idi];
+  	auto& ry_i = ry[idi];
+  	auto& rz_i = rz[idi];
+  	
+  	auto& rx_j = rx[idj];
+  	auto& ry_j = ry[idj];
+  	auto& rz_j = rz[idj];
+  	
+  	Vec3d ri = {rx_i, ry_i, rz_i};
+  	Vec3d rj = {rx_j, ry_j, rz_j};
+  	
+  	auto& vrotx_i = vrotx[idi];
+  	auto& vroty_i = vroty[idi];
+  	auto& vrotz_i = vrotz[idi];
+  	
+  	auto& vrotx_j = vrotx[idj];
+  	auto& vroty_j = vroty[idj];
+  	auto& vrotz_j = vrotz[idj];
+  	
+  	Vec3d vrot_i = {vrotx_i, vroty_i, vrotz_i};
+  	Vec3d vrot_j = {vrotx_j, vroty_j, vrotz_j};
+  	
+  	auto& type_i = type[idi];
+  	auto& type_j = type[idj];
+  	
+  	auto& vertices_i = vertices[idi];
+  	auto& vertices_j = vertices[idj];
+  	
+  	const shape& shp_i = shps[type_i];
+  	const shape& shp_j = shps[type_j];
+
+	auto [contact, dn, n, contact_position] = detection_precompute(type2, vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
+
+  	Vec3d f = {0, 0, 0};
+  	Vec3d fn = {0, 0, 0};
+  	if(contact)
+  	{
+  		const Vec3d vi = {vx[idi], vy[idi], vz[idi]};
+  		const Vec3d vj = {vx[idj], vy[idj], vz[idj]};
+  		const auto& m_i = mass[idi];
+  		const auto& m_j = mass[idj];
+  		
+  		const double meff = compute_effective_mass(m_i, m_j);
+  		
+  		contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, ri, vi, f, item.moment, vrot_i, // particle 1
+                             rj, vj, vrot_j                                                                                                                             // particle nbh
+          	);
+          	
+          	fn = f - item.friction;
+          	
+  		Vec3d mom_i = {momx[idi], momy[idi], momz[idi]};
+  		Vec3d mom_i_res = compute_moments(contact_position, ri, f, item.moment);
+  		atomicAdd(&momx[idi], mom_i_res.x);
+  		atomicAdd(&momy[idi], mom_i_res.y);
+  		atomicAdd(&momz[idi], mom_i_res.z);
+  		atomicAdd(&fx[idi], f.x);
+  		atomicAdd(&fy[idi], f.y);
+  		atomicAdd(&fz[idi], f.z);
+  			
+  		Vec3d mom_j = {momx[idj], momy[idj], momz[idj]};
+  		Vec3d mom_j_res = compute_moments(contact_position, rj, -f, -item.moment);
+  		atomicAdd(&momx[idj], mom_j_res.x);
+  		atomicAdd(&momy[idj], mom_j_res.y);
+  		atomicAdd(&momz[idj], mom_j_res.z);
+  		atomicAdd(&fx[idj], -f.x);
+  		atomicAdd(&fy[idj], -f.y);
+  		atomicAdd(&fz[idj], -f.z);
+  		            	
+  	}
+  	else
+  	{
+  		item.reset();
+  		dn = 0;
+  	}
+  }
+  
+  __global__ void kernel1(exaDEM::Interaction* interactions,
+  				double* rx,
+  				double* ry,
+  				double* rz,
+  				double* vrotx,
+  				double* vroty,
+  				double* vrotz,
+  				double* vx,
+  				double* vy,
+  				double* vz,
+  				double* mass,
+  				double* momx,
+  				double* momy,
+  				double* momz,
+  				double* fx,
+  				double* fy,
+  				double* fz,
+  				uint32_t* type,
+  				VertexArray* vertices,
+  				const shape *const shps,
+  				const double time,
+  				const ContactParams hkp,
+  				int size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		Interaction& item = interactions[idx];
+  		
+  		Interaction2 item2 = {item.friction, item.moment, item.id_i, item.id_j, item.sub_i, item.sub_j};
+  		
+  		kernelContact1(item2, rx, ry, rz, vrotx, vroty, vrotz, vx, vy, vz, mass, momx, momy, momz, fx, fy, fz, type, vertices, shps, time, hkp);
+  		
+  		item.update_friction_and_moment(item2);
+  	}
+  }	
+  
+  __global__ void kernel2(exaDEM::Interaction* interactions,
+  				double* rx,
+  				double* ry,
+  				double* rz,
+  				double* vrotx,
+  				double* vroty,
+  				double* vrotz,
+  				double* vx,
+  				double* vy,
+  				double* vz,
+  				double* mass,
+  				double* momx,
+  				double* momy,
+  				double* momz,
+  				double* fx,
+  				double* fy,
+  				double* fz,
+  				uint32_t* type,
+  				VertexArray* vertices,
+  				const shape *const shps,
+  				const double time,
+  				const ContactParams hkp,
+  				int size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		Interaction& item = interactions[idx];
+  		
+  		Interaction2 item2 = {item.friction, item.moment, item.id_i, item.id_j, item.sub_i, item.sub_j};
+  		
+  		kernelContact2(item2, rx, ry, rz, vrotx, vroty, vrotz, vx, vy, vz, mass, momx, momy, momz, fx, fy, fz, type, vertices, shps, time, hkp);
+  		
+  		item.update_friction_and_moment(item2);
+  	}
+  }
+  
+  __global__ void kernel3(exaDEM::Interaction* interactions,
+  				double* rx,
+  				double* ry,
+  				double* rz,
+  				double* vrotx,
+  				double* vroty,
+  				double* vrotz,
+  				double* vx,
+  				double* vy,
+  				double* vz,
+  				double* mass,
+  				double* momx,
+  				double* momy,
+  				double* momz,
+  				double* fx,
+  				double* fy,
+  				double* fz,
+  				uint32_t* type,
+  				VertexArray* vertices,
+  				const shape *const shps,
+  				const double time,
+  				const ContactParams hkp,
+  				int size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		Interaction& item = interactions[idx];
+  		
+  		Interaction2 item2 = {item.friction, item.moment, item.id_i, item.id_j, item.sub_i, item.sub_j};
+  		
+  		kernelContact3(item2, rx, ry, rz, vrotx, vroty, vrotz, vx, vy, vz, mass, momx, momy, momz, fx, fy, fz, type, vertices, shps, time, hkp);
+  		
+  		item.update_friction_and_moment(item2);
+  	}
+  }
+  
+  __global__ void kernel4(exaDEM::Interaction* interactions,
+  				double* rx,
+  				double* ry,
+  				double* rz,
+  				double* vrotx,
+  				double* vroty,
+  				double* vrotz,
+  				double* vx,
+  				double* vy,
+  				double* vz,
+  				double* mass,
+  				double* momx,
+  				double* momy,
+  				double* momz,
+  				double* fx,
+  				double* fy,
+  				double* fz,
+  				uint32_t* type,
+  				VertexArray* vertices,
+  				const shape *const shps,
+  				const double time,
+  				const ContactParams hkp,
+  				int size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		Interaction& item = interactions[idx];
+  		
+  		Interaction2 item2 = {item.friction, item.moment, item.id_i, item.id_j, item.sub_i, item.sub_j};
+  		
+  		kernelContact4(item2, rx, ry, rz, vrotx, vroty, vrotz, vx, vy, vz, mass, momx, momy, momz, fx, fy, fz, type, vertices, shps, time, hkp);
+  		
+  		item.update_friction_and_moment(item2);
+  	}
+  }
+  
+  __global__ void kernelTotal(exaDEM::Interaction* interactions,
+  				double* rx,
+  				double* ry,
+  				double* rz,
+  				double* vrotx,
+  				double* vroty,
+  				double* vrotz,
+  				double* vx,
+  				double* vy,
+  				double* vz,
+  				double* mass,
+  				double* momx,
+  				double* momy,
+  				double* momz,
+  				double* fx,
+  				double* fy,
+  				double* fz,
+  				uint32_t* type,
+  				VertexArray* vertices,
+  				const shape *const shps,
+  				const double time,
+  				const ContactParams hkp,
+  				int size,
+  				int type2)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		Interaction& item = interactions[idx];
+  		
+  		Interaction2 item2 = {item.friction, item.moment, item.id_i, item.id_j, item.sub_i, item.sub_j};
+  		
+  		kernelContactTotal(item2, rx, ry, rz, vrotx, vroty, vrotz, vx, vy, vz, mass, momx, momy, momz, fx, fy, fz, type, vertices, shps, time, hkp, type2);
+  		
+  		item.update_friction_and_moment(item2);
+  	}
+  }  			
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class ComputeContactClassifierPolyhedronGPU : public OperatorNode
   {
@@ -83,7 +787,7 @@ namespace exaDEM
     ADD_SLOT(double, dt, INPUT, REQUIRED);
     ADD_SLOT(bool, symetric, INPUT_OUTPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
     ADD_SLOT(Drivers, drivers, INPUT, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier<InteractionAOS>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
     // analyses
     ADD_SLOT(long, timestep, INPUT, REQUIRED);
@@ -153,9 +857,7 @@ namespace exaDEM
       onika::memory::CudaMMVector<double> rx;
       onika::memory::CudaMMVector<double> ry;
       onika::memory::CudaMMVector<double> rz;
-      
-      onika::memory::CudaMMVector<double> rad;
-      
+
       onika::memory::CudaMMVector<double> vrotx;
       onika::memory::CudaMMVector<double> vroty;
       onika::memory::CudaMMVector<double> vrotz;
@@ -183,9 +885,7 @@ namespace exaDEM
       rx.resize(number_of_particles);
       ry.resize(number_of_particles);
       rz.resize(number_of_particles);
-        
-      rad.resize(number_of_particles);
-        
+      
       vrotx.resize(number_of_particles);
       vroty.resize(number_of_particles);
       vrotz.resize(number_of_particles);
@@ -221,7 +921,7 @@ namespace exaDEM
       for (size_t type = 0; type <= 3; type++)
       {
         auto [data, size] = classifier.get_info(type);
-        InteractionWrapper<InteractionSOA> wrapper(data);
+        InteractionWrapper<InteractionAOS> wrapper(data);
         
         for(int i = 0; i < size; i++)
         {
@@ -236,14 +936,12 @@ namespace exaDEM
         	auto id_i = item.id_i;
         	auto id_j = item.id_j;
         	
-        	if(pass[id_i] = false)
+        	if(pass[id_i] == false)
         	{
         		rx[id_i] = cell_i[field::rx][p_i];
         		ry[id_i] = cell_i[field::ry][p_i];
         		rz[id_i] = cell_i[field::rz][p_i];
-        		
-        		rad[id_i] = cell_i[field::radius][p_i];
-        		
+
         		vrotx[id_i] = cell_i[field::vrot][p_i].x;
         		vroty[id_i] = cell_i[field::vrot][p_i].y;
         		vrotz[id_i] = cell_i[field::vrot][p_i].z;
@@ -269,14 +967,12 @@ namespace exaDEM
         		pass[id_i] = true;
         	}
         	
-        	if(pass[id_j] = false)
+        	if(pass[id_j] == false)
         	{
         		rx[id_j] = cell_i[field::rx][p_i];
         		ry[id_j] = cell_i[field::ry][p_i];
         		rz[id_j] = cell_i[field::rz][p_i];
-        		
-        		rad[id_j] = cell_i[field::radius][p_i];
-        		
+
         		vrotx[id_j] = cell_i[field::vrot][p_i].x;
         		vroty[id_j] = cell_i[field::vrot][p_i].y;
         		vrotz[id_j] = cell_i[field::vrot][p_i].z;
@@ -303,7 +999,29 @@ namespace exaDEM
         	}
         }
         
+        int numBlocks = (size + 255) / 256;
+        int threadsPerBlock = 256;
         
+        /*if(type == 0)
+        {
+        	//kernel1<<<numBlocks, threadsPerBlock>>>(wrapper.interactions, rx.data(), ry.data(), rz.data(), vrotx.data(), vroty.data(), vrotz.data(), vx.data(), vy.data(), vz.data(), mass.data(), momx.data(), momy.data(), momz.data(), fx.data(), fy.data(), fz.data(), type_particule.data(), vertices.data(), shps, time, hkp, size);
+        }
+        else if(type == 1)
+        {
+        	kernel2<<<numBlocks, threadsPerBlock>>>(wrapper.interactions, rx.data(), ry.data(), rz.data(), vrotx.data(), vroty.data(), vrotz.data(), vx.data(), vy.data(), vz.data(), mass.data(), momx.data(), momy.data(), momz.data(), fx.data(), fy.data(), fz.data(), type_particule.data(), vertices.data(), shps, time, hkp, size);
+        }
+        else if(type == 2)
+        {
+        	//kernel3<<<numBlocks, threadsPerBlock>>>(wrapper.interactions, rx.data(), ry.data(), rz.data(), vrotx.data(), vroty.data(), vrotz.data(), vx.data(), vy.data(), vz.data(), mass.data(), momx.data(), momy.data(), momz.data(), fx.data(), fy.data(), fz.data(), type_particule.data(), vertices.data(), shps, time, hkp, size);
+        }
+        else if(type == 3)
+        {
+        	//kernel4<<<numBlocks, threadsPerBlock>>>(wrapper.interactions, rx.data(), ry.data(), rz.data(), vrotx.data(), vroty.data(), vrotz.data(), vx.data(), vy.data(), vz.data(), mass.data(), momx.data(), momy.data(), momz.data(), fx.data(), fy.data(), fz.data(), type_particule.data(), vertices.data(), shps, time, hkp, size);
+        }*/
+        
+        printf("TYPE:%d\n", type);
+        
+        kernelTotal<<<numBlocks, threadsPerBlock>>>(wrapper.interactions, rx.data(), ry.data(), rz.data(), vrotx.data(), vroty.data(), vrotz.data(), vx.data(), vy.data(), vz.data(), mass.data(), momx.data(), momy.data(), momz.data(), fx.data(), fy.data(), fz.data(), type_particule.data(), vertices.data(), shps, time, hkp, size, type);
       
         run_contact_law(parallel_execution_context(), type, classifier, poly, __params__);
       }
