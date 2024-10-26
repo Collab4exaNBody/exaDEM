@@ -55,30 +55,49 @@ namespace exaDEM
 
     uint16_t type; /**< Type of the interaction (e.g., contact type). */
 
+    template<typename Func>
+    void for_all (Func& func)
+    {
+      func(ft_x);
+      func(ft_y);
+      func(ft_z);
+      func(mom_x);
+      func(mom_y);
+      func(mom_z);
+      func(id_i);
+      func(id_j);
+      func(cell_i);
+      func(cell_j);
+      func(p_i);
+      func(p_j);
+      func(sub_i);
+      func(sub_j);
+    }
+
+    struct ClearFunctor{
+      template<typename T> inline void operator()(T& vec) {vec.clear();}
+    };
+
     /**
      *@briefs CLears all the lists.
      */
     void clear()
     {
-      ft_x.clear();
-      ft_y.clear();
-      ft_z.clear();
+      ClearFunctor func;
+      for_all(func);
+    }
 
-      mom_x.clear();
-      mom_y.clear();
-      mom_z.clear();
-
-      id_i.clear();
-      id_j.clear();
-
-      cell_i.clear();
-      cell_j.clear();
-
-      p_i.clear();
-      p_j.clear();
-
-      sub_i.clear();
-      sub_j.clear();
+    struct ResizeFunctor{
+      const size_t size;
+      template<typename T> inline void operator()(T& vec) {vec.resize(size);}
+    };
+    /**
+     *@briefs Resize all the lists.
+     */
+    void resize(const size_t size)
+    {
+      ResizeFunctor func = {size};
+      for_all(func);
     }
 
     /**
@@ -88,35 +107,91 @@ namespace exaDEM
 
     ONIKA_HOST_DEVICE_FUNC size_t size() { return onika::cuda::vector_size(ft_x); }
 
+    struct PrefetchMemoryFunctor
+    {
+      size_t size;
+      int deviceId;
+      onikaStream_t stream;
+
+      template<typename T> inline void operator()(T& vec)
+      {
+        auto* data = onika::cuda::vector_data(vec);
+        ONIKA_CU_MEM_PREFETCH(data, size, deviceId, stream);
+      }
+    };
+
+    void prefetch_memory_on_gpu(int device_id, onikaStream_t stream)
+    {
+      PrefetchMemoryFunctor func = {this->size(), device_id, stream};
+      for_all(func);
+    }
+
     /**
      *@briefs Fills the lists.
      */
     void insert(std::vector<exaDEM::Interaction> &tmp, int w)
     {
-      for (auto interaction : tmp)
-      {
-        ft_x.push_back(interaction.friction.x);
-        ft_y.push_back(interaction.friction.y);
-        ft_z.push_back(interaction.friction.z);
-
-        mom_x.push_back(interaction.moment.x);
-        mom_y.push_back(interaction.moment.y);
-        mom_z.push_back(interaction.moment.z);
-
-        id_i.push_back(interaction.id_i);
-        id_j.push_back(interaction.id_j);
-
-        cell_i.push_back(interaction.cell_i);
-        cell_j.push_back(interaction.cell_j);
-
-        p_i.push_back(interaction.p_i);
-        p_j.push_back(interaction.p_j);
-
-        sub_i.push_back(interaction.sub_i);
-        sub_j.push_back(interaction.sub_j);
-      }
+      const size_t new_elements = tmp.size();
+      const size_t old_size = this->size();
+      this->resize(old_size + new_elements);
 
       type = w;
+
+      for (size_t i = 0 ; i < new_elements ; i++)
+      {
+        const size_t idx = old_size + i;
+        auto& interaction = tmp[i];
+        ft_x[idx] = interaction.friction.x;
+        ft_y[idx] = interaction.friction.y;
+        ft_z[idx] = interaction.friction.z;
+
+        mom_x[idx] = interaction.moment.x;
+        mom_y[idx] = interaction.moment.y;
+        mom_z[idx] = interaction.moment.z;
+
+        id_i[idx] = interaction.id_i;
+        id_j[idx] = interaction.id_j;
+
+        cell_i[idx] = interaction.cell_i;
+        cell_j[idx] = interaction.cell_j;
+
+        p_i[idx] = interaction.p_i;
+        p_j[idx] = interaction.p_j;
+
+        sub_i[idx] = interaction.sub_i;
+        sub_j[idx] = interaction.sub_j;
+      }
+    }
+
+    void insert(size_t start, size_t size, std::vector<exaDEM::Interaction> &tmp, int w)
+    {
+      if( tmp.size() != size ) std::cout << "Error when resizing wave " << w << std::endl; 
+      type = w;
+
+      for (size_t i = 0 ; i < size ; i++)
+      {
+        const size_t idx = start + i;
+        auto& interaction = tmp[i];
+        ft_x[idx] = interaction.friction.x;
+        ft_y[idx] = interaction.friction.y;
+        ft_z[idx] = interaction.friction.z;
+
+        mom_x[idx] = interaction.moment.x;
+        mom_y[idx] = interaction.moment.y;
+        mom_z[idx] = interaction.moment.z;
+
+        id_i[idx] = interaction.id_i;
+        id_j[idx] = interaction.id_j;
+
+        cell_i[idx] = interaction.cell_i;
+        cell_j[idx] = interaction.cell_j;
+
+        p_i[idx] = interaction.p_i;
+        p_j[idx] = interaction.p_j;
+
+        sub_i[idx] = interaction.sub_i;
+        sub_j[idx] = interaction.sub_j;
+      }
     }
 
     /**

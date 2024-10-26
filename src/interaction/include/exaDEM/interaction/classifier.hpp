@@ -207,6 +207,17 @@ namespace exaDEM
       return types;
     }
 
+    void prefetch_memory_on_gpu()
+    {
+      const int device_id = 0;
+      onikaStream_t s;
+      cudaStreamCreate(&s);
+      for(int w = 0 ; w < types ; w++)
+      {
+        waves[w].prefetch_memory_on_gpu(device_id, s);
+      }
+    }
+
     /**
      * @brief Classifies interactions into categorized waves based on their types.
      *
@@ -219,18 +230,34 @@ namespace exaDEM
      */
     void classify(GridCellParticleInteraction &ges, size_t *idxs, size_t size)
     {
+      std::array<size_t, types> previous_sizes;
+      for (int w = 0; w < types; w++) previous_sizes[w] = waves[w].size();
+
       reset_waves();          // Clear existing waves
       auto &ces = ges.m_data; // Reference to cells containing interactions
 
+      size_t n_threads;
 #     pragma omp parallel
       {
+        n_threads = omp_get_num_threads();
+      }
+
+      std::vector< std::array<std::pair<size_t,size_t>, types> > bounds;
+      bounds.resize(n_threads);
+
+#     pragma omp parallel
+      {
+        size_t threads = omp_get_thread_num();
         std::array<std::vector<exaDEM::Interaction>, types> tmp; ///< Storage for interactions categorized by type.
+        for (int w = 0; w < types; w++) tmp[w].reserve( (2*previous_sizes[w]) / n_threads);
+
+        // Partial
 #       pragma omp for schedule(dynamic) nowait
         for (size_t c = 0; c < size; c++)
         {
           auto &interactions = ces[idxs[c]];
           const unsigned int n_interactions_in_cell = interactions.m_data.size();
-          exaDEM::Interaction *const __restrict__ data_ptr = onika::cuda::vector_data(interactions.m_data);
+          exaDEM::Interaction *const __restrict__ data_ptr = interactions.m_data.data();
           // Place interactions into their respective waves
           for (size_t it = 0; it < n_interactions_in_cell; it++)
           {
@@ -239,13 +266,37 @@ namespace exaDEM
             tmp[t].push_back(item);
           }
         }
+        for (int w = 0; w < types; w++) bounds[threads][w].second = tmp[w].size();
 
+        #pragma omp barrier   
+     
+        // All
+        for (int w = 0; w < types; w++) 
+        {
+          size_t start = 0;
+          for ( size_t i = 0 ; i < threads ; i++)
+          {
+            start += bounds[i][w].second;
+          }
+          bounds[threads][w].first = start;
+        }
+
+        #pragma omp barrier
+
+        // Partial
+        #pragma omp for
         for (int w = 0; w < types; w++)
         {
-#         pragma omp critical
-          {
-            waves[w].insert(tmp[w], w);
-          }
+          size_t size = bounds[n_threads-1][w].first + bounds[n_threads-1][w].second;
+          waves[w].resize(size);
+        }
+
+        #pragma omp barrier
+
+        // All
+        for (int w = 0; w < types; w++)
+        {
+          waves[w].insert(bounds[threads][w].first, bounds[threads][w].second, tmp[w], w);
         }
       }
     }

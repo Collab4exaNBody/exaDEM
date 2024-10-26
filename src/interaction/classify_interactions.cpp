@@ -62,6 +62,7 @@ namespace exaDEM
       if (!ic.has_value())
         ic->initialize();
       ic->classify(*ges, cell_ptr, cell_size);
+      //ic->prefetch_memory_on_gpu(); // GPU only
     }
   };
 
