@@ -25,25 +25,25 @@ namespace exaDEM
 
   template <> struct InteractionWrapper<InteractionSOA>
   {
-    double *ft_x;
-    double *ft_y;
-    double *ft_z;
+    double * __restrict__ ft_x;
+    double * __restrict__ ft_y;
+    double * __restrict__ ft_z;
 
-    double *mom_x;
-    double *mom_y;
-    double *mom_z;
+    double * __restrict__ mom_x;
+    double * __restrict__ mom_y;
+    double * __restrict__ mom_z;
 
-    uint64_t *id_i;
-    uint64_t *id_j;
+    uint64_t * __restrict__ id_i;
+    uint64_t * __restrict__ id_j;
 
-    uint32_t *cell_i;
-    uint32_t *cell_j;
+    uint32_t * __restrict__ cell_i;
+    uint32_t * __restrict__ cell_j;
 
-    uint16_t *p_i;
-    uint16_t *p_j;
+    uint16_t * __restrict__ p_i;
+    uint16_t * __restrict__ p_j;
 
-    uint16_t *sub_i;
-    uint16_t *sub_j;
+    uint16_t * __restrict__ sub_i;
+    uint16_t * __restrict__ sub_j;
 
     uint16_t m_type;
 
@@ -74,12 +74,11 @@ namespace exaDEM
 
     ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
     {
-      exaDEM::Interaction res;
-      res = {{ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}, id_i[idx], id_j[idx], cell_i[idx], cell_j[idx], p_i[idx], p_j[idx], sub_i[idx], sub_j[idx], m_type};
+      exaDEM::Interaction res = {{ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}, id_i[idx], id_j[idx], cell_i[idx], cell_j[idx], p_i[idx], p_j[idx], sub_i[idx], sub_j[idx], m_type};
       return res;
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction item) const
+    ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
     {
       ft_x[idx] = item.friction.x;
       ft_y[idx] = item.friction.y;
@@ -93,13 +92,13 @@ namespace exaDEM
 
   template <> struct InteractionWrapper<InteractionAOS>
   {
-    exaDEM::Interaction *interactions;
+    exaDEM::Interaction * __restrict__ interactions;
 
     InteractionWrapper(InteractionAOS &data) { interactions = onika::cuda::vector_data(data.m_data); }
 
     ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const { return interactions[idx]; }
 
-    ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction item) const
+    ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
     {
       auto &item2 = interactions[idx];
       item2.update_friction_and_moment(item);
@@ -185,10 +184,10 @@ namespace exaDEM
       // fit size if needed
       const size_t size = waves[id].size();
       analysis.resize(size);
-      double *const dnp = onika::cuda::vector_data(analysis.dn);
-      Vec3d *const cpp = onika::cuda::vector_data(analysis.cp);
-      Vec3d *const fnp = onika::cuda::vector_data(analysis.fn);
-      Vec3d *const ftp = onika::cuda::vector_data(analysis.ft);
+      double *const __restrict__ dnp = onika::cuda::vector_data(analysis.dn);
+      Vec3d *const __restrict__ cpp = onika::cuda::vector_data(analysis.cp);
+      Vec3d *const __restrict__ fnp = onika::cuda::vector_data(analysis.fn);
+      Vec3d *const __restrict__ ftp = onika::cuda::vector_data(analysis.ft);
       return {dnp, cpp, fnp, ftp};
     }
 

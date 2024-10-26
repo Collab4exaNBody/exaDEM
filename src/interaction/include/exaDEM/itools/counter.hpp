@@ -17,11 +17,11 @@
 #include <onika/parallel/parallel_for.h>
 #include <exanb/compute/reduce_cell_particles.h>
 
+
 // mini macro here
-//#ifdef ONIKA_CUDA_VERSION
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 
-  __device__ double atomicMin_double(double *address, double val)
+  __host__ __device__ double atomicMin_double(double *address, double val)
   {
     unsigned long long int *address_as_ull = (unsigned long long int *)address;
     unsigned long long int old = *address_as_ull, assumed;
@@ -38,6 +38,7 @@
 #else
 # define EXADEM_CU_ATOMIC_MIN(x,a,...) ::onika::capture_atomic_min( x , static_cast<std::remove_reference_t<decltype(x)> >(a) );
 #endif
+
 
 namespace exaDEM
 {
@@ -166,7 +167,8 @@ namespace exaDEM
         ONIKA_CU_ATOMIC_ADD(global.n_act_interaction, local.n_act_interaction);
         ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction, local.n_tot_interaction);
         EXADEM_CU_ATOMIC_MIN(global.min_dn, local.min_dn);
-      }
+ 
+     }
 
       /**
        * @brief Operator to combine results globally.
@@ -198,11 +200,12 @@ namespace exaDEM
      */
     template <typename T, typename Func, typename ResultT> static inline ParallelExecutionWrapper reduce_data(ParallelExecutionContext *exec_ctx, InteractionWrapper<T> &data, Func &func, uint64_t size, ResultT &result)
     {
-#     if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
-        BlockParallelForOptions opts;
+//#     if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+#ifdef ONIKA_CUDA_VERSION
+        ParallelForOptions opts;
         opts.omp_scheduling = OMP_SCHED_STATIC;
         ReduceTFunctor<T, Func, ResultT> kernel = {data, func, &result};
-        return block_parallel_for(size, kernel, exec_ctx, opts);
+        return parallel_for(size, kernel, exec_ctx, opts);
 #     else
         // should be generic, later
         int n_act_interaction(0), n_tot_interaction(0);
@@ -228,10 +231,10 @@ namespace exaDEM
         result.min_dn = min_dn;
 
         // useless but it avoid bugs, TODO LATER
-        BlockParallelForOptions opts;
+        ParallelForOptions opts;
         opts.omp_scheduling = OMP_SCHED_STATIC;
         ReduceTFunctor<T, Func, ResultT> kernel = {data, func, &result};
-        return block_parallel_for(0, kernel, exec_ctx, opts);
+        return parallel_for(0, kernel, exec_ctx, opts);
 #     endif
     }
   } // namespace itools

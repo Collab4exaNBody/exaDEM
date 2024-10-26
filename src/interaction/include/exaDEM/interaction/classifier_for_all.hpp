@@ -41,10 +41,10 @@ namespace exaDEM
    */
   struct AnalysisDataPacker
   {
-    double *dnp; /**< Pointer to the buffer storing overlap (dn) values between particles. */
-    Vec3d *cpp;  /**< Pointer to the buffer storing contact point positions. */
-    Vec3d *fnp;  /**< Pointer to the buffer storing normal force vectors (fn). */
-    Vec3d *ftp;  /**< Pointer to the buffer storing tangential force vectors (ft). */
+    double * __restrict__ dnp; /**< Pointer to the buffer storing overlap (dn) values between particles. */
+    Vec3d * __restrict__ cpp;  /**< Pointer to the buffer storing contact point positions. */
+    Vec3d * __restrict__ fnp;  /**< Pointer to the buffer storing normal force vectors (fn). */
+    Vec3d * __restrict__ ftp;  /**< Pointer to the buffer storing tangential force vectors (ft). */
 
     /**
      * @brief Constructor that initializes the data packer with buffers from a classifier.
@@ -124,7 +124,7 @@ namespace exaDEM
     template <size_t... Is> ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const
     {
       exaDEM::Interaction item = data(i);
-      const auto [dn, pos, fn, ft] = kernel(std::forward<exaDEM::Interaction>(item), std::get<Is>(params)...);
+      const auto [dn, pos, fn, ft] = kernel(item, std::get<Is>(params)...);
       data.update(i, item);
       packer(i, dn, pos, fn, ft); // packer is used to store interaction data
     }

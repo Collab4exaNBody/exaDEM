@@ -88,6 +88,7 @@ namespace exaDEM
       bool need_interactions_for_log_frequency = (*timestep) % log_frequency;
 
       bool store_interactions = write_interactions || compute_stress_tensor || need_interactions_for_log_frequency;
+      store_interactions = true;
 
       /** Get driver and particles data */
       driver_t *drvs = drivers->data();

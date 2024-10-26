@@ -86,9 +86,9 @@ namespace exaDEM
        * @param pj Vertex array of the second polyhedron.
        * @param j Index of the vertex or edge in the second polyhedron.
        * @param shpj Shape data of the second polyhedron.
-       * @return std::tuple<bool, double, Vec3d, Vec3d> Tuple
+       * @return contact()
        */
-      ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator()(const uint16_t type, const VertexArray &pi, const int i, const shape *shpi, const VertexArray &pj, const int j, const shape *shpj) const
+      ONIKA_HOST_DEVICE_FUNC inline contact operator()(const uint16_t type, const VertexArray &pi, const int i, const shape *shpi, const VertexArray &pj, const int j, const shape *shpj) const
       {
 #       define __params__     pi, i, shpi, pj, j, shpj
         assert(type >= uint16_t(0) && type <= uint16_t(4));
@@ -104,7 +104,7 @@ namespace exaDEM
           return exaDEM::detection_edge_edge_precompute(__params__);
         }
 #undef __params__
-        return std::tuple<bool, double, Vec3d, Vec3d>();
+        return contact();
       }
     };
 
@@ -165,7 +165,7 @@ namespace exaDEM
        * @param shps Pointer to the shapes array providing shape information for interactions.
        * @param dt Time increment for the simulation step.
        */
-      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &&item, TMPLC *const cells, const ContactParams &hkp, const shape *const shps, const double dt) const
+      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPLC *const __restrict__ cells, const ContactParams &hkp, const shape *const shps, const double dt) const
       {
         // === cell
         auto &cell_i = cells[item.cell_i];
@@ -258,7 +258,7 @@ namespace exaDEM
        * @param shps Pointer to the shapes array providing shape information for interactions.
        * @param dt Time increment for the simulation step.
        */
-      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &&item, TMPLC *cells, driven_t *const drvs, const ContactParams &hkp, const shape *shps, const double dt) const
+      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPLC * __restrict__ cells, driven_t *const drvs, const ContactParams &hkp, const shape *shps, const double dt) const
       {
         const int driver_idx = item.id_j; //
         // TMPLD& driver        = std::get<TMPLD>(drvs[driver_idx]) ;
@@ -345,7 +345,7 @@ namespace exaDEM
        * @param shpj Pointer to the shape information of the second object.
        * @param oj Orientation of the second object.
        */
-      ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator()(const uint16_t type, const Vec3d &pi, const int i, const shape *shpi, const exanb::Quaternion &oi, const Vec3d &pj, const int j, const shape *shpj, const exanb::Quaternion &oj) const
+      ONIKA_HOST_DEVICE_FUNC inline contact operator()(const uint16_t type, const Vec3d &pi, const int i, const shape *shpi, const exanb::Quaternion &oi, const Vec3d &pj, const int j, const shape *shpj, const exanb::Quaternion &oj) const
       {
 #       define __params__     pi, i, shpi, oi, pj, j, shpj, oj
 #       define __inv_params__ pj, j, shpj, oj, pi, i, shpi, oi
@@ -369,7 +369,7 @@ namespace exaDEM
 
 #undef __params__
 #undef __inv_params__
-        return std::tuple<bool, double, Vec3d, Vec3d>();
+        return contact();
       }
     };
 
@@ -397,7 +397,7 @@ namespace exaDEM
        * @param shps Pointer to the shapes array providing shape information for interactions.
        * @param dt Time increment for the simulation step.
        */
-      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &&item, TMPLC *cells, driver_t *const drvs, const ContactParams &hkp, const shape *shps, const double dt) const
+      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPLC * __restrict__ cells, driver_t *const drvs, const ContactParams &hkp, const shape *shps, const double dt) const
       {
         const int driver_idx = item.id_j; //
         Stl_mesh &driver = (exaDEM::Stl_mesh &)(drvs[driver_idx]);

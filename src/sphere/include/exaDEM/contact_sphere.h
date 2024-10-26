@@ -125,7 +125,7 @@ namespace exaDEM
       template <typename TMPC>
       ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
           // inline void operator()(
-          Interaction &&item, TMPC *cells, const ContactParams &hkp, const double time) const
+          Interaction &item, TMPC *cells, const ContactParams &hkp, const double time) const
       {
         // === cell
         auto &cell_i = cells[item.cell_i];
@@ -216,7 +216,7 @@ namespace exaDEM
        * @param hkp Reference to the contact law parameters.
        * @param time Increment simulation time.
        */
-      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &&item, TMPLC *cells, driver_t *drvs, const ContactParams &hkp, const double time) const
+      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPLC *cells, driver_t *drvs, const ContactParams &hkp, const double time) const
       {
         const int driver_idx = item.id_j; //
         // TMPLD& driver = std::get<TMPLD>(drvs[driver_idx]); // issue on GPU
@@ -295,7 +295,7 @@ namespace exaDEM
        *         - Vec3d: Contact point on the particle.
        *         - Vec3d: Contact point on the mesh element.
        */
-      ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator()(const uint16_t type, const Vec3d &pi, const double radius, const Vec3d &pj, const int j, const shape *const shpj, const exanb::Quaternion &oj) const
+      ONIKA_HOST_DEVICE_FUNC inline contact operator()(const uint16_t type, const Vec3d &pi, const double radius, const Vec3d &pj, const int j, const shape *const shpj, const exanb::Quaternion &oj) const
       {
 #       define __params__     pi, radius, pj, j, shpj, oj
         assert(type >= 7 && type <= 12); // Asserting valid interaction type range
@@ -309,7 +309,7 @@ namespace exaDEM
           return exaDEM::detection_vertex_face(__params__);
         }
 #undef __params__
-        return std::tuple<bool, double, Vec3d, Vec3d>(); // Default return if type is invalid
+        return contact(); // Default return if type is invalid
       }
     };
 
@@ -335,7 +335,7 @@ namespace exaDEM
        * @param hkp Reference to the contact law parameters.
        * @param time The simulation time increment.
        */
-      template <typename TMPC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &&item, TMPC *cells, driver_t *drvs, const ContactParams &hkp, const double time) const
+      template <typename TMPC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPC *cells, driver_t *drvs, const ContactParams &hkp, const double time) const
       {
         const int driver_idx = item.id_j; //
         // auto& driver = std::get<Stl_mesh>(drvs[driver_idx]) ; // issue on gpu
