@@ -230,10 +230,10 @@ namespace exaDEM
      */
     void classify(GridCellParticleInteraction &ges, size_t *idxs, size_t size)
     {
-      std::array<size_t, types> previous_sizes;
-      for (int w = 0; w < types; w++) previous_sizes[w] = waves[w].size();
+      //std::array<size_t, types> previous_sizes;
+      //for (int w = 0; w < types; w++) previous_sizes[w] = waves[w].size();
 
-      reset_waves();          // Clear existing waves
+      //reset_waves();          // Clear existing waves
       auto &ces = ges.m_data; // Reference to cells containing interactions
 
       size_t n_threads;
@@ -249,10 +249,10 @@ namespace exaDEM
       {
         size_t threads = omp_get_thread_num();
         std::array<std::vector<exaDEM::Interaction>, types> tmp; ///< Storage for interactions categorized by type.
-        for (int w = 0; w < types; w++) tmp[w].reserve( (2*previous_sizes[w]) / n_threads);
+        //for (int w = 0; w < types; w++) tmp[w].reserve( (2*previous_sizes[w]) / n_threads);
 
         // Partial
-#       pragma omp for schedule(dynamic) nowait
+#       pragma omp for schedule(static) nowait
         for (size_t c = 0; c < size; c++)
         {
           auto &interactions = ces[idxs[c]];
@@ -266,11 +266,13 @@ namespace exaDEM
             tmp[t].push_back(item);
           }
         }
+
         for (int w = 0; w < types; w++) bounds[threads][w].second = tmp[w].size();
 
         #pragma omp barrier   
      
         // All
+        auto& bound = bounds[threads];
         for (int w = 0; w < types; w++) 
         {
           size_t start = 0;
@@ -278,7 +280,7 @@ namespace exaDEM
           {
             start += bounds[i][w].second;
           }
-          bounds[threads][w].first = start;
+          bound[w].first = start;
         }
 
         #pragma omp barrier
@@ -296,7 +298,7 @@ namespace exaDEM
         // All
         for (int w = 0; w < types; w++)
         {
-          waves[w].insert(bounds[threads][w].first, bounds[threads][w].second, tmp[w], w);
+          waves[w].copy(bound[w].first, bound[w].second, tmp[w], w);
         }
       }
     }
@@ -316,35 +318,50 @@ namespace exaDEM
       Vec3d null = {0, 0, 0};
       auto &ces = ges.m_data; // Reference to cells containing interactions
                               // Iterate through each wave
-      for (int w = 0; w < types; w++)
+/*
+      std::array<onikaStream_t, types> streams;
+      for (int w = 0; w < types; w++) 
       {
-        auto &wave = waves[w];
-        const unsigned int n1 = wave.size();
-        // Parallel loop to process interactions within a wave
-#       pragma omp parallel for
-        for (size_t it = 0; it < n1; it++)
+        int device_id = 0;
+        ONIKA_CU_CREATE_STREAM_NON_BLOCKING(streams[w]);
+        waves[w].prefetch_memory_on_gpu(cudaCpuDeviceId, streams[w]);
+      }
+*/
+
+#     pragma omp parallel
+      {
+        for (int w = 0; w < types; w++)
         {
-          exaDEM::Interaction item1 = wave[it];
-          // Check if interaction in wave has non-zero friction and moment
-          if (item1.friction != null || item1.moment != null)
+          auto &wave = waves[w];
+          const unsigned int n1 = wave.size();
+//        ONIKA_CU_STREAM_SYNCHRONIZE(streams[w]);
+
+          // Parallel loop to process interactions within a wave
+#         pragma omp for schedule(guided) nowait
+          for (size_t it = 0; it < n1; it++)
           {
-            auto &cell = ces[item1.cell_i];
-            const unsigned int n2 = onika::cuda::vector_size(cell.m_data);
-            exaDEM::Interaction *data_ptr = onika::cuda::vector_data(cell.m_data);
-            // Iterate through interactions in cell to find matching interaction
-            for (size_t it2 = 0; it2 < n2; it2++)
+            exaDEM::Interaction item1 = wave[it];
+            // Check if interaction in wave has non-zero friction and moment
+            if (item1.friction != null || item1.moment != null)
             {
-              exaDEM::Interaction &item2 = data_ptr[it2];
-              if (item1 == item2)
+              auto &cell = ces[item1.cell_i];
+              const unsigned int n2 = onika::cuda::vector_size(cell.m_data);
+              exaDEM::Interaction * __restrict__ data_ptr = onika::cuda::vector_data(cell.m_data);
+              // Iterate through interactions in cell to find matching interaction
+              for (size_t it2 = 0; it2 < n2; it2++)
               {
-                item2.update_friction_and_moment(item1);
-                break;
+                exaDEM::Interaction &item2 = data_ptr[it2];
+                if (item1 == item2)
+                {
+                  item2.update_friction_and_moment(item1);
+                  break;
+                }
               }
             }
           }
         }
       }
-      reset_waves();
+      //reset_waves(); keep the memory alive
     }
   };
 } // namespace exaDEM

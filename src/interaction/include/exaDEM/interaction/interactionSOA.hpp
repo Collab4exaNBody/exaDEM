@@ -163,7 +163,7 @@ namespace exaDEM
       }
     }
 
-    void insert(size_t start, size_t size, std::vector<exaDEM::Interaction> &tmp, int w)
+    void copy(size_t start, size_t size, std::vector<exaDEM::Interaction> &tmp, int w)
     {
       if( tmp.size() != size ) std::cout << "Error when resizing wave " << w << std::endl; 
       type = w;
@@ -172,25 +172,25 @@ namespace exaDEM
       {
         const size_t idx = start + i;
         auto& interaction = tmp[i];
-        ft_x[idx] = interaction.friction.x;
-        ft_y[idx] = interaction.friction.y;
-        ft_z[idx] = interaction.friction.z;
+        ft_x[idx]   = interaction.friction.x;
+        ft_y[idx]   = interaction.friction.y;
+        ft_z[idx]   = interaction.friction.z;
 
-        mom_x[idx] = interaction.moment.x;
-        mom_y[idx] = interaction.moment.y;
-        mom_z[idx] = interaction.moment.z;
+        mom_x[idx]  = interaction.moment.x;
+        mom_y[idx]  = interaction.moment.y;
+        mom_z[idx]  = interaction.moment.z;
 
-        id_i[idx] = interaction.id_i;
-        id_j[idx] = interaction.id_j;
+        id_i[idx]   = interaction.id_i;
+        id_j[idx]   = interaction.id_j;
 
         cell_i[idx] = interaction.cell_i;
         cell_j[idx] = interaction.cell_j;
 
-        p_i[idx] = interaction.p_i;
-        p_j[idx] = interaction.p_j;
+        p_i[idx]    = interaction.p_i;
+        p_j[idx]    = interaction.p_j;
 
-        sub_i[idx] = interaction.sub_i;
-        sub_j[idx] = interaction.sub_j;
+        sub_i[idx]  = interaction.sub_i;
+        sub_j[idx]  = interaction.sub_j;
       }
     }
 
