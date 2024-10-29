@@ -39,7 +39,7 @@ jobs:
       run: make UpdatePluginDataBase && ctest --test-dir example -C --rerun-failed --output-on-failure ${{env.BUILD_TYPE}}
 
     - name: Generate a code coverage repor part1
-      uses: threeal/gcovr-action@v1.0.0
+      uses: threeal/gcovr-action@v1.1.0
       with:
         root: ${{github.workspace}}/build/src/
         excludes: |
