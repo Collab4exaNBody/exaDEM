@@ -22,6 +22,7 @@ under the License.
 #include <exaDEM/shape/shape.hpp>
 #include <exaDEM/shape/shape_reader.hpp>
 #include <exaDEM/interaction/interaction.hpp>
+#include <filesystem>
 
 namespace exaDEM
 {
@@ -80,6 +81,9 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC inline void initialize()
     {
       // checks
+      // remove relative paths
+      std::filesystem::path full_name = this->shp.m_name;
+      this->shp.m_name = full_name.filename();
     }
 
     /**
