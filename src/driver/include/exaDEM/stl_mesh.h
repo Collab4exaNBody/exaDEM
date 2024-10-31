@@ -78,7 +78,7 @@ namespace exaDEM
     /**
      * @brief Print information about the STL mesh.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void initialize()
+    inline void initialize()
     {
       // checks
       // remove relative paths
