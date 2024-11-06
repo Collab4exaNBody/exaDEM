@@ -648,4 +648,43 @@ namespace exaDEM
     const Vec3d &vsj = vaj[sj];
     return detection_edge_edge_core(vfi, vsi, ri, vfj, vsj, rj);
   }
+
+# define __params__ const VertexArray &vai, const int i, const shape *shpi, const VertexArray &vaj, const int j, const shape *shpj
+# define __params__use__ vai, i, shpi, vaj, j, shpj
+  template<int INTERACTION_TYPE> struct detect{};
+  template<> struct detect<0>{ ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_vertex_precompute(__params__use__); } };
+  template<> struct detect<1>{ ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_edge_precompute(__params__use__); } };
+  template<> struct detect<2>{ ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_face_precompute(__params__use__); } };
+  template<> struct detect<3>{ ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_edge_edge_precompute(__params__use__); } };
+# undef __params__
+# undef __params__use__
+
+  /** This part concerns detection between particles and “stl mesh”.  **/
+# define __params__ const Vec3d &pi, const int i, const shape *shpi, const exanb::Quaternion &oi, const Vec3d &pj, const int j, const shape *shpj, const exanb::Quaternion &oj 
+# define __params__sph__ const Vec3d &pi, const double ri, const Vec3d &pj, const int j, const shape *shpj, const exanb::Quaternion &oj 
+# define __params__use__      pi, i, shpi, oi, pj, j, shpj, oj
+# define __params__use__sph__     pi, ri, pj, j, shpj, oj
+# define __params__use__inv__ pj, j, shpj, oj, pi, i, shpi, oi
+  template<> struct detect<7>{ 
+    ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_vertex(__params__use__); } // polyhedron
+    ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__sph__) const { return detection_vertex_vertex(__params__use__sph__); } // sphere
+  };
+  template<> struct detect<8>{ 
+    ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_edge(__params__use__); } // polyhedron
+    ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__sph__) const { return detection_vertex_edge(__params__use__sph__); } // sphere
+  };
+  template<> struct detect<9>{ 
+    ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_face(__params__use__); } // polyhedron 
+    ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__sph__) const { return detection_vertex_face(__params__use__sph__); }  // sphere
+  };
+  template<> struct detect<10>{ ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_edge_edge(__params__use__); } };
+  template<> struct detect<11>{ ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_vertex(__params__use__inv__); } };
+  template<> struct detect<12>{ ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_edge(__params__use__inv__); } };
+# undef __params__
+# undef __params__sph__
+# undef __params__use__
+# undef __params__use__sph__
+# undef __params__use__inv__
+
+
 } // namespace exaDEM
