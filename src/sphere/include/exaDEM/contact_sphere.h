@@ -24,7 +24,6 @@ under the License.
 
 namespace exaDEM
 {
-
   /**
    * @brief Atomically adds a value to a double variable.
    *
@@ -263,67 +262,17 @@ namespace exaDEM
     };
 
     /**
-     * @struct stl_mesh_detector
-     * @brief Structure for detecting interactions between particles and STL mesh elements.
-     *
-     * This structure provides methods for detecting interactions between particles and
-     * STL mesh elements such as vertices, edges, and faces. It uses specific detection
-     * functions based on the type of interaction specified.
-     */
-    struct stl_mesh_detector
-    {
-      /**
-       * @brief Detects interactions between particles and STL mesh elements.
-       *
-       * This function detects interactions between a particle and an STL mesh element
-       * based on the specified type. It returns information about the interaction,
-       * including whether an interaction occurred, penetration depth, and contact points.
-       *
-       * @param type The type of interaction to detect:
-       *             - 7: Vertex-Vertex interaction
-       *             - 8: Vertex-Edge interaction
-       *             - 9: Vertex-Face interaction
-       * @param pi Position of the particle.
-       * @param radius Radius of the particle.
-       * @param pj Position of the mesh element (vertex, edge, or face).
-       * @param j Index of the mesh element.
-       * @param shpj Pointer to the shape of the mesh element.
-       * @param oj Orientation of the mesh element (Quaternion).
-       * @return A tuple containing:
-       *         - bool: Whether an interaction occurred.
-       *         - double: Penetration depth (if applicable).
-       *         - Vec3d: Contact point on the particle.
-       *         - Vec3d: Contact point on the mesh element.
-       */
-      ONIKA_HOST_DEVICE_FUNC inline contact operator()(const uint16_t type, const Vec3d &pi, const double radius, const Vec3d &pj, const int j, const shape *const shpj, const exanb::Quaternion &oj) const
-      {
-#       define __params__     pi, radius, pj, j, shpj, oj
-        assert(type >= 7 && type <= 12); // Asserting valid interaction type range
-        switch (type)
-        {
-        case 7:
-          return exaDEM::detection_vertex_vertex(__params__);
-        case 8:
-          return exaDEM::detection_vertex_edge(__params__);
-        case 9:
-          return exaDEM::detection_vertex_face(__params__);
-        }
-#undef __params__
-        return contact(); // Default return if type is invalid
-      }
-    };
-
-    /**
      * @struct contact_law_stl
      * @brief Structure for applying contact law interactions with STL drivers.
      *
      * This structure provides methods for applying contact law interactions between
      * particles and STL drivers (such as cylinders, spheres, surfaces, or mesh faces).
      */
+    template<int interaction_type>
     struct contact_law_stl
     {
       using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
-      const stl_mesh_detector func; ///< STL mesh detector function object.
+      detect<interaction_type> detection; ///< STL mesh detector function object.
       /**
        * @brief Applies contact law interactions with STL drivers.
        *
@@ -352,7 +301,7 @@ namespace exaDEM
         // === driver j
         const auto &shp_j = driver.shp;
         const Quaternion orient_j = driver.quat;
-        auto [contact, dn, n, contact_position] = func(item.type, r_i, radius_i, driver.center, sub_j, &shp_j, orient_j);
+        auto [contact, dn, n, contact_position] = detection(r_i, radius_i, driver.center, sub_j, &shp_j, orient_j);
         Vec3d fn = {0, 0, 0};
 
         if (contact)

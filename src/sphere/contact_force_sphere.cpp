@@ -74,6 +74,17 @@ namespace exaDEM
   public:
     inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
 
+    template<int start, int end, template<int> typename FuncT, typename T, typename... Args>
+    void loop_contact_force(Classifier<T>& classifier, Args &&... args)
+    {
+      FuncT<start> contact_law;
+      run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
+      if constexpr( start + 1 <= end )
+      {
+        loop_contact_force<start+1, end, FuncT>(classifier, std::forward<Args>(args)...);
+      }
+    }
+
     inline void execute() override final
     {
       if (grid->number_of_cells() == 0)
@@ -110,7 +121,6 @@ namespace exaDEM
       contact_law_driver<Cylinder> cyli;
       contact_law_driver<Surface> surf;
       contact_law_driver<Ball> ball;
-      contact_law_stl stlm = {};
 
       if (*symetric)
       {
@@ -125,10 +135,10 @@ namespace exaDEM
       run_contact_law(parallel_execution_context(), 4, classifier, cyli, store_interactions, cells, drvs, hkp_drvs, time);
       run_contact_law(parallel_execution_context(), 5, classifier, surf, store_interactions, cells, drvs, hkp_drvs, time);
       run_contact_law(parallel_execution_context(), 6, classifier, ball, store_interactions, cells, drvs, hkp_drvs, time);
-      for (int type = 7; type <= 9; type++)
-      {
-        run_contact_law(parallel_execution_context(), type, classifier, stlm, store_interactions, cells, drvs, hkp_drvs, time);
-      }
+
+      constexpr int stl_type_start = 7;
+      constexpr int stl_type_end = 9;
+      loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, store_interactions, cells, drvs, hkp_drvs, time);
 
       // printf("EXECUTE\n");
       // getchar();

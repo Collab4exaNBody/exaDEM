@@ -55,65 +55,13 @@ namespace exaDEM
     }
 
     /**
-     * @struct polyhedron_detector
-     * @brief Structure for detecting interactions between polyhedrons in exaDEM.
-     *
-     * This structure provides methods to detect interactions between polyhedrons
-     * based on the specified type using precomputed data.
-     */
-    struct polyhedron_detector
-    {
-      /**
-       * @brief Default constructor for polyhedron_detector struct.
-       */
-      polyhedron_detector() {}
-
-      /**
-       * @brief Detects interactions between polyhedrons based on the specified type.
-       *
-       * This function detects interactions between polyhedrons based on the specified
-       * type using precomputed data. It returns a tuple indicating whether an interaction
-       * was detected, the distance between the polyhedrons, norm and contact point.
-       *
-       * @param type Type of interaction to detect:
-       *             - 0; Vertex-Vertex interaction
-       *             - 1: Vertex-Edge interaction
-       *             - 2: Vertex-Face interaction
-       *             - 3: Edge-Edge interaction
-       * @param pi Vertex array of the first polyhedron.
-       * @param i Index of the vertex or edge in the first polyhedron.
-       * @param shpi Shape data of the first polyhedron.
-       * @param pj Vertex array of the second polyhedron.
-       * @param j Index of the vertex or edge in the second polyhedron.
-       * @param shpj Shape data of the second polyhedron.
-       * @return contact()
-       */
-      ONIKA_HOST_DEVICE_FUNC inline contact operator()(const uint16_t type, const VertexArray &pi, const int i, const shape *shpi, const VertexArray &pj, const int j, const shape *shpj) const
-      {
-#       define __params__     pi, i, shpi, pj, j, shpj
-        assert(type >= uint16_t(0) && type <= uint16_t(4));
-        switch (type)
-        {
-        case 0:
-          return exaDEM::detection_vertex_vertex_precompute(__params__);
-        case 1:
-          return exaDEM::detection_vertex_edge_precompute(__params__);
-        case 2:
-          return exaDEM::detection_vertex_face_precompute(__params__);
-        case 3:
-          return exaDEM::detection_edge_edge_precompute(__params__);
-        }
-#undef __params__
-        return contact();
-      }
-    };
-
-    /**
      * @struct contact_law
      * @brief Structure defining contact law interactions for particles (polyhedra).
      */
+    template<int interaction_type>
     struct contact_law
     {
+      detect<interaction_type> detection;
       /**
        * @brief Default constructor for contact_law struct.
        */
@@ -191,7 +139,7 @@ namespace exaDEM
         const shape &shp_i = shps[type_i];
         const shape &shp_j = shps[type_j];
 
-        auto [contact, dn, n, contact_position] = detect(item.type, vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
+        auto [contact, dn, n, contact_position] = detection(vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
         // temporary vec3d to store forces.
         Vec3d f = {0, 0, 0};
         Vec3d fn = {0, 0, 0};
@@ -233,7 +181,6 @@ namespace exaDEM
 
         return {dn, contact_position, fn, item.friction};
       }
-      const polyhedron_detector detect;
     };
 
     /**
@@ -310,76 +257,13 @@ namespace exaDEM
     };
 
     /**
-     * @brief Functor for detecting interactions between two objects in an STL mesh.
-     *
-     * This functor detects interactions between two objects represented by vertices,
-     * edges, or faces in an STL mesh. It returns a tuple indicating whether an interaction
-     * occurred, the distance between the objects, and the interaction details.
-     * Type of interaction to detect:
-     *             - 7: Vertex-Vertex
-     *             - 8: Vertex-Edge
-     *             - 9: Vertex-Face
-     *             - 10: Edge-Edge
-     *             - 11: Edge-Vertex (inverted order of Vertex-Edge)
-     *             - 12: Face-Vertex (inverted order of Vertex-Face)
-     */
-    struct stl_mesh_detector
-    {
-
-      // default constructor
-      stl_mesh_detector() {}
-      /**
-       * @brief Detects interactions between two objects based on the specified type.
-       *
-       * This function detects interactions between two objects in an STL mesh based
-       * on the provided interaction type. It uses the positions, indices, shape
-       * information, and orientations of the objects to determine the interaction.
-       *
-       * @param type Type of interaction to detect.
-       * @param pi Position of the first object's vertex or edge vertex.
-       * @param i Index of the vertex or edge vertex in the first object.
-       * @param shpi Pointer to the shape information of the first object.
-       * @param oi Orientation of the first object.
-       * @param pj Position of the second object's vertex or edge vertex.
-       * @param j Index of the vertex or edge vertex in the second object.
-       * @param shpj Pointer to the shape information of the second object.
-       * @param oj Orientation of the second object.
-       */
-      ONIKA_HOST_DEVICE_FUNC inline contact operator()(const uint16_t type, const Vec3d &pi, const int i, const shape *shpi, const exanb::Quaternion &oi, const Vec3d &pj, const int j, const shape *shpj, const exanb::Quaternion &oj) const
-      {
-#       define __params__     pi, i, shpi, oi, pj, j, shpj, oj
-#       define __inv_params__ pj, j, shpj, oj, pi, i, shpi, oi
-        assert(type >= uint16_t(7) && type <= uint16_t(12));
-        switch (type)
-        {
-        case 7:
-          return exaDEM::detection_vertex_vertex(__params__);
-        case 8:
-          return exaDEM::detection_vertex_edge(__params__);
-        case 9:
-          return exaDEM::detection_vertex_face(__params__);
-        case 10:
-          return exaDEM::detection_edge_edge(__params__);
-          // case 11: return exaDEM::detection_vertex_edge ( __params__ );
-        case 11:
-          return exaDEM::detection_vertex_edge(__inv_params__);
-        case 12:
-          return exaDEM::detection_vertex_face(__inv_params__);
-        }
-
-#undef __params__
-#undef __inv_params__
-        return contact();
-      }
-    };
-
-    /**
      * @brief Functor for applying contact law interactions with STL mesh objects.
      */
+    template<int interaction_type>
     struct contact_law_stl
     {
       using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
-      const stl_mesh_detector func;
+      detect<interaction_type> detection;
       /* Default constructor */
       contact_law_stl() {}
       /**
@@ -418,7 +302,7 @@ namespace exaDEM
         const Quaternion &orient_i = cell[field::orient][p_i];
         const Quaternion orient_j = driver.quat;
         // === detection
-        auto [contact, dn, n, contact_position] = func(item.type, r_i, sub_i, &shp_i, orient_i, driver.center, sub_j, &shp_j, orient_j);
+        auto [contact, dn, n, contact_position] = detection(r_i, sub_i, &shp_i, orient_i, driver.center, sub_j, &shp_j, orient_j);
         constexpr Vec3d null = {0, 0, 0};
         Vec3d fn = null;
 
