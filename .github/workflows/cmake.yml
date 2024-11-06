@@ -41,6 +41,8 @@ jobs:
     - name: Generate a code coverage repor part1
       uses: threeal/gcovr-action@v1.1.0
       with:
+        html-details: true
+        html-theme: github.green
         root: ${{github.workspace}}/build/src/
         excludes: |
           exaNBody
