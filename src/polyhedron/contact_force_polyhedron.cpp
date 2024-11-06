@@ -47,483 +47,544 @@ namespace exaDEM
 {
   using namespace exanb;
   using namespace polyhedron;
-  
-  
-  
-  __device__ double compute_damp_gpu(const double a_damp_rate, const double a_kn, const double a_meff)
-  {
-    const double ret = a_damp_rate * 2.0 * sqrt(a_kn * a_meff);
-    return ret;
-  }
 
-  __device__ Vec3d compute_relative_velocity_gpu(const Vec3d &contact_position, const Vec3d &pos_i, const Vec3d &vel_i, const Vec3d &vrot_i, const Vec3d &pos_j, const Vec3d &vel_j, const Vec3d &vrot_j)
-  {
-    const auto contribution_i = vel_i - exanb::cross(contact_position - pos_i, vrot_i);
-    const auto contribution_j = vel_j - exanb::cross(contact_position - pos_j, vrot_j);
-    const auto ret = contribution_j - contribution_i;
-    return ret;
-  }
-  
- __device__ Vec3d compute_normal_force_gpu(const double a_kn, const double a_damp, const double a_dn, const double a_vn, const Vec3d &a_n)
-  {
-    const double fne = -a_kn * a_dn;  // elastic contact
-    const double fnv = a_damp * a_vn; // viscous damping
-    const double fn = fnv + fne;
-    const auto ret = fn * a_n;
-    return ret;
-  }
-  
-  __device__ Vec3d compute_tangential_force_gpu(const double a_kt, const double a_dt, const double a_vn, const Vec3d &a_n, const Vec3d &a_vel)
-  {
-    const Vec3d vt = a_vel - a_vn * a_n;
-    const Vec3d ft = a_kt * (a_dt * vt);
-    return ft;
-  }
-  
-  __device__ double compute_threshold_ft_gpu(const double a_mu, const double a_kn, const double a_dn)
-  {
-    // === recompute fne
-    const double fne = a_kn * a_dn; //(remove -)
-    const double threshold_ft = std::fabs(a_mu * fne);
-    return threshold_ft;
-  }
-
-  __device__ void fit_tangential_force_gpu(const double threshold_ft, Vec3d &a_ft)
-  {
-    double ft_square = exanb::dot(a_ft, a_ft);
-    if (ft_square > 0.0 && ft_square > threshold_ft * threshold_ft)
-      a_ft *= (threshold_ft / sqrt(ft_square));
-  }
-
-  
-  __device__ void contact_force_core_gpu(const double dn,
-                                                        const Vec3d &n, // -normal
-                                                        const double dt, const double kn, const double kt, const double kr, const double mu, const double dampRate, const double meff,
-                                                        Vec3d &ft, // tangential force between particle i and j
-                                                        const Vec3d &contact_position,
-                                                        const Vec3d &pos_i,  // positions i
-                                                        const Vec3d &vel_i,  // positions i
-                                                        Vec3d f_i,          // forces i
-                                                        Vec3d &mom_i,        // moments i
-                                                        const Vec3d &vrot_i, // angular velocities i
-                                                        const Vec3d &pos_j,  // positions j
-                                                        const Vec3d &vel_j,  // positions j
-                                                        const Vec3d &vrot_j  // angular velocities j
-  )
-  {
-    const double damp = compute_damp_gpu(dampRate, kn, meff);
-
-    // === Relative velocity (j relative to i)
-    auto vel = compute_relative_velocity_gpu(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
-
-    // compute relative velocity
-    const double vn = exanb::dot(vel, n);
-
-    // === Normal force (elatic contact + viscous damping)
-    const Vec3d fn = compute_normal_force_gpu(kn, damp, dn, vn, n); // fc ==> cohesive force
-
-    // === Tangential force (friction)
-    ft += compute_tangential_force_gpu(kt, dt, vn, n, vel);
-    // ft	 	+= exaDEM::compute_tangential_force(kt, dt, vn, n, vel);
-
-    // fit tangential force
-    auto threshold_ft = compute_threshold_ft_gpu(mu, kn, dn);
-    fit_tangential_force_gpu(threshold_ft, ft);
-
-    // === sum forces
-    f_i = fn + ft;
-    
-    //printf("FORCE(%f,%f,%f)\n", fn.x,fn.y,fn.z);
-
-    // === update moments
-    mom_i += kr * (vrot_j - vrot_i) * dt;
-
-    ///*
-    // test
-    Vec3d branch = contact_position - pos_i;
-    double r = (exanb::dot(branch, vrot_i)) / (exanb::dot(vrot_i, vrot_i));
-    branch -= r * vrot_i;
-
-    constexpr double mur = 0;
-    double threshold_mom = std::abs(mur * exanb::norm(branch) * exanb::norm(fn)); // even without fabs, the value should
-                                                                                  // be positive
-    double mom_square = exanb::dot(mom_i, mom_i);
-    if (mom_square > 0.0 && mom_square > threshold_mom * threshold_mom)
-      mom_i = mom_i * (threshold_mom / sqrt(mom_square));
-    //*/
-  }  
-  
-
-  template <typename GridT> __global__ void kernelContact1(InteractionWrapper<InteractionSOA> soa, 
+  template <typename GridT> __global__ void kernelContact1(double* ft_x,
+  								double* ft_y,
+  								double* ft_z,
+  								double* mom_x,
+  								double* mom_y,
+  								double* mom_z,
+  								uint64_t* id_i,
+  								uint64_t* id_j,
+  								uint32_t* celli,
+  								uint32_t* cellj,
+  								uint16_t* p_i,
+  								uint16_t* p_j,
+  								uint16_t* sub_i,
+  								uint16_t* sub_j, 
   								GridT* cells,
   								const shape *const shps,
-  								const ContactParams &hkp,
+  								const ContactParams hkp,
   								const double dt,
+  								double* dnp,
+  								Vec3d* cpp,
+  								Vec3d* fnp,
+  								Vec3d* ftp,		
   								size_t size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
   	if(idx < size)
   	{
-  		Interaction item = soa(idx);
-  		
-        	auto &cell_i = cells[item.cell_i];
-        	auto &cell_j = cells[item.cell_j];
+        	auto &cell_i = cells[celli[idx]];
+        	auto &cell_j = cells[cellj[idx]];
 
         	// === positions
-        	const Vec3d ri = {cell_i[field::rx][item.p_i], cell_i[field::ry][item.p_i], cell_i[field::rz][item.p_i]};//get_r(cell_i, item.p_i);
-        	const Vec3d rj = {cell_j[field::rx][item.p_j], cell_j[field::ry][item.p_j], cell_j[field::rz][item.p_j]};//get_r(cell_j, item.p_j);
+        	const Vec3d ri = {cell_i[field::rx][p_i[idx]], cell_i[field::ry][p_i[idx]], cell_i[field::rz][p_i[idx]]};//get_r(cell_i, item.p_i);
+        	const Vec3d rj = {cell_j[field::rx][p_j[idx]], cell_j[field::ry][p_j[idx]], cell_j[field::rz][p_j[idx]]};//get_r(cell_j, item.p_j);
 
         	// === vrot
-        	const Vec3d &vrot_i = cell_i[field::vrot][item.p_i];
-        	const Vec3d &vrot_j = cell_j[field::vrot][item.p_j];
+        	const Vec3d &vrot_i = cell_i[field::vrot][p_i[idx]];
+        	const Vec3d &vrot_j = cell_j[field::vrot][p_j[idx]];
 
         	// === type
-        	const auto &type_i = cell_i[field::type][item.p_i];
-        	const auto &type_j = cell_j[field::type][item.p_j];
+        	const auto &type_i = cell_i[field::type][p_i[idx]];
+        	const auto &type_j = cell_j[field::type][p_j[idx]];
 
         	// === vertex array
-        	const auto &vertices_i = cell_i[field::vertices][item.p_i];
-        	const auto &vertices_j = cell_j[field::vertices][item.p_j];
+        	const auto &vertices_i = cell_i[field::vertices][p_i[idx]];
+        	const auto &vertices_j = cell_j[field::vertices][p_j[idx]];
 
         	// === shapes
         	const shape &shp_i = shps[type_i];
         	const shape &shp_j = shps[type_j];
         	
-        	auto [contact, dn, n, contact_position] = exaDEM::detection_vertex_vertex_precompute(vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
+        	auto [contact, dn, n, contact_position] = exaDEM::detection_vertex_vertex_precompute(vertices_i, sub_i[idx], &shp_i, vertices_j, sub_j[idx], &shp_j);
         	
         	Vec3d f = {0, 0, 0};
         	Vec3d fn = {0, 0, 0};
         	if (contact)
         	{
-         	const Vec3d vi = {cell_i[field::vx][item.p_i], cell_i[field::vy][item.p_i], cell_i[field::vz][item.p_i]};//get_v(cell_i, item.p_i);
-          	const Vec3d vj = {cell_j[field::vx][item.p_j], cell_j[field::vy][item.p_j], cell_j[field::vz][item.p_j]};//get_v(cell_j, item.p_j);
-          	const auto &m_i = cell_i[field::mass][item.p_i];
-          	const auto &m_j = cell_j[field::mass][item.p_j];
+         	const Vec3d vi = {cell_i[field::vx][p_i[idx]], cell_i[field::vy][p_i[idx]], cell_i[field::vz][p_i[idx]]};//get_v(cell_i, item.p_i);
+          	const Vec3d vj = {cell_j[field::vx][p_j[idx]], cell_j[field::vy][p_j[idx]], cell_j[field::vz][p_j[idx]]};//get_v(cell_j, item.p_j);
+          	const auto &m_i = cell_i[field::mass][p_i[idx]];
+          	const auto &m_j = cell_j[field::mass][p_j[idx]];
 
           	const double meff = compute_effective_mass(m_i, m_j);
-		
-          	contact_force_core_gpu(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, ri, vi, f, item.moment, vrot_i, // particle 1
+          	
+          	Vec3d item_friction = {ft_x[idx], ft_y[idx], ft_z[idx]};
+          	Vec3d item_moment = {mom_x[idx], mom_y[idx], mom_z[idx]};
+  
+          	contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item_friction, contact_position, ri, vi, f, item_moment, vrot_i, // particle 1
                              rj, vj, vrot_j                                                                                                                             // particle nbh
           	);
-		
-          	fn = f - item.friction;
+
+          	fn = f - item_friction;
           	
           	Vec3d f2 = {0,0,0};
 
           	// === update particle informations
           	// ==== Particle i
-          	auto &mom_i = cell_i[field::mom][item.p_i];
+          	auto &mom_i = cell_i[field::mom][p_i[idx]];
           	
-          	auto mom_res_i = compute_moments(contact_position, ri, f, item.moment);
-     
+          	auto mom_res_i = compute_moments(contact_position, ri, f, item_moment);
           	
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].x, 0);//mom_res_i.x);
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].y, 0);//mom_res_i.y);
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].z, 0);//mom_res_i.z);
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].x, mom_res_i.x);
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].y, mom_res_i.y);
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].z, mom_res_i.z);
           	
-          	atomicAdd(&(cells[item.cell_i][field::fx][item.p_i]), 0);//a);
-          	atomicAdd(&(cells[item.cell_i][field::fy][item.p_i]), 0);//f.y);
-          	atomicAdd(&(cells[item.cell_i][field::fz][item.p_i]), 0);//f.z);
+          	//atomicAdd(&(cells[celli[idx]][field::fx][p_i[idx]]), f.x);
+          	//atomicAdd(&(cells[celli[idx]][field::fy][p_i[idx]]), f.y);
+          	//atomicAdd(&(cells[celli[idx]][field::fz][p_i[idx]]), f.z);
 
           	// ==== Particle j
-          	auto &mom_j = cell_j[field::mom][item.p_j];
+          	auto &mom_j = cell_j[field::mom][p_j[idx]];
           	
-          	auto mom_res_j = compute_moments(contact_position, rj, -f, -item.moment);
+          	auto mom_res_j = compute_moments(contact_position, rj, -f, -item_moment);
           	
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].x, 0);//mom_res_j.x);
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].y, 0);//mom_res_j.y);
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].z, 0);//mom_res_j.z);
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].x, mom_res_j.x);
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].y, mom_res_j.y);
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].z, mom_res_j.z);
           	
-          	atomicAdd(&cells[item.cell_j][field::fx][item.p_j], 0);//-f.x);
-          	atomicAdd(&cells[item.cell_j][field::fy][item.p_j], 0);//-f.y);
-          	atomicAdd(&cells[item.cell_j][field::fz][item.p_j], 0);//-f.z);
+          	//atomicAdd(&cells[cellj[idx]][field::fx][p_j[idx]], -f.x);
+          	//atomicAdd(&cells[cellj[idx]][field::fy][p_j[idx]], -f.y);
+          	//atomicAdd(&cells[cellj[idx]][field::fz][p_j[idx]], -f.z);
+          	
+          	ft_x[idx] = item_friction.x;
+          	ft_y[idx] = item_friction.y;
+          	ft_z[idx] = item_friction.z;
+          	
+          	mom_x[idx] = item_moment.x;
+          	mom_y[idx] = item_moment.y;
+          	mom_z[idx] = item_moment.z;
 
        		}
         	else
         	{
           	//item.reset();
-          	soa.update(idx, item);
+          	
+          	ft_x[idx] = 0;
+          	ft_y[idx] = 0;
+          	ft_z[idx] = 0;
+          	
+          	mom_x[idx] = 0;
+          	mom_y[idx] = 0;
+          	mom_z[idx] = 0;
+          	
           	dn = 0;
           	
         	}        	
-  		
+
+		dnp[idx] = dn;
+		cpp[idx] = contact_position;
+		fnp[idx] = fn;
+		ftp[idx] = {ft_x[idx], ft_y[idx], ft_z[idx]};
+
   	}
   	
   }
   
-    template <typename GridT> __global__ void kernelContact2(InteractionWrapper<InteractionSOA> soa, 
+  template <typename GridT> __global__ void kernelContact2(double* ft_x,
+  								double* ft_y,
+  								double* ft_z,
+  								double* mom_x,
+  								double* mom_y,
+  								double* mom_z,
+  								uint64_t* id_i,
+  								uint64_t* id_j,
+  								uint32_t* celli,
+  								uint32_t* cellj,
+  								uint16_t* p_i,
+  								uint16_t* p_j,
+  								uint16_t* sub_i,
+  								uint16_t* sub_j, 
   								GridT* cells,
   								const shape *const shps,
-  								const ContactParams &hkp,
+  								const ContactParams hkp,
   								const double dt,
+  								double* dnp,
+  								Vec3d* cpp,
+  								Vec3d* fnp,
+  								Vec3d* ftp,		
   								size_t size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
   	if(idx < size)
   	{
-  		Interaction item = soa(idx);
-  		
-        	auto &cell_i = cells[item.cell_i];
-        	auto &cell_j = cells[item.cell_j];
+        	auto &cell_i = cells[celli[idx]];
+        	auto &cell_j = cells[cellj[idx]];
 
         	// === positions
-        	const Vec3d ri = {cell_i[field::rx][item.p_i], cell_i[field::ry][item.p_i], cell_i[field::rz][item.p_i]};//get_r(cell_i, item.p_i);
-        	const Vec3d rj = {cell_j[field::rx][item.p_j], cell_j[field::ry][item.p_j], cell_j[field::rz][item.p_j]};//get_r(cell_j, item.p_j);
+        	const Vec3d ri = {cell_i[field::rx][p_i[idx]], cell_i[field::ry][p_i[idx]], cell_i[field::rz][p_i[idx]]};//get_r(cell_i, item.p_i);
+        	const Vec3d rj = {cell_j[field::rx][p_j[idx]], cell_j[field::ry][p_j[idx]], cell_j[field::rz][p_j[idx]]};//get_r(cell_j, item.p_j);
 
         	// === vrot
-        	const Vec3d &vrot_i = cell_i[field::vrot][item.p_i];
-        	const Vec3d &vrot_j = cell_j[field::vrot][item.p_j];
+        	const Vec3d &vrot_i = cell_i[field::vrot][p_i[idx]];
+        	const Vec3d &vrot_j = cell_j[field::vrot][p_j[idx]];
 
         	// === type
-        	const auto &type_i = cell_i[field::type][item.p_i];
-        	const auto &type_j = cell_j[field::type][item.p_j];
+        	const auto &type_i = cell_i[field::type][p_i[idx]];
+        	const auto &type_j = cell_j[field::type][p_j[idx]];
 
         	// === vertex array
-        	const auto &vertices_i = cell_i[field::vertices][item.p_i];
-        	const auto &vertices_j = cell_j[field::vertices][item.p_j];
+        	const auto &vertices_i = cell_i[field::vertices][p_i[idx]];
+        	const auto &vertices_j = cell_j[field::vertices][p_j[idx]];
 
         	// === shapes
         	const shape &shp_i = shps[type_i];
         	const shape &shp_j = shps[type_j];
         	
-        	auto [contact, dn, n, contact_position] = exaDEM::detection_vertex_edge_precompute(vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
+        	auto [contact, dn, n, contact_position] = exaDEM::detection_vertex_edge_precompute(vertices_i, sub_i[idx], &shp_i, vertices_j, sub_j[idx], &shp_j);
         	
         	Vec3d f = {0, 0, 0};
         	Vec3d fn = {0, 0, 0};
         	if (contact)
         	{
-         	const Vec3d vi = {cell_i[field::vx][item.p_i], cell_i[field::vy][item.p_i], cell_i[field::vz][item.p_i]};//get_v(cell_i, item.p_i);
-          	const Vec3d vj = {cell_j[field::vx][item.p_j], cell_j[field::vy][item.p_j], cell_j[field::vz][item.p_j]};//get_v(cell_j, item.p_j);
-          	const auto &m_i = cell_i[field::mass][item.p_i];
-          	const auto &m_j = cell_j[field::mass][item.p_j];
+         	const Vec3d vi = {cell_i[field::vx][p_i[idx]], cell_i[field::vy][p_i[idx]], cell_i[field::vz][p_i[idx]]};//get_v(cell_i, item.p_i);
+          	const Vec3d vj = {cell_j[field::vx][p_j[idx]], cell_j[field::vy][p_j[idx]], cell_j[field::vz][p_j[idx]]};//get_v(cell_j, item.p_j);
+          	const auto &m_i = cell_i[field::mass][p_i[idx]];
+          	const auto &m_j = cell_j[field::mass][p_j[idx]];
 
           	const double meff = compute_effective_mass(m_i, m_j);
-		
-          	contact_force_core_gpu(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, ri, vi, f, item.moment, vrot_i, // particle 1
-                             rj, vj, vrot_j                                                                                                                             // particle nbh
-          	);
-		
-          	fn = f - item.friction;
-
-          	// === update particle informations
-          	// ==== Particle i
-          	auto &mom_i = cell_i[field::mom][item.p_i];
           	
-          	auto mom_res_i = compute_moments(contact_position, ri, f, item.moment);
-          	
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].x, 0);//mom_res_i.x);
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].y, 0);//mom_res_i.y);
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].z, 0);//mom_res_i.z);
-          	
-          	atomicAdd(&cells[item.cell_i][field::fx][item.p_i], 0);//f.x);
-          	atomicAdd(&cells[item.cell_i][field::fy][item.p_i], 0);//f.y);
-          	atomicAdd(&cells[item.cell_i][field::fz][item.p_i], 0);//f.z);
-
-          	// ==== Particle j
-          	auto &mom_j = cell_j[field::mom][item.p_j];
-          	
-          	auto mom_res_j = compute_moments(contact_position, rj, -f, -item.moment);
-          	
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].x, 0);//mom_res_j.x);
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].y, 0);//mom_res_j.y);
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].z, 0);//mom_res_j.z);
-          	
-          	atomicAdd(&cells[item.cell_j][field::fx][item.p_j], 0);//-f.x);
-          	atomicAdd(&cells[item.cell_j][field::fy][item.p_j], 0);//-f.y);
-          	atomicAdd(&cells[item.cell_j][field::fz][item.p_j], 0);//-f.z);
-       		}
-        	else
-        	{
-          	//item.reset();
-          	soa.update(idx, item);
-          	dn = 0;
-        	}     	
-  		
-  		}
-  	
-  }
+          	Vec3d item_friction = {ft_x[idx], ft_y[idx], ft_z[idx]};
+          	Vec3d item_moment = {mom_x[idx], mom_y[idx], mom_z[idx]};
   
-  template <typename GridT> __global__ void kernelContact3(InteractionWrapper<InteractionSOA> soa, 
-  								GridT* cells,
-  								const shape *const shps,
-  								const ContactParams &hkp,
-  								const double dt,
-  								size_t size)
-  {
-  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  	if(idx < size)
-  	{
-  		Interaction item = soa(idx);
-  		
-        	auto &cell_i = cells[item.cell_i];
-        	auto &cell_j = cells[item.cell_j];
-
-        	// === positions
-        	const Vec3d ri = {cell_i[field::rx][item.p_i], cell_i[field::ry][item.p_i], cell_i[field::rz][item.p_i]};//get_r(cell_i, item.p_i);
-        	const Vec3d rj = {cell_j[field::rx][item.p_j], cell_j[field::ry][item.p_j], cell_j[field::rz][item.p_j]};//get_r(cell_j, item.p_j);
-
-        	// === vrot
-        	const Vec3d &vrot_i = cell_i[field::vrot][item.p_i];
-        	const Vec3d &vrot_j = cell_j[field::vrot][item.p_j];
-
-        	// === type
-        	const auto &type_i = cell_i[field::type][item.p_i];
-        	const auto &type_j = cell_j[field::type][item.p_j];
-
-        	// === vertex array
-        	const auto &vertices_i = cell_i[field::vertices][item.p_i];
-        	const auto &vertices_j = cell_j[field::vertices][item.p_j];
-
-        	// === shapes
-        	const shape &shp_i = shps[type_i];
-        	const shape &shp_j = shps[type_j];
-        	
-        	auto [contact, dn, n, contact_position] = exaDEM::detection_vertex_face_precompute(vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
-        	
-        	Vec3d f = {0, 0, 0};
-        	Vec3d fn = {0, 0, 0};
-        	if (contact)
-        	{
-         	const Vec3d vi = {cell_i[field::vx][item.p_i], cell_i[field::vy][item.p_i], cell_i[field::vz][item.p_i]};//get_v(cell_i, item.p_i);
-          	const Vec3d vj = {cell_j[field::vx][item.p_j], cell_j[field::vy][item.p_j], cell_j[field::vz][item.p_j]};//get_v(cell_j, item.p_j);
-          	const auto &m_i = cell_i[field::mass][item.p_i];
-          	const auto &m_j = cell_j[field::mass][item.p_j];
-
-          	const double meff = compute_effective_mass(m_i, m_j);
-		
-          	contact_force_core_gpu(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, ri, vi, f, item.moment, vrot_i, // particle 1
+          	contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item_friction, contact_position, ri, vi, f, item_moment, vrot_i, // particle 1
                              rj, vj, vrot_j                                                                                                                             // particle nbh
           	);
-		
-          	fn = f - item.friction;
+
+          	fn = f - item_friction;
+          	
+          	Vec3d f2 = {0,0,0};
 
           	// === update particle informations
           	// ==== Particle i
-          	auto &mom_i = cell_i[field::mom][item.p_i];
+          	auto &mom_i = cell_i[field::mom][p_i[idx]];
           	
-          	auto mom_res_i = compute_moments(contact_position, ri, f, item.moment);
+          	auto mom_res_i = compute_moments(contact_position, ri, f, item_moment);
           	
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].x, 0);//mom_res_i.x);
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].y, 0);//mom_res_i.y);
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].z, 0);//mom_res_i.z);
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].x, mom_res_i.x);
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].y, mom_res_i.y);
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].z, mom_res_i.z);
           	
-          	atomicAdd(&cells[item.cell_i][field::fx][item.p_i], 0);//f.x);
-          	atomicAdd(&cells[item.cell_i][field::fy][item.p_i], 0);//f.y);
-          	atomicAdd(&cells[item.cell_i][field::fz][item.p_i], 0);//f.z);
+          	//atomicAdd(&(cells[celli[idx]][field::fx][p_i[idx]]), f.x);
+          	//atomicAdd(&(cells[celli[idx]][field::fy][p_i[idx]]), f.y);
+          	//atomicAdd(&(cells[celli[idx]][field::fz][p_i[idx]]), f.z);
 
           	// ==== Particle j
-          	auto &mom_j = cell_j[field::mom][item.p_j];
+          	auto &mom_j = cell_j[field::mom][p_j[idx]];
           	
-          	auto mom_res_j = compute_moments(contact_position, rj, -f, -item.moment);
+          	auto mom_res_j = compute_moments(contact_position, rj, -f, -item_moment);
           	
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].x, 0);//mom_res_j.x);
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].y, 0);//mom_res_j.y);
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].z, 0);//mom_res_j.z);
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].x, mom_res_j.x);
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].y, mom_res_j.y);
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].z, mom_res_j.z);
           	
-          	atomicAdd(&cells[item.cell_j][field::fx][item.p_j], 0);//-f.x);
-          	atomicAdd(&cells[item.cell_j][field::fy][item.p_j], 0);//-f.y);
-          	atomicAdd(&cells[item.cell_j][field::fz][item.p_j], 0);//-f.z);
+          	//atomicAdd(&cells[cellj[idx]][field::fx][p_j[idx]], -f.x);
+          	//atomicAdd(&cells[cellj[idx]][field::fy][p_j[idx]], -f.y);
+          	//atomicAdd(&cells[cellj[idx]][field::fz][p_j[idx]], -f.z);
+          	
+          	ft_x[idx] = item_friction.x;
+          	ft_y[idx] = item_friction.y;
+          	ft_z[idx] = item_friction.z;
+          	
+          	mom_x[idx] = item_moment.x;
+          	mom_y[idx] = item_moment.y;
+          	mom_z[idx] = item_moment.z;
+
        		}
         	else
         	{
           	//item.reset();
-          	soa.update(idx, item);
+          	
+          	ft_x[idx] = 0;
+          	ft_y[idx] = 0;
+          	ft_z[idx] = 0;
+          	
+          	mom_x[idx] = 0;
+          	mom_y[idx] = 0;
+          	mom_z[idx] = 0;
+          	
           	dn = 0;
-        	}
-  		
-  		}
-  	
-  }
-  
-  template <typename GridT> __global__ void kernelContact4(InteractionWrapper<InteractionSOA> soa, 
-  								GridT* cells,
-  								const shape *const shps,
-  								const ContactParams &hkp,
-  								const double dt,
-  								size_t size)
-  {
-  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  	if(idx < size)
-  	{
-  		Interaction item = soa(idx);
-  		
-        	auto &cell_i = cells[item.cell_i];
-        	auto &cell_j = cells[item.cell_j];
-
-        	// === positions
-        	const Vec3d ri = {cell_i[field::rx][item.p_i], cell_i[field::ry][item.p_i], cell_i[field::rz][item.p_i]};//get_r(cell_i, item.p_i);
-        	const Vec3d rj = {cell_j[field::rx][item.p_j], cell_j[field::ry][item.p_j], cell_j[field::rz][item.p_j]};//get_r(cell_j, item.p_j);
-
-        	// === vrot
-        	const Vec3d &vrot_i = cell_i[field::vrot][item.p_i];
-        	const Vec3d &vrot_j = cell_j[field::vrot][item.p_j];
-
-        	// === type
-        	const auto &type_i = cell_i[field::type][item.p_i];
-        	const auto &type_j = cell_j[field::type][item.p_j];
-
-        	// === vertex array
-        	const auto &vertices_i = cell_i[field::vertices][item.p_i];
-        	const auto &vertices_j = cell_j[field::vertices][item.p_j];
-
-        	// === shapes
-        	const shape &shp_i = shps[type_i];
-        	const shape &shp_j = shps[type_j];
-        	
-        	auto [contact, dn, n, contact_position] = exaDEM::detection_edge_edge_precompute(vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
-        	
-        	Vec3d f = {0, 0, 0};
-        	Vec3d fn = {0, 0, 0};
-        	if (contact)
-        	{
-         	const Vec3d vi = {cell_i[field::vx][item.p_i], cell_i[field::vy][item.p_i], cell_i[field::vz][item.p_i]};//get_v(cell_i, item.p_i);
-          	const Vec3d vj = {cell_j[field::vx][item.p_j], cell_j[field::vy][item.p_j], cell_j[field::vz][item.p_j]};//get_v(cell_j, item.p_j);
-          	const auto &m_i = cell_i[field::mass][item.p_i];
-          	const auto &m_j = cell_j[field::mass][item.p_j];
-
-          	const double meff = compute_effective_mass(m_i, m_j);
-		
-          	contact_force_core_gpu(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, ri, vi, f, item.moment, vrot_i, // particle 1
-                             rj, vj, vrot_j                                                                                                                             // particle nbh
-          	);
-		
-          	fn = f - item.friction;
-
-          	// === update particle informations
-          	// ==== Particle i
-          	auto &mom_i = cell_i[field::mom][item.p_i];
           	
-          	auto mom_res_i = compute_moments(contact_position, ri, f, item.moment);
-          	
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].x, 0);//mom_res_i.x);
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].y, 0);//mom_res_i.y);
-          	atomicAdd(&cells[item.cell_i][field::mom][item.p_i].z, 0);//mom_res_i.z);
-          	
-          	atomicAdd(&cells[item.cell_i][field::fx][item.p_i], 0);//f.x);
-          	atomicAdd(&cells[item.cell_i][field::fy][item.p_i], 0);//f.y);
-          	atomicAdd(&cells[item.cell_i][field::fz][item.p_i], 0);//f.z);
-
-          	// ==== Particle j
-          	auto &mom_j = cell_j[field::mom][item.p_j];
-          	
-          	auto mom_res_j = compute_moments(contact_position, rj, -f, -item.moment);
-          	
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].x, 0);//mom_res_j.x);
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].y, 0);//mom_res_j.y);
-          	atomicAdd(&cells[item.cell_j][field::mom][item.p_j].z, 0);//mom_res_j.z);
-          	
-          	atomicAdd(&cells[item.cell_j][field::fx][item.p_j], 0);//-f.x);
-          	atomicAdd(&cells[item.cell_j][field::fy][item.p_j], 0);//-f.y);
-          	atomicAdd(&cells[item.cell_j][field::fz][item.p_j], 0);//-f.z);
-       		}
-        	else
-        	{
-          	//item.reset();
-          	soa.update(idx, item);
-          	dn = 0;
         	}        	
-  		
-  		}
+
+		dnp[idx] = dn;
+		cpp[idx] = contact_position;
+		fnp[idx] = fn;
+		ftp[idx] = {ft_x[idx], ft_y[idx], ft_z[idx]};
+
+  	}
+  	
+  }
+  
+  template <typename GridT> __global__ void kernelContact3(double* ft_x,
+  								double* ft_y,
+  								double* ft_z,
+  								double* mom_x,
+  								double* mom_y,
+  								double* mom_z,
+  								uint64_t* id_i,
+  								uint64_t* id_j,
+  								uint32_t* celli,
+  								uint32_t* cellj,
+  								uint16_t* p_i,
+  								uint16_t* p_j,
+  								uint16_t* sub_i,
+  								uint16_t* sub_j, 
+  								GridT* cells,
+  								const shape *const shps,
+  								const ContactParams hkp,
+  								const double dt,
+  								double* dnp,
+  								Vec3d* cpp,
+  								Vec3d* fnp,
+  								Vec3d* ftp,		
+  								size_t size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	if(idx < size)
+  	{
+        	auto &cell_i = cells[celli[idx]];
+        	auto &cell_j = cells[cellj[idx]];
+
+        	// === positions
+        	const Vec3d ri = {cell_i[field::rx][p_i[idx]], cell_i[field::ry][p_i[idx]], cell_i[field::rz][p_i[idx]]};//get_r(cell_i, item.p_i);
+        	const Vec3d rj = {cell_j[field::rx][p_j[idx]], cell_j[field::ry][p_j[idx]], cell_j[field::rz][p_j[idx]]};//get_r(cell_j, item.p_j);
+
+        	// === vrot
+        	const Vec3d &vrot_i = cell_i[field::vrot][p_i[idx]];
+        	const Vec3d &vrot_j = cell_j[field::vrot][p_j[idx]];
+
+        	// === type
+        	const auto &type_i = cell_i[field::type][p_i[idx]];
+        	const auto &type_j = cell_j[field::type][p_j[idx]];
+
+        	// === vertex array
+        	const auto &vertices_i = cell_i[field::vertices][p_i[idx]];
+        	const auto &vertices_j = cell_j[field::vertices][p_j[idx]];
+
+        	// === shapes
+        	const shape &shp_i = shps[type_i];
+        	const shape &shp_j = shps[type_j];
+        	
+        	auto [contact, dn, n, contact_position] = exaDEM::detection_vertex_face_precompute(vertices_i, sub_i[idx], &shp_i, vertices_j, sub_j[idx], &shp_j);
+        	
+        	Vec3d f = {0, 0, 0};
+        	Vec3d fn = {0, 0, 0};
+        	if (contact)
+        	{
+         	const Vec3d vi = {cell_i[field::vx][p_i[idx]], cell_i[field::vy][p_i[idx]], cell_i[field::vz][p_i[idx]]};//get_v(cell_i, item.p_i);
+          	const Vec3d vj = {cell_j[field::vx][p_j[idx]], cell_j[field::vy][p_j[idx]], cell_j[field::vz][p_j[idx]]};//get_v(cell_j, item.p_j);
+          	const auto &m_i = cell_i[field::mass][p_i[idx]];
+          	const auto &m_j = cell_j[field::mass][p_j[idx]];
+
+          	const double meff = compute_effective_mass(m_i, m_j);
+          	
+          	Vec3d item_friction = {ft_x[idx], ft_y[idx], ft_z[idx]};
+          	Vec3d item_moment = {mom_x[idx], mom_y[idx], mom_z[idx]};
+  
+          	contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item_friction, contact_position, ri, vi, f, item_moment, vrot_i, // particle 1
+                             rj, vj, vrot_j                                                                                                                             // particle nbh
+          	);
+
+          	fn = f - item_friction;
+          	
+          	Vec3d f2 = {0,0,0};
+
+          	// === update particle informations
+          	// ==== Particle i
+          	auto &mom_i = cell_i[field::mom][p_i[idx]];
+          	
+          	auto mom_res_i = compute_moments(contact_position, ri, f, item_moment);
+          	
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].x, mom_res_i.x);
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].y, mom_res_i.y);
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].z, mom_res_i.z);
+          	
+          	//atomicAdd(&(cells[celli[idx]][field::fx][p_i[idx]]), f.x);
+          	//atomicAdd(&(cells[celli[idx]][field::fy][p_i[idx]]), f.y);
+          	//atomicAdd(&(cells[celli[idx]][field::fz][p_i[idx]]), f.z);
+
+          	// ==== Particle j
+          	auto &mom_j = cell_j[field::mom][p_j[idx]];
+          	
+          	auto mom_res_j = compute_moments(contact_position, rj, -f, -item_moment);
+          	
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].x, mom_res_j.x);
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].y, mom_res_j.y);
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].z, mom_res_j.z);
+          	
+          	//atomicAdd(&cells[cellj[idx]][field::fx][p_j[idx]], -f.x);
+          	//atomicAdd(&cells[cellj[idx]][field::fy][p_j[idx]], -f.y);
+          	//atomicAdd(&cells[cellj[idx]][field::fz][p_j[idx]], -f.z);
+          	
+          	ft_x[idx] = item_friction.x;
+          	ft_y[idx] = item_friction.y;
+          	ft_z[idx] = item_friction.z;
+          	
+          	mom_x[idx] = item_moment.x;
+          	mom_y[idx] = item_moment.y;
+          	mom_z[idx] = item_moment.z;
+
+       		}
+        	else
+        	{
+          	//item.reset();
+          	
+          	ft_x[idx] = 0;
+          	ft_y[idx] = 0;
+          	ft_z[idx] = 0;
+          	
+          	mom_x[idx] = 0;
+          	mom_y[idx] = 0;
+          	mom_z[idx] = 0;
+          	
+          	dn = 0;
+          	
+        	}        	
+
+		dnp[idx] = dn;
+		cpp[idx] = contact_position;
+		fnp[idx] = fn;
+		ftp[idx] = {ft_x[idx], ft_y[idx], ft_z[idx]};
+
+  	}
+  	
+  }
+  
+  template <typename GridT> __global__ void kernelContact4(double* ft_x,
+  								double* ft_y,
+  								double* ft_z,
+  								double* mom_x,
+  								double* mom_y,
+  								double* mom_z,
+  								uint64_t* id_i,
+  								uint64_t* id_j,
+  								uint32_t* celli,
+  								uint32_t* cellj,
+  								uint16_t* p_i,
+  								uint16_t* p_j,
+  								uint16_t* sub_i,
+  								uint16_t* sub_j, 
+  								GridT* cells,
+  								const shape *const shps,
+  								const ContactParams hkp,
+  								const double dt,
+  								double* dnp,
+  								Vec3d* cpp,
+  								Vec3d* fnp,
+  								Vec3d* ftp,		
+  								size_t size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	if(idx < size)
+  	{
+        	auto &cell_i = cells[celli[idx]];
+        	auto &cell_j = cells[cellj[idx]];
+
+        	// === positions
+        	const Vec3d ri = {cell_i[field::rx][p_i[idx]], cell_i[field::ry][p_i[idx]], cell_i[field::rz][p_i[idx]]};//get_r(cell_i, item.p_i);
+        	const Vec3d rj = {cell_j[field::rx][p_j[idx]], cell_j[field::ry][p_j[idx]], cell_j[field::rz][p_j[idx]]};//get_r(cell_j, item.p_j);
+
+        	// === vrot
+        	const Vec3d &vrot_i = cell_i[field::vrot][p_i[idx]];
+        	const Vec3d &vrot_j = cell_j[field::vrot][p_j[idx]];
+
+        	// === type
+        	const auto &type_i = cell_i[field::type][p_i[idx]];
+        	const auto &type_j = cell_j[field::type][p_j[idx]];
+
+        	// === vertex array
+        	const auto &vertices_i = cell_i[field::vertices][p_i[idx]];
+        	const auto &vertices_j = cell_j[field::vertices][p_j[idx]];
+
+        	// === shapes
+        	const shape &shp_i = shps[type_i];
+        	const shape &shp_j = shps[type_j];
+        	
+        	auto [contact, dn, n, contact_position] = exaDEM::detection_edge_edge_precompute(vertices_i, sub_i[idx], &shp_i, vertices_j, sub_j[idx], &shp_j);
+        	
+        	Vec3d f = {0, 0, 0};
+        	Vec3d fn = {0, 0, 0};
+        	if (contact)
+        	{
+         	const Vec3d vi = {cell_i[field::vx][p_i[idx]], cell_i[field::vy][p_i[idx]], cell_i[field::vz][p_i[idx]]};//get_v(cell_i, item.p_i);
+          	const Vec3d vj = {cell_j[field::vx][p_j[idx]], cell_j[field::vy][p_j[idx]], cell_j[field::vz][p_j[idx]]};//get_v(cell_j, item.p_j);
+          	const auto &m_i = cell_i[field::mass][p_i[idx]];
+          	const auto &m_j = cell_j[field::mass][p_j[idx]];
+
+          	const double meff = compute_effective_mass(m_i, m_j);
+          	
+          	Vec3d item_friction = {ft_x[idx], ft_y[idx], ft_z[idx]};
+          	Vec3d item_moment = {mom_x[idx], mom_y[idx], mom_z[idx]};
+  
+          	contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item_friction, contact_position, ri, vi, f, item_moment, vrot_i, // particle 1
+                             rj, vj, vrot_j                                                                                                                             // particle nbh
+          	);
+
+          	fn = f - item_friction;
+          	
+          	Vec3d f2 = {0,0,0};
+
+          	// === update particle informations
+          	// ==== Particle i
+          	auto &mom_i = cell_i[field::mom][p_i[idx]];
+          	
+          	auto mom_res_i = compute_moments(contact_position, ri, f, item_moment);
+          	
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].x, mom_res_i.x);
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].y, mom_res_i.y);
+          	//atomicAdd(&cells[celli[idx]][field::mom][p_i[idx]].z, mom_res_i.z);
+          	
+          	//atomicAdd(&(cells[celli[idx]][field::fx][p_i[idx]]), f.x);
+          	//atomicAdd(&(cells[celli[idx]][field::fy][p_i[idx]]), f.y);
+          	//atomicAdd(&(cells[celli[idx]][field::fz][p_i[idx]]), f.z);
+
+          	// ==== Particle j
+          	auto &mom_j = cell_j[field::mom][p_j[idx]];
+          	
+          	auto mom_res_j = compute_moments(contact_position, rj, -f, -item_moment);
+          	
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].x, mom_res_j.x);
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].y, mom_res_j.y);
+          	//atomicAdd(&cells[cellj[idx]][field::mom][p_j[idx]].z, mom_res_j.z);
+          	
+          	//atomicAdd(&cells[cellj[idx]][field::fx][p_j[idx]], -f.x);
+          	//atomicAdd(&cells[cellj[idx]][field::fy][p_j[idx]], -f.y);
+          	//atomicAdd(&cells[cellj[idx]][field::fz][p_j[idx]], -f.z);
+          	
+          	ft_x[idx] = item_friction.x;
+          	ft_y[idx] = item_friction.y;
+          	ft_z[idx] = item_friction.z;
+          	
+          	mom_x[idx] = item_moment.x;
+          	mom_y[idx] = item_moment.y;
+          	mom_z[idx] = item_moment.z;
+
+       		}
+        	else
+        	{
+          	//item.reset();
+          	
+          	ft_x[idx] = 0;
+          	ft_y[idx] = 0;
+          	ft_z[idx] = 0;
+          	
+          	mom_x[idx] = 0;
+          	mom_y[idx] = 0;
+          	mom_z[idx] = 0;
+          	
+          	dn = 0;
+          	
+        	}        	
+
+		dnp[idx] = dn;
+		cpp[idx] = contact_position;
+		fnp[idx] = fn;
+		ftp[idx] = {ft_x[idx], ft_y[idx], ft_z[idx]};
+
+  	}
   	
   }
 
@@ -602,35 +663,53 @@ namespace exaDEM
 #     define __params__ store_interactions, cells, hkp, shps, time
 #     define __params_driver__ store_interactions, cells, drvs, hkp_drvs, shps, time
 
+      int blockSize = 256;
+
+      auto [data1, size1] = classifier.get_info(0);
+      InteractionWrapper<InteractionSOA> interactions1(data1);
+      AnalysisDataPacker packer1(classifier, 0);
+      int numBlocks1 = (size1 + blockSize - 1) / blockSize;
+
+      auto [data2, size2] = classifier.get_info(1);
+      InteractionWrapper<InteractionSOA> interactions2(data2);
+      AnalysisDataPacker packer2(classifier, 1);
+      int numBlocks2 = (size2 + blockSize - 1) / blockSize;
+      
+      auto [data3, size3] = classifier.get_info(2);
+      InteractionWrapper<InteractionSOA> interactions3(data3);
+      AnalysisDataPacker packer3(classifier, 2);
+      int numBlocks3 = (size3 + blockSize - 1) / blockSize;
+      
+      auto [data4, size4] = classifier.get_info(3);
+      InteractionWrapper<InteractionSOA> interactions4(data4);
+      AnalysisDataPacker packer4(classifier, 3);
+      int numBlocks4 = (size4 + blockSize - 1) / blockSize;
+      
+/*      cudaStream_t stream1, stream2, stream3, stream4;
+      
+      cudaStreamCreate(&stream1);
+      cudaStreamCreate(&stream2);
+      cudaStreamCreate(&stream3);
+      cudaStreamCreate(&stream4);*/
+      
+      kernelContact1<<<numBlocks1, blockSize>>>(interactions1.ft_x, interactions1.ft_y, interactions1.ft_z, interactions1.mom_x, interactions1.mom_y, interactions1.mom_z, interactions1.id_i, interactions1.id_j, interactions1.cell_i, interactions1.cell_j, interactions1.p_i, interactions1.p_j, interactions1.sub_i, interactions1.sub_j, cells, shps, hkp, time, packer1.dnp, packer1.cpp, packer1.fnp, packer1.ftp, size1);
+      kernelContact2<<<numBlocks2, blockSize>>>(interactions2.ft_x, interactions2.ft_y, interactions2.ft_z, interactions2.mom_x, interactions2.mom_y, interactions2.mom_z, interactions2.id_i, interactions2.id_j, interactions2.cell_i, interactions2.cell_j, interactions2.p_i, interactions2.p_j, interactions2.sub_i, interactions2.sub_j, cells, shps, hkp, time, packer2.dnp, packer2.cpp, packer2.fnp, packer2.ftp, size2);
+      kernelContact3<<<numBlocks3, blockSize>>>(interactions3.ft_x, interactions3.ft_y, interactions3.ft_z, interactions3.mom_x, interactions3.mom_y, interactions3.mom_z, interactions3.id_i, interactions3.id_j, interactions3.cell_i, interactions3.cell_j, interactions3.p_i, interactions3.p_j, interactions3.sub_i, interactions3.sub_j, cells, shps, hkp, time, packer3.dnp, packer3.cpp, packer3.fnp, packer3.ftp, size3);
+      kernelContact4<<<numBlocks4, blockSize>>>(interactions4.ft_x, interactions4.ft_y, interactions4.ft_z, interactions4.mom_x, interactions4.mom_y, interactions4.mom_z, interactions4.id_i, interactions4.id_j, interactions4.cell_i, interactions4.cell_j, interactions4.p_i, interactions4.p_j, interactions4.sub_i, interactions4.sub_j, cells, shps, hkp, time, packer4.dnp, packer4.cpp, packer4.fnp, packer4.ftp, size4);
+      
+/*      cudaStreamSynchronize(stream1);
+      cudaStreamSynchronize(stream2);
+      cudaStreamSynchronize(stream3);
+      cudaStreamSynchronize(stream4);
+      
+      cudaStreamDestroy(stream1);
+      cudaStreamDestroy(stream2);
+      cudaStreamDestroy(stream3);
+      cudaStreamDestroy(stream4);*/
+
       for (size_t type = 0; type <= 3; type++)
       {
-        //run_contact_law(parallel_execution_context(), type, classifier, poly, __params__);
-        
-        auto [data, size] = classifier.get_info(type);
-    	InteractionWrapper<InteractionSOA> interactions(data);
-    	
-    	int blockSize = 256;
-    	int numBlocks = (size + blockSize - 1) / blockSize;
-    	
-    	if(type == 0)
-    	{
-    		kernelContact1<<<numBlocks, blockSize>>>(interactions, cells, shps, hkp, time, size);
-    	}
-    	else if(type == 1)
-    	{
-    		kernelContact2<<<numBlocks, blockSize>>>(interactions, cells, shps, hkp, time, size);
-    	}
-    	else if(type == 2)
-    	{
-    		kernelContact3<<<numBlocks, blockSize>>>(interactions, cells, shps, hkp, time, size);
-    	}
-    	else if(type == 3)
-    	{
-    		kernelContact4<<<numBlocks, blockSize>>>(interactions, cells, shps, hkp, time, size);
-    	}
-    	
-    	run_contact_law(parallel_execution_context(), type, classifier, poly, __params__);
-    	
+        run_contact_law(parallel_execution_context(), type, classifier, poly, __params__);
       }
       run_contact_law(parallel_execution_context(), 4, classifier, cyli, __params_driver__);
       run_contact_law(parallel_execution_context(), 5, classifier, surf, __params_driver__);
