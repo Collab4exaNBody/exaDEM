@@ -213,8 +213,7 @@ namespace exaDEM
     std::string first;
     for (std::string line; getline(input, line);)
     {
-      input >> first;
-      if (first == "<")
+      if (line == "<")
       {
         first = ""; // reset key
         shape shp = read_shp(input, big_shape);
