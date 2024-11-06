@@ -47,8 +47,9 @@ namespace exaDEM
      */
     ONIKA_HOST_DEVICE_FUNC void reset()
     {
-      friction = {0, 0, 0};
-      moment = {0, 0, 0};
+      constexpr exanb::Vec3d null = {0, 0, 0};
+      friction = null;
+      moment = null;
     }
 
     /**
