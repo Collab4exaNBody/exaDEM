@@ -81,6 +81,7 @@ namespace exaDEM
     shape shp;
     std::string key, line;
     std::vector<int> tmp_face;
+    exanb::Vec3d position = {0, 0, 0};
     while (1)
     {
       input >> key;
@@ -123,6 +124,10 @@ namespace exaDEM
         input >> Im.x >> Im.y >> Im.z;
         shp.m_inertia_on_mass = Im;
       }
+      else if(key == "position")
+      {
+      	input >> position.x >> position.y >> position.z;
+      }
       else if (key == "nv")
       {
         int nv = 0;
@@ -139,7 +144,8 @@ namespace exaDEM
         {
           getline(input, line);
           exanb::Vec3d vertex;
-          input >> vertex.x >> vertex.y >> vertex.z;
+          input >> vertex.x  >> vertex.y >> vertex.z;
+          vertex = {vertex.x - position.x, vertex.y - position.y, vertex.z - position.z};
           shp.add_vertex(vertex);
         }
       }
@@ -179,6 +185,7 @@ namespace exaDEM
       {
         shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
         shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
+        shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
         return shp;
       }
     }

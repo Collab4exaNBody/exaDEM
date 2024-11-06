@@ -34,8 +34,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 # === Set Some default values for polyhedra ====
 # ==============================================
 # These values have to be set by exaNBody
-set(EXADEM_MAX_VERTICES "8" CACHE STRING "Maximum number of vertices per polyhedron")
-message(STATUS "Maximum number of vertices per polyhedron: ${EXADEM_MAX_VERTICES}, default is 8 vertices.")
+set(EXADEM_MAX_VERTICES "9" CACHE STRING "Maximum number of vertices per polyhedron")
+message(STATUS "Maximum number of vertices per polyhedron: ${EXADEM_MAX_VERTICES}, default is 9 vertices.")
 add_compile_options(-DEXADEM_MAX_VERTICES=${EXADEM_MAX_VERTICES})
 
 # ======================================
