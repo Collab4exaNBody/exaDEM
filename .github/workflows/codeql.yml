@@ -59,8 +59,8 @@ jobs:
       run: |
          sudo apt install libyaml-cpp-dev
          git clone https://github.com/Collab4exaNBody/exaNBody.git
-         cmake -DCMAKE_CXX_FLAGS="--coverage -g" -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DexaNBody_DIR=${{github.workspace}}/exaNBody
-         cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -j 15
+         cmake -DCMAKE_CXX_FLAGS="--coverage -g" -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DexaNBody_DIR=${{github.workspace}}/exaNBody
+         cmake --build ${{github.workspace}}/build --config Release -j 15
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
