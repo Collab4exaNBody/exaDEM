@@ -55,7 +55,7 @@ namespace exaDEM
     const Vec3d dist = pi - pj;
 
     // === compute norm
-    const double dist_norm = sqrt(exanb::dot(dist, dist));
+    const double dist_norm = exanb::norm(dist);
 
     // === inv norm
     const double inv_dist_norm = 1.0 / dist_norm;

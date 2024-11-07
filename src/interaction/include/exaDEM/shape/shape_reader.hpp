@@ -145,7 +145,7 @@ namespace exaDEM
           getline(input, line);
           exanb::Vec3d vertex;
           input >> vertex.x  >> vertex.y >> vertex.z;
-          vertex = {vertex.x - position.x, vertex.y - position.y, vertex.z - position.z};
+          vertex = {vertex.x, vertex.y, vertex.z};
           shp.add_vertex(vertex);
         }
       }
@@ -183,9 +183,9 @@ namespace exaDEM
       }
       else if (key == ">")
       {
+        shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
         shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
         shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
-        shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
         return shp;
       }
     }
