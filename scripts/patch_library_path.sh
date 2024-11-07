@@ -1,7 +1,7 @@
 #!/bin/sh
 if [ "${LD_LIBRARY_PATH}" ]
 then
-  HAS_PATH=$(${LD_LIBRARY_PATH} | tr ':' '\n' | grep -c ${PLUGIN_PATH})
+  HAS_PATH=$("${LD_LIBRARY_PATH}" | tr ':' '\n' | grep -c "${PLUGIN_PATH}")
   # echo "HAS_PATH=${HAS_PATH}"
   if [ "${HAS_PATH}" = "0" ]
   then
