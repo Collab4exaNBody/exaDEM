@@ -25,11 +25,8 @@ under the License.
 
 namespace exaDEM
 {
-
-  using namespace exanb;
-
-  class AddBall : public OperatorNode
-  {
+  class AddBall : public OperatorNode {
+    using namespace exanb;
     static constexpr Vec3d null = {0.0, 0.0, 0.0};
 
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
@@ -39,16 +36,15 @@ namespace exaDEM
     ADD_SLOT(Vec3d, velocity, INPUT, null, DocString{"Ball velocity"});
     ADD_SLOT(Vec3d, vrot, INPUT, null, DocString{"Angular velocity of the ball, default is 0 m.s-"});
 
-  public:
-    inline std::string documentation() const override final
+    public:
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator add a ball (boundary condition) to the drivers list.
         )EOF";
     }
 
-    inline void execute() override final
-    {
+    inline void execute() override final {
       exaDEM::Ball driver = {*radius, *center, *velocity, *vrot};
       driver.initialize();
       drivers->add_driver(*id, driver);
@@ -56,5 +52,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("add_ball", make_simple_operator<AddBall>); }
-} // namespace exaDEM
+  CONSTRUCTOR_FUNCTION{ OperatorNodeFactory::instance()->register_factory("add_ball", make_simple_operator<AddBall>); }
+}  // namespace exaDEM
