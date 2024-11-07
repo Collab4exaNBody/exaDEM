@@ -98,10 +98,10 @@ namespace exaDEM
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final { return R"EOF(Fill rcut_max with the maximum of the radii. )EOF"; }
+    inline std::string documentation() const final { return R"EOF(Fill rcut_max with the maximum of the radii. )EOF"; }
 
   public:
-    inline void execute() override final
+    inline void execute() final
     {
       MPI_Comm comm = *mpi;
       double &rmax = *rcut_max;

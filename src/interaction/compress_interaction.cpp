@@ -39,14 +39,14 @@ namespace exaDEM
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
 					"This opertor compress interaction by removing inactive interaction. Do not use it if interaction are not rebuilt after."
 				        )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       if (grid->number_of_cells() == 0)
       {

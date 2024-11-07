@@ -75,7 +75,7 @@ namespace exaDEM
     ADD_SLOT(ParticleTypes, particle_types, INPUT); // optional. if no species given, type ids are allocated automatically
 
   public:
-    inline void execute() override final
+    inline void execute() final
     {
       //-------------------------------------------------------------------------------------------
       // Reading datas from YAML or previous input

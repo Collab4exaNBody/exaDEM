@@ -39,14 +39,14 @@ namespace exaDEM
     ADD_SLOT(Vec3d, vrot, INPUT, Vec3d{0.0, 0.0, 0.0}, DocString{"Angular velocity of the surface, default is 0 m.s-"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator add a surface to the drivers list.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       exaDEM::Surface driver = {*offset, *normal, *center, *velocity, *vrot}; //
       driver.initialize();                                                    // initialize some values from input parameters such as the projected center of the surface (normal line)

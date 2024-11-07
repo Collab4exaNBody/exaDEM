@@ -60,14 +60,14 @@ namespace exaDEM
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator generates random velocities using a normal distribution law (var[double], mean[vec3d]).
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       struct jammy
       {

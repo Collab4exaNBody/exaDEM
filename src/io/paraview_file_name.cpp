@@ -35,13 +35,13 @@ namespace exanb
     ADD_SLOT(std::string, filename, OUTPUT);
 
   public:
-    inline void execute() override final
+    inline void execute() final
     {
       std::string paraview_filename = (*dir_name) + "/" + (*format);
       *filename = format_string(paraview_filename, *timestep);
     }
 
-    inline void yaml_initialize(const YAML::Node &node) override final
+    inline void yaml_initialize(const YAML::Node &node) final
     {
       YAML::Node tmp;
       if (node.IsScalar())

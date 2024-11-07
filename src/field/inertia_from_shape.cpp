@@ -38,14 +38,14 @@ namespace exaDEM
   public:
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator updates the inertia field.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       auto cells = grid->cells();
       const IJK dims = grid->dimension();

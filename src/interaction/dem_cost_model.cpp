@@ -45,7 +45,7 @@ namespace exaDEM
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
 
   public:
-    inline void execute() override final
+    inline void execute() final
     {
       GridT &grid = *(this->grid);
       CellCosts &cell_costs = *(this->cell_costs);

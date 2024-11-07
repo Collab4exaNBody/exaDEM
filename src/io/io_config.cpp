@@ -33,11 +33,11 @@ namespace exaDEM
     ADD_SLOT(std::string, interaction_basename, INPUT_OUTPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
 
   public:
-    inline std::string documentation() const override final { return R"EOF(This operator defines the tree structure of output files.)EOF"; }
+    inline std::string documentation() const final { return R"EOF(This operator defines the tree structure of output files.)EOF"; }
 
-    inline bool is_sink() const override final { return true; }
+    inline bool is_sink() const final { return true; }
 
-    inline void execute() override final
+    inline void execute() final
     {
 
       std::string dirName = *dir_name;

@@ -48,14 +48,14 @@ namespace exaDEM
   public:
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator sets the same homothety value to all particles in a region.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       if (region.has_value())
       {

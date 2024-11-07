@@ -38,13 +38,13 @@ namespace exaDEM
     ADD_SLOT(mutexes, locks, INPUT_OUTPUT);
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
 				        )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       const auto &cells = grid->cells();
       const int n_cells = grid->number_of_cells();

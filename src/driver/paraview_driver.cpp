@@ -39,9 +39,9 @@ namespace exaDEM
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
   public:
-    inline std::string documentation() const override final { return R"EOF( This operator creates a parview file of stl meshes. )EOF"; }
+    inline std::string documentation() const final { return R"EOF( This operator creates a parview file of stl meshes. )EOF"; }
 
-    inline void execute() override final
+    inline void execute() final
     {
       std::string path = *dir_name + "/ParaviewOutputFiles/";
       for (size_t id = 0; id < drivers->get_size(); id++)

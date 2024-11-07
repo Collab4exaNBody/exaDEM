@@ -31,14 +31,14 @@ namespace exaDEM
     ADD_SLOT(double, dt, INPUT, DocString{"dt is the time increment of the timeloop"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
           This operator updates driver centers using their velocities. Not that accelerations are not used.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       double t = *dt;
       for (size_t id = 0; id < drivers->get_size(); id++)

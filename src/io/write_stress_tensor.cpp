@@ -44,9 +44,9 @@ namespace exaDEM
     ADD_SLOT(double, dt, INPUT, REQUIRED);
 
   public:
-    inline std::string documentation() const override final { return R"EOF( Write the average stensor tensor. )EOF"; }
+    inline std::string documentation() const final { return R"EOF( Write the average stensor tensor. )EOF"; }
 
-    inline void execute() override final
+    inline void execute() final
     {
       namespace fs = std::filesystem;
       std::string full_path = (*dir_name) + "/" + (*avg_stress_tensor_name);

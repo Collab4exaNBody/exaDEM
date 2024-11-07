@@ -57,13 +57,13 @@ namespace exaDEM
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF( This operator initialize shapes data structure from a shape input file.
     	    			)EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       // mpi stuff
       int rank, size;

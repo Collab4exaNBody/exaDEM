@@ -44,14 +44,14 @@ namespace exaDEM
     ADD_SLOT(Vec3d, gravity, INPUT, default_gravity, DocString{"define the gravity constant in function of the gravity axis, default value are x axis = 0, y axis = 0 and z axis = -9.807"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator computes forces related to the gravity.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       auto [cell_ptr, cell_size] = cell_list->info();
       GravityForceFunctor func{*gravity};

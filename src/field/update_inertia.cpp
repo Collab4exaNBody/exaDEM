@@ -81,14 +81,14 @@ namespace exaDEM
   public:
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator updates the inertia field (0.4*mass*radius*radius).
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       if (region.has_value())
       {

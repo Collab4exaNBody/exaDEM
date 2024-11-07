@@ -69,7 +69,7 @@ namespace exaDEM
     ADD_SLOT(double, radius, INPUT, REQUIRED); // optional. if no species given, type ids are allocated automatically
 
   public:
-    inline void execute() override final
+    inline void execute() final
     {
       //-------------------------------------------------------------------------------------------
       using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type>;

@@ -69,7 +69,7 @@ namespace exaDEM
     ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
 
   public:
-    inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
+    inline std::string documentation() const final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
 
 
     template<int start, int end, template<int> typename FuncT, typename T, typename... Args>
@@ -83,7 +83,7 @@ namespace exaDEM
       }
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       if (grid->number_of_cells() == 0)
       {

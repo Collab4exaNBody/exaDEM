@@ -59,9 +59,9 @@ namespace exaDEM
     ADD_SLOT(double, electronic_energy, INPUT, OPTIONAL);
 
   public:
-    inline bool is_sink() const override final { return true; }
+    inline bool is_sink() const final { return true; }
 
-    inline void execute() override final
+    inline void execute() final
     {
       static const std::string header = "     Step     Time          Particles  Mv/Ext/Imb.       |dn|  avg. act. I     avg. I   avg. Ec   avg. Erot     Volume       Mass  Throughput";
 

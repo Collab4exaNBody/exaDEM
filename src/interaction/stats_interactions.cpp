@@ -42,9 +42,9 @@ namespace exaDEM
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
 
   public:
-    inline std::string documentation() const override final { return R"EOF( This operator displays DEM simulation data for a given frequency.)EOF"; }
+    inline std::string documentation() const final { return R"EOF( This operator displays DEM simulation data for a given frequency.)EOF"; }
 
-    inline void execute() override final
+    inline void execute() final
     {
       auto &cells = ges->m_data;
 

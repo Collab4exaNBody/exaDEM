@@ -96,7 +96,7 @@ namespace exaDEM
       return res;
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       MPI_Comm comm = *mpi;
       SimulationState &sim_info = *simulation_state;

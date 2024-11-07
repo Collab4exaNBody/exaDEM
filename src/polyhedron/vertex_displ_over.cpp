@@ -59,7 +59,7 @@ namespace exaDEM
   public:
     // -----------------------------------------------
     // -----------------------------------------------
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
 compute the distance between each particle in grid input and it's backup position in backup_dem input.
@@ -69,7 +69,7 @@ sets result output to true if at least one particle has moved further than thres
 
     // -----------------------------------------------
     // -----------------------------------------------
-    inline void execute() override final
+    inline void execute() final
     {
       MPI_Comm comm = *mpi;
       const shapes &shps = *shapes_collection;

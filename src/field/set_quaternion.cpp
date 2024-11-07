@@ -49,14 +49,14 @@ namespace exaDEM
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator sets the orientation value for every particles. Random option is available.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
 
 			bool is_random = *random;

@@ -39,13 +39,13 @@ namespace exaDEM
     ADD_SLOT(CellListWrapper, cell_list, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF( This operator update the list of non-empty cells. This operator should be called as long as a particle move from a cell to another cell.
 				        )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       const auto &cells = grid->cells();
       IJK dims = grid->dimension();

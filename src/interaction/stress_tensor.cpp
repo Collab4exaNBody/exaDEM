@@ -57,9 +57,9 @@ namespace exaDEM
     ADD_SLOT(Mat3d, stress_tensor, OUTPUT, DocString{"Write an Output file containing stress tensors."});
 
   public:
-    inline std::string documentation() const override final { return R"EOF( This operator computes the total stress tensor and the stress tensor for each particles. )EOF"; }
+    inline std::string documentation() const final { return R"EOF( This operator computes the total stress tensor and the stress tensor for each particles. )EOF"; }
 
-    inline void execute() override final
+    inline void execute() final
     {
       if (grid->number_of_cells() == 0)
       {

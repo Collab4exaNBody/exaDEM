@@ -34,7 +34,7 @@ namespace exaDEM
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator initializes the DEM grid.
@@ -43,7 +43,7 @@ namespace exaDEM
 
     inline InitGridFlavorNode() { set_profiling(false); }
 
-    inline void execute() override final
+    inline void execute() final
     {
       if (grid->number_of_cells() == 0)
       {

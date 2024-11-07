@@ -53,13 +53,13 @@ namespace exaDEM
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
                 )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       // using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
       if (grid->number_of_cells() == 0)

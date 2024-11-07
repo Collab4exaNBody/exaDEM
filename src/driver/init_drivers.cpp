@@ -36,14 +36,14 @@ namespace exaDEM
     ADD_SLOT(Drivers, drivers, OUTPUT, DocString{"List of Drivers"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator creates a slot for drivers.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       // do nothing
     }

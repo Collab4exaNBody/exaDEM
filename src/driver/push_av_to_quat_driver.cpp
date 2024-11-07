@@ -42,9 +42,9 @@ namespace exaDEM
     ADD_SLOT(double, dt, INPUT, DocString{"dt is the time increment of the timeloop"});
 
   public:
-    inline std::string documentation() const override final { return R"EOF( This operator compute the new orientation using the angular velocity. )EOF"; }
+    inline std::string documentation() const final { return R"EOF( This operator compute the new orientation using the angular velocity. )EOF"; }
 
-    inline void execute() override final
+    inline void execute() final
     {
       double t = *dt;
       func_push_av_to_quat func = {t};

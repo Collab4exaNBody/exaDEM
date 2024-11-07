@@ -45,14 +45,14 @@ namespace exaDEM
     ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator computes particle angular velocitiy values from angular velocities and angular accelerations. 
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       const double dt = *(this->dt);
       const double dt_2 = 0.5 * dt;

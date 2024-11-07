@@ -42,14 +42,14 @@ namespace exaDEM
     ADD_SLOT(double, radius, INPUT, REQUIRED, DocString{"Radius of the cylinder, positive and should be superior to the biggest sphere radius in the cylinder"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator add a cylinder to the drivers list.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       // proj center over axis
       Vec3d c = (*center) * (*axis);

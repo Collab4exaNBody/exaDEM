@@ -50,9 +50,9 @@ namespace exaDEM
     ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"rcut_max"});
 
   public:
-    inline std::string documentation() const override final { return R"EOF( Update the list of information for each cell regarding the vertex, edge, and face indices in contact with the cell in an STL mesh." )EOF"; }
+    inline std::string documentation() const final { return R"EOF( Update the list of information for each cell regarding the vertex, edge, and face indices in contact with the cell in an STL mesh." )EOF"; }
 
-    inline void execute() override final
+    inline void execute() final
     {
       const auto &g = *grid;
       const size_t n_cells = g.number_of_cells(); // nbh.size();

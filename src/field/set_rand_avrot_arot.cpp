@@ -38,14 +38,14 @@ namespace exaDEM
     ADD_SLOT(Vec3d, mean_vrot, INPUT, Vec3d{0, 0, 0}, DocString{"Average values for angular acceleration"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator generates random angular velocities and angular accelerations using a normal distribution law (var[double], mean[vec3d]).
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       auto cells = grid->cells();
       const IJK dims = grid->dimension();

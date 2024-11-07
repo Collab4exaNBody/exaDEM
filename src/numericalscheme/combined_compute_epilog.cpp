@@ -98,7 +98,7 @@ namespace exaDEM
     ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
 
   public:
-    inline void execute() override final
+    inline void execute() final
     {
       const double delta_t = *dt;
       const double half_delta_t = delta_t * 0.5;

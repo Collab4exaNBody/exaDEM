@@ -57,14 +57,14 @@ namespace exaDEM
     ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
                   This operator creates paraview files containing the contact network.
 				        )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       auto &interactions = ges->m_data;
 

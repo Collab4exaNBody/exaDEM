@@ -40,14 +40,14 @@ namespace exaDEM
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
           "This opertor checks if a interaction related to a particle contains its particle id. (i.e. , I_id(i,j), id == item.id_i || item.id_j)"
                 )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       if (grid->number_of_cells() == 0)
       {

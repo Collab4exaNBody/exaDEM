@@ -38,7 +38,7 @@ namespace exaDEM
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator applies the same density to all particles. If you want to apply various densities according to their material properties, use set_densities_multiple_materials.
@@ -46,7 +46,7 @@ namespace exaDEM
     }
 
   public:
-    inline void execute() override final
+    inline void execute() final
     {
       auto cells = grid->cells();
       const IJK dims = grid->dimension();

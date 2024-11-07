@@ -50,14 +50,14 @@ namespace exaDEM
     ADD_SLOT(double, rcut_inc, INPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator add a stl mesh to the drivers list.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       stl_mesh_reader reader;
       reader(*filename);

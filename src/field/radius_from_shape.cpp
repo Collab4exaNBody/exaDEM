@@ -78,14 +78,14 @@ namespace exaDEM
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         )EOF";
     }
 
   public:
-    inline void execute() override final
+    inline void execute() final
     {
       // compute the biggest radius for each polyhedron
       const shapes shps = *shapes_collection;

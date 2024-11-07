@@ -41,9 +41,9 @@ namespace exaDEM
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
   public:
-    inline std::string documentation() const override final { return R"EOF( This operator writes shapes data structure into a "shp" file. )EOF"; }
+    inline std::string documentation() const final { return R"EOF( This operator writes shapes data structure into a "shp" file. )EOF"; }
 
-    inline void execute() override final
+    inline void execute() final
     {
       // get shapes
       auto &shps = *shapes_collection;

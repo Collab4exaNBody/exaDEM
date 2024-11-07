@@ -42,14 +42,14 @@ namespace exaDEM
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         )EOF";
     }
 
   public:
-    inline void execute() override final
+    inline void execute() final
     {
       const shape *shps = shapes_collection->data();
       PolyhedraComputeVerticesFunctor func{shps};

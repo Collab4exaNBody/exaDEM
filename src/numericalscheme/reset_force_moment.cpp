@@ -39,14 +39,14 @@ namespace exaDEM
     static inline constexpr FieldSet<field::_fx, field::_fy, field::_fz, field::_mom> compute_field_set = {};
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator resets two grid fields : moments and forces.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       auto [cell_ptr, cell_size] = cell_list->info();
       SetFunctor<double, double, double, Vec3d> func = {{double(0.0), double(0.0), double(0.0), Vec3d{0.0, 0.0, 0.0}}};

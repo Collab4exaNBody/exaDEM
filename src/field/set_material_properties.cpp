@@ -51,14 +51,14 @@ namespace exaDEM
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator sets material properties for spheres, ie radius, denstiy and quaternion values.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       // compute mass
       const double d = (*density);

@@ -47,14 +47,14 @@ namespace exaDEM
     ADD_SLOT(double, rcut_max, INPUT_OUTPUT, DocString{"rcut_max"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator sets the radius value for every particles.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       if (rcut_max.has_value())
       {

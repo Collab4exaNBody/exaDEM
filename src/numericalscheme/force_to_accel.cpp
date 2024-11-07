@@ -43,14 +43,14 @@ namespace exaDEM
     ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
 
   public:
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator computes particle accelerations from forces and mass.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       auto [cell_ptr, cell_size] = cell_list->info();
       ForceToAccelFunctor func{};

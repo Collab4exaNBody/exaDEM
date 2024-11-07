@@ -44,7 +44,7 @@ namespace exaDEM
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator fills type id to all particles. 
@@ -52,7 +52,7 @@ namespace exaDEM
     }
 
   public:
-    inline void execute() override final
+    inline void execute() final
     {
       uint32_t t = *type;
       if (region.has_value())

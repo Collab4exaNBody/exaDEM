@@ -57,9 +57,9 @@ namespace exaDEM
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
   public:
-    inline std::string documentation() const override final { return R"EOF( This operator outputs driver information. )EOF"; }
+    inline std::string documentation() const final { return R"EOF( This operator outputs driver information. )EOF"; }
 
-    inline void execute() override final
+    inline void execute() final
     {
       auto &drvs = *drivers;
       size_t n_drivers = drivers->get_size();

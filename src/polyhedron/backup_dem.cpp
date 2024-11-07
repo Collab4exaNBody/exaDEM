@@ -37,7 +37,7 @@ namespace exaDEM
     ADD_SLOT(Domain, domain, INPUT);
     ADD_SLOT(DEMBackupData, backup_dem, INPUT_OUTPUT);
 
-    inline void execute() override final
+    inline void execute() final
     {
       IJK dims = grid->dimension();
       auto cells = grid->cells();

@@ -77,14 +77,14 @@ namespace exaDEM
     ADD_SLOT(ChunkNeighborsConfig, config, INPUT, ChunkNeighborsConfig{});
     ADD_SLOT(ChunkNeighborsScratchStorage, chunk_neighbors_scratch, PRIVATE);
 
-    inline std::string documentation() const override final
+    inline std::string documentation() const final
     {
       return R"EOF(
         This operator builds the neighbor lists used to detect contacts between particles.
         )EOF";
     }
 
-    inline void execute() override final
+    inline void execute() final
     {
       unsigned int cs = config->chunk_size;
       unsigned int cs_log2 = 0;
