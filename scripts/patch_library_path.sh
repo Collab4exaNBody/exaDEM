@@ -1,3 +1,4 @@
+#!/bin/sh
 if [ $(LD_LIBRARY_PATH) ]
 then
   HAS_PATH=`$(LD_LIBRARY_PATH) | tr ':' '\n' | grep -c $(PLUGIN_PATH)`
