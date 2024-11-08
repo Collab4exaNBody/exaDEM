@@ -30,6 +30,9 @@ namespace exaDEM
   inline vec3r conv_to_vec3r(const exanb::Vec3d &v) { return vec3r{v.x, v.y, v.z}; }
 
   ONIKA_HOST_DEVICE_FUNC
+  inline vec3r conv_to_vec3r(exanb::Vec3d &v) { return vec3r{v.x, v.y, v.z}; }
+
+  ONIKA_HOST_DEVICE_FUNC
   inline Vec3d conv_to_Vec3d(vec3r &v) { return Vec3d{v[0], v[1], v[2]}; }
 
   ONIKA_HOST_DEVICE_FUNC
