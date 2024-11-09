@@ -143,7 +143,6 @@ namespace exaDEM
 
   inline void write_vtp_polyhedron(std::string name, size_t n_vertices, size_t n_polygons, std::stringstream &buff_vertices, std::stringstream &buff_faces, std::stringstream &buff_offsets)
   {
-    name = name + ".vtp";
     std::ofstream outFile(name);
     if (!outFile)
     {
@@ -219,10 +218,10 @@ namespace exaDEM
     outFile << "</VTKFile>" << std::endl;
   }
 
-  inline void write_pvtp_polyhedron(std::string basedir, std::string basename, size_t number_of_files)
+  inline void write_pvtp_polyhedron(std::string filename, size_t number_of_files)
   {
 
-    std::string name = basedir + "/" + basename + ".pvtp";
+    std::string name = filename + ".pvtp";
     std::ofstream outFile(name);
     if (!outFile)
     {
@@ -235,10 +234,13 @@ namespace exaDEM
     outFile << "    <PPoints>" << std::endl;
     outFile << "      <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
     outFile << "    </PPoints> " << std::endl;
+    std::filesystem::path full_path(filename);
+    std::string directory = full_path.filename().string();
+    std::string subfile = directory + "/%06d.vtp";
     for (size_t i = 0; i < number_of_files; i++)
     {
-      std::string subfile = basename + "/" + basename + "_" + std::to_string(i) + ".vtp";
-      outFile << "    <Piece Source=\"" << subfile << "\"/>" << std::endl;
+      std::string file = format_string(subfile,  i);
+      outFile << "    <Piece Source=\"" << file << "\"/>" << std::endl;
     }
     outFile << "  </PPolyData>" << std::endl;
     outFile << "</VTKFile>" << std::endl;

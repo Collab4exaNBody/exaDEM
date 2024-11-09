@@ -23,7 +23,9 @@ dump_data_paraview:
       rebind: { mesg: filename }
       body:
         - message: { endl: true }
-  - write_paraview_generic
+#  - write_paraview_generic
+  - write_paraview_polyhedra:
+     basename: polyhedra
   - paraview_driver
 
 compute_volume:

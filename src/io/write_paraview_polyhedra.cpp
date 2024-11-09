@@ -32,10 +32,7 @@ under the License.
 #include <exanb/core/basic_types.h>
 #include <exanb/core/basic_types_operators.h>
 #include <exanb/core/basic_types_stream.h>
-#include <onika/memory/allocator.h> // for ONIKA_ASSUME_ALIGNED macro
-#include <exanb/compute/compute_pair_optional_args.h>
-
-#include <exanb/compute/compute_cell_particles.h>
+#include <exanb/core/string_utils.h>
 
 #include <mpi.h>
 #include <exaDEM/shape/shapes.hpp>
@@ -51,8 +48,7 @@ namespace exaDEM
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
-    ADD_SLOT(std::string, basename, INPUT, REQUIRED, DocString{"Output filename"});
-    ADD_SLOT(std::string, basedir, INPUT, "polyhedra_paraview", DocString{"Output directory, default is polyhedra_paraview"});
+    ADD_SLOT( std::string , filename     , INPUT , "output");
     ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
 
@@ -70,15 +66,9 @@ namespace exaDEM
       MPI_Comm_rank(*mpi, &rank);
       MPI_Comm_size(*mpi, &size);
 
-      std::string directory = (*basedir) + "/" + (*basename) + "_" + std::to_string(*timestep);
-      std::string filename = directory + "/" + (*basename) + "_" + std::to_string(*timestep) + "_" + std::to_string(rank);
-
-      // prepro
       if (rank == 0)
       {
-        namespace fs = std::filesystem;
-        fs::create_directory(*basedir);
-        fs::create_directory(directory);
+        std::filesystem::create_directories( *filename );
       }
 
       MPI_Barrier(*mpi);
@@ -114,11 +104,11 @@ namespace exaDEM
 
       if (rank == 0)
       {
-        std::string dir = *basedir;
-        std::string name = *basename + "_" + std::to_string(*timestep);
-        exaDEM::write_pvtp_polyhedron(dir, name, size);
+        exaDEM::write_pvtp_polyhedron(*filename, size);
       }
-      exaDEM::write_vtp_polyhedron(filename, __PARAMS__);
+      std::string file = *filename + "/%06d.vtp";
+      file = format_string(file,  rank);
+      exaDEM::write_vtp_polyhedron(file, __PARAMS__);
 #undef __PARAMS__
     }
   };
