@@ -317,33 +317,33 @@ namespace exaDEM
       }
 
       outFile << "<VTKFile type=\"PolyData\">" << std::endl;
-      outFile << " <PolyData>" << std::endl;
-      outFile << "   <Piece NumberOfPoints=\"" << n_particles << "\" NumberOfLines=\"" << n_interactions << "\">" << std::endl;
-      outFile << "   <Points>" << std::endl;
-      outFile << "     <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+      outFile << "  <PolyData>" << std::endl;
+      outFile << "    <Piece NumberOfPoints=\"" << n_particles << "\" NumberOfLines=\"" << n_interactions << "\">" << std::endl;
+      outFile << "    <Points>" << std::endl;
+      outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
       if (n_particles != 0)
         outFile << buff_position.rdbuf() << std::endl;
-      outFile << "     </DataArray>" << std::endl;
-      outFile << "   </Points>" << std::endl;
-      outFile << "   <Lines>" << std::endl;
-      outFile << "     <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "    </Points>" << std::endl;
+      outFile << "    <Lines>" << std::endl;
+      outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
       if (n_interactions != 0)
         outFile << buff_connect.rdbuf() << std::endl;
-      outFile << "     </DataArray>" << std::endl;
-      outFile << "     <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
       for (size_t i = 0; i < n_interactions; i++)
         outFile << " " << 2 * i;
       outFile << std::endl;
-      outFile << "     </DataArray>" << std::endl;
-      outFile << "   </Lines>" << std::endl;
-      outFile << "   <CellData>" << std::endl;
-      outFile << "     <DataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "    </Lines>" << std::endl;
+      outFile << "    <CellData>" << std::endl;
+      outFile << "      <DataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
       if (n_interactions != 0)
         outFile << buff_value.rdbuf() << std::endl;
-      outFile << "     </DataArray>" << std::endl;
-      outFile << "   </CellData>" << std::endl;
-      outFile << "  </Piece>" << std::endl;
-      outFile << " </PolyData>" << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "    </CellData>" << std::endl;
+      outFile << "    </Piece>" << std::endl;
+      outFile << "  </PolyData>" << std::endl;
       outFile << "</VTKFile>" << std::endl;
     }
 
