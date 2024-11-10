@@ -35,29 +35,50 @@ namespace exaDEM
     std::stringstream types;
   };
 
-  inline void build_buffer_polyhedron(const exanb::Vec3d &pos, const shape *shp, const exanb::Quaternion &orient, size_t &polygon_offset_in_stream, size_t &n_vertices, size_t &n_polygon, std::stringstream &buff_position, std::stringstream &buff_faces, std::stringstream &buff_offset)
+  struct par_poly_helper
   {
-    auto writer_v = [](const exanb::Vec3d &v, std::stringstream &out, const exanb::Vec3d &p, const exanb::Quaternion &q)
+    int n_vertices = 0;
+    int n_polygons = 0;
+    uint64_t incr_offset = 0;
+    std::stringstream vertices; 
+    std::stringstream faces;
+    std::stringstream offsets;
+    std::stringstream ids;
+    std::stringstream types;
+    std::stringstream velocities;
+  };
+
+  inline void build_buffer_polyhedron(const exanb::Vec3d &pos, const shape *shp, const exanb::Quaternion &orient, uint64_t id, uint16_t type, double vx, double vy, double vz, par_poly_helper& buffers)
+  {
+    auto writer_v = [&buffers](const exanb::Vec3d &v, const exanb::Vec3d &p, const exanb::Quaternion &q)
     {
       exanb::Vec3d new_pos = p + q * v;
-      out << " " << new_pos.x << " " << new_pos.y << " " << new_pos.z;
+      buffers.vertices << " " << new_pos.x << " " << new_pos.y << " " << new_pos.z;
     };
 
-    shp->for_all_vertices(writer_v, buff_position, pos, orient);
+    auto writer_components = [&buffers] (const exanb::Vec3d &v, uint64_t i, uint16_t t, double v_x, double v_y, double v_z)
+    {
+      buffers.ids   << " " << i;
+      buffers.types << " " << t;
+      buffers.velocities << " " << v_x << " " << v_y << " " << v_z;
+    };
+
+    shp->for_all_vertices(writer_v, pos, orient);
+    shp->for_all_vertices(writer_components, id, type, vx, vy, vz);
 
     size_t n_faces = shp->get_number_of_faces();
-    n_polygon += n_faces;
+    buffers.n_polygons += n_faces;
 
     // faces
-    auto writer_f = [](const size_t size, const int *data, std::stringstream &sface, std::stringstream &soffset, size_t &offset, size_t point_off)
+    auto writer_f = [&buffers](const size_t size, const int *data)
     {
-      soffset << offset + size << " ";
-      offset += size;
+      buffers.offsets << buffers.incr_offset + size << " ";
+      buffers.incr_offset += size;
       for (size_t it = 0; it < size; it++)
-        sface << " " << data[it] + point_off;
+        buffers.faces << " " << data[it] + buffers.n_vertices;
     };
-    shp->for_all_faces(writer_f, buff_faces, buff_offset, polygon_offset_in_stream, n_vertices);
-    n_vertices += shp->get_number_of_vertices();
+    shp->for_all_faces(writer_f);
+    buffers.n_vertices += shp->get_number_of_vertices(); // warning, increment n_vertices after all_faces
   }
 
 
@@ -141,7 +162,7 @@ namespace exaDEM
   }
 
 
-  inline void write_vtp_polyhedron(std::string name, size_t n_vertices, size_t n_polygons, std::stringstream &buff_vertices, std::stringstream &buff_faces, std::stringstream &buff_offsets)
+  inline void write_vtp_polyhedron(std::string name, par_poly_helper& buffers)
   {
     std::ofstream outFile(name);
     if (!outFile)
@@ -150,27 +171,42 @@ namespace exaDEM
       return;
     }
 
+    outFile << "<?xml version=\"1.0\"?>" << std::endl;
     outFile << "<VTKFile type=\"PolyData\">" << std::endl;
-    outFile << " <PolyData>" << std::endl;
-    outFile << "   <Piece NumberOfPoints=\"" << n_vertices << "\" NumberOfPolys=\"" << n_polygons << "\">" << std::endl;
-    outFile << "   <Points>" << std::endl;
-    outFile << "     <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-    if (n_vertices != 0)
-      outFile << buff_vertices.rdbuf() << std::endl;
-    outFile << "     </DataArray>" << std::endl;
-    outFile << "   </Points>" << std::endl;
-    outFile << "   <Polys>" << std::endl;
-    outFile << "     <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
-    if (n_polygons != 0)
-      outFile << buff_faces.rdbuf() << std::endl;
-    outFile << "     </DataArray>" << std::endl;
-    outFile << "     <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
-    if (n_polygons != 0)
-      outFile << buff_offsets.rdbuf() << std::endl;
-    outFile << "     </DataArray>" << std::endl;
-    outFile << "   </Polys>" << std::endl;
-    outFile << "  </Piece>" << std::endl;
-    outFile << " </PolyData>" << std::endl;
+    outFile << "  <PolyData>" << std::endl;
+    outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices << "\" NumberOfPolys=\"" << buffers.n_polygons << "\">" << std::endl;
+    outFile << "    <PointData>" << std::endl;
+    outFile << "      <DataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+    if (buffers.n_polygons != 0)
+    outFile << buffers.ids.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "      <DataArray type=\"Int32\" Name=\"Type\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+    if (buffers.n_polygons != 0)
+    outFile << buffers.types.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "      <DataArray type=\"Float64\" Name=\"Velocity\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+    if (buffers.n_polygons != 0)
+    outFile << buffers.velocities.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "    </PointData>" << std::endl;
+    outFile << "    <Points>" << std::endl;
+    outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+    if (buffers.n_vertices != 0)
+      outFile << buffers.vertices.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "    </Points>" << std::endl;
+    outFile << "    <Polys>" << std::endl;
+    outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
+    if (buffers.n_polygons != 0)
+      outFile << buffers.faces.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
+    if (buffers.n_polygons != 0)
+      outFile << buffers.offsets.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "    </Polys>" << std::endl;
+    outFile << "    </Piece>" << std::endl;
+    outFile << "  </PolyData>" << std::endl;
     outFile << "</VTKFile>" << std::endl;
   }
 
@@ -231,6 +267,11 @@ namespace exaDEM
     outFile << "<?xml version=\"1.0\"?>" << std::endl;
     outFile << "<VTKFile type=\"PPolyData\"> " << std::endl;
     outFile << "  <PPolyData GhostLevel=\"0\">" << std::endl;
+    outFile << "    <PPointData>" << std::endl;
+    outFile << "      <PDataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\"/>" << std::endl;
+    outFile << "      <PDataArray type=\"Int32\" Name=\"Type\"  NumberOfComponents=\"1\"/>" << std::endl;
+    outFile << "      <PDataArray type=\"Float64\" Name=\"Velocity\"  NumberOfComponents=\"3\"/>" << std::endl;
+    outFile << "    </PPointData>" << std::endl;
     outFile << "    <PPoints>" << std::endl;
     outFile << "      <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
     outFile << "    </PPoints> " << std::endl;

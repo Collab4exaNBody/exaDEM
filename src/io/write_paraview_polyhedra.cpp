@@ -76,13 +76,8 @@ namespace exaDEM
       auto &shps = *shapes_collection;
       const auto cells = grid->cells();
       const size_t n_cells = grid->number_of_cells();
+      par_poly_helper buffers; // it conatins streams 
 
-      size_t count_vertex(0), count_face(0), polygon_offset_in_stream(0);
-      std::stringstream buff_vertices; // store vertices
-      std::stringstream buff_faces;    // store faces
-      std::stringstream buff_offsets;  // store face offsets
-
-#     define __PARAMS__ count_vertex, count_face, buff_vertices, buff_faces, buff_offsets
       // fill string buffers
       for (size_t cell_a = 0; cell_a < n_cells; cell_a++)
       {
@@ -92,13 +87,17 @@ namespace exaDEM
         auto *__restrict__ rx = cells[cell_a][field::rx];
         auto *__restrict__ ry = cells[cell_a][field::ry];
         auto *__restrict__ rz = cells[cell_a][field::rz];
+        auto *__restrict__ vx = cells[cell_a][field::vx];
+        auto *__restrict__ vy = cells[cell_a][field::vy];
+        auto *__restrict__ vz = cells[cell_a][field::vz];
         auto *__restrict__ type = cells[cell_a][field::type];
+        auto *__restrict__ id = cells[cell_a][field::id];
         auto *__restrict__ orient = cells[cell_a][field::orient];
         for (int j = 0; j < n_particles; j++)
         {
           exanb::Vec3d pos{rx[j], ry[j], rz[j]};
           const shape *shp = shps[type[j]];
-          build_buffer_polyhedron(pos, shp, orient[j], polygon_offset_in_stream, __PARAMS__);
+          build_buffer_polyhedron(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], buffers);
         }
       };
 
@@ -108,8 +107,7 @@ namespace exaDEM
       }
       std::string file = *filename + "/%06d.vtp";
       file = format_string(file,  rank);
-      exaDEM::write_vtp_polyhedron(file, __PARAMS__);
-#undef __PARAMS__
+      exaDEM::write_vtp_polyhedron(file, buffers);
     }
   };
 
