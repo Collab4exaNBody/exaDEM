@@ -29,5 +29,7 @@ compute_new_vertices: polyhedra_compute_vertices
 
 reorder_extra_data: nop
 
-+dump_data_paraview:
+particle_write_paraview_generic:
+  - write_paraview_generic
+#  - write_paraview_polyhedra
   - write_paraview_obb_particles

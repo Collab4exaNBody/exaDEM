@@ -14,7 +14,11 @@ write_paraview_generic:
   write_ghost: false
   write_box: true
   fields: ["radius", "type","vx","vy","vz","id","orient"]
-#  fields: ["vx","vy","vz","id","radius"]
+
+# Defined in config_spheres and config_polyhedra
+# config_spheres -> write_paraview_generic
+# config_polyhedra -> write_paraview_generic and write_paraview_obb_particles 
+particle_write_paraview_generic: nop
 
 dump_data_paraview:
   - timestep_paraview_file: "ParaviewOutputFiles/exadem_%010d"
@@ -23,9 +27,7 @@ dump_data_paraview:
       rebind: { mesg: filename }
       body:
         - message: { endl: true }
-#  - write_paraview_generic
-  - write_paraview_polyhedra:
-     basename: polyhedra
+  - particle_write_paraview_generic
   - paraview_driver
 
 compute_volume:
