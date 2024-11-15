@@ -149,7 +149,7 @@ namespace exaDEM
     // This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_face`
     const size_t size = this->get_number_of_vertices();
     m_obb_vertices.resize(size);
-    const exanb::Vec3d center = conv_to_Vec3d(this->obb.center) + particle_center;
+    const exanb::Vec3d center = particle_center;//conv_to_Vec3d(this->obb.center) + particle_center;
 
     ldbg << "obb [vertices] = " << size << std::endl;
 
@@ -167,7 +167,7 @@ namespace exaDEM
     m_obb_edges.resize(size);
 
     // const exanb::Vec3d vnull      = {0,0,0};
-    const exanb::Vec3d center = conv_to_Vec3d(this->obb.center) + particle_center;
+    const exanb::Vec3d center = particle_center;//conv_to_Vec3d(this->obb.center) + particle_center;
     ldbg << "obb [edges]    = " << size << std::endl;
 #   pragma omp parallel for schedule(static)
     for (size_t i = 0; i < size; i++)
@@ -181,7 +181,7 @@ namespace exaDEM
     // This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_face`
     const size_t size = this->get_number_of_faces();
     m_obb_faces.resize(size);
-    const exanb::Vec3d center = conv_to_Vec3d(this->obb.center) + particle_center;
+    const exanb::Vec3d center = particle_center; //conv_to_Vec3d(this->obb.center) + particle_center;
     ldbg << "obb [faces]    = " << size << std::endl;
 
 #   pragma omp parallel for schedule(static)

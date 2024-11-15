@@ -506,8 +506,10 @@ namespace exaDEM
       dist = -dist;
     }
 
+
     if (dist > (ri + rj))
       return contact();
+
 
     const Vec3d P = vi - n * dist;
 
@@ -608,7 +610,7 @@ namespace exaDEM
         normalize(n);
 
         // === compute contact position
-        const Vec3d contact_position = pj + n * (rj + 0.5 * dn);
+        const Vec3d contact_position = pi - n * (ri + 0.5 * dn);
         return {dn <= 0, dn, n, contact_position};
       }
     }

@@ -194,7 +194,7 @@ namespace exaDEM
     }
 
     ONIKA_HOST_DEVICE_FUNC
-    inline OBB get_obb_edge(const exanb::Vec3d &position, const size_t index, exanb::Quaternion orientation) const
+    inline OBB get_obb_edge(const exanb::Vec3d &position, const size_t index, const exanb::Quaternion& orientation) const
     {
       OBB res = m_obb_edges[index];
       res.rotate(conv_to_quat(orientation));
@@ -203,7 +203,7 @@ namespace exaDEM
     }
 
     ONIKA_HOST_DEVICE_FUNC
-    inline OBB get_obb_face(const exanb::Vec3d &position, const size_t index, exanb::Quaternion orientation) const
+    inline OBB get_obb_face(const exanb::Vec3d &position, const size_t index, const exanb::Quaternion& orientation) const
     {
       OBB res = m_obb_faces[index];
       res.rotate(conv_to_quat(orientation));

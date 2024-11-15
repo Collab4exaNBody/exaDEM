@@ -454,6 +454,7 @@ namespace exaDEM
                                           for (int i = 0; i < ne; i++)
                                           {
                                             OBB obb_edge_i = shp->get_obb_edge(r, i, orient);
+                                            obb_edge_i.enlarge(rVerlet);
                                             if (obb_j.intersect(obb_edge_i))
                                             {
                                               obb_edge_i.enlarge(rVerlet);
