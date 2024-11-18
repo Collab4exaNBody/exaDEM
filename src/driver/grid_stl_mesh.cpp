@@ -64,10 +64,16 @@ namespace exaDEM
         if (drivers->type(id) == DRIVER_TYPE::STL_MESH)
         {
           exaDEM::Stl_mesh &mesh = std::get<exaDEM::Stl_mesh>(drivers->data(id));
+          auto &grid_stl = mesh.grid_indexes;
+
+          if( mesh.vrot == Vec3d{0,0,0} && mesh.vel == Vec3d{0,0,0} && grid_stl.size() == n_cells )
+          { 
+            // The grid is already built and didn't change
+            continue; 
+          }
           mesh.shp.pre_compute_obb_vertices(mesh.center, mesh.quat);
           mesh.shp.pre_compute_obb_edges(mesh.center, mesh.quat);
           mesh.shp.pre_compute_obb_faces(mesh.center, mesh.quat);
-          auto &grid_stl = mesh.grid_indexes;
           grid_stl.clear();
           grid_stl.resize(n_cells);
 
