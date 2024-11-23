@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 #include <memory>
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
@@ -56,7 +56,7 @@ namespace exaDEM
     ADD_SLOT(Drivers, drivers, INPUT, DocString{"List of Drivers"});
     ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
 
-  public:
+    public:
     inline std::string documentation() const override final
     {
       return R"EOF(
@@ -234,9 +234,6 @@ namespace exaDEM
         return;
       }
 
-      // use OBB for vertex/edge and vertex/faces
-      constexpr bool skip_obb = false;
-
       auto [cell_ptr, cell_size] = cell_list->info();
 
 #     pragma omp parallel
@@ -344,171 +341,165 @@ namespace exaDEM
 
           // Second, we add interactions between two polyhedra.
           apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-                                        [&g, cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, vertices_a, &add_contact](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
-                                        {
-                                          // default value of the interaction studied (A or i -> B or j)
-                                          const uint64_t id_nbh = cells[cell_b][field::id][p_b];
-                                          if (id_a[p_a] >= id_nbh)
-                                          {
-                                            if (!g.is_ghost_cell(cell_b))
-                                              return;
-                                          }
+              [&g, cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, vertices_a, &add_contact](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+              {
+              // default value of the interaction studied (A or i -> B or j)
+              const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+              if (id_a[p_a] >= id_nbh)
+              {
+              if (!g.is_ghost_cell(cell_b))
+              return;
+              }
 
-                                          // Get particle pointers for the particle b.
-                                          const uint32_t type_nbh = cells[cell_b][field::type][p_b];
-                                          const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
-                                          const double rx_nbh = cells[cell_b][field::rx][p_b];
-                                          const double ry_nbh = cells[cell_b][field::ry][p_b];
-                                          const double rz_nbh = cells[cell_b][field::rz][p_b];
-                                          const auto &vertices_b = cells[cell_b][field::vertices][p_b];
+              // Get particle pointers for the particle b.
+              const uint32_t type_nbh = cells[cell_b][field::type][p_b];
+              const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
+              const double rx_nbh = cells[cell_b][field::rx][p_b];
+              const double ry_nbh = cells[cell_b][field::ry][p_b];
+              const double rz_nbh = cells[cell_b][field::rz][p_b];
+              const auto &vertices_b = cells[cell_b][field::vertices][p_b];
 
-                                          // prev
-                                          const shape *shp = shps[t_a[p_a]];
-                                          const shape *shp_nbh = shps[type_nbh];
+              // prev
+              const shape *shp = shps[t_a[p_a]];
+              const shape *shp_nbh = shps[type_nbh];
 
-                                          // Eliminate if two polyhedra are two far away if there is not intersection between their OBBs.
-                                          OBB obb_i = shp->obb;
-                                          OBB obb_j = shp_nbh->obb;
-                                          const Quaternion &orient = orient_a[p_a];
-                                          const double rx = rx_a[p_a];
-                                          const double ry = ry_a[p_a];
-                                          const double rz = rz_a[p_a];
-                                          quat conv_orient_i = quat{vec3r{orient.x, orient.y, orient.z}, orient.w};
-                                          quat conv_orient_j = quat{vec3r{orient_nbh.x, orient_nbh.y, orient_nbh.z}, orient_nbh.w};
-                                          obb_i.rotate(conv_orient_i);
-                                          obb_j.rotate(conv_orient_j);
-                                          obb_i.translate(vec3r{rx, ry, rz});
-                                          obb_j.translate(vec3r{rx_nbh, ry_nbh, rz_nbh});
+              // Eliminate if two polyhedra are two far away if there is not intersection between their OBBs.
+              OBB obb_i = shp->obb;
+              OBB obb_j = shp_nbh->obb;
+              const Quaternion &orient = orient_a[p_a];
+              const double rx = rx_a[p_a];
+              const double ry = ry_a[p_a];
+              const double rz = rz_a[p_a];
+              quat conv_orient_i = quat{vec3r{orient.x, orient.y, orient.z}, orient.w};
+              quat conv_orient_j = quat{vec3r{orient_nbh.x, orient_nbh.y, orient_nbh.z}, orient_nbh.w};
+              obb_i.rotate(conv_orient_i);
+              obb_j.rotate(conv_orient_j);
+              obb_i.translate(vec3r{rx, ry, rz});
+              obb_j.translate(vec3r{rx_nbh, ry_nbh, rz_nbh});
 
-                                          obb_i.enlarge(rVerlet);
-                                          obb_j.enlarge(rVerlet);
+              obb_i.enlarge(rVerlet);
+              obb_j.enlarge(rVerlet);
 
-                                          if (!obb_i.intersect(obb_j))
-                                            return;
+              if (!obb_i.intersect(obb_j))
+                return;
 
-                                          // reset rVerlet
-                                          obb_i.enlarge(-rVerlet);
-                                          obb_j.enlarge(-rVerlet);
+              // reset rVerlet
+              obb_i.enlarge(-rVerlet);
+              obb_j.enlarge(-rVerlet);
 
-                                          // Add interactions
-                                          item.id_i = id_a[p_a];
-                                          item.p_i = p_a;
+              // Add interactions
+              item.id_i = id_a[p_a];
+              item.p_i = p_a;
 
-                                          item.cell_i = cell_a;
-                                          item.p_j = p_b;
-                                          item.cell_j = cell_b;
+              item.cell_i = cell_a;
+              item.p_j = p_b;
+              item.cell_j = cell_b;
 
-                                          const Vec3d r = {rx, ry, rz};
-                                          const Vec3d r_nbh = {rx_nbh, ry_nbh, rz_nbh};
+              const Vec3d r = {rx, ry, rz};
+              const Vec3d r_nbh = {rx_nbh, ry_nbh, rz_nbh};
 
-                                          // get particle j data.
-                                          const int nv = shp->get_number_of_vertices();
-                                          const int ne = shp->get_number_of_edges();
-                                          const int nf = shp->get_number_of_faces();
-                                          const int nv_nbh = shp_nbh->get_number_of_vertices();
-                                          const int ne_nbh = shp_nbh->get_number_of_edges();
-                                          const int nf_nbh = shp_nbh->get_number_of_faces();
+              // get particle j data.
+              const int nv = shp->get_number_of_vertices();
+              const int ne = shp->get_number_of_edges();
+              const int nf = shp->get_number_of_faces();
+              const int nv_nbh = shp_nbh->get_number_of_vertices();
+              const int ne_nbh = shp_nbh->get_number_of_edges();
+              const int nf_nbh = shp_nbh->get_number_of_faces();
 
-                                          item.id_j = id_nbh;
-                                          // exclude possibilities with obb
-                                          for (int i = 0; i < nv; i++)
-                                          {
-                                            auto vi = shp->get_vertex(i, r, orient);
-                                            OBB obbvi;
-                                            obbvi.center = {vi.x, vi.y, vi.z};
-                                            obbvi.enlarge(shp->m_radius + rVerlet);
-                                            if (obb_j.intersect(obbvi))
-                                            {
-                                              item.type = 0; // === Vertex - Vertex
-                                              for (int j = 0; j < nv_nbh; j++)
-                                              {
-                                                if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh))
-                                                {
-                                                  add_contact(p_a, item, i, j);
-                                                }
-                                              }
+              item.id_j = id_nbh;
+              // exclude possibilities with obb
+              for (int i = 0; i < nv; i++)
+              {
+                auto vi = shp->get_vertex(i, r, orient);
+                OBB obbvi;
+                obbvi.center = {vi.x, vi.y, vi.z};
+                obbvi.enlarge(shp->m_radius + rVerlet);
+                if (obb_j.intersect(obbvi))
+                {
+                  item.type = 0; // === Vertex - Vertex
+                  for (int j = 0; j < nv_nbh; j++)
+                  {
+                    if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh))
+                    {
+                      add_contact(p_a, item, i, j);
+                    }
+                  }
 
-                                              item.type = 1; // === vertex edge
-                                              for (int j = 0; j < ne_nbh; j++)
-                                              {
-                                                bool contact = exaDEM::filter_vertex_edge<skip_obb>(obbvi, r_nbh, j, shp_nbh, orient_nbh);
-                                                if (contact)
-                                                {
-                                                  add_contact(p_a, item, i, j);
-                                                }
-                                              }
+                  item.type = 1; // === vertex edge
+                  for (int j = 0; j < ne_nbh; j++)
+                  {
+                    bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh);
+                    if (contact)
+                    {
+                      add_contact(p_a, item, i, j);
+                    }
+                  }
 
-                                              item.type = 2; // === vertex face
-                                              for (int j = 0; j < nf_nbh; j++)
-                                              {
-                                                bool contact = exaDEM::filter_vertex_face<skip_obb>(obbvi, r_nbh, j, shp_nbh, orient_nbh);
-                                                if (contact)
-                                                {
-                                                  add_contact(p_a, item, i, j);
-                                                }
-                                              }
-                                            }
-                                          }
+                  item.type = 2; // === vertex face
+                  for (int j = 0; j < nf_nbh; j++)
+                  {
+                    bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh);
+                    if (contact)
+                    {
+                      add_contact(p_a, item, i, j);
+                    }
+                  }
+                }
+              }
 
-                                          item.type = 3; // === edge edge
-                                          for (int i = 0; i < ne; i++)
-                                          {
-                                            OBB obb_edge_i = shp->get_obb_edge(r, i, orient);
-                                            obb_edge_i.enlarge(rVerlet);
-                                            if (obb_j.intersect(obb_edge_i))
-                                            {
-                                              obb_edge_i.enlarge(rVerlet);
-                                              for (int j = 0; j < ne_nbh; j++)
-                                              {
-                                                OBB obb_edge_j = shp_nbh->get_obb_edge(r_nbh, j, orient_nbh);
-                                                if (obb_edge_i.intersect(obb_edge_j))
-                                                {
-                                                  add_contact(p_a, item, i, j);
-                                                }
-                                              }
-                                            }
-                                          }
+              item.type = 3; // === edge edge
+              for (int i = 0; i < ne; i++)
+              {
+                for (int j = 0; j < ne_nbh; j++)
+                {
+                  bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh);
+                  if (contact)
+                  {
+                    add_contact(p_a, item, i, j);
+                  }
+                }
+              }
 
-                                          // interaction of from particle j to particle i
-                                          item.cell_j = cell_a;
-                                          item.id_j = id_a[p_a];
-                                          item.p_j = p_a;
+              // interaction of from particle j to particle i
+              item.cell_j = cell_a;
+              item.id_j = id_a[p_a];
+              item.p_j = p_a;
 
-                                          item.cell_i = cell_b;
-                                          item.p_i = p_b;
-                                          item.id_i = id_nbh;
+              item.cell_i = cell_b;
+              item.p_i = p_b;
+              item.id_i = id_nbh;
 
-                                          for (int j = 0; j < nv_nbh; j++)
-                                          {
-                                            auto vj = shp->get_vertex(j, r_nbh, orient_nbh);
-                                            OBB obbvj;
-                                            obbvj.center = {vj.x, vj.y, vj.z};
-                                            obbvj.enlarge(shp_nbh->m_radius + rVerlet);
+              for (int j = 0; j < nv_nbh; j++)
+              {
+                auto vj = shp->get_vertex(j, r_nbh, orient_nbh);
+                OBB obbvj;
+                obbvj.center = {vj.x, vj.y, vj.z};
+                obbvj.enlarge(shp_nbh->m_radius + rVerlet);
 
-                                            if (obb_i.intersect(obbvj))
-                                            {
-                                              item.type = 1; // === vertex edge
-                                              for (int i = 0; i < ne; i++)
-                                              {
-                                                bool contact = exaDEM::filter_vertex_edge<skip_obb>(obbvj, r, i, shp, orient);
-                                                if (contact)
-                                                {
-                                                  add_contact(p_a, item, j, i);
-                                                }
-                                              }
+                if (obb_i.intersect(obbvj))
+                {
+                  item.type = 1; // === vertex edge
+                  for (int i = 0; i < ne; i++)
+                  {
+                    bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a[p_a], i, shp);
+                    if (contact)
+                    {
+                      add_contact(p_a, item, j, i);
+                    }
+                  }
 
-                                              item.type = 2; // === vertex face
-                                              for (int i = 0; i < nf; i++)
-                                              {
-                                                bool contact = exaDEM::filter_vertex_face<skip_obb>(obbvj, r, i, shp, orient);
-                                                if (contact)
-                                                {
-                                                  add_contact(p_a, item, j, i);
-                                                }
-                                              }
-                                            }
-                                          }
-                                        });
+                  item.type = 2; // === vertex face
+                  for (int i = 0; i < nf; i++)
+                  {
+                    bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a[p_a], i, shp);
+                    if (contact)
+                    {
+                      add_contact(p_a, item, j, i);
+                    }
+                  }
+                }
+              }
+              });
 
           manager.update_extra_storage<true>(storage);
 
