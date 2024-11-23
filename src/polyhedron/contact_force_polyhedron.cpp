@@ -62,11 +62,9 @@ namespace exaDEM
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
     // analyses
     ADD_SLOT(long, timestep, INPUT, REQUIRED);
-    ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
-    ADD_SLOT(long, analysis_dump_stress_tensor_frequency, INPUT, REQUIRED, DocString{"Compute avg Stress Tensor."});
-    ADD_SLOT(long, simulation_log_frequency, INPUT, REQUIRED, DocString{"Log frequency."});
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
     ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
+    ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
 
   public:
     inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
@@ -91,17 +89,9 @@ namespace exaDEM
       }
 
       /** Analysis */
+      const bool store_interactions = true;
       const long frequency_interaction = *analysis_interaction_dump_frequency;
       bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
-
-      const long frequency_stress_tensor = *analysis_dump_stress_tensor_frequency;
-      bool compute_stress_tensor = (frequency_stress_tensor > 0 && (*timestep) % frequency_stress_tensor == 0);
-
-      const long log_frequency = *simulation_log_frequency;
-      bool need_interactions_for_log_frequency = (*timestep) % log_frequency;
-
-      bool store_interactions = write_interactions || compute_stress_tensor || need_interactions_for_log_frequency;
-      store_interactions = true;
 
       /** Get driver and particles data */
       driver_t *drvs = drivers->data();
