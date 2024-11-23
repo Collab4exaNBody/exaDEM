@@ -46,187 +46,49 @@ namespace exaDEM
     using StorageType = ForceType;                ///< Type for storing forces.
     using KeyType = CoupleType;                   ///< Type used as keys in data storage.
 
-    // Members
-    typename GridT::CellParticles *cells; ///< Pointer to the cells of the grid.
-    shapes &shps;                         ///< Reference to the list of shapes.
-    ContactParams params;                 ///< Parameters for Contact operations.
-    double time;                          ///< Incrementation time value
-
-    using signature = contact (*)(const onika::oarray_t<exanb::Vec3d, EXADEM_MAX_VERTICES> &, int, const exaDEM::shape *, const onika::oarray_t<exanb::Vec3d, EXADEM_MAX_VERTICES> &, int, const exaDEM::shape *);
-
-    /**
-     * @brief Array of function pointers for precomputed detection signatures.
-     *
-     * This static constexpr array contains function pointers for precomputed detection.
-     * Each element of the array corresponds to a specific type of interaction detection:
-     * - detection[0]: Vertex-Vertex interaction detection.
-     * - detection[1]: Vertex-Edge interaction detection.
-     * - detection[2]: Vertex-Face interaction detection.
-     * - detection[3]: Edge-Edge interaction detection.
-     */
-    static constexpr signature detection[4] = {exaDEM::detection_vertex_vertex_precompute, exaDEM::detection_vertex_edge_precompute, exaDEM::detection_vertex_face_precompute, exaDEM::detection_edge_edge_precompute};
+    GridT& grid; ///< Pointer to the cells of the grid.
+    std::stringstream pos; // store particle positions
+    std::stringstream connect; // store interaction connections
+    std::stringstream val; // store force values
 
     // TODO optimize if later with another data storage
     std::map<KeyType, StorageType> network; ///< Stores network data, with keys defined by KeyType and values by StorageType.
 
-    /**
-     * @brief Constructor for NetworkFunctor.
-     *
-     * Initializes a NetworkFunctor object with the provided grid, shapes, configuration parameters, and time.
-     *
-     * @param g Reference to the grid.
-     * @param s Reference to the shapes.
-     * @param config Reference to the configuration parameters.
-     * @param t Time parameter.
-     */
-    NetworkFunctor(GridT &g, shapes &s, ContactParams &config, double t) : cells(g.cells()), shps(s), params(config), time(t) {}
+    NetworkFunctor(GridT &g) : grid(g) {}
 
-    /**
-     * @brief Gets the position vector of a particle in a specified cell.
-     *
-     * Retrieves the position vector of the particle with the position in the specified cell.
-     *
-     * @param cell_id The ID of the cell containing the particle.
-     * @param p_id The position of the particle in the cell_id.
-     * @return The position vector of the particle.
-     */
-    const Vec3d get_position(const int cell_id, const int p_id)
-    {
-      const Vec3d res = {cells[cell_id][field::rx][p_id], cells[cell_id][field::ry][p_id], cells[cell_id][field::rz][p_id]};
-      return res;
-    };
-
-    /**
-     * @brief Gets the velocity vector of a particle in a specified cell.
-     *
-     * Retrieves the velocity vector of the particle with the position in the specified cell.
-     *
-     * @param cell_id The ID of the cell containing the particle.
-     * @param p_id The position of the particle in the cell_id.
-     * @return The velocity vector of the particle.
-     */
-    const Vec3d get_velocity(const int cell_id, const int p_id)
-    {
-      const Vec3d res = {cells[cell_id][field::vx][p_id], cells[cell_id][field::vy][p_id], cells[cell_id][field::vz][p_id]};
-      return res;
-    };
-
-    /**
-     * @brief Computes the normal force value according to contact law and stores it based on the pair of polyhedra considered.
-     * @param I The Interaction object representing the pair of polyhedra and associated interaction data.
-     * @return A key-value pair representing the processed interaction data (pair of polyhedra and normal force value).
-     */
-    std::pair<KeyType, StorageType> operator()(exaDEM::Interaction &I)
+    void add(exaDEM::Interaction& I, double value)
     {
       // === build contact network key
       IdType i = {I.cell_i, I.p_i};
       IdType j = {I.cell_j, I.p_j};
       KeyType key = {i, j};
-
-      // === only interactions between polyhedron are considered
-      if (I.type > 3)
+      auto it = network.find(key);
+      if (it != network.end())
       {
-        return {key, ForceType(0)};
-      }
-
-      // === positions
-      const Vec3d ri = get_position(I.cell_i, I.p_i);
-      const Vec3d rj = get_position(I.cell_j, I.p_j);
-
-      // === get cells
-      auto &cell_i = cells[I.cell_i];
-      auto &cell_j = cells[I.cell_j];
-
-      // === get angular velocities
-      const Vec3d &vrot_i = cell_i[field::vrot][I.p_i];
-      const Vec3d &vrot_j = cell_j[field::vrot][I.p_j];
-
-      // === get polyhedron types
-      const auto &type_i = cell_i[field::type][I.p_i];
-      const auto &type_j = cell_j[field::type][I.p_j];
-
-      // === get vertex positions
-      const auto &vertices_i = cell_i[field::vertices][I.p_i];
-      const auto &vertices_j = cell_j[field::vertices][I.p_j];
-
-      // === get shape relative to polyhedron types
-      const shape *shp_i = this->shps[type_i];
-      const shape *shp_j = this->shps[type_j];
-
-      // === make detection
-      auto [contact, dn, n, contact_position] = detection[I.type](vertices_i, I.sub_i, shp_i, vertices_j, I.sub_j, shp_j);
-
-      // if contact detection, compute contact law
-      if (contact)
-      {
-        const Vec3d vi = get_velocity(I.cell_i, I.p_i);
-        const Vec3d vj = get_velocity(I.cell_j, I.p_j);
-        const auto &m_i = cell_i[field::mass][I.p_i];
-        const auto &m_j = cell_j[field::mass][I.p_j];
-
-        // === Utilize temporary values to avoid updating friction and moment in contact_force_core.
-        Vec3d f = {0, 0, 0};
-        Vec3d fr = I.friction;
-        Vec3d mom = I.moment;
-        const double meff = compute_effective_mass(m_i, m_j);
-
-        contact_force_core(dn, n, time, params.m_kn, params.m_kt, params.m_kr, params.m_mu, params.m_damp_rate, meff, fr, contact_position, ri, vi, f, mom, vrot_i, // particle 1
-                           rj, vj, vrot_j                                                                                                                           // particle nbh
-        );
-        // === compute normal force vector (f = ft + fn)
-        Vec3d fn = f - fr;
-        // === compute normal force
-        ForceType res = exanb::norm(fn);
-        return {key, res};
+        it->second += value;
       }
       else
       {
-        return {key, ForceType(0)};
+        network[key] = value;
       }
     }
 
-    /**
-     * @brief Functor operator for processing multiple contact interactions (network). Every Interactions concerns the same particle.
-     * @param I Pointer to the array of Interaction objects.
-     * @param offset Offset indicating the starting index of the interactions to process.
-     * @param size Size of the range of interactions to process.
-     */
-    void operator()(exaDEM::Interaction *I, const size_t offset, const size_t size)
+    template<typename Is, typename Data> 
+    void operator()(const size_t size, Is& interactions, Data& data)
     {
-      // interaction are sorted by construction
-      // sort is used because interaction i to j and j to i have the same key.
-      auto sort = [](CoupleType &in) -> void
+      Vec3d* fn = onika::cuda::vector_data(data.fn); 
+      Vec3d* ft = onika::cuda::vector_data(data.ft);
+      for(size_t i = 0; i < size ; i++)
       {
-        if (in.first > in.second)
-          std::swap(in.first, in.second);
-      };
-
-      for (size_t i = offset; i < offset + size; i++)
-      {
-        auto [couple, value] = this->operator()(I[i]);
-
-        // value = 0 means that the contact detection has failled
-        if (value == 0)
-          continue;
-        if (value == 0)
-          continue;
-
-        // update key
-        sort(couple);
-
-        // check if this contact exists, increment the value if true, otherwise it creates it
-        auto it = network.find(couple);
-        if (it != network.end())
+        const double f = exanb::norm(fn[i] + ft[i]);
+        if( f != 0)
         {
-          it->second += value;
+          Interaction I = interactions[i];
+          if (filter_duplicates(grid, I)) add(I, f);
         }
-        else
-        {
-          network[couple] = value;
-        }
-      }
+      } 
     }
-
+    
     /**
      * @brief Creates an indirection array for particle indexes (cell_id, pos_id).
      *
@@ -257,27 +119,21 @@ namespace exaDEM
       return ids;
     }
 
-    /**
-     * @brief Fills a stringstream with position data.
-     * @param buff_position The stringstream to fill with position data.
-     * @param ids The vector of particle IDs for which position data is to be retrieved.
-     */
-    void fill_position(std::stringstream &buff_position, std::vector<IdType> &ids)
+    void fill_position(std::vector<IdType> &ids)
     {
+      auto * cells = grid.cells();
       for (size_t i = 0; i < ids.size(); i++)
       {
         auto [cell, id] = ids[i];
-        buff_position << " " << cells[cell][field::rx][id] << " " << cells[cell][field::ry][id] << " " << cells[cell][field::rz][id];
+        pos << " " << cells[cell][field::rx][id] << " " << cells[cell][field::ry][id] << " " << cells[cell][field::rz][id];
       }
     }
 
     /**
      * @brief Fills stringstreams with connectivity and value data.
-     * @param buff_connect The stringstream to fill with connectivity data.
-     * @param buff_value The stringstream to fill with value data.
      * @param ids The vector of particle IDs for which connectivity and value data is to be retrieved.
      */
-    void fill_connect_and_value(std::stringstream &buff_connect, std::stringstream &buff_value, std::vector<IdType> &ids)
+    void fill_connect_and_value(std::vector<IdType> &ids)
     {
       for (auto it : network)
       {
@@ -288,8 +144,8 @@ namespace exaDEM
         assert(itj != ids.end());
         int ii = std::distance(ids.begin(), iti);
         int jj = std::distance(ids.begin(), itj);
-        buff_connect << " " << ii << " " << jj;
-        buff_value << " " << it.second;
+        connect << " " << ii << " " << jj;
+        val << " " << it.second;
       }
     }
 
@@ -301,14 +157,10 @@ namespace exaDEM
      *
      * @param name The name of the VTP file to write.
      * @param n_particles The number of particles to write data for.
-     * @param buff_position The stringstream containing position data.
-     * @param buff_connect The stringstream containing connectivity data.
-     * @param buff_value The stringstream containing value data.
      */
-    void write_vtp(std::string name, size_t n_particles, std::stringstream &buff_position, std::stringstream &buff_connect, std::stringstream &buff_value)
+    void write_vtp(std::string name, size_t n_particles)
     {
       size_t n_interactions = network.size();
-      name = name + ".vtp";
       std::ofstream outFile(name);
       if (!outFile)
       {
@@ -316,19 +168,20 @@ namespace exaDEM
         return;
       }
 
+      outFile << "<?xml version=\"1.0\"?>" << std::endl;
       outFile << "<VTKFile type=\"PolyData\">" << std::endl;
       outFile << "  <PolyData>" << std::endl;
       outFile << "    <Piece NumberOfPoints=\"" << n_particles << "\" NumberOfLines=\"" << n_interactions << "\">" << std::endl;
       outFile << "    <Points>" << std::endl;
       outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
       if (n_particles != 0)
-        outFile << buff_position.rdbuf() << std::endl;
+        outFile << pos.rdbuf() << std::endl;
       outFile << "      </DataArray>" << std::endl;
       outFile << "    </Points>" << std::endl;
       outFile << "    <Lines>" << std::endl;
       outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
       if (n_interactions != 0)
-        outFile << buff_connect.rdbuf() << std::endl;
+        outFile << connect.rdbuf() << std::endl;
       outFile << "      </DataArray>" << std::endl;
       outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
       for (size_t i = 0; i < n_interactions; i++)
@@ -339,7 +192,7 @@ namespace exaDEM
       outFile << "    <CellData>" << std::endl;
       outFile << "      <DataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
       if (n_interactions != 0)
-        outFile << buff_value.rdbuf() << std::endl;
+        outFile << val.rdbuf() << std::endl;
       outFile << "      </DataArray>" << std::endl;
       outFile << "    </CellData>" << std::endl;
       outFile << "    </Piece>" << std::endl;
@@ -357,16 +210,17 @@ namespace exaDEM
      * @param basename The base name for the PVTP files.
      * @param number_of_files The number of PVTP files to create.
      */
-    void write_pvtp(std::string basedir, std::string basename, size_t number_of_files)
+    void write_pvtp(std::string basename, size_t number_of_files)
     {
-      std::string name = basedir + "/" + basename + ".pvtp";
+      std::string name = basename + ".pvtp";
       std::ofstream outFile(name);
       if (!outFile)
       {
         std::cerr << "Erreur : impossible de créer le fichier de sortie suivant: " << name << std::endl;
         return;
       }
-      outFile << " <VTKFile type=\"PPolyData\"> " << std::endl;
+      outFile << "<?xml version=\"1.0\"?>" << std::endl;
+      outFile << "<VTKFile type=\"PPolyData\"> " << std::endl;
       outFile << "   <PPolyData GhostLevel=\"0\">" << std::endl;
       outFile << "     <PPoints>" << std::endl;
       outFile << "       <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
@@ -374,13 +228,16 @@ namespace exaDEM
       outFile << "     <PCellData Scalar=\"fn\">" << std::endl;
       outFile << "       <PDataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"1\"/>" << std::endl;
       outFile << "     </PCellData> " << std::endl;
+      std::filesystem::path full_path(basename);
+      std::string directory = full_path.filename().string();
+      std::string subfile = directory + "/%06d.vtp";
       for (size_t i = 0; i < number_of_files; i++)
       {
-        std::string subfile = basename + "/" + basename + "_" + std::to_string(i) + ".vtp";
-        outFile << "     <Piece Source=\"" << subfile << "\"/>" << std::endl;
+        std::string file = format_string(subfile,  i);
+        outFile << "     <Piece Source=\"" << file << "\"/>" << std::endl;
       }
       outFile << "   </PPolyData>" << std::endl;
-      outFile << " </VTKFile>" << std::endl;
+      outFile << "</VTKFile>" << std::endl;
     }
   };
 } // namespace exaDEM

@@ -51,7 +51,7 @@ compute_force:
 
 particle_regions:
    - AREA:
-      bounds: [ [ 0 , 0 , 19 ] , [ 20 , 7.5 , 20 ] ]
+      bounds: [ [ 0 , 0 , 18 ] , [ 20 , 7.5 , 20 ] ]
 
 domain:
   cell_size: 1.5 m

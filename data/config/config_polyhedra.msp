@@ -33,3 +33,5 @@ particle_write_paraview_generic:
   - write_paraview_generic
 #  - write_paraview_polyhedra
   - write_paraview_obb_particles
+
+contact_network: dump_contact_network
