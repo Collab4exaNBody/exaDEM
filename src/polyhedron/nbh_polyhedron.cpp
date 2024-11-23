@@ -234,9 +234,6 @@ namespace exaDEM
         return;
       }
 
-      // use OBB for vertex/edge and vertex/faces
-      constexpr bool skip_obb = false;
-
       auto [cell_ptr, cell_size] = cell_list->info();
 
 #     pragma omp parallel
