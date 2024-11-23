@@ -30,88 +30,84 @@ under the License.
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <exanb/particle_neighbors/chunk_neighbors.h>
-#include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/interaction/classifier.hpp>
+#include <exaDEM/interaction/classifier_for_all.hpp>
 #include <exaDEM/shape/shapes.hpp>
+#include <exanb/core/string_utils.h>
 #include <exaDEM/network.hpp>
 
 namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename GridT, class = AssertGridHasFields<GridT>> class ContactNetwork : public OperatorNode
-  {
-    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
-    ADD_SLOT(shapes, shapes_collection, INPUT, DocString{"Collection of shapes"});
-    ADD_SLOT(ContactParams, config, INPUT);
-    ADD_SLOT(double, dt, INPUT);
-    ADD_SLOT(std::string, basename, INPUT, REQUIRED, DocString{"Output filename"});
-    ADD_SLOT(std::string, basedir, INPUT, "network", DocString{"Output directory, default is network"});
-    ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
+	template <typename GridT, class = AssertGridHasFields<GridT>> class ContactNetwork : public OperatorNode
+	{
+		ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+		ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+		ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
+		ADD_SLOT(shapes, shapes_collection, INPUT, DocString{"Collection of shapes"});
+		ADD_SLOT(ContactParams, config, INPUT);
+		ADD_SLOT(double, dt, INPUT);
+		ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+		ADD_SLOT( std::string , filename , INPUT , "output");
+		ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
 
-  public:
-    inline std::string documentation() const override final
-    {
-      return R"EOF(
+
+		public:
+		inline std::string documentation() const override final
+		{
+			return R"EOF(
                   This operator creates paraview files containing the contact network.
 				        )EOF";
-    }
+		}
 
-    inline void execute() override final
-    {
-      auto &interactions = ges->m_data;
+		inline void execute() override final
+		{
+			// mpi stuff
+			int rank, size;
+			MPI_Comm_rank(*mpi, &rank);
+			MPI_Comm_size(*mpi, &size);
 
-      // Fill network and manage paraview output
-      NetworkFunctor<GridT> manager(*grid, *shapes_collection, *config, *dt);
+			Classifier<InteractionSOA>& classifier = (*ic);
+			NetworkFunctor<GridT> manager(*grid);
 
-      // mpi stuff
-      int rank, size;
-      MPI_Comm_rank(*mpi, &rank);
-      MPI_Comm_size(*mpi, &size);
-      std::string directory = (*basedir) + "/" + (*basename) + "_" + std::to_string(*timestep);
-      std::string filename = directory + "/" + (*basename) + "_" + std::to_string(*timestep) + "_" + std::to_string(rank);
-      // prepro
-      if (rank == 0)
-      {
-        namespace fs = std::filesystem;
-        fs::create_directory(*basedir);
-        fs::create_directory(directory);
-        std::string dir = *basedir;
-        std::string name = *basename + "_" + std::to_string(*timestep);
-        manager.write_pvtp(dir, name, size);
-      }
+			if (rank == 0)
+			{
+				std::filesystem::create_directories( *filename );
+			}
 
-      MPI_Barrier(*mpi);
+			MPI_Barrier(*mpi);
 
-      // fill network
-      for (size_t c = 0; c < interactions.size(); c++)
-      {
-        CellExtraDynamicDataStorageT<Interaction> &storage = interactions[c];
-        auto &info = storage.m_info;
-        auto *data_ptr = storage.m_data.data();
-        for (auto &it : info)
-        {
-          manager(data_ptr, it.offset, it.size); // ptr, offset, size
-        }
-      }
+			// iterate over interaction types
+			// for (size_t type = 0; type < classifier.number_of_waves(); type++)
+			for (size_t type = 0; type < 4; type++) // skip drivers
+			{
+				auto& interactions = classifier.waves[type];
+				auto& forces = classifier.buffers[type];
+        const size_t n = interactions.size();
+				manager(n, interactions, forces); 
+			}
 
-      std::stringstream position, connect, value;
-      auto ids = manager.create_indirection_array();
-      manager.fill_position(position, ids);
-      manager.fill_connect_and_value(connect, value, ids);
-      manager.write_vtp(filename, ids.size(), position, connect, value);
-    }
-  };
+			if (rank == 0)
+			{
+				manager.write_pvtp(*filename, size);
+			}
 
-  template <class GridT> using ContactNetworkTmpl = ContactNetwork<GridT>;
+			std::string file = *filename + "/%06d.vtp";
+			file = format_string(file,  rank);
+			auto ids = manager.create_indirection_array();
+			manager.fill_position(ids);
+			manager.fill_connect_and_value(ids);
+			manager.write_vtp(file, ids.size());
+		}
+	};
 
-  // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("dump_contact_network", make_grid_variant_operator<ContactNetwork>); }
+	template <class GridT> using ContactNetworkTmpl = ContactNetwork<GridT>;
+
+	// === register factories ===
+	CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("dump_contact_network", make_grid_variant_operator<ContactNetwork>); }
 } // namespace exaDEM

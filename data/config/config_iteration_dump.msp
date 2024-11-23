@@ -9,11 +9,26 @@ trigger_dump_paraview:
   body:
     - nth_timestep: { first: false }
 
+trigger_dump_contact_network_paraview:
+  rebind: { freq: simulation_contact_network_paraview_frequency , result: trigger_contact_network_dump_paraview }
+  body:
+    - nth_timestep: { first: false }
+
 write_paraview_generic:
   binary: false
   write_ghost: false
   write_box: true
   fields: ["radius", "type","vx","vy","vz","id","orient"]
+
+
+contact_network: nop
+
+contact_network_paraview:
+  condition: enable_contact_network
+  body:
+    - timestep_paraview_file: "ParaviewOutputFiles/contact_network_%010d"
+    - contact_network
+
 
 # Defined in config_spheres and config_polyhedra
 # config_spheres -> write_paraview_generic
@@ -29,6 +44,7 @@ dump_data_paraview:
         - message: { endl: true }
   - particle_write_paraview_generic
   - paraview_driver
+  - contact_network_paraview
 
 compute_volume:
   - domain_volume
@@ -42,7 +58,6 @@ dump_stress_tensor_if_triggered:
     - compute_volume
     - compute_stress_tensor
     - write_stress_tensor
-#    - message: { mesg: "Update Avg Stress" , endl: true }
 
 compress_data: 
   - unclassify_interactions
