@@ -67,6 +67,12 @@ ghost_full_update:
 migrate_particles: nop
 add_generated_particles: nop
 
+particle_generator:
+  condition: trigger_generator
+  body:
+    - message: { mesg: "The particle generator is triggered ...", endl: true} 
+    - add_generated_particles
+
 trigger_grid_stl_mesh:
   condition: trigger_grid_stl_mesh
   body:
@@ -79,11 +85,6 @@ update_stl_mesh:
   - trigger_grid_stl_mesh
 
 parallel_update_particles:
-  - particle_generator:
-      condition: trigger_generator
-      body:
-         - message: { mesg: "Add particles", endl: true} 
-         - add_generated_particles
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
@@ -145,6 +146,7 @@ update_particles_full:
   condition: trigger_move_particles
   body:
     - backup_drivers
+    - particle_generator
     - update_particles_full_body
 
 update_particles_fast_body:
