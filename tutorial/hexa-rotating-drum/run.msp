@@ -18,11 +18,6 @@ setup_drivers:
      radius: 16
      angular_velocity: [0,0.35,0]
 
-+dump_data_paraview:
-  - dump_contact_network:
-     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
-     basename: hexapods
-
 compute_force:
   - gravity_force
   - contact_polyhedron:
@@ -34,14 +29,11 @@ domain:
   cell_size: 2 m
   periodic: [false,true,false]
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 global:
   simulation_dump_frequency: 100000
   simulation_end_iteration: 5000000
   simulation_log_frequency: 10000
+  enable_contact_network: true
   simulation_paraview_frequency:  20000
   dt: 0.00001 s 
   rcut_inc: 0.075 m

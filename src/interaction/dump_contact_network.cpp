@@ -48,10 +48,6 @@ namespace exaDEM
 	{
 		ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
 		ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-		ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
-		ADD_SLOT(shapes, shapes_collection, INPUT, DocString{"Collection of shapes"});
-		ADD_SLOT(ContactParams, config, INPUT);
-		ADD_SLOT(double, dt, INPUT);
 		ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
 		ADD_SLOT( std::string , filename , INPUT , "output");
 		ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
