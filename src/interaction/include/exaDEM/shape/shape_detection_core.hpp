@@ -107,7 +107,7 @@ namespace exaDEM
     const Vec3d distfs = vs - vf;
     const Vec3d distfi = vi - vf;
     double r = (exanb::dot(distfs, distfi)) / (exanb::dot(distfs, distfs));
-    if (r < -rVerlet || r > rVerlet)
+    if (r < -rVerlet || r > 1.0 + rVerlet)
       return false;
 
     // === compute minimal distance between the vertex and the edge
@@ -390,10 +390,8 @@ namespace exaDEM
       dist = -dist;
     }
 
-
     if (dist > (ri + rj + rVerlet))
       return false;
-
 
     const Vec3d P = vi - n * dist;
 
