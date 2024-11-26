@@ -40,7 +40,7 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
-  template <class GridT, class = AssertGridHasFields<GridT>> class UpdateGridSTLMeshOperator : public OperatorNode
+  template <class GridT> class UpdateGridSTLMeshOperator : public OperatorNode
   {
     using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz>;
     static constexpr ComputeFields compute_field_set{};
@@ -48,6 +48,7 @@ namespace exaDEM
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, DocString{"Grid used for computations."});
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, DocString{"List of Drivers"});
     ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"rcut_max"});
+    ADD_SLOT(bool, force_reset, INPUT, REQUIRED, DocString{"Force to rebuild grid for stl meshes."});
 
   public:
     inline std::string documentation() const override final { return R"EOF( Update the list of information for each cell regarding the vertex, edge, and face indices in contact with the cell in an STL mesh." )EOF"; }
@@ -59,6 +60,8 @@ namespace exaDEM
       const IJK dims = g.dimension();
       const double Rmax = *rcut_max;
 
+      bool ForceResetSTLGrid = *force_reset;
+
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
         if (drivers->type(id) == DRIVER_TYPE::STL_MESH)
@@ -66,10 +69,13 @@ namespace exaDEM
           exaDEM::Stl_mesh &mesh = std::get<exaDEM::Stl_mesh>(drivers->data(id));
           auto &grid_stl = mesh.grid_indexes;
 
-          if( mesh.vrot == Vec3d{0,0,0} && mesh.vel == Vec3d{0,0,0} && grid_stl.size() == n_cells )
-          { 
-            // The grid is already built and didn't change
-            continue; 
+          if ( !ForceResetSTLGrid )
+          {
+            if( mesh.vrot == Vec3d{0,0,0} && mesh.vel == Vec3d{0,0,0} && grid_stl.size() == n_cells )
+            { 
+              // The grid is already built and didn't change
+              continue; 
+            }
           }
           mesh.shp.pre_compute_obb_vertices(mesh.center, mesh.quat);
           mesh.shp.pre_compute_obb_edges(mesh.center, mesh.quat);
@@ -162,9 +168,8 @@ namespace exaDEM
       }
     }
   };
-  // this helps older versions of gcc handle the unnamed default second template parameter
-  template <class GridT> using UpdateGridSTLMeshOperatorTemplate = UpdateGridSTLMeshOperator<GridT>;
 
-  // === register factories ===
+  // === register factories ==
+  template <class GridT> using UpdateGridSTLMeshOperatorTemplate = UpdateGridSTLMeshOperator<GridT>;
   CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("grid_stl_mesh", make_grid_variant_operator<UpdateGridSTLMeshOperatorTemplate>); }
 } // namespace exaDEM

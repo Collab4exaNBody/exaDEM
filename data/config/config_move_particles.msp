@@ -73,23 +73,13 @@ particle_generator:
     - message: { mesg: "The particle generator is triggered ...", endl: true} 
     - add_generated_particles
 
-trigger_grid_stl_mesh:
-  condition: trigger_grid_stl_mesh
-  body:
-    - grid_stl_mesh
-
-update_stl_mesh:
-  - combineSTL:
-      rebind: { in1: enable_stl_mesh , in2: trigger_load_balance, result: trigger_grid_stl_mesh}
-      body: [ boolean_and ]  
-  - trigger_grid_stl_mesh
-
 parallel_update_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
   - update_cell_list
-  - grid_stl_mesh
+  - grid_stl_mesh:
+     force_reset: false
   - update_particle_neighbors
 
 # define actions to initialize particles at startup, just after file read
@@ -101,7 +91,8 @@ init_particles:
   - ghost_full_update
   - grid_post_processing
   - update_cell_list
-  - grid_stl_mesh
+  - grid_stl_mesh:
+     force_reset: true
   - update_particle_neighbors
 ###########################################################################
 
@@ -133,6 +124,8 @@ load_balancing_if_triggered:
   condition: trigger_load_balance
   body:
     - load_balance
+    - grid_stl_mesh: # force to rebuild grid mesh
+       force_reset: true
 
 update_particles_full_body:
   - compress_data
@@ -151,11 +144,11 @@ update_particles_full:
 
 update_particles_fast_body:
     - ghost_update_rq:
-       gpu_buffer_pack: true
+       gpu_buffer_pack: false
        async_buffer_pack: true
        staging_buffer: true
        serialize_pack_send: true
-       wait_all: false
+       wait_all: true
     - compute_new_vertices
 
 update_particles_fast:
