@@ -123,7 +123,7 @@ sets result output to true if at least one particle has moved further than thres
     {
       MPI_Comm comm = *mpi;
 
-      const double max_dist = *threshold;
+      const double max_dist = 0.5* (*threshold);
       const double max_dist2 = max_dist * max_dist;
 
       int local_drivers_displ(0), global_drivers_displ(0);

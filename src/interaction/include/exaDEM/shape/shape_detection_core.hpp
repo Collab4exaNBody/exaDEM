@@ -432,6 +432,79 @@ namespace exaDEM
     return false;
   }
 
+  ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(const double rVerlet,  const Vec3d &pi, const int i, const shape *shpi, const exanb::Quaternion &oi, const Vec3d &pj, const int j, const shape *shpj, const exanb::Quaternion &oj)
+  {
+    double ri = shpi->m_radius;
+    double rj = shpj->m_radius;
+
+    const Vec3d vi = shpi->get_vertex(i, pi, oi);
+
+    // === compute vertices
+    auto [data, nf] = shpj->get_face(j);
+    assert(nf >= 3);
+    const Vec3d &va = shpj->get_vertex(data[0], pj, oj);
+    const Vec3d &vb = shpj->get_vertex(data[1], pj, oj);
+    const Vec3d &vc = shpj->get_vertex(data[nf-1], pj, oj);
+    const Vec3d v = vi - va;
+    Vec3d v1 = vb - va;
+    Vec3d v2 = vc - va;
+    normalize(v1);
+
+    // === compute normal vector
+    Vec3d n = cross(v1, v2);
+    normalize(n);
+
+    // === eliminate possibility
+    double dist = exanb::dot(n, v);
+
+    if (dist < 0)
+    {
+      n = n * (-1);
+      dist = -dist;
+    }
+
+    if (dist > (ri + rj + rVerlet))
+      return false;
+
+    const Vec3d P = vi - n * dist;
+
+    int ODD = 0;
+    v2 = cross(n, v1);
+    double ori1 = exanb::dot(P, v1);
+    double ori2 = exanb::dot(P, v2);
+    double pa1, pa2;
+    double pb1, pb2;
+    int iva, ivb;
+    for (iva = 0; iva < nf; ++iva)
+    {
+      ivb = iva + 1;
+      if (ivb == nf)
+        ivb = 0;
+      const Vec3d &_va = shpj->get_vertex(data[iva], pj, oj);
+      const Vec3d &_vb = shpj->get_vertex(data[ivb], pj, oj);
+      pa1 = exanb::dot(_va, v1);
+      pb1 = exanb::dot(_vb, v1);
+      pa2 = exanb::dot(_va, v2);
+      pb2 = exanb::dot(_vb, v2);
+
+      // @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
+      // @see http://alienryderflex.com/polygon/
+      if ((pa2 < ori2 && pb2 >= ori2) || (pb2 < ori2 && pa2 >= ori2))
+      {
+        if (pa1 + (ori2 - pa2) / (pb2 - pa2) * (pb1 - pa1) < ori1)
+        {
+          ODD = 1 - ODD;
+        }
+      }
+    }
+
+    if(ODD == 1) 
+    {
+      return true;
+    }
+    return false;
+  }
+
   /**
    * @brief Detects vertex-face interactions and computes contact information.
    * @param vai The array of vertices of polyhedron i.
@@ -564,7 +637,7 @@ namespace exaDEM
       Vec3d n = pi - pj; // from j to i
 
       // === compute overlap in dn
-      return (exanb::dot(n,n) < (R*R));
+      return (exanb::dot(n,n) <= (R*R));
     }
     return false;
 #undef _EPSILON_VALUE_

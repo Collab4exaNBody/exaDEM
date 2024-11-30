@@ -263,9 +263,12 @@ namespace exaDEM
     struct contact_law_stl
     {
       using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
+
       detect<interaction_type> detection;
+
       /* Default constructor */
       contact_law_stl() {}
+
       /**
        * @brief Operator function for applying contact law interactions with STL mesh objects.
        *
@@ -281,57 +284,95 @@ namespace exaDEM
        * @param shps Pointer to the shapes array providing shape information for interactions.
        * @param dt Time increment for the simulation step.
        */
-      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPLC * __restrict__ cells, driver_t *const drvs, const ContactParams &hkp, const shape *shps, const double dt) const
-      {
-        const int driver_idx = item.id_j; //
-        Stl_mesh &driver = (exaDEM::Stl_mesh &)(drvs[driver_idx]);
-        auto &cell = cells[item.cell_i];
-        const auto type = cell[field::type][item.p_i];
-        const auto &shp_i = shps[type];
-        const auto &shp_j = driver.shp;
+			template <typename TMPLC> 
+				ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
+						Interaction &item, 
+						TMPLC * __restrict__ cells, 
+						driver_t *const drvs, 
+						const ContactParams &hkp, 
+						const shape *shps, 
+						const double dt) const
+				{
+					const int driver_idx = item.id_j; //
+					Stl_mesh &driver = (exaDEM::Stl_mesh &)(drvs[driver_idx]);
+					auto &cell = cells[item.cell_i];
+          // renaming
+					const size_t p_i = item.p_i;
+					const size_t sub_i = item.sub_i;
+					const size_t sub_j = item.sub_j;
 
-        const size_t p_i = item.p_i;
-        const size_t sub_i = item.sub_i;
-        const size_t sub_j = item.sub_j;
+          // get shapes
+					const auto type = cell[field::type][item.p_i];
+					const auto &shp_i = shps[type];
+					const auto &shp_j = driver.shp;
 
-        // === positions
-        const Vec3d r_i = {cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i]};
-        // === vrot
-        const Vec3d &vrot_i = cell[field::vrot][p_i];
-        // === orientation
-        const Quaternion &orient_i = cell[field::orient][p_i];
-        const Quaternion orient_j = driver.quat;
-        // === detection
-        auto [contact, dn, n, contact_position] = detection(r_i, sub_i, &shp_i, orient_i, driver.center, sub_j, &shp_j, orient_j);
-        constexpr Vec3d null = {0, 0, 0};
-        Vec3d fn = null;
 
-        if (contact)
-        {
-          Vec3d f = null;
-          auto &mom = cell[field::mom][p_i];
-          const Vec3d v_i = {cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i]};
-          const double meff = cell[field::mass][p_i];
-          contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, r_i, v_i, f, item.moment, vrot_i, // particle i
-                             driver.center, driver.vel, driver.vrot                                                                                                       // particle j
-          );
+					// === positions
+					const Vec3d r_i = {cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i]};
+					// === vrot
+					const Vec3d &vrot_i = cell[field::vrot][p_i];
+					// === orientation
+					const Quaternion &orient_i = cell[field::orient][p_i];
+					const Quaternion &orient_j = driver.quat;
+					// === detection
+					auto [contact, dn, n, contact_position] = detection(r_i, sub_i, &shp_i, orient_i, driver.center, sub_j, &shp_j, orient_j);
+					constexpr Vec3d null = {0, 0, 0};
+					Vec3d fn = null;
 
-          // === used for analysis
-          fn = f - item.friction;
+					if (contact)
+					{
+						Vec3d f = null;
+						auto &mom = cell[field::mom][p_i];
+						const Vec3d v_i = {cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i]};
+						const double meff = cell[field::mass][p_i];
 
-          // === update informations
-          lockAndAdd(mom, compute_moments(contact_position, r_i, f, item.moment));
-          lockAndAdd(cell[field::fx][p_i], f.x);
-          lockAndAdd(cell[field::fy][p_i], f.y);
-          lockAndAdd(cell[field::fz][p_i], f.z);
-        }
-        else
-        {
-          item.reset();
-          dn = 0;
-        }
-        return {dn, contact_position, fn, item.friction};
-      }
-    };
-  } // namespace polyhedron
+
+            // i to j
+            if constexpr (interaction_type <= 10 && interaction_type >= 7 )
+            {
+						  contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, 
+                  item.friction, contact_position, 
+                  r_i, v_i, f, item.moment, vrot_i,       // particle i
+							  	driver.center, driver.vel, driver.vrot  // particle j
+							  	);
+
+						  // === used for analysis
+						  fn = f - item.friction;
+						  // === update informations
+						  lockAndAdd(mom, compute_moments(contact_position, r_i, f, item.moment));
+					  	lockAndAdd(cell[field::fx][p_i], f.x);
+					  	lockAndAdd(cell[field::fy][p_i], f.y);
+					  	lockAndAdd(cell[field::fz][p_i], f.z);
+            }
+
+            //  j to i 
+            if constexpr (interaction_type <= 12 && interaction_type >= 11 )
+            {
+						  contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, 
+                  item.friction, contact_position, 
+							  	driver.center, driver.vel, f, item.moment, driver.vrot,  // particle j
+                  r_i, v_i,  vrot_i       // particle i
+							 );
+
+						   // === used for analysis
+						   fn = item.friction - f;
+						   // === update informations
+						   lockAndAdd(mom, compute_moments(contact_position, r_i, -f, -item.moment));
+					  	 lockAndAdd(cell[field::fx][p_i], -f.x);
+					  	 lockAndAdd(cell[field::fy][p_i], -f.y);
+					  	 lockAndAdd(cell[field::fz][p_i], -f.z);
+               item.friction = -item.friction;
+            }
+
+
+					}
+					else
+					{
+						item.reset();
+						dn = 0;
+					}
+					return {dn, contact_position, fn, item.friction};
+				}
+		};
+	} // namespace polyhedron
 } // namespace exaDEM
