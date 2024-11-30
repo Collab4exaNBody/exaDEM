@@ -71,7 +71,7 @@ namespace exaDEM
 
           if ( !ForceResetSTLGrid )
           {
-            if( mesh.vrot == Vec3d{0,0,0} && mesh.vel == Vec3d{0,0,0} && grid_stl.size() == n_cells )
+            if( mesh.stationary() && grid_stl.size() == n_cells )
             { 
               // The grid is already built and didn't change
               continue; 

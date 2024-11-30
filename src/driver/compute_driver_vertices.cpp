@@ -79,7 +79,7 @@ namespace exaDEM
 		// -----------------------------------------------
 		ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
 		ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
-		ADD_SLOT(bool, force_host , INPUT, REQUIRED, DocString{"Force computations on the host"});
+  	ADD_SLOT(bool, force_host , INPUT, REQUIRED, DocString{"Force computations on the host"});
 
 		public:
 		// -----------------------------------------------

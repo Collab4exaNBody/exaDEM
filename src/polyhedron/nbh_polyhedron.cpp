@@ -81,9 +81,10 @@ namespace exaDEM
 					const exanb::Quaternion *__restrict__ orient, 
 					shapes &shps)
 			{
+#define __particle__ vertices_i, i, shpi
+#define __driver__ mesh.vertices.data(), idx, &mesh.shp
 				assert(cell_a < mesh.grid_indexes.size());
 				auto &list = mesh.grid_indexes[cell_a];
-				auto &stl_shp = mesh.shp;
 				const size_t stl_nv = list.vertices.size();
 				const size_t stl_ne = list.edges.size();
 				const size_t stl_nf = list.faces.size();
@@ -94,6 +95,7 @@ namespace exaDEM
 				for (size_t p = 0; p < n_particles; p++)
 				{
 					Vec3d r = {rx[p], ry[p], rz[p]}; // position
+          auto& vertices_i = vertices[p];
           const Quaternion& orient_i = orient[p];
 					item.p_i = p;
 					item.id_i = id[p];
@@ -106,8 +108,8 @@ namespace exaDEM
           // Get OBB from stl mesh
           auto &stl_shp = mesh.shp;
           OBB *__restrict__ stl_obb_vertices = onika::cuda::vector_data(stl_shp.m_obb_vertices);
-          OBB *__restrict__ stl_obb_edges = onika::cuda::vector_data(stl_shp.m_obb_edges);
-          OBB *__restrict__ stl_obb_faces = onika::cuda::vector_data(stl_shp.m_obb_faces);
+          [[maybe_unused]] OBB *__restrict__ stl_obb_edges = onika::cuda::vector_data(stl_shp.m_obb_edges);
+          [[maybe_unused]] OBB *__restrict__ stl_obb_faces = onika::cuda::vector_data(stl_shp.m_obb_faces);
 
           // compute OBB from particle p
           OBB obb_i = shpi->obb;
@@ -119,7 +121,6 @@ namespace exaDEM
           // Note:
           // loop i = particle p
           // loop j = stl mesh
-
 					for (size_t i = 0; i < nv; i++)
 					{
 						vec3r v = conv_to_vec3r(vertices[p][i]);
@@ -133,7 +134,8 @@ namespace exaDEM
 						for (size_t j = 0; j < stl_nv; j++)
 						{
 							size_t idx = list.vertices[j];
-							if(filter_vertex_vertex(rVerlet, r, i, shpi, orient[p], mesh.center, idx, &mesh.shp, mesh.quat))
+							if(filter_vertex_vertex_v2(rVerlet, __particle__, __driver__))
+							//if(filter_vertex_vertex(rVerlet, __particle__, __driver__))
 							{
 								add_contact(p, item, i, idx);
 							} 
@@ -143,7 +145,7 @@ namespace exaDEM
 						for (size_t j = 0; j < stl_ne; j++)
 						{
 							size_t idx = list.edges[j];
-							if(filter_vertex_edge(rVerlet, r, i, shpi, orient[p], mesh.center, idx, &mesh.shp, mesh.quat))
+							if(filter_vertex_edge(rVerlet, __particle__, __driver__))
 							{
 								add_contact(p, item, i, idx);
 							}
@@ -156,7 +158,7 @@ namespace exaDEM
               const OBB& obb_f_stl_j = stl_obb_faces[idx];
               if( obb_f_stl_j.intersect(obb_v_i) )
               {
-							  if(filter_vertex_face(rVerlet, r, i, shpi, orient[p], mesh.center, idx, &mesh.shp, mesh.quat))
+							  if(filter_vertex_face(rVerlet, __particle__, __driver__))
 						  	{
 								  add_contact(p, item, i, idx);
 						  	}
@@ -172,7 +174,7 @@ namespace exaDEM
 						for (size_t j = 0; j < stl_ne; j++)
 						{
 							const size_t idx = list.edges[j];
-							if(filter_edge_edge(rVerlet, r, i, shpi, orient[p], mesh.center, idx, &mesh.shp, mesh.quat))
+							if(filter_edge_edge(rVerlet, __particle__, __driver__))
 							{
 								add_contact(p, item, i, idx);
 							}
@@ -191,7 +193,7 @@ namespace exaDEM
   			    // edge - vertex
 					  for (size_t i = 0; i < ne; i++)
             {
-							if(filter_vertex_edge(rVerlet, mesh.center, idx, &mesh.shp, mesh.quat, r, i, shpi, orient[p])) 
+							if(filter_vertex_edge(rVerlet, __driver__, __particle__)) 
 							{
 								add_contact(p, item, i, idx);
 							}
@@ -200,13 +202,15 @@ namespace exaDEM
 					  item.type = 12;
 					  for (size_t i = 0; i < nf; i++)
             {
-					    if(filter_vertex_face(rVerlet, mesh.center, idx, &mesh.shp, mesh.quat, r, i, shpi, orient[p]))
+					    if(filter_vertex_face(rVerlet, __driver__, __particle__))
 						  {
 						    add_contact(p, item, i, idx);
 						  }
             }
 					}
 				} // end loop p
+#undef __particle__
+#undef __driver__
 			} // end funcion
 
 		template <typename D, typename Func> 
@@ -415,10 +419,6 @@ namespace exaDEM
 							if (!obb_i.intersect(obb_j))
 								return;
 
-							// reset rVerlet
-							obb_i.enlarge(-rVerlet);
-							obb_j.enlarge(-rVerlet);
-
 							// Add interactions
 							item.id_i = id_a[p_a];
 							item.p_i = p_a;
@@ -445,7 +445,7 @@ namespace exaDEM
 								auto vi = shp->get_vertex(i, r, orient);
 								OBB obbvi;
 								obbvi.center = {vi.x, vi.y, vi.z};
-								obbvi.enlarge(shp->m_radius + rVerlet);
+								obbvi.enlarge(shp->m_radius);
 								if (obb_j.intersect(obbvi))
 								{
 									item.type = 0; // === Vertex - Vertex
@@ -503,12 +503,12 @@ namespace exaDEM
 
 							for (int j = 0; j < nv_nbh; j++)
 							{
-								// auto vj = shp->get_vertex(j, r_nbh, orient_nbh);
-								// OBB obbvj;
-								// obbvj.center = {vj.x, vj.y, vj.z};
-								// obbvj.enlarge(shp_nbh->m_radius + rVerlet);
+								auto& vj = vertices_b[j];//shp->get_vertex(j, r_nbh, orient_nbh);
+								OBB obbvj;
+								obbvj.center = {vj.x, vj.y, vj.z};
+								obbvj.enlarge(shp_nbh->m_radius);
 
-								//if (obb_i.intersect(obbvj))
+								if (obb_i.intersect(obbvj))
 								{
 									item.type = 1; // === vertex edge
 									for (int i = 0; i < ne; i++)

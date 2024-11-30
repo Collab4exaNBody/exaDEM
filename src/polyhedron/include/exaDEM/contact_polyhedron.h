@@ -309,13 +309,14 @@ namespace exaDEM
 
 					// === positions
 					const Vec3d r_i = {cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i]};
+          const auto& vertices_i = cell[field::vertices][p_i]; 
 					// === vrot
 					const Vec3d &vrot_i = cell[field::vrot][p_i];
 					// === orientation
 					const Quaternion &orient_i = cell[field::orient][p_i];
 					const Quaternion &orient_j = driver.quat;
 					// === detection
-					auto [contact, dn, n, contact_position] = detection(r_i, sub_i, &shp_i, orient_i, driver.center, sub_j, &shp_j, orient_j);
+					auto [contact, dn, n, contact_position] = detection(vertices_i, sub_i, &shp_i, driver.vertices.data(), sub_j, &shp_j);
 					constexpr Vec3d null = {0, 0, 0};
 					Vec3d fn = null;
 
@@ -325,7 +326,6 @@ namespace exaDEM
 						auto &mom = cell[field::mom][p_i];
 						const Vec3d v_i = {cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i]};
 						const double meff = cell[field::mass][p_i];
-
 
             // i to j
             if constexpr (interaction_type <= 10 && interaction_type >= 7 )
@@ -363,8 +363,6 @@ namespace exaDEM
 					  	 lockAndAdd(cell[field::fz][p_i], -f.z);
                item.friction = -item.friction;
             }
-
-
 					}
 					else
 					{
