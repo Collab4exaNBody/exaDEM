@@ -94,6 +94,7 @@ namespace exaDEM
 				for (size_t p = 0; p < n_particles; p++)
 				{
 					Vec3d r = {rx[p], ry[p], rz[p]}; // position
+          const Quaternion& orient_i = orient[p];
 					item.p_i = p;
 					item.id_i = id[p];
 					auto ti = type[p];
@@ -102,9 +103,30 @@ namespace exaDEM
 					const size_t ne = shpi->get_number_of_edges();
 					const size_t nf = shpi->get_number_of_faces();
 
+          // Get OBB from stl mesh
+          auto &stl_shp = mesh.shp;
+          OBB *__restrict__ stl_obb_vertices = onika::cuda::vector_data(stl_shp.m_obb_vertices);
+          OBB *__restrict__ stl_obb_edges = onika::cuda::vector_data(stl_shp.m_obb_edges);
+          OBB *__restrict__ stl_obb_faces = onika::cuda::vector_data(stl_shp.m_obb_faces);
+
+          // compute OBB from particle p
+          OBB obb_i = shpi->obb;
+          quat conv_orient_i = quat{vec3r{orient_i.x, orient_i.y, orient_i.z}, orient_i.w};
+          obb_i.rotate(conv_orient_i);
+          obb_i.translate(vec3r{r.x, r.y, r.z});
+          obb_i.enlarge(rVerlet);
+
+          // Note:
+          // loop i = particle p
+          // loop j = stl mesh
+
 					for (size_t i = 0; i < nv; i++)
 					{
 						vec3r v = conv_to_vec3r(vertices[p][i]);
+            OBB obb_v_i;
+            obb_v_i.center = v; 
+            obb_v_i.enlarge(rVerlet + shpi->m_radius);
+
 						// vertex - vertex
 						item.type = 7;
 						item.sub_i = i;
@@ -131,10 +153,14 @@ namespace exaDEM
 						for (size_t j = 0; j < stl_nf; j++)
 						{
 							size_t idx = list.faces[j];
-							if(filter_vertex_face(rVerlet, r, i, shpi, orient[p], mesh.center, idx, &mesh.shp, mesh.quat))
-							{
-								add_contact(p, item, i, idx);
-							}
+              const OBB& obb_f_stl_j = stl_obb_faces[idx];
+              if( obb_f_stl_j.intersect(obb_v_i) )
+              {
+							  if(filter_vertex_face(rVerlet, r, i, shpi, orient[p], mesh.center, idx, &mesh.shp, mesh.quat))
+						  	{
+								  add_contact(p, item, i, idx);
+						  	}
+              }
 						}
 					}
 
@@ -151,35 +177,37 @@ namespace exaDEM
 								add_contact(p, item, i, idx);
 							}
 						}
+          }
 
-						// edge - vertex
-						item.type = 11;
-						for (size_t j = 0; j < stl_nv; j++)
-						{
-							const size_t idx = list.vertices[j];
-							if(filter_vertex_edge(rVerlet, mesh.center, idx, &mesh.shp, mesh.quat, r, i, shpi, orient[p]))
+			 	  for (size_t j = 0; j < stl_nv; j++)
+			 	  {
+				    const size_t idx = list.vertices[j];
+
+            // rejects vertices that are too far from the stl mesh.
+            const OBB& obb_v_stl_j = stl_obb_vertices[idx];
+            if( !obb_v_stl_j.intersect(obb_i)) continue;
+
+            item.type = 11;
+  			    // edge - vertex
+					  for (size_t i = 0; i < ne; i++)
+            {
+							if(filter_vertex_edge(rVerlet, mesh.center, idx, &mesh.shp, mesh.quat, r, i, shpi, orient[p])) 
 							{
 								add_contact(p, item, i, idx);
 							}
 						}
+					  // face vertex
+					  item.type = 12;
+					  for (size_t i = 0; i < nf; i++)
+            {
+					    if(filter_vertex_face(rVerlet, mesh.center, idx, &mesh.shp, mesh.quat, r, i, shpi, orient[p]))
+						  {
+						    add_contact(p, item, i, idx);
+						  }
+            }
 					}
-
-					// face vertex
-					item.type = 12;
-					for (size_t i = 0; i < nf; i++)
-					{
-						item.sub_i = i;
-						for (size_t j = 0; j < stl_nv; j++)
-						{
-							size_t idx = list.vertices[j];
-							if(filter_vertex_face(rVerlet, mesh.center, idx, &mesh.shp, mesh.quat, r, i, shpi, orient[p]))
-							{
-								add_contact(p, item, i, idx);
-							}
-						}
-					}
-				}
-			}
+				} // end loop p
+			} // end funcion
 
 		template <typename D, typename Func> 
 			void add_driver_interaction(

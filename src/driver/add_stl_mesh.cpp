@@ -99,7 +99,8 @@ namespace exaDEM
         shp = read_shp(shp, output_name_vtk, big_shape);
       }
       shp.m_radius = *minskowski;
-      shp.increase_obb(*rcut_inc);
+      //shp.increase_obb(*rcut_inc);
+      shp.increase_obb(shp.m_radius);
       exaDEM::Stl_mesh driver = {*center, *velocity, *angular_velocity, *orientation, shp};
       driver.initialize();
       drivers->add_driver(*id, driver);

@@ -80,6 +80,7 @@ namespace exaDEM
           mesh.shp.pre_compute_obb_vertices(mesh.center, mesh.quat);
           mesh.shp.pre_compute_obb_edges(mesh.center, mesh.quat);
           mesh.shp.pre_compute_obb_faces(mesh.center, mesh.quat);
+          mesh.shp.increase_obb(mesh.shp.m_radius);
           grid_stl.clear();
           grid_stl.resize(n_cells);
 
