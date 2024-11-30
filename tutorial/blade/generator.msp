@@ -42,7 +42,7 @@ add_generated_particles:
 setup_drivers:
   - add_stl_mesh:
      id: 0
-     filename: exaDEM-Data/mod_base.shp
+     filename: exaDEM-Data/stl_files/mod_base.shp
      center: [0,0,-20] 
      minskowski: 0.01
   - add_cylinder:

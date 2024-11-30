@@ -13,7 +13,7 @@ setup_drivers:
      minskowski: 0.01
   - add_stl_mesh:
      id: 2
-     filename: exaDEM-Data/palefine.stl
+     filename: exaDEM-Data/stl_files/palefine.stl
      minskowski: 0.05 m
      angular_velocity: [0,0, -0.004]
      velocity: [0,0,-0.0174]
