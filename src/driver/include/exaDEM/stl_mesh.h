@@ -50,7 +50,7 @@ namespace exaDEM
     exanb::Vec3d vrot;      /**< Angular velocity of the STL mesh. */
     exanb::Quaternion quat; /**< Quaternion of the STL mesh. */
     shape shp;              /**< Shape of the STL mesh. */
-    //  vector_t<Vec3d> verticies;      /**< Collection of vertices (computed from shp, quat and center). */
+    vector_t<Vec3d> vertices;      /**< Collection of vertices (computed from shp, quat and center). */
     vector_t<list_of_elements> grid_indexes; /**< Grid indices of the STL mesh. */
 
     /**
@@ -81,9 +81,23 @@ namespace exaDEM
     inline void initialize()
     {
       // checks
+      if( shp.get_number_of_faces() == 0 && shp.get_number_of_edges() == 0 && shp.get_number_of_vertices() == 0)
+      {
+        lout << "Your shape is not correctly defined, no vertex, no edge, and no face" << std::endl;
+        std::abort();
+      }
+
+      // resize vertices
+      vertices.resize(shp.get_number_of_vertices());  
+
       // remove relative paths
       std::filesystem::path full_name = this->shp.m_name;
       this->shp.m_name = full_name.filename();
+    }
+
+    ONIKA_HOST_DEVICE_FUNC inline void update_vertex(int i)
+    {
+      vertices[i] = shp.get_vertex(i, this->center, this->quat);
     }
 
     /**
@@ -95,6 +109,12 @@ namespace exaDEM
      * @brief return driver velocity
      */
     ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion &get_quat() { return quat; }
+
+    ONIKA_HOST_DEVICE_FUNC inline bool stationary()
+    {
+      constexpr exanb::Vec3d null = {0,0,0};
+      return (this->vel == null && this->vrot == null);
+    }
 
     void dump_driver(int id, std::string path, std::stringstream &stream)
     {
