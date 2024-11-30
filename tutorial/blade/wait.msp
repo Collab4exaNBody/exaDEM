@@ -16,8 +16,8 @@ compute_force:
      gravity: [0,0,-0.00981]
   - contact_polyhedron:
      symetric: true
-     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1.257, kt: 1.077, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.4} 
-     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 12.57, kt: 10.77, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.5} 
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1.257, kt: 1.077, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
+     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 12.57, kt: 10.77, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
 
 domain:
   cell_size: 5.0 m
@@ -32,7 +32,7 @@ particle_write_paraview_generic:
  
 global:
   simulation_dump_frequency: 100000
-  simulation_end_iteration: 1500000 #4400000
+  simulation_end_iteration: 1500000 
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 5000
   simulation_load_balance_frequency: -1 #27000
