@@ -32,10 +32,10 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
   using namespace onika::parallel;
-	class DriverComputeVertices : public OperatorNode
-	{
+  class DriverComputeVertices : public OperatorNode
+  {
 
     struct WrapperSTLMeshComputeVertices
     {
@@ -46,72 +46,71 @@ namespace exaDEM
       }
     };
 
-		struct driver_compute_vertices
-		{
-      ParallelExecutionContext *exec_ctx;
-			void operator()(exaDEM::Stl_mesh &mesh)
-			{
-				const size_t size = mesh.shp.get_number_of_vertices();
-
-        if(mesh.stationary()) 
+    template<typename Operator>
+      struct driver_compute_vertices
+      {
+        Operator* op; // I don't know how to do it properly
+        void operator()(exaDEM::Stl_mesh &mesh)
         {
-          return;
+          const size_t size = mesh.shp.get_number_of_vertices();
+
+          if(mesh.stationary()) 
+          {
+            return;
+          }
+
+          ParallelForOptions opts;
+          opts.omp_scheduling = OMP_SCHED_STATIC;
+
+          WrapperSTLMeshComputeVertices func = {&mesh};
+          parallel_for(size, func, op->parallel_execution_context(), opts);
         }
+        /**
+          Add another driver type here 
+         */
 
-        ParallelForOptions opts;
-        opts.omp_scheduling = OMP_SCHED_STATIC;
- 
-        WrapperSTLMeshComputeVertices func = {&mesh};
-        parallel_for(size, func, exec_ctx, opts);
-			}
-      /**
-      Add another driver type here 
-      */
+        void operator()(auto &&a) 
+        {
+          //lout << "WARNING: driver_compute_vertices is not defined for this driver. " << std::endl;
+          //return 0;
+        }
+      };
 
-			void operator()(auto &&a) 
-			{
-				//lout << "WARNING: driver_compute_vertices is not defined for this driver. " << std::endl;
-				//return 0;
-			}
-		};
+    // -----------------------------------------------
+    // -----------------------------------------------
+    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+    ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
+    ADD_SLOT(bool, force_host , INPUT, REQUIRED, DocString{"Force computations on the host"});
 
-		// -----------------------------------------------
-		// -----------------------------------------------
-		ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-		ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
-  	ADD_SLOT(bool, force_host , INPUT, REQUIRED, DocString{"Force computations on the host"});
-
-		public:
-		// -----------------------------------------------
-		// -----------------------------------------------
-		inline std::string documentation() const override final
-		{
-			return R"EOF(
+    public:
+    // -----------------------------------------------
+    // -----------------------------------------------
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
            This operator calculates new vertex positions. 
            If stl mesh velocity and angular velocity are equal to [0,0,0], vertices are not calculated.
         )EOF";
-		}
+    }
 
-		// -----------------------------------------------
-		// -----------------------------------------------
-		inline void execute() override final
-		{
-			Drivers &drvs = *drivers;
-			size_t size = drvs.get_size();
+    // -----------------------------------------------
+    // -----------------------------------------------
+    inline void execute() override final
+    {
+      Drivers &drvs = *drivers;
+      size_t size = drvs.get_size();
       set_gpu_enabled(*force_host);
-      std::vector<driver_compute_vertices> vfunc;
-			for (size_t i = 0; i <size; i++)
-			{
-			  driver_compute_vertices func = {parallel_execution_context()};
-				auto & drv = drvs.data(i);
-				std::visit(func, drv);
-        vfunc.push_back(std::move(func));
-			}
+      for (size_t i = 0; i <size; i++)
+      {
+        driver_compute_vertices<DriverComputeVertices> func = {this}; // I don't know how to do it properly
+        auto & drv = drvs.data(i);
+        std::visit(func, drv);
+      }
       // 
-		}
-	};
+    }
+  };
 
-	// === register factories ===
-	CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("compute_driver_vertices", make_simple_operator<DriverComputeVertices>); }
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("compute_driver_vertices", make_simple_operator<DriverComputeVertices>); }
 
 } // namespace exaDEM
