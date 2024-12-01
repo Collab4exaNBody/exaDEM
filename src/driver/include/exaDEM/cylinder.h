@@ -59,7 +59,7 @@ namespace exaDEM
      */
     void dump_driver(int id, std::stringstream &stream)
     {
-      stream << "  - add_surface:" << std::endl;
+      stream << "  - add_cylinder:" << std::endl;
       stream << "     id: " << id << std::endl;
       stream << "     axis: [" << this->axis << "]" << std::endl;
       stream << "     center: [" << this->center << "]" << std::endl;
