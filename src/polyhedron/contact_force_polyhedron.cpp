@@ -66,20 +66,20 @@ namespace exaDEM
     ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
     ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
 
-  public:
+    public:
     inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
 
 
     template<int start, int end, template<int> typename FuncT, typename T, typename... Args>
-    void loop_contact_force(Classifier<T>& classifier, Args &&... args)
-    {
-      FuncT<start> contact_law;
-      run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
-      if constexpr( start + 1 <= end )
+      void loop_contact_force(Classifier<T>& classifier, Args &&... args)
       {
-        loop_contact_force<start+1, end, FuncT>(classifier, std::forward<Args>(args)...);
+        FuncT<start> contact_law;
+        run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
+        if constexpr( start + 1 <= end )
+        {
+          loop_contact_force<start+1, end, FuncT>(classifier, std::forward<Args>(args)...);
+        }
       }
-    }
 
     inline void execute() override final
     {
