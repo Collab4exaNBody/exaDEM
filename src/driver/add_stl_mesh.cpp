@@ -47,6 +47,7 @@ namespace exaDEM
     ADD_SLOT(Vec3d, velocity, INPUT, null, DocString{"Defined but not used"});
     ADD_SLOT(Quaternion, orientation, INPUT, default_quat, DocString{"Defined but not used"});
     ADD_SLOT(double, minskowski, INPUT, REQUIRED, DocString{"Minskowski radius value"});
+    ADD_SLOT(double, scale, INPUT, 1.0, DocString{"Scale your dtl mesh"});
     ADD_SLOT(double, rcut_inc, INPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
 
   public:
@@ -93,11 +94,17 @@ namespace exaDEM
       }
       else if (is_shp)
       {
-        // output_name_vtk.erase(it, old_extension_shp.length());
         // not optimized
         bool big_shape = true;
         shp = read_shp(shp, output_name_vtk, big_shape);
       }
+
+      if( *scale != 1.0 )
+      {
+        shp.rescale(*scale);
+        shp.write_paraview(); // replace
+      }
+
       shp.m_radius = *minskowski;
       //shp.increase_obb(*rcut_inc);
       shp.increase_obb(shp.m_radius);

@@ -311,6 +311,14 @@ namespace exaDEM
       }
     }
 
+    void rescale(const double scale)
+    {
+      auto scale_vertices = [] (exanb::Vec3d& v, double s) { v = s * v; };
+      for_all_vertices(scale_vertices, scale);
+      m_radius *= scale;
+        
+    }
+
     void print_vertices()
     {
       int idx = 0;

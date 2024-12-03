@@ -164,7 +164,7 @@ namespace exaDEM
                   }
                 }
           }
-          // mesh.grid_indexes_summary(); //for debug
+//          mesh.grid_indexes_summary(); //for debug
         }
       }
     }
