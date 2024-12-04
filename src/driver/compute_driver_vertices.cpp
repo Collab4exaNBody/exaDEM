@@ -40,6 +40,7 @@ namespace exaDEM
     struct WrapperSTLMeshComputeVertices
     {
       Stl_mesh* mesh;
+      ONIKA_HOST_DEVICE_FUNC  
       void operator() (int idx) const
       {
         mesh->update_vertex(idx);

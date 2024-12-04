@@ -312,8 +312,11 @@ namespace exaDEM
             const auto& vertices_i = cell[field::vertices][p_i]; 
             // === vrot
             const Vec3d &vrot_i = cell[field::vrot][p_i];
+
+            // STL Vertices
+            const Vec3d* const stl_vertices =  onika::cuda::vector_data( driver.vertices ); 
             // === detection
-            auto [contact, dn, n, contact_position] = detection(vertices_i, sub_i, &shp_i, driver.vertices.data(), sub_j, &shp_j);
+            auto [contact, dn, n, contact_position] = detection(vertices_i, sub_i, &shp_i, stl_vertices, sub_j, &shp_j);
             constexpr Vec3d null = {0, 0, 0};
             Vec3d fn = null;
 
