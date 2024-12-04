@@ -64,148 +64,184 @@ namespace exaDEM
                 )EOF";
     }
 
-    template <typename Func> void add_driver_interaction(Stl_mesh &mesh, size_t cell_a, Func &add_contact, Interaction &item, const size_t n_particles, const double rVerlet, const uint32_t *__restrict__ type, const uint64_t *__restrict__ id, const double *__restrict__ rx, const double *__restrict__ ry, const double *__restrict__ rz, const VertexArray *__restrict__ vertices, const exanb::Quaternion *__restrict__ orient, shapes &shps)
-    {
-      assert(cell_a < mesh.grid_indexes.size());
-      auto &list = mesh.grid_indexes[cell_a];
-      const size_t stl_nv = list.vertices.size();
-      const size_t stl_ne = list.edges.size();
-      const size_t stl_nf = list.faces.size();
-      auto &stl_shp = mesh.shp;
-      OBB *__restrict__ stl_obb_vertices = onika::cuda::vector_data(stl_shp.m_obb_vertices);
-      OBB *__restrict__ stl_obb_edges = onika::cuda::vector_data(stl_shp.m_obb_edges);
-      OBB *__restrict__ stl_obb_faces = onika::cuda::vector_data(stl_shp.m_obb_faces);
-
-      if (stl_nv == 0 && stl_ne == 0 && stl_nf == 0)
-        return;
-
-      for (size_t p = 0; p < n_particles; p++)
+    template <typename Func> 
+      void add_driver_interaction(
+          Stl_mesh &mesh, 
+          size_t cell_a, 
+          Func &add_contact, 
+          Interaction &item, 
+          const size_t n_particles, 
+          const double rVerlet, 
+          const uint32_t *__restrict__ type, 
+          const uint64_t *__restrict__ id, 
+          const double *__restrict__ rx, 
+          const double *__restrict__ ry, 
+          const double *__restrict__ rz, 
+          const VertexArray *__restrict__ vertices, 
+          const exanb::Quaternion *__restrict__ orient, 
+          shapes &shps)
       {
-        Vec3d r = {rx[p], ry[p], rz[p]}; // position
-        item.p_i = p;
-        item.id_i = id[p];
-        auto ti = type[p];
-        const shape *shpi = shps[ti];
-        const size_t nv = shpi->get_number_of_vertices();
-        const size_t ne = shpi->get_number_of_edges();
-        const size_t nf = shpi->get_number_of_faces();
+#define __particle__ vertices_i, i, shpi
+#define __driver__ mesh.vertices.data(), idx, &mesh.shp
+        assert(cell_a < mesh.grid_indexes.size());
+        auto &list = mesh.grid_indexes[cell_a];
+        const size_t stl_nv = list.vertices.size();
+        const size_t stl_ne = list.edges.size();
+        const size_t stl_nf = list.faces.size();
 
-        for (size_t i = 0; i < nv; i++)
+        if (stl_nv == 0 && stl_ne == 0 && stl_nf == 0)
+          return;
+
+        for (size_t p = 0; p < n_particles; p++)
         {
-          vec3r v = conv_to_vec3r(vertices[p][i]);
-          // vertex - vertex
-          item.type = 7;
-          item.sub_i = i;
-          for (size_t j = 0; j < stl_nv; j++)
-          {
-            size_t idx = list.vertices[j];
-            OBB obb = stl_obb_vertices[idx];
-            obb.enlarge(rVerlet);
-            // obb.enlarge( shpi->m_radius );
-            if (obb.intersect(v))
-            {
-              add_contact(p, item, i, idx);
-            }
-          }
-          // vertex - edge
-          item.type = 8;
-          for (size_t j = 0; j < stl_ne; j++)
-          {
-            size_t idx = list.edges[j];
-            OBB obb = stl_obb_edges[idx];
-            // obb.enlarge( shpi->m_radius );
-            obb.enlarge(rVerlet);
-            if (obb.intersect(v))
-            {
-              add_contact(p, item, i, idx);
-            }
-          }
-          // vertex - face
-          item.type = 9;
-          for (size_t j = 0; j < stl_nf; j++)
-          {
-            size_t idx = list.faces[j];
-            OBB obb = stl_obb_faces[idx];
-            // obb.enlarge( shpi->m_radius );
-            obb.enlarge(rVerlet);
-            if (obb.intersect(v))
-            {
-              add_contact(p, item, i, idx);
-            }
-          }
-        }
+          Vec3d r = {rx[p], ry[p], rz[p]}; // position
+          auto& vertices_i = vertices[p];
+          const Quaternion& orient_i = orient[p];
+          item.p_i = p;
+          item.id_i = id[p];
+          auto ti = type[p];
+          const shape *shpi = shps[ti];
+          const size_t nv = shpi->get_number_of_vertices();
+          const size_t ne = shpi->get_number_of_edges();
+          const size_t nf = shpi->get_number_of_faces();
 
-        for (size_t i = 0; i < ne; i++)
-        {
-          item.type = 10;
-          item.sub_i = i;
-          OBB obb_edge_i = shpi->get_obb_edge(r, i, orient[i]);
-          obb_edge_i.enlarge(rVerlet);
-          // edge - edge
-          for (size_t j = 0; j < stl_ne; j++)
+          // Get OBB from stl mesh
+          auto &stl_shp = mesh.shp;
+          OBB *__restrict__ stl_obb_vertices = onika::cuda::vector_data(stl_shp.m_obb_vertices);
+          [[maybe_unused]] OBB *__restrict__ stl_obb_edges = onika::cuda::vector_data(stl_shp.m_obb_edges);
+          [[maybe_unused]] OBB *__restrict__ stl_obb_faces = onika::cuda::vector_data(stl_shp.m_obb_faces);
+
+          // compute OBB from particle p
+          OBB obb_i = shpi->obb;
+          quat conv_orient_i = quat{vec3r{orient_i.x, orient_i.y, orient_i.z}, orient_i.w};
+          obb_i.rotate(conv_orient_i);
+          obb_i.translate(vec3r{r.x, r.y, r.z});
+          obb_i.enlarge(rVerlet);
+
+          // Note:
+          // loop i = particle p
+          // loop j = stl mesh
+          for (size_t i = 0; i < nv; i++)
           {
-            const size_t idx = list.edges[j];
-            OBB &stl_obb_edge = stl_obb_edges[idx];
-            if (obb_edge_i.intersect(stl_obb_edge))
+            vec3r v = conv_to_vec3r(vertices[p][i]);
+            OBB obb_v_i;
+            obb_v_i.center = v; 
+            obb_v_i.enlarge(rVerlet + shpi->m_radius);
+
+            // vertex - vertex
+            item.type = 7;
+            item.sub_i = i;
+            for (size_t j = 0; j < stl_nv; j++)
             {
-              add_contact(p, item, i, idx);
+              size_t idx = list.vertices[j];
+              if(filter_vertex_vertex_v2(rVerlet, __particle__, __driver__))
+                //if(filter_vertex_vertex(rVerlet, __particle__, __driver__))
+              {
+                add_contact(p, item, i, idx);
+              } 
+            }
+            // vertex - edge
+            item.type = 8;
+            for (size_t j = 0; j < stl_ne; j++)
+            {
+              size_t idx = list.edges[j];
+              if(filter_vertex_edge(rVerlet, __particle__, __driver__))
+              {
+                add_contact(p, item, i, idx);
+              }
+            }
+            // vertex - face
+            item.type = 9;
+            for (size_t j = 0; j < stl_nf; j++)
+            {
+              size_t idx = list.faces[j];
+              const OBB& obb_f_stl_j = stl_obb_faces[idx];
+              if( obb_f_stl_j.intersect(obb_v_i) )
+              {
+                if(filter_vertex_face(rVerlet, __particle__, __driver__))
+                {
+                  add_contact(p, item, i, idx);
+                }
+              }
             }
           }
 
-          // edge - vertex
-          item.type = 11;
+          for (size_t i = 0; i < ne; i++)
+          {
+            item.type = 10;
+            item.sub_i = i;
+            // edge - edge
+            for (size_t j = 0; j < stl_ne; j++)
+            {
+              const size_t idx = list.edges[j];
+              if(filter_edge_edge(rVerlet, __particle__, __driver__))
+              {
+                add_contact(p, item, i, idx);
+              }
+            }
+          }
+
           for (size_t j = 0; j < stl_nv; j++)
           {
             const size_t idx = list.vertices[j];
-            OBB &obb = stl_obb_vertices[idx];
-            if (obb_edge_i.intersect(obb))
+
+            // rejects vertices that are too far from the stl mesh.
+            const OBB& obb_v_stl_j = stl_obb_vertices[idx];
+            if( !obb_v_stl_j.intersect(obb_i)) continue;
+
+            item.type = 11;
+            // edge - vertex
+            for (size_t i = 0; i < ne; i++)
             {
-              add_contact(p, item, i, idx);
+              if(filter_vertex_edge(rVerlet, __driver__, __particle__)) 
+              {
+                add_contact(p, item, i, idx);
+              }
+            }
+            // face vertex
+            item.type = 12;
+            for (size_t i = 0; i < nf; i++)
+            {
+              if(filter_vertex_face(rVerlet, __driver__, __particle__))
+              {
+                add_contact(p, item, i, idx);
+              }
             }
           }
-        }
+        } // end loop p
+#undef __particle__
+#undef __driver__
+      } // end funcion
 
-        // face vertex
-        item.type = 12;
-        for (size_t i = 0; i < nf; i++)
-        {
-          item.sub_i = i;
-          OBB obb_face_i = shpi->get_obb_face(r, i, orient[i]);
-          obb_face_i.enlarge(rVerlet);
-          for (size_t j = 0; j < stl_nv; j++)
-          {
-            size_t idx = list.vertices[j];
-            OBB &obb = stl_obb_vertices[idx];
-            if (obb_face_i.intersect(obb))
-            {
-              add_contact(p, item, i, idx);
-            }
-          }
-        }
-      }
-    }
-
-    template <typename D, typename Func> void add_driver_interaction(D &driver, Func &add_contact, Interaction &item, const size_t n_particles, const double rVerlet, const uint32_t *__restrict__ type, const uint64_t *__restrict__ id, const VertexArray *__restrict__ vertices, shapes &shps)
-    {
-      for (size_t p = 0; p < n_particles; p++)
+    template <typename D, typename Func> 
+      void add_driver_interaction(
+          D &driver, 
+          Func &add_contact, 
+          Interaction &item, 
+          const size_t n_particles, 
+          const double rVerlet, 
+          const uint32_t *__restrict__ type, 
+          const uint64_t *__restrict__ id, 
+          const VertexArray *__restrict__ vertices, 
+          shapes &shps)
       {
-        const auto va = vertices[p];
-        const shape *shp = shps[type[p]];
-        int nv = shp->get_number_of_vertices();
-        for (int sub = 0; sub < nv; sub++)
+        for (size_t p = 0; p < n_particles; p++)
         {
-          bool contact = exaDEM::filter_vertex_driver(driver, rVerlet, va, sub, shp);
-          if (contact)
+          const auto va = vertices[p];
+          const shape *shp = shps[type[p]];
+          int nv = shp->get_number_of_vertices();
+          for (int sub = 0; sub < nv; sub++)
           {
-            item.p_i = p;
-            item.id_i = id[p];
-            // item.sub_i = sub;
-            // item.sub_j = -1;
-            add_contact(p, item, sub, -1);
+            bool contact = exaDEM::filter_vertex_driver(driver, rVerlet, va, sub, shp);
+            if (contact)
+            {
+              item.p_i = p;
+              item.id_i = id[p];
+              add_contact(p, item, sub, -1);
+            }
           }
         }
       }
-    }
 
     inline void execute() override final
     {
@@ -383,10 +419,6 @@ namespace exaDEM
               if (!obb_i.intersect(obb_j))
                 return;
 
-              // reset rVerlet
-              obb_i.enlarge(-rVerlet);
-              obb_j.enlarge(-rVerlet);
-
               // Add interactions
               item.id_i = id_a[p_a];
               item.p_i = p_a;
@@ -396,7 +428,6 @@ namespace exaDEM
               item.cell_j = cell_b;
 
               const Vec3d r = {rx, ry, rz};
-              const Vec3d r_nbh = {rx_nbh, ry_nbh, rz_nbh};
 
               // get particle j data.
               const int nv = shp->get_number_of_vertices();
@@ -413,7 +444,7 @@ namespace exaDEM
                 auto vi = shp->get_vertex(i, r, orient);
                 OBB obbvi;
                 obbvi.center = {vi.x, vi.y, vi.z};
-                obbvi.enlarge(shp->m_radius + rVerlet);
+                obbvi.enlarge(shp->m_radius);
                 if (obb_j.intersect(obbvi))
                 {
                   item.type = 0; // === Vertex - Vertex
@@ -471,10 +502,10 @@ namespace exaDEM
 
               for (int j = 0; j < nv_nbh; j++)
               {
-                auto vj = shp->get_vertex(j, r_nbh, orient_nbh);
+                auto& vj = vertices_b[j];//shp->get_vertex(j, r_nbh, orient_nbh);
                 OBB obbvj;
                 obbvj.center = {vj.x, vj.y, vj.z};
-                obbvj.enlarge(shp_nbh->m_radius + rVerlet);
+                obbvj.enlarge(shp_nbh->m_radius);
 
                 if (obb_i.intersect(obbvj))
                 {

@@ -56,10 +56,16 @@ update_particle_neighbors:
 
 grid_post_processing: grid_memory_compact
 
+compute_vertices:
+  - compute_new_vertices
+  - compute_driver_vertices:
+     force_host: true
+
 ghost_full_update:
   - ghost_comm_scheme
   - ghost_update_all
-  - compute_new_vertices
+  - compute_vertices
+
 
 ################### parallel particle migration ############################
 
@@ -150,6 +156,8 @@ update_particles_fast_body:
        serialize_pack_send: true
        wait_all: true
     - compute_new_vertices
+    - compute_driver_vertices:
+       force_host: false
 
 update_particles_fast:
   condition: not trigger_move_particles

@@ -24,6 +24,8 @@ jobs:
     - name: Install
       run: sudo apt-get update && sudo apt-get install lcov
     - uses: mpi4py/setup-mpi@v1
+      with: 
+        mpi: openmpi
     - name: Get ExaNBody
       run: git clone https://github.com/Collab4exaNBody/exaNBody.git
       

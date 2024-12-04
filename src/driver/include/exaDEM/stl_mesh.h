@@ -1,11 +1,11 @@
 /*
-         Licensed to the Apache Software Foundation (ASF) under one
-         or more contributor license agreements.  See the NOTICE file
-         distributed with this work for additional information
-         regarding copyright ownership.  The ASF licenses this file
-         to you under the Apache License, Version 2.0 (the
-         "License"); you may not use this file except in compliance
-         with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
 http://www.apache.org/licenses/LICENSE-2.0
 
@@ -50,7 +50,7 @@ namespace exaDEM
     exanb::Vec3d vrot;      /**< Angular velocity of the STL mesh. */
     exanb::Quaternion quat; /**< Quaternion of the STL mesh. */
     shape shp;              /**< Shape of the STL mesh. */
-    //  vector_t<Vec3d> verticies;      /**< Collection of vertices (computed from shp, quat and center). */
+    vector_t<Vec3d> vertices;      /**< Collection of vertices (computed from shp, quat and center). */
     vector_t<list_of_elements> grid_indexes; /**< Grid indices of the STL mesh. */
 
     /**
@@ -81,10 +81,32 @@ namespace exaDEM
     inline void initialize()
     {
       // checks
+      if( shp.get_number_of_faces() == 0 
+          && shp.get_number_of_edges() == 0 
+          && shp.get_number_of_vertices() == 0)
+      {
+        lout << "Your shape is not correctly defined, no vertex, no edge, and no face" << std::endl;
+        std::abort();
+      }
+
+      // resize and initialize vertices
+      vertices.resize(shp.get_number_of_vertices());  
+#pragma omp parallel for schedule(static)
+      for(int i = 0; i < shp.get_number_of_vertices() ; i++)
+      {
+        this->update_vertex(i);
+      }
+
       // remove relative paths
       std::filesystem::path full_name = this->shp.m_name;
       this->shp.m_name = full_name.filename();
     }
+
+    ONIKA_HOST_DEVICE_FUNC 
+      inline void update_vertex(int i)
+      {
+        vertices[i] = shp.get_vertex(i, this->center, this->quat);
+      }
 
     /**
      * @brief return driver velocity
@@ -95,6 +117,12 @@ namespace exaDEM
      * @brief return driver velocity
      */
     ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion &get_quat() { return quat; }
+
+    ONIKA_HOST_DEVICE_FUNC inline bool stationary()
+    {
+      constexpr exanb::Vec3d null = {0,0,0};
+      return (this->vel == null && this->vrot == null);
+    }
 
     void dump_driver(int id, std::string path, std::stringstream &stream)
     {

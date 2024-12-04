@@ -32,6 +32,7 @@ namespace exaDEM
   {
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(std::vector<double>, radius, INPUT, REQUIRED, DocString{"Array of radius values"});
+    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, DocString{"rcut_max"});
 
   public:
     // -----------------------------------------------
@@ -45,6 +46,11 @@ namespace exaDEM
 
     inline void execute() override final
     {
+      for(auto& r: *radius)
+      {
+        *rcut_max = std::max(*rcut_max, 2 * r);
+      }
+
       auto cells = grid->cells();
       const IJK dims = grid->dimension();
 #     pragma omp parallel

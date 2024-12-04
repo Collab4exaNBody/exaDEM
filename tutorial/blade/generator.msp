@@ -1,0 +1,95 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_polyhedra.msp
+ 
+particle_regions:
+  - CYL1:
+      quadric:
+        shape: cylz
+        transform:
+          - scale: [ 23 m, 23 m, 5 m]
+          - translate: [ 0 m , 0 m, 50 m ]
+  - BOX:
+      bounds: [ [ -25 , -25 , 35 m ] , [ 25 m , 25 m, 40 m] ]
+
+init_fields:
+  - radius_from_shape
+  - set_density:
+     density: 0.0026
+     region: CYL1 and BOX 
+  - set_rand_velocity:
+     var: 0.0001
+     mean: [0.0,0.0,-0.5]
+     region: CYL1 and BOX 
+  - set_rand_vrot_arot:
+     region: CYL1 and BOX 
+  - set_quaternion:
+     random: true
+     region: CYL1 and BOX 
+  - update_inertia:
+     region: CYL1 and BOX 
+
+
+add_generated_particles:
+  - lattice:
+      structure: SC
+      types: [ 0 ]
+      size: [ 4.0 m , 4.0 m , 4.0 m ]
+      region: CYL1 and BOX 
+  - init_fields
+
+setup_drivers:
+  - add_stl_mesh:
+     id: 0
+     filename: exaDEM-Data/stl_files/mod_base.shp
+     center: [0,0,-20] 
+     minskowski: 0.01
+  - add_cylinder:
+     id: 1
+     radius: 25
+     center: [0,0,0] 
+     axis: [1,1,0]
+     angular_velocity: [0,0,0]
+
+
+input_data:
+  - read_shape_file:
+     filename: shape.shp
+  - init_rcb_grid
+  - lattice:
+      structure: SC
+      types: [ 0 ]
+      size: [ 4.0 m , 4.0 m , 4.0 m ]
+      region: CYL1 and BOX 
+  - init_fields:
+
+compute_force:
+  - gravity_force:
+     gravity: [0,0,-0.00981]
+  - contact_polyhedron:
+     symetric: true
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1.257, kt: 1.077, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999}
+     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 12.57, kt: 10.77, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
+
+domain:
+  cell_size: 5.0 m
+  periodic: [false,false,false]
+  grid_dims: [10, 10, 8]
+  bounds: [[-25 m , -25 m, 0 m], [25 m, 25 m, 40 m]]
+  expandable: true
+ 
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+  - write_paraview_obb_particles
+ 
+global:
+  simulation_dump_frequency: 100000
+  simulation_end_iteration: 1400000 #4400000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 5000
+  simulation_load_balance_frequency: -1 #27000
+  dt: 0.0005 s 
+  rcut_inc: 0.5 m
+  enable_stl_mesh: true
+  simulation_generator_frequency: 25000

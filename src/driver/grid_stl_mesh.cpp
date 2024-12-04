@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
@@ -50,7 +50,7 @@ namespace exaDEM
     ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"rcut_max"});
     ADD_SLOT(bool, force_reset, INPUT, REQUIRED, DocString{"Force to rebuild grid for stl meshes."});
 
-  public:
+    public:
     inline std::string documentation() const override final { return R"EOF( Update the list of information for each cell regarding the vertex, edge, and face indices in contact with the cell in an STL mesh." )EOF"; }
 
     inline void execute() override final
@@ -71,7 +71,7 @@ namespace exaDEM
 
           if ( !ForceResetSTLGrid )
           {
-            if( mesh.vrot == Vec3d{0,0,0} && mesh.vel == Vec3d{0,0,0} && grid_stl.size() == n_cells )
+            if( mesh.stationary() && grid_stl.size() == n_cells )
             { 
               // The grid is already built and didn't change
               continue; 
@@ -80,6 +80,7 @@ namespace exaDEM
           mesh.shp.pre_compute_obb_vertices(mesh.center, mesh.quat);
           mesh.shp.pre_compute_obb_edges(mesh.center, mesh.quat);
           mesh.shp.pre_compute_obb_faces(mesh.center, mesh.quat);
+          mesh.shp.increase_obb(mesh.shp.m_radius);
           grid_stl.clear();
           grid_stl.resize(n_cells);
 
@@ -163,7 +164,7 @@ namespace exaDEM
                   }
                 }
           }
-          // mesh.grid_indexes_summary(); //for debug
+//          mesh.grid_indexes_summary(); //for debug
         }
       }
     }
