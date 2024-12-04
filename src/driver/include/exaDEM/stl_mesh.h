@@ -28,7 +28,7 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename T> using vector_t = std::vector<T>;
+  template <typename T> using vector_t = onika::memory::CudaMMVector<T>;
 
   /**
    * @brief Struct representing a list of elements( vertex, edge, or face).

@@ -128,7 +128,11 @@ namespace exaDEM
     }
 
     ONIKA_HOST_DEVICE_FUNC
-    inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d &p, const exanb::Quaternion &orient) { return p + orient * m_vertices[i]; }
+    inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d &p, const exanb::Quaternion &orient) 
+    {
+      const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices); 
+      return p + orient * vertices[i]; 
+    }
 
     ONIKA_HOST_DEVICE_FUNC
     inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d &p, const exanb::Quaternion &orient) const
