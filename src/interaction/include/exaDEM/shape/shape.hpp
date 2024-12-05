@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 #pragma once
 #include <fstream>
 #include <vector>
@@ -59,161 +59,177 @@ namespace exaDEM
     OBB obb;
     VectorT<int> m_edges; ///<
     VectorT<int> m_faces; ///<
+    VectorT<int> m_offset_faces; ///<
     double m_radius;      ///< use for detection
     double m_volume;      ///< use for detection
     std::string m_name = "undefined";
 
     // functions in shape_prepro.hpp
-    /*		ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_vertices();
-                    ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_edges();
-                    ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_faces();
-        ONIKA_HOST_DEVICE_FUNC inline void increase_obb ( const double value );
-    */
-    inline void pre_compute_obb_vertices(const exanb::Vec3d &particle_center, const exanb::Quaternion &particle_quat);
+    /*    ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_vertices();
+          ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_edges();
+          ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_faces();
+          ONIKA_HOST_DEVICE_FUNC inline void increase_obb ( const double value );
+     */
     inline void pre_compute_obb_edges(const exanb::Vec3d &particle_center, const exanb::Quaternion &particle_quat);
     inline void pre_compute_obb_faces(const exanb::Vec3d &particle_center, const exanb::Quaternion &particle_quat);
+    inline void pre_compute_obb_vertices(const exanb::Vec3d * scratch);
+    inline void pre_compute_obb_edges(const exanb::Vec3d * scratch);
+    inline void pre_compute_obb_faces(const exanb::Vec3d * scratch);
     inline void increase_obb(const double value);
+    void compute_prepro_obb(exanb::Vec3d * scratch, const exanb::Vec3d &particle_center, const exanb::Quaternion &particle_quat);
 
     ONIKA_HOST_DEVICE_FUNC
-    inline double get_volume() const
+      inline double get_volume() const
+      {
+        assert(m_volume != 0 && "wrong initialisation");
+        return m_volume;
+      }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline const exanb::Vec3d &get_Im() { return m_inertia_on_mass; }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline const exanb::Vec3d &get_Im() const { return m_inertia_on_mass; }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline int get_number_of_vertices() { return onika::cuda::vector_size(m_vertices); }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline int get_number_of_vertices() const { return onika::cuda::vector_size(m_vertices); }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline int get_number_of_edges() { return onika::cuda::vector_size(m_edges) / 2; }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline int get_number_of_edges() const { return onika::cuda::vector_size(m_edges) / 2; }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline int get_number_of_faces()
+      {
+        const int *__restrict__ faces = onika::cuda::vector_data(m_faces);
+        return faces[0];
+      }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline int get_number_of_faces() const
+      {
+        const int *__restrict__ faces = onika::cuda::vector_data(m_faces);
+        return faces[0];
+      }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline exanb::Vec3d &get_vertex(const int i)
+      {
+        Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices);
+        return vertices[i];
+      }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline const exanb::Vec3d &get_vertex(const int i) const
+      {
+        const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices);
+        return vertices[i];
+      }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d &p, const exanb::Quaternion &orient) 
+      {
+        const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices); 
+        return p + orient * vertices[i]; 
+      }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d &p, const exanb::Quaternion &orient) const
+      {
+        const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices);
+        return p + orient * vertices[i];
+      }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline std::pair<int, int> get_edge(const int i)
+      {
+        const int *__restrict__ edges = onika::cuda::vector_data(m_edges);
+        return {edges[2 * i], edges[2 * i + 1]};
+      }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline std::pair<int, int> get_edge(const int i) const
+      {
+        const int *__restrict__ edges = onika::cuda::vector_data(m_edges);
+        return {edges[2 * i], edges[2 * i + 1]};
+      }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline int *get_faces() const
+      {
+        const int *faces = onika::cuda::vector_data(m_faces);
+        return (int *)faces; // just get a copy of the pointer
+      }
+
+    ONIKA_HOST_DEVICE_FUNC
+      inline int *get_faces()
+      {
+        int *faces = onika::cuda::vector_data(m_faces);
+        return faces;
+      }
+
+    inline void compute_offset_faces()
     {
-      assert(m_volume != 0 && "wrong initialisation");
-      return m_volume;
+      int n = this->get_number_of_faces();
+      m_offset_faces.resize(n);
+      int *start = this->get_faces() ;
+#     pragma omp parallel for
+      for(int i = 0 ; i < n ; i++)
+      {
+        int * ptr = start + 1; // the first element is the total number of face
+        int acc = 1;
+        for (int it = i; it > 0; it--)
+        {
+          acc += ptr[0] + 1; // ptr[0] contains the number of vertices of this face
+          ptr += ptr[0] + 1;
+        }
+        m_offset_faces[i] = acc; 
+      } 
     }
 
-    ONIKA_HOST_DEVICE_FUNC
-    inline const exanb::Vec3d &get_Im() { return m_inertia_on_mass; }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline const exanb::Vec3d &get_Im() const { return m_inertia_on_mass; }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline int get_number_of_vertices() { return onika::cuda::vector_size(m_vertices); }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline int get_number_of_vertices() const { return onika::cuda::vector_size(m_vertices); }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline int get_number_of_edges() { return onika::cuda::vector_size(m_edges) / 2; }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline int get_number_of_edges() const { return onika::cuda::vector_size(m_edges) / 2; }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline int get_number_of_faces()
-    {
-      const int *__restrict__ faces = onika::cuda::vector_data(m_faces);
-      return faces[0];
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline int get_number_of_faces() const
-    {
-      const int *__restrict__ faces = onika::cuda::vector_data(m_faces);
-      return faces[0];
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline exanb::Vec3d &get_vertex(const int i)
-    {
-      Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices);
-      return vertices[i];
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline const exanb::Vec3d &get_vertex(const int i) const
-    {
-      const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices);
-      return vertices[i];
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d &p, const exanb::Quaternion &orient) 
-    {
-      const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices); 
-      return p + orient * vertices[i]; 
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d &p, const exanb::Quaternion &orient) const
-    {
-      const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices);
-      return p + orient * vertices[i];
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline std::pair<int, int> get_edge(const int i)
-    {
-      const int *__restrict__ edges = onika::cuda::vector_data(m_edges);
-      return {edges[2 * i], edges[2 * i + 1]};
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline std::pair<int, int> get_edge(const int i) const
-    {
-      const int *__restrict__ edges = onika::cuda::vector_data(m_edges);
-      return {edges[2 * i], edges[2 * i + 1]};
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline int *get_faces() const
-    {
-      const int *faces = onika::cuda::vector_data(m_faces);
-      return (int *)faces; // just get a copy of the pointer
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline int *get_faces()
-    {
-      int *faces = onika::cuda::vector_data(m_faces);
-      return faces;
-    }
 
     // returns the pointor on data and the number of vertex in the faces
     ONIKA_HOST_DEVICE_FUNC
-    const std::pair<int *, int> get_face(const int i)
-    {
-      // assert(i < m_faces[0]);
-      assert(i < onika::cuda::vector_data(m_faces)[0]);
-      int *ptr = this->get_faces() + 1;
-      for (int it = i; it > 0; it--)
+      const std::pair<int *, int> get_face(const int i)
       {
-        ptr += ptr[0] + 1;
+        auto * __restrict__ data =  onika::cuda::vector_data(m_offset_faces);
+        int *ptr = this->get_faces();
+        int index = data[i];
+        return {ptr + index + 1, ptr[index]};
       }
-      return {ptr + 1, ptr[0]};
-    }
 
     // returns the pointor on data and the number of vertex in the faces
     ONIKA_HOST_DEVICE_FUNC
-    const std::pair<int *, int> get_face(const int i) const
-    {
-      // assert(i < m_faces[0]);
-      assert(i < onika::cuda::vector_data(m_faces)[0]);
-      int *ptr = this->get_faces() + 1;
-      for (int it = i; it > 0; it--)
+      const std::pair<int *, int> get_face(const int i) const
       {
-        ptr += ptr[0] + 1;
+        auto * __restrict__ data =  onika::cuda::vector_data(m_offset_faces);
+        int *ptr = this->get_faces();
+        int index = data[i];
+        return {ptr + index + 1, ptr[index]};
       }
-      return {ptr + 1, ptr[0]};
-    }
 
     ONIKA_HOST_DEVICE_FUNC
-    inline OBB get_obb_edge(const exanb::Vec3d &position, const size_t index, const exanb::Quaternion& orientation) const
-    {
-      OBB res = m_obb_edges[index];
-      res.rotate(conv_to_quat(orientation));
-      res.translate(conv_to_vec3r(position));
-      return res;
-    }
+      inline OBB get_obb_edge(const exanb::Vec3d &position, const size_t index, const exanb::Quaternion& orientation) const
+      {
+        OBB res = m_obb_edges[index];
+        res.rotate(conv_to_quat(orientation));
+        res.translate(conv_to_vec3r(position));
+        return res;
+      }
 
     ONIKA_HOST_DEVICE_FUNC
-    inline OBB get_obb_face(const exanb::Vec3d &position, const size_t index, const exanb::Quaternion& orientation) const
-    {
-      OBB res = m_obb_faces[index];
-      res.rotate(conv_to_quat(orientation));
-      res.translate(conv_to_vec3r(position));
-      return res;
-    }
+      inline OBB get_obb_face(const exanb::Vec3d &position, const size_t index, const exanb::Quaternion& orientation) const
+      {
+        OBB res = m_obb_faces[index];
+        res.rotate(conv_to_quat(orientation));
+        res.translate(conv_to_vec3r(position));
+        return res;
+      }
 
     void add_vertex(const exanb::Vec3d &vertex) { m_vertices.push_back(vertex); }
 
@@ -320,7 +336,7 @@ namespace exaDEM
       auto scale_vertices = [] (exanb::Vec3d& v, double s) { v = s * v; };
       for_all_vertices(scale_vertices, scale);
       m_radius *= scale;
-        
+
     }
 
     void print_vertices()

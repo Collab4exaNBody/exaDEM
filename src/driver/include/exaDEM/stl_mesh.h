@@ -29,15 +29,17 @@ namespace exaDEM
   using namespace exanb;
 
   template <typename T> using vector_t = onika::memory::CudaMMVector<T>;
+  //template <typename T> using vector_t = std::vector<T>;
 
   /**
    * @brief Struct representing a list of elements( vertex, edge, or face).
    */
   struct list_of_elements
   {
-    vector_t<int> vertices; /**< List of vertex indices. */
-    vector_t<int> edges;    /**< List of edge indices. */
-    vector_t<int> faces;    /**< List of face indices. */
+    std::vector<int> vertices; /**< List of vertex indices. */
+    std::vector<int> edges;    /**< List of edge indices. */
+    std::vector<int> faces;    /**< List of face indices. */
+    void clean() { vertices.clear(); edges.clear(); faces.clear(); }
   };
 
   /**
@@ -51,7 +53,8 @@ namespace exaDEM
     exanb::Quaternion quat; /**< Quaternion of the STL mesh. */
     shape shp;              /**< Shape of the STL mesh. */
     vector_t<Vec3d> vertices;      /**< Collection of vertices (computed from shp, quat and center). */
-    vector_t<list_of_elements> grid_indexes; /**< Grid indices of the STL mesh. */
+    std::vector<list_of_elements> grid_indexes; /**< Grid indices of the STL mesh. */
+    std::vector<omp_lock_t> grid_mutexes; /**< Grid indices of the STL mesh. */
 
     /**
      * @brief Get the type of the driver (in this case, STL_MESH).
