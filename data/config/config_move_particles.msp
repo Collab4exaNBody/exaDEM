@@ -150,7 +150,7 @@ update_particles_full:
 
 update_particles_fast_body:
     - ghost_update_rq:
-       gpu_buffer_pack: false
+       gpu_buffer_pack: true
        async_buffer_pack: true
        staging_buffer: true
        serialize_pack_send: true
