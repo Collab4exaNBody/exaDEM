@@ -18,23 +18,30 @@ under the License.
  */
 //#pragma xstamp_cuda_enable
 
+#include <mpi.h>
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
 #include <exanb/core/basic_types.h>
-#include <mpi.h>
-#include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/drivers.h>
+#include <exaDEM/reduce_stl_mesh.hpp>
 
 namespace exaDEM
 {
+  using namespace exanb;
+  template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
 
-  struct driver_displ_over
+  template<typename Operator> struct driver_displ_over
   {
+    Operator* op;
     double r2; // square distance
     MPI_Comm &comm;
+    int * storage;
+    /* Ignored */   
     int operator()(exaDEM::UndefinedDriver &a, exaDEM::UndefinedDriver &b) { return 0; }
     int operator()(exaDEM::Cylinder &a, exaDEM::Cylinder &b) { return 0; } // WARNING should not move
+
+    /* Active */
     int operator()(exaDEM::Surface &a, exaDEM::Surface &b)
     {
       Vec3d d = a.center_proj - b.center_proj;
@@ -43,6 +50,7 @@ namespace exaDEM
       else
         return 0;
     }
+
     int operator()(exaDEM::Ball &a, exaDEM::Ball &b)
     {
       Vec3d d = a.center - b.center;
@@ -51,10 +59,24 @@ namespace exaDEM
       else
         return 0;
     }
+
     int operator()(exaDEM::Stl_mesh &a, exaDEM::Stl_mesh &b)
     {
       if ((a.center == b.center) && (a.quat == b.quat))
         return 0;
+
+#ifdef ONIKA_CUDA_VERSION
+      size_t size = a.shp.get_number_of_vertices();
+      const Vec3d * __restrict__ ptr_shp_vertices = onika::cuda::vector_data(a.shp.m_vertices);
+      STLVertexDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.center, a.quat, b.center, b.quat};
+      ReduceMaxSTLVertexDisplacementFunctor func = {SVDFunc, storage};
+
+      ParallelForOptions opts;
+      opts.omp_scheduling = OMP_SCHED_STATIC;
+      parallel_for(size, func, op->parallel_execution_context(), opts);   
+      return *storage;
+#else
+      int sum = 0;
       // check each vertex
       auto check_dist = [](Vec3d &v1, Vec3d &v2, double r2) -> bool
       {
@@ -65,7 +87,6 @@ namespace exaDEM
       };
       auto &shp_a = a.shp;
       size_t size = shp_a.get_number_of_vertices();
-      int sum = 0;
 
       size_t start(0), end(size);
       // optimization for big shapes
@@ -86,8 +107,10 @@ namespace exaDEM
         if (check_dist(va, vb, r2))
           sum++;
       }
-      return (sum > 0);
+      return sum;
+#endif
     }
+
     int operator()(auto &&a, auto &&b)
     {
       lout << "WARNING: driver_displ_over is not defined for this driver. " << std::endl;
@@ -95,7 +118,11 @@ namespace exaDEM
     }
   };
 
-  using namespace exanb;
+  struct Accumulator
+  {
+    VectorT<int> data;
+  };
+
   class DriverDisplacementOver : public OperatorNode
   {
     // -----------------------------------------------
@@ -105,8 +132,8 @@ namespace exaDEM
     ADD_SLOT(bool, result, OUTPUT);
     ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(Drivers, backup_drvs, INPUT, REQUIRED, DocString{"List of backup Drivers"});
-
-  public:
+    ADD_SLOT(Accumulator, displ_driver_count, PRIVATE);
+    public:
     // -----------------------------------------------
     // -----------------------------------------------
     inline std::string documentation() const override final
@@ -123,6 +150,8 @@ sets result output to true if at least one particle has moved further than thres
     {
       MPI_Comm comm = *mpi;
 
+      auto& ddc = *displ_driver_count;
+
       const double max_dist = *threshold;
       const double max_dist2 = max_dist * max_dist;
 
@@ -136,16 +165,20 @@ sets result output to true if at least one particle has moved further than thres
         return;
       }
 
+      ddc.data.resize(1);
+      int * pddc = onika::cuda::vector_data(ddc.data);
+      // reset value (accumulator)
+      *pddc = 0;
+      // get backup
       Drivers &bcpd = *backup_drvs;
       size_t bcpd_size = bcpd.get_size();
       assert(bcpd_size == size);
-      driver_displ_over func = {max_dist2, comm};
+      driver_displ_over<DriverDisplacementOver> func = {this, max_dist2, comm, pddc};
 
-      for (size_t i = 0; i < bcpd_size; i++)
+      for (size_t i = 0; i < bcpd_size && local_drivers_displ == 0 ; i++)
       {
         auto &drv1 = drvs.data(i);
         auto &drv2 = bcpd.data(i);
-        // std::visit(func, drv1, drv2);
         local_drivers_displ += std::visit(func, drv1, drv2);
       }
 
