@@ -28,6 +28,7 @@ under the License.
 #include <random>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/compute_vertices.hpp>
+#include <exaDEM/cell_list_wrapper.hpp>
 
 namespace exaDEM
 {
@@ -39,6 +40,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(CellListWrapper, cell_list, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -53,7 +55,16 @@ namespace exaDEM
     {
       const shape *shps = shapes_collection->data();
       PolyhedraComputeVerticesFunctor func{shps};
-      compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context());
+      
+      size_t* cell_ptr = nullptr;
+      size_t cell_size = -1;
+      
+      if(cell_list->iterator)
+      {
+      	std::tie(cell_ptr, cell_size) = cell_list->info();
+      }
+      
+      compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
     }
   };
 

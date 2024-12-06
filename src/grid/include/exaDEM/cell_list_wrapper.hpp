@@ -4,6 +4,8 @@ struct CellListWrapper
 {
   template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
   VectorT<size_t> m_data;
+  
+  bool iterator = false;
 
   size_t *data() { return onika::cuda::vector_data(m_data); }
 

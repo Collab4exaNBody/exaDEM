@@ -65,6 +65,8 @@ namespace exaDEM
           cl.push_back(i);
       }
       GRID_OMP_FOR_END
+      
+      cell_list->iterator = true;
     }
   };
 
