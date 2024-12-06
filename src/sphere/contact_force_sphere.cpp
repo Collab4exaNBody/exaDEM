@@ -87,6 +87,7 @@ namespace exaDEM
 
     inline void execute() override final
     {
+      //printf("DEBUR\n");
       if (grid->number_of_cells() == 0)
       {
         return;
@@ -149,6 +150,7 @@ namespace exaDEM
         std::string ts = std::to_string(*timestep);
         itools::write_file(stream, *dir_name, (*interaction_basename) + ts);
       }
+      //printf("FIN\n");
     }
   };
 

@@ -52,6 +52,11 @@ namespace exaDEM
 
     VectorT<uint16_t> sub_i; /**< List of the sub-particle indexes for the first particle involved in the interaction.  */
     VectorT<uint16_t> sub_j; /**< List of the sub-particle indexes for the first particle involved in the interaction.  */
+    
+    bool iterator = false;
+    
+    VectorT<int> particles_start;
+    VectorT<int> particles_end;
 
     uint16_t type; /**< Type of the interaction (e.g., contact type). */
 

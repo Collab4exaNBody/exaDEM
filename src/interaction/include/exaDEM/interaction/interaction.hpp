@@ -66,6 +66,7 @@ namespace exaDEM
       bool res = (moment != null) || (friction != null);
       return res;
     }
+    
 
     /**
      * @brief Displays the Interaction data.

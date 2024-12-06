@@ -41,7 +41,13 @@ under the License.
 
 #include <exaDEM/interaction/interaction.hpp>
 
+#include <exaDEM/interaction/interactionSOA.hpp>
+
 #include <exanb/particle_neighbors/chunk_neighbors_execute.h>
+
+#include <cub/cub.cuh>
+
+#define THREADS_PER_BLOCK 256
 
 namespace exaDEM
 {
@@ -80,121 +86,144 @@ namespace exaDEM
   
   template< class GridT > __global__ void kernelUN(GridT* cells,
   							int* cell_id,
-  							int* nb_total,
-  							int* nb_particles_nbh,
-  							int* incr_cell,
-  							int* incr_cell2,
-  							int* cell_nb_nbh,
-  							int* start_cell,
-  							int* cell_div,
-  							int* cells_nbh_ids,
-  							int* cells_nbh_particles,
+  							int* nb_particles,
+  							int* cell_neighbors_ids,
+  							int* cell_neighbors_size,
+  							int* cell_start,
+  							int* cell_end,
+  							int* cell_particle_start,
   							const double dist_lab,
   							Mat3d xform,
   							double rcut_inc,
-  							exaDEM::Interaction* interactions,
-  							int* nb_nbh2,
-  							int* interactions_blocks )
+  							uint64_t* id_i,
+  							uint64_t* id_j,
+  							uint32_t* cell_i,
+  							uint32_t* cell_j,
+  							uint16_t* p_i,
+  							uint16_t* p_j,
+  							int* nb_nbh,
+  							int* id,
+  							int* total_interactions )
   {
   	
   	int cell = cell_id[blockIdx.x];
-  	int total_size = nb_total[blockIdx.x];
-  	int total = nb_particles_nbh[blockIdx.x];
-  	int incr = incr_cell[blockIdx.x];
-  	int incr4 = incr_cell2[blockIdx.x];
-  	int nb_nbh = cell_nb_nbh[blockIdx.x];
-  	int start = start_cell[blockIdx.x];
-  	int div = cell_div[blockIdx.x];
-  	
-  	//__shared__ int shared_threads[256];
-  	__shared__ int shared_threads[256];
-
-	shared_threads[threadIdx.x] = -1;
-	__syncthreads();
+	int nb = nb_particles[blockIdx.x];
+	int start = cell_start[blockIdx.x];
+	int end = cell_end[blockIdx.x];
+	int incr = cell_particle_start[blockIdx.x];
 	
-	int nbh_pa;
-  	
-  	for(int i = 0; i < div; i++)
-  	{
-  		//int idx = 256*i + threadIdx.x
-  		int idx = 256*i + threadIdx.x;
-  		if(idx < total_size)
-  		{
-  			int p_a = (int)(idx / total);
-  			int idx2 = idx - (p_a * total);
-  			int cell_b;
-  			int p_b;
-  			bool b2 = true;
-  			int incr2 = 0;
-  			int incr3 = 0;
-  			
-  			for(int j = start; j < start + nb_nbh; j++)
-  			{
-  				incr2+= cells_nbh_particles[j];
-  				if(b2 && idx2 < incr2)
-  				{
-  					cell_b = cells_nbh_ids[j];
-  					p_b = idx2 - incr3;
-  					b2 = false;
-  				}
-  				
-  				incr3+= cells_nbh_particles[j];
-  			
-  			}
-  			
-  			double rcut2 = dist_lab * dist_lab;
+	if(threadIdx.x < nb)
+	{
+		int p_a = threadIdx.x;
+		int nb_interactions = 0;
+		
+		for(int i = start; i < end; i++)
+		{
+			int cell_b = cell_neighbors_ids[i];
+			
+			for(int j = 0; j < cell_neighbors_size[i]; j++)
+			{
+				int p_b = j;
+	  			
+	  			double rcut2 = dist_lab * dist_lab;
   		
-  			const Vec3d dr = { cells[cell][field::rx][p_a] - cells[cell_b][field::rx][p_b] , cells[cell][field::ry][p_a] - cells[cell_b][field::ry][p_b] , cells[cell][field::rz][p_a] - cells[cell_b][field::rz][p_b] };
-                	double d2 = norm2( xform * dr );
+  				const Vec3d dr = { cells[cell][field::rx][p_a] - cells[cell_b][field::rx][p_b] , cells[cell][field::ry][p_a] - cells[cell_b][field::ry][p_b] , cells[cell][field::rz][p_a] - cells[cell_b][field::rz][p_b] };
+                		double d2 = norm2( xform * dr );
                 	
-  			if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) 
-  			{ 
-  				shared_threads[threadIdx.x] = p_a;
-  				
-  				nbh_pa = nb_nbh2[incr + p_a];
-  			}
-  			
-  			__syncthreads();
-  			
-  			int index = 0;
-  			
-  			if(shared_threads[threadIdx.x] != -1)
-  			{
-  				
-  				for(int i = 0; i < threadIdx.x; i++)
-  				{
-  					if(shared_threads[i] == p_a) index++;
-  				}
-  				
-  				exaDEM::Interaction item;
-  				item.moment = {0,0,0};
-  				item.friction = {0,0,0};
-  				item.cell_i = cell;
-  				item.type = 0;
-  				item.id_i = cells[cell][field::id][p_a];
-  				item.p_i = p_a;
-  				item.id_j = cells[cell_b][field::id][p_b];
-  				item.p_j = p_b;
-  				item.cell_j = cell_b;
-  				
-  				interactions[incr4 + 15*p_a + nbh_pa + index] = item;
-  				
-  				atomicAdd(&nb_nbh2[incr + p_a], 1);
-  				atomicAdd(&interactions_blocks[blockIdx.x], 1);
-  				
-  			}
-  			
-  			__syncthreads();
-  			
-  			shared_threads[threadIdx.x] = -1;
-  			
-  			__syncthreads();
-  			
+  				if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) 
+  				{ 
+  					id_i[incr*6 + p_a*6 + nb_interactions] = cells[cell][field::id][p_a];
+  					id_j[incr*6 + p_a*6 + nb_interactions] = cells[cell_b][field::id][p_b];
+  					cell_i[incr*6 + p_a*6 + nb_interactions] = cell;
+  					cell_j[incr*6 + p_a*6 + nb_interactions] = cell_b;
+  					p_i[incr*6 + p_a*6 + nb_interactions] = p_a;
+  					p_j[incr*6 + p_a*6 + nb_interactions] = p_b;
+  					
+  					nb_interactions++;
+  					
+  					atomicAdd(&total_interactions[0], 1);
+  				}				
+			}
+		}
+		
+		nb_nbh[incr + p_a] = nb_interactions;
+		id[incr + p_a] = cells[cell][field::id][p_a];
+	}
+   }
+   
+  __global__ void kernelDEUX(int* nb_nbh, int* nb_nbh_incr, uint64_t* id_i, uint64_t* id_j, uint32_t* cell_i, uint32_t* cell_j, uint16_t* p_i, uint16_t* p_j, uint64_t* id_i_final, uint64_t* id_j_final, uint32_t* cell_i_final, uint32_t* cell_j_final, uint16_t* p_i_final, uint16_t* p_j_final, int n )
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < n)
+  	{
+  		int nb = nb_nbh[idx];
+  		int incr = nb_nbh_incr[idx];
+  		
+  		for(int i = 0; i < nb; i++)
+  		{
+  			id_i_final[incr + i] = id_i[idx*6 + i];
+  			id_j_final[incr + i] = id_j[idx*6 + i];
+  			cell_i_final[incr + i] = cell_i[idx*6 + i];
+  			cell_j_final[incr + i] = cell_j[idx*6 + i];
+  			p_i_final[incr + i] = p_i[idx*6 + i];
+  			p_j_final[incr + i] = p_j[idx*6 + i];
   		}
+  	}
+  }
+  
+  __global__ void setParticles1(int* ids, int* particles_start, int* particles_end, int n)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < n && idx > 0)
+  	{
+  		if(ids[idx] == ids[idx - 1])
+  		{
+  			ids[idx] = 0;
+  		}
+  	}
+  }
+  
+  __global__ void setParticles2(int* particles_start_final, int* particles_end_final, int* ids, int* particles_start, int* particles_end, int n)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < n)
+  	{
+  		int id = ids[idx];
+  		if(id > 0)
+  		{
+  			particles_start_final[id - 1] = particles_start[idx];
+  			particles_end_final[id -1] = particles_end[idx];
+  		}
+  	}
+  }
+  
+  __global__ void update_friction_moment(uint64_t* id_i, uint64_t* id_j, int* start_old, int* end_old, uint64_t* id_j_old, double* ftx, double* fty, double* ftz, double* ftx_old, double* fty_old, double* ftz_old, double* momx, double* momy, double* momz, double* momx_old, double* momy_old, double* momz_old, int n)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < n)
+  	{
+  		int id = id_i[idx];
+  		int id2 = id_j[idx];
+  		int start = start_old[id];
+  		int end = end_old[id];
   		
-  		
-  	}  	
-  	 
+  		for(int i = start; i < end; ++i)
+  		{
+  			if(id2 == id_j_old[i])
+  			{
+  				ftx[idx] = ftx_old[i];
+  				fty[idx] = fty_old[i];
+  				ftz[idx] = ftz_old[i];
+  				momx[idx] = momx_old[i];
+  				momy[idx] = momy_old[i];
+  				momz[idx] = momz_old[i];
+  			}
+  		}
+  	}
   }
 
   template <typename GridT> struct ChunkNeighborsContact : public OperatorNode
@@ -213,6 +242,7 @@ namespace exaDEM
 
     ADD_SLOT(ChunkNeighborsConfig, config, INPUT, ChunkNeighborsConfig{});
     ADD_SLOT(ChunkNeighborsScratchStorage, chunk_neighbors_scratch, PRIVATE);
+    ADD_SLOT(InteractionSOA, interaction_neighbors, INPUT_OUTPUT);
 
     inline std::string documentation() const override final
     {
@@ -223,6 +253,7 @@ namespace exaDEM
 
     inline void execute() override final
     {
+      printf("CHUNK_BEGIN\n");
       unsigned int cs = config->chunk_size;
       unsigned int cs_log2 = 0;
       while (cs > 1)
@@ -259,6 +290,10 @@ namespace exaDEM
         NullXForm xform = {};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
       }
+      
+      auto& int_neighbors = *interaction_neighbors;
+      
+      auto number_of_particles = grid->number_of_particles();
        
       onika::memory::CudaMMVector<int> nb_particles_cell;
       onika::memory::CudaMMVector<onika::memory::CudaMMVector<int>> cell_particles_neighbors;
@@ -368,102 +403,293 @@ namespace exaDEM
 	nb_particles.resize(cell_id.size());
 	onika::memory::CudaMMVector<int> cell_nb_nbh; //NOMBRE DE CELLULES VOISINES
 	cell_nb_nbh.resize(cell_id.size());
-	onika::memory::CudaMMVector<int> nb_particles_nbh; //NOMBRE TOTAL DE PARTICULES VOISINES
-	nb_particles_nbh.resize(cell_id.size());
-	onika::memory::CudaMMVector<int> nb_total; //NOMBRE DE PARTICULES * NOMBRE DE PARTICULES VOISINES
-	nb_total.resize(cell_id.size());
+	onika::memory::CudaMMVector<int> cell_neighbors_ids;
+	onika::memory::CudaMMVector<int> cell_neighbors_size;
 	
 	for(int i=0; i < cell_id.size(); i++)
 	{
 		int index = cell_id[i];
 		nb_particles[i] = nb_particles_cell[index];
 		cell_nb_nbh[i] = cell_particles_neighbors[index].size();
-		
-		int sum = 0;
-		for(auto nb : cell_particles_neighbors_size[index] )
+		for(auto id: cell_particles_neighbors[index])
 		{
-			sum+= nb;
+			cell_neighbors_ids.push_back(id);	
 		}
-		nb_particles_nbh[i] = sum;
-		nb_total[i] = nb_particles[i] * nb_particles_nbh[i];
-	}
-	
-	for(int i = 0; i < cell_id.size(); i++)
-	{
-		printf("CELLULE_%i : %d SIZE: %d NB_NBH: %d\n", i, cell_id[i], nb_particles_cell[cell_id[i]], cell_nb_nbh[i]);
-	}
-	
-	
-	onika::memory::CudaMMVector<int> start_cell; //START CELL
-	start_cell.resize(cell_id.size());
-	onika::memory::CudaMMVector<int> incr_cell; //INCR
-	incr_cell.resize(cell_id.size());
-	onika::memory::CudaMMVector<int> incr_cell2;
-	incr_cell2.resize(cell_id.size());
-	
-	int total = 0;
-	int total2 = 0;
-	int total3 = 0;
-	for(int i = 0; i < cell_id.size(); i++)
-	{
-		start_cell[i] = total;
-		incr_cell[i] = total2;
-		incr_cell2[i] = total3;
-		
-		total+= cell_nb_nbh[i];
-		total2+= nb_particles[i];
-		total3+= nb_particles[i] * 15; 
-	}
-	
-	onika::memory::CudaMMVector<int> cell_nbh_ids; //IDENTIFIANTS VOISINS
-	cell_nbh_ids.resize(total + cell_nb_nbh[cell_nb_nbh.size() - 1]);
-	onika::memory::CudaMMVector<int> cell_nbh_particles; //PARTICULES VOISINES
-	cell_nbh_particles.resize( cell_nbh_ids.size() );
-	onika::memory::CudaMMVector<int> cell_div; //DIV
-	cell_div.resize(cell_id.size());
-	int nb_threads = 256;
-	for(int i = 0; i < cell_id.size(); i++)
-	{
-		int index = cell_id[i];
-		int start = start_cell[i];
-		int div = (int)(nb_total[i]/nb_threads) + 1;
-		for(int j = 0; j < cell_nb_nbh[i]; j++)
+		for(auto size: cell_particles_neighbors_size[index])
 		{
-			cell_nbh_ids[start+j] = cell_particles_neighbors[index][j];
-			cell_nbh_particles[start+j] = cell_particles_neighbors_size[index][j];
+			cell_neighbors_size.push_back(size);
 		}
-		
-		cell_div[i] = div;
+	
 	}
+	
+	//CELL START
+	onika::memory::CudaMMVector<int> cell_start;
+	cell_start.resize(cell_nb_nbh.size());
 
+	void* d_temp_storage = nullptr;
+	size_t temp_storage_bytes = 0;
+	
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, cell_nb_nbh.data(), cell_start.data(), cell_start.size());
+	
+	cudaMalloc(&d_temp_storage, temp_storage_bytes);
+	
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, cell_nb_nbh.data(), cell_start.data(), cell_start.size());
+	
+	cudaFree(d_temp_storage);
+	
+	//CELL END
+	onika::memory::CudaMMVector<int> cell_end;
+	cell_end.resize(cell_nb_nbh.size());
+	
+	d_temp_storage = nullptr;
+	temp_storage_bytes = 0;
+	
+	cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, cell_nb_nbh.data(), cell_end.data(), cell_end.size());
+	
+	cudaMalloc(&d_temp_storage, temp_storage_bytes);
+	
+	cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, cell_nb_nbh.data(), cell_end.data(), cell_end.size());
+		
+	cudaFree(d_temp_storage);
+	
+	//CELL PARTICLES START
+	onika::memory::CudaMMVector<int> nb_particles_start;
+	nb_particles_start.resize(nb_particles.size());
+	
+	d_temp_storage = nullptr;
+	temp_storage_bytes = 0;
+	
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_particles.data(), nb_particles_start.data(), nb_particles.size());
+	
+	cudaMalloc(&d_temp_storage, temp_storage_bytes);
+	
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_particles.data(), nb_particles_start.data(), nb_particles.size());
+	
+	cudaFree(d_temp_storage);	
 	
 	int numBlocks = cell_id.size();
+
+	onika::memory::CudaMMVector<uint64_t> id_i;
+	onika::memory::CudaMMVector<uint64_t> id_j;
+	onika::memory::CudaMMVector<uint32_t> cell_i;
+	onika::memory::CudaMMVector<uint32_t> cell_j;
+	onika::memory::CudaMMVector<uint16_t> p_i;
+	onika::memory::CudaMMVector<uint16_t> p_j;
 	
-	// TABLEAUX DE RESULTATS
-	//onika::memory::CudaMMVector<exaDEM::Interaction> interactions;
-	//onika::memory::CudaMMVector<int> nb_nbh;
-	//onika::memory::CudaMMVector<int> interactions_blocks;
-	onika::memory::CudaMMVector<exaDEM::Interaction> interactions;
 	onika::memory::CudaMMVector<int> nb_nbh;
-	onika::memory::CudaMMVector<int> interactions_blocks;
+	onika::memory::CudaMMVector<int> id_particle;
 	
-	//PREPARATION DES TABLEAUX
-	nb_nbh.resize(total2);
-	interactions.resize(total3);
-	interactions_blocks.resize(cell_id.size());
+	onika::memory::CudaMMVector<int> total_interactions;
 	
-	kernelUN<<<numBlocks, nb_threads>>>(cells, cell_id.data(), nb_total.data(), nb_particles_nbh.data(), incr_cell.data(), incr_cell2.data(), cell_nb_nbh.data(), start_cell.data(), cell_div.data(), cell_nbh_ids.data(), cell_nbh_particles.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, interactions.data(), nb_nbh.data(), interactions_blocks.data());
+	total_interactions.resize(1);
+
+	int total = 0;
+	for(int i = 0; i < nb_particles.size(); i++)
+	{
+		total+= nb_particles[i];
+	}
+	
+	nb_nbh.resize(total);
+	id_particle.resize(total);
+	
+	total = total*6;
+	
+	id_i.resize(total);
+	id_j.resize(total);
+	cell_i.resize(total);
+	cell_j.resize(total);
+	p_i.resize(total);
+	p_j.resize(total);
+	
+	kernelUN<<<numBlocks, 32>>>(cells, cell_id.data(), nb_particles.data(), cell_neighbors_ids.data(), cell_neighbors_size.data(), cell_start.data(), cell_end.data(), nb_particles_start.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), nb_nbh.data(), id_particle.data(), total_interactions.data());
 	
 	cudaDeviceSynchronize();
 	
-	int incrr = incr_cell[15];
-	
-	for(int i = 0; i < nb_particles[15]; i++)
+	/*for(int i = 0; i < 100; i++)
 	{
-		printf("PARTICULE: %d VOISINS: %d\n", i, nb_nbh[incrr + i]);
-	}
+		printf("CELL: %d ID_I: %d ID_J: %d\n", cell_i[i], id_i[i], id_j[i]);
+	}*/
 	
-	getchar();	      
+	//printf("\n\n\n\n\n\n");
+	
+	onika::memory::CudaMMVector<int> nb_nbh_incr;
+	nb_nbh_incr.resize(nb_nbh.size());
+	
+	d_temp_storage = nullptr;
+	temp_storage_bytes = 0;
+	
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_incr.data(), nb_nbh.size());
+	
+	cudaMalloc(&d_temp_storage, temp_storage_bytes);
+	
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_incr.data(), nb_nbh.size());
+	
+	cudaFree(d_temp_storage);
+	
+	onika::memory::CudaMMVector<uint64_t> id_i_final;
+	onika::memory::CudaMMVector<uint64_t> id_j_final;
+	onika::memory::CudaMMVector<uint32_t> cell_i_final;
+	onika::memory::CudaMMVector<uint32_t> cell_j_final;
+	onika::memory::CudaMMVector<uint16_t> p_i_final;
+	onika::memory::CudaMMVector<uint16_t> p_j_final;
+	
+	id_i_final.resize(total_interactions[0]);
+	id_j_final.resize(total_interactions[0]);
+	cell_i_final.resize(total_interactions[0]);
+	cell_j_final.resize(total_interactions[0]);
+	p_i_final.resize(total_interactions[0]);
+	p_j_final.resize(total_interactions[0]);
+	
+	numBlocks = (nb_nbh.size() + 256 - 1) / 256;
+	
+	kernelDEUX<<<numBlocks, 256>>>(nb_nbh.data(), nb_nbh_incr.data(), id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), id_i_final.data(), id_j_final.data(), cell_i_final.data(), cell_j_final.data(), p_i_final.data(), p_j_final.data(), nb_nbh.size());
+	
+	cudaDeviceSynchronize();
+	
+	onika::memory::CudaMMVector<int> nb_nbh_end;
+	nb_nbh_end.resize(nb_nbh.size());
+	
+	d_temp_storage = nullptr;
+	temp_storage_bytes = 0;
+	
+	cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_end.data(), nb_nbh.size());
+	
+	cudaMalloc(&d_temp_storage, temp_storage_bytes);
+	
+	cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_end.data(), nb_nbh.size());
+	
+	cudaFree(d_temp_storage);
+	
+	onika::memory::CudaMMVector<int> id_particle_sorted;
+	id_particle_sorted.resize(id_particle.size());
+	
+	onika::memory::CudaMMVector<int> particles_start_sorted;
+	onika::memory::CudaMMVector<int> particles_end_sorted;
+	
+	particles_start_sorted.resize(id_particle.size());
+	particles_end_sorted.resize(id_particle.size());
+	
+	d_temp_storage = nullptr;
+	temp_storage_bytes = 0;
+	
+	cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, id_particle.data(), id_particle_sorted.data(), nb_nbh_incr.data(), particles_start_sorted.data(), id_particle.size());
+	
+	cudaMalloc(&d_temp_storage, temp_storage_bytes);
+	
+	cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, id_particle.data(), id_particle_sorted.data(), nb_nbh_incr.data(), particles_start_sorted.data(), id_particle.size());
+	
+	cudaDeviceSynchronize();
+	
+	cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes, id_particle.data(), id_particle_sorted.data(), nb_nbh_end.data(), particles_end_sorted.data(), id_particle.size());
+	
+	/*for(int i = 0; i < 100; i++)
+	{
+		printf("CELL: %d ID_I: %d ID_J: %d\n", cell_i_final[i], id_i_final[i], id_j_final[i]);
+	}*/
+	
+	setParticles1<<<numBlocks, 256>>>(id_particle_sorted.data(), particles_start_sorted.data(), particles_end_sorted.data(), id_particle.size());
+	
+	cudaDeviceSynchronize();
+	
+	onika::memory::CudaMMVector<int> particles_start_final;
+        onika::memory::CudaMMVector<int> particles_end_final;
+      
+        particles_start_final.resize(number_of_particles);
+        particles_end_final.resize(number_of_particles);
+	
+	setParticles2<<<numBlocks, 256>>>(particles_start_final.data(), particles_end_final.data(), id_particle_sorted.data(), particles_start_sorted.data(), particles_end_sorted.data(), id_particle.size());
+	
+	cudaDeviceSynchronize();
+	
+	//for(int i = 0; i < 100; i++)
+	//{
+	//	printf("ID: %d START: %d END: %d\n", id_particle_sorted[i], particles_start_sorted[i], particles_end_sorted[i]);
+	//}
+	
+	onika::memory::CudaMMVector<double> ftx;
+	onika::memory::CudaMMVector<double> fty;
+	onika::memory::CudaMMVector<double> ftz;
+	onika::memory::CudaMMVector<double> momx;
+	onika::memory::CudaMMVector<double> momy;
+	onika::memory::CudaMMVector<double> momz;
+	
+	ftx.resize(id_i_final.size());
+	fty.resize(id_i_final.size());
+	ftz.resize(id_j_final.size());
+	momx.resize(id_i_final.size());
+	momy.resize(id_i_final.size());
+	momz.resize(id_i_final.size());
+	
+	auto& start_old = int_neighbors.particles_start;
+	auto& end_old = int_neighbors.particles_end;
+	auto& id_j_old = int_neighbors.id_j;
+	auto& ftx_old = int_neighbors.ft_x;
+	auto& fty_old = int_neighbors.ft_y;
+	auto& ftz_old = int_neighbors.ft_z;
+	auto& momx_old = int_neighbors.mom_x;
+	auto& momy_old = int_neighbors.mom_y;
+	auto& momz_old = int_neighbors.mom_z;
+	auto& id_i_SOA = int_neighbors.id_i;
+	auto& cell_i_SOA = int_neighbors.cell_i;
+	auto& cell_j_SOA = int_neighbors.cell_j;
+	auto& p_i_SOA = int_neighbors.p_i;
+	auto& p_j_SOA = int_neighbors.p_j;
+	
+	//getchar();
+	
+	/*if(int_neighbors.iterator)
+	{
+		numBlocks = (id_i_final.size() + 256 - 1) / 256;
+		
+		//update_friction_moment<<<numBlocks, 256>>>(id_i_final.data() , id_j_final.data(), start_old.data(), end_old.data(), id_j_old.data(), ftx.data(), fty.data(), ftz.data(), ftx_old.data(), fty_old.data(), ftz_old.data(), momx.data(), momy.data(), momz.data(), momx_old.data(), momy_old.data(), momz_old.data(), id_i_final.size());
+		
+		 //cudaDeviceSynchronize();
+		 
+		 /*start_old.clear();
+		 end_old.clear();
+		 id_j_old.clear();
+		 ftx_old.clear();
+		 fty_old.clear();
+		 ftz_old.clear();
+		 momx_old.clear();
+		 momy_old.clear();
+		 momz_old.clear();
+		 id_i_SOA.clear();
+		 cell_i_SOA.clear();
+		 cell_j_SOA.clear();
+		 p_i_SOA.clear();
+		 p_j_SOA.clear();*/
+		 
+		 //for(int i = 0; i < 100; i++)
+		 //{
+		 //	printf("FX: %f FY: %f FZ: %f MX: %f MY: %f MZ: %f\n", ftx[i], fty[i], ftz[i], momx[i], momy[i], momz[i]);
+		 //}
+		 
+		 //getchar();
+	/*}
+	else
+	{
+		int_neighbors.iterator = true;
+	}*/
+	/*
+		 start_old = particles_start_sorted;;
+		 end_old = particles_end_sorted;;
+		 id_j_old = id_j_final;;
+		 ftx_old = ftx;;
+		 fty_old = fty;;
+		 ftz_old = ftz;;
+		 momx_old = momx;;
+		 momy_old = momy;;
+		 momz_old = momz;;
+		 id_i_SOA = id_i_final;;
+		 cell_i_SOA = cell_i_final;;
+		 cell_j_SOA = cell_j_final;;
+		 p_i_SOA = p_i_final;
+		 p_j_SOA = p_j_final;*/	
+	
+	printf("CHUNK_END\n");	 
+	
+	//getchar();  
       
     }
   };
