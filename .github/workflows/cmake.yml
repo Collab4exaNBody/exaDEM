@@ -23,9 +23,11 @@ jobs:
       run: sudo apt install libyaml-cpp-dev
     - name: Install
       run: sudo apt-get update && sudo apt-get install lcov
-    - uses: mpi4py/setup-mpi@v1
-      with: 
-        mpi: openmpi
+#    - uses: mpi4py/setup-mpi@v1
+#      with: 
+#        mpi: openmpi
+    - name: Install MPI
+      run: sudo apt install mpich
     - name: Get ExaNBody
       run: git clone https://github.com/Collab4exaNBody/exaNBody.git
       
