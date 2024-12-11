@@ -33,19 +33,38 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
+  struct WrapperSTLMeshComputeVertices
+  {
+    Vec3d center;
+    Quaternion quat;
+    Vec3d * stl_vertices;
+    const Vec3d * shp_vertices;
+    ONIKA_HOST_DEVICE_FUNC  
+    void operator() (int idx) const
+    {
+      stl_vertices[idx] = center + quat * shp_vertices[idx];
+    }
+  };
+}
+
+namespace onika
+{
+  namespace parallel
+  {
+    template<> struct ParallelForFunctorTraits<exaDEM::WrapperSTLMeshComputeVertices>
+    {
+      static inline constexpr bool CudaCompatible = true;
+    };
+  } // namespace parallel
+} // namespace onika
+
+
+namespace exaDEM
+{
+
   using namespace onika::parallel;
   class DriverComputeVertices : public OperatorNode
   {
-
-    struct WrapperSTLMeshComputeVertices
-    {
-      Stl_mesh* mesh;
-      void operator() (int idx) const
-      {
-        mesh->update_vertex(idx);
-      }
-    };
-
     template<typename Operator>
       struct driver_compute_vertices
       {
@@ -62,7 +81,11 @@ namespace exaDEM
           ParallelForOptions opts;
           opts.omp_scheduling = OMP_SCHED_STATIC;
 
-          WrapperSTLMeshComputeVertices func = {&mesh};
+          Vec3d stl_center = mesh.center;
+          Quaternion stl_quat = mesh.quat;
+          Vec3d* ptr_stl_vertices = onika::cuda::vector_data(mesh.vertices);
+          Vec3d* ptr_shp_vertices = onika::cuda::vector_data(mesh.shp.m_vertices);
+          WrapperSTLMeshComputeVertices func = {stl_center, stl_quat, ptr_stl_vertices, ptr_shp_vertices};
           parallel_for(size, func, op->parallel_execution_context(), opts);
         }
         /**
@@ -99,7 +122,7 @@ namespace exaDEM
     {
       Drivers &drvs = *drivers;
       size_t size = drvs.get_size();
-      set_gpu_enabled(*force_host);
+      set_gpu_enabled(!(*force_host));
       for (size_t i = 0; i <size; i++)
       {
         driver_compute_vertices<DriverComputeVertices> func = {this}; // I don't know how to do it properly

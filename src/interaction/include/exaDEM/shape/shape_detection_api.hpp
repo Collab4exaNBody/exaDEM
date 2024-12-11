@@ -33,8 +33,8 @@ namespace exaDEM
   /*********/
   /* Utils */
   /*********/
-  inline const Vec3d* get_ptr(const Vec3d* ptr) { return ptr; }
-  inline const Vec3d* get_ptr(const VertexArray& vec) { return vec.data(); }
+  ONIKA_HOST_DEVICE_FUNC inline const Vec3d* get_ptr(const Vec3d* ptr) { return ptr; }
+  ONIKA_HOST_DEVICE_FUNC inline const Vec3d* get_ptr(const VertexArray& vec) { return vec.data(); }
 
   /********************/
   /* Vertex - Vertex  */
