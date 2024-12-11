@@ -7,14 +7,15 @@ configuration:
 grid_flavor: grid_flavor_dem
 
 includes:
-  - config_spheres_with_interactions_sym.msp
+  - config_spheres.msp
 
 reader1:
+  - init_rcb_grid
   - lattice:
       structure: SC
       types: [ 0 ]
-      size: [ 1.0 , 1.0 , 1.0 ]
-      repeats: [ 300 , 300 , 60 ]
+      size: [ 10.0 , 10.0 , 10.0 ]
+#      repeats: [ 300 , 300 , 60 ]
       enlarge_bounds: 0.0 m
       region: CYLINDER and not GEYSERE2
   - set_radius:
@@ -57,7 +58,7 @@ input_data:
   - reader1
   - set_cell_values:
      field_name: jet
-     grid_subdiv: 30
+     grid_subdiv: 15
      value: [1, 0, 0, 20]
      region: GEYSERE
   - write_grid_vtk:
@@ -67,7 +68,7 @@ input_data:
 +update_particles_full_body:
   - set_cell_values:
      field_name: jet
-     grid_subdiv: 30
+     grid_subdiv: 15
      value: [1, 0, 0,20]
      region: GEYSERE
 
@@ -87,6 +88,8 @@ compute_force:
 domain:
   cell_size: 10.0 m
   periodic: [false,false,false]
+  grid_dims: [30,30,30]
+  bounds: [[0,0,0],[300,300,300]]
 
 write_vtklegacy:
   ascii: true
