@@ -1,3 +1,8 @@
+Add or Change a feature
+=======================
+
+
+
 Style
 =====
 
@@ -24,3 +29,5 @@ Pull request process
 ====================
 
 Every pull request undergoes a code review. During the code review, if you make changes, add new commits to the pull request for each change. Once the code review is complete, rebase against the master branch and squash into a single commit.
+
+Given the size of the code, only one reviewer will be assigned to you. If the assignment time exceeds one week, please tag `rprat-pro` or `carrardt` in the conversion.
