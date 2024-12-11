@@ -16,8 +16,8 @@ Documentation is available here:
 - Main Sections:
   - [Overview](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Introduction.html)
   - [Installation](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Installation.html)
-  - [ExaNBody] (https://collab4exanbody.github.io/doc_exaDEM/project_exaNBody/index.html)
-  - [Spheres] (https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Spheres.html) / [Polyhedra] (https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Polyhedra.html)
+  - [ExaNBody](https://collab4exanbody.github.io/doc_exaDEM/project_exaNBody/index.html)
+  - [Spheres](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Spheres.html) / [Polyhedra](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Polyhedra.html)
   - [Force field](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/ForceField.html)
   - [I/O](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Analysis.html)
   - [Examples](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Test_cases.html)
@@ -33,15 +33,15 @@ Documentation is available here:
 
 ### Main developers
 
-- Raphaël Prat (raphael.prat@cea.fr)
-- Thierry Carrard
-- Carlo Elia Doncecchi
+- Raphaël Prat (CEA/DES) (raphael.prat@cea.fr)
+- Thierry Carrard (CEA/DAM)
+- Carlo Elia Doncecchi (CEA/DES)
 
 ### Other Developers
 
-- Paul Lafourcade
-- Lhassan Amarsid
-- Vincent Richefeu
+- Paul Lafourcade (CEA/DAM)
+- Lhassan Amarsid (CEA/DES)
+- Vincent Richefeu (CNRS)
 
 ### Acknowledgment
 
