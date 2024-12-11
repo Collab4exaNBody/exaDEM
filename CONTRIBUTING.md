@@ -1,8 +1,6 @@
 Add or Change a feature
 =======================
 
-
-
 Style
 =====
 
