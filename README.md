@@ -25,6 +25,8 @@ Documentation is available here:
 
 ## Community Guidelines
 
+For more details, see `CONTRIBUTING.md`. Main guidelines are:
+
 - For any bug, please create an issue and add the label “bug”. We welcome all feedback to make exaDEM as robust as possible.
 - If you would like to participate and add functionality to `exaDEM`, you can find instructions for coding style, tests and pull request process in `CONTRIBUTING.md`.
 - If you have any support-related / collaboration questions, please contact the team at `raphael.prat@cea.fr`. If you are a `CEA` member, please request access to the group : "exaNBody & Co. (exaStamp, exaDEM, exaSPH)", an external access can also be provided. 
