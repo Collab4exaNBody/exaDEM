@@ -28,11 +28,11 @@ setup_drivers:
   - add_stl_mesh:
      id: 0
      filename: mesh.stl
-     minskowski: 0.0001 m
+     minskowski: 0.001 m
   - add_stl_mesh:
      id: 1
      filename: cube.stl
-     minskowski: 0.0001 m
+     minskowski: 0.001 m
 
 input_data:
   - reader1
@@ -44,11 +44,11 @@ compute_force:
      mu: 0.0000015
   - contact_sphere:
      symetric: true
-     config: { rcut: 0.0 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
-     config_driver: { rcut: 0.0 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.3} 
+     config: { rcut: 0.0 m , dncut: 0.003 m, kn: 10000, kt: 10000, kr: 0.1, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
+     config_driver: { rcut: 0.0 m , dncut: 0.003 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.3} 
 
 domain:
-  cell_size: 0.005 m
+  cell_size: 0.025 m
   periodic: [false,false,false]
 
 global:
@@ -56,6 +56,6 @@ global:
   simulation_end_iteration: 200000
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 1000
-  dt: 0.00001 s 
-  rcut_inc: 0.0005 m
+  dt: 0.00001 s
+  rcut_inc: 0.0025 m
   enable_stl_mesh: true
