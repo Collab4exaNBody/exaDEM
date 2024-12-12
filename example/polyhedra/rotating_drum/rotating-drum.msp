@@ -37,10 +37,10 @@ compute_force:
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2.0 m
+  cell_size: 2.5 m
   periodic: [false,true,false]
-  grid_dims: [4, 4, 4]
-  bounds: [[0 m ,0 m, 0 m],[8 m, 8 m, 8 m]]
+  grid_dims: [2, 2, 2]
+  bounds: [[0 m ,0 m, 0 m],[5 m, 5 m, 5 m]]
   expandable: true
 
 write_vtklegacy:
