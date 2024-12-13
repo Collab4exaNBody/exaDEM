@@ -62,6 +62,7 @@ namespace exaDEM
       stream << "  - add_cylinder:" << std::endl;
       stream << "     id: " << id << std::endl;
       stream << "     axis: [" << this->axis << "]" << std::endl;
+      stream << "     radius: " << this->radius << std::endl;
       stream << "     center: [" << this->center << "]" << std::endl;
       stream << "     velocity: [" << this->vel << "]" << std::endl;
       stream << "     angular_velocity: [" << this->vrot << "]" << std::endl;
