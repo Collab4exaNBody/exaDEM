@@ -71,7 +71,6 @@ namespace exaDEM
 
       if( list_of_types.size() == 0 ) lout << "[Analysis/counter] types is empty, this operator is skipped" << std::endl;
 
-      
       auto [cell_ptr, cell_size] = cell_list->info();
 
 			// iterate over types -- it could be optimized by computing all types in a single call of reduce_cell_particles.

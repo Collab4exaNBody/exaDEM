@@ -18,6 +18,7 @@ includes:
   - config_numerical_schemes.msp
   - config_globals.msp
   - config_iteration_log.msp
+  - config_analyses.msp
   - config_iteration_dump.msp
   - config_end_iteration.msp
   - config_input.msp
