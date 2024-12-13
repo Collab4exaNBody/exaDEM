@@ -1,44 +1,36 @@
 #pragma once
 
+#include <exanb/core/basic_types.h>
+#include <exanb/grid_cell_particles/particle_region.h>
+#include <onika/flat_tuple.h>
+
 namespace exaDEM
 {
-  using vector_int = onika::memory::CudaMMVector<int>;
-
-
-  struct countersWrapper
+  using namespace exanb;
+  struct ReduceParticleCounterTypeFunctor
   {
-    int size;
-    int* data;
-    int* types;
-  };
-
-  struct counters
-  {
-    vector_int m_data;
-    vector_int m_types;
-    counters(std::vector<int>& types)
+    const ParticleRegionCSGShallowCopy region;
+    const uint16_t filter_type;
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(int &local, const double rx, const double ry, const double rz, const uint16_t type, reduce_thread_local_t = {}) const
     {
-      size_t size = types.size();
-      m_data.resize(size);
-      m_types.resize(size);
-      for(int i=0 ; i<size ; i++)
+      Vec3d r = {rx, ry, rz};
+      if( region.contains(r) )
       {
-        m_data[i] = 0;
-        m_types[i] = types[i];
+        if( type  == filter_type )
+        {
+          local++;
+        }
       }
     }
 
-    countersWrapper get_wrapper()
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(int &global, int local, reduce_thread_block_t) const
     {
-      return { onika::memory::vector_size(m_data), onika::memory::vector_data(m_data), onika::memory::vector_data(m_size) }
+      ONIKA_CU_ATOMIC_ADD(global, local);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(int &global, int local, reduce_global_t) const
+    {
+      ONIKA_CU_ATOMIC_ADD(global, local);
     }
   };
-
-
-  struct reduceCounterWrapper
-  {
-    countersWrapper data;
-    const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
-
-  }
 }
