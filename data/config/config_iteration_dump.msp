@@ -7,7 +7,7 @@ trigger_dump_data:
 trigger_dump_paraview:
   rebind: { freq: simulation_paraview_frequency , result: trigger_dump_paraview }
   body:
-    - nth_timestep: { first: false }
+    - nth_timestep: { first: true }
 
 trigger_dump_contact_network_paraview:
   rebind: { freq: simulation_contact_network_paraview_frequency , result: trigger_contact_network_dump_paraview }
