@@ -45,10 +45,6 @@ domain:
   bounds: [[0 m ,0 m, 0 m], [5 m, 5 m, 5 m]]
   expandable: true
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 dump_data_xyz:
   - timestep_file: "dem_pos_vel_%09d.xyz"
   - message: { mesg: "Write positions-velocities dump " , endl: true }
@@ -63,6 +59,6 @@ global:
   simulation_dump_frequency: 500
   simulation_end_iteration: 20000
   simulation_log_frequency: 1000
-  simulation_paraview_frequency: -1
+  simulation_paraview_frequency: 20000
   dt: 0.00005 s 
   rcut_inc: 0.1 m

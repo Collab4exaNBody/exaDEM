@@ -31,12 +31,11 @@ under the License.
 #include <exaDEM/AnalysisManager.hpp>
 #include <exaDEM/counter.hpp>
 
-
 namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_rx, field::_ry, field::_rz, field::_type>> class CounterAnalysis : public OperatorNode
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_rx, field::_ry, field::_rz, field::_type>> class ParticleCounterAnalysis : public OperatorNode
   {
 
     static constexpr FieldSet<field::_rx,field::_ry,field::_rz,field::_type> reduce_field_set{};
@@ -56,14 +55,14 @@ namespace exaDEM
     inline std::string documentation() const override final
     {
       return R"EOF(
-        This operator computes forces related to the gravity.
+        The purpose of this operator is to count the number of particles per type in a particular region.
         )EOF";
     }
 
     inline void execute() override final
     {
       analysis::AnalysisFileManager manager = {};
-      manager.set_path ((*dir_name) + "/Analysis");
+      manager.set_path ((*dir_name) + "/ExaDEMAnalyses");
       manager.set_filename (*name);
       double t = (*dt) * (*timestep);
       manager.add_element("Time", t, "%3f");
@@ -73,26 +72,26 @@ namespace exaDEM
 
       auto [cell_ptr, cell_size] = cell_list->info();
 
-			// iterate over types -- it could be optimized by computing all types in a single call of reduce_cell_particles.
-			for(size_t i = 0 ; i < list_of_types.size() ; i++)
-			{
+      // iterate over types -- it could be optimized by computing all types in a single call of reduce_cell_particles.
+      for(size_t i = 0 ; i < list_of_types.size() ; i++)
+      {
         uint16_t type = list_of_types[i];
         ParticleRegionCSGShallowCopy prcsg; 
-				// now, fill the radius field
-				if (region.has_value())
-				{
-					prcsg =  *region;
-					if (!particle_regions.has_value())
-					{
-						fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
-					}
+        // now, fill the radius field
+        if (region.has_value())
+        {
+          if (!particle_regions.has_value())
+          {
+            fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+          }
 
-					if (region->m_nb_operands == 0)
-					{
-						ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
-						region->build_from_expression_string(particle_regions->data(), particle_regions->size());
-					}
-				}
+          if (region->m_nb_operands == 0)
+          {
+            ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
+            region->build_from_expression_string(particle_regions->data(), particle_regions->size());
+          }
+          prcsg =  *region;
+        }
         ReduceParticleCounterTypeFunctor func = {prcsg, type};
         int count = 0;
         reduce_cell_particles(*grid, false, func, count, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
@@ -100,15 +99,15 @@ namespace exaDEM
         MPI_Reduce(&local, &global, 1, MPI_UINT64_T, MPI_SUM, 0, *mpi); 
         std::string var_name = "Type[" + std::to_string(type) + "]";
         manager.add_element(var_name, count, "%d");
-			}
-			manager.endl();
-			manager.write();
-		}
-	};
+      }
+      manager.endl();
+      manager.write();
+    }
+  };
 
-	template <class GridT> using CounterAnalysisTmpl = CounterAnalysis<GridT>;
+  template <class GridT> using ParticleCounterAnalysisTmpl = ParticleCounterAnalysis<GridT>;
 
-	// === register factories ===
-	CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("counter", make_grid_variant_operator<CounterAnalysisTmpl>); }
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("particle_counter", make_grid_variant_operator<ParticleCounterAnalysisTmpl>); }
 
 } // namespace exaDEM
