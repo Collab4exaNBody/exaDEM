@@ -38,7 +38,7 @@ domain:
   cell_size: 1.0 m
   periodic: [false,false,false]
   grid_dims: [4, 4, 4]
-  bounds: [[0 m ,0 m, 0 m], [4 m, 4 m, 4 m]]
+  bounds: [[1 m ,1 m, 1 m], [5 m, 5 m, 5 m]]
   expandable: true
 
 compute_volume: nop
@@ -54,5 +54,5 @@ global:
   simulation_paraview_frequency: 10000
   analysis_dump_stress_tensor_frequency: 1000
   enable_stl_mesh: true
-  dt: 0.0001 s 
+  dt: 0.000005 s 
   rcut_inc: 0.1 m
