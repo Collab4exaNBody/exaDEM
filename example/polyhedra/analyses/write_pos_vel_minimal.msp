@@ -9,7 +9,6 @@ input_data:
       structure: SC
       types: [ 0 ]
       size: [ 1.0 , 1.0 , 1.0 ]
-      repeats: [ 5 , 5 , 5 ]
       enlarge_bounds: 0.0 m
   - read_shape_file:
      filename: shapes.shp

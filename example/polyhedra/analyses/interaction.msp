@@ -9,7 +9,6 @@ input_data:
       structure: SC
       types: [ 0 ]
       size: [ 1.0 m , 1.0 m , 1.0 m ]
-      repeats: [ 128 , 8 , 128 ]
       enlarge_bounds: 0.0 m
       region: CYLINDER
   - read_shape_file:
