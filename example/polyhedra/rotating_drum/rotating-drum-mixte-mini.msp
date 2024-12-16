@@ -9,7 +9,6 @@ input_data:
       structure: BCC
       types: [ 0 , 1 ]
       size: [ 1.5 , 1.5 , 1.5 ]
-      repeats: [ 5 , 5 , 5 ]
       enlarge_bounds: 0.0 m
   - read_shape_file:
      filename: alpha3.shp

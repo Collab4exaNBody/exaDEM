@@ -31,14 +31,14 @@ compute_force:
   - gravity_force
   - contact_polyhedron:
      symetric: true
-     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
-     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
+     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 domain:
   cell_size: 1.0 m
   periodic: [false,false,false]
   grid_dims: [4, 4, 4]
-  bounds: [[0 m ,0 m, 0 m], [4 m, 4 m, 4 m]]
+  bounds: [[1 m ,1 m, 1 m], [5 m, 5 m, 5 m]]
   expandable: true
 
 compute_volume: nop
@@ -47,10 +47,6 @@ compute_stress_tensor:
   - stress_tensor:
      volume: 21952
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 global:
   simulation_dump_frequency: -1
   simulation_end_iteration: 150000
@@ -58,5 +54,5 @@ global:
   simulation_paraview_frequency: 10000
   analysis_dump_stress_tensor_frequency: 1000
   enable_stl_mesh: true
-  dt: 0.00005 s 
+  dt: 0.000005 s 
   rcut_inc: 0.1 m

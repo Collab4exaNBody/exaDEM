@@ -14,30 +14,5 @@
 # kind, either express or implied.  see the license for the
 # specific language governing permissions and limitations
 # under the license.
-
-# ===================================
-# === exaDEM application package  ===
-# ===================================
-
-add_subdirectory(grid)
-add_subdirectory(field)
-add_subdirectory(numericalscheme)
-add_subdirectory(forcefield)
-add_subdirectory(io)
-add_subdirectory(driver)
-add_subdirectory(interaction)
-add_subdirectory(sphere)
-add_subdirectory(polyhedron)
-add_subdirectory(analysis)
-
-
-if(USE_RSA)
-	add_subdirectory(rsa)
-endif()
-
-AddRegressionTestDir(${CMAKE_CURRENT_SOURCE_DIR}/regression)
-
- 
-# automatically added by xstamp_add_plugin macro
-#add_subdirectory(tests)
-
+set(exadem_analysis_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exadem_grid exadem_driver exadem_interaction)
+xstamp_add_plugin(exadem_analysis ${CMAKE_CURRENT_SOURCE_DIR})
