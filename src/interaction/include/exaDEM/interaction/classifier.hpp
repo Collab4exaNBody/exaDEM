@@ -104,6 +104,67 @@ namespace exaDEM
       item2.update_friction_and_moment(item);
     }
   };
+  
+    
+  struct OldClassifier
+  {
+  	template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
+  	
+  	VectorT<uint64_t> id_i;
+  	VectorT<uint64_t> id_j;
+  	
+  	VectorT<double> ft_x;
+  	VectorT<double> ft_y;
+  	VectorT<double> ft_z;
+  	
+  	VectorT<double> mom_x;
+  	VectorT<double> mom_y;
+  	VectorT<double> mom_z;
+	
+	VectorT<int> indices;
+	
+  	VectorT<int> particles;
+  	VectorT<int> particles_incr;
+  	
+  	size_t size = 0;
+  	
+  	void set(int s, int p)
+  	{
+  		size = s;
+  		
+  		id_i.clear();
+  		id_j.clear();
+  		
+  		id_i.resize(size);
+  		id_j.resize(size);
+  		
+  		ft_x.clear();
+  		ft_y.clear();
+  		ft_z.clear();
+  		
+  		ft_x.resize(size);
+  		ft_y.resize(size);
+  		ft_z.resize(size);
+  		
+  		mom_x.clear();
+  		mom_y.clear();
+  		mom_z.clear();
+  		
+  		mom_x.resize(size);
+  		mom_y.resize(size);
+  		mom_z.resize(size);
+  		
+  		indices.clear();
+  		
+  		indices.resize(size);
+  		
+  		particles.clear();
+  		particles_incr.clear();
+  		
+  		particles.resize(p);
+  		particles_incr.resize(p);
+  	}
+  };
 
   /**
    * @brief Classifier for managing interactions categorized into different types.
@@ -363,5 +424,8 @@ namespace exaDEM
       }
       //reset_waves(); keep the memory alive
     }
+    
   };
+
+  
 } // namespace exaDEM

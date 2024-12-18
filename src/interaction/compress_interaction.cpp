@@ -48,7 +48,7 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      if (grid->number_of_cells() == 0)
+      /*if (grid->number_of_cells() == 0)
       {
         return;
       }
@@ -62,6 +62,7 @@ namespace exaDEM
         auto &storage = cell_interactions[current_cell];
         storage.compress_data(save);
       }
+      */
     }
   };
 
