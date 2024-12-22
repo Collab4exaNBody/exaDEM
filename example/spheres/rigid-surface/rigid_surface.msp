@@ -7,7 +7,9 @@ input_data:
   - read_xyz:
       file: input_file_rigid_surface.xyz
       bounds_mode: FILE
-      enlarge_bounds: 1.0 m
+      enlarge_bounds: 0.0 m
+  - replicate_domain:
+     repeat: [1,1,10]
   - set_radius:
      rad: 0.5
   - set_quaternion
@@ -34,7 +36,7 @@ compute_force:
 
 domain:
   cell_size: 4 m
-  periodic: [false,false,false]
+  periodic: [false,true,false]
 
 write_vtklegacy:
   ascii: true
