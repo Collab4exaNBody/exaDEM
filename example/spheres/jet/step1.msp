@@ -9,6 +9,10 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_spheres.msp
 
+io_tree:
+  - io_config:
+     dir_name: "SpheresJetDir"
+
 reader1:
   - init_rcb_grid
   - lattice:
