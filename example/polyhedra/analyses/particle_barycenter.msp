@@ -1,18 +1,20 @@
+grid_flavor: grid_flavor_dem
+
 includes:
   - config_polyhedra.msp
   - common.msp
 
-analyses:
-  - particle_counter:
-     name: "ParticleTypes0And1.txt"
-     types: [0,1]
-     region: BOX
+#analyses:
+#  - particle_barycenter:
+#     types: [0,1]
+#     region: BOX
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 500000
+  simulation_end_iteration: 10000000
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 10000
   simulation_analyses_frequency: 10000
-  dt: 0.0001 s 
+#  dt: 0.00001 s 
+  dt: 0.00002 s 
   rcut_inc: 0.1 m
