@@ -29,32 +29,33 @@ under the License.
 #include <memory>
 #include <exaDEM/traversal.hpp>
 #include <exaDEM/AnalysisManager.hpp>
-#include <exaDEM/counter.hpp>
+#include <exaDEM/barycenter.hpp>
 
 namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_rx, field::_ry, field::_rz, field::_type>> class ParticleCounterAnalysis : public OperatorNode
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_rx, field::_ry, field::_rz, field::_type>> class ParticleBarycenterAnalysis : public OperatorNode
   {
 
     static constexpr FieldSet<field::_rx,field::_ry,field::_rz,field::_type> reduce_field_set{};
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, DocString{"list of non empty cells [REAL] within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(double, dt, INPUT, REQUIRED);
-    ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Time iteration number"});
+    ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory, usually defined into io_config."});
-    ADD_SLOT(std::string, name, INPUT, "ParticleCounter.txt", DocString{"Filename. Default is: ParticleCounter.txt"});
+    ADD_SLOT(std::string, name, INPUT, "ParticleBarycenter.txt", DocString{"Filename. Default is: ParticleBarycenter.txt"});
     ADD_SLOT(std::vector<int>, types, INPUT, REQUIRED , DocString{"List of types"});
+
 
     public:
     inline std::string documentation() const override final
     {
       return R"EOF(
-        The purpose of this operator is to count the number of particles per type in a particular region.
+        The purpose of this operator is to compute the barycenter of particles per type into a particular region.
         )EOF";
     }
 
@@ -67,7 +68,7 @@ namespace exaDEM
       manager.add_element("Time", t, "%3f");
       auto& list_of_types = (*types);
 
-      if( list_of_types.size() == 0 ) lout << "[Analysis/counter] types is empty, this operator is skipped" << std::endl;
+      if( list_of_types.size() == 0 ) lout << "[Analysis/barycenter] types is empty, this operator is skipped" << std::endl;
 
       auto [cell_ptr, cell_size] = traversal_real->info();
 
@@ -91,22 +92,42 @@ namespace exaDEM
           }
           prcsg =  *region;
         }
-        ReduceParticleCounterTypeFunctor func = {prcsg, type};
-        int count = 0;
-        reduce_cell_particles(*grid, false, func, count, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
-        uint64_t local(count), global(0);
-        MPI_Reduce(&local, &global, 1, MPI_UINT64_T, MPI_SUM, 0, *mpi); 
-        std::string var_name = "Type[" + std::to_string(type) + "]";
-        manager.add_element(var_name, count, "%d");
+        // Reduce over the subdomain
+        ReduceParticleBarycenterTypeFunctor func = {prcsg, type};
+        ParticleBarycenterTypeValue value = {0, {0.0,0.0,0.0}}; // int , Vec3d
+        reduce_cell_particles(*grid, false, func, value, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
+        // Reduce over MPI processes
+        double local[4] = {(double)(value.count),value.barycenter.x, value.barycenter.y, value.barycenter.z};
+        double global[4] = {0.0, 0.0, 0.0, 0.0}; // count, x, y, z
+        MPI_Reduce(&local, &global, 4, MPI_DOUBLE, MPI_SUM, 0, *mpi); 
+        std::string var_name_rx = "Type[" + std::to_string(type) + "][rx]";
+        std::string var_name_ry = "Type[" + std::to_string(type) + "][ry]";
+        std::string var_name_rz = "Type[" + std::to_string(type) + "][rz]";
+        // Compute means
+        if( global[0] != 0.0) // There is at least one particle
+        {
+          for(int i = 0 ; i < 3 ; i++) 
+          { 
+            global[i+1] /= global[0]; // It compute the average values
+          }
+        }
+        else 
+        { 
+          lout << "Warning: no particle into this region (particle_barycenter). Barycenter is set to {0,0,0}" << std::endl;
+        }
+        // Add data to the output file
+        manager.add_element(var_name_rx, global[1], "%f");
+        manager.add_element(var_name_ry, global[2], "%f");
+        manager.add_element(var_name_rz, global[3], "%f");
       }
       manager.endl();
       manager.write();
     }
   };
 
-  template <class GridT> using ParticleCounterAnalysisTmpl = ParticleCounterAnalysis<GridT>;
+  template <class GridT> using ParticleBarycenterAnalysisTmpl = ParticleBarycenterAnalysis<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("particle_counter", make_grid_variant_operator<ParticleCounterAnalysisTmpl>); }
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("particle_barycenter", make_grid_variant_operator<ParticleBarycenterAnalysisTmpl>); }
 
 } // namespace exaDEM
