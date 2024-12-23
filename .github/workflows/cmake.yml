@@ -47,6 +47,7 @@ jobs:
       with:
         html-details: true
         html-theme: github.green
+        gcov-executable: gcov
         root: ${{github.workspace}}/build/src/
         excludes: |
           exaNBody
