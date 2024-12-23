@@ -102,11 +102,13 @@ compute_loop:
 
 # You can tune the output directories here:
 io_tree:
-  - io_config:
-     dir_name: "ExaDEMOutputDir"
-     log_name: "log.txt"
-     avg_stress_tensor_name: "AvgStressTensor.txt"
-     interaction_basename: "InteractionOutputDir-"      
+  - io_config
+# default
+#  - io_config:
+#     dir_name: "ExaDEMOutputDir"
+#     log_name: "log.txt"
+#     avg_stress_tensor_name: "AvgStressTensor.txt"
+#     interaction_basename: "InteractionOutputDir-"      
 
 # Add your drivers by overriding setup_drivers
 setup_drivers: nop

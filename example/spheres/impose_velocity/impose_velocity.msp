@@ -59,10 +59,6 @@ domain:
   cell_size: 2.0 m
   periodic: [true, true, false]
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 global:
   simulation_dump_frequency: -1
   simulation_paraview_frequency: -1

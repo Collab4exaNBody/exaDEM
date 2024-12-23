@@ -3,6 +3,10 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_polyhedra.msp
 
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraRotatingDrumMixteMini"
+
 input_data:
   - init_rcb_grid
   - lattice:

@@ -3,18 +3,16 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_spheres.msp
 
-
-replicate_domain:
-  repeat: [ 1 , 1 , 1 ]
+io_tree:
+  - io_config:
+     dir_name: "SpheresMeshStlDir"
 
 reader1:
   - read_xyz:
       file: particles.xyz
       bounds_mode: FILE
-      enlarge_bounds: 0.01 m
-      adjust_bounds_to_particles: true
   - set_radius:
-     rad: 0.0015
+     rad: 0.0015 m
   - set_quaternion
   - set_rand_velocity:
      var: 0.001
@@ -25,19 +23,18 @@ reader1:
   - update_inertia
   - replicate_domain
 
-
-input_data:
-  - reader1
-
 setup_drivers:
   - add_stl_mesh:
      id: 0
      filename: mesh.stl
-     minskowski: 0.0001 m
+     minskowski: 0.001 m
   - add_stl_mesh:
      id: 1
      filename: cube.stl
-     minskowski: 0.0001 m
+     minskowski: 0.001 m
+
+input_data:
+  - reader1
 
 compute_force:
   - gravity_force
@@ -46,19 +43,18 @@ compute_force:
      mu: 0.0000015
   - contact_sphere:
      symetric: true
-     config: { rcut: 0.003 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
-     config_driver: { rcut: 0.003 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.3} 
+     config: { rcut: 0.0 m , dncut: 0.003 m, kn: 1000, kt: 1000, kr: 0.1, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
+     config_driver: { rcut: 0.0 m , dncut: 0.003 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.3} 
 
 domain:
-  cell_size: 0.005 m
+  cell_size: 0.1 m
   periodic: [false,false,false]
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 100
-  simulation_log_frequency: 10
-  simulation_paraview_frequency: -1
-  dt: 0.00001 s 
-  rcut_inc: 0.002 m
-  friction_rcut: 0.002 m
+  simulation_end_iteration: 20000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 1000
+  dt: 0.0001 s
+  rcut_inc: 0.0025 m
   enable_stl_mesh: true

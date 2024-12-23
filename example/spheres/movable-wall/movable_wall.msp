@@ -3,6 +3,10 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_spheres.msp
 
+io_tree:
+  - io_config:
+     dir_name: "SpheresMovableWallDir"
+
 input_data:
   - read_xyz:
       file: input_file_movable_wall.xyz
@@ -52,10 +56,6 @@ compute_force:
 domain:
   cell_size: 2 m
   periodic: [false,false,false]
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1

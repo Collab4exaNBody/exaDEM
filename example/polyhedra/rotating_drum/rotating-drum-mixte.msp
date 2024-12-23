@@ -3,12 +3,17 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_polyhedra.msp
 
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraRotatingDrumMixteDir"
+
 input_data:
   - init_rcb_grid
   - lattice:
       structure: BCC
       types: [ 0 , 1 ]
       size: [ 1.5 , 1.5 , 1.5 ]
+      repeats: [ 30 , 30 , 30 ]
       enlarge_bounds: 0.0 m
   - read_shape_file:
      filename: alpha3.shp
@@ -43,21 +48,16 @@ compute_force:
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 8000, kr: 0.0, fc: 0.0, mu: 0.5, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2.5 m
+  cell_size: 5 m
   periodic: [false,true,false]
-  grid_dims: [18, 18, 18]
+  grid_dims: [9, 9, 9]
   bounds: [[0 m ,0 m, 0 m],[45 m, 45 m, 45 m]]
   expandable: true  
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 1000000
+  simulation_end_iteration: 100000
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 5000
-  dt: 0.0001 s 
+  dt: 0.00005 s 
   rcut_inc: 0.05 m
-  enable_stl_mesh: true

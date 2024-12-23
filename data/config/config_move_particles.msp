@@ -85,7 +85,7 @@ parallel_update_particles:
   - grid_post_processing
   - update_cell_list
   - grid_stl_mesh:
-     force_reset: false
+     force_reset: true
   - update_particle_neighbors
 
 # define actions to initialize particles at startup, just after file read

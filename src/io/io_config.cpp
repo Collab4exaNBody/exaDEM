@@ -27,10 +27,10 @@ namespace exaDEM
   class IOConfigNode : public OperatorNode
   {
     // save file
-    ADD_SLOT(std::string, dir_name, INPUT_OUTPUT, REQUIRED, DocString{"Main output directory."});
-    ADD_SLOT(std::string, log_name, INPUT_OUTPUT, REQUIRED, DocString{"Write an Output file containing log lines."});
-    ADD_SLOT(std::string, avg_stress_tensor_name, INPUT_OUTPUT, REQUIRED, DocString{"Write an Output file containing stress tensors."});
-    ADD_SLOT(std::string, interaction_basename, INPUT_OUTPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
+    ADD_SLOT(std::string, dir_name, INPUT_OUTPUT, "ExaDEMOutputDir", DocString{"Main output directory."});
+    ADD_SLOT(std::string, log_name, INPUT_OUTPUT, "log.txt", DocString{"Write an Output file containing log lines."});
+    ADD_SLOT(std::string, avg_stress_tensor_name, INPUT_OUTPUT, "AvgStressTensor.txt", DocString{"Write an Output file containing stress tensors."});
+    ADD_SLOT(std::string, interaction_basename, INPUT_OUTPUT, "InteractionOutputDir-", DocString{"Write an Output file containing interactions."});
 
   public:
     inline std::string documentation() const override final { return R"EOF(This operator defines the tree structure of output files.)EOF"; }
