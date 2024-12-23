@@ -62,3 +62,5 @@ global:
   simulation_paraview_frequency: 5000
   dt: 0.00001 s 
   rcut_inc: 0.1 m
+  enable_contact_network: true
+

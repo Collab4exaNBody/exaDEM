@@ -3,11 +3,9 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_polyhedra.msp
 
-#configuration:
-#  logging: { debug: true , parallel: true }
-#  debug:
-#    filter: [ ".*init_neighbor_friction" , ".*move_particles_friction" , ".*check_nbh_friction" , ".*compact_neighbor_friction" , ".*extend_domain" ]
-
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraGeneratorDir"
 
 add_particles:
   - lattice:
@@ -64,10 +62,6 @@ domain:
   bounds: [[0 m ,0 m, 0 m], [10 m, 10 m, 10 m]]
   expandable: true
   
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 global:
   simulation_dump_frequency: -1
   simulation_end_iteration: 100000

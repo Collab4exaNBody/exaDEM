@@ -9,6 +9,7 @@ input_data:
       structure: SC
       types: [ 0 ]
       size: [ 1.5 , 1.5 , 1.5 ]
+      repeats: [ 200 , 200 , 150 ]
       enlarge_bounds: 0.0 m
       region: FUNNEL and BZ
   - read_shape_file:
@@ -53,12 +54,9 @@ compute_force:
 domain:
   cell_size: 5 m
   periodic: [false,false,false]
-  grid_dims: [60,60,20]
-  bounds: [[0,0,110],[ 300 , 300 , 210 ]]
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
+  grid_dims: [60,60,45]
+  bounds: [[0,0,0],[300,300, 225]] 
+  expandable: true
 
 global:
   simulation_dump_frequency: 100000
@@ -66,5 +64,5 @@ global:
   simulation_log_frequency: 100
   simulation_paraview_frequency: 1000
   dt: 0.0001 s 
-  rcut_inc: 0.4 m
+  rcut_inc: 0.2 m
   enable_stl_mesh: true

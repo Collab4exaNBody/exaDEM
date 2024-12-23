@@ -3,6 +3,10 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_polyhedra.msp
 
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraBallsDir"
+
 input_data:
   - init_rcb_grid
   - lattice:
@@ -47,10 +51,6 @@ domain:
   grid_dims: [3, 3, 3]
   bounds: [[0 m ,0 m, 0 m], [6 m, 6 m, 6 m]]
   expandable: true
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1
