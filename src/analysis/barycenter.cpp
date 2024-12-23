@@ -27,7 +27,7 @@ under the License.
 #include <exanb/core/grid.h>
 
 #include <memory>
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/AnalysisManager.hpp>
 #include <exaDEM/barycenter.hpp>
 
@@ -41,7 +41,7 @@ namespace exaDEM
     static constexpr FieldSet<field::_rx,field::_ry,field::_rz,field::_type> reduce_field_set{};
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(CellListWrapper, cell_list, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(double, dt, INPUT, REQUIRED);
     ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
@@ -70,7 +70,7 @@ namespace exaDEM
 
       if( list_of_types.size() == 0 ) lout << "[Analysis/barycenter] types is empty, this operator is skipped" << std::endl;
 
-      auto [cell_ptr, cell_size] = cell_list->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
 
       // iterate over types -- it could be optimized by computing all types in a single call of reduce_cell_particles.
       for(size_t i = 0 ; i < list_of_types.size() ; i++)
