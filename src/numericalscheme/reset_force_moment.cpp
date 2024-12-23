@@ -26,7 +26,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/compute/compute_cell_particles.h>
 #include <exaDEM/set_fields.h>
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM
 {
@@ -34,7 +34,7 @@ namespace exaDEM
   template <typename GridT, class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz, field::_mom>> class ResetForceMomentNode : public OperatorNode
   {
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
 
     static inline constexpr FieldSet<field::_fx, field::_fy, field::_fz, field::_mom> compute_field_set = {};
 
@@ -48,7 +48,7 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto [cell_ptr, cell_size] = cell_list->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
       SetFunctor<double, double, double, Vec3d> func = {{double(0.0), double(0.0), double(0.0), Vec3d{0.0, 0.0, 0.0}}};
       compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
     }

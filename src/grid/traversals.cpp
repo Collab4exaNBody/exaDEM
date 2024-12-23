@@ -22,7 +22,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/traversal.hpp>
 #include <memory>
 
 namespace exaDEM
@@ -36,7 +36,8 @@ namespace exaDEM
     template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
 
     ADD_SLOT(GridT, grid, INPUT, REQUIRED);
-    ADD_SLOT(CellListWrapper, cell_list, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, DocString{"list of non empty cells [REAL] within the current grid"});
+    ADD_SLOT(Traversal, traversal_all, INPUT_OUTPUT, DocString{"list of non empty cells [ALL = REAL+GHOST] within the current grid"});
 
   public:
     inline std::string documentation() const override final
@@ -50,10 +51,12 @@ namespace exaDEM
       const auto &cells = grid->cells();
       IJK dims = grid->dimension();
       const ssize_t gl = grid->ghost_layers();
-      auto &cl = cell_list->m_data;
+      auto &tr_real = traversal_real->m_data;
+      auto &tr_all = traversal_all->m_data;
 
       // reset the cell list
-      cl.clear();
+      tr_real.clear();
+      tr_all.clear();
 
       // iterate over "real" cells
       GRID_OMP_FOR_BEGIN (dims - 2 * gl, _, loc_no_gl)
@@ -62,16 +65,27 @@ namespace exaDEM
         const size_t i = grid_ijk_to_index(dims, loc);
         const size_t n_particles = cells[i].size();
         if (n_particles > 0)
-          cl.push_back(i);
+          tr_real.push_back(i);
+      }
+      GRID_OMP_FOR_END
+
+      GRID_OMP_FOR_BEGIN (dims, _ , loc)
+      {
+        //const IJK loc = loc;
+        const size_t i = grid_ijk_to_index(dims, loc);
+        const size_t n_particles = cells[i].size();
+        if (n_particles > 0)
+          tr_all.push_back(i);
       }
       GRID_OMP_FOR_END
       
-      cell_list->iterator = true;
+      traversal_real->iterator = true;
+      traversal_all->iterator = true;
     }
   };
 
   template <class GridT> using UpdateCellListTmpl = UpdateCellList<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("update_cell_list", make_grid_variant_operator<UpdateCellListTmpl>); }
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("update_traversals", make_grid_variant_operator<UpdateCellListTmpl>); }
 } // namespace exaDEM

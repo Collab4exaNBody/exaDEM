@@ -28,7 +28,7 @@ under the License.
 #include <random>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/compute_vertices.hpp>
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM
 {
@@ -40,7 +40,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
-    ADD_SLOT(CellListWrapper, cell_list, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_all, INPUT_OUTPUT, DocString{"list of non empty cells [REAL] within the current grid"});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -59,18 +59,18 @@ namespace exaDEM
       size_t* cell_ptr = nullptr;
       size_t cell_size = -1;
       
-      if(cell_list->iterator)
+      if(traversal_all->iterator)
       {
-      	std::tie(cell_ptr, cell_size) = cell_list->info();
+      	std::tie(cell_ptr, cell_size) = traversal_all->info();
       }
       
-      compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+      compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context()); //, cell_ptr, cell_size);
     }
   };
 
   template <class GridT> using PolyhedraComputeVerticesTmpl = PolyhedraComputeVertices<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("polyhedra_compute_vertices", make_grid_variant_operator<PolyhedraComputeVerticesTmpl>); }
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("compute_vertices", make_grid_variant_operator<PolyhedraComputeVerticesTmpl>); }
 
 } // namespace exaDEM
