@@ -5,7 +5,7 @@ includes:
 
 io_tree:
   - io_config:
-     dir_name: "PolyhedraRotatingDrumOctahedra"
+     dir_name: "PolyhedraRotatingDrumOctahedraDir"
 
 particle_regions:
   - CYL1:
