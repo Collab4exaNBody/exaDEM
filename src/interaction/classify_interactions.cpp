@@ -28,7 +28,7 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/classifier.hpp>
 #include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM
 {
@@ -43,7 +43,7 @@ namespace exaDEM
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
 
   public:
     inline std::string documentation() const override final
@@ -58,7 +58,7 @@ namespace exaDEM
       {
         return;
       }
-      auto [cell_ptr, cell_size] = cell_list->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
       if (!ic.has_value())
         ic->initialize();
       ic->classify(*ges, cell_ptr, cell_size);

@@ -56,7 +56,7 @@ update_particle_neighbors:
 
 grid_post_processing: grid_memory_compact
 
-compute_vertices:
+compute_all_vertices:
   - compute_new_vertices
   - compute_driver_vertices:
      force_host: true
@@ -64,7 +64,7 @@ compute_vertices:
 ghost_full_update:
   - ghost_comm_scheme
   - ghost_update_all
-  - compute_vertices
+  - compute_all_vertices
 
 
 ################### parallel particle migration ############################
@@ -83,7 +83,7 @@ parallel_update_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - update_cell_list
+  - update_traversals
   - grid_stl_mesh:
      force_reset: true
   - update_particle_neighbors
@@ -96,7 +96,7 @@ init_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - update_cell_list
+  - update_traversals
   - grid_stl_mesh:
      force_reset: true
   - update_particle_neighbors

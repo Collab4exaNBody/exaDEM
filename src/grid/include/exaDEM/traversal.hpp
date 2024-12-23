@@ -1,6 +1,6 @@
 #pragma once
 
-struct CellListWrapper
+struct Traversal
 {
   template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
   VectorT<size_t> m_data;
