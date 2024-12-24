@@ -98,7 +98,7 @@ namespace exaDEM
    * @tparam AnalysisDataPacker Used to pack any kind of data.
    * @tparam Args Types of additional parameters passed to the kernel function.
    */
-  template <typename T, typename K, typename AnalysisDataPacker, typename... Args> struct WrapperForAll
+  template <typename T, typename K, typename AnalysisDataPacker, typename... Args> struct WrapperContactLawForAll
   {
     InteractionWrapper<T> data;
     const K kernel;             /**< Kernel function to be applied. */
@@ -112,7 +112,7 @@ namespace exaDEM
      * @param k Kernel function to be applied.
      * @param args Additional parameters passed to the kernel function.
      */
-    WrapperForAll(InteractionWrapper<T> &d, K &k, AnalysisDataPacker &p, Args... args) : data(std::move(d)), kernel(k), packer(p), params(std::tuple<Args...>(args...)) {}
+    WrapperContactLawForAll(InteractionWrapper<T> &d, K &k, AnalysisDataPacker &p, Args... args) : data(std::move(d)), kernel(k), packer(p), params(std::tuple<Args...>(args...)) {}
 
     /**
      * @brief Helper function to apply the kernel function to a single element.
@@ -136,7 +136,41 @@ namespace exaDEM
      */
     ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const { apply(i, tuple_helper::gen_seq<sizeof...(Args)>{}); }
   };
+
+  template <typename T, typename K, typename... Args> struct WrapperForAll
+  {
+    InteractionWrapper<T> data;
+    K kernel;             /**< Kernel function to be applied. */
+    std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
+
+    /**
+     * @brief Constructor to initialize the WrapperForAll struct.
+     * @param d Wrapper that contains the array of elements.
+     * @param k Kernel function to be applied.
+     * @param args Additional parameters passed to the kernel function.
+     */
+    WrapperForAll(InteractionWrapper<T> &d, K &k, Args... args) : data(std::move(d)), kernel(k), params(std::tuple<Args...>(args...)) {}
+
+    /**
+     * @brief Helper function to apply the kernel function to a single element.
+     * @tparam Is Index sequence for unpacking the parameter tuple.
+     * @param item Reference to the element from the array.
+     * @param indexes Index sequence to unpack the parameter tuple.
+     */
+    template <size_t... Is> ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const
+    {
+      exaDEM::Interaction item = data(i);
+      kernel(i, item, std::get<Is>(params)...);
+    }
+
+    /**
+     * @brief Functor operator to apply the kernel function to each element in the array.
+     * @param i Index of the element in the array.
+     */
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const { apply(i, tuple_helper::gen_seq<sizeof...(Args)>{}); }
+  };
 } // namespace exaDEM
+
 
 namespace onika
 {
@@ -180,13 +214,13 @@ namespace exaDEM
     if (!dataPacker)
     {
       AnalysisDataPackerNull nop;
-      WrapperForAll func(interactions, kernel, nop, args...);
+      WrapperContactLawForAll func(interactions, kernel, nop, args...);
       return parallel_for(size, func, exec_ctx, opts);
     }
     else
     {
       AnalysisDataPacker packer(ic, type);
-      WrapperForAll func(interactions, kernel, packer, args...);
+      WrapperContactLawForAll func(interactions, kernel, packer, args...);
       return parallel_for(size, func, exec_ctx, opts);
     }
   }
