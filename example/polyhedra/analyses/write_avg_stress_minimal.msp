@@ -43,8 +43,8 @@ domain:
 
 compute_volume: nop
 
-compute_stress_tensor:
-  - stress_tensor:
+global_stress_tensor:
+  - average_stress_tensor:
      volume: 21952
 
 global:

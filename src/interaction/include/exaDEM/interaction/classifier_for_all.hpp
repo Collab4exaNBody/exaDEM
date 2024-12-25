@@ -85,6 +85,10 @@ namespace exaDEM
     }
   };
 
+  /*******************************************/
+  /*            WrapperContactLawForAll      */
+  /*******************************************/
+
   /**
    * @brief Wrapper for applying a kernel function to elements of an array in parallel.
    *
@@ -137,10 +141,13 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const { apply(i, tuple_helper::gen_seq<sizeof...(Args)>{}); }
   };
 
+  /*******************************************/
+  /*            WrapperFoAll                 */
+  /*******************************************/
   template <typename T, typename K, typename... Args> struct WrapperForAll
   {
     InteractionWrapper<T> data;
-    K kernel;             /**< Kernel function to be applied. */
+    K kernel;                   /**< Kernel function to be applied. */
     std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
 
     /**
@@ -176,7 +183,12 @@ namespace onika
 {
   namespace parallel
   {
-    template <typename T, typename K, typename A, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperForAll<T, K, A, Args...>>
+    template <typename T, typename K, typename A, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperContactLawForAll<T, K, A, Args...>>
+    {
+      static inline constexpr bool CudaCompatible = true;
+    };
+
+    template <typename T, typename K, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperForAll<T, K, Args...>>
     {
       static inline constexpr bool CudaCompatible = true;
     };
