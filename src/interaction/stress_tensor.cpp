@@ -34,6 +34,7 @@ under the License.
 #include <exaDEM/interaction/interactionAOS.hpp>
 #include <exaDEM/interaction/classifier.hpp>
 #include <exaDEM/interaction/classifier_for_all.hpp>
+#include <exaDEM/type/add_contribution_mat3d.hpp>
 
 namespace exaDEM
 {
@@ -59,7 +60,7 @@ namespace exaDEM
           Vec3d fij = fnp[idx] + ftp[idx];
           Vec3d pos_i = {cell[field::rx][I.p_i], cell[field::ry][I.p_i], cell[field::rz][I.p_i]};
           Vec3d cij = cpp[idx] - pos_i;
-          exanb::atomic_add_contribution(cell[field::stress][I.p_i], exanb::tensor(fij, cij));
+          exanb::mat3d_atomic_add_contribution(cell[field::stress][I.p_i], exanb::tensor(fij, cij));
 
           if constexpr ( type <= 3 && sym == true) // polyhedron - polyhedron || sphere - sphere
           {
@@ -67,7 +68,7 @@ namespace exaDEM
             Vec3d fji = -fij;
             Vec3d pos_j = {cellj[field::rx][I.p_j], cellj[field::ry][I.p_j], cellj[field::rz][I.p_j]};
             Vec3d cji = cpp[idx] - pos_j;
-            exanb::atomic_add_contribution(cellj[field::stress][I.p_j], exanb::tensor(fji, cji));
+            exanb::mat3d_atomic_add_contribution(cellj[field::stress][I.p_j], exanb::tensor(fji, cji));
           }
         }
     };

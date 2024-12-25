@@ -1,4 +1,4 @@
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/common_minimal.msp ${CMAKE_CURRENT_SOURCE_DIR}/common.msp ${CMAKE_CURRENT_SOURCE_DIR}/shapes.shp ${CMAKE_CURRENT_SOURCE_DIR}/box_avg_stress.stl DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/common_minimal.msp ${CMAKE_CURRENT_SOURCE_DIR}/common.msp ${CMAKE_CURRENT_SOURCE_DIR}/shapes.shp ${CMAKE_CURRENT_SOURCE_DIR}/octahedron.shp ${CMAKE_CURRENT_SOURCE_DIR}/box_avg_stress.stl DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 add_omp_mpi_test("ParticleCount" "particle_counter_minimal.msp")
 add_omp_mpi_test("InteractionOutput" "interaction_minimal.msp")
 add_omp_mpi_test("WritePosVelOutput" "write_pos_vel_minimal.msp")
