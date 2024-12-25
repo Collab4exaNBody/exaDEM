@@ -19,14 +19,6 @@ thermo_state_if_triggered:
     - default_thermodynamic_state
 
 end_iteration:
-  - trigger_particle_generator
-  - trigger_dump_data
-  - trigger_dump_paraview
-  - trigger_print_log
-  - trigger_dump_thermo
-  - trigger_thermo_state
-  - trigger_write_stress_tensor
-  - trigger_analyses
   - thermo_state_if_triggered
   - dump_data_if_triggered
   - dump_paraview_if_triggered

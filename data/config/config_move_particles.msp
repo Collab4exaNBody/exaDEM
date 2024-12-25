@@ -102,6 +102,7 @@ init_particles:
   - update_particle_neighbors
 ###########################################################################
 
+
 ########################### Load balancing ############################
 # trigger load balance whenever domain size changed, whatever freq has been requested
 # extend_domain has an input named enable_domain_extension to control if domain extesion is allowed

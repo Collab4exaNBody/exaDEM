@@ -18,7 +18,7 @@ write_paraview_generic:
   binary: false
   write_ghost: false
   write_box: true
-  fields: ["radius", "type","vx","vy","vz","id","orient"]
+  fields: ["radius", "type","vx","vy","vz","id","orient","stress"]
 
 
 contact_network: nop
@@ -49,14 +49,14 @@ dump_data_paraview:
 compute_volume:
   - domain_volume
 
-compute_stress_tensor:
-  - stress_tensor
+global_stress_tensor:
+  - avg_stress_tensor
 
 dump_stress_tensor_if_triggered:
   condition: trigger_write_stress_tensor
   body:
     - compute_volume
-    - compute_stress_tensor
+    - global_stress_tensor
     - write_stress_tensor
 
 compress_data: 

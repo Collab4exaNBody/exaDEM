@@ -23,87 +23,95 @@ namespace exaDEM
 
   template <typename T> struct InteractionWrapper;
 
-  template <> struct InteractionWrapper<InteractionSOA>
-  {
-    double * __restrict__ ft_x;
-    double * __restrict__ ft_y;
-    double * __restrict__ ft_z;
-
-    double * __restrict__ mom_x;
-    double * __restrict__ mom_y;
-    double * __restrict__ mom_z;
-
-    uint64_t * __restrict__ id_i;
-    uint64_t * __restrict__ id_j;
-
-    uint32_t * __restrict__ cell_i;
-    uint32_t * __restrict__ cell_j;
-
-    uint16_t * __restrict__ p_i;
-    uint16_t * __restrict__ p_j;
-
-    uint16_t * __restrict__ sub_i;
-    uint16_t * __restrict__ sub_j;
-
-    uint16_t m_type;
-
-    InteractionWrapper(InteractionSOA &data)
+  template <> 
+    struct InteractionWrapper<InteractionSOA>
     {
-      ft_x = onika::cuda::vector_data(data.ft_x);
-      ft_y = onika::cuda::vector_data(data.ft_y);
-      ft_z = onika::cuda::vector_data(data.ft_z);
+      // forces
+      double * __restrict__ ft_x;
+      double * __restrict__ ft_y;
+      double * __restrict__ ft_z;
+      // moment
+      double * __restrict__ mom_x;
+      double * __restrict__ mom_y;
+      double * __restrict__ mom_z;
+      // particle id
+      uint64_t * __restrict__ id_i;
+      uint64_t * __restrict__ id_j;
+      // cell id
+      uint32_t * __restrict__ cell_i;
+      uint32_t * __restrict__ cell_j;
+      // position into the cell
+      uint16_t * __restrict__ p_i;
+      uint16_t * __restrict__ p_j;
+      // sub id
+      uint16_t * __restrict__ sub_i;
+      uint16_t * __restrict__ sub_j;
+      uint16_t m_type;
 
-      mom_x = onika::cuda::vector_data(data.mom_x);
-      mom_y = onika::cuda::vector_data(data.mom_y);
-      mom_z = onika::cuda::vector_data(data.mom_z);
+      InteractionWrapper(InteractionSOA &data)
+      {
+        ft_x = onika::cuda::vector_data(data.ft_x);
+        ft_y = onika::cuda::vector_data(data.ft_y);
+        ft_z = onika::cuda::vector_data(data.ft_z);
 
-      id_i = onika::cuda::vector_data(data.id_i);
-      id_j = onika::cuda::vector_data(data.id_j);
+        mom_x = onika::cuda::vector_data(data.mom_x);
+        mom_y = onika::cuda::vector_data(data.mom_y);
+        mom_z = onika::cuda::vector_data(data.mom_z);
 
-      cell_i = onika::cuda::vector_data(data.cell_i);
-      cell_j = onika::cuda::vector_data(data.cell_j);
+        id_i = onika::cuda::vector_data(data.id_i);
+        id_j = onika::cuda::vector_data(data.id_j);
 
-      p_i = onika::cuda::vector_data(data.p_i);
-      p_j = onika::cuda::vector_data(data.p_j);
+        cell_i = onika::cuda::vector_data(data.cell_i);
+        cell_j = onika::cuda::vector_data(data.cell_j);
 
-      sub_i = onika::cuda::vector_data(data.sub_i);
-      sub_j = onika::cuda::vector_data(data.sub_j);
+        p_i = onika::cuda::vector_data(data.p_i);
+        p_j = onika::cuda::vector_data(data.p_j);
 
-      m_type = data.type;
-    }
+        sub_i = onika::cuda::vector_data(data.sub_i);
+        sub_j = onika::cuda::vector_data(data.sub_j);
 
-    ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
+        m_type = data.type;
+      }
+
+      ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
+      {
+        exaDEM::Interaction res = {
+          {ft_x[idx], ft_y[idx], ft_z[idx]}, 
+          {mom_x[idx], mom_y[idx], mom_z[idx]}, 
+          id_i[idx], id_j[idx], 
+          cell_i[idx], cell_j[idx], 
+          p_i[idx], p_j[idx], 
+          sub_i[idx], sub_j[idx], m_type};
+        return res;
+      }
+
+      ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
+      {
+        ft_x[idx] = item.friction.x;
+        ft_y[idx] = item.friction.y;
+        ft_z[idx] = item.friction.z;
+
+        mom_x[idx] = item.moment.x;
+        mom_y[idx] = item.moment.y;
+        mom_z[idx] = item.moment.z;
+      }
+    };
+
+  template <> 
+    struct InteractionWrapper<InteractionAOS>
     {
-      exaDEM::Interaction res = {{ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}, id_i[idx], id_j[idx], cell_i[idx], cell_j[idx], p_i[idx], p_j[idx], sub_i[idx], sub_j[idx], m_type};
-      return res;
-    }
+      exaDEM::Interaction * __restrict__ interactions;
 
-    ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
-    {
-      ft_x[idx] = item.friction.x;
-      ft_y[idx] = item.friction.y;
-      ft_z[idx] = item.friction.z;
+      InteractionWrapper(InteractionAOS &data) { interactions = onika::cuda::vector_data(data.m_data); }
 
-      mom_x[idx] = item.moment.x;
-      mom_y[idx] = item.moment.y;
-      mom_z[idx] = item.moment.z;
-    }
-  };
+      ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const { return interactions[idx]; }
 
-  template <> struct InteractionWrapper<InteractionAOS>
-  {
-    exaDEM::Interaction * __restrict__ interactions;
-
-    InteractionWrapper(InteractionAOS &data) { interactions = onika::cuda::vector_data(data.m_data); }
-
-    ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const { return interactions[idx]; }
-
-    ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
-    {
-      auto &item2 = interactions[idx];
-      item2.update_friction_and_moment(item);
-    }
-  };
+      ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
+      {
+        auto &item2 = interactions[idx];
+        item2.update_friction_and_moment(item);
+      }
+    };
 
   /**
    * @brief Classifier for managing interactions categorized into different types.
@@ -249,9 +257,9 @@ namespace exaDEM
       {
         size_t threads = omp_get_thread_num();
         std::array<std::vector<exaDEM::Interaction>, types> tmp; ///< Storage for interactions categorized by type.
-        //for (int w = 0; w < types; w++) tmp[w].reserve( (2*previous_sizes[w]) / n_threads);
+                                                                 //for (int w = 0; w < types; w++) tmp[w].reserve( (2*previous_sizes[w]) / n_threads);
 
-        // Partial
+                                                                 // Partial
 #       pragma omp for schedule(static) nowait
         for (size_t c = 0; c < size; c++)
         {
@@ -269,8 +277,8 @@ namespace exaDEM
 
         for (int w = 0; w < types; w++) bounds[threads][w].second = tmp[w].size();
 
-        #pragma omp barrier   
-     
+#pragma omp barrier   
+
         // All
         auto& bound = bounds[threads];
         for (int w = 0; w < types; w++) 
@@ -283,17 +291,17 @@ namespace exaDEM
           bound[w].first = start;
         }
 
-        #pragma omp barrier
+#pragma omp barrier
 
         // Partial
-        #pragma omp for
+#pragma omp for
         for (int w = 0; w < types; w++)
         {
           size_t size = bounds[n_threads-1][w].first + bounds[n_threads-1][w].second;
           waves[w].resize(size);
         }
 
-        #pragma omp barrier
+#pragma omp barrier
 
         // All
         for (int w = 0; w < types; w++)
@@ -318,15 +326,15 @@ namespace exaDEM
       Vec3d null = {0, 0, 0};
       auto &ces = ges.m_data; // Reference to cells containing interactions
                               // Iterate through each wave
-/*
-      std::array<onikaStream_t, types> streams;
-      for (int w = 0; w < types; w++) 
-      {
-        int device_id = 0;
-        ONIKA_CU_CREATE_STREAM_NON_BLOCKING(streams[w]);
-        waves[w].prefetch_memory_on_gpu(cudaCpuDeviceId, streams[w]);
-      }
-*/
+      /*
+         std::array<onikaStream_t, types> streams;
+         for (int w = 0; w < types; w++) 
+         {
+         int device_id = 0;
+         ONIKA_CU_CREATE_STREAM_NON_BLOCKING(streams[w]);
+         waves[w].prefetch_memory_on_gpu(cudaCpuDeviceId, streams[w]);
+         }
+       */
 
 #     pragma omp parallel
       {
@@ -334,7 +342,7 @@ namespace exaDEM
         {
           auto &wave = waves[w];
           const unsigned int n1 = wave.size();
-//        ONIKA_CU_STREAM_SYNCHRONIZE(streams[w]);
+          //        ONIKA_CU_STREAM_SYNCHRONIZE(streams[w]);
 
           // Parallel loop to process interactions within a wave
 #         pragma omp for schedule(guided) nowait

@@ -1,0 +1,14 @@
+trigger_stress_tensor:
+  - combine_move_particles:
+      rebind: { in1: trigger_dump_paraview , in2: trigger_write_stress_tensor, result: trigger_stress_tensor}
+      body: [ boolean_or ]
+ 
+compute_stress_tensor:
+  - reset_stress
+  - stress_tensor
+#  - avg_stress_tensor
+
+update_stress_tensor:
+  condition: trigger_stress_tensor
+  body:
+    - compute_stress_tensor

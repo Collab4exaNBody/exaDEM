@@ -251,7 +251,6 @@ namespace exaDEM
       const shape *shpj, 
       const exanb::Quaternion &oj)
   {
-    assert(i < shpi->get_number_of_vertices());
     assert(j < shpj->get_number_of_edges());
     // === compute vertice positions
     auto [first, second] = shpj->get_edge(j);

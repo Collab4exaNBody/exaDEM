@@ -49,6 +49,7 @@ compute_loop:
   name: loop
   condition: compute_loop_continue
   body:
+    - start_iteration
     - compute_loop_prolog
     - numerical_scheme
     - end_iteration

@@ -10,7 +10,7 @@ input_data:
       types: [ 0 ]
       size: [ 1.0 , 1.0 , 1.0 ]
   - read_shape_file:
-     filename: shapes.shp
+     filename: octahedron.shp
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:
@@ -43,13 +43,10 @@ domain:
 
 compute_volume: nop
 
-compute_stress_tensor:
-  - stress_tensor:
+global_stress_tensor:
+  - avg_stress_tensor:
      volume: 21952
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1
