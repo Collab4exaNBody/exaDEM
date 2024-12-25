@@ -18,6 +18,7 @@ under the License.
  */
 #pragma once
 #include <exaDEM/shape/shapes.hpp>
+#include <exanb/core/particle_type_id.h>
 #include <cassert>
 #include <fstream>
 #include <regex>
@@ -206,6 +207,32 @@ namespace exaDEM
     lout << "Warning, no shape find into the file " << file_name << "." << std::endl;
     lout << "Warning, this file is ignored." << file_name << std::endl;
     return shape();
+  }
+
+  inline void read_shp(ParticleTypeMap& ptm, shapes& shps, const std::string file_name, bool big_shape = false)
+  {
+    std::ifstream input(file_name.c_str());
+    std::string first;
+    for (std::string line; getline(input, line);)
+    {
+      if (line == "<")
+      {
+        first = ""; // reset key
+        shape shp = read_shp(input, big_shape);
+/* too much verbosity        
+        if (!big_shape)
+          shp.print();
+*/
+        shp.write_paraview();
+        if( ptm.find(shp.m_name) != ptm.end() )
+        {
+          shp.m_name = shp.m_name + "X";
+          lout << "Warning, this polyhedron name is already taken, exaDEM has renamed it to: " << shp.m_name << std::endl;
+        } 
+        ptm[shp.m_name] = shps.get_size();
+        shps.add_shape(&shp);
+      }
+    }
   }
 
   inline void read_shp(shapes &shps, const std::string file_name, bool big_shape = false)

@@ -34,7 +34,7 @@ init_fields:
 add_generated_particles:
   - lattice:
       structure: SC
-      types: [ 0 ]
+      types: [ PolyBig5 ]
       size: [ 4.0 m , 4.0 m , 4.0 m ]
       region: CYL1 and BOX 
   - init_fields
@@ -59,7 +59,7 @@ input_data:
   - init_rcb_grid
   - lattice:
       structure: SC
-      types: [ 0 ]
+      types: [ PolyBig5 ]
       size: [ 4.0 m , 4.0 m , 4.0 m ]
       region: CYL1 and BOX 
   - init_fields:

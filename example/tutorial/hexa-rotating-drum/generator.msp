@@ -6,7 +6,7 @@ includes:
 add_particles:
   - lattice:
      structure: SC
-     types: [ 0 ]
+     types: [ alpha3 ]
      size: [ 1.5 , 1.5 , 1.5 ]
      region: AREA
 
@@ -21,7 +21,6 @@ init_new_particles:
      region: AREA
   - radius_from_shape:
      region: AREA
-
 
 input_data:
   - init_rcb_grid

@@ -16,6 +16,8 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+#include <vector>
+#include <iomanip>
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
@@ -23,8 +25,7 @@ under the License.
 #include <exanb/core/basic_types_operators.h>
 #include <exanb/core/basic_types_stream.h>
 #include <onika/memory/allocator.h> // for ONIKA_ASSUME_ALIGNED macro
-#include <vector>
-#include <iomanip>
+#include <exanb/core/particle_type_id.h>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/shape/shape_reader.hpp>
 
@@ -35,6 +36,8 @@ namespace exaDEM
   {
     ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"Input filename"});
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT_OUTPUT );
+    ADD_SLOT(bool, verbosity, INPUT, true );
 
   public:
     inline std::string documentation() const override final
@@ -45,9 +48,17 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto &collection = *shapes_collection;
+      auto& ptm = *particle_type_map;
       lout << "Read file= " << *filename << std::endl;
-      exaDEM::read_shp(collection, *filename);
+      const bool BigShape = false; // do not remove it
+      exaDEM::read_shp(ptm, *shapes_collection, *filename, BigShape);
+      if( *verbosity )
+      {
+        for(const auto& [ name, type ] : ptm)
+        {
+          lout << "Shape[" << type <<"] is " << name << std::endl;
+        }
+      }
     };
   };
 

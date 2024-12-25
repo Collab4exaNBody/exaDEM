@@ -9,12 +9,12 @@ io_tree:
 
 input_data:
   - init_rcb_grid
-  - lattice:
-      structure: SC
-      types: [ 0 ]
-      size: [ 1.5 , 1.5 , 1.5 ]
   - read_shape_file:
      filename: alpha3.shp
+  - lattice:
+      structure: SC
+      types: [ alpha3 ]
+      size: [ 1.5 , 1.5 , 1.5 ]
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:

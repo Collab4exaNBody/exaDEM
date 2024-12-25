@@ -5,14 +5,14 @@ includes:
 
 input_data:
   - init_rcb_grid
+  - read_shape_file:
+     filename: shapes.shp
   - lattice:
       structure: SC
-      types: [ 0 ]
+      types: [ Octahedron ]
       size: [ 1.0 m , 1.0 m , 1.0 m ]
       enlarge_bounds: 0.0 m
       region: CYLINDER
-  - read_shape_file:
-     filename: shapes.shp
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:

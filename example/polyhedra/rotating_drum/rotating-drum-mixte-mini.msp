@@ -9,15 +9,15 @@ io_tree:
 
 input_data:
   - init_rcb_grid
-  - lattice:
-      structure: BCC
-      types: [ 0 , 1 ]
-      size: [ 1.5 , 1.5 , 1.5 ]
-      enlarge_bounds: 0.0 m
   - read_shape_file:
      filename: alpha3.shp
   - read_shape_file:
      filename: octahedron.shp
+  - lattice:
+      structure: BCC
+      types: [alpha3, Octahedron ]
+      size: [ 1.5 , 1.5 , 1.5 ]
+      enlarge_bounds: 0.0 m
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:
