@@ -5,15 +5,15 @@ includes:
 
 input_data:
   - init_rcb_grid
+  - read_shape_file:
+     filename: alpha3.shp
   - lattice:
       structure: SC
-      types: [ 0 ]
+      types: [ alpha3 ]
       size: [ 1.5 , 1.5 , 1.5 ]
       repeats: [ 200 , 200 , 150 ]
       enlarge_bounds: 0.0 m
       region: FUNNEL and BZ
-  - read_shape_file:
-     filename: alpha3.shp
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:

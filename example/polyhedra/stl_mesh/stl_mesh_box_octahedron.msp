@@ -9,12 +9,12 @@ io_tree:
 
 input_data:
   - init_rcb_grid
-  - lattice:
-      structure: SC
-      types: [ 0 ]
-      size: [ 1.0 , 1.0 , 1.0 ]
   - read_shape_file:
      filename: octahedron.shp
+  - lattice:
+      structure: SC
+      types: [ Octahedron ]
+      size: [ 1.0 , 1.0 , 1.0 ]
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:

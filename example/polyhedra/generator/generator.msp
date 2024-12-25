@@ -10,7 +10,7 @@ io_tree:
 add_particles:
   - lattice:
      structure: SC
-     types: [ 0 ]
+     types: [ Octahedron ]
      size: [ 1.0 , 1.0 , 1.0 ]
      region: AREA
 

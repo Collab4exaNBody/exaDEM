@@ -5,12 +5,12 @@ includes:
 
 input_data:
   - init_rcb_grid
-  - lattice:
-      structure: SC
-      types: [ 0 ]
-      size: [ 1.5 m , 1.5 m , 1.5 m ]
   - read_shape_file:
      filename: alpha3.shp
+  - lattice:
+      structure: SC
+      types: [ alpha3 ]
+      size: [ 1.5 m , 1.5 m , 1.5 m ]
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:
