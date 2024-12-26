@@ -48,10 +48,10 @@ jobs:
         html-details: true
         html-theme: github.green
         gcov-executable: gcov
-        root:  ${{github.workspace}}/
-#        root: ${{github.workspace}}/build/src/
-#        excludes: |
-#          exaNBody
+#        root:  ${{github.workspace}}/
+        root: ${{github.workspace}}/build/src/
+        excludes: |
+          exaNBody
 
     - name: Generate a code coverage report part2
       working-directory: ${{github.workspace}}/
