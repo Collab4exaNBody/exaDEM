@@ -1,3 +1,5 @@
+[![CMake](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/cmake.yml/badge.svg)](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/cmake.yml)
+
 # ExaDEM
 
 ![](doc/logo/exaDEMlogo2.png)
