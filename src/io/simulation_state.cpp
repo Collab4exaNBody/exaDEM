@@ -36,7 +36,7 @@ under the License.
 #include <exaDEM/simulation_state.h>
 #include <exaDEM/dem_simulation_state.h>
 #include <exaDEM/traversal.hpp>
-#include <exaDEM/interaction/classifier.hpp>
+#include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/itools/itools.hpp>
 
 // ================== Thermodynamic state compute operator ======================

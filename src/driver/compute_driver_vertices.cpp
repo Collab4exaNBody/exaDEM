@@ -27,7 +27,7 @@ under the License.
 
 #include <exanb/core/basic_types.h>
 #include <mpi.h>
-#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shapes.hpp>
 #include <exaDEM/drivers.h>
 
 namespace exaDEM

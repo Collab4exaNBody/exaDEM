@@ -20,6 +20,7 @@
 # ===================================
 
 add_subdirectory(grid)
+add_subdirectory(shape)
 add_subdirectory(field)
 add_subdirectory(numericalscheme)
 add_subdirectory(forcefield)

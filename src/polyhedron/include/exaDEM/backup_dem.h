@@ -25,7 +25,7 @@ under the License.
 #include <onika/cuda/cuda.h>
 #include <onika/cuda/cuda_math.h>
 #include <exanb/compute/reduce_cell_particles.h>
-#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shapes.hpp>
 
 namespace exaDEM
 {

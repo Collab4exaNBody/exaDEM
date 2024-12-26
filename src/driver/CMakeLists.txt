@@ -14,7 +14,5 @@
 # kind, either express or implied.  see the license for the
 # specific language governing permissions and limitations
 # under the license.
-set(exadem_driver_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exanbExtraStorage exadem_force_field exadem_interaction exadem_grid)
-
-#exanbIO exanbDefBox exanbCompute exadem_grid exadem_numerical_scheme exadem_force_field exadem_io exadem_interaction)
+set(exadem_driver_LINK_LIBRARIES exadem_shape)
 xstamp_add_plugin(exadem_driver ${CMAKE_CURRENT_SOURCE_DIR})

@@ -20,9 +20,9 @@ under the License.
 
 #include <exanb/core/basic_types.h>
 #include <exanb/core/basic_types_operators.h>
-#include <exaDEM/shape/shape.hpp>
+#include <exaDEM/shape.hpp>
 #include <math.h>
-#include <exaDEM/shape/shape_prepro.hpp>
+#include <exaDEM/shape_prepro.hpp>
 #include <exaDEM/type/contact.hpp>
 
 namespace exaDEM
@@ -87,6 +87,21 @@ namespace exaDEM
 
       // === compute vertex position
       return filter_vertex_vertex(rVerlet, vai[i], shpi->m_radius, vaj[j], shpj->m_radius);
+    }
+
+  template<typename VecJ>
+    ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex_v2(
+        const double rVerlet, 
+        const Vec3d &pi, 
+        const double radius,
+        const VecJ &vaj, 
+        const int j, 
+        const shape *shpj)
+    {
+      assert(j < shpj->get_number_of_vertices());
+
+      // === compute vertex position
+      return filter_vertex_vertex(rVerlet, pi, radius, vaj[j], shpj->m_radius);
     }
 
   template<typename VecI, typename VecJ>
@@ -199,6 +214,25 @@ namespace exaDEM
     return filter_vertex_edge_core(rVerlet, pi, radius, vf, vs, rj);
   }
 
+  template<typename VecJ>
+    ONIKA_HOST_DEVICE_FUNC 
+    inline bool filter_vertex_edge(
+        const double rVerlet, 
+        const Vec3d &vi, 
+        const double ri, 
+        const VecJ &vaj, 
+        const int j, 
+        const shape *shpj)
+    {
+      assert(j < shpj->get_number_of_edges());
+
+      auto [first, second] = shpj->get_edge(j);
+      const Vec3d &vf = vaj[first];
+      const Vec3d &vs = vaj[second];
+      double rj = shpj->m_radius;
+      return filter_vertex_edge_core(rVerlet, vi, ri, vf, vs, rj);
+    }
+
   template<typename VecI, typename VecJ>
     ONIKA_HOST_DEVICE_FUNC 
     inline bool filter_vertex_edge(
@@ -285,6 +319,19 @@ namespace exaDEM
   /*****************/
   /* Vertex - Face */
   /*****************/
+  template<typename VecJ>
+    ONIKA_HOST_DEVICE_FUNC 
+    inline bool filter_vertex_face(
+        const double rVerlet, 
+        const Vec3d &vi, 
+        const double ri, 
+        const VecJ &vaj, 
+        const int j, 
+        const shape *shpj)
+    {
+      assert(j < shpj->get_number_of_faces());
+      return filter_vertex_face(rVerlet, vi, ri, get_ptr(vaj), j, shpj);
+    }
 
   template<typename VecI, typename VecJ>
     ONIKA_HOST_DEVICE_FUNC 
@@ -300,6 +347,19 @@ namespace exaDEM
       assert(i < shpi->get_number_of_vertices());
       assert(j < shpj->get_number_of_faces());
       return filter_vertex_face(rVerlet, vai[i], shpi->m_radius, get_ptr(vaj), j, shpj);
+    }
+
+  template<typename VecJ>
+    ONIKA_HOST_DEVICE_FUNC 
+    inline contact detection_vertex_face(
+        const Vec3d &vi, 
+        const double ri, 
+        const VecJ &vaj, 
+        const int j, 
+        const shape *shpj)
+    {
+      assert(j < shpj->get_number_of_faces());
+      return detection_vertex_face_core(vi, ri, get_ptr(vaj), j, shpj);
     }
 
   template<typename VecI, typename VecJ>

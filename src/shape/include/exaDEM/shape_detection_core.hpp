@@ -20,9 +20,9 @@ under the License.
 
 #include <exanb/core/basic_types.h>
 #include <exanb/core/basic_types_operators.h>
-#include <exaDEM/shape/shape.hpp>
+#include <exaDEM/shape.hpp>
 #include <math.h>
-#include <exaDEM/shape/shape_prepro.hpp>
+#include <exaDEM/shape_prepro.hpp>
 #include <exaDEM/type/contact.hpp>
 
 namespace exaDEM

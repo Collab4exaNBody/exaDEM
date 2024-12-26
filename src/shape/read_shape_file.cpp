@@ -26,8 +26,8 @@ under the License.
 #include <exanb/core/basic_types_stream.h>
 #include <onika/memory/allocator.h> // for ONIKA_ASSUME_ALIGNED macro
 #include <exanb/core/particle_type_id.h>
-#include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_reader.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape_reader.hpp>
 
 namespace exaDEM
 {

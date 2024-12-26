@@ -26,7 +26,7 @@ under the License.
 #include <onika/cuda/cuda.h>
 #include <onika/cuda/stl_adaptors.h>
 
-//#include <exaDEM/shape/shape_printer.hpp>
+//#include <exaDEM/shape_printer.hpp>
 
 namespace exaDEM
 {
@@ -500,4 +500,4 @@ namespace exaDEM
 
 }; // namespace exaDEM
 
-#include <exaDEM/shape/shape_prepro.hpp>
+#include <exaDEM/shape_prepro.hpp>

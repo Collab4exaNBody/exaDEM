@@ -26,7 +26,7 @@ under the License.
 #include <exaDEM/driver_base.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/stl_mesh.h>
-#include <exaDEM/shape/shape.hpp>
+#include <exaDEM/shape.hpp>
 #include <exaDEM/stl_mesh_to_driver.h>
 
 namespace exaDEM

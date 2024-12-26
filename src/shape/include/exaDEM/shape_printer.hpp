@@ -18,7 +18,7 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/shape/shape.hpp>
+#include <exaDEM/shape.hpp>
 #include <exanb/core/string_utils.h>
 #include <iostream>
 

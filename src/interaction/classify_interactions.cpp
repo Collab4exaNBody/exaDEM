@@ -27,7 +27,7 @@ under the License.
 #include <exaDEM/classifier/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shapes.hpp>
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM

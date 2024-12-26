@@ -24,7 +24,7 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <memory>
-#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shapes.hpp>
 
 namespace exaDEM
 {

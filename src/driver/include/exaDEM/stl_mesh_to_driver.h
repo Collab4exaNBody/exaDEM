@@ -20,7 +20,7 @@ under the License.
 
 #include <vector>
 #include <exaDEM/stl_mesh_reader.h>
-#include <exaDEM/shape/shape.hpp>
+#include <exaDEM/shape.hpp>
 
 namespace exaDEM
 {

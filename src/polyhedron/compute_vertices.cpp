@@ -26,7 +26,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <memory>
 #include <random>
-#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shapes.hpp>
 #include <exaDEM/compute_vertices.hpp>
 #include <exaDEM/traversal.hpp>
 

@@ -27,8 +27,8 @@ under the License.
 #include <iomanip>
 #include <mpi.h>
 #include <filesystem>
-#include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_reader.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape_reader.hpp>
 
 namespace exaDEM
 {

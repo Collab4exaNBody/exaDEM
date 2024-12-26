@@ -18,8 +18,8 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/shape/shape.hpp>
-#include <exaDEM/shape/shape_detection.hpp>
+#include <exaDEM/shape.hpp>
+#include <exaDEM/shape_detection.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 
 namespace exaDEM
