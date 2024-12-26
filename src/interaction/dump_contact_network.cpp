@@ -34,8 +34,8 @@ under the License.
 
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/interaction/classifier.hpp>
-#include <exaDEM/interaction/classifier_for_all.hpp>
+#include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/classifier/classifier_for_all.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exanb/core/string_utils.h>
 #include <exaDEM/network.hpp>

@@ -23,10 +23,10 @@ under the License.
 #include <exanb/core/grid.h>
 #include <memory>
 #include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/interaction/interactionSOA.hpp>
-#include <exaDEM/interaction/interactionAOS.hpp>
+#include <exaDEM/classifier/interactionSOA.hpp>
+#include <exaDEM/classifier/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/interaction/classifier.hpp>
+#include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/shape/shapes.hpp>
 #include <exaDEM/traversal.hpp>
 

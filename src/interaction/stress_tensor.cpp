@@ -30,10 +30,10 @@ under the License.
 #include <mpi.h>
 
 #include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/interaction/interactionSOA.hpp>
-#include <exaDEM/interaction/interactionAOS.hpp>
-#include <exaDEM/interaction/classifier.hpp>
-#include <exaDEM/interaction/classifier_for_all.hpp>
+#include <exaDEM/classifier/interactionSOA.hpp>
+#include <exaDEM/classifier/interactionAOS.hpp>
+#include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/classifier/classifier_for_all.hpp>
 #include <exaDEM/type/add_contribution_mat3d.hpp>
 
 namespace exaDEM

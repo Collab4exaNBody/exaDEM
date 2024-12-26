@@ -1,6 +1,6 @@
 #pragma once
 
-#include <exaDEM/interaction/classifier.hpp>
+#include <exaDEM/classifier/classifier.hpp>
 
 namespace exaDEM
 {
