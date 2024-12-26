@@ -1,4 +1,5 @@
 [![CMake](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/cmake.yml/badge.svg)](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/cmake.yml)
+[![Spack](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/spack.yml/badge.svg)](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/spack.yml)
 
 # ExaDEM
 
