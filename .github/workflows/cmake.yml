@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4.2.2
+    - uses: actions/checkout@v3
       with:
         persist-credentials: false
     - uses: actions/setup-node@v4
@@ -48,9 +48,10 @@ jobs:
         html-details: true
         html-theme: github.green
         gcov-executable: gcov
-        root: ${{github.workspace}}/build/src/
-        excludes: |
-          exaNBody
+        root:  ${{github.workspace}}/
+#        root: ${{github.workspace}}/build/src/
+#        excludes: |
+#          exaNBody
 
     - name: Generate a code coverage report part2
       working-directory: ${{github.workspace}}/
