@@ -31,6 +31,7 @@ namespace exaDEM
   class AddBall : public OperatorNode
   {
     static constexpr Vec3d null = {0.0, 0.0, 0.0};
+    static constexpr Driver_params default_params = Driver_params();
 
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
@@ -38,6 +39,7 @@ namespace exaDEM
     ADD_SLOT(Vec3d, center, INPUT, REQUIRED, DocString{"Center of the ball"});
     ADD_SLOT(Vec3d, velocity, INPUT, null, DocString{"Ball velocity"});
     ADD_SLOT(Vec3d, vrot, INPUT, null, DocString{"Angular velocity of the ball, default is 0 m.s-"});
+    ADD_SLOT(Driver_params, params, INPUT, default_params, DocString{"List of params, motion type, motion vectors ... "});
 
   public:
     inline std::string documentation() const override final
@@ -50,6 +52,7 @@ namespace exaDEM
     inline void execute() override final
     {
       exaDEM::Ball driver = {*radius, *center, *velocity, *vrot};
+      driver.set_params(*params);
       driver.initialize();
       drivers->add_driver(*id, driver);
     }

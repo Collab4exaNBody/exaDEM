@@ -32,7 +32,6 @@ input_data:
      density: 0.02
   - set_rand_vrot_arot
   - update_inertia
-  - replicate_domain
 
 chunk_neighbors_contact:
   config:

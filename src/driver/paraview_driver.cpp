@@ -24,6 +24,9 @@ under the License.
 #include <memory>
 #include <exaDEM/stl_mesh.h>
 #include <exaDEM/drivers.h>
+#include <exaDEM/paraview_driver.hpp>
+#include <exanb/core/string_utils.h>
+
 
 namespace exaDEM
 {
@@ -44,13 +47,28 @@ namespace exaDEM
     inline void execute() override final
     {
       std::string path = *dir_name + "/ParaviewOutputFiles/";
+
+      std::vector<info_ball> balls;
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
+        if (drivers->type(id) == DRIVER_TYPE::BALL)
+        {
+          exaDEM::Ball &ball = std::get<exaDEM::Ball>(drivers->data(id));
+          balls.push_back({int(id), ball.center, ball.radius, ball.vel});
+        }
         if (drivers->type(id) == DRIVER_TYPE::STL_MESH)
         {
           exaDEM::Stl_mesh &mesh = std::get<exaDEM::Stl_mesh>(drivers->data(id));
           mesh.shp.write_move_paraview(path, *timestep, mesh.center, mesh.quat);
         }
+      }
+ 
+      if( balls.size() > 0 )
+      {
+        std::filesystem::path dir(path);
+        std::string driver_ball_name = "driver_balls_%010d.vtk";
+        driver_ball_name = format_string(driver_ball_name,  *timestep);
+        write_balls_paraview(balls, path, driver_ball_name);
       }
     }
   };
