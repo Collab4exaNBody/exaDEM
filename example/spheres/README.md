@@ -11,6 +11,14 @@ Two test cases demonstrate the use of a rotating drum:
 
 These examples use a perfect cylinder to model the drum.
 
+## Ball
+
+Three test cases to higligth different scenarion with different motions.
+
+- Stationary: This test case represents a scenario where there is no movement, showcasing a static condition.
+- Linear Motion: This case involves motion in a straight line, providing insights into linear stress behaviors.
+- Radial Stress: This scenario examines the effects of radial stress.
+
 ## Cylinder (STL) & Complex Meshes
 
 - **Cylinder with barriers:** Instead of a perfect cylinder, this example uses an STL file representing a cylinder with small barriers: `cylinder_stl/cylinder_stl.msp`.

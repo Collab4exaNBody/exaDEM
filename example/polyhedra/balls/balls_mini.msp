@@ -25,18 +25,18 @@ input_data:
   - inertia_from_shape
 
 setup_drivers:
-  - add_ball:
+  - register_ball:
      id: 0
-     center: [2 m , 2 m, 0 m]
-     radius: 20 m
-  - add_ball:
+     state: {center: [2,2,0], radius: 20}
+     params: { motion_type: STATIONARY }
+  - register_ball:
      id: 1
-     center: [2 m, 2 m, -5 m]
-     radius: 3 m
-  - add_ball:
+     state: {center: [2,2,-5], radius: 3}
+     params: { motion_type: STATIONARY }
+  - register_ball:
      id: 2
-     center: [2 m, 2 m, -20 m]
-     radius: 7 m
+     state: {center: [2,2,-20], radius: 7}
+     params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force
