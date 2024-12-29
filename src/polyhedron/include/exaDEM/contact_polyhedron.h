@@ -360,7 +360,7 @@ namespace exaDEM
               {
                 contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, 
                     item.friction, contact_position, 
-                    driver.center, driver.vel, f, item.moment, driver.vrot,  // particle j
+                    driver.center, driver.get_vel(), f, item.moment, driver.vrot,  // particle j
                     r_i, v_i,  vrot_i       // particle i
                     );
 

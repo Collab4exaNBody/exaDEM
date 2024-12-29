@@ -314,7 +314,7 @@ namespace exaDEM
           const double meff = cell[field::mass][p_i];
           Vec3d f = {0, 0, 0};
           contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, r_i, v_i, f, item.moment, vrot_i, // particle i
-                             driver.center, driver.vel, driver.vrot                                                                                                         // particle j
+                             driver.center, driver.get_vel(), driver.vrot                                                                                                         // particle j
           );
 
           // === For analysis

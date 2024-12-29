@@ -28,18 +28,14 @@ namespace exaDEM
 
   using namespace exanb;
 
-  class AddCylinder : public OperatorNode
+  class RegisterCylinder : public OperatorNode
   {
-    static constexpr Vec3d default_axis = {1.0, 0.0, 1.0};
-    static constexpr Vec3d null = {0.0, 0.0, 0.0};
+    static constexpr Driver_params default_params = Driver_params();
 
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
-    ADD_SLOT(Vec3d, center, INPUT, REQUIRED, DocString{"Center of the cylinder"});
-    ADD_SLOT(Vec3d, axis, INPUT, default_axis, DocString{"Define the plan of the cylinder"});
-    ADD_SLOT(Vec3d, angular_velocity, INPUT, null, DocString{"Angular velocity of the cylinder, default is 0 m.s-"});
-    ADD_SLOT(Vec3d, velocity, INPUT, null, DocString{"Cylinder velocity, could be used in 'expert mode'"});
-    ADD_SLOT(double, radius, INPUT, REQUIRED, DocString{"Radius of the cylinder, positive and should be superior to the biggest sphere radius in the cylinder"});
+    ADD_SLOT(Cylinder_params, state, INPUT, REQUIRED, DocString{"Current cylinder state, default is {radius: REQUIRED, axis: REQUIRED, center: REQUIRED, vel: [0,0,0], vrot: [0,0,0], rv: 0, ra: 0}. You need to specify the radius and center"});
+    ADD_SLOT(Driver_params, params, INPUT, default_params, DocString{"List of params, motion type, motion vectors .... Default is { motion_type: STATIONARY}."});
 
   public:
     inline std::string documentation() const override final
@@ -52,12 +48,12 @@ namespace exaDEM
     inline void execute() override final
     {
       // proj center over axis
-      Vec3d c = (*center) * (*axis);
-      exaDEM::Cylinder driver = {*radius, *axis, c, *velocity, *angular_velocity};
+      exaDEM::Cylinder driver = {*state, *params};
+      driver.initialize();
       drivers->add_driver(*id, driver);
     }
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("add_cylinder", make_simple_operator<AddCylinder>); }
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("register_cylinder", make_simple_operator<RegisterCylinder>); }
 } // namespace exaDEM
