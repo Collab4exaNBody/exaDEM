@@ -33,12 +33,10 @@ input_data:
   - reader1
 
 setup_drivers:
-  - add_cylinder:
+  - register_cylinder:
      id: 0
-     center: [22.5 m, 22.5 m, 22.5 m]
-     axis: [1, 0, 1]
-     radius: 39 m
-     angular_velocity: [0,0.05,0]
+     state: {center: [22.5 m,22.5 m,22.5 m], axis: [1,0,1], radius: 39 m, vrot: [0,0.05,0]}
+     params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force

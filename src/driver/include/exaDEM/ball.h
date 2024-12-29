@@ -66,7 +66,7 @@ namespace YAML
       }
       if( !check_error(node, "radius") ) return false;
       if( !check_error(node, "center") ) return false;
-      v.radius = node["radius"].as<double>();
+      v.radius = node["radius"].as<Quantity>().convert();
       v.center = node["center"].as<Vec3d>();
       if( check(node, "vel") ) { v.vel = node["vel"].as<Vec3d>(); }
       if( check(node, "vrot") ) { v.vrot = node["vrot"].as<Vec3d>(); }

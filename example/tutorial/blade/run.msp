@@ -18,12 +18,10 @@ setup_drivers:
      angular_velocity: [0,0, -0.004]
      velocity: [0,0,-0.0174]
      center: [0,0,1.5]
-  - add_cylinder:
+  - register_cylinder:
      id: 1
-     radius: 25
-     center: [0,0,0] 
-     axis: [1,1,0]
-     angular_velocity: [0,0,0]
+     state: {radius: 25, center: [0,0,0], axis: [1,1,0]}
+     params: { motion_type: STATIONARY }
 
 
 input_data:

@@ -24,12 +24,10 @@ input_data:
   - inertia_from_shape
 
 setup_drivers:
-  - add_cylinder:
+  - register_cylinder:
      id: 0
-     center: [64 m, 4 m, 64 m]
-     axis: [1, 0, 1]
-     radius: 64 m
-     angular_velocity: [0,0,0]
+     state: {center: [64 m,4 m,64 m], axis: [1,0,1], radius: 64 m}
+     params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force

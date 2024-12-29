@@ -54,7 +54,7 @@ namespace YAML
       if( !check_error(node, "radius") ) return false;
       if( !check_error(node, "axis") ) return false;
       if( !check_error(node, "center") ) return false;
-      v.radius = node["radius"].as<double>();
+      v.radius = node["radius"].as<Quantity>().convert();
       v.axis = node["axis"].as<Vec3d>();
       v.center = node["center"].as<Vec3d>();
       if( check(node, "vel") ) { v.vel = node["vel"].as<Vec3d>(); }

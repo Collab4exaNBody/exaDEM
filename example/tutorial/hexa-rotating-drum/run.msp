@@ -11,12 +11,10 @@ input_data:
   - radius_from_shape
 
 setup_drivers:
-  - add_cylinder:
+  - register_cylinder:
      id: 0
-     center: [10, 3.75, 10]
-     axis: [1, 0, 1]
-     radius: 16
-     angular_velocity: [0,0.35,0]
+     state: {center: [10, 3.75, 10], axis: [1, 0, 1], radius: 16, vrot: [0,0.35,0]}
+     params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force
