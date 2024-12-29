@@ -63,7 +63,7 @@ namespace exaDEM
 {
 
   using namespace onika::parallel;
-  class DriverComputeVertices : public OperatorNode
+  class DriverVertices : public OperatorNode
   {
     template<typename Operator>
       struct driver_compute_vertices
@@ -125,7 +125,7 @@ namespace exaDEM
       set_gpu_enabled(!(*force_host));
       for (size_t i = 0; i <size; i++)
       {
-        driver_compute_vertices<DriverComputeVertices> func = {this}; // I don't know how to do it properly
+        driver_compute_vertices<DriverVertices> func = {this}; // I don't know how to do it properly
         auto & drv = drvs.data(i);
         std::visit(func, drv);
       }
@@ -134,6 +134,6 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("compute_driver_vertices", make_simple_operator<DriverComputeVertices>); }
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("driver_vertices", make_simple_operator<DriverVertices>); }
 
 } // namespace exaDEM

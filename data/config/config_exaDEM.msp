@@ -120,7 +120,7 @@ drivers:
   - setup_drivers
   - print_drivers
   - backup_drivers
-  - compute_driver_vertices:
+  - driver_vertices:
      force_host: true
 
 ######## simulation program description #################
