@@ -19,45 +19,52 @@ under the License.
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
-#include <exaDEM/driver_base.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/ball.h>
 
 namespace exaDEM
 {
-
   using namespace exanb;
 
-  class AddBall : public OperatorNode
+  struct force_to_accel
   {
-    static constexpr Vec3d null = {0.0, 0.0, 0.0};
-    static constexpr Driver_params default_params = Driver_params();
+    const double dt;
+    const double mass;
+    void operator()(Ball& arg)
+    {
+      arg.weigth = mass;
+      arg.f_ra(dt);
+      arg.force_to_accel();
+    }
+    void operator()(auto&& arg) { arg.force_to_accel(); }
+  };
 
+
+  class ForceToAccelDriverFunctor : public OperatorNode
+  {
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
-    ADD_SLOT(double, radius, INPUT, REQUIRED, DocString{"Radius of the ball, positive and should be superior to the biggest sphere radius in the ball"});
-    ADD_SLOT(Vec3d, center, INPUT, REQUIRED, DocString{"Center of the ball"});
-    ADD_SLOT(Vec3d, velocity, INPUT, null, DocString{"Ball velocity"});
-    ADD_SLOT(Vec3d, vrot, INPUT, null, DocString{"Angular velocity of the ball, default is 0 m.s-"});
-    ADD_SLOT(Driver_params, params, INPUT, default_params, DocString{"List of params, motion type, motion vectors ... "});
+    ADD_SLOT(double, dt, INPUT, DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT(double, system_mass, INPUT, REQUIRED);
+
 
   public:
     inline std::string documentation() const override final
     {
       return R"EOF(
-        This operator add a ball (boundary condition) to the drivers list.
+          This operator updates driver centers using their velocities. Not that accelerations are not used.
         )EOF";
     }
 
     inline void execute() override final
     {
-      exaDEM::Ball driver = {*radius, *center, *velocity, *vrot};
-      driver.set_params(*params);
-      driver.initialize();
-      drivers->add_driver(*id, driver);
+      force_to_accel func = {*dt, *system_mass};
+      for (size_t id = 0; id < drivers->get_size(); id++)
+      {
+        auto &driver = drivers->data(id);
+        std::visit(func, driver);
+      }
     }
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("add_ball", make_simple_operator<AddBall>); }
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("force_to_accel_driver", make_simple_operator<ForceToAccelDriverFunctor>); }
 } // namespace exaDEM

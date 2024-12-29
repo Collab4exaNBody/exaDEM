@@ -55,6 +55,7 @@ namespace exaDEM
     vector_t<Vec3d> vertices;      /**< Collection of vertices (computed from shp, quat and center). */
     std::vector<list_of_elements> grid_indexes; /**< Grid indices of the STL mesh. */
     std::vector<omp_lock_t> grid_mutexes; /**< Grid indices of the STL mesh. */
+    exanb::Vec3d forces;
 
     /**
      * @brief Get the type of the driver (in this case, STL_MESH).
@@ -104,6 +105,11 @@ namespace exaDEM
       std::filesystem::path full_name = this->shp.m_name;
       this->shp.m_name = full_name.filename();
     }
+
+    ONIKA_HOST_DEVICE_FUNC inline void force_to_accel() {}
+  	ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt) {}
+  	ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt) {}
+
 
     ONIKA_HOST_DEVICE_FUNC 
       inline void update_vertex(int i)

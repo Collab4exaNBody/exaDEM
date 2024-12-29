@@ -75,8 +75,14 @@ namespace exaDEM
 		Vec3d motion_vector = {0,0,0};
 		double motion_start_threshold = 0;
 		double motion_end_threshold = std::numeric_limits<double>::max();
-		double const_vel = 0;
 
+    // Motion: Linear
+		double const_vel = 0;
+    // Motion: Compression
+    double sigma = 0;       /**< used for compressive force */
+    Vec3d forces = {0,0,0}; /**< sum of the forces applied to the ball. */
+    double weigth = 0;     /**< cumulated sum of particle weigth into the simulation or in the driver */
+ 
 		inline bool is_stationary() { return motion_type == STATIONARY; }
 
 		void set_params(Driver_params& in)
@@ -94,6 +100,26 @@ namespace exaDEM
 			return (motion_type == COMPRESSIVE_FORCE || motion_type == LINEAR_COMPRESSIVE_MOTION);
 		}
 
+		inline bool is_force_motion()
+		{
+			return ( motion_type == FORCE_MOTION || motion_type == LINEAR_FORCE_MOTION );
+		}
+
+    // Getter
+    Vec3d sum_forces()
+    {
+      if( motion_type == FORCE_MOTION )
+      {
+        return forces;
+      }
+      if( motion_type == LINEAR_FORCE_MOTION )
+      {
+        return exanb::dot(forces, motion_vector) * motion_vector;
+      }
+      return Vec3d{0,0,0};
+    }
+
+    // Checks
 		bool is_valid_motion_type(const std::vector<MotionType>& valid_motion_types)
 		{
 			auto it = std::find(valid_motion_types.begin(), valid_motion_types.end(), motion_type);
@@ -133,6 +159,15 @@ namespace exaDEM
 					lout << "\033[31m[Warning] You have chosen constant linear motion with zero velocity, please use \"const_vel\" or use the motion type \"STATIONARY\"\033[0m" << std::endl;
 				}
 			}
+
+      if( is_compressive() )
+      {
+        if( sigma == 0 ) 
+        {
+          lout << "\033[31m[Warning] Sigma is to 0.0 while the compressive motion type is set to true.\033[0m" << std::endl;
+        }
+      }
+
 			return true;  // Return true if the motion is coherent
 		}
 
@@ -166,6 +201,10 @@ namespace exaDEM
 						lout << "Velocity (constant): " << const_vel << std::endl;
 					}
 				}
+        if (is_compressive() )
+        {
+				lout << "Sigma: " << sigma << std::endl;
+        }
 			}
 		};
 
@@ -183,6 +222,10 @@ namespace exaDEM
 			{
 				stream << ", const_vel: "   << const_vel;
 			}
+      if( is_compressive() )
+      {
+        stream << ", sigma; " << sigma;
+      }
 			stream  <<" }" << std::endl;
 		}
 
@@ -239,6 +282,16 @@ namespace YAML
 					}
 					if( node["const_vel"] ) v.const_vel = node["const_vel"].as<double>();
 				}
+				if( v.is_compressive() )
+        {
+					if (!node["sigma"])
+					{
+						lerr << "\033[31msigma \033[0m\n";
+						return false;
+					}
+          v.sigma = node["sigma"].as<double>(); 
+          std::cout << v.sigma << std::endl; std::exit(EXIT_FAILURE);
+        }
 			}
 			if( node["motion_start_threshold"] ) v.motion_start_threshold = node["motion_start_threshold"].as<double>();
 			if( node["motion_end_threshold"] ) v.motion_start_threshold = node["motion_end_threshold"].as<double>();

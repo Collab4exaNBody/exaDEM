@@ -25,7 +25,30 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  class PushVelocityToPositionDriver : public OperatorNode
+  struct push_f_v_r
+  {
+    const double dt;
+    void operator()(Ball& arg)
+    {
+      arg.push_f_v_r(dt);
+    }
+
+    void operator()(Surface& arg)
+    {
+      arg.push_f_v_r(dt);
+    }
+
+    void operator()(Stl_mesh& arg)
+    {
+      arg.push_f_v_r(dt);
+    }
+    void operator()(auto&& arg)
+    {
+      /** nothing */
+    }
+  };
+
+  class PushAccelToVelocityDriver : public OperatorNode
   {
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(double, dt, INPUT, DocString{"dt is the time increment of the timeloop"});
@@ -41,14 +64,15 @@ namespace exaDEM
     inline void execute() override final
     {
       double t = *dt;
+      push_f_v_r func = {t};
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
         auto &driver = drivers->data(id);
-        std::visit([t](auto &&arg) { arg.push_v_to_r(t); }, driver);
+        std::visit(func, driver);
       }
     }
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("push_v_to_r_driver", make_simple_operator<PushVelocityToPositionDriver>); }
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("push_f_v_driver", make_simple_operator<PushAccelToVelocityDriver>); }
 } // namespace exaDEM

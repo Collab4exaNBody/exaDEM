@@ -35,6 +35,7 @@ namespace exaDEM
     double vel;               /**< Velocity of the surface. */
     exanb::Vec3d vrot;        /**< Angular velocity of the surface. */
     exanb::Vec3d center_proj; /**< Center position projected on the norm. */
+    exanb::Vec3d forces;
 
     /**
      * @brief Get the type of the driver (in this case, SURFACE).
@@ -89,6 +90,10 @@ namespace exaDEM
       // if( exanb::dot(normal,normal) != 1 )  lout << "Warning, normal vector (surface) is not correctly defined" << std::endl;
     }
 
+
+    ONIKA_HOST_DEVICE_FUNC inline void force_to_accel() {}
+  	ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt) {}
+
     /**
      * @brief Compute offset if we ignore forces apply on this surface.
      * @param t The time step.
@@ -104,11 +109,11 @@ namespace exaDEM
      * @brief Update the position of the wall.
      * @param t The time step.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void push_v_to_r(const double t)
+  	ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt)
     {
-      center = center + t * vel * normal;
-      center_proj = center_proj + t * vel * normal;
-      offset += t * vel;
+      center = center + dt * vel * normal;
+      center_proj = center_proj + dt * vel * normal;
+      offset += dt * vel;
     }
 
     /**

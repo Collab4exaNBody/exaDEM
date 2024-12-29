@@ -34,7 +34,8 @@ namespace exaDEM
     exanb::Vec3d center; /**< Center position of the cylinder. */
     exanb::Vec3d vel;    /**< Velocity of the cylinder. */
     exanb::Vec3d vrot;   /**< Angular velocity of the cylinder. */
-
+    exanb::Vec3d forces;
+    
     /**
      * @brief Get the type of the driver (in this case, CYLINDER).
      * @return The type of the driver.
@@ -73,11 +74,9 @@ namespace exaDEM
      */
     ONIKA_HOST_DEVICE_FUNC inline Vec3d &get_vel() { return vel; }
 
-    /**
-     * @brief Update the position of the ball.
-     * @param t The time step.
-     */
-    ONIKA_HOST_DEVICE_FUNC inline void push_v_to_r(const double t) { center = center + t * vel; }
+    ONIKA_HOST_DEVICE_FUNC inline void force_to_accel() {}
+  	ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt) {}
+  	ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt) { center = center + dt * vel; }
 
     /**
      * @brief Filter function to check if a point is within a certain radius of the cylinder.

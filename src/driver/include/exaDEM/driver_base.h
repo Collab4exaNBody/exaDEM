@@ -20,6 +20,7 @@ under the License.
 #include <exanb/core/basic_types.h>
 #include <string.h>
 #include <tuple>
+#include <exaDEM/driver_params.hpp>
 
 namespace exaDEM
 {
