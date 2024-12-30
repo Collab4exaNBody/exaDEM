@@ -30,17 +30,17 @@ namespace exaDEM
     const double dt;
     void operator()(Ball& arg)
     {
-      arg.push_f_v_r(dt);
+      arg.push_f_v(dt);
     }
 
     void operator()(Surface& arg)
     {
-      arg.push_f_v_r(dt);
+      arg.push_f_v(dt);
     }
 
     void operator()(Stl_mesh& arg)
     {
-      arg.push_f_v_r(dt);
+      arg.push_f_v(dt);
     }
     void operator()(auto&& arg)
     {

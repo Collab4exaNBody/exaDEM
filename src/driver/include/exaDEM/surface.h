@@ -24,19 +24,86 @@ namespace exaDEM
 {
   using namespace exanb;
 
+  using namespace exanb;
+  struct Surface_params
+  {
+    /** Required */
+    double offset = 0;                /**< Offset from the origin along the normal vector. */
+    exanb::Vec3d normal = {0,0,1};    /**< Normal vector of the surface. */
+    exanb::Vec3d center = {0,0,0};    /**< Center position of the surface. */
+    /** optional */
+    double vel = 0;                   /**< Velocity of the surface. */
+    exanb::Vec3d vrot = Vec3d{0,0,0}; /**< Angular velocity of the surface. */
+    double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the ball */
+    double surface = -1;
+    /** no need to dump them */
+    exanb::Vec3d center_proj;         /**< Center position projected on the norm. */
+    double acc = 0;
+  };
+}
+
+namespace YAML
+{
+  using exaDEM::Surface_params;
+  using exaDEM::MotionType;
+  using exanb::lerr;
+  using exanb::Quantity;
+  using exanb::UnityConverterHelper;
+
+  template <> struct convert<Surface_params>
+  {
+    static bool decode(const Node &node, Surface_params &v)
+    {
+      if (!node.IsMap())
+      {
+        return false;
+      }
+      if( !check_error(node, "offset") ) return false;
+      if( !check_error(node, "normal") ) return false;
+      v.offset = node["offset"].as<Quantity>().convert();
+      v.normal = node["normal"].as<Vec3d>();
+      if( check(node, "vel") ) { v.vel = node["vel"].as<Quantity>().convert(); }
+      if( check(node, "vrot") ) { v.vrot = node["vrot"].as<Vec3d>(); }
+      if( check(node, "mass") ) { v.mass = node["mass"].as<double>(); }
+      if( check(node, "surface") ) { v.surface = node["surface"].as<double>(); }
+      if( v.vrot != Vec3d{0,0,0} )
+      { 
+        if( !check_error(node, "center") ) return false;
+        v.center = node["center"].as<Vec3d>();
+      }
+      else
+      {
+        if( check(node, "center") ) 
+        { 
+          v.center = node["center"].as<Vec3d>(); 
+        }
+        else
+        {
+          v.center = v.offset * v.normal;
+        }
+      }
+      return true;
+    }
+  };
+}
+
+namespace exaDEM
+{
+  using namespace exanb;
+
+  const std::vector<MotionType> surface_valid_motion_types = { STATIONARY, LINEAR_MOTION, LINEAR_COMPRESSIVE_MOTION};
+
   /**
    * @brief Struct representing a surface in the exaDEM simulation.
    */
-  struct Surface
+  struct Surface : public Surface_params, Driver_params
   {
-    double offset;            /**< Offset from the origin along the normal vector. */
-    exanb::Vec3d normal;      /**< Normal vector of the surface. */
-    exanb::Vec3d center;      /**< Center position of the surface. */
-    double vel;               /**< Velocity of the surface. */
-    exanb::Vec3d vrot;        /**< Angular velocity of the surface. */
-    exanb::Vec3d center_proj; /**< Center position projected on the norm. */
-    exanb::Vec3d forces;
-
+/*
+    Surface(Surface_params& bp, Driver_params& dp) : Surface_params{bp}, Driver_params()
+    {
+      Driver_params::set_params(dp);
+    }
+*/
     /**
      * @brief Get the type of the driver (in this case, SURFACE).
      * @return The type of the driver.
@@ -52,8 +119,14 @@ namespace exaDEM
       lout << "Offset: " << offset << std::endl;
       lout << "Normal: " << normal << std::endl;
       lout << "Center: " << center << std::endl;
-      lout << "Vel   : " << vel << std::endl;
+      lout << "Vel   : " << exanb::norm(get_vel()) << std::endl;
       lout << "AngVel: " << vrot << std::endl;
+      if ( is_compressive() )
+      {
+        lout << "Acceleration: "<< acc << std::endl;
+        lout << "Surface Value [>0]: "<< surface << std::endl;
+      }
+      Driver_params::print_driver_params();
     }
 
     /**
@@ -63,11 +136,14 @@ namespace exaDEM
     {
       stream << "  - add_surface:" << std::endl;
       stream << "     id: " << id << std::endl;
-      stream << "     offset: " << this->offset << std::endl;
-      stream << "     center: [" << this->center << "]" << std::endl;
-      stream << "     normal: [" << this->normal << "]" << std::endl;
-      stream << "     velocity: " << this->vel << std::endl;
-      stream << "     angular_velocity: [" << this->vrot << "]" << std::endl;
+      stream << "     state: {offset: " << this->offset;;
+      stream << ", center: [" << this->center << "]";
+      stream << ", normal: [" << this->normal << "]";;
+      stream << ", vel: " << exanb::norm(get_vel()); 
+      stream << ", vrot: [" << this->vrot << "]";
+      stream << ", surface: " << surface;
+      stream << "}" << std::endl;
+      Driver_params::dump_driver_params(stream);
     }
 
     /**
@@ -86,19 +162,67 @@ namespace exaDEM
         center += (offset - exanb::dot(center, normal)) * normal;
         lout << "center is re-computed because it doesn't fit with offset, new center is: " << center << " and center_proj is: " << center_proj << std::endl;
       }
-
-      // if( exanb::dot(normal,normal) != 1 )  lout << "Warning, normal vector (surface) is not correctly defined" << std::endl;
+      if( !Driver_params::is_valid_motion_type(surface_valid_motion_types)) std::exit(EXIT_FAILURE);
+      if( !Driver_params::check_motion_coherence()) std::exit(EXIT_FAILURE);
+      if( mass <= 0.0 )
+      {
+        lout << "Please, define a positive mass." << std::endl;
+        std::exit(EXIT_FAILURE);
+      }
+      if( is_linear() )
+      {
+        if( normal != motion_vector )
+        {
+          lout << "\033[32m[Warning: The motion vector of the surface has been adjusted to align with the normal vector, i.e. the motion vecor[" << motion_vector<<"] is now equal to ["<<normal<<"].\033[0m" <<std::endl;
+          motion_vector = normal;
+        }
+      }
+      if( is_compressive() )
+      {
+        if( surface <= 0 )
+        {
+          lout << "\033[31m[Surface Error]: The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl; 
+          std::exit(EXIT_FAILURE);
+        }
+      }
     }
 
 
-    ONIKA_HOST_DEVICE_FUNC inline void force_to_accel() {}
-  	ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt) {}
+    ONIKA_HOST_DEVICE_FUNC inline void force_to_accel() 
+    {
+      if( is_compressive() )
+      { 
+        constexpr double C = 0.5;
+        if( weigth != 0 )
+        {
+          const double s = surface;
+          acc = (exanb::norm(forces) - sigma * s - (0.999 * vel) ) / (weigth * C);
+        }
+        else
+        {
+          acc = 0; 
+        }
+      }
+    }
 
-    /**
-     * @brief Compute offset if we ignore forces apply on this surface.
-     * @param t The time step.
-     */
-    ONIKA_HOST_DEVICE_FUNC inline double compute_pos_from_vel(const double t) { return offset + t * vel; }
+    ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt) 
+    {
+      if ( is_stationary() )
+      {
+        vel = 0;
+      }
+      else
+      {
+        if( is_compressive() )
+        {
+          if( this->sigma != 0 ) vel += 0.5 * dt * acc; 
+        }
+        if( motion_type == LINEAR_MOTION )
+        {
+          vel = this->const_vel; // I prefere reset it 
+        }
+      }
+    }
 
     /**
      * @brief return driver velocity
@@ -109,11 +233,19 @@ namespace exaDEM
      * @brief Update the position of the wall.
      * @param t The time step.
      */
-  	ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt)
+    ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt)
     {
-      center = center + dt * vel * normal;
-      center_proj = center_proj + dt * vel * normal;
-      offset += dt * vel;
+      if( !is_stationary() )
+      {
+        if( motion_type == LINEAR_MOTION )
+        {
+          assert( vel = this->const_vel );  
+        }
+        const double displ = dt * vel + 0.5 * dt * dt * acc;
+        center += displ * normal;
+        offset += displ; 
+        center_proj +=  displ * normal;
+      }
     }
 
     /**

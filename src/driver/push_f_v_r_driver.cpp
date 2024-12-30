@@ -25,29 +25,6 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  struct push_f_v_r
-  {
-    const double dt;
-    void operator()(Ball& arg)
-    {
-      arg.push_f_v_r(dt);
-    }
-
-    void operator()(Surface& arg)
-    {
-      arg.push_f_v_r(dt);
-    }
-
-    void operator()(Stl_mesh& arg)
-    {
-      arg.push_f_v_r(dt);
-    }
-    void operator()(auto&& arg)
-    {
-      /** nothing */
-    }
-  };
-
   class PushAccVelocityToPositionDriver : public OperatorNode
   {
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
@@ -63,12 +40,11 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      double t = *dt;
-      push_f_v_r func = {t};
+      const double& t = *dt;
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        auto &driver = drivers->data(id);
-        std::visit(func, driver);
+        auto& driver = drivers->data(id);
+        std::visit([&t](auto&& arg){arg.push_f_v_r(t);}, driver);
       }
     }
   };

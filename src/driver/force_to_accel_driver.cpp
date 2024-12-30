@@ -36,12 +36,28 @@ namespace exaDEM
       arg.f_ra(dt);
       arg.force_to_accel();
     }
+    void operator()(Surface& arg)
+    {
+      arg.weigth = mass;
+      arg.force_to_accel();
+    }
     void operator()(auto&& arg) { arg.force_to_accel(); }
   };
 
   struct tmp_reduce
   {
     std::tuple<bool, Vec3d> operator()(Ball& arg)
+    {
+      if( arg.is_compressive() || arg.is_force_motion() )
+      {
+        return {true, arg.forces};
+      }
+      else 
+      { 
+        return {false, {0,0,0}};
+      }
+    }
+    std::tuple<bool, Vec3d> operator()(Surface& arg)
     {
       if( arg.is_compressive() || arg.is_force_motion() )
       {

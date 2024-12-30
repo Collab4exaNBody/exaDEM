@@ -30,7 +30,6 @@ namespace exaDEM
 
   class RegisterBall : public OperatorNode
   {
-    static constexpr Vec3d null = {0.0, 0.0, 0.0};
     static constexpr Driver_params default_params = Driver_params();
 
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});

@@ -164,32 +164,6 @@ namespace exaDEM
     }
 
     /**
-     * @brief return driver velocity
-     */
-    ONIKA_HOST_DEVICE_FUNC inline Vec3d &get_vel() { return vel; }
-
-    /**
-     * @brief Update the position of the ball.
-     * @param dt The time step.
-     */
-    ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt) 
-    {
-      if( motion_type == LINEAR_MOTION )
-      {
-        vel = motion_vector * const_vel; // I prefere reset it 
-      }
-      if( is_compressive() )
-      {
-        if( motion_type == COMPRESSIVE_FORCE )
-        {
-          vel = {0,0,0};
-        }      
-        push_ra_rv_to_rad(dt);
-      }
-      center = center + dt * vel; 
-    }
-
-    /**
      * @brief Update the position of the ball.
      * @param dt The time step.
      */
@@ -207,122 +181,151 @@ namespace exaDEM
     }
 
     /**
+     * @brief return driver velocity
+     */
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d &get_vel() { return vel; }
+
+    /**
+     * @brief Update the position of the ball.
+     * @param dt The time step.
+     */
+    ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt) 
+    {
+      if( !is_stationary() )
+      {
+        if( is_compressive() )
+        {
+          push_ra_rv_to_rad(dt);
+        }
+        center = center + dt * vel; 
+      }
+    }
+
+    /**
      * @brief Update the position of the ball.
      * @param dt The time step.
      */
     ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt)
     {
-      if( is_force_motion() )
-      {
-        vel = acc * dt;
-      }
+			if( is_force_motion() )
+			{
+				vel = acc * dt;
+			}
 
-      // update ra
-      if( is_compressive() )
-      {
-        push_ra_to_rv(dt);
-      }
-    }
-    /**
-     * @brief Update the "velocity raduis" of the ball.
-     * @param t The time step.
-     */
-    ONIKA_HOST_DEVICE_FUNC inline void push_ra_to_rv(const double dt) 
-    {
-      if( is_compressive() )
-      {
-        if( sigma != 0 ) rv += 0.5 * dt * ra;
-      }
-    }
+			if( motion_type == LINEAR_MOTION )
+			{
+				vel = motion_vector * const_vel; // I prefere reset it 
+			}
 
-    /**
-     * @brief Update the "velocity raduis" of the ball.
-     * @param t The time step.
-     */
-    ONIKA_HOST_DEVICE_FUNC inline void push_ra_rv_to_rad(const double dt) 
-    {
-      if( is_compressive() )
-      {
-        radius += dt * rv + 0.5 * dt * dt * ra;
-      }
-    }
+			if( is_compressive() )
+			{
+				if( motion_type == COMPRESSIVE_FORCE )
+				{
+					vel = {0,0,0};
+				}
+				push_ra_to_rv(dt);
+			}
+		}
+		/**
+		 * @brief Update the "velocity raduis" of the ball.
+		 * @param t The time step.
+		 */
+		ONIKA_HOST_DEVICE_FUNC inline void push_ra_to_rv(const double dt) 
+		{
+			if( is_compressive() )
+			{
+				if( sigma != 0 ) rv += 0.5 * dt * ra;
+			}
+		}
 
-    /**
-     * @brief Compute the surface.
-     */
-    ONIKA_HOST_DEVICE_FUNC inline 
-      double surface()
-      {
-        const double pi = 4*atan(1);
-        return 4 * pi * radius * radius;
-      }
+		/**
+		 * @brief Update the "velocity raduis" of the ball.
+		 * @param t The time step.
+		 */
+		ONIKA_HOST_DEVICE_FUNC inline void push_ra_rv_to_rad(const double dt) 
+		{
+			if( is_compressive() )
+			{
+				radius += dt * rv + 0.5 * dt * dt * ra;
+			}
+		}
 
-    /**
-     * @brief Update the "velocity radius" of the ball.
-     * @param t The time step.
-     */
-    ONIKA_HOST_DEVICE_FUNC inline void f_ra(const double dt) 
-    {
-      if( is_compressive() )
-      {
-        constexpr double C = 0.5; // I don't remember why, ask Lhassan
-        if( weigth != 0 ) 
-        {
-          const double s = surface();
-          // forces and weigth are defined in Driver_params
-          ra = ( exanb::norm(forces) - sigma * s - (0.999 * rv) ) / (weigth * C); 
-          //ra = ( - sum_f - sigma * s - (damprate * rv) ) / (weigth * C);
-        }
-      }
-    }
+		/**
+		 * @brief Compute the surface.
+		 */
+		ONIKA_HOST_DEVICE_FUNC inline 
+			double surface()
+			{
+				const double pi = 4*atan(1);
+				return 4 * pi * radius * radius;
+			}
+
+		/**
+		 * @brief Update the "velocity radius" of the ball.
+		 * @param t The time step.
+		 */
+		ONIKA_HOST_DEVICE_FUNC inline void f_ra(const double dt) 
+		{
+			if( is_compressive() )
+			{
+				constexpr double C = 0.5; // I don't remember why, ask Lhassan
+				if( weigth != 0 ) 
+				{
+					const double s = surface();
+					// forces and weigth are defined in Driver_params
+					ra = ( exanb::norm(forces) - sigma * s - (0.999 * rv) ) / (weigth * C); 
+					//ra = ( - sum_f - sigma * s - (damprate * rv) ) / (weigth * C);
+				}
+			}
+		}
 
 
-    /**
-     * @brief Filter function to check if a point is within a certain radius of the ball.
-     * @param rcut The cut-off radius.
-     * @param p The point to check.
-     * @return True if the point is within the cut-off radius of the ball, false otherwise.
-     */
-    ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const exanb::Vec3d &p)
-    {
-      const Vec3d dist = center - p;
-      double d = radius - norm(dist);
-      return std::fabs(d) <= rcut;
-    }
+		/**
+		 * @brief Filter function to check if a point is within a certain radius of the ball.
+		 * @param rcut The cut-off radius.
+		 * @param p The point to check.
+		 * @return True if the point is within the cut-off radius of the ball, false otherwise.
+		 */
+		ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const exanb::Vec3d &p)
+		{
+			const Vec3d dist = center - p;
+			double d = radius - norm(dist);
+			return std::fabs(d) <= rcut;
+		}
 
-    /**
-     * @brief Detects collision between a vertex and the ball.
-     * @param rcut The cut-off radius.
-     * @param p The point to check for collision.
-     * @return A tuple containing:
-     *         - A boolean indicating whether a collision occurred.
-     *         - The penetration depth (negative if inside the ball).
-     *         - The normal vector pointing from the collision point to the center of the ball.
-     *         - The contact position on the surface of the ball.
-     */
-    ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d &p)
-    {
-      Vec3d point_to_center = center - p;
-      double d = norm(point_to_center);
-      double dn;
-      Vec3d n = point_to_center / d;
-      if (d > radius)
-      {
-        dn = d - radius - rcut;
-        n = (-1) * n;
-      }
-      else
-        dn = radius - d - rcut;
+		/**
+		 * @brief Detects collision between a vertex and the ball.
+		 * @param rcut The cut-off radius.
+		 * @param p The point to check for collision.
+		 * @return A tuple containing:
+		 *         - A boolean indicating whether a collision occurred.
+		 *         - The penetration depth (negative if inside the ball).
+		 *         - The normal vector pointing from the collision point to the center of the ball.
+		 *         - The contact position on the surface of the ball.
+		 */
+		ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d &p)
+		{
+			Vec3d point_to_center = center - p;
+			double d = norm(point_to_center);
+			double dn;
+			Vec3d n = point_to_center / d;
+			if (d > radius)
+			{
+				dn = d - radius - rcut;
+				n = (-1) * n;
+			}
+			else
+				dn = radius - d - rcut;
 
-      if (dn > 0)
-      {
-        return {false, 0.0, Vec3d(), Vec3d()};
-      }
-      else
-      {
-        Vec3d contact_position = p - n * (rcut + 0.5 * dn);
-        return {true, dn, n, contact_position};
-      }
-    }
-  };
+			if (dn > 0)
+			{
+				return {false, 0.0, Vec3d(), Vec3d()};
+			}
+			else
+			{
+				Vec3d contact_position = p - n * (rcut + 0.5 * dn);
+				return {true, dn, n, contact_position};
+			}
+		}
+	};
 } // namespace exaDEM
