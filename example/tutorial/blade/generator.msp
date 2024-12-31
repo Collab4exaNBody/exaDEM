@@ -40,17 +40,15 @@ add_generated_particles:
   - init_fields
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: exaDEM-Data/stl_files/mod_base.shp
      center: [0,0,-20] 
      minskowski: 0.01
-  - add_cylinder:
+  - register_cylinder:
      id: 1
-     radius: 25
-     center: [0,0,0] 
-     axis: [1,1,0]
-     angular_velocity: [0,0,0]
+     state: {radius: 25, center: [0,0,0], axis: [1,1,0]}
+     params: { motion_type: STATIONARY }
 
 
 input_data:

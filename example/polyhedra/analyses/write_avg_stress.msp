@@ -22,7 +22,7 @@ input_data:
   - inertia_from_shape
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: box_avg_stress.stl
      minskowski: 0.01

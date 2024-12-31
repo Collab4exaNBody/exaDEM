@@ -19,36 +19,40 @@ under the License.
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
+#include <exaDEM/driver_base.h>
 #include <exaDEM/drivers.h>
+#include <exaDEM/ball.h>
 
 namespace exaDEM
 {
+
   using namespace exanb;
 
-  class PushVelocityToPositionDriver : public OperatorNode
+  class RegisterBall : public OperatorNode
   {
+    static constexpr Driver_params default_params = Driver_params();
+
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(double, dt, INPUT, DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
+    ADD_SLOT(Ball_params, state, INPUT, REQUIRED, DocString{"Current ball state, default is {radius: REQUIRED, center: REQUIRED, vel: [0,0,0], vrot: [0,0,0], rv: 0, ra: 0}. You need to specify the radius and center"});
+    ADD_SLOT(Driver_params, params, INPUT, default_params, DocString{"List of params, motion type, motion vectors .... Default is { motion_type: STATIONARY}."});
 
   public:
     inline std::string documentation() const override final
     {
       return R"EOF(
-          This operator updates driver centers using their velocities. Not that accelerations are not used.
+        This operator add a ball (boundary condition) to the drivers list.
         )EOF";
     }
 
     inline void execute() override final
     {
-      double t = *dt;
-      for (size_t id = 0; id < drivers->get_size(); id++)
-      {
-        auto &driver = drivers->data(id);
-        std::visit([t](auto &&arg) { arg.push_v_to_r(t); }, driver);
-      }
+      exaDEM::Ball driver(*state, *params);
+      driver.initialize();
+      drivers->add_driver(*id, driver);
     }
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("push_v_to_r_driver", make_simple_operator<PushVelocityToPositionDriver>); }
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("register_ball", make_simple_operator<RegisterBall>); }
 } // namespace exaDEM

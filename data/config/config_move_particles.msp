@@ -58,7 +58,7 @@ grid_post_processing: grid_memory_compact
 
 compute_all_vertices:
   - compute_new_vertices
-  - compute_driver_vertices:
+  - driver_vertices:
      force_host: true
 
 ghost_full_update:
@@ -157,7 +157,7 @@ update_particles_fast_body:
        serialize_pack_send: true
        wait_all: true
     - compute_new_vertices
-    - compute_driver_vertices:
+    - driver_vertices:
        force_host: false
 
 update_particles_fast:

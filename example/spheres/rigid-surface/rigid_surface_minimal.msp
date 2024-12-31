@@ -20,10 +20,10 @@ input_data:
   - update_inertia
 
 setup_drivers:
-  - add_surface:
+  - register_surface:
      id: 0
-     normal: [0,0,1]
-     offset: -0.5
+     state: {normal: [0,0,1], offset: -0.5}
+     params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force

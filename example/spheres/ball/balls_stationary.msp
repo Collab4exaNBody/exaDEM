@@ -5,16 +5,16 @@ includes:
 
 io_tree:
   - io_config:
-     dir_name: "RotatingDrumNoPeriodicDir"
+     dir_name: "SpheresBallsStationaryMotionDir"
 
 input_data:
   - init_rcb_grid
   - lattice:
       structure: SC
       types: [ 0 ]
-      size: [ 1.0 m , 1.0 m , 1.0 m ]
+      size: [ 1.5 , 1.5 , 1.5 ]
   - set_radius:
-     rad: 0.5 m
+     rad: 0.5
   - set_quaternion
   - set_rand_velocity:
      var: 0.1
@@ -23,26 +23,19 @@ input_data:
      density: 0.02
   - set_rand_vrot_arot
   - update_inertia
-  - replicate_domain
-
-chunk_neighbors_contact:
-  config:
-    chunk_size: 1
 
 setup_drivers:
-  - register_cylinder:
-     id: 2
-     state: {radius: 22 m, center: [15 m,15 m,15 m], axis: [1,0,1], vrot: [0,0.25,0]}
-     params: { motion_type: STATIONARY }
-  - register_surface:
-     id: 1
-     normal: [0,1,0]
-     state: {offset: -0.8, center: [15 m,-0.8 m,15 m], vel: 0 m/s, vrot: [0,0.25,0]}
-     params: { motion_type: STATIONARY }
-  - register_surface:
+  - register_ball:
      id: 0
-     normal: [0,1,0]
-     state: {offset: 30.8 m, center: [15,30.8,15], vel: 0 m/s, vrot: [0,0.25,0]}
+     state: {center: [2,2,0], radius: 20}
+     params: { motion_type: STATIONARY }
+  - register_ball:
+     id: 1
+     state: {center: [2,2,-5], radius: 3}
+     params: { motion_type: STATIONARY }
+  - register_ball:
+     id: 2
+     state: {center: [2,2,-20], radius: 7}
      params: { motion_type: STATIONARY }
 
 compute_force:
@@ -53,17 +46,16 @@ compute_force:
      config_driver: { rcut: 0.0 m , dncut: 1.0 m, kn: 1000, kt: 800, kr: 0.0, fc: 0.05, mu: 0.3, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2.5 m
+  cell_size: 2.0 m
   periodic: [false,false,false]
-  grid_dims: [12, 12, 12]
-  bounds: [[0 m ,0 m, 0 m],[30 m, 30 m, 30 m]]
+  grid_dims: [3, 3, 3]
+  bounds: [[0 m ,0 m, 0 m], [6 m, 6 m, 6 m]]
   expandable: true
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 20000
+  simulation_end_iteration: 15000
   simulation_log_frequency: 1000
-  simulation_paraview_frequency: 1000
-  dt: 0.0005 
+  simulation_paraview_frequency: 400
+  dt: 0.0005 s 
   rcut_inc: 0.4 m
-

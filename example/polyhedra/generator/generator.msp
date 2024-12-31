@@ -34,11 +34,10 @@ input_data:
   - init_new_particles
 
 setup_drivers:
-  - add_cylinder:
+  - register_cylinder:
      id: 0
-     center: [5 m, 5 m, 5 m]
-     axis: [1, 0, 1]
-     radius: 8 m 
+     state: {center: [5 m,5 m,5 m], axis: [1,0,1], radius: 8 m}
+     params: { motion_type: STATIONARY }
 
 add_generated_particles:
   - add_particles

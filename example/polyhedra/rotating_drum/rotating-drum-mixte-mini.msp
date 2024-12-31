@@ -27,18 +27,14 @@ input_data:
   - set_quaternion
   - inertia_from_shape
 
-
 input_data:
   - reader1
 
 setup_drivers:
-  - add_cylinder:
+  - register_cylinder:
      id: 0
-     center: [3.75 m , 3.75 m , 3.75 m ]
-     axis: [1, 0, 1]
-     radius: 6 m
-     angular_velocity: [0,0.2,0]
-
+     state: {center: [3.75 m,3.75 m,3.75 m], axis: [1, 0, 1], radius: 6 m, vrot: [0,0.2,0]}
+     params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force

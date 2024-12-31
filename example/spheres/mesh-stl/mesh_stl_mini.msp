@@ -30,11 +30,11 @@ input_data:
   - reader1
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: mesh.stl
      minskowski: 0.0001 m
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 1
      filename: cube.stl
      minskowski: 0.0001 m

@@ -28,11 +28,10 @@ input_data:
   - inertia_from_shape
 
 setup_drivers:
-  - add_cylinder:
+  - register_cylinder:
      id: 0
-     center: [5 m, 5 m , 5 m ]
-     axis: [1, 0, 1]
-     radius: 5 m
+     state: {center: [5 m,5 m,5 m], axis: [1,0,1], radius: 5 m}
+     params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force

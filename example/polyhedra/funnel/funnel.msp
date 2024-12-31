@@ -25,11 +25,11 @@ input_data:
 
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: box.stl
      minskowski: 0.01
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 1
      filename: funnel.stl
      minskowski: 0.01

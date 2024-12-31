@@ -47,6 +47,13 @@ namespace exaDEM
      * @param add Rvalue reference to the source Vec3d whose components are to be added.
      */
     ONIKA_HOST_DEVICE_FUNC
+      inline void lockAndAdd(Vec3d &val, Vec3d &add)
+      {
+        ONIKA_CU_ATOMIC_ADD(val.x, add.x);
+        ONIKA_CU_ATOMIC_ADD(val.y, add.y);
+        ONIKA_CU_ATOMIC_ADD(val.z, add.z);
+      }
+    ONIKA_HOST_DEVICE_FUNC
       inline void lockAndAdd(Vec3d &val, Vec3d &&add)
       {
         ONIKA_CU_ATOMIC_ADD(val.x, add.x);
@@ -246,6 +253,8 @@ namespace exaDEM
           lockAndAdd(cell[field::fx][p], f.x);
           lockAndAdd(cell[field::fy][p], f.y);
           lockAndAdd(cell[field::fz][p], f.z);
+
+          lockAndAdd( driver.forces, -f);
         }
         else
         {
@@ -343,6 +352,7 @@ namespace exaDEM
                 lockAndAdd(cell[field::fx][p_i], f.x);
                 lockAndAdd(cell[field::fy][p_i], f.y);
                 lockAndAdd(cell[field::fz][p_i], f.z);
+                lockAndAdd( driver.forces, -f);
               }
 
               //  j to i 
@@ -350,7 +360,7 @@ namespace exaDEM
               {
                 contact_force_core(dn, n, dt, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, 
                     item.friction, contact_position, 
-                    driver.center, driver.vel, f, item.moment, driver.vrot,  // particle j
+                    driver.center, driver.get_vel(), f, item.moment, driver.vrot,  // particle j
                     r_i, v_i,  vrot_i       // particle i
                     );
 
@@ -362,7 +372,9 @@ namespace exaDEM
                 lockAndAdd(cell[field::fy][p_i], -f.y);
                 lockAndAdd(cell[field::fz][p_i], -f.z);
                 item.friction = -item.friction;
+                lockAndAdd( driver.forces, f);
               }
+ 
             }
             else
             {

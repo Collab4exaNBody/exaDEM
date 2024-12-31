@@ -54,6 +54,7 @@ namespace exaDEM
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
     ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(SimulationState, simulation_state, OUTPUT);
+    ADD_SLOT(double, system_mass, OUTPUT);
 
     // DEM data
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
@@ -160,6 +161,9 @@ namespace exaDEM
       sim_info.set_active_interaction_count(active_interactions);
       sim_info.set_interaction_count(total_interactions);
       sim_info.set_dn(dn);
+
+      // for other operators
+      *system_mass = mass;
     }
   };
 
