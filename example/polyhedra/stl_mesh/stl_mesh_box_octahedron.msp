@@ -29,7 +29,7 @@ input_data:
   - reader1
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: box_for_octa.stl
      minskowski: 0.01

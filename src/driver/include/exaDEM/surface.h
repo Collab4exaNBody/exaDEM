@@ -134,7 +134,7 @@ namespace exaDEM
      */
     void dump_driver(int id, std::stringstream &stream)
     {
-      stream << "  - add_surface:" << std::endl;
+      stream << "  - register_surface:" << std::endl;
       stream << "     id: " << id << std::endl;
       stream << "     state: {offset: " << this->offset;;
       stream << ", center: [" << this->center << "]";

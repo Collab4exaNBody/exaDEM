@@ -5,7 +5,7 @@ includes:
 
 io_tree:
   - io_config:
-     dir_name: "SpheresMeshStlDir"
+     dir_name: "SpheresMeshStlLinearMotionDir"
 
 reader1:
   - read_xyz:
@@ -26,6 +26,8 @@ reader1:
 setup_drivers:
   - register_stl_mesh:
      id: 0
+     state: {center: [0.4,0,0]}
+     params: { motion_type: LINEAR_MOTION, motion_vector: [-1,0,0], const_vel: 0.5 }
      filename: mesh.stl
      minskowski: 0.001 m
   - register_stl_mesh:
@@ -43,8 +45,8 @@ compute_force:
      mu: 0.0000015
   - contact_sphere:
      symetric: true
-     config: { rcut: 0.0 m , dncut: 0.003 m, kn: 1000, kt: 1000, kr: 0.1, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
-     config_driver: { rcut: 0.0 m , dncut: 0.003 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.3} 
+     config: { rcut: 0.0 m , dncut: 0.00 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
+     config_driver: { rcut: 0.0 m , dncut: 0.00 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.0, mu: 0.5, damp_rate: 0.3} 
 
 domain:
   cell_size: 0.1 m
@@ -54,7 +56,7 @@ global:
   simulation_dump_frequency: -1
   simulation_end_iteration: 20000
   simulation_log_frequency: 100
-  simulation_paraview_frequency: 1000
+  simulation_paraview_frequency: 200
   dt: 0.0001 s
   rcut_inc: 0.0025 m
   enable_stl_mesh: true

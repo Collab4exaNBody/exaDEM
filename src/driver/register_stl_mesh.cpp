@@ -37,11 +37,12 @@ namespace exaDEM
   class RegisterSTLMesh : public OperatorNode
   {
     static constexpr Driver_params default_params = Driver_params();
+    static constexpr Stl_params default_stl_mesh_params = Stl_params();
 
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
     ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"Input filename"});
-    ADD_SLOT(Stl_params, state, INPUT, REQUIRED, DocString{""});
+    ADD_SLOT(Stl_params, state, INPUT, default_stl_mesh_params, DocString{"Define the center, velocity, angular velocity and the orientatation. Default is: state: {center: [0,0,0], vel: [0,0,0], vrot: [0,0,0], quat: [1,0,0,0]}."});
     ADD_SLOT(Driver_params, params, INPUT, default_params, DocString{"List of params, motion type, motion vectors .... Default is { motion_type: STATIONARY}."});
     ADD_SLOT(double, minskowski, INPUT, REQUIRED, DocString{"Minskowski radius value"});
     ADD_SLOT(double, scale, INPUT, 1.0, DocString{"Scale your dtl mesh"});
@@ -71,7 +72,7 @@ namespace exaDEM
         is_shp = true;
       if ((is_stl == false) && (is_shp == false))
       {
-        lout << "Wrong file extension used in add_stl_mesh, available formats: [shp or stl]" << std::endl;
+        lout << "Wrong file extension used in register_stl_mesh, available formats: [shp or stl]" << std::endl;
         std::abort();
       }
       if ((is_stl == true) && (is_shp == true))

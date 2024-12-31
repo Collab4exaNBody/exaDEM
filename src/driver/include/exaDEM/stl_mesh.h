@@ -70,7 +70,7 @@ namespace YAML
       {
         return false;
       }
-      if( check(node, "center") ) { v.vel = node["center"].as<Vec3d>(); }
+      if( check(node, "center") ) { v.center = node["center"].as<Vec3d>(); }
       if( check(node, "vel") )    { v.vel = node["vel"].as<Vec3d>(); }
       if( check(node, "vrot") )   { v.vrot = node["vrot"].as<Vec3d>(); }
       if( check(node, "mass") ) { v.mass = node["mass"].as<double>(); }
@@ -216,13 +216,13 @@ namespace exaDEM
 
 		ONIKA_HOST_DEVICE_FUNC inline bool stationary()
 		{
-			return is_stationary();
+			return is_stationary() && (vrot == Vec3d{0,0,0});
 		}
 
 		void dump_driver(int id, std::string path, std::stringstream &stream)
 		{
 			std::string filename = path + this->shp.m_name + ".shp";
-			stream << "  - add_stl_mesh:" << std::endl;
+			stream << "  - register_stl_mesh:" << std::endl;
 			stream << "     id: " << id << std::endl;
 			stream << "     filename: " << filename << std::endl;
 			stream << "     minskowski: " << this->shp.m_radius << std::endl;
@@ -236,7 +236,7 @@ namespace exaDEM
 				stream << ",mass: " << this->mass;
 			}
 			stream << "}" <<std::endl;
-			Driver_params::print_driver_params();
+      Driver_params::dump_driver_params(stream);
 			write_shp(this->shp, filename);
 		}
 

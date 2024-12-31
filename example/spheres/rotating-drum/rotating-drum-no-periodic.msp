@@ -42,7 +42,7 @@ setup_drivers:
   - register_surface:
      id: 0
      normal: [0,1,0]
-     state: {offset: 30.8 m, velocity: 0 m/s, center: [15,30.8,15], vel: 0 m/s, vrot: [0,0.25,0]}
+     state: {offset: 30.8 m, center: [15,30.8,15], vel: 0 m/s, vrot: [0,0.25,0]}
      params: { motion_type: STATIONARY }
 
 compute_force:

@@ -34,7 +34,7 @@ reader1:
   - update_inertia
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: mesh.stl
      minskowski: 0.001

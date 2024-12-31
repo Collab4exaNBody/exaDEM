@@ -40,7 +40,7 @@ add_generated_particles:
   - init_fields
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: exaDEM-Data/stl_files/mod_base.shp
      center: [0,0,-20] 
