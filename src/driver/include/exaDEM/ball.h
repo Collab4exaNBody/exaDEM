@@ -273,8 +273,7 @@ namespace exaDEM
 				{
 					const double s = surface();
 					// forces and weigth are defined in Driver_params
-					ra = ( exanb::norm(forces) - sigma * s - (0.999 * rv) ) / (weigth * C); 
-					//ra = ( - sum_f - sigma * s - (damprate * rv) ) / (weigth * C);
+					ra = ( exanb::norm(forces) - sigma * s - (damprate * rv) ) / (weigth * C); 
 				}
 			}
 		}

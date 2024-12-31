@@ -20,6 +20,7 @@ under the License.
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
+#include <exanb/core/domain.h>
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/stl_mesh.h>
@@ -37,6 +38,7 @@ namespace exaDEM
   {
     static constexpr Vec3d null = {0.0, 0.0, 0.0};
 
+    ADD_SLOT(Domain, domain, INPUT, REQUIRED);
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
@@ -49,12 +51,18 @@ namespace exaDEM
       std::string path = *dir_name + "/ParaviewOutputFiles/";
 
       std::vector<info_ball> balls;
+      std::vector<info_surface> surfaces;
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
         if (drivers->type(id) == DRIVER_TYPE::BALL)
         {
           exaDEM::Ball &ball = std::get<exaDEM::Ball>(drivers->data(id));
           balls.push_back({int(id), ball.center, ball.radius, ball.vel});
+        }
+        if (drivers->type(id) == DRIVER_TYPE::SURFACE)
+        {
+          exaDEM::Surface &surface = std::get<exaDEM::Surface>(drivers->data(id));
+          surfaces.push_back({int(id), surface.normal, surface.offset, surface.vel});
         }
         if (drivers->type(id) == DRIVER_TYPE::STL_MESH)
         {
@@ -69,6 +77,13 @@ namespace exaDEM
         std::string driver_ball_name = "driver_balls_%010d.vtk";
         driver_ball_name = format_string(driver_ball_name,  *timestep);
         write_balls_paraview(balls, path, driver_ball_name);
+      }
+      if( surfaces.size() > 0 )
+      {
+        std::filesystem::path dir(path);
+        std::string driver_surface_name = "driver_surfaces_%010d.vtk";
+        driver_surface_name = format_string(driver_surface_name,  *timestep);
+        write_surfaces_paraview(*domain, surfaces, path, driver_surface_name);
       }
     }
   };

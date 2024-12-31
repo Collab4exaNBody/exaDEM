@@ -38,10 +38,10 @@ setup_drivers:
      id: 0
      state: {radius: 44, center: [44,44,44], axis: [1, 1, 0]}
      params: { motion_type: STATIONARY }
-  - add_surface:
+  - register_surface:
      id: 1
-     normal: [0,0,1]
-     offset: -11
+     state: {normal: [0,0,1], offset: -11}
+     params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force

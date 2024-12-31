@@ -80,6 +80,7 @@ namespace exaDEM
     double const_vel = 0;
     // Motion: Compression
     double sigma = 0;       /**< used for compressive force */
+    double damprate = 0;    /**< used for compressive force */
     Vec3d forces = {0,0,0}; /**< sum of the forces applied to the ball. */
     double weigth = 0;     /**< cumulated sum of particle weigth into the simulation or in the driver */
 
@@ -166,6 +167,10 @@ namespace exaDEM
         {
           lout << "\033[31m[Warning] Sigma is to 0.0 while the compressive motion type is set to true.\033[0m" << std::endl;
         }
+        if( damprate <= 0 )
+        {
+          lout << "\033[31m[Warning] Dumprate is to 0.0 while the compressive motion type is set to true.\033[0m" << std::endl;
+        }
       }
 
       return true;  // Return true if the motion is coherent
@@ -204,6 +209,7 @@ namespace exaDEM
         if (is_compressive() )
         {
           lout << "Sigma: " << sigma << std::endl;
+          lout << "Damprate: " << damprate << std::endl;
         }
       }
     };
@@ -225,6 +231,7 @@ namespace exaDEM
       if( is_compressive() )
       {
         stream << ", sigma; " << sigma;
+        stream << ", damprate; " << damprate;
       }
       stream  <<" }" << std::endl;
     }
@@ -293,6 +300,12 @@ namespace YAML
           return false;
         }
         v.sigma = node["sigma"].as<double>(); 
+        if (!node["damprate"])
+        {
+          lerr << "\033[31mdamprate is missing \033[0m\n";
+          return false;
+        }
+        v.damprate = node["damprate"].as<double>(); 
       }
       if( node["motion_start_threshold"] ) v.motion_start_threshold = node["motion_start_threshold"].as<double>();
       if( node["motion_end_threshold"] ) v.motion_start_threshold = node["motion_end_threshold"].as<double>();

@@ -35,7 +35,7 @@ setup_drivers:
   - register_ball:
      id: 0
      state: {center: [0,0,0], radius: 11}
-     params: {motion_type: COMPRESSIVE_FORCE , sigma: 1.0}
+     params: {motion_type: COMPRESSIVE_FORCE , sigma: 1.0, damprate: 0.999}
 
 compute_force:
   - contact_sphere:

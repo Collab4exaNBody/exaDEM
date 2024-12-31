@@ -196,7 +196,7 @@ namespace exaDEM
         if( weigth != 0 )
         {
           const double s = surface;
-          acc = (exanb::norm(forces) - sigma * s - (0.999 * vel) ) / (weigth * C);
+          acc = (exanb::norm(forces) - sigma * s - (damprate * vel) ) / (weigth * C);
         }
         else
         {
