@@ -34,18 +34,15 @@ namespace exaDEM
 
   using namespace exanb;
 
-  class AddSTLMesh : public OperatorNode
+  class RegisterSTLMesh : public OperatorNode
   {
-    static constexpr Vec3d null = {0.0, 0.0, 0.0};
-    static constexpr Quaternion default_quat = {1.0, 0.0, 0.0, 0.0};
+    static constexpr Driver_params default_params = Driver_params();
 
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
     ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"Input filename"});
-    ADD_SLOT(Vec3d, center, INPUT, null, DocString{"Defined but not used"});
-    ADD_SLOT(Vec3d, angular_velocity, INPUT, null, DocString{"Defined but not used"});
-    ADD_SLOT(Vec3d, velocity, INPUT, null, DocString{"Defined but not used"});
-    ADD_SLOT(Quaternion, orientation, INPUT, default_quat, DocString{"Defined but not used"});
+    ADD_SLOT(Stl_params, state, INPUT, REQUIRED, DocString{""});
+    ADD_SLOT(Driver_params, params, INPUT, default_params, DocString{"List of params, motion type, motion vectors .... Default is { motion_type: STATIONARY}."});
     ADD_SLOT(double, minskowski, INPUT, REQUIRED, DocString{"Minskowski radius value"});
     ADD_SLOT(double, scale, INPUT, 1.0, DocString{"Scale your dtl mesh"});
     ADD_SLOT(double, rcut_inc, INPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
@@ -108,7 +105,8 @@ namespace exaDEM
       shp.m_radius = *minskowski;
       //shp.increase_obb(*rcut_inc);
       shp.increase_obb(shp.m_radius);
-      exaDEM::Stl_mesh driver = {*center, *velocity, *angular_velocity, *orientation, shp};
+      exaDEM::Stl_mesh driver = {*state, *params};
+      driver.set_shape(shp);
       driver.initialize();
       drivers->add_driver(*id, driver);
       lout << "=================================" << std::endl;
@@ -116,5 +114,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("add_stl_mesh", make_simple_operator<AddSTLMesh>); }
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("register_stl_mesh", make_simple_operator<RegisterSTLMesh>); }
 } // namespace exaDEM
