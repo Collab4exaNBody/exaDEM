@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 #pragma once
 
 #include <exaDEM/face.h>
@@ -56,16 +56,16 @@ namespace exaDEM
     Face &get_data(const int idx) { return m_data[idx]; }
 
 
-void dumpbytes(const std::vector<char>& v)
-{
-    for (int i=0; i<v.size(); ++i)
+    void dumpbytes(const std::vector<char>& v)
     {
+      for (int i=0; i<v.size(); ++i)
+      {
         printf("%u ", (unsigned char)v[i]);
         if ((i+1) % 16 == 0)
-            printf("\n");
+          printf("\n");
+      }
+      printf("\n");
     }
-    printf("\n");
-}
 
     /**
      * @brief Reads mesh data from an STL file and populates the mesh.
@@ -79,8 +79,8 @@ void dumpbytes(const std::vector<char>& v)
     void operator()(std::string file_name, bool is_binary )
     {
       std::ifstream input;
-			int nv = 0;
-			int nf = 0;
+      int nv = 0;
+      int nf = 0;
       if( is_binary )
       {
         // this part comes from Rockable
@@ -109,51 +109,51 @@ void dumpbytes(const std::vector<char>& v)
           nv += 3;
           nf += 1;
         }
-			}
-			else
-			{
-				input.open(file_name.c_str());
-				std::string first;
-				std::vector<Vec3d> vertices;
-				Vec3d vertex;
-				for (std::string line; getline(input, line);)
-				{
-					input >> first;
-					std::cout << first << std::endl;
-					if (first == "outer")
-					{
-						bool build_face = true;
-						while (build_face)
-						{
-							getline(input, line);
-							input >> first;
-							if (first == "vertex")
-							{
-								input >> vertex.x >> vertex.y >> vertex.z;
-								vertices.push_back(vertex);
-								nv++;
-							}
-							else if (first != "endloop")
-							{
-								std::cout << "error when reading stl file, it should be endloop and not " << first << std::endl;
-								build_face = false;
-							}
-							else
-							{
-								build_face = false;
-							}
-						}
-						Face tmp(vertices);
-						this->add_face(tmp);
-						vertices.clear();
-						nf++;
-					}
-				}
-			}
-			lout << "========= STL Mesh ==============" << std::endl;
-			lout << "Name     = " << file_name << std::endl;
-			ldbg << "Vertices = " << nv << std::endl;
-			ldbg << "Faces    = " << nf << std::endl;
-		}
-};
+      }
+      else
+      {
+        input.open(file_name.c_str());
+        std::string first;
+        std::vector<Vec3d> vertices;
+        Vec3d vertex;
+        for (std::string line; getline(input, line);)
+        {
+          input >> first;
+          std::cout << first << std::endl;
+          if (first == "outer")
+          {
+            bool build_face = true;
+            while (build_face)
+            {
+              getline(input, line);
+              input >> first;
+              if (first == "vertex")
+              {
+                input >> vertex.x >> vertex.y >> vertex.z;
+                vertices.push_back(vertex);
+                nv++;
+              }
+              else if (first != "endloop")
+              {
+                std::cout << "error when reading stl file, it should be endloop and not " << first << std::endl;
+                build_face = false;
+              }
+              else
+              {
+                build_face = false;
+              }
+            }
+            Face tmp(vertices);
+            this->add_face(tmp);
+            vertices.clear();
+            nf++;
+          }
+        }
+      }
+      lout << "========= STL Mesh ==============" << std::endl;
+      lout << "Name     = " << file_name << std::endl;
+      ldbg << "Vertices = " << nv << std::endl;
+      ldbg << "Faces    = " << nf << std::endl;
+    }
+  };
 } // namespace exaDEM
