@@ -55,6 +55,18 @@ namespace exaDEM
      */
     Face &get_data(const int idx) { return m_data[idx]; }
 
+
+void dumpbytes(const std::vector<char>& v)
+{
+    for (int i=0; i<v.size(); ++i)
+    {
+        printf("%u ", (unsigned char)v[i]);
+        if ((i+1) % 16 == 0)
+            printf("\n");
+    }
+    printf("\n");
+}
+
     /**
      * @brief Reads mesh data from an STL file and populates the mesh.
      *
@@ -64,50 +76,84 @@ namespace exaDEM
      *
      * @param file_name The name of the STL file to read.
      */
-    void operator()(std::string file_name)
+    void operator()(std::string file_name, bool is_binary )
     {
-      std::ifstream input(file_name.c_str());
-      std::string first;
-      std::vector<Vec3d> vertices;
-      Vec3d vertex;
-      int nv = 0;
-      int nf = 0;
-      for (std::string line; getline(input, line);)
+      std::ifstream input;
+			int nv = 0;
+			int nf = 0;
+      if( is_binary )
       {
-        input >> first;
-        if (first == "outer")
+        // this part comes from Rockable
+        input.open(file_name.c_str(), std::ifstream::binary | std::ifstream::in);
+        uint8_t head[80];
+        input.read((char*)&head, sizeof(uint8_t) * 80);
+        uint32_t nb_triangles;
+        input.read((char*)&nb_triangles, sizeof(uint32_t));
+
+        uint16_t osef;
+        struct float3d { float x; float y; float z;};
+        float3d normal, v1, v2, v3;
+        std::vector<Vec3d> vertices(3);
+        for (uint32_t t = 0; t < nb_triangles; t++) 
         {
-          bool build_face = true;
-          while (build_face)
-          {
-            getline(input, line);
-            input >> first;
-            if (first == "vertex")
-            {
-              input >> vertex.x >> vertex.y >> vertex.z;
-              vertices.push_back(vertex);
-              nv++;
-            }
-            else if (first != "endloop")
-            {
-              std::cout << "error when reading stl file, it should be endloop and not " << first << std::endl;
-              build_face = false;
-            }
-            else
-            {
-              build_face = false;
-            }
-          }
-          Face tmp(vertices);
-          this->add_face(tmp);
-          vertices.clear();
-          nf++;
+          input.read((char*)&normal, sizeof(float3d));
+          input.read((char*)&v1, sizeof(float3d));
+          input.read((char*)&v2, sizeof(float3d));
+          input.read((char*)&v3, sizeof(float3d));
+          input.read((char*)&osef, sizeof(uint16_t));
+          vertices[0] = {v1.x, v1.y, v1.z};
+          vertices[1] = {v2.x, v2.y, v2.z};
+          vertices[2] = {v3.x, v3.y, v3.z};
+          Face face(vertices);
+          add_face(face);
+          nv += 3;
+          nf += 1;
         }
-      }
-      lout << "========= STL Mesh ==============" << std::endl;
-      lout << "Name     = " << file_name << std::endl;
-      ldbg << "Vertices = " << nv << std::endl;
-      ldbg << "Faces    = " << nf << std::endl;
-    }
-  };
+			}
+			else
+			{
+				input.open(file_name.c_str());
+				std::string first;
+				std::vector<Vec3d> vertices;
+				Vec3d vertex;
+				for (std::string line; getline(input, line);)
+				{
+					input >> first;
+					std::cout << first << std::endl;
+					if (first == "outer")
+					{
+						bool build_face = true;
+						while (build_face)
+						{
+							getline(input, line);
+							input >> first;
+							if (first == "vertex")
+							{
+								input >> vertex.x >> vertex.y >> vertex.z;
+								vertices.push_back(vertex);
+								nv++;
+							}
+							else if (first != "endloop")
+							{
+								std::cout << "error when reading stl file, it should be endloop and not " << first << std::endl;
+								build_face = false;
+							}
+							else
+							{
+								build_face = false;
+							}
+						}
+						Face tmp(vertices);
+						this->add_face(tmp);
+						vertices.clear();
+						nf++;
+					}
+				}
+			}
+			lout << "========= STL Mesh ==============" << std::endl;
+			lout << "Name     = " << file_name << std::endl;
+			ldbg << "Vertices = " << nv << std::endl;
+			ldbg << "Faces    = " << nf << std::endl;
+		}
+};
 } // namespace exaDEM

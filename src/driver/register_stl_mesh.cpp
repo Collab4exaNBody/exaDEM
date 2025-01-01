@@ -45,6 +45,7 @@ namespace exaDEM
     ADD_SLOT(Stl_params, state, INPUT, default_stl_mesh_params, DocString{"Define the center, velocity, angular velocity and the orientatation. Default is: state: {center: [0,0,0], vel: [0,0,0], vrot: [0,0,0], quat: [1,0,0,0]}."});
     ADD_SLOT(Driver_params, params, INPUT, default_params, DocString{"List of params, motion type, motion vectors .... Default is { motion_type: STATIONARY}."});
     ADD_SLOT(double, minskowski, INPUT, REQUIRED, DocString{"Minskowski radius value"});
+    ADD_SLOT(bool, binary_mode, INPUT, false, DocString{"Binary mode"});
     ADD_SLOT(double, scale, INPUT, 1.0, DocString{"Scale your dtl mesh"});
     ADD_SLOT(double, rcut_inc, INPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
 
@@ -59,7 +60,7 @@ namespace exaDEM
     inline void execute() override final
     {
       stl_mesh_reader reader;
-      reader(*filename);
+      reader(*filename, *binary_mode);
       std::string output_name_vtk = *filename;
       std::string old_extension_stl = ".stl";
       std::string old_extension_shp = ".shp";
