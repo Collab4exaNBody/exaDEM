@@ -60,7 +60,7 @@ namespace exaDEM
     inline void execute() override final
     {
       stl_mesh_reader reader;
-      reader(*filename, *binary_mode);
+      reader(*filename, *binary);
       std::string output_name_vtk = *filename;
       std::string old_extension_stl = ".stl";
       std::string old_extension_shp = ".shp";
