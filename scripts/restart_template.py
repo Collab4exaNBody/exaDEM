@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(description='Script so useful.')
 parser.add_argument("--directory", default="ExaDEMOutputDir")
 
 args = parser.parse_args()
+
 Directory = args.directory
 print("Restart directory: " + Directory)
 
@@ -16,15 +17,17 @@ FullCheckPointDir=Directory+CheckPointDir
 
 isExist = os.path.exists(FullCheckPointDir)
 if not isExist:
-	print("There is no folder available for making restart templates.")
+	print("[Error] There is no folder available for making restart templates.")
+	exit()
 
 ShapeFile = FullCheckPointDir + "RestartShapeFile.shp"
 isPolyhedra = os.path.exists(ShapeFile)
 
 if isPolyhedra:
 	print("The folder contains a shape file, so polyhedral mode is enabled.")
+	print("Particle mode: Polyhedra")
 else:
-	print("Sphere mode is enabled")
+	print("Particle mode: Spheres")
 
 
 last_ite = -1 # last iteration
@@ -39,7 +42,8 @@ for f in files:
 
 
 if last_ite == -1:
-	print("Last iteration is not identified")
+	print("[Error] The lastest iteration is not identified.")
+	exit()
 else:
 	print("Last iteration identified: " + str(last_ite))
 
@@ -53,6 +57,7 @@ isDriver = os.path.exists(driver_file)
 # includes
 ## particle type
 ## drivers
+print("Here s a template for restarting your simulation at the last saved iteration: \n")
 
 print("includes:")
 if isPolyhedra:
@@ -62,12 +67,14 @@ else:
 if isDriver:
 	print("  - " + driver_file)
 
+print("")
 
 # input data
 ## shape
 ## restart file
 
 print("input_data:")
+print("  - init_rcb_grid")
 
 if isPolyhedra:
 	print("  - read_shape_file:")
@@ -76,6 +83,6 @@ if isPolyhedra:
 print("  - read_dump_particle_interaction:")
 print("     filename: " + exadem_file) 
 
-
-
+if isPolyhedra:
+	print("  - radius_from_shape")
 
