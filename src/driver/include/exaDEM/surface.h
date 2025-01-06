@@ -188,7 +188,7 @@ namespace exaDEM
     }
 
 
-    ONIKA_HOST_DEVICE_FUNC inline void force_to_accel() 
+    inline void force_to_accel() 
     {
       if( is_compressive() )
       { 
@@ -205,7 +205,7 @@ namespace exaDEM
       }
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt) 
+    inline void push_f_v(const double dt) 
     {
       if ( is_stationary() )
       {
@@ -233,7 +233,7 @@ namespace exaDEM
      * @brief Update the position of the wall.
      * @param t The time step.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt)
+    inline void push_f_v_r(const double dt)
     {
       if( !is_stationary() )
       {

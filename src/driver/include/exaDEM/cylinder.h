@@ -94,7 +94,7 @@ namespace exaDEM
      * @brief Initialize the cylinder.
      * @details This function asserts that the radius of the cylinder is greater than 0.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void initialize()
+    inline void initialize()
     {
       if( !Driver_params::is_valid_motion_type(cylinder_valid_motion_types)) std::exit(EXIT_FAILURE);
       if( !Driver_params::check_motion_coherence()) std::exit(EXIT_FAILURE);

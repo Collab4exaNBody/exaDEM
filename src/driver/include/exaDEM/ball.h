@@ -151,7 +151,7 @@ namespace exaDEM
      * @brief Initialize the ball.
      * @details This function asserts that the radius of the ball is greater than 0.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void initialize() 
+    inline void initialize() 
     {
       if( !Driver_params::is_valid_motion_type(ball_valid_motion_types)) std::exit(EXIT_FAILURE);
       if( !Driver_params::check_motion_coherence()) std::exit(EXIT_FAILURE);
@@ -167,7 +167,7 @@ namespace exaDEM
      * @brief Update the position of the ball.
      * @param dt The time step.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void force_to_accel()
+    inline void force_to_accel()
     {
       if( is_force_motion() )
       {
@@ -189,7 +189,7 @@ namespace exaDEM
      * @brief Update the position of the ball.
      * @param dt The time step.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt) 
+    inline void push_f_v_r(const double dt) 
     {
       if( !is_stationary() )
       {
@@ -205,7 +205,7 @@ namespace exaDEM
      * @brief Update the position of the ball.
      * @param dt The time step.
      */
-    ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt)
+    inline void push_f_v(const double dt)
     {
 			if( is_force_motion() )
 			{
@@ -230,7 +230,7 @@ namespace exaDEM
 		 * @brief Update the "velocity raduis" of the ball.
 		 * @param t The time step.
 		 */
-		ONIKA_HOST_DEVICE_FUNC inline void push_ra_to_rv(const double dt) 
+		inline void push_ra_to_rv(const double dt) 
 		{
 			if( is_compressive() )
 			{
@@ -242,7 +242,7 @@ namespace exaDEM
 		 * @brief Update the "velocity raduis" of the ball.
 		 * @param t The time step.
 		 */
-		ONIKA_HOST_DEVICE_FUNC inline void push_ra_rv_to_rad(const double dt) 
+		inline void push_ra_rv_to_rad(const double dt) 
 		{
 			if( is_compressive() )
 			{
@@ -264,7 +264,7 @@ namespace exaDEM
 		 * @brief Update the "velocity radius" of the ball.
 		 * @param t The time step.
 		 */
-		ONIKA_HOST_DEVICE_FUNC inline void f_ra(const double dt) 
+		inline void f_ra(const double dt) 
 		{
 			if( is_compressive() )
 			{

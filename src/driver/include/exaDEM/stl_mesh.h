@@ -159,7 +159,7 @@ namespace exaDEM
       }
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline void force_to_accel()
+    inline void force_to_accel()
     {
       if( is_force_motion() )
       {
@@ -172,7 +172,7 @@ namespace exaDEM
       }
     }
 
-		ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt)
+		inline void push_f_v(const double dt)
 		{
 			if( is_force_motion() )
 			{
@@ -185,7 +185,7 @@ namespace exaDEM
 			}
 		}
 
-		ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt)
+		inline void push_f_v_r(const double dt)
     {
       if( !is_stationary() )
       {
@@ -214,7 +214,7 @@ namespace exaDEM
 		 */
 		ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion &get_quat() { return quat; }
 
-		ONIKA_HOST_DEVICE_FUNC inline bool stationary()
+		inline bool stationary()
 		{
 			return is_stationary() && (vrot == Vec3d{0,0,0});
 		}
