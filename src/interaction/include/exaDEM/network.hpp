@@ -21,8 +21,8 @@ under the License.
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
-#include <exaDEM/contact_force_parameters.h>
 #include <exaDEM/compute_contact_force.h>
+#include <exaDEM/contact_force_parameters.h>
 #include <vector>
 #include <tuple>
 #include <algorithm>

@@ -57,7 +57,7 @@ namespace exaDEM
       PolyhedraComputeVerticesFunctor func{shps};
       
       size_t* cell_ptr = nullptr;
-      size_t cell_size = -1;
+      size_t cell_size = size_t(-1);
       
       if(traversal_all->iterator)
       {

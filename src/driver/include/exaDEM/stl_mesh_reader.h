@@ -55,18 +55,6 @@ namespace exaDEM
      */
     Face &get_data(const int idx) { return m_data[idx]; }
 
-
-    void dumpbytes(const std::vector<char>& v)
-    {
-      for (int i=0; i<v.size(); ++i)
-      {
-        printf("%u ", (unsigned char)v[i]);
-        if ((i+1) % 16 == 0)
-          printf("\n");
-      }
-      printf("\n");
-    }
-
     /**
      * @brief Reads mesh data from an STL file and populates the mesh.
      *
