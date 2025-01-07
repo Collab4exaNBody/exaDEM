@@ -71,13 +71,13 @@ namespace exaDEM
       }
       ONIKA_CU_BLOCK_SYNC();
 
-      if (ONIKA_CU_THREAD_IDX != 0)
+      if (ONIKA_CU_THREAD_IDX != 0 && local_val > 0)
       {
         m_func(team_val, local_val, reduce_thread_block_t{});
       }
       ONIKA_CU_BLOCK_SYNC();
 
-      if (ONIKA_CU_THREAD_IDX == 0)
+      if (ONIKA_CU_THREAD_IDX == 0 && team_val > 0)
       {
         m_func(*m_reduced_val, team_val, reduce_global_t{});
       }
