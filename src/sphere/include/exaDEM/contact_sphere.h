@@ -253,7 +253,7 @@ namespace exaDEM
           lockAndAdd(cell[field::fz][p], f.z);
 
           // only forces now
-          lockAndAdd(driver.forces, -f);
+          if( driver.need_forces() ) lockAndAdd( driver.forces, -f);
         }
         else
         {
@@ -327,7 +327,7 @@ namespace exaDEM
           lockAndAdd(cell[field::fz][p_i], f.z);
 
           // only forces now
-          lockAndAdd(driver.forces, -f);
+          if( driver.need_forces() ) lockAndAdd( driver.forces, -f);
         }
         else
         {

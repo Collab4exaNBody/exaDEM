@@ -91,19 +91,30 @@ namespace exaDEM
       (*this) = in;
     }
 
-    inline bool is_linear()
+    ONIKA_HOST_DEVICE_FUNC inline bool is_linear()
     {
       return (motion_type == LINEAR_MOTION || motion_type == LINEAR_FORCE_MOTION || motion_type == LINEAR_COMPRESSIVE_MOTION);
     }
 
-    inline bool is_compressive()
+    ONIKA_HOST_DEVICE_FUNC inline bool is_compressive()
     {
       return (motion_type == COMPRESSIVE_FORCE || motion_type == LINEAR_COMPRESSIVE_MOTION);
     }
 
-    inline bool is_force_motion()
+    ONIKA_HOST_DEVICE_FUNC inline bool is_force_motion()
     {
       return ( motion_type == FORCE_MOTION || motion_type == LINEAR_FORCE_MOTION );
+    }
+
+    ONIKA_HOST_DEVICE_FUNC inline bool need_forces()
+    {
+      // No need for LINEAR_FORCE_MOTION
+      // No need for STATIONARY
+      // No need for LINEAR_MOTION
+      // Need for FORCE_MOTION
+      // Need for COMPRESSIVE_FORCE
+      // Need for LINEAR_COMPRESSIVE_MOTION
+      return is_compressive() || motion_type == FORCE_MOTION; 
     }
 
     // Getter
