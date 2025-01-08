@@ -107,7 +107,6 @@ namespace exaDEM
         for (std::string line; getline(input, line);)
         {
           input >> first;
-          std::cout << first << std::endl;
           if (first == "outer")
           {
             bool build_face = true;
