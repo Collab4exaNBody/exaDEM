@@ -199,8 +199,6 @@ namespace exaDEM
     {
       // using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
       
-      //printf("UNCLASSIFY\n");
-      
       auto& c = *ic;
       
       auto& old = *ic_old;
