@@ -23,7 +23,7 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  struct UndefinedDriver
+  struct UndefinedDriver : public Ball_params, Driver_params
   {
     /**
      * @brief Get the type of the driver (in this case, UNDEFINED).
@@ -31,7 +31,8 @@ namespace exaDEM
      */
     constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::UNDEFINED; }
 
-    void push_v_to_r(const double dt) {}
+    void force_to_accel() {}
+    void push_f_v_r(const double dt) {}
 
     /**
      * @brief Print information about the undefined driver.

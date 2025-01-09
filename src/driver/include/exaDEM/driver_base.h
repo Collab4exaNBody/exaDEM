@@ -20,6 +20,30 @@ under the License.
 #include <exanb/core/basic_types.h>
 #include <string.h>
 #include <tuple>
+#include <exaDEM/driver_params.hpp>
+
+
+namespace YAML
+{
+  inline bool check_error(const Node &node, std::string item)
+  {
+    if (!node[item])
+    {
+      exanb::lout << "\033[31m" << item << " is missing\033[0m\n";
+      return false;
+    }
+    return true;
+  }
+
+  inline bool check(const Node &node, std::string item)
+  {
+    if (!node[item])
+    {
+      return false;
+    }
+    return true;
+  }
+}
 
 namespace exaDEM
 {

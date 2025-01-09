@@ -2,6 +2,10 @@ grid_flavor: grid_flavor_dem
 
 includes:
   - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "ImposeVelocityHoleDir"
   
 input_data:
   - particle_regions:
@@ -45,6 +49,7 @@ compute_loop:
   name: loop
   condition: compute_loop_continue
   body:
+    - start_iteration
     - compute_loop_prolog
     - numerical_scheme
     - end_iteration
@@ -59,7 +64,7 @@ compute_force:
   - gravity_force  
   - contact_sphere:
      symetric: true
-     config: {rcut: 1.0 m, dncut: 0.0,  kn: 100000, kt: 80000, kr: 0, fc: 0.00, mu: 0.3, damp_rate: 0.9}
+     config: {rcut: 1.0 m, dncut: 0.0,  kn: 1000, kt: 800, kr: 0, fc: 0.00, mu: 0.3, damp_rate: 0.9}
   - transverse_velocity_slab
 
 domain:
@@ -76,9 +81,9 @@ iteration_dump_writer:
   - dump_data_xyz
 
 global:
-  simulation_dump_frequency: 1000
+  simulation_dump_frequency: 2000
   simulation_paraview_frequency: 1000
-  simulation_end_iteration: 20000
-  simulation_log_frequency: 1000
-  dt: 0.0001 s 
+  simulation_end_iteration: 2000
+  simulation_log_frequency: 100
+  dt: 0.001 s 
   rcut_inc: 0.4 m

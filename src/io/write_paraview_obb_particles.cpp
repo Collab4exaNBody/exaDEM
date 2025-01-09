@@ -38,8 +38,8 @@ under the License.
 #include <exanb/compute/compute_cell_particles.h>
 
 #include <mpi.h>
-#include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_printer.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape_printer.hpp>
 #include <exanb/core/string_utils.h>
 
 namespace exaDEM

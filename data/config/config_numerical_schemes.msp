@@ -9,14 +9,17 @@ numerical_scheme_verlet_macro(compute_force_op):
 #    - push_to_quaternion: { dt_scale: 1.0 }
     - combined_compute_prolog
     - push_av_to_quat_driver
-    - push_v_to_r_driver
-    - mpi_barrier
+    - push_f_v_driver: {dt_scale: 0.5}
+    - push_f_v_r_driver
     - check_and_update_particles
+    - reset_force_driver
     - reset_force_moment
     - mpi_barrier
     - compute_force_op
-    - mpi_barrier
-    - force_to_accel # TODO: add DEM specific force_to_accel operator
+    - update_stress_tensor
+    - force_to_accel 
+    - force_to_accel_driver 
+    - push_f_v_driver: {dt_scale: 0.5}
 #    - update_angular_acceleration 
 #    - update_angular_velocity: { dt_scale: 1 }
 #    - push_f_v: { dt_scale: 0.5 }

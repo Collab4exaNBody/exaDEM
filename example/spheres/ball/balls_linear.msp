@@ -1,0 +1,61 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "SpheresBallsLinearMotionDir"
+
+input_data:
+  - init_rcb_grid
+  - lattice:
+      structure: SC
+      types: [ 0 ]
+      size: [ 1.05 , 1.05 , 1.05 ]
+  - set_radius:
+     rad: 0.5
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.02
+  - set_rand_vrot_arot
+  - update_inertia
+
+setup_drivers:
+  - register_ball:
+     id: 0
+     state: {center: [2,2,0], radius: 20}
+     params: { motion_type: LINEAR_MOTION , motion_vector: [0,0,1], const_vel: 0.1}
+  - register_ball:
+     id: 1
+     state: {center: [20,2,-10], radius: 8}
+     params: { motion_type: LINEAR_MOTION , motion_vector: [-1,0,0], const_vel: 0.2}
+  - register_ball:
+     id: 2
+     state: {center: [2,2,-20], radius: 7}     
+     params: { motion_type: STATIONARY }
+
+compute_force:
+  - gravity_force
+  - contact_sphere:
+     symetric: true
+     config: { rcut: 0.0 m , dncut: 1.0 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.05, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { rcut: 0.0 m , dncut: 1.0 m, kn: 1000, kt: 800, kr: 0.0, fc: 0.05, mu: 0.3, damp_rate: 0.999} 
+
+domain:
+  cell_size: 2.0 m
+  periodic: [false,false,false]
+  grid_dims: [6, 6, 3]
+  bounds: [[-6 m ,-6 m, 0 m], [6 m, 6 m, 6 m]]
+  expandable: true
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 150000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 1000
+  dt: 0.0005 s 
+  rcut_inc: 0.4 m

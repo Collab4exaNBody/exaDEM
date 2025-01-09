@@ -18,8 +18,8 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/shape/shape.hpp>
-#include <exaDEM/shape/shape_detection.hpp>
+#include <exaDEM/shape.hpp>
+#include <exaDEM/shape_detection.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 
 namespace exaDEM
@@ -251,6 +251,9 @@ namespace exaDEM
           lockAndAdd(cell[field::fx][p], f.x);
           lockAndAdd(cell[field::fy][p], f.y);
           lockAndAdd(cell[field::fz][p], f.z);
+
+          // only forces now
+          if( driver.need_forces() ) lockAndAdd( driver.forces, -f);
         }
         else
         {
@@ -311,7 +314,7 @@ namespace exaDEM
           const double meff = cell[field::mass][p_i];
           Vec3d f = {0, 0, 0};
           contact_force_core(dn, n, time, hkp.m_kn, hkp.m_kt, hkp.m_kr, hkp.m_mu, hkp.m_damp_rate, meff, item.friction, contact_position, r_i, v_i, f, item.moment, vrot_i, // particle i
-                             driver.center, driver.vel, driver.vrot                                                                                                         // particle j
+                             driver.center, driver.get_vel(), driver.vrot                                                                                                         // particle j
           );
 
           // === For analysis
@@ -322,6 +325,9 @@ namespace exaDEM
           lockAndAdd(cell[field::fx][p_i], f.x);
           lockAndAdd(cell[field::fy][p_i], f.y);
           lockAndAdd(cell[field::fz][p_i], f.z);
+
+          // only forces now
+          if( driver.need_forces() ) lockAndAdd( driver.forces, -f);
         }
         else
         {

@@ -25,7 +25,7 @@ cost_model: dem_cost_model
 
 move_particles_extra_data: move_particles_interaction
 
-compute_new_vertices: polyhedra_compute_vertices
+compute_new_vertices: compute_vertices
 
 reorder_extra_data: nop
 

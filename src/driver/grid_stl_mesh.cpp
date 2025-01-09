@@ -27,11 +27,11 @@ under the License.
 #include <exanb/core/basic_types_operators.h>
 #include <exanb/core/basic_types_stream.h>
 #include <onika/memory/allocator.h> // for ONIKA_ASSUME_ALIGNED macro
-#include <exanb/compute/compute_pair_optional_args.h>
+//#include <exanb/compute/compute_pair_optional_args.h>
 #include <vector>
 #include <iomanip>
 
-#include <exanb/compute/compute_cell_particles.h>
+//#include <exanb/compute/compute_cell_particles.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/stl_mesh.h>
 

@@ -4,15 +4,16 @@ includes:
   - config_polyhedra.msp
 
 input_data:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: alpha3.shp
   - lattice:
       structure: SC
-      types: [ 0 ]
+      types: [ alpha3 ]
       size: [ 1.5 , 1.5 , 1.5 ]
       repeats: [ 200 , 200 , 150 ]
       enlarge_bounds: 0.0 m
       region: FUNNEL and BZ
-  - read_shape_file:
-     filename: alpha3.shp
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:
@@ -24,11 +25,11 @@ input_data:
 
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: box.stl
      minskowski: 0.01
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 1
      filename: funnel.stl
      minskowski: 0.01
@@ -51,12 +52,11 @@ compute_force:
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 8000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
 
 domain:
-  cell_size: 4 m
+  cell_size: 5 m
   periodic: [false,false,false]
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
+  grid_dims: [60,60,45]
+  bounds: [[0,0,0],[300,300, 225]] 
+  expandable: true
 
 global:
   simulation_dump_frequency: 100000
@@ -64,5 +64,5 @@ global:
   simulation_log_frequency: 100
   simulation_paraview_frequency: 1000
   dt: 0.0001 s 
-  rcut_inc: 0.4 m
+  rcut_inc: 0.2 m
   enable_stl_mesh: true

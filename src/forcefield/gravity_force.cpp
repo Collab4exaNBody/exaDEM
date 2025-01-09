@@ -25,7 +25,7 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <memory>
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/gravity_force.h>
 
 namespace exaDEM
@@ -40,7 +40,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(CellListWrapper, cell_list, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(Vec3d, gravity, INPUT, default_gravity, DocString{"define the gravity constant in function of the gravity axis, default value are x axis = 0, y axis = 0 and z axis = -9.807"});
 
   public:
@@ -53,7 +53,7 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto [cell_ptr, cell_size] = cell_list->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
       GravityForceFunctor func{*gravity};
       compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
     }

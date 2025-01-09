@@ -3,14 +3,18 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_polyhedra.msp
 
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraBallsDir"
+
 input_data:
   - init_rcb_grid
-  - lattice:
-      structure: SC
-      types: [ 0 ]
-      size: [ 1.5 m , 1.5 m , 1.5 m]
   - read_shape_file:
      filename: alpha3.shp
+  - lattice:
+      structure: SC
+      types: [ alpha3 ]
+      size: [ 1.5 , 1.5 , 1.5 ]
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:
@@ -21,18 +25,18 @@ input_data:
   - inertia_from_shape
 
 setup_drivers:
-  - add_ball:
+  - register_ball:
      id: 0
-     center: [2 m , 2 m, 0 m]
-     radius: 20 m
-  - add_ball:
+     state: {center: [2,2,0], radius: 20}
+     params: { motion_type: STATIONARY }
+  - register_ball:
      id: 1
-     center: [2 m, 2 m, -5 m]
-     radius: 3 m
-  - add_ball:
+     state: {center: [2,2,-5], radius: 3}
+     params: { motion_type: STATIONARY }
+  - register_ball:
      id: 2
-     center: [2 m, 2 m, -20 m]
-     radius: 7 m
+     state: {center: [2,2,-20], radius: 7}
+     params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force
@@ -48,14 +52,10 @@ domain:
   bounds: [[0 m ,0 m, 0 m], [6 m, 6 m, 6 m]]
   expandable: true
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 25000
+  simulation_end_iteration: 150000
   simulation_log_frequency: 10000
-  simulation_paraview_frequency: -1
-  dt: 0.0001 s 
+  simulation_paraview_frequency: 4000
+  dt: 0.00005 s 
   rcut_inc: 0.1 m

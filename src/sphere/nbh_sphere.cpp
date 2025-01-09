@@ -33,10 +33,12 @@ under the License.
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/drivers.h>
-#include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_detection.hpp>
-#include <exaDEM/shape/shape_detection_driver.hpp>
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/shape_detection_driver.hpp>
+#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.hpp>
+#include <exaDEM/nbh_sphere.hpp>
 
 namespace exaDEM
 {
@@ -51,9 +53,9 @@ namespace exaDEM
     ADD_SLOT(double, rcut_inc, INPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
     ADD_SLOT(bool, symetric, INPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
-    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
 
-  public:
+    public:
     inline std::string documentation() const override final
     {
       return R"EOF(
@@ -87,7 +89,7 @@ namespace exaDEM
         return;
       }
 
-      auto [cell_ptr, cell_size] = cell_list->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
 
 #     pragma omp parallel
       {
@@ -222,7 +224,7 @@ namespace exaDEM
                 for (size_t p = 0; p < n_particles; p++)
                 {
                   // a sphere can have multiple interactions with a stl mesh
-                  auto items = driver.detection_sphere_driver(cell_a, p, id_a[p], drvs_idx, rx[p], ry[p], rz[p], rad[p] + rVerlet);
+                  auto items = detection_sphere_driver(driver, cell_a, p, id_a[p], drvs_idx, rx[p], ry[p], rz[p], rad[p], rVerlet);
                   for (auto &it : items)
                     manager.add_item(p, it);
                 }
@@ -236,41 +238,41 @@ namespace exaDEM
           {
             // Second, we add interactions between two spheres.
             apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-                                          [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
-                                          {
-                                            // default value of the interaction studied (A or i -> B or j)
-                                            const uint64_t id_nbh = cells[cell_b][field::id][p_b];
-                                            if (id_a[p_a] >= id_nbh)
-                                            {
-                                              if (!g.is_ghost_cell(cell_b))
-                                                return;
-                                            }
+                [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+                {
+                // default value of the interaction studied (A or i -> B or j)
+                const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+                if (id_a[p_a] >= id_nbh)
+                {
+                if (!g.is_ghost_cell(cell_b))
+                return;
+                }
 
-                                            // Add interactions
-                                            item.id_i = id_a[p_a];
-                                            item.p_i = p_a;
-                                            item.id_j = id_nbh;
-                                            item.p_j = p_b;
-                                            item.cell_j = cell_b;
-                                            manager.add_item(p_a, item);
-                                          });
+                // Add interactions
+                item.id_i = id_a[p_a];
+                item.p_i = p_a;
+                item.id_j = id_nbh;
+                item.p_j = p_b;
+                item.cell_j = cell_b;
+                manager.add_item(p_a, item);
+                });
           }
           else
           {
             // Second, we add interactions between two spheres.
             apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-                                          [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
-                                          {
-                                            // default value of the interaction studied (A or i -> B or j)
-                                            const uint64_t id_nbh = cells[cell_b][field::id][p_b];
-                                            // Add interactions
-                                            item.id_i = id_a[p_a];
-                                            item.p_i = p_a;
-                                            item.id_j = id_nbh;
-                                            item.p_j = p_b;
-                                            item.cell_j = cell_b;
-                                            manager.add_item(p_a, item);
-                                          });
+                [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+                {
+                // default value of the interaction studied (A or i -> B or j)
+                const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+                // Add interactions
+                item.id_i = id_a[p_a];
+                item.p_i = p_a;
+                item.id_j = id_nbh;
+                item.p_j = p_b;
+                item.cell_j = cell_b;
+                manager.add_item(p_a, item);
+                });
           }
 
           manager.update_extra_storage<true>(storage);

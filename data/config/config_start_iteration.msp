@@ -1,0 +1,14 @@
+###############################
+## Add trigger boolean values #
+###############################
+
+start_iteration:
+  - trigger_dump_data
+  - trigger_print_log
+  - trigger_dump_thermo
+  - trigger_particle_generator
+  - trigger_thermo_state
+  - trigger_dump_paraview
+  - trigger_analyses
+  - trigger_write_stress_tensor
+  - trigger_stress_tensor # after trigger_write_stress_tensor and trigger_dump_paraview

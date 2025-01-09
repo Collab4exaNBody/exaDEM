@@ -31,15 +31,15 @@ under the License.
 #include <exaDEM/compute_contact_force.h>
 
 #include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/interaction/interactionSOA.hpp>
-#include <exaDEM/interaction/interactionAOS.hpp>
+#include <exaDEM/classifier/interactionSOA.hpp>
+#include <exaDEM/classifier/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/interaction/classifier.hpp>
-#include <exaDEM/interaction/classifier_for_all.hpp>
+#include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/classifier/classifier_for_all.hpp>
 #include <exaDEM/itools/itools.hpp>
-#include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_detection.hpp>
-#include <exaDEM/shape/shape_detection_driver.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/shape_detection_driver.hpp>
 #include <exaDEM/drivers.h>
 #include <exaDEM/contact_polyhedron.h>
 

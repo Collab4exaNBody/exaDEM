@@ -31,10 +31,10 @@ under the License.
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/drivers.h>
-#include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_detection.hpp>
-#include <exaDEM/shape/shape_detection_driver.hpp>
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/shape_detection_driver.hpp>
+#include <exaDEM/traversal.hpp>
 
 #include <cassert>
 
@@ -54,7 +54,7 @@ namespace exaDEM
     ADD_SLOT(shapes, shapes_collection, INPUT, DocString{"Collection of shapes"});
     ADD_SLOT(double, rcut_inc, INPUT_OUTPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
     ADD_SLOT(Drivers, drivers, INPUT, DocString{"List of Drivers"});
-    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
 
     public:
     inline std::string documentation() const override final
@@ -270,7 +270,7 @@ namespace exaDEM
         return;
       }
 
-      auto [cell_ptr, cell_size] = cell_list->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
 
 #     pragma omp parallel
       {

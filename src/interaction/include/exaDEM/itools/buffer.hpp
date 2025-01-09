@@ -15,6 +15,8 @@ namespace exaDEM
       void resize(const size_t size)
       {
         assert(size < 1e9);
+        if( size == dn.size() ) return;
+
         if (size != 0)
         {
           dn.resize(size);

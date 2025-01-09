@@ -5,12 +5,12 @@ includes:
 
 input_data:
   - init_rcb_grid
+  - read_shape_file:
+     filename: octahedron.shp
   - lattice:
       structure: SC
-      types: [ 0 ]
+      types: [ Octahedron ]
       size: [ 1.0 , 1.0 , 1.0 ]
-  - read_shape_file:
-     filename: shapes.shp
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:
@@ -22,7 +22,7 @@ input_data:
   - inertia_from_shape
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: box_avg_stress.stl
      minskowski: 0.01
@@ -43,13 +43,10 @@ domain:
 
 compute_volume: nop
 
-compute_stress_tensor:
-  - stress_tensor:
+global_stress_tensor:
+  - avg_stress_tensor:
      volume: 21952
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1

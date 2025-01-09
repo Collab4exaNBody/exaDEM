@@ -18,7 +18,10 @@ includes:
   - config_numerical_schemes.msp
   - config_globals.msp
   - config_iteration_log.msp
+  - config_start_iteration.msp
+  - config_analyses.msp
   - config_iteration_dump.msp
+  - config_stress_tensor.msp
   - config_end_iteration.msp
   - config_input.msp
 
@@ -92,6 +95,7 @@ compute_loop:
   name: loop
   condition: compute_loop_continue
   body:
+    - start_iteration
     - compute_loop_prolog
     - numerical_scheme
     - end_iteration
@@ -101,11 +105,13 @@ compute_loop:
 
 # You can tune the output directories here:
 io_tree:
-  - io_config:
-     dir_name: "ExaDEMOutputDir"
-     log_name: "log.txt"
-     avg_stress_tensor_name: "AvgStressTensor.txt"
-     interaction_basename: "InteractionOutputDir-"      
+  - io_config
+# default
+#  - io_config:
+#     dir_name: "ExaDEMOutputDir"
+#     log_name: "log.txt"
+#     avg_stress_tensor_name: "AvgStressTensor.txt"
+#     interaction_basename: "InteractionOutputDir-"      
 
 # Add your drivers by overriding setup_drivers
 setup_drivers: nop
@@ -114,7 +120,7 @@ drivers:
   - setup_drivers
   - print_drivers
   - backup_drivers
-  - compute_driver_vertices:
+  - driver_vertices:
      force_host: true
 
 ######## simulation program description #################
