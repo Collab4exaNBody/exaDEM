@@ -47,6 +47,8 @@ namespace exaDEM
       uint16_t * __restrict__ sub_i;
       uint16_t * __restrict__ sub_j;
       uint16_t m_type;
+      
+      size_t size;
 
       InteractionWrapper(InteractionSOA &data)
       {
@@ -71,6 +73,8 @@ namespace exaDEM
         sub_j = onika::cuda::vector_data(data.sub_j);
 
         m_type = data.type;
+        
+        size = onika::cuda::vector_size(data.ft_x);
       }
 
       ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const

@@ -137,6 +137,33 @@ namespace exaDEM
       }
       
       getchar();*/
+      /*#pragma omp parallel for
+      for(int i = 0; i < interactions.size; i++)
+      {
+        //printf("CIAO\n");
+      	int id = interactions.id_i[i];
+      	
+      	if(old.particles[id] > 0)
+      	{
+      		int p = old.particles_incr[id];
+      		
+      		int id2 = interactions.id_j[i];
+      		
+      		for(int j = 0; j < old.particles[i]; j++)
+      		{
+      			if ( id2 == old.id_j[old.indices[p + j]] )
+      			{
+      				interactions.ft_x[i] = old.ft_x[old.indices[p + j]];
+      				interactions.ft_y[i] = old.ft_y[old.indices[p + j]];
+      				interactions.ft_z[i] = old.ft_z[old.indices[p + j]];
+      				
+      				interactions.mom_x[i] = old.mom_x[old.indices[p + j]];
+      				interactions.mom_y[i] = old.mom_y[old.indices[p + j]];
+      				interactions.mom_z[i] = old.mom_z[old.indices[p + j]];
+      			}
+      		}
+      	}
+      }*/
       
       kernel<<<numBlocks, blockSize>>>( interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, interactions.id_i, interactions.id_j, old.ft_x.data(), old.ft_y.data(), old.ft_z.data(), old.mom_x.data(), old.mom_y.data(), old.mom_z.data(), old.id_i.data(), old.id_j.data(), old.indices.data(), old.particles.data(), old.particles_incr.data(), size);
       
