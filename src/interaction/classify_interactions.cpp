@@ -98,7 +98,6 @@ namespace exaDEM
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
     ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
     
-    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(OldClassifier, ic_old, INPUT_OUTPUT);
 
   public:
