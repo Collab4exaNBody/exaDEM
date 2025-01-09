@@ -97,15 +97,6 @@ namespace exaDEM
       }
     };
 
-  template <> 
-    struct InteractionWrapper<InteractionAOS>
-    {
-      exaDEM::Interaction * __restrict__ interactions;
-
-      InteractionWrapper(InteractionAOS &data) { interactions = onika::cuda::vector_data(data.m_data); }
-
-      ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const { return interactions[idx]; }
-
   template <> struct InteractionWrapper<InteractionAOS>
   {
     exaDEM::Interaction * __restrict__ interactions;
@@ -120,13 +111,6 @@ namespace exaDEM
       item2.update_friction_and_moment(item);
     }
   };
-
-      ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
-      {
-        auto &item2 = interactions[idx];
-        item2.update_friction_and_moment(item);
-      }
-    };
 
   struct OldClassifier
   {
