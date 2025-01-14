@@ -64,7 +64,7 @@ namespace exaDEM
       	std::tie(cell_ptr, cell_size) = traversal_all->info();
       }
       
-      compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context()); //, cell_ptr, cell_size);
+      compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
     }
   };
 
