@@ -28,13 +28,13 @@ under the License.
 #include <exaDEM/contact_force_parameters.h>
 #include <exaDEM/compute_contact_force.h>
 #include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/interaction/interactionSOA.hpp>
-#include <exaDEM/interaction/interactionAOS.hpp>
+#include <exaDEM/classifier/interactionSOA.hpp>
+#include <exaDEM/classifier/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/interaction/classifier.hpp>
-#include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_detection.hpp>
-#include <exaDEM/shape/shape_detection_driver.hpp>
+#include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/shape_detection_driver.hpp>
 #include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
 

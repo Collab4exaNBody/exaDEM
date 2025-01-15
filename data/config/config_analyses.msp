@@ -1,0 +1,13 @@
+# in situ analyses
+analyses: nop
+
+trigger_analyses:
+  rebind: { freq: simulation_analyses_frequency , result: trigger_analyses }
+  body:
+    - nth_timestep: { first: false }
+#    - nth_timestep: { first: true }
+
+analyses_if_triggered:
+  condition: trigger_analyses
+  body:
+    - analyses

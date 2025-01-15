@@ -3,14 +3,18 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_polyhedra.msp
 
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraSTLMeshOctahedraDir"
+
 input_data:
   - init_rcb_grid
-  - lattice:
-      structure: SC
-      types: [ 0 ]
-      size: [ 1.0 , 1.0 , 1.0 ]
   - read_shape_file:
      filename: octahedron.shp
+  - lattice:
+      structure: SC
+      types: [ Octahedron ]
+      size: [ 1.0 , 1.0 , 1.0 ]
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:
@@ -25,7 +29,7 @@ input_data:
   - reader1
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: box_for_octa.stl
      minskowski: 0.01
@@ -43,10 +47,6 @@ domain:
   grid_dims: [9, 9, 30]
   bounds: [[0 m ,0 m, 0 m], [9 m, 9 m, 30 m]]
   expandable: true
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1

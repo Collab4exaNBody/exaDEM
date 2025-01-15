@@ -38,6 +38,7 @@ compute_loop:
   name: loop
   condition: compute_loop_continue
   body:
+    - start_iteration
     - compute_loop_prolog
     - numerical_scheme
     - end_iteration
@@ -58,10 +59,6 @@ compute_force:
 domain:
   cell_size: 2.0 m
   periodic: [true, true, false]
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1

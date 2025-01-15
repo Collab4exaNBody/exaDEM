@@ -31,7 +31,7 @@ under the License.
 
 #include <exaDEM/angular_acceleration.h>
 #include <exaDEM/angular_velocity.h>
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/traversal.hpp>
 #include <exanb/defbox/push_vec3_1st_order.h>
 //#include <exanb/defbox/push_vec3_1st_order_xform.h>
 
@@ -95,14 +95,14 @@ namespace exaDEM
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
     ADD_SLOT(double, dt, INPUT);
-    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
 
   public:
     inline void execute() override final
     {
       const double delta_t = *dt;
       const double half_delta_t = delta_t * 0.5;
-      auto [cell_ptr, cell_size] = cell_list->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
 
       if (domain->xform_is_identity())
       {

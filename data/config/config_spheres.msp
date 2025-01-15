@@ -25,3 +25,5 @@ move_particles_extra_data: move_particles_interaction
 reorder_extra_data: nop
 
 particle_write_paraview_generic: write_paraview_generic
+
+contact_network: dump_contact_network

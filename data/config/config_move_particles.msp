@@ -56,10 +56,16 @@ update_particle_neighbors:
 
 grid_post_processing: grid_memory_compact
 
+compute_all_vertices:
+  - compute_new_vertices
+  - driver_vertices:
+     force_host: true
+
 ghost_full_update:
   - ghost_comm_scheme
   - ghost_update_all
-  - compute_new_vertices
+  - compute_all_vertices
+
 
 ################### parallel particle migration ############################
 
@@ -67,28 +73,19 @@ ghost_full_update:
 migrate_particles: nop
 add_generated_particles: nop
 
-trigger_grid_stl_mesh:
-  condition: trigger_grid_stl_mesh
+particle_generator:
+  condition: trigger_generator
   body:
-    - grid_stl_mesh
-
-update_stl_mesh:
-  - combineSTL:
-      rebind: { in1: enable_stl_mesh , in2: trigger_load_balance, result: trigger_grid_stl_mesh}
-      body: [ boolean_and ]  
-  - trigger_grid_stl_mesh
+    - message: { mesg: "The particle generator is triggered ...", endl: true} 
+    - add_generated_particles
 
 parallel_update_particles:
-  - particle_generator:
-      condition: trigger_generator
-      body:
-         - message: { mesg: "Add particles", endl: true} 
-         - add_generated_particles
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - update_cell_list
-  - grid_stl_mesh
+  - update_traversals
+  - grid_stl_mesh:
+     force_reset: true
   - update_particle_neighbors
 
 # define actions to initialize particles at startup, just after file read
@@ -99,10 +96,12 @@ init_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - update_cell_list
-  - grid_stl_mesh
+  - update_traversals
+  - grid_stl_mesh:
+     force_reset: true
   - update_particle_neighbors
 ###########################################################################
+
 
 ########################### Load balancing ############################
 # trigger load balance whenever domain size changed, whatever freq has been requested
@@ -132,6 +131,8 @@ load_balancing_if_triggered:
   condition: trigger_load_balance
   body:
     - load_balance
+    - grid_stl_mesh: # force to rebuild grid mesh
+       force_reset: true
 
 update_particles_full_body:
   - compress_data
@@ -145,6 +146,7 @@ update_particles_full:
   condition: trigger_move_particles
   body:
     - backup_drivers
+    - particle_generator
     - update_particles_full_body
 
 update_particles_fast_body:
@@ -153,8 +155,10 @@ update_particles_fast_body:
        async_buffer_pack: true
        staging_buffer: true
        serialize_pack_send: true
-       wait_all: false
+       wait_all: true
     - compute_new_vertices
+    - driver_vertices:
+       force_host: false
 
 update_particles_fast:
   condition: not trigger_move_particles

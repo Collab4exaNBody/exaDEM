@@ -1,0 +1,62 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "SpheresMeshStlLinearMotionDir"
+
+reader1:
+  - read_xyz:
+      file: particles.xyz
+      bounds_mode: FILE
+  - set_radius:
+     rad: 0.0015 m
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.001
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 2500
+  - set_rand_vrot_arot
+  - update_inertia
+  - replicate_domain
+
+setup_drivers:
+  - register_stl_mesh:
+     id: 0
+     state: {center: [0.4,0,0]}
+     params: { motion_type: LINEAR_MOTION, motion_vector: [-1,0,0], const_vel: 0.5 }
+     filename: mesh.stl
+     minskowski: 0.001 m
+  - register_stl_mesh:
+     id: 1
+     filename: cube.stl
+     minskowski: 0.001 m
+
+input_data:
+  - reader1
+
+compute_force:
+  - gravity_force
+  - quadratic_force:
+     cx: 0.38
+     mu: 0.0000015
+  - contact_sphere:
+     symetric: true
+     config: { rcut: 0.0 m , dncut: 0.00 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
+     config_driver: { rcut: 0.0 m , dncut: 0.00 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.0, mu: 0.5, damp_rate: 0.3} 
+
+domain:
+  cell_size: 0.1 m
+  periodic: [false,false,false]
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 20000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 200
+  dt: 0.0001 s
+  rcut_inc: 0.0025 m
+  enable_stl_mesh: true

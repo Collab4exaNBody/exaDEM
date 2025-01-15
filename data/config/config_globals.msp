@@ -11,6 +11,8 @@ global:
   simulation_load_balance_frequency: 10000
   simulation_dump_frequency: 1000         # 0 means no dump at all
   simulation_dump_thermo_frequency: -1
+  simulation_generator_frequency: -1
+  simulation_analyses_frequency: -1
   timestep: 0
   physical_time: 0.
   enable_domain_extension: true
@@ -19,7 +21,7 @@ global:
   #amr_z_curve: false
   enable_grid_compact: true
   enable_stl_mesh: false
-  simulation_generator_frequency: -1
+  enable_contact_network: false
   trigger_generator: false
   analysis_interaction_dump_frequency: -1 
   analysis_dump_stress_tensor_frequency: -1

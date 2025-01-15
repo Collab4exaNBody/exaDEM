@@ -35,8 +35,8 @@ under the License.
 
 #include <exaDEM/simulation_state.h>
 #include <exaDEM/dem_simulation_state.h>
-#include <exaDEM/cell_list_wrapper.hpp>
-#include <exaDEM/interaction/classifier.hpp>
+#include <exaDEM/traversal.hpp>
+#include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/itools/itools.hpp>
 
 // ================== Thermodynamic state compute operator ======================
@@ -52,8 +52,9 @@ namespace exaDEM
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
-    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(SimulationState, simulation_state, OUTPUT);
+    ADD_SLOT(double, system_mass, OUTPUT);
 
     // DEM data
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
@@ -106,7 +107,7 @@ namespace exaDEM
       double mass = 0.;
       uint64_t total_particles = 0;
 
-      auto [cell_ptr, cell_size] = cell_list->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
       exaDEM::simulation_state_variables sim{}; // kinetic_energy, rotation_energy, mass, potential_energy, total_particles};
       ReduceSimulationStateFunctor func = {};
       reduce_cell_particles(*grid, false, func, sim, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
@@ -160,6 +161,9 @@ namespace exaDEM
       sim_info.set_active_interaction_count(active_interactions);
       sim_info.set_interaction_count(total_interactions);
       sim_info.set_dn(dn);
+
+      // for other operators
+      *system_mass = mass;
     }
   };
 

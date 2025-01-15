@@ -35,8 +35,8 @@ under the License.
 #include <exanb/core/string_utils.h>
 
 #include <mpi.h>
-#include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_printer.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape_printer.hpp>
 
 namespace exaDEM
 {

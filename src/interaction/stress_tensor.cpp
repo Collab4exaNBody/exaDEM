@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,116 +15,124 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
+//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 #include <exanb/core/operator.h>
 #include <exanb/core/operator_slot.h>
 #include <exanb/core/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
+#include <exanb/core/concurent_add_contributions.h>
+#include <onika/parallel/parallel_for.h>
+
 
 #include <memory>
 #include <mpi.h>
 
-#include <exaDEM/contact_force_parameters.h>
-#include <exaDEM/compute_contact_force.h>
 #include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/interaction/interactionSOA.hpp>
-#include <exaDEM/interaction/interactionAOS.hpp>
-#include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/interaction/classifier.hpp>
-#include <exaDEM/shape/shapes.hpp>
-#include <exaDEM/shape/shape_detection.hpp>
-#include <exaDEM/shape/shape_detection_driver.hpp>
-#include <exaDEM/mutexes.h>
-#include <exaDEM/drivers.h>
+#include <exaDEM/classifier/interactionSOA.hpp>
+#include <exaDEM/classifier/interactionAOS.hpp>
+#include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/classifier/classifier_for_all.hpp>
+#include <exaDEM/type/add_contribution_mat3d.hpp>
 
 namespace exaDEM
 {
   using namespace exanb;
+  using namespace onika::parallel;
 
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_rx, field::_ry, field::_rz>> class StressTensor : public OperatorNode
+  template <int type, bool sym>
+    struct compute_stress_tensor
+    {
+      template <typename TMPLC> 
+        ONIKA_HOST_DEVICE_FUNC 
+        inline void operator()(
+            uint64_t idx,
+            Interaction& I, 
+            TMPLC *const __restrict__ cells, 
+            const Vec3d *const __restrict__ fnp, 
+            const Vec3d *const __restrict__ ftp, 
+            const Vec3d *const __restrict__ cpp) const
+        {
+          assert( type == I.type );
+          // get fij and cij
+          auto &cell = cells[I.cell_i];
+          Vec3d fij = fnp[idx] + ftp[idx];
+          Vec3d pos_i = {cell[field::rx][I.p_i], cell[field::ry][I.p_i], cell[field::rz][I.p_i]};
+          Vec3d cij = cpp[idx] - pos_i;
+          exanb::mat3d_atomic_add_contribution(cell[field::stress][I.p_i], exanb::tensor(fij, cij));
+
+          if constexpr ( type <= 3 && sym == true) // polyhedron - polyhedron || sphere - sphere
+          {
+            auto &cellj = cells[I.cell_j];
+            Vec3d fji = -fij;
+            Vec3d pos_j = {cellj[field::rx][I.p_j], cellj[field::ry][I.p_j], cellj[field::rz][I.p_j]};
+            Vec3d cji = cpp[idx] - pos_j;
+            exanb::mat3d_atomic_add_contribution(cellj[field::stress][I.p_j], exanb::tensor(fji, cji));
+          }
+        }
+    };
+
+  template<int NTypes, bool Sym, typename Op>
+    struct compute_stress_tensors
+    {
+      Op* oper;
+
+      template <int Type, typename TMPLC>
+        void iteration(Classifier<InteractionSOA>& classifier, TMPLC *const __restrict__ cells)
+        {
+          static_assert(Type >= 0 && Type < NTypes);
+          auto [Ip, size] = classifier.get_info(Type); // get interactions
+          if (size > 0 )
+          {
+            ParallelForOptions opts;
+            opts.omp_scheduling = OMP_SCHED_STATIC;
+            const auto [dnp, cpp, fnp, ftp] = classifier.buffer_p(Type); // get parameters: get forces (fn, ft) and contact positions (cp) computed into the contact force operators.
+            InteractionWrapper<InteractionSOA> interactions(Ip);         // get data: interaction
+            compute_stress_tensor<Type, Sym> func;                       // get kernel
+            WrapperForAll wrapper(interactions, func , cells, fnp, ftp, cpp); // pack data, kernel, and interaction in a wrapper
+            parallel_for(size, wrapper, oper->parallel_execution_context(), opts); // launch kernel
+          }
+        }
+
+      template<int Type, typename... Args> void loop(Args... args)
+      {
+        iteration<Type>(args...);
+        if constexpr (Type - 1 >= 0) loop<Type-1> (args...); 
+      }
+
+      template<typename... Args> void operator()(Args&&... args)
+      {
+        static_assert(NTypes >= 1);
+        loop<NTypes-1>(args...);
+      }
+    };
+
+
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_stress>> class StressTensor : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet<field::_vrot, field::_arot>;
-    static constexpr ComputeFields compute_field_set{};
-
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-    ADD_SLOT(double, volume, INPUT, REQUIRED, DocString{"Volume of the domain simulation. >0 "});
-    ADD_SLOT(Mat3d, stress_tensor, OUTPUT, DocString{"Write an Output file containing stress tensors."});
+    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
 
-  public:
+    public:
     inline std::string documentation() const override final { return R"EOF( This operator computes the total stress tensor and the stress tensor for each particles. )EOF"; }
 
     inline void execute() override final
     {
-      if (grid->number_of_cells() == 0)
-      {
-        return;
-      }
+      if (grid->number_of_cells() == 0) { return; }
+      if (!ic.has_value()) { return; }
 
       // get slot data
       auto cells = grid->cells();
-      Classifier<InteractionSOA> &cf = *ic;
-      exanb::Mat3d &stress = *stress_tensor;
-      stress = exanb::make_zero_matrix();
-
-      //
-      if (!ic.has_value())
-      {
-        return;
-      }
-
-      size_t types = cf.number_of_waves();
-      bool sym = true;
-
-#     pragma omp parallel
-      {
-        Mat3d TLS = exanb::make_zero_matrix(); // Thread Local Storage
-        for (size_t type = 0; type < types; type++)
-        {
-          auto [Ip, size] = cf.get_info(type);           // get interactions
-          auto [dnp, cpp, fnp, ftp] = cf.buffer_p(type); // get forces (fn, ft) and contact positions (cp) computed into the contact force operators.
-#         pragma omp for schedule(static)
-          for (size_t i = 0; i < size; i++)
-          {
-            // get fij and cij
-            Interaction I = Ip[i];
-            auto &cell = cells[I.cell_i];
-            Vec3d fij = fnp[i] + ftp[i];
-            Vec3d pos_i = {cell[field::rx][I.p_i], cell[field::ry][I.p_i], cell[field::rz][I.p_i]};
-            Vec3d cij = cpp[i] - pos_i;
-            TLS += exanb::tensor(fij, cij);
-
-            if (I.type <= 3 && sym == true) // polyhedron - polyhedron || sphere - sphere
-            {
-              auto &cellj = cells[I.cell_j];
-              Vec3d fji = -fij;
-              Vec3d pos_j = {cellj[field::rx][I.p_j], cellj[field::ry][I.p_j], cellj[field::rz][I.p_j]};
-              Vec3d cji = cpp[i] - pos_j;
-              TLS += exanb::tensor(fji, cji);
-            }
-
-            // compute tensor
-          }
-        }
-#       pragma omp critical
-        {
-          stress += TLS;
-        }
-      }
-
-      // get reduction over mpi processes
-      double buff[9] = {stress.m11, stress.m12, stress.m13, stress.m21, stress.m22, stress.m23, stress.m31, stress.m32, stress.m33};
-
-      MPI_Allreduce(MPI_IN_PLACE, buff, 9, MPI_DOUBLE, MPI_SUM, *mpi);
-      stress = {buff[0], buff[1], buff[2], buff[3], buff[4], buff[5], buff[6], buff[7], buff[8]};
-
-      assert(*volume > 0);
-      stress = stress / (*volume);
+      Classifier<InteractionSOA>& cf = *ic;
+      // get kernel
+      constexpr bool sym = true;
+      compute_stress_tensors<13, sym, StressTensor> runner = {this}; // 13 is the number of interaction types
+                                                                     // iterate over types
+      runner(cf, cells);
     }
   };
 
