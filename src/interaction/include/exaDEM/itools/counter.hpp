@@ -2,7 +2,7 @@
 
 //#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 
-#include <exaDEM/interaction/classifier.hpp>
+#include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/itools/buffer.hpp>
 
 #include <onika/cuda/cuda.h>

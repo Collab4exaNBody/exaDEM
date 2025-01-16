@@ -3,17 +3,21 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_polyhedra.msp
 
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraSTLMeshMixteDir"
+
 input_data:
   - init_rcb_grid
-  - lattice:
-      structure: BCC
-      types: [ 0 , 1 ]
-      size: [ 1.5 , 1.5 , 1.5 ]
-      enlarge_bounds: 0.0 m
   - read_shape_file:
      filename: alpha3.shp
   - read_shape_file:
      filename: octahedron.shp
+  - lattice:
+      structure: BCC
+      types: [alpha3,Octahedron]
+      size: [ 1.5 , 1.5 , 1.5 ]
+      enlarge_bounds: 0.0 m
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:
@@ -28,7 +32,7 @@ input_data:
   - reader1
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
      filename: box_mixte.stl
      minskowski: 0.01
@@ -46,10 +50,6 @@ domain:
   grid_dims: [9, 9, 30]
   bounds: [[0 m ,0 m, 0 m], [18 m, 18 m, 60 m]]
   expandable: true
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1

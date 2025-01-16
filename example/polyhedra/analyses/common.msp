@@ -1,0 +1,52 @@
+particle_regions:
+  - BOX:
+      bounds: [ [ 0 , 0 , 0 m ] , [ 5 m , 5 m, 5 m] ]
+  - CYL:
+      quadric:
+        shape: cyly
+        transform:
+          - scale: [ 4.0, 2.0 , 4.0 ]
+          - translate: [ 5 m , 2.5 , 5 m ]
+
+input_data:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: shapes.shp
+  - lattice:
+      structure: BCC
+      types: [Poly,Octahedron ]
+      size: [ 1.0 m , 1.0 m , 1.0 m ]
+      region: CYL
+  - radius_from_shape
+  - density_from_shape
+#     density: 0.0026
+  - set_rand_velocity:
+     var: 0.001
+     mean: [0.0,0.0,0.0]
+  - set_rand_vrot_arot
+  - set_quaternion: {random: true}
+  - inertia_from_shape
+
+setup_drivers:
+  - register_cylinder:
+     id: 0
+     state: {center: [5 m,5 m,5 m], axis: [1,0,1], radius: 5 m}
+     params: { motion_type: STATIONARY }
+
+compute_force:
+  - gravity_force
+  - contact_polyhedron:
+     symetric: true
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
+     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 8000, kr: 0.0, fc: 0.0, mu: 0.5, damp_rate: 0.999} 
+
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+
+domain:
+  cell_size: 2.5 m
+  periodic: [false,true,false]
+  grid_dims: [4, 2, 4]
+  bounds: [[0 m ,0 m, 0 m],[10 m, 5 m, 10 m]]
+  expandable: true

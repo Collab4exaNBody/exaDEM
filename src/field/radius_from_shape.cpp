@@ -27,7 +27,7 @@ under the License.
 #include <exanb/grid_cell_particles/particle_region.h>
 #include <memory>
 #include <random>
-#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shapes.hpp>
 
 namespace exaDEM
 {

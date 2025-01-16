@@ -28,7 +28,7 @@ under the License.
 #include <exanb/compute/compute_cell_particles.h>
 #include <memory>
 
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/angular_acceleration.h>
 
 namespace exaDEM
@@ -42,7 +42,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
 
   public:
     inline std::string documentation() const override final
@@ -54,7 +54,7 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto [cell_ptr, cell_size] = cell_list->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
       PushToAngularAccelerationFunctor func{};
       compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
     }

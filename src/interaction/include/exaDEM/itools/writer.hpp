@@ -5,7 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <mpi.h>
-#include <exaDEM/interaction/classifier.hpp>
+#include <exaDEM/classifier/classifier.hpp>
 
 namespace exaDEM
 {

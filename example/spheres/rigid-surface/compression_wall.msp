@@ -1,0 +1,75 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "SpheresCompressionWallDir"
+
+particle_regions:
+  - BOX:
+     bounds: [[1,1,1],[9,9,9]]
+
+input_data:
+  - init_rcb_grid
+  - lattice:
+     structure: SC
+     types: [0]
+     size: [ 1.0 , 1.0 , 1.0 ]
+     region: BOX
+  - set_radius:
+     rad: 0.5
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.02
+  - set_rand_vrot_arot
+  - update_inertia
+
+setup_drivers:
+  - register_surface:
+     id: 0
+     state: {normal: [0,1,0], offset: 11}
+     params: { motion_type: STATIONARY }
+  - register_surface:
+     id: 1
+     state: {normal: [0,1,0], offset: -1}
+     params: { motion_type: STATIONARY }
+  - register_surface:
+     id: 2
+     state: {normal: [0,0,1], offset: -1}
+     params: { motion_type: STATIONARY }
+  - register_surface:
+     id: 3
+     state: { normal: [1,0,0], offset: -1}
+     params: { motion_type: STATIONARY }
+  - register_surface:
+     id: 4
+     state: { normal: [1,0,0], offset: 11, surface: 144}
+     params: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [1,0,0], sigma: 0.5, damprate: 0.999 }
+
+compute_force:
+  - gravity_force
+  - contact_sphere:
+     symetric: true
+     config: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.1, damp_rate: 0.9} 
+     config_driver: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 90000, kr: 0.1, fc: 0.05, mu: 0.5, damp_rate: 0.9} 
+
+domain:
+  cell_size: 2 m
+  periodic: [false,false,false]
+  grid_dims: [6,6,6]
+  bounds: [[-1,-1,-1],[11,11,11]]
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 50000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 1000
+  dt: 0.00005 s 
+  rcut_inc: 0.01 m
+  friction_rcut: 1.1 m
+

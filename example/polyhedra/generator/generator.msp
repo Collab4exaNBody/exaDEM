@@ -3,16 +3,14 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_polyhedra.msp
 
-#configuration:
-#  logging: { debug: true , parallel: true }
-#  debug:
-#    filter: [ ".*init_neighbor_friction" , ".*move_particles_friction" , ".*check_nbh_friction" , ".*compact_neighbor_friction" , ".*extend_domain" ]
-
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraGeneratorDir"
 
 add_particles:
   - lattice:
      structure: SC
-     types: [ 0 ]
+     types: [ Octahedron ]
      size: [ 1.0 , 1.0 , 1.0 ]
      region: AREA
 
@@ -36,11 +34,10 @@ input_data:
   - init_new_particles
 
 setup_drivers:
-  - add_cylinder:
+  - register_cylinder:
      id: 0
-     center: [5 m, 5 m, 5 m]
-     axis: [1, 0, 1]
-     radius: 8 m 
+     state: {center: [5 m,5 m,5 m], axis: [1,0,1], radius: 8 m}
+     params: { motion_type: STATIONARY }
 
 add_generated_particles:
   - add_particles
@@ -64,10 +61,6 @@ domain:
   bounds: [[0 m ,0 m, 0 m], [10 m, 10 m, 10 m]]
   expandable: true
   
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 global:
   simulation_dump_frequency: -1
   simulation_end_iteration: 100000

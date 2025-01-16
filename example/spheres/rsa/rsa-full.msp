@@ -28,12 +28,10 @@ chunk_neighbors_contact:
     chunk_size: 1
 
 setup_drivers:
-  - add_cylinder:
+  - register_cylinder:
      id: 0
-     radius: 100
-     center: [80,80,80]
-     axis: [1, 0, 1]
-     angular_velocity: [0,0.0,0]
+     state: {radius: 100, center: [80,80,80], axis: [1, 0, 1]}
+     params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force

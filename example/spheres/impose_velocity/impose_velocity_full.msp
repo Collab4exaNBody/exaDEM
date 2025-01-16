@@ -3,6 +3,10 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_spheres.msp
 
+io_tree:
+  - io_config:
+     dir_name: "ImposeVelocityFullDir"
+
 input_data:
   - read_xyz:
       file: input_file_impose_velocity.xyz
@@ -44,7 +48,7 @@ compute_force:
   - gravity_force  
   - contact_sphere:
      symetric: true
-     config: {rcut: 0.0 m, dncut: 1.0,  kn: 100000, kt: 80000, kr: 0, fc: 0.00, mu: 0.3, damp_rate: 0.9}
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1000, kt: 1000, kr: 0.1, fc: 0.05, mu: 0.2, damp_rate: 0.9} 
   - transverse_velocity_slab
 
 domain:
@@ -57,8 +61,8 @@ write_vtklegacy:
 
 global:
   simulation_dump_frequency: -1
-  simulation_paraview_frequency: 5000
-  simulation_end_iteration: 100000
-  simulation_log_frequency: 1000
-  dt: 0.0001 s 
+  simulation_paraview_frequency: 1000
+  simulation_end_iteration: 10000
+  simulation_log_frequency: 100
+  dt: 0.001 s 
   rcut_inc: 0.4 m

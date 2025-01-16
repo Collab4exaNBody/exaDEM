@@ -34,11 +34,13 @@ chunk_neighbors_contact:
     chunk_size: 1
 
 setup_drivers:
-  - add_stl_mesh:
+  - register_stl_mesh:
      id: 0
-     filename: cylinder_ascii.stl
+     filename: cylinder_binary.stl
      minskowski: 0.01 m
-     angular_velocity: [0,0.25,0]
+     state: { vrot: [0,0.25,0] }
+     params: {motion_type: STATIONARY }
+     binary: true
 
 compute_force:
   - gravity_force

@@ -33,9 +33,9 @@ under the License.
 
 #include <exanb/compute/reduce_cell_particles.h>
 #include <exanb/mpi/particle_displ_over_async_request.h>
-#include <exaDEM/shape/shapes.hpp>
+#include <exaDEM/shapes.hpp>
 #include <exaDEM/backup_dem.h>
-#include <exaDEM/cell_list_wrapper.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM
 {
@@ -53,7 +53,7 @@ namespace exaDEM
     ADD_SLOT(shapes, shapes_collection, INPUT, DocString{"Collection of shapes"});
     ADD_SLOT(bool, result, OUTPUT);
     ADD_SLOT(DEMBackupData, backup_dem, INPUT);
-    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(ParticleDisplOverAsyncRequest, particle_displ_comm, INPUT_OUTPUT);
 
   public:
@@ -78,7 +78,7 @@ sets result output to true if at least one particle has moved further than thres
       const double max_dist = *threshold;
       const double max_dist2 = max_dist * max_dist;
 
-      auto [cell_ptr, cell_size] = cell_list->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
 
       particle_displ_comm->m_comm = *mpi;
       particle_displ_comm->m_request = MPI_REQUEST_NULL;
