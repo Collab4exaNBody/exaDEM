@@ -48,26 +48,23 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC inline void operator()(unsigned long long int &count_over_dist2, IJK cell_loc, size_t cell, size_t j, double rx, double ry, double rz, uint32_t type, const exanb::Quaternion &orientation, reduce_thread_local_t = {}) const
     {
       const double *__restrict__ rb = onika::cuda::vector_data(m_backup_data[cell]);
-      Quaternion old_orientation = {rb[j * 7 + 3], rb[j * 7 + 4], rb[j * 7 + 5], rb[j * 7 + 6]};
-      Vec3d old_center = {rb[j * 7 + 0], rb[j * 7 + 1], rb[j * 7 + 2]};
+      Vec3d new_center = {rx, ry, rz};
 #ifdef TRY_SOA
       //try another data layout
       const size_t size = onika::cuda::vector_size(m_backup_data[cell]) / 7;
       Quaternion old_orientation = {rb[j + size * 3], rb[j + size * 4], rb[j + size * 5], rb[j + size * 6]};
       Vec3d old_center = {rb[j], rb[j + size * 1], rb[j + size * 2]};
-      Vec3d new_center = {rx, ry, rz};
 #else
-
+      Quaternion old_orientation = {rb[j * 7 + 3], rb[j * 7 + 4], rb[j * 7 + 5], rb[j * 7 + 6]};
+      Vec3d old_center = {rb[j * 7 + 0], rb[j * 7 + 1], rb[j * 7 + 2]};
+#endif
       const auto &shp = shps[type];
       const int nv = shp.get_number_of_vertices();
       for (int v = 0; v < nv; v++)
       {
-/*
         const Vec3d old_vertex = shp.get_vertex(v, old_center, old_orientation);
         const Vec3d new_vertex = shp.get_vertex(v, new_center, orientation);
         const Vec3d dr = new_vertex - old_vertex;
-*/
-        const Vec3d dr = shp.get_vertex(v, new_center-old_center, orientation - old_orientation);
         if (exanb::dot(dr, dr) >= m_threshold_sqr)
         {
           ++count_over_dist2;

@@ -62,10 +62,10 @@ namespace exaDEM
           const auto *__restrict__ rz = cells[i][field::rz];
           const auto *__restrict__ orient = cells[i][field::orient];
 
-         //try another data layout
-         const size_t block_size = n_particles * 7; 
 
 #ifdef TRY_SOA //not activated
+         //try another data layout
+         const size_t block_size = n_particles * 7; 
 #         pragma omp simd
           for (size_t j = 0; j < n_particles; j++)
           {
