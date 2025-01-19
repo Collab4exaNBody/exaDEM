@@ -78,7 +78,7 @@ namespace exaDEM
 		inline void execute() override final
 		{
 			//-------------------------------------------------------------------------------------------
-			using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type>;
+			using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
 			using ParticleTuple = decltype(grid->cells()[0][0]);
 
 			assert(grid->number_of_particles() == 0);
@@ -135,8 +135,9 @@ namespace exaDEM
 			for (size_t s = 0; s < spheres.size(); s++)
 			{
 				auto pos = spheres[s].center;
+				auto rad = spheres[s].radius;
 				auto id = ns + s;
-				pt = ParticleTupleIO(pos[0], pos[1], pos[2], id, *type);
+				pt = ParticleTupleIO(pos[0], pos[1], pos[2], id, *type, rad);
 				particle_data.push_back(pt);
 			}
 

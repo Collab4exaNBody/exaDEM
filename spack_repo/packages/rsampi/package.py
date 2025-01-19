@@ -9,7 +9,7 @@ class Rsampi(CMakePackage):
 
     version('0.1.0', git='https://github.com/MarcJos/RSA_MPI.git', branch='v0.1.0')
 
-    depends_on("cmake@3.26.3")
+    depends_on("cmake")
     depends_on("openmpi")
     build_system("cmake", default="cmake@3.26.3")
 
