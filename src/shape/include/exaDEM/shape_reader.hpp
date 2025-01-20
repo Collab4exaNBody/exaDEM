@@ -209,7 +209,7 @@ namespace exaDEM
     return shape();
   }
 
-  inline void read_shp(ParticleTypeMap& ptm, shapes& shps, const std::string file_name, bool big_shape = false)
+  inline void read_shp(ParticleTypeMap& ptm, shapes& shps, shapes_GPU& shps2, const std::string file_name, bool big_shape = false)
   {
     std::ifstream input(file_name.c_str());
     std::string first;
@@ -231,6 +231,7 @@ namespace exaDEM
         } 
         ptm[shp.m_name] = shps.get_size();
         shps.add_shape(&shp);
+        shps2.add_shape(&shp);
       }
     }
   }

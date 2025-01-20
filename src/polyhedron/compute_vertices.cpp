@@ -40,6 +40,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(shapes_GPU, shapes_collection2, INPUT_OUTPUT, DocString{"Collection of shapes"});
     ADD_SLOT(Traversal, traversal_all, INPUT_OUTPUT, DocString{"list of non empty cells [REAL] within the current grid"});
 
     // -----------------------------------------------
@@ -54,7 +55,8 @@ namespace exaDEM
     inline void execute() override final
     {
       const shape *shps = shapes_collection->data();
-      PolyhedraComputeVerticesFunctor func{shps};
+      const shapes_GPU &shps2 = *shapes_collection2;
+      PolyhedraComputeVerticesFunctor func{shps, shps2};
       
       size_t* cell_ptr = nullptr;
       size_t cell_size = size_t(-1);

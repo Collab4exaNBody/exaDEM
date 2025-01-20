@@ -36,6 +36,7 @@ namespace exaDEM
   {
     ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"Input filename"});
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(shapes_GPU, shapes_collection2, INPUT_OUTPUT, DocString{"Collection of shapes"});
     ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT_OUTPUT );
     ADD_SLOT(bool, verbosity, INPUT, true );
 
@@ -51,7 +52,7 @@ namespace exaDEM
       auto& ptm = *particle_type_map;
       lout << "Read file= " << *filename << std::endl;
       const bool BigShape = false; // do not remove it
-      exaDEM::read_shp(ptm, *shapes_collection, *filename, BigShape);
+      exaDEM::read_shp(ptm, *shapes_collection, *shapes_collection2, *filename, BigShape);
       if( *verbosity )
       {
         for(const auto& [ name, type ] : ptm)
