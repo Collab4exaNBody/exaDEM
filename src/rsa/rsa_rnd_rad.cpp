@@ -30,178 +30,178 @@
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	struct ParticleType
-	{
-		static inline constexpr size_t MAX_STR_LEN = 16;
+  struct ParticleType
+  {
+    static inline constexpr size_t MAX_STR_LEN = 16;
 
-		double m_mass = 1.0;
-		double m_radius = 1.0;
-		char m_name[MAX_STR_LEN] = {'\0'};
+    double m_mass = 1.0;
+    double m_radius = 1.0;
+    char m_name[MAX_STR_LEN] = {'\0'};
 
-		inline void set_name(const std::string &s)
-		{
-			if (s.length() >= MAX_STR_LEN)
-			{
-				std::cerr << "Particle name too long : length=" << s.length() << ", max=" << (MAX_STR_LEN - 1) << "\n";
-				std::abort();
-			}
-			std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
-			m_name[MAX_STR_LEN - 1] = '\0';
-		}
-		inline std::string name() const { return m_name; }
-	};
+    inline void set_name(const std::string &s)
+    {
+      if (s.length() >= MAX_STR_LEN)
+      {
+        std::cerr << "Particle name too long : length=" << s.length() << ", max=" << (MAX_STR_LEN - 1) << "\n";
+        std::abort();
+      }
+      std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
+      m_name[MAX_STR_LEN - 1] = '\0';
+    }
+    inline std::string name() const { return m_name; }
+  };
 
-	using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;
+  using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;
 
-	template <typename GridT> class RSARndRad : public OperatorNode
-	{
-		ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-		ADD_SLOT(Domain, domain, INPUT_OUTPUT);
-		ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-		ADD_SLOT(double, enlarge_bounds, INPUT, 0.0);
-		ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
-		ADD_SLOT(std::vector<bool>, periodicity, INPUT, OPTIONAL, DocString{"if set, overrides domain's periodicity stored in file with this value"});
-		ADD_SLOT(bool, expandable, INPUT, OPTIONAL, DocString{"if set, override domain expandability stored in file"});
-		ADD_SLOT(AABB, bounds, INPUT, REQUIRED, DocString{"if set, override domain's bounds, filtering out particle outside of overriden bounds"});
-		ADD_SLOT(int, type, INPUT, 0);
-		ADD_SLOT(bool, pbc_adjust_xform, INPUT, true);
+  template <typename GridT> class RSARndRad : public OperatorNode
+  {
+    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+    ADD_SLOT(Domain, domain, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(double, enlarge_bounds, INPUT, 0.0);
+    ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
+    ADD_SLOT(std::vector<bool>, periodicity, INPUT, OPTIONAL, DocString{"if set, overrides domain's periodicity stored in file with this value"});
+    ADD_SLOT(bool, expandable, INPUT, OPTIONAL, DocString{"if set, override domain expandability stored in file"});
+    ADD_SLOT(AABB, bounds, INPUT, REQUIRED, DocString{"if set, override domain's bounds, filtering out particle outside of overriden bounds"});
+    ADD_SLOT(int, type, INPUT, 0);
+    ADD_SLOT(bool, pbc_adjust_xform, INPUT, true);
 
-		ADD_SLOT(double, r_min, INPUT, REQUIRED, DocString{"Value of the smallest radius possible"}); 
-		ADD_SLOT(double, r_max, INPUT, REQUIRED, DocString{"Value of the biggest radius possible"}); 
-		ADD_SLOT(uint64_t, n_max, INPUT, 1e16, DocString{"Maximal number of particles. Default is 1e16."}); 
+    ADD_SLOT(double, r_min, INPUT, REQUIRED, DocString{"Value of the smallest radius possible"}); 
+    ADD_SLOT(double, r_max, INPUT, REQUIRED, DocString{"Value of the biggest radius possible"}); 
+    ADD_SLOT(uint64_t, n_max, INPUT, 1e16, DocString{"Maximal number of particles. Default is 1e16."}); 
 
-		ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
-		ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
+    ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+    ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
-		public:
-		inline void execute() override final
-		{
-			//-------------------------------------------------------------------------------------------
-			using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
-			using ParticleTuple = decltype(grid->cells()[0][0]);
+    public:
+    inline void execute() override final
+    {
+      //-------------------------------------------------------------------------------------------
+      using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
+      using ParticleTuple = decltype(grid->cells()[0][0]);
 
-			assert(grid->number_of_particles() == 0);
+      assert(grid->number_of_particles() == 0);
 
-			// MPI Initialization
-			int rank = 0, np = 1;
-			MPI_Comm_rank(*mpi, &rank);
-			MPI_Comm_size(*mpi, &np);
+      // MPI Initialization
+      int rank = 0, np = 1;
+      MPI_Comm_rank(*mpi, &rank);
+      MPI_Comm_size(*mpi, &np);
 
-			AABB b = *bounds;
-			constexpr int DIM = 3;
-			constexpr int method = 1;
-			constexpr int ghost_layer = 1;
-			uint64_t phase = 0;
-			double rmin = *r_min;
-			double rmax = *r_max;
-			double exclusion_distance = 0.;
-			auto nonlinear_transform = [rmin, rmax](double x) {return rmin + (rmax - rmin) * x;};
-			sac_de_billes::RandomRadiusGenerator random_radius_generator(nonlinear_transform, phase);
+      AABB b = *bounds;
+      constexpr int DIM = 3;
+      constexpr int method = 1;
+      constexpr int ghost_layer = 1;
+      uint64_t phase = 0;
+      double rmin = *r_min;
+      double rmax = *r_max;
+      double exclusion_distance = 0.;
+      auto nonlinear_transform = [rmin, rmax](double x) {return rmin + (rmax - rmin) * x;};
+      sac_de_billes::RandomRadiusGenerator random_radius_generator(nonlinear_transform, phase);
 
-			// domain size
-			std::array<double, DIM> domain_inf = {b.bmin.x, b.bmin.y, b.bmin.z};
-			std::array<double, DIM> domain_sup = {b.bmax.x, b.bmax.y, b.bmax.z};
+      // domain size
+      std::array<double, DIM> domain_inf = {b.bmin.x, b.bmin.y, b.bmin.z};
+      std::array<double, DIM> domain_sup = {b.bmax.x, b.bmax.y, b.bmax.z};
 
-			// gen
-			sac_de_billes::RadiusGenerator<DIM> radius_generator(rmin, rmax, &random_radius_generator, *n_max, exclusion_distance);
-			rsa_domain<DIM> rsa_domain(domain_inf, domain_sup, ghost_layer, radius_generator.get_max_radius());
+      // gen
+      sac_de_billes::RadiusGenerator<DIM> radius_generator(rmin, rmax, &random_radius_generator, *n_max, exclusion_distance);
+      rsa_domain<DIM> rsa_domain(domain_inf, domain_sup, ghost_layer, radius_generator.get_max_radius());
 
-			size_t seed = 0;
-			algorithm::uniform_generate<DIM, method>(rsa_domain, radius_generator, 6000, 10, seed);
-			auto spheres = rsa_domain.extract_spheres();
+      size_t seed = 0;
+      algorithm::uniform_generate<DIM, method>(rsa_domain, radius_generator, 6000, 10, seed);
+      auto spheres = rsa_domain.extract_spheres();
 
-			if (rank == 0)
-			{
-				compute_domain_bounds(*domain, *bounds_mode, *enlarge_bounds, b, b, *pbc_adjust_xform);
-			}
+      if (rank == 0)
+      {
+        compute_domain_bounds(*domain, *bounds_mode, *enlarge_bounds, b, b, *pbc_adjust_xform);
+      }
 
-			// compute indexes
-			int ns = spheres.size();
-			MPI_Exscan(MPI_IN_PLACE, &ns, 1, MPI_INT, MPI_SUM, *mpi);
+      // compute indexes
+      int ns = spheres.size();
+      MPI_Exscan(MPI_IN_PLACE, &ns, 1, MPI_INT, MPI_SUM, *mpi);
 
-			// send bounds and size_box values to all cores
-			MPI_Bcast(&(*domain), sizeof(Domain), MPI_CHARACTER, 0, *mpi);
-			assert(check_domain(*domain));
-			grid->set_offset(IJK{0, 0, 0});
-			grid->set_origin(domain->bounds().bmin);
-			grid->set_cell_size(domain->cell_size());
-			grid->set_dimension(domain->grid_dimension());
+      // send bounds and size_box values to all cores
+      MPI_Bcast(&(*domain), sizeof(Domain), MPI_CHARACTER, 0, *mpi);
+      assert(check_domain(*domain));
+      grid->set_offset(IJK{0, 0, 0});
+      grid->set_origin(domain->bounds().bmin);
+      grid->set_cell_size(domain->cell_size());
+      grid->set_dimension(domain->grid_dimension());
 
-			// add particles
-			std::vector<ParticleTupleIO> particle_data;
-			ParticleTupleIO pt;
-			for (size_t s = 0; s < spheres.size(); s++)
-			{
-				auto pos = spheres[s].center;
-				auto rad = spheres[s].radius;
-				auto id = ns + s;
-				pt = ParticleTupleIO(pos[0], pos[1], pos[2], id, *type, rad);
-				particle_data.push_back(pt);
-			}
+      // add particles
+      std::vector<ParticleTupleIO> particle_data;
+      ParticleTupleIO pt;
+      for (size_t s = 0; s < spheres.size(); s++)
+      {
+        auto pos = spheres[s].center;
+        auto rad = spheres[s].radius;
+        auto id = ns + s;
+        pt = ParticleTupleIO(pos[0], pos[1], pos[2], id, *type, rad);
+        particle_data.push_back(pt);
+      }
 
-			bool is_region = region.has_value();
-			ParticleRegionCSGShallowCopy prcsg;
-			if( is_region )
-			{
-				if (!particle_regions.has_value())
-				{
-					fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
-				}
+      bool is_region = region.has_value();
+      ParticleRegionCSGShallowCopy prcsg;
+      if( is_region )
+      {
+        if (!particle_regions.has_value())
+        {
+          fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+        }
 
-				if (region->m_nb_operands == 0)
-				{
-					ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
-					region->build_from_expression_string(particle_regions->data(), particle_regions->size());
-				}
-				prcsg =  *region;
-			}
+        if (region->m_nb_operands == 0)
+        {
+          ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
+          region->build_from_expression_string(particle_regions->data(), particle_regions->size());
+        }
+        prcsg =  *region;
+      }
 
-			// Fill grid, particles will migrate accross mpi processed via the operator migrate_cell_particles
-			for (auto p : particle_data)
-			{
-				Vec3d r{p[field::rx], p[field::ry], p[field::rz]};
-				IJK loc = domain_periodic_location(*domain, r); // grid.locate_cell(r);
-				assert(grid->contains(loc));
-				assert(min_distance2_between(r, grid->cell_bounds(loc)) < grid->epsilon_cell_size2());
-				p[field::rx] = r.x;
-				p[field::ry] = r.y;
-				p[field::rz] = r.z;
-				ParticleTuple t = p;
-				if( is_region )
-				{
-					if( prcsg.contains(r) )
-					{
-						grid->cell(loc).push_back(t, grid->cell_allocator());
-					}
-				}
-				else
-				{
-					grid->cell(loc).push_back(t, grid->cell_allocator());
-				}
-			}
+      // Fill grid, particles will migrate accross mpi processed via the operator migrate_cell_particles
+      for (auto p : particle_data)
+      {
+        Vec3d r{p[field::rx], p[field::ry], p[field::rz]};
+        IJK loc = domain_periodic_location(*domain, r); // grid.locate_cell(r);
+        assert(grid->contains(loc));
+        assert(min_distance2_between(r, grid->cell_bounds(loc)) < grid->epsilon_cell_size2());
+        p[field::rx] = r.x;
+        p[field::ry] = r.y;
+        p[field::rz] = r.z;
+        ParticleTuple t = p;
+        if( is_region )
+        {
+          if( prcsg.contains(r) )
+          {
+            grid->cell(loc).push_back(t, grid->cell_allocator());
+          }
+        }
+        else
+        {
+          grid->cell(loc).push_back(t, grid->cell_allocator());
+        }
+      }
 
-			uint64_t n_particles = particle_data.size();
-			uint64_t n;
-			MPI_Reduce(&n_particles, &n, 1, MPI_UINT64_T, MPI_SUM, 0, *mpi);
+      uint64_t n_particles = particle_data.size();
+      uint64_t n;
+      MPI_Reduce(&n_particles, &n, 1, MPI_UINT64_T, MPI_SUM, 0, *mpi);
 
-			// Display information
-			lout << "=================================" << std::endl;
-			lout << "Particles        = " << n << std::endl;
-			lout << "Domain XForm     = " << domain->xform() << std::endl;
-			lout << "Domain bounds    = " << domain->bounds() << std::endl;
-			lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
-			lout << "Real size        = " << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33} << std::endl;
-			lout << "Cell size        = " << domain->cell_size() << std::endl;
-			lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension()) << " cells)" << std::endl;
-			lout << "=================================" << std::endl;
+      // Display information
+      lout << "=================================" << std::endl;
+      lout << "Particles        = " << n << std::endl;
+      lout << "Domain XForm     = " << domain->xform() << std::endl;
+      lout << "Domain bounds    = " << domain->bounds() << std::endl;
+      lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
+      lout << "Real size        = " << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33} << std::endl;
+      lout << "Cell size        = " << domain->cell_size() << std::endl;
+      lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension()) << " cells)" << std::endl;
+      lout << "=================================" << std::endl;
 
-			grid->rebuild_particle_offsets();
-		}
-	};
+      grid->rebuild_particle_offsets();
+    }
+  };
 
-	// === register factories ===
-	__attribute__((constructor)) static void register_factories() { OperatorNodeFactory::instance()->register_factory("rsa_rnd_rad", make_grid_variant_operator<RSARndRad>); }
+  // === register factories ===
+  __attribute__((constructor)) static void register_factories() { OperatorNodeFactory::instance()->register_factory("rsa_rnd_rad", make_grid_variant_operator<RSARndRad>); }
 
 } // namespace exaDEM

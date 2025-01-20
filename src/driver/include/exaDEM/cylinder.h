@@ -124,7 +124,7 @@ namespace exaDEM
     {
       stream << "  - register_cylinder:" << std::endl;
       stream << "     id: " << id << std::endl;
-      stream << "     state: { radius:" << this->radius;
+      stream << "     state: { radius: " << this->radius;
       stream << ",axis: [" << this->axis << "]";
       stream << ",center: [" << this->axis << "]";
       stream << ",vel: [" << this->vel << "]";
