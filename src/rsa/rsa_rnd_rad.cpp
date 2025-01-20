@@ -68,8 +68,9 @@ namespace exaDEM
 		ADD_SLOT(int, type, INPUT, 0);
 		ADD_SLOT(bool, pbc_adjust_xform, INPUT, true);
 
-		ADD_SLOT(double, r_min, INPUT, REQUIRED); 
-		ADD_SLOT(double, r_max, INPUT, REQUIRED); 
+		ADD_SLOT(double, r_min, INPUT, REQUIRED, DocString{"Value of the smallest radius possible"}); 
+		ADD_SLOT(double, r_max, INPUT, REQUIRED, DocString{"Value of the biggest radius possible"}); 
+		ADD_SLOT(uint64_t, n_max, INPUT, 1e16, DocString{"Maximal number of particles. Default is 1e16."}); 
 
 		ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
 		ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
@@ -95,7 +96,6 @@ namespace exaDEM
 			uint64_t phase = 0;
 			double rmin = *r_min;
 			double rmax = *r_max;
-			uint64_t nb_spheres_max = 1e16;
 			double exclusion_distance = 0.;
 			auto nonlinear_transform = [rmin, rmax](double x) {return rmin + (rmax - rmin) * x;};
 			sac_de_billes::RandomRadiusGenerator random_radius_generator(nonlinear_transform, phase);
@@ -105,7 +105,7 @@ namespace exaDEM
 			std::array<double, DIM> domain_sup = {b.bmax.x, b.bmax.y, b.bmax.z};
 
 			// gen
-			sac_de_billes::RadiusGenerator<DIM> radius_generator(rmin, rmax, &random_radius_generator, nb_spheres_max, exclusion_distance);
+			sac_de_billes::RadiusGenerator<DIM> radius_generator(rmin, rmax, &random_radius_generator, *n_max, exclusion_distance);
 			rsa_domain<DIM> rsa_domain(domain_inf, domain_sup, ghost_layer, radius_generator.get_max_radius());
 
 			size_t seed = 0;
