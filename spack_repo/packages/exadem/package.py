@@ -12,6 +12,7 @@ class Exadem(CMakePackage):
     version("1.0.2", git='https://github.com/Collab4exaNBody/exaDEM.git', branch='v1.0.2', preferred=True )
     version("1.0.1", commit="a68904c87f3889a36b9fdb64cdd03efc25d06914")
     variant("cuda", default=False, description="Support for GPU")
+    variant("rsampi", default=False, description="Support for particles generation using the RSA package")
 
     depends_on("cmake@3.27.9")
     depends_on("yaml-cpp@0.6.3")
@@ -19,6 +20,7 @@ class Exadem(CMakePackage):
     depends_on("exanbody")
     depends_on("rsampi", when="+rsampi")
     depends_on("cuda", when="+cuda")
+    depends_on("rsampi", when="+rsampi")
 
 
     build_system("cmake", default="cmake")
