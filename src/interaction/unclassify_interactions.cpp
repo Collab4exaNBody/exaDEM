@@ -46,7 +46,7 @@ namespace exaDEM
 {
   using namespace exanb;
   
-  __global__ void kernelUN( double* ft_x,
+  __global__ void filtre_un( double* ft_x,
   			double* ft_y,
   			double* ft_z,
   			double* mom_x,
@@ -68,7 +68,7 @@ namespace exaDEM
   	}
   }
   
-  __global__ void kernelDEUX( uint64_t* id_i,
+  __global__ void filtre_deux( uint64_t* id_i,
   				uint64_t* id_j,
   				uint64_t* id_i_res,
   				uint64_t* id_j_res,
@@ -86,7 +86,6 @@ namespace exaDEM
   				double* mom_z_res,
   				int* blocks_incr,
   				int* indices,
-  				int* particles,
   				int size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -128,12 +127,26 @@ namespace exaDEM
   			mom_x_res[index + incr] = mom_x[threadIdx.x];
   			mom_y_res[index + incr] = mom_y[threadIdx.x];
   			mom_z_res[index + incr] = mom_z[threadIdx.x];
-  			
-  			atomicAdd(&particles[id_i[threadIdx.x]], 1);
-  			
+
   			indices[incr + index] = incr + index;
   		}
   		
+  	}
+  }
+  
+  __global__ void generateKeys( uint64_t* keys, 
+  				const uint64_t* id_i, 
+  				const uint64_t* id_j,
+  				int min,
+  				int max,
+  				int size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		int range = max - min + 1;
+  		keys[idx] = (id_i[idx] - min) * range + (id_j[idx] - min);
   	}
   }
   
@@ -186,7 +199,7 @@ namespace exaDEM
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-    ADD_SLOT(OldClassifier, ic_old, INPUT_OUTPUT);
+    ADD_SLOT(OldClassifiers, ic_olds, INPUT_OUTPUT);
 
   public:
     inline std::string documentation() const override final
@@ -199,13 +212,32 @@ namespace exaDEM
     {
       // using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
       
+      printf("UNCLASSIFY\n");
+      
+      auto &olds = *ic_olds;
+      
+      if(olds.use)
+      {
+      	olds.waves.resize(13);
+      	
+      	olds.use = false;
+      }
+      
       auto& c = *ic;
       
-      auto& old = *ic_old;
+      for(int type = 0; type < 13; type++)
+      {
       
-      auto [data, size] = c.get_info(0);
+      auto [data, size] = c.get_info(type);
+      
+      if(size > 0)
+      {
+      
+      printf("PASSAGE_%d\n", type);
       
       InteractionWrapper<InteractionSOA> interactions(data);
+      
+      auto &o = olds.waves[type];
       
       int blockSize = 256;
       int numBlocks = ( size + blockSize - 1 ) / blockSize;
@@ -220,37 +252,53 @@ namespace exaDEM
       onika::memory::CudaMMVector<int> total;
       total.resize(1);
       
-      kernelUN<<<numBlocks, blockSize>>>( interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, size, blocks.data(), total.data());
+      filtre_un<<<numBlocks, blockSize>>>( interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, size, blocks.data(), total.data());
       
       exclusive_sum( blocks.data(), blocks_incr.data(), numBlocks );
       
       onika::memory::CudaMMVector<uint64_t> id_i_res;
       id_i_res.resize(total[0]);
+      
+      onika::memory::CudaMMVector<uint64_t> id_j_res;
+      id_j_res.resize(total[0]);
 	
       onika::memory::CudaMMVector<int> indices;
       indices.resize(total[0]);
       
-      old.set(total[0], grid->number_of_particles());
+      o.set( total[0] );
       
-      kernelDEUX<<<numBlocks, blockSize>>>( interactions.id_i, interactions.id_j, id_i_res.data(), old.id_j.data(), interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x.data(), old.ft_y.data(), old.ft_z.data(), interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x.data(), old.mom_y.data(), old.mom_z.data(), blocks_incr.data(), indices.data(), old.particles.data(), size);
+      OldClassifierWrapper old(o);
+      
+      filtre_deux<<<numBlocks, blockSize>>>( interactions.id_i, interactions.id_j, id_i_res.data(), id_j_res.data(), interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, blocks_incr.data(), indices.data(), size);
       
        cudaDeviceSynchronize();
+       
+       onika::memory::CudaMMVector<uint64_t> keys;
+       keys.resize(total[0]);
+       
+       int min = 0;
+       int max = grid->number_of_particles() - 1;
+       
+       numBlocks = ( total[0] + blockSize - 1 ) / blockSize;
+       
+       generateKeys<<<numBlocks, blockSize>>>( keys.data(), id_i_res.data(), id_j_res.data(), min, max, total[0]);
       
-      sortWithIndices( id_i_res.data(), indices.data(), old.id_i.data(), old.indices.data(), total[0]);
-      
-      exclusive_sum( old.particles.data(), old.particles_incr.data(), grid->number_of_particles() );
+       sortWithIndices( keys.data(), indices.data(), old.keys, indices.data(), total[0]);
       
       //getchar();
       
-      /*if (grid->number_of_cells() == 0)
+      }
+      }
+      
+      if (grid->number_of_cells() == 0)
       {
         return;
       }
       if (!ic.has_value())
         return;
-      ic->unclassify(*ges);*/
+      ic->unclassify(*ges);
       
-      //printf("UNCLASSIFY END\n");
+     printf("UNCLASSIFY_END\n");
       
     }
   };

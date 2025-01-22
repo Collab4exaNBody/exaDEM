@@ -32,56 +32,87 @@ under the License.
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/traversal.hpp>
+#include <cub/cub.cuh>
 
 namespace exaDEM
 {
   using namespace exanb;
   
-  __global__ void kernel( double* ft_x,
-  			double* ft_y,
-  			double* ft_z,
-  			double* mom_x,
-  			double* mom_y,
-  			double* mom_z,
-  			uint64_t* id_i,
-  			uint64_t* id_j,
-  			double* ft_x_old,
-  			double* ft_y_old,
-  			double* ft_z_old,
-  			double* mom_x_old,
-  			double* mom_y_old,
-  			double* mom_z_old,
-  			uint64_t* id_i_old,
-  			uint64_t* id_j_old,
-  			int* indices,
-  			int* particles,
-  			int* particles_incr,
-  			size_t size)
+  __global__ void generateKeys( uint64_t* keys, 
+  				const uint64_t* id_i, 
+  				const uint64_t* id_j,
+  				int* indices,
+  				int min,
+  				int max,
+  				int size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
   	
-  	if( idx < size )
+  	if(idx < size)
   	{
-  		int id = id_i[idx];
+  		int range = max - min + 1;
+  		keys[idx] = (id_i[idx] - min) * range + (id_j[idx] - min);
   		
-  		if(particles[id] > 0)
+  		indices[idx] = idx;
+  	}
+  }
+  
+
+	void sortWithIndices2(uint64_t* id_in, int *indices_in, uint64_t* id_out, int* indices_out, int size) {
+	    // Allocate temporary storage
+	    void *d_temp_storage = nullptr;
+	    size_t temp_storage_bytes = 0;
+
+	    // Step 1: Determine temporary storage size
+	    cub::DeviceRadixSort::SortPairs(
+		d_temp_storage, temp_storage_bytes, 
+		id_in, id_out, 
+		indices_in, indices_out, 
+		size);
+
+	    // Step 2: Allocate temporary storage
+	    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+
+	    // Step 3: Perform the radix sort (key-value pair sorting)
+	    cub::DeviceRadixSort::SortPairs(
+		d_temp_storage, temp_storage_bytes, 
+		id_in, id_out, 
+		indices_in, indices_out, 
+		size);
+
+	    // Free temporary storage and double-buffered arrays
+	    cudaFree(d_temp_storage);
+	}
+	
+  __global__ void find_common_elements(const uint64_t* keys, const uint64_t* keys_old, int size1, int size2, double* ftx, double* fty, double* ftz, double* ftx_old, double* fty_old, double* ftz_old, double* momx, double* momy, double* momz, double* momx_old, double* momy_old, double* momz_old, int* indices, int* indices_old)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if (idx < size1)
+  	{
+  		uint64_t key = keys[idx];
+  		int low = 0, high = size2 - 1;
+  		while(low <= high)
   		{
-  			int p = particles_incr[id];
-  			
-  			int id2 = id_j[idx];
-  			
-  			for(int i = 0; i < particles[id]; i++)
+  			int mid = low + (high - low) / 2;
+  			if( keys_old[mid] == key)
   			{
-  				if( id2 == id_j_old[indices[p + i]])
-  				{
-  					ft_x[idx] = ft_x_old[indices[p + i]];
-  					ft_y[idx] = ft_y_old[indices[p + i]]; 
-  					ft_z[idx] = ft_z_old[indices[p + i]];
-  					
-  					mom_x[idx] = mom_x_old[indices[p + i]];  
-  					mom_y[idx] = mom_y_old[indices[p + i]];  
-  					mom_z[idx] = mom_z_old[indices[p + i]];   
-  				}
+  				ftx[indices[idx]] = ftx_old[indices_old[mid]];
+  				fty[indices[idx]] = fty_old[indices_old[mid]];
+  				ftz[indices[idx]] = ftz_old[indices_old[mid]];
+  				
+  				momx[indices[idx]] = momx_old[indices_old[mid]];
+  				momy[indices[idx]] = momy_old[indices_old[mid]];
+  				momz[indices[idx]] = momz_old[indices_old[mid]];
+  				return;
+  			}
+  			else if( keys_old[mid] < key)
+  			{
+  				low = mid + 1;
+  			}
+  			else
+  			{
+  				high = mid - 1;
   			}
   		}
   	}
@@ -97,8 +128,8 @@ namespace exaDEM
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
     ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
-    
-    ADD_SLOT(OldClassifier, ic_old, INPUT_OUTPUT);
+    //ADD_SLOT(OldClassifier, ic_old, INPUT_OUTPUT);
+    ADD_SLOT(OldClassifiers, ic_olds, INPUT_OUTPUT);
 
   public:
     inline std::string documentation() const override final
@@ -110,7 +141,7 @@ namespace exaDEM
     inline void execute() override final
     {
     
-      //printf("CLASSIFY\n");
+      printf("CLASSIFY\n");
     
       if (grid->number_of_cells() == 0)
       {
@@ -122,52 +153,56 @@ namespace exaDEM
       ic->classify(*ges, cell_ptr, cell_size);
       //ic->prefetch_memory_on_gpu(); // GPU only
       
-      auto [data, size] = ic->get_info(0);
+      auto &olds = *ic_olds;
+      
+      auto& c = *ic;
+      
+      for(int type = 0; type < 13; type++)
+      {
+      
+      auto [data, size] = c.get_info(type);
+      
+      if(size > 0)
+      {
+      
+      if(type == 0)
+      {
+      
+      auto &o = olds.waves[type];
       
       InteractionWrapper<InteractionSOA> interactions(data);
       
       int blockSize = 256;
       int numBlocks = ( size + blockSize - 1 ) / blockSize;
       
-      auto& old = *ic_old;
+      onika::memory::CudaMMVector<uint64_t> keys;
+      keys.resize(size);
       
-      /*for(int i = 0; i < old.id_i.size(); i++)
-      {
-      	printf("ID_I: %d   ID_J: %d   FTX: %f   FTY: %f   FTZ: %f   MOMX: %f   MOMY: %f   MOMZ: %f   Particles: %d   Particles_Incr: %d\n", old.id_i[i], old.id_j[i], old.ft_x[i], old.ft_y[i], old.ft_z[i], old.mom_x[i], old.mom_y[i], old.mom_z[i], old.particles[old.id_i[i]], old.particles_incr[old.id_i[i]]);
+      onika::memory::CudaMMVector<uint64_t> keys_sorted;
+      keys_sorted.resize(size);
+      
+      onika::memory::CudaMMVector<int> indices;
+      indices.resize(size);
+      
+      onika::memory::CudaMMVector<int> indices_sorted;
+      indices_sorted.resize(size);
+      
+      int min = 0;
+      int max = grid->number_of_particles() - 1;
+      
+      generateKeys<<<numBlocks, blockSize>>>( keys.data(), interactions.id_i, interactions.id_j, indices.data(), min, max, size);
+      
+      sortWithIndices2( keys.data(), indices.data(), keys_sorted.data(), indices_sorted.data(), size);
+      
+      OldClassifierWrapper old(o);
+      
+      find_common_elements<<<numBlocks, blockSize>>>( keys.data(), old.keys, size, old.size, interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, indices_sorted.data(), old.indices);
+      
+      }
+      }
       }
       
-      getchar();*/
-      /*#pragma omp parallel for
-      for(int i = 0; i < interactions.size; i++)
-      {
-        //printf("CIAO\n");
-      	int id = interactions.id_i[i];
-      	
-      	if(old.particles[id] > 0)
-      	{
-      		int p = old.particles_incr[id];
-      		
-      		int id2 = interactions.id_j[i];
-      		
-      		for(int j = 0; j < old.particles[i]; j++)
-      		{
-      			if ( id2 == old.id_j[old.indices[p + j]] )
-      			{
-      				interactions.ft_x[i] = old.ft_x[old.indices[p + j]];
-      				interactions.ft_y[i] = old.ft_y[old.indices[p + j]];
-      				interactions.ft_z[i] = old.ft_z[old.indices[p + j]];
-      				
-      				interactions.mom_x[i] = old.mom_x[old.indices[p + j]];
-      				interactions.mom_y[i] = old.mom_y[old.indices[p + j]];
-      				interactions.mom_z[i] = old.mom_z[old.indices[p + j]];
-      			}
-      		}
-      	}
-      }*/
-      
-      kernel<<<numBlocks, blockSize>>>( interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, interactions.id_i, interactions.id_j, old.ft_x.data(), old.ft_y.data(), old.ft_z.data(), old.mom_x.data(), old.mom_y.data(), old.mom_z.data(), old.id_i.data(), old.id_j.data(), old.indices.data(), old.particles.data(), old.particles_incr.data(), size);
-      
-      //printf("CLASSIFY END\n");
+      printf("END_CLASSIFY\n");  
       
     }
   };

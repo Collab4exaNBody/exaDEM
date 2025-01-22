@@ -120,8 +120,7 @@ namespace exaDEM
   {
   	template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
   	
-  	VectorT<uint64_t> id_i;
-  	VectorT<uint64_t> id_j;
+  	VectorT<uint64_t> keys;
   	
   	VectorT<double> ft_x;
   	VectorT<double> ft_y;
@@ -132,21 +131,16 @@ namespace exaDEM
   	VectorT<double> mom_z;
 	
 	VectorT<int> indices;
-	
-  	VectorT<int> particles;
-  	VectorT<int> particles_incr;
   	
   	size_t size = 0;
   	
-  	void set(int s, int p)
+  	void set( int s )
   	{
   		size = s;
   		
-  		id_i.clear();
-  		id_j.clear();
+  		keys.clear();
   		
-  		id_i.resize(size);
-  		id_j.resize(size);
+  		keys.resize(size);
   		
   		ft_x.clear();
   		ft_y.clear();
@@ -167,13 +161,52 @@ namespace exaDEM
   		indices.clear();
   		
   		indices.resize(size);
-  		
-  		particles.clear();
-  		particles_incr.clear();
-  		
-  		particles.resize(p);
-  		particles_incr.resize(p);
   	}
+  };
+  
+  struct OldClassifierWrapper
+  {
+  	uint64_t * __restrict__ keys;
+  	
+  	double * __restrict__ ft_x;
+  	double * __restrict__ ft_y;
+  	double * __restrict__ ft_z;
+  	
+  	double * __restrict__ mom_x;
+  	double * __restrict__ mom_y;
+  	double * __restrict__ mom_z;
+  	
+  	int * __restrict__ indices;
+  	
+  	size_t size = 0;
+  	
+  	OldClassifierWrapper(OldClassifier& data)
+  	{
+  		keys = onika::cuda::vector_data(data.keys);
+  		
+  		ft_x = onika::cuda::vector_data(data.ft_x);
+  		ft_y = onika::cuda::vector_data(data.ft_y);
+  		ft_z = onika::cuda::vector_data(data.ft_z);
+  	
+  		mom_x = onika::cuda::vector_data(data.mom_x);
+  		mom_y = onika::cuda::vector_data(data.mom_y);
+  		mom_z = onika::cuda::vector_data(data.mom_z);
+  		
+  		indices = onika::cuda::vector_data(data.indices);
+  		
+  		size = data.size;
+  	}
+  };
+  
+  struct OldClassifiers
+  {
+  	template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
+  	
+  	static constexpr int types = 13;
+  	std::vector<OldClassifier> waves;
+  	
+  	bool use = true;
+  	
   };
 
   /**
