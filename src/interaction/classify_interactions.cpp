@@ -165,6 +165,8 @@ namespace exaDEM
       if(size > 0)
       {
       
+      InteractionWrapper<InteractionSOA> interactions(data);
+      
       if(type == 0)
       {
       
@@ -203,7 +205,6 @@ namespace exaDEM
       }
       
       printf("END_CLASSIFY\n");  
-      
     }
   };
 

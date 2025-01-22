@@ -207,6 +207,18 @@ namespace exaDEM
   	
   	bool use = true;
   	
+  	bool stl_7 = true;
+  	bool stl_8 = true;
+  	bool stl_9 = true;
+  	
+  	uint16_t max_7;
+  	uint16_t min_7;
+  	
+  	uint16_t max_8;
+  	uint16_t min_8;
+  	
+  	uint16_t max_9;
+  	uint16_t min_9;
   };
 
   /**

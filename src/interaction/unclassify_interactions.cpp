@@ -46,6 +46,39 @@ namespace exaDEM
 {
   using namespace exanb;
   
+  enum ReduceType {
+    MIN,
+    MAX
+  };
+  
+  void findMinMax(uint16_t* d_in, int size, uint16_t* result, ReduceType type) {
+    // Temporary storage
+    void* d_temp_storage = nullptr;
+    size_t temp_storage_bytes = 0;
+
+    if (type == MAX) {
+        // Calculate temporary storage size for max
+        cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, d_in, result, size);
+    } else {
+        // Calculate temporary storage size for min
+        cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, result, size);
+    }
+
+    // Allocate temporary storage
+    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+
+    if (type == MAX) {
+        // Launch reduction to find the max
+        cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, d_in, result, size);
+    } else {
+        // Launch reduction to find the min
+        cub::DeviceReduce::Min(d_temp_storage, temp_storage_bytes, d_in, result, size);
+    }
+
+    // Free temporary storage
+    cudaFree(d_temp_storage);
+  } 
+  
   __global__ void filtre_un( double* ft_x,
   			double* ft_y,
   			double* ft_z,
@@ -70,8 +103,10 @@ namespace exaDEM
   
   __global__ void filtre_deux( uint64_t* id_i,
   				uint64_t* id_j,
+  				uint16_t* sub_j,
   				uint64_t* id_i_res,
   				uint64_t* id_j_res,
+  				uint16_t* sub_j_res,
   				double* ft_x,
   				double* ft_y,
   				double* ft_z,
@@ -119,14 +154,15 @@ namespace exaDEM
   				if( s[i] == 1 ) index++;
   			}
   			
-  			id_i_res[index + incr] = id_i[threadIdx.x];
-  			id_j_res[index + incr] = id_j[threadIdx.x];
-  			ft_x_res[index + incr] = ft_x[threadIdx.x];
-  			ft_y_res[index + incr] = ft_y[threadIdx.x];
-  			ft_z_res[index + incr] = ft_z[threadIdx.x];
-  			mom_x_res[index + incr] = mom_x[threadIdx.x];
-  			mom_y_res[index + incr] = mom_y[threadIdx.x];
-  			mom_z_res[index + incr] = mom_z[threadIdx.x];
+  			id_i_res[index + incr] = id_i[idx];
+  			id_j_res[index + incr] = id_j[idx];
+  			sub_j_res[index + incr] = sub_j[idx];
+  			ft_x_res[index + incr] = ft_x[idx];
+  			ft_y_res[index + incr] = ft_y[idx];
+  			ft_z_res[index + incr] = ft_z[idx];
+  			mom_x_res[index + incr] = mom_x[idx];
+  			mom_y_res[index + incr] = mom_y[idx];
+  			mom_z_res[index + incr] = mom_z[idx];
 
   			indices[incr + index] = incr + index;
   		}
@@ -147,6 +183,31 @@ namespace exaDEM
   	{
   		int range = max - min + 1;
   		keys[idx] = (id_i[idx] - min) * range + (id_j[idx] - min);
+  	}
+  }
+  
+  __global__ void generateKeys2( uint64_t* keys,
+  				 const uint64_t* id_i,
+  				 const uint64_t* id_j,
+  				 const uint16_t* sub_j,
+  				 int min, int max,
+  				 int min2, int max2,
+  				 int size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		uint64_t L_b = max - min + 1;
+  		uint64_t L_c = max2 - min2 + 1;
+  		
+  		uint64_t a = id_i[idx];
+  		uint64_t b = id_j[idx];
+  		uint16_t c = sub_j[idx];
+  		
+  		keys[idx] = (static_cast<uint64_t>(a - min) * L_b * L_c) +
+  			    (static_cast<uint64_t>(b - min) * L_c) +
+  			    (static_cast<uint64_t>(c - min2));
   	}
   }
   
@@ -237,7 +298,64 @@ namespace exaDEM
       
       InteractionWrapper<InteractionSOA> interactions(data);
       
-      auto &o = olds.waves[type];
+      
+      
+      if(type == 7)
+      {
+      	if(olds.stl_7)
+      	{
+      		onika::memory::CudaMMVector<uint16_t> max;
+      		onika::memory::CudaMMVector<uint16_t> min;
+      		max.resize(1);
+      		min.resize(1);
+      		
+      		findMinMax(interactions.sub_j, size, max.data(), MAX);
+      		findMinMax(interactions.sub_j, size, min.data(), MIN);
+      		
+      		olds.max_7 = max[0];
+      		olds.min_7 = min[0];
+      		
+      		olds.stl_7 = false;
+      	}
+      }
+      
+      if(type == 8)
+      {
+      	if(olds.stl_8)
+      	{
+      		onika::memory::CudaMMVector<uint16_t> max;
+      		onika::memory::CudaMMVector<uint16_t> min;
+      		max.resize(1);
+      		min.resize(1);
+      		
+      		findMinMax(interactions.sub_j, size, max.data(), MAX);
+      		findMinMax(interactions.sub_j, size, min.data(), MIN);
+      		
+      		olds.max_8 = max[0];
+      		olds.min_8 = min[0];
+      		
+      		olds.stl_8 = false;
+      	}
+      }
+      
+      if(type == 9)
+      {
+      	if(olds.stl_9)
+      	{
+      		onika::memory::CudaMMVector<uint16_t> max;
+      		onika::memory::CudaMMVector<uint16_t> min;
+      		max.resize(1);
+      		min.resize(1);
+      		
+      		findMinMax(interactions.sub_j, size, max.data(), MAX);
+      		findMinMax(interactions.sub_j, size, min.data(), MIN);
+      		
+      		olds.max_9 = max[0];
+      		olds.min_9 = min[0];
+      		
+      		olds.stl_9 = false;
+      	}
+      }
       
       int blockSize = 256;
       int numBlocks = ( size + blockSize - 1 ) / blockSize;
@@ -261,15 +379,20 @@ namespace exaDEM
       
       onika::memory::CudaMMVector<uint64_t> id_j_res;
       id_j_res.resize(total[0]);
+      
+      onika::memory::CudaMMVector<uint16_t> sub_j_res;
+      sub_j_res.resize(total[0]);
 	
       onika::memory::CudaMMVector<int> indices;
       indices.resize(total[0]);
+      
+      auto &o = olds.waves[type];
       
       o.set( total[0] );
       
       OldClassifierWrapper old(o);
       
-      filtre_deux<<<numBlocks, blockSize>>>( interactions.id_i, interactions.id_j, id_i_res.data(), id_j_res.data(), interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, blocks_incr.data(), indices.data(), size);
+      filtre_deux<<<numBlocks, blockSize>>>( interactions.id_i, interactions.id_j, interactions.sub_j, id_i_res.data(), id_j_res.data(), sub_j_res.data(), interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, blocks_incr.data(), indices.data(), size);
       
        cudaDeviceSynchronize();
        
@@ -281,11 +404,39 @@ namespace exaDEM
        
        numBlocks = ( total[0] + blockSize - 1 ) / blockSize;
        
-       generateKeys<<<numBlocks, blockSize>>>( keys.data(), id_i_res.data(), id_j_res.data(), min, max, total[0]);
-      
+       if(type >= 7 && type <= 9)
+       {
+       
+        int min2;
+        int max2;
+        
+       	if(type == 7)
+       	{
+       		min2 = olds.min_7;
+       		max2 = olds.max_7;
+       	}
+       	else if( type == 8 )
+       	{
+       		min2 = olds.min_8;
+       		max2 = olds.max_8;
+       	}
+       	else if( type == 9 )
+       	{
+       		min2 = olds.min_9;
+       		max2 = olds.max_9;
+       	}
+       	
+       	generateKeys2<<<numBlocks, blockSize>>>( keys.data(), id_i_res.data(), id_j_res.data(), sub_j_res.data(), min, max, min2, max2, total[0]);
+       	
+       } 
+       else
+       {
+       	
+       	generateKeys<<<numBlocks, blockSize>>>( keys.data(), id_i_res.data(), id_j_res.data(), min, max, total[0]);
+       
+       }
+       
        sortWithIndices( keys.data(), indices.data(), old.keys, indices.data(), total[0]);
-      
-      //getchar();
       
       }
       }
