@@ -273,7 +273,7 @@ namespace exaDEM
     {
       // using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
       
-      printf("UNCLASSIFY\n");
+      //printf("UNCLASSIFY\n");
       
       auto &olds = *ic_olds;
       
@@ -294,7 +294,7 @@ namespace exaDEM
       if(size > 0)
       {
       
-      printf("PASSAGE_%d\n", type);
+      //printf("PASSAGE_%d\n", type);
       
       InteractionWrapper<InteractionSOA> interactions(data);
       
@@ -437,19 +437,20 @@ namespace exaDEM
        }
        
        sortWithIndices( keys.data(), indices.data(), old.keys, indices.data(), total[0]);
+       
       
       }
       }
       
-      if (grid->number_of_cells() == 0)
+      /*if (grid->number_of_cells() == 0)
       {
         return;
       }
       if (!ic.has_value())
         return;
-      ic->unclassify(*ges);
+      ic->unclassify(*ges);*/
       
-     printf("UNCLASSIFY_END\n");
+     //printf("UNCLASSIFY_END\n");
       
     }
   };

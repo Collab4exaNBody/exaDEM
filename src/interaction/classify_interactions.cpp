@@ -57,6 +57,34 @@ namespace exaDEM
   	}
   }
   
+  __global__ void generateKeys2( uint64_t* keys,
+  				 const uint64_t* id_i,
+  				 const uint64_t* id_j,
+  				 const uint16_t* sub_j,
+  				 int *indices,
+  				 int min, int max,
+  				 int min2, int max2,
+  				 int size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		uint64_t L_b = max - min + 1;
+  		uint64_t L_c = max2 - min2 + 1;
+  		
+  		uint64_t a = id_i[idx];
+  		uint64_t b = id_j[idx];
+  		uint16_t c = sub_j[idx];
+  		
+  		keys[idx] = (static_cast<uint64_t>(a - min) * L_b * L_c) +
+  			    (static_cast<uint64_t>(b - min) * L_c) +
+  			    (static_cast<uint64_t>(c - min2));
+  			    
+  		indices[idx] = idx;
+  	}
+  }
+  
 
 	void sortWithIndices2(uint64_t* id_in, int *indices_in, uint64_t* id_out, int* indices_out, int size) {
 	    // Allocate temporary storage
@@ -141,7 +169,7 @@ namespace exaDEM
     inline void execute() override final
     {
     
-      printf("CLASSIFY\n");
+      //printf("CLASSIFY\n");
     
       if (grid->number_of_cells() == 0)
       {
@@ -165,12 +193,7 @@ namespace exaDEM
       if(size > 0)
       {
       
-      InteractionWrapper<InteractionSOA> interactions(data);
-      
-      if(type == 0)
-      {
-      
-      auto &o = olds.waves[type];
+      //printf("PASSAGE_%d\n", type);
       
       InteractionWrapper<InteractionSOA> interactions(data);
       
@@ -192,9 +215,41 @@ namespace exaDEM
       int min = 0;
       int max = grid->number_of_particles() - 1;
       
-      generateKeys<<<numBlocks, blockSize>>>( keys.data(), interactions.id_i, interactions.id_j, indices.data(), min, max, size);
+       if(type >= 7 && type <= 9)
+       {
+       
+        int min2;
+        int max2;
+        
+       	if(type == 7)
+       	{
+       		min2 = olds.min_7;
+       		max2 = olds.max_7;
+       	}
+       	else if( type == 8 )
+       	{
+       		min2 = olds.min_8;
+       		max2 = olds.max_8;
+       	}
+       	else if( type == 9 )
+       	{
+       		min2 = olds.min_9;
+       		max2 = olds.max_9;
+       	}
+       	
+       	generateKeys2<<<numBlocks, blockSize>>>( keys.data(), interactions.id_i, interactions.id_j, interactions.sub_j, indices.data(), min, max, min2, max2, size);
+       	
+       } 
+       else
+       {
+       	
+       	generateKeys<<<numBlocks, blockSize>>>( keys.data(), interactions.id_i, interactions.id_j, indices.data(), min, max, size);
+       
+       }
       
       sortWithIndices2( keys.data(), indices.data(), keys_sorted.data(), indices_sorted.data(), size);
+      
+      auto &o = olds.waves[type];
       
       OldClassifierWrapper old(o);
       
@@ -202,9 +257,8 @@ namespace exaDEM
       
       }
       }
-      }
       
-      printf("END_CLASSIFY\n");  
+      //printf("END_CLASSIFY\n");  
     }
   };
 
