@@ -36,13 +36,12 @@ setup_drivers:
      params: { motion_type: STATIONARY }
   - register_surface:
      id: 1
-     normal: [0,1,0]
-     state: {offset: -0.8, center: [15 m,-0.8 m,15 m], vel: 0 m/s, vrot: [0,0.25,0]}
+     state: {offset: -0.8, normal: [0,1,0], center: [15 m,-0.8 m,15 m], vel: 0 m/s, vrot: [0,0.25,0]}
      params: { motion_type: STATIONARY }
   - register_surface:
      id: 0
      normal: [0,1,0]
-     state: {offset: 30.8 m, center: [15,30.8,15], vel: 0 m/s, vrot: [0,0.25,0]}
+     state: {offset: 30.8 m, normal: [0,1,0], center: [15,30.8,15], vel: 0 m/s, vrot: [0,0.25,0]}
      params: { motion_type: STATIONARY }
 
 compute_force:
