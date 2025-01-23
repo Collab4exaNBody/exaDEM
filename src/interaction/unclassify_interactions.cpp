@@ -436,7 +436,7 @@ namespace exaDEM
        
        }
        
-       sortWithIndices( keys.data(), indices.data(), old.keys, indices.data(), total[0]);
+       sortWithIndices( keys.data(), indices.data(), old.keys, old.indices, total[0]);
        
       
       }
