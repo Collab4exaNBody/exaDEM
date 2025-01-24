@@ -122,6 +122,104 @@ namespace exaDEM
         NullXForm xform = {};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
       }
+      
+      //NOUVELLE MÉTHODE
+      
+      auto number_of_particles = grid->number_of_particles();
+       
+      onika::memory::CudaMMVector<int> nb_particles_cell;
+      onika::memory::CudaMMVector<onika::memory::CudaMMVector<int>> cell_particles_neighbors;
+      onika::memory::CudaMMVector<onika::memory::CudaMMVector<int>> cell_particles_neighbors_size;
+      
+      	auto& g = *grid;
+      	//auto cells = g.cells();
+      	IJK dims = g.dimension();
+      	
+      	auto& amr_gpu = *amr;
+      	const size_t* sub_grid_start = amr_gpu.sub_grid_start().data();
+      	const uint32_t* sub_grid_cells = amr_gpu.sub_grid_cells().data();
+      	
+      	const double max_dist = *nbh_dist_lab;
+      	const double max_dist2 = max_dist*max_dist;
+      	
+      	auto& amr_grid_pairs_gpu = *amr_grid_pairs;
+      	const unsigned int loc_max_gap = amr_grid_pairs_gpu.cell_layers();
+      	//const unsigned int nbh_cell_side = loc_max_gap+1;
+      	const unsigned int n_nbh_cell = amr_grid_pairs_gpu.nb_nbh_cells();
+      	//assert( nbh_cell_side*nbh_cell_side*nbh_cell_side == n_nbh_cell );
+      	
+      	const size_t n_cells = g.number_of_cells();
+      	
+      	nb_particles_cell.resize( n_cells );
+      	cell_particles_neighbors.resize( n_cells );
+      	cell_particles_neighbors_size.resize( n_cells );
+      	
+      	//chunk_neighbors_gpu.clear();
+      	//chunk_neighbors_gpu.set_number_of_cells( n_cells );
+      	//chunk_neighbors_gpu.set_chunk_size( cs );
+      	//chunk_neighbors_gpu.realloc_stream_pool( config_gpu.stream_prealloc_factor );
+      	
+      	
+      	//ldbg << "cell max gap = "<<loc_max_gap<<", cslog2="<<cs_log2<<", n_nbh_cell="<<n_nbh_cell<<", pre-alloc="<<chunk_neighbors_gpu.m_fixed_stream_pool.m_capacity <<std::endl;
+      	
+      	unsigned int max_threads = omp_get_max_threads();
+      	//if( max_threads > chunk_neighbors_scratch_gpu.thread.size() )
+      	//{
+      	//	chunk_neighbors_scratch_gpu.thread.resize( max_threads );
+      	//}
+      	
+      	//GridChunkNeighborsHostWriteAccessor chunk_nbh( chunk_neighbors_gpu );
+      	
+#	pragma omp parallel
+	{
+		int tid = omp_get_thread_num();
+		assert( tid>=0 && size_t(tid)<max_threads );
+		//auto& cell_a_particle_nbh = chunk_neighbors_scratch_gpu.thread[tid].cell_a_particle_nbh;
+		
+		GRID_OMP_FOR_BEGIN(dims,cell_a,loc_a, schedule(dynamic))
+		{
+			size_t n_particles_a = cells[cell_a].size();
+			
+			nb_particles_cell[cell_a] = n_particles_a;
+			
+			//cell_a_particle_nbh.resize( n_particles_a );
+			
+			//for(size_t i=0;i<n_particles_a;i++)
+			//{
+			//	cell_a_particle_nbh[i].clear();
+			//}
+			
+			ssize_t sgstart_a = sub_grid_start[cell_a];
+			ssize_t sgsize_a = sub_grid_start[cell_a+1] - sgstart_a;
+			ssize_t n_sub_cells_a = sgsize_a+1;
+			ssize_t sgside_a = icbrt64( n_sub_cells_a );
+			assert( sgside_a <= static_cast<ssize_t>(GRID_CHUNK_NBH_MAX_AMR_RES) );
+			
+          		ssize_t bstarti = std::max( loc_a.i-loc_max_gap , 0l ); 
+          		ssize_t bendi = std::min( loc_a.i+loc_max_gap , dims.i-1 );
+          		ssize_t bstartj = std::max( loc_a.j-loc_max_gap , 0l );
+          		ssize_t bendj = std::min( loc_a.j+loc_max_gap , dims.j-1 );
+          		ssize_t bstartk = std::max( loc_a.k-loc_max_gap , 0l );
+         		ssize_t bendk = std::min( loc_a.k+loc_max_gap , dims.k-1 );
+         		
+          		for(ssize_t loc_bk=bstartk;loc_bk<=bendk;loc_bk++)
+          		for(ssize_t loc_bj=bstartj;loc_bj<=bendj;loc_bj++)
+          		for(ssize_t loc_bi=bstarti;loc_bi<=bendi;loc_bi++)
+          		{
+            			IJK loc_b { loc_bi, loc_bj, loc_bk };
+            			ssize_t cell_b = grid_ijk_to_index( dims, loc_b );
+            			size_t n_particles_b = cells[cell_b].size();
+            			
+            			if( n_particles_b > 0)
+            			{
+            				cell_particles_neighbors[cell_a].push_back(cell_b);
+            				cell_particles_neighbors_size[cell_a].push_back(n_particles_b);
+            			}
+            		}         		
+			
+		}
+		GRID_OMP_FOR_END
+	}
     }
   };
 
