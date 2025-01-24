@@ -51,7 +51,7 @@ namespace exaDEM
             uint64_t idx,
             Interaction& I, 
             TMPLC *const __restrict__ cells, 
-            const Vec3d *const __restrict__ dnp, 
+            const double *const __restrict__ dnp, 
             const Vec3d *const __restrict__ fnp, 
             const Vec3d *const __restrict__ ftp, 
             const Vec3d *const __restrict__ cpp) const
