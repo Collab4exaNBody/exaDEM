@@ -51,25 +51,29 @@ namespace exaDEM
             uint64_t idx,
             Interaction& I, 
             TMPLC *const __restrict__ cells, 
+            const Vec3d *const __restrict__ dnp, 
             const Vec3d *const __restrict__ fnp, 
             const Vec3d *const __restrict__ ftp, 
             const Vec3d *const __restrict__ cpp) const
         {
           assert( type == I.type );
-          // get fij and cij
-          auto &cell = cells[I.cell_i];
-          Vec3d fij = fnp[idx] + ftp[idx];
-          Vec3d pos_i = {cell[field::rx][I.p_i], cell[field::ry][I.p_i], cell[field::rz][I.p_i]};
-          Vec3d cij = cpp[idx] - pos_i;
-          exanb::mat3d_atomic_add_contribution(cell[field::stress][I.p_i], exanb::tensor(fij, cij));
-
-          if constexpr ( type <= 3 && sym == true) // polyhedron - polyhedron || sphere - sphere
+          if( dnp[idx] < 0.0)
           {
-            auto &cellj = cells[I.cell_j];
-            Vec3d fji = -fij;
-            Vec3d pos_j = {cellj[field::rx][I.p_j], cellj[field::ry][I.p_j], cellj[field::rz][I.p_j]};
-            Vec3d cji = cpp[idx] - pos_j;
-            exanb::mat3d_atomic_add_contribution(cellj[field::stress][I.p_j], exanb::tensor(fji, cji));
+            // get fij and cij
+            auto &cell = cells[I.cell_i];
+            Vec3d fij = fnp[idx] + ftp[idx];
+            Vec3d pos_i = {cell[field::rx][I.p_i], cell[field::ry][I.p_i], cell[field::rz][I.p_i]};
+            Vec3d cij = cpp[idx] - pos_i;
+            exanb::mat3d_atomic_add_contribution(cell[field::stress][I.p_i], exanb::tensor(fij, cij));
+
+            if constexpr ( type <= 3 && sym == true) // polyhedron - polyhedron || sphere - sphere
+            {
+              auto &cellj = cells[I.cell_j];
+              Vec3d fji = -fij;
+              Vec3d pos_j = {cellj[field::rx][I.p_j], cellj[field::ry][I.p_j], cellj[field::rz][I.p_j]};
+              Vec3d cji = cpp[idx] - pos_j;
+              exanb::mat3d_atomic_add_contribution(cellj[field::stress][I.p_j], exanb::tensor(fji, cji));
+            }
           }
         }
     };
@@ -91,7 +95,7 @@ namespace exaDEM
             const auto [dnp, cpp, fnp, ftp] = classifier.buffer_p(Type); // get parameters: get forces (fn, ft) and contact positions (cp) computed into the contact force operators.
             InteractionWrapper<InteractionSOA> interactions(Ip);         // get data: interaction
             compute_stress_tensor<Type, Sym> func;                       // get kernel
-            WrapperForAll wrapper(interactions, func , cells, fnp, ftp, cpp); // pack data, kernel, and interaction in a wrapper
+            WrapperForAll wrapper(interactions, func , cells, dnp, fnp, ftp, cpp); // pack data, kernel, and interaction in a wrapper
             parallel_for(size, wrapper, oper->parallel_execution_context(), opts); // launch kernel
           }
         }
