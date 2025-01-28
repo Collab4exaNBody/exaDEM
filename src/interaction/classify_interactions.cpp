@@ -34,6 +34,8 @@ under the License.
 #include <exaDEM/traversal.hpp>
 #include <cub/cub.cuh>
 
+#include <exaDEM/classifier/interactionSOA.hpp>
+
 namespace exaDEM
 {
   using namespace exanb;
@@ -44,6 +46,7 @@ namespace exaDEM
   				int* indices,
   				int min,
   				int max,
+  				int type,
   				int size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -51,7 +54,9 @@ namespace exaDEM
   	if(idx < size)
   	{
   		int range = max - min + 1;
-  		keys[idx] = (id_i[idx] - min) * range + (id_j[idx] - min);
+  		
+  		if(type == 0){ keys[idx] = (id_i[idx] - min) * range + (id_j[idx] - min); }
+  		else if(type == 4){ keys[idx] = id_i[idx]; }
   		
   		indices[idx] = idx;
   	}
@@ -158,6 +163,9 @@ namespace exaDEM
     ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
     //ADD_SLOT(OldClassifier, ic_old, INPUT_OUTPUT);
     ADD_SLOT(OldClassifiers, ic_olds, INPUT_OUTPUT);
+    
+    ADD_SLOT(InteractionSOA, interaction_type0, INPUT_OUTPUT);
+    ADD_SLOT(InteractionSOA, interaction_type4, INPUT_OUTPUT);
 
   public:
     inline std::string documentation() const override final
@@ -169,7 +177,7 @@ namespace exaDEM
     inline void execute() override final
     {
     
-      //printf("CLASSIFY\n");
+      printf("CLASSIFY\n");
     
       if (grid->number_of_cells() == 0)
       {
@@ -178,12 +186,32 @@ namespace exaDEM
       auto [cell_ptr, cell_size] = traversal_real->info();
       if (!ic.has_value())
         ic->initialize();
-      ic->classify(*ges, cell_ptr, cell_size);
-      //ic->prefetch_memory_on_gpu(); // GPU only
-      
-      auto &olds = *ic_olds;
-      
+      /*ic->classify(*ges, cell_ptr, cell_size);
+      ic->prefetch_memory_on_gpu(); // GPU only*/
+
+     auto &olds = *ic_olds;
+      	      
       auto& c = *ic;
+      
+      /*auto [data, size] = c.get_info(0);
+      
+      auto& type0 = *interaction_type0;
+      
+      printf("TYPE0: OLD: %d NEW: %d\n", size, type0.ft_x.size());
+      
+      auto [data2, size2] = c.get_info(4);
+      
+      auto& type4 = *interaction_type4;
+      
+      printf("TYPE4: OLD: %d NEW: %d\n", size2, type4.ft_x.size());*/
+      
+      auto& waves = ic->waves;
+      
+      waves[0].clear();
+      waves[0] = *interaction_type0;
+      
+      waves[4].clear();
+      waves[4] = *interaction_type4;
       
       for(int type = 0; type < 13; type++)
       {
@@ -192,9 +220,7 @@ namespace exaDEM
       
       if(size > 0)
       {
-      
-      //printf("PASSAGE_%d\n", type);
-      
+
       InteractionWrapper<InteractionSOA> interactions(data);
       
       int blockSize = 256;
@@ -243,7 +269,7 @@ namespace exaDEM
        else
        {
        	
-       	generateKeys<<<numBlocks, blockSize>>>( keys.data(), interactions.id_i, interactions.id_j, indices.data(), min, max, size);
+       	generateKeys<<<numBlocks, blockSize>>>( keys.data(), interactions.id_i, interactions.id_j, indices.data(), min, max, type, size);
        
        }
       
@@ -258,7 +284,7 @@ namespace exaDEM
       }
       }
       
-      //printf("END_CLASSIFY\n");  
+     printf("END_CLASSIFY\n");  
     }
   };
 

@@ -121,6 +121,7 @@ namespace exaDEM
   				double* mom_z_res,
   				int* blocks_incr,
   				int* indices,
+  				uint64_t* keys,
   				int size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -165,6 +166,7 @@ namespace exaDEM
   			mom_z_res[index + incr] = mom_z[idx];
 
   			indices[incr + index] = incr + index;
+  			
   		}
   		
   	}
@@ -175,6 +177,7 @@ namespace exaDEM
   				const uint64_t* id_j,
   				int min,
   				int max,
+  				int type,
   				int size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -182,7 +185,8 @@ namespace exaDEM
   	if(idx < size)
   	{
   		int range = max - min + 1;
-  		keys[idx] = (id_i[idx] - min) * range + (id_j[idx] - min);
+  		if(type == 0)keys[idx] = (id_i[idx] - min) * range + (id_j[idx] - min);
+  		if(type == 4)keys[idx] = id_i[idx];
   	}
   }
   
@@ -273,7 +277,7 @@ namespace exaDEM
     {
       // using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
       
-      //printf("UNCLASSIFY\n");
+      printf("UNCLASSIFY\n");
       
       auto &olds = *ic_olds;
       
@@ -386,18 +390,18 @@ namespace exaDEM
       onika::memory::CudaMMVector<int> indices;
       indices.resize(total[0]);
       
+       onika::memory::CudaMMVector<uint64_t> keys;
+       keys.resize(total[0]);
+      
       auto &o = olds.waves[type];
       
       o.set( total[0] );
       
       OldClassifierWrapper old(o);
       
-      filtre_deux<<<numBlocks, blockSize>>>( interactions.id_i, interactions.id_j, interactions.sub_j, id_i_res.data(), id_j_res.data(), sub_j_res.data(), interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, blocks_incr.data(), indices.data(), size);
+      filtre_deux<<<numBlocks, blockSize>>>( interactions.id_i, interactions.id_j, interactions.sub_j, id_i_res.data(), id_j_res.data(), sub_j_res.data(), interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, blocks_incr.data(), indices.data(), keys.data(), size);
       
        cudaDeviceSynchronize();
-       
-       onika::memory::CudaMMVector<uint64_t> keys;
-       keys.resize(total[0]);
        
        int min = 0;
        int max = grid->number_of_particles() - 1;
@@ -432,7 +436,7 @@ namespace exaDEM
        else
        {
        	
-       	generateKeys<<<numBlocks, blockSize>>>( keys.data(), id_i_res.data(), id_j_res.data(), min, max, total[0]);
+       	generateKeys<<<numBlocks, blockSize>>>( keys.data(), id_i_res.data(), id_j_res.data(), min, max, type, total[0]);
        
        }
        
@@ -441,16 +445,16 @@ namespace exaDEM
       
       }
       }
-      
-      /*if (grid->number_of_cells() == 0)
+      /*
+      if (grid->number_of_cells() == 0)
       {
         return;
       }
       if (!ic.has_value())
         return;
-      ic->unclassify(*ges);*/
-      
-     //printf("UNCLASSIFY_END\n");
+      ic->unclassify(*ges);
+      */
+     printf("UNCLASSIFY_END\n");
       
     }
   };
