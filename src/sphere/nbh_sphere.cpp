@@ -116,8 +116,8 @@ namespace exaDEM
           // Extract history before reset it
           const size_t data_size = storage.m_data.size();
           Interaction *__restrict__ data_ptr = storage.m_data.data();
-          //extract_history(manager.hist, data_ptr, data_size);
-          //std::sort(manager.hist.begin(), manager.hist.end());
+          extract_history(manager.hist, data_ptr, data_size);
+          std::sort(manager.hist.begin(), manager.hist.end());
           manager.reset(n_particles);
 
           // Reset storage, interaction history was stored in the manager

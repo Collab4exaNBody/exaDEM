@@ -186,14 +186,14 @@ namespace exaDEM
       auto [cell_ptr, cell_size] = traversal_real->info();
       if (!ic.has_value())
         ic->initialize();
-      /*ic->classify(*ges, cell_ptr, cell_size);
+      ic->classify(*ges, cell_ptr, cell_size);
       ic->prefetch_memory_on_gpu(); // GPU only*/
 
      auto &olds = *ic_olds;
-      	      
+            
       auto& c = *ic;
-      
-      /*auto [data, size] = c.get_info(0);
+      /*
+      auto [data, size] = c.get_info(0);
       
       auto& type0 = *interaction_type0;
       
@@ -203,8 +203,30 @@ namespace exaDEM
       
       auto& type4 = *interaction_type4;
       
-      printf("TYPE4: OLD: %d NEW: %d\n", size2, type4.ft_x.size());*/
+      printf("TYPE4: OLD: %d NEW: %d\n", size2, type4.ft_x.size());
       
+      //if(size!=type0.ft_x.size())
+      //{
+      	
+      	int loop = std::min(size, type0.ft_x.size());
+      	
+      	int err = 0;
+      	
+      	for(int i = 0; i < loop; i++)
+      	{
+      		if(data.id_i[i] != type0.id_i[i] || data.id_j[i] != type0.id_j[i] || data.cell_i[i] != type0.cell_i[i] || data.cell_j[i] != type0.cell_j[i] || data.p_i[i] != type0.p_i[i] || data.p_j[i] != type0.p_j[i]) err++;//printf("ERREUR_%d\n", i);
+      	}
+      	printf("ERREURS: %d\n", err);
+      	//getchar();
+      //}
+      if(size!=type0.ft_x.size()){
+      	printf("STOP\n"); 
+      	int index = loop - err;
+      	printf("PREUVE: INTERACTION_UN(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)   INTERACTION_DEUX(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)\n", data.id_i[index-1], data.id_j[index-1], data.cell_i[index-1], data.cell_j[index-1], data.p_i[index-1], data.p_j[index-1], type0.id_i[index-1], type0.id_j[index-1], type0.cell_i[index-1], type0.cell_j[index-1], type0.p_i[index-1], type0.p_j[index-1]);
+      	printf("PREUVE: INTERACTION_UN(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)   INTERACTION_DEUX(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)\n", data.id_i[index], data.id_j[index], data.cell_i[index], data.cell_j[index], data.p_i[index], data.p_j[index], type0.id_i[index], type0.id_j[index], type0.cell_i[index], type0.cell_j[index], type0.p_i[index], type0.p_j[index]);
+      	getchar();
+      	}
+      */
       auto& waves = ic->waves;
       
       waves[0].clear();

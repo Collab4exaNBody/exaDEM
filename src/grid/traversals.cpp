@@ -81,6 +81,8 @@ namespace exaDEM
       
       traversal_real->iterator = true;
       traversal_all->iterator = true;
+      
+      //printf("TRAVERSAL\n");
     }
   };
 
