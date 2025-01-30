@@ -72,6 +72,7 @@ namespace exaDEM
       std::string filename = path + "driver_%010d.msp";
       filename = format_string(filename, *timestep);
       data_stream << "setup_drivers:" << std::endl;
+      data_stream << std::setprecision(16);
 
       DumpDriverFunc func = {0, path, data_stream};
 
@@ -81,6 +82,7 @@ namespace exaDEM
         std::visit(func, drv);
       }
       std::ofstream file(filename.c_str());
+      file << std::setprecision(16);
       file << data_stream.rdbuf();
     }
   };
