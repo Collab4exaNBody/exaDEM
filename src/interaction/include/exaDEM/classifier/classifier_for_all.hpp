@@ -185,11 +185,13 @@ namespace onika
   {
     template <typename T, typename K, typename A, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperContactLawForAll<T, K, A, Args...>>
     {
+      static inline constexpr bool RequiresBlockSynchronousCall = false;
       static inline constexpr bool CudaCompatible = true;
     };
 
     template <typename T, typename K, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperForAll<T, K, Args...>>
     {
+      static inline constexpr bool RequiresBlockSynchronousCall = false;
       static inline constexpr bool CudaCompatible = true;
     };
   } // namespace parallel
