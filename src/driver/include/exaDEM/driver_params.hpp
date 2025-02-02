@@ -78,10 +78,12 @@ namespace exaDEM
 
     // Motion: Linear
     double const_vel = 0;
+    double const_force = 0;
+
     // Motion: Compression
     double sigma = 0;       /**< used for compressive force */
     double damprate = 0;    /**< used for compressive force */
-    Vec3d forces = {0,0,0}; /**< sum of the forces applied to the ball. */
+    Vec3d forces = {0,0,0}; /**< sum of the forces applied to the driver. */
     double weigth = 0;     /**< cumulated sum of particle weigth into the simulation or in the driver */
 
     inline bool is_stationary() { return motion_type == STATIONARY; }
@@ -108,13 +110,13 @@ namespace exaDEM
 
     ONIKA_HOST_DEVICE_FUNC inline bool need_forces()
     {
-      // No need for LINEAR_FORCE_MOTION
+      // Need for LINEAR_FORCE_MOTION
       // No need for STATIONARY
       // No need for LINEAR_MOTION
       // Need for FORCE_MOTION
       // Need for COMPRESSIVE_FORCE
       // Need for LINEAR_COMPRESSIVE_MOTION
-      return is_compressive() || motion_type == FORCE_MOTION; 
+      return is_compressive() || motion_type == FORCE_MOTION ||  motion_type == LINEAR_FORCE_MOTION; 
     }
 
     // Getter
@@ -126,7 +128,10 @@ namespace exaDEM
       }
       if( motion_type == LINEAR_FORCE_MOTION )
       {
-        return exanb::dot(forces, motion_vector) * motion_vector;
+        //lout <<  " avant " << forces <<std::endl;
+        forces = (exanb::dot(forces, motion_vector) + const_force) * motion_vector;
+        //lout <<  " apres " << forces <<std::endl;
+        return forces;
       }
       return Vec3d{0,0,0};
     }
@@ -169,6 +174,10 @@ namespace exaDEM
         if( motion_type == LINEAR_MOTION && const_vel == 0 )
         {
           lout << "\033[31m[Warning] You have chosen constant linear motion with zero velocity, please use \"const_vel\" or use the motion type \"STATIONARY\"\033[0m" << std::endl;
+        }
+        if( motion_type == LINEAR_FORCE_MOTION && const_force == 0 )
+        {
+          lout << "\033[31m[Warning] You have chosen constant linear force motion with zero force, please use \"const_force\" or use the motion type \"STATIONARY\"\033[0m" << std::endl;
         }
       }
 
@@ -216,6 +225,10 @@ namespace exaDEM
           { 
             lout << "Velocity (constant): " << const_vel << std::endl;
           }
+          if(motion_type == LINEAR_FORCE_MOTION)
+          {
+            lout << "Force (constant): " << const_force << std::endl;
+          }
         }
         if (is_compressive() )
         {
@@ -238,6 +251,10 @@ namespace exaDEM
       if(motion_type == LINEAR_MOTION)
       {
         stream << ", const_vel: "   << const_vel;
+      }
+      if(motion_type == LINEAR_FORCE_MOTION)
+      {
+        stream << ", const_force: " << const_force; 
       }
       if( is_compressive() )
       {
@@ -301,6 +318,15 @@ namespace YAML
             return false;
           }
           if( node["const_vel"] ) v.const_vel = node["const_vel"].as<double>();
+        }
+        if( v.motion_type == MotionType::LINEAR_FORCE_MOTION )
+        {
+          if (!node["const_force"])
+          {
+            lerr << "\033[31mconst_force is missing \033[0m\n";
+            return false;
+          }
+          if( node["const_force"] ) v.const_force = node["const_force"].as<double>();
         }
       }
       if( v.is_compressive() )

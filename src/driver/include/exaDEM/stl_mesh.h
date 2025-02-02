@@ -84,7 +84,7 @@ namespace YAML
 
 namespace exaDEM
 {
-  const std::vector<MotionType> stl_valid_motion_types = {STATIONARY, LINEAR_MOTION};
+  const std::vector<MotionType> stl_valid_motion_types = {STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION};
 
   using namespace exanb;
   /**
@@ -122,6 +122,7 @@ namespace exaDEM
       lout << "Number of faces    : " << shp.get_number_of_faces() << std::endl;
       lout << "Number of edges    : " << shp.get_number_of_edges() << std::endl;
       lout << "Number of vertices : " << shp.get_number_of_vertices() << std::endl;
+      Driver_params::print_driver_params();
     }
 
     /**
@@ -165,6 +166,7 @@ namespace exaDEM
       {
         if( mass >= 1e100 ) lout << "Warning, the mass of the stl mesh is set to " << mass << std::endl;
         acc = Driver_params::sum_forces() / mass;
+        //lout << "acceleration: " << acc << std::endl;
       }
       else
       {
@@ -176,13 +178,14 @@ namespace exaDEM
 		{
 			if( is_force_motion() )
 			{
-				vel = acc * dt;
+				vel += acc * dt;
 			}
 
 			if( motion_type == LINEAR_MOTION )
 			{
 				vel = motion_vector * const_vel; 
 			}
+      //lout << "vel: " << vel << std::endl;
 		}
 
 		inline void push_f_v_r(const double dt)
