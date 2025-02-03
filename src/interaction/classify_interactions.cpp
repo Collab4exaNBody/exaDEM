@@ -192,7 +192,7 @@ namespace exaDEM
      auto &olds = *ic_olds;
             
       auto& c = *ic;
-      /*
+      
       auto [data, size] = c.get_info(0);
       
       auto& type0 = *interaction_type0;
@@ -214,20 +214,20 @@ namespace exaDEM
       	
       	for(int i = 0; i < loop; i++)
       	{
-      		if(data.id_i[i] != type0.id_i[i] || data.id_j[i] != type0.id_j[i] || data.cell_i[i] != type0.cell_i[i] || data.cell_j[i] != type0.cell_j[i] || data.p_i[i] != type0.p_i[i] || data.p_j[i] != type0.p_j[i]) err++;//printf("ERREUR_%d\n", i);
+      		if(data.id_i[i] != type0.id_i[i] || data.id_j[i] != type0.id_j[i] || data.cell_i[i] != type0.cell_i[i] || data.cell_j[i] != type0.cell_j[i] || data.p_i[i] != type0.p_i[i] || data.p_j[i] != type0.p_j[i]){ err++; printf("I:%d   ",i);       	printf("PREUVE: INTERACTION_UN(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)   INTERACTION_DEUX(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)\n", data.id_i[i], data.id_j[i], data.cell_i[i], data.cell_j[i], data.p_i[i], data.p_j[i], type0.id_i[i], type0.id_j[i], type0.cell_i[i], type0.cell_j[i], type0.p_i[i], type0.p_j[i]);}//printf("ERREUR_%d\n", i);
       	}
-      	printf("ERREURS: %d\n", err);
+      	if(err > 0){ printf("ERREURS: %d\n", err); getchar(); }
       	//getchar();
       //}
-      if(size!=type0.ft_x.size()){
+      /*if(size!=type0.ft_x.size()){
       	printf("STOP\n"); 
       	int index = loop - err;
       	printf("PREUVE: INTERACTION_UN(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)   INTERACTION_DEUX(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)\n", data.id_i[index-1], data.id_j[index-1], data.cell_i[index-1], data.cell_j[index-1], data.p_i[index-1], data.p_j[index-1], type0.id_i[index-1], type0.id_j[index-1], type0.cell_i[index-1], type0.cell_j[index-1], type0.p_i[index-1], type0.p_j[index-1]);
       	printf("PREUVE: INTERACTION_UN(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)   INTERACTION_DEUX(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)\n", data.id_i[index], data.id_j[index], data.cell_i[index], data.cell_j[index], data.p_i[index], data.p_j[index], type0.id_i[index], type0.id_j[index], type0.cell_i[index], type0.cell_j[index], type0.p_i[index], type0.p_j[index]);
       	getchar();
-      	}
-      */
-      auto& waves = ic->waves;
+      	}*/
+      
+      /*auto& waves = ic->waves;
       
       waves[0].clear();
       waves[0] = *interaction_type0;
@@ -305,7 +305,7 @@ namespace exaDEM
       
       }
       }
-      
+      */
      printf("END_CLASSIFY\n");  
     }
   };

@@ -125,7 +125,8 @@ namespace exaDEM
   							int* total_interactions_driver,
   							int nombre_voisins_potentiels,
   							Cylinder driver,
-  							int* interaction_driver )
+  							int* interaction_driver,
+  							int* anas )
   {
   	
   	int cell = cell_id[blockIdx.x];
@@ -171,25 +172,28 @@ namespace exaDEM
   				{
   					if(cells[cell][field::id][p_a] < cells[cell_b][field::id][p_b])
   					{
-  					id_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell][field::id][p_a];
-  					id_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell_b][field::id][p_b];
-  					cell_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell;
-  					cell_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell_b;
-  					p_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_a;
-  					p_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_b;
+  						id_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell][field::id][p_a];
+  						id_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell_b][field::id][p_b];
+  						cell_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell;
+  						cell_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell_b;
+  						p_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_a;
+  						p_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_b;
   					
-  					nb_interactions++;
+  						nb_interactions++;
   					}
   					else if( ghost_cell[i]==1 )
   					{
-   					id_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell][field::id][p_a];
-  					id_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell_b][field::id][p_b];
-  					cell_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell;
-  					cell_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell_b;
-  					p_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_a;
-  					p_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_b;
+   						id_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell][field::id][p_a];
+  						id_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell_b][field::id][p_b];
+  						cell_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell;
+  						cell_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell_b;
+  						p_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_a;
+  						p_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_b;
   					
-  					nb_interactions++;
+  						nb_interactions++;
+  						
+  						atomicAdd(&anas[0], 1);
+  						
   					}
   					//atomicAdd(&total_interactions[0], 1);
   				}				
@@ -323,7 +327,7 @@ namespace exaDEM
       auto cells = grid->cells();
       ContactNeighborFilterFunc<decltype(cells)> nbh_filter{cells, *rcut_inc};
       static constexpr std::false_type no_z_order = {};
-      /*
+      
       if (!domain->xform_is_identity())
       {
         LinearXForm xform = {domain->xform()};
@@ -334,7 +338,7 @@ namespace exaDEM
         NullXForm xform = {};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
       }
-      */
+      
       
       //NOUVELLE MÉTHODE
  
@@ -582,7 +586,7 @@ namespace exaDEM
 	p_particle.resize(total);
 	interaction_driver.resize(total);
 	
-	int nombre_voisins_potentiels = 12;
+	int nombre_voisins_potentiels = 16;
 	
 	total = total* nombre_voisins_potentiels;
 	
@@ -596,9 +600,23 @@ namespace exaDEM
 	auto &drvs = *drivers;
 	Cylinder &driver = std::get<Cylinder>(drvs.data(0));
 	
-	kernelUN<<<numBlocks, 256>>>(cells, /*g,*/ ghost_cell.data(), cell_id.data(), nb_particles.data(), cell_neighbors_ids.data(), cell_neighbors_size.data(), cell_start.data(), cell_end.data(), nb_particles_start.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), nb_nbh.data(), id_particle.data(), cell_particle.data(), p_particle.data(), total_interactions.data(), total_interactions_driver.data(), nombre_voisins_potentiels, driver, interaction_driver.data());
+	onika::memory::CudaMMVector<int> anas;
+	anas.resize(1);
+	
+	kernelUN<<<numBlocks, 256>>>(cells, /*g,*/ ghost_cell.data(), cell_id.data(), nb_particles.data(), cell_neighbors_ids.data(), cell_neighbors_size.data(), cell_start.data(), cell_end.data(), nb_particles_start.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), nb_nbh.data(), id_particle.data(), cell_particle.data(), p_particle.data(), total_interactions.data(), total_interactions_driver.data(), nombre_voisins_potentiels, driver, interaction_driver.data(), anas.data());
 	
 	cudaDeviceSynchronize();
+	
+	int max = 0;
+	
+	for(int i = 0; i < nb_nbh.size(); ++i)
+	{
+		if(nb_nbh[i] > max) max = nb_nbh[i];
+	}
+	
+	printf("MAX: %d\n", max);
+	
+	printf("ANAS: %d\n", anas[0]);
 
 	onika::memory::CudaMMVector<int> nb_nbh_incr;
 	nb_nbh_incr.resize(nb_nbh.size());
