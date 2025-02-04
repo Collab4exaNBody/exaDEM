@@ -121,33 +121,44 @@ namespace exaDEM
   							int* id,
   							int* celli,
   							int* pi,
-  							int* total_interactions,
-  							int* total_interactions_driver,
+  							//int* total_interactions,
+  							//int* total_interactions_driver,
   							int nombre_voisins_potentiels,
   							Cylinder driver,
   							int* interaction_driver)
   {
   	
-  	int cell = cell_id[blockIdx.x];
 	int nb = nb_particles[blockIdx.x];
-	int start = cell_start[blockIdx.x];
-	int end = cell_end[blockIdx.x];
-	int incr = cell_particle_start[blockIdx.x];
 	
 	if(threadIdx.x < nb)
 	{
+		int cell = cell_id[blockIdx.x];
+		int start = cell_start[blockIdx.x];
+		int end = cell_end[blockIdx.x];
+		int incr = cell_particle_start[blockIdx.x];
+		
 		int p_a = threadIdx.x;
+				
+		int incr2 = incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels;
+		
 		int nb_interactions = 0;
 		
 		const double rVerletMax = cells[cell][field::radius][p_a] + rcut_inc;
 		
-		const Vec3d r = {cells[cell][field::rx][p_a], cells[cell][field::ry][p_a], cells[cell][field::rz][p_a]};
+		auto &rx_a = cells[cell][field::rx][p_a];
+		auto &ry_a = cells[cell][field::ry][p_a];
+		auto &rz_a = cells[cell][field::rz][p_a];
+		auto &id_a = cells[cell][field::id][p_a];
+		
+		const Vec3d r = { rx_a , ry_a , rz_a };
 		
 		if (driver.filter(rVerletMax, r))
 		{
-			atomicAdd(&total_interactions_driver[0], 1);
+			//atomicAdd(&total_interactions_driver[0], 1);
 			interaction_driver[incr + p_a] = 1;
-			
+			id[incr + p_a] = id_a;
+			pi[incr + p_a] = p_a;
+			celli[incr + p_a] = cell;
 		}
 		else
 		{
@@ -161,62 +172,65 @@ namespace exaDEM
 			for(int j = 0; j < cell_neighbors_size[i]; j++)
 			{
 				int p_b = j;
+				
+				auto &id_b = cells[cell_b][field::id][p_b];
 	  			
 	  			double rcut2 = dist_lab * dist_lab;
   		
-  				const Vec3d dr = { cells[cell][field::rx][p_a] - cells[cell_b][field::rx][p_b] , cells[cell][field::ry][p_a] - cells[cell_b][field::ry][p_b] , cells[cell][field::rz][p_a] - cells[cell_b][field::rz][p_b] };
+  				const Vec3d dr = { rx_a - cells[cell_b][field::rx][p_b] , ry_a - cells[cell_b][field::ry][p_b] , rz_a - cells[cell_b][field::rz][p_b] };
                 		double d2 = norm2( xform * dr );
                 	
   				if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) //&& (cells[cell][field::id][p_a] < cells[cell_b][field::id][p_b]) && ) 
   				{
-  					if(cells[cell][field::id][p_a] < cells[cell_b][field::id][p_b])
+  					if( id_a < id_b)
   					{
-  						id_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell][field::id][p_a];
-  						id_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell_b][field::id][p_b];
-  						cell_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell;
-  						cell_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell_b;
-  						p_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_a;
-  						p_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_b;
+  						id_i[incr2 + nb_interactions] = id_a;
+  						id_j[incr2 + nb_interactions] = id_b;
+  						cell_i[incr2 + nb_interactions] = cell;
+  						cell_j[incr2 + nb_interactions] = cell_b;
+  						p_i[incr2 + nb_interactions] = p_a;
+  						p_j[incr2 + nb_interactions] = p_b;
+  						
+  						nb_nbh[incr2 + nb_interactions] = 1;
   					
   						nb_interactions++;
   					}
   					else if( ghost_cell[i]==1 )
   					{
-   						id_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell][field::id][p_a];
-  						id_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cells[cell_b][field::id][p_b];
-  						cell_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell;
-  						cell_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = cell_b;
-  						p_i[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_a;
-  						p_j[incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels + nb_interactions] = p_b;
+   						id_i[incr2 + nb_interactions] = id_a;
+  						id_j[incr2 + nb_interactions] = id_b;
+  						cell_i[incr2 + nb_interactions] = cell;
+  						cell_j[incr2 + nb_interactions] = cell_b;
+  						p_i[incr2 + nb_interactions] = p_a;
+  						p_j[incr2 + nb_interactions] = p_b;
+  						
+  						nb_nbh[incr2 + nb_interactions] = 1;
   					
   						nb_interactions++;
   						
   					}
-  					//atomicAdd(&total_interactions[0], 1);
   				}				
 			}
 		}
 		
-		nb_nbh[incr + p_a] = nb_interactions;
+		/*nb_nbh[incr + p_a] = nb_interactions;
 		id[incr + p_a] = cells[cell][field::id][p_a];
 		celli[incr + p_a] = cell;
 		pi[incr + p_a] = p_a;
-		atomicAdd(&total_interactions[0], nb_interactions); 
+		atomicAdd(&total_interactions[0], nb_interactions);*/
 	}
    }
    
-  __global__ void kernelDEUX(int* nb_nbh, int* nb_nbh_incr, uint64_t* id_i, uint64_t* id_j, uint32_t* cell_i, uint32_t* cell_j, uint16_t* p_i, uint16_t* p_j, uint64_t* id_i_final, uint64_t* id_j_final, uint32_t* cell_i_final, uint32_t* cell_j_final, uint16_t* p_i_final, uint16_t* p_j_final, double* ftx_final, double* fty_final, double* ftz_final, double* momx_final, double* momy_final, double* momz_final, int n, int nombre_voisins_potentiels, int* id, int* cell, int* p, uint64_t* id_i_driver, uint64_t* id_j_driver, uint32_t* cell_i_driver, uint16_t* p_i_driver, int* interaction_driver, int* driver_incr, double* ftx_driver, double* fty_driver, double* ftz_driver, double* momx_driver, double* momy_driver, double* momz_driver)
+  __global__ void kernelDEUX(int* nb_nbh, int* nb_nbh_incr, uint64_t* id_i, uint64_t* id_j, uint32_t* cell_i, uint32_t* cell_j, uint16_t* p_i, uint16_t* p_j, uint64_t* id_i_final, uint64_t* id_j_final, uint32_t* cell_i_final, uint32_t* cell_j_final, uint16_t* p_i_final, uint16_t* p_j_final, double* ftx_final, double* fty_final, double* ftz_final, double* momx_final, double* momy_final, double* momz_final, int size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
   	
-  	if(idx < n)
+  	if(idx < size)
   	{
-  		int nb = nb_nbh[idx];
   		int incr = nb_nbh_incr[idx];
+  		//int incr_driver = driver_incr[idx];
   		
-  		int incr_driver = driver_incr[idx];
-  		
-  		if(interaction_driver[idx] == 1)
+  		/*if(interaction_driver[idx] == 1)
   		{
   			id_i_driver[incr_driver] = id[idx];
   			id_j_driver[incr_driver] = 0;
@@ -228,22 +242,41 @@ namespace exaDEM
   			momx_driver[incr_driver] = 0;
   			momy_driver[incr_driver] = 0;
   			momz_driver[incr_driver] = 0;
-  		}
+  		}*/
   		
-  		for(int i = 0; i < nb; i++)
+  		//for(int i = 0; i < nb; i++)
+  		//{
+  		if(nb_nbh[idx] == 1)
   		{
-  			id_i_final[incr + i] = id_i[idx*nombre_voisins_potentiels + i];
-  			id_j_final[incr + i] = id_j[idx*nombre_voisins_potentiels + i];
-  			cell_i_final[incr + i] = cell_i[idx*nombre_voisins_potentiels + i];
-  			cell_j_final[incr + i] = cell_j[idx*nombre_voisins_potentiels + i];
-  			p_i_final[incr + i] = p_i[idx*nombre_voisins_potentiels + i];
-  			p_j_final[incr + i] = p_j[idx*nombre_voisins_potentiels + i];
-  			ftx_final[incr + i] = 0;
-  			fty_final[incr + i] = 0;
-  			ftz_final[incr + i] = 0;
-  			momx_final[incr + i] = 0;
-  			momy_final[incr + i] = 0;
-  			momz_final[incr + i] = 0;
+  			id_i_final[incr] = id_i[idx];
+  			id_j_final[incr] = id_j[idx];
+  			cell_i_final[incr] = cell_i[idx];
+  			cell_j_final[incr] = cell_j[idx];
+  			p_i_final[incr] = p_i[idx];
+  			p_j_final[incr] = p_j[idx];
+  			ftx_final[incr] = 0;
+  			fty_final[incr] = 0;
+  			ftz_final[incr] = 0;
+  			momx_final[incr] = 0;
+  			momy_final[incr] = 0;
+  			momz_final[incr] = 0;
+  		}
+  	}
+  }
+  
+  __global__ void kernelTROIS(int* interaction_driver, int* driver_incr, int* id, int* cell, int* p, uint64_t* id_i_driver, uint32_t* cell_i_driver, uint16_t* p_i_driver, int size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		int incr = driver_incr[idx];
+  		
+  		if(interaction_driver[idx] == 1)
+  		{
+  			id_i_driver[incr] = id[idx];
+  			cell_i_driver[incr] = cell[idx];
+  			p_i_driver[incr] = p[idx];
   		}
   	}
   }
@@ -297,7 +330,7 @@ namespace exaDEM
     inline void execute() override final
     {
     
-      printf("CHUNK_START\n");
+      //printf("CHUNK_START\n");
       
       unsigned int cs = config->chunk_size;
       unsigned int cs_log2 = 0;
@@ -423,12 +456,15 @@ namespace exaDEM
 	}
 
 	onika::memory::CudaMMVector<int> cell_id;
+	onika::memory::CudaMMVector<int> incr_cell_id;
 	
 	auto [cell_ptr, cell_size] = traversal_real->info();
+	
+	int incr_cell = 0;
 
 	for(int i=0; i < nb_particles_cell.size(); i++)
 	{
-		if( nb_particles_cell[i] > 0 && is_in(i, cell_ptr, cell_size) ){ cell_id.push_back(i);}
+		if( nb_particles_cell[i] > 0 && is_in(i, cell_ptr, cell_size) ){ cell_id.push_back(i); incr_cell_id.push_back(incr_cell); incr_cell+= cell_particles_number_of_neighbors_cells[i]; }
 	}
 
 	onika::memory::CudaMMVector<int> nb_particles; //NOMBRE DE PARTICULES CELLULE_I
@@ -438,11 +474,15 @@ namespace exaDEM
 	cell_nb_nbh.resize(cell_id.size());
 	
 	onika::memory::CudaMMVector<int> cell_neighbors_ids;
+	cell_neighbors_ids.resize(incr_cell);
 	
 	onika::memory::CudaMMVector<int> cell_neighbors_size;
+	cell_neighbors_size.resize(incr_cell);
 	
 	onika::memory::CudaMMVector<int> ghost_cell;
+	ghost_cell.resize(incr_cell);
 	
+	#pragma omp parallel for
 	for(int i=0; i < cell_id.size(); i++)
 	{
 		int index = cell_id[i];
@@ -450,14 +490,16 @@ namespace exaDEM
 		nb_particles[i] = nb_particles_cell[index];
 
 		cell_nb_nbh[i] = cell_particles_number_of_neighbors_cells[index];
+		
+		int incr = incr_cell_id[i];
 
 		for(int j = 0; j < cell_nb_nbh[i]; j++)
 		{
-			cell_neighbors_ids.push_back(cell_particles_neighbors[index*27 + j]);
+			cell_neighbors_ids[incr + j] = cell_particles_neighbors[index*27 + j];
 			
-			ghost_cell.push_back( g.is_ghost_cell( cell_particles_neighbors[index*27 + j]) );
+			ghost_cell[incr + j] = g.is_ghost_cell( cell_particles_neighbors[index*27 + j]);
 			
-			cell_neighbors_size.push_back(cell_particles_neighbors_size[index*27 + j]);	
+			cell_neighbors_size[incr + j] = cell_particles_neighbors_size[index*27 + j];	
 		}
 	}
 	
@@ -491,7 +533,8 @@ namespace exaDEM
 		
 	cudaFree(d_temp_storage);
 	
-	//CELL PARTICLES START
+	//CELL PARTICLES START		
+
 	onika::memory::CudaMMVector<int> nb_particles_start;
 	nb_particles_start.resize(nb_particles.size());
 	
@@ -519,22 +562,15 @@ namespace exaDEM
 	onika::memory::CudaMMVector<int> id_particle;
 	onika::memory::CudaMMVector<int> cell_particle;
 	onika::memory::CudaMMVector<int> p_particle;
-	
-	onika::memory::CudaMMVector<int> total_interactions;
-	onika::memory::CudaMMVector<int> total_interactions_driver;
-	
+
 	onika::memory::CudaMMVector<int> interaction_driver;
 	
-	total_interactions.resize(1);
-	total_interactions_driver.resize(1);
-
 	int total = 0;
 	for(int i = 0; i < nb_particles.size(); i++)
 	{
 		total+= nb_particles[i];
 	}
-	
-	nb_nbh.resize(total);
+
 	id_particle.resize(total);
 	cell_particle.resize(total);
 	p_particle.resize(total);
@@ -544,6 +580,7 @@ namespace exaDEM
 	
 	total = total* nombre_voisins_potentiels;
 	
+	nb_nbh.resize(total);
 	id_i.resize(total);
 	id_j.resize(total);
 	cell_i.resize(total);
@@ -554,7 +591,7 @@ namespace exaDEM
 	auto &drvs = *drivers;
 	Cylinder &driver = std::get<Cylinder>(drvs.data(0));
 	
-	kernelUN<<<numBlocks, 256>>>(cells, ghost_cell.data(), cell_id.data(), nb_particles.data(), cell_neighbors_ids.data(), cell_neighbors_size.data(), cell_start.data(), cell_end.data(), nb_particles_start.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), nb_nbh.data(), id_particle.data(), cell_particle.data(), p_particle.data(), total_interactions.data(), total_interactions_driver.data(), nombre_voisins_potentiels, driver, interaction_driver.data());
+	kernelUN<<<numBlocks, 256>>>(cells, ghost_cell.data(), cell_id.data(), nb_particles.data(), cell_neighbors_ids.data(), cell_neighbors_size.data(), cell_start.data(), cell_end.data(), nb_particles_start.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), nb_nbh.data(), id_particle.data(), cell_particle.data(), p_particle.data(), nombre_voisins_potentiels, driver, interaction_driver.data());
 	
 	cudaDeviceSynchronize();
 
@@ -572,6 +609,8 @@ namespace exaDEM
 	
 	cudaFree(d_temp_storage);
 	
+	int total_interactions = nb_nbh_incr[nb_nbh.size() - 1] + nb_nbh[nb_nbh.size() - 1];
+	
 	onika::memory::CudaMMVector<int> driver_incr;
 	driver_incr.resize(interaction_driver.size());
 	
@@ -584,7 +623,9 @@ namespace exaDEM
 	
 	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, interaction_driver.data(), driver_incr.data(), interaction_driver.size());
 	
-	cudaFree(d_temp_storage); 
+	cudaFree(d_temp_storage);
+	
+	int total_interactions_driver = driver_incr[interaction_driver.size() - 1] + interaction_driver[interaction_driver.size() - 1];
 	
 	auto& type0 = *interaction_type0;
 	auto& type4 = *interaction_type4;
@@ -595,8 +636,8 @@ namespace exaDEM
 	type0.type = 0;
 	type4.type = 4;
 	
-	type0.resize(total_interactions[0]);
-	type4.resize(total_interactions_driver[0]);
+	type0.resize(total_interactions);
+	type4.resize(total_interactions_driver);
 	
 	onika::memory::CudaMMVector<uint64_t> &id_i_final = type0.id_i;
 	onika::memory::CudaMMVector<uint64_t> &id_j_final = type0.id_j;
@@ -624,9 +665,13 @@ namespace exaDEM
 
 	numBlocks = (nb_nbh.size() + 256 - 1) / 256;
 	
-	kernelDEUX<<<numBlocks, 256>>>(nb_nbh.data(), nb_nbh_incr.data(), id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), id_i_final.data(), id_j_final.data(), cell_i_final.data(), cell_j_final.data(), p_i_final.data(), p_j_final.data(), ftx_final.data(), fty_final.data(), ftz_final.data(), momx_final.data(), momy_final.data(), momz_final.data(), nb_nbh.size(), nombre_voisins_potentiels, id_particle.data(),  cell_particle.data(), p_particle.data(), id_i_driver.data(), id_j_driver.data(), cell_i_driver.data(), p_i_driver.data(), interaction_driver.data(), driver_incr.data(), ftx_driver.data(), fty_driver.data(), ftz_driver.data(), momx_driver.data(), momy_driver.data(), momz_driver.data());
+	kernelDEUX<<<numBlocks, 256>>>(nb_nbh.data(), nb_nbh_incr.data(), id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), id_i_final.data(), id_j_final.data(), cell_i_final.data(), cell_j_final.data(), p_i_final.data(), p_j_final.data(), ftx_final.data(), fty_final.data(), ftz_final.data(), momx_final.data(), momy_final.data(), momz_final.data(), nb_nbh.size());
+	
+	numBlocks = (interaction_driver.size() + 256 - 1) / 256;
+	
+	kernelTROIS<<<numBlocks, 256>>>(interaction_driver.data(), driver_incr.data(), id_particle.data(), cell_particle.data(), p_particle.data(), id_i_driver.data(), cell_i_driver.data(), p_i_driver.data(), interaction_driver.size());
 
-	printf("CHUNK_END\n");	
+	//printf("CHUNK_END\n");	
 		
     }
   };
