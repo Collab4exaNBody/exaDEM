@@ -23,8 +23,6 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
-
-  using namespace exanb;
   struct Surface_params
   {
     /** Required */

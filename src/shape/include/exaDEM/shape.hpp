@@ -63,13 +63,6 @@ namespace exaDEM
     double m_radius;      ///< use for detection
     double m_volume;      ///< use for detection
     std::string m_name = "undefined";
-
-    // functions in shape_prepro.hpp
-    /*    ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_vertices();
-          ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_edges();
-          ONIKA_HOST_DEVICE_FUNC inline void pre_compute_obb_faces();
-          ONIKA_HOST_DEVICE_FUNC inline void increase_obb ( const double value );
-     */
     inline void pre_compute_obb_edges(const exanb::Vec3d &particle_center, const exanb::Quaternion &particle_quat);
     inline void pre_compute_obb_faces(const exanb::Vec3d &particle_center, const exanb::Quaternion &particle_quat);
     inline void pre_compute_obb_vertices(const exanb::Vec3d * scratch);
@@ -385,6 +378,30 @@ namespace exaDEM
         lout << "Number of faces  = " << this->get_number_of_faces() << std::endl;
         for_all_faces(printer);
       }
+    }
+
+    double compute_surface() const
+    {
+      double surface = 0.0;
+      const size_t n_faces = this->get_number_of_faces();
+#pragma omp parallel for reduction(+: surface)
+      for (size_t it = 0; it < n_faces; it++)
+      {
+        auto [data, size] = this->get_face(it);
+        const Vec3d& vi = m_vertices[data[0]];
+        if( size == 3 )
+        {
+          for(int j = 1; j < size - 1; j++)
+          {
+            const size_t k = j + 1;
+            const Vec3d vij = m_vertices[data[j]] - vi;
+            const Vec3d vik = m_vertices[data[k]] - vi;
+            const Vec3d cross = exanb::cross(vij, vik);
+            surface += 0.5 * exanb::norm(cross);
+          }
+        }
+      }
+      return surface;
     }
 
     inline void print()
