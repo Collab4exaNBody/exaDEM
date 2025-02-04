@@ -278,7 +278,7 @@ namespace exaDEM
       // using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
       
       printf("UNCLASSIFY\n");
-      /*
+      
       auto &olds = *ic_olds;
       
       if(olds.use)
@@ -445,14 +445,14 @@ namespace exaDEM
       
       }
       }
-      */
-      if (grid->number_of_cells() == 0)
+      
+      /*if (grid->number_of_cells() == 0)
       {
         return;
       }
       if (!ic.has_value())
         return;
-      ic->unclassify(*ges);
+      ic->unclassify(*ges);*/
       
      printf("UNCLASSIFY_END\n");
       

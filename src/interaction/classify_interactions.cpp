@@ -183,17 +183,17 @@ namespace exaDEM
       {
         return;
       }
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      //auto [cell_ptr, cell_size] = traversal_real->info();
       if (!ic.has_value())
         ic->initialize();
-      ic->classify(*ges, cell_ptr, cell_size);
+      /*ic->classify(*ges, cell_ptr, cell_size);
       ic->prefetch_memory_on_gpu(); // GPU only*/
 
      auto &olds = *ic_olds;
             
       auto& c = *ic;
       
-      auto [data, size] = c.get_info(0);
+      /*auto [data, size] = c.get_info(0);
       
       auto& type0 = *interaction_type0;
       
@@ -227,7 +227,7 @@ namespace exaDEM
       	getchar();
       	}*/
       
-      /*auto& waves = ic->waves;
+      auto& waves = ic->waves;
       
       waves[0].clear();
       waves[0] = *interaction_type0;
@@ -305,7 +305,7 @@ namespace exaDEM
       
       }
       }
-      */
+      
      printf("END_CLASSIFY\n");  
     }
   };
