@@ -135,8 +135,8 @@ namespace exaDEM
     //ADD_SLOT(OldClassifier, ic_old, INPUT_OUTPUT);
     ADD_SLOT(OldClassifiers, ic_olds, INPUT_OUTPUT);
     
-    ADD_SLOT(InteractionSOA, interaction_type0, INPUT_OUTPUT);
-    ADD_SLOT(InteractionSOA, interaction_type4, INPUT_OUTPUT);
+   // ADD_SLOT(InteractionSOA, interaction_type0, INPUT_OUTPUT);
+    //ADD_SLOT(InteractionSOA, interaction_type4, INPUT_OUTPUT);
 
   public:
     inline std::string documentation() const override final
@@ -155,8 +155,8 @@ namespace exaDEM
         return;
       }
       //auto [cell_ptr, cell_size] = traversal_real->info();
-      if (!ic.has_value())
-        ic->initialize();
+      //if (!ic.has_value())
+      //  ic->initialize();
       /*ic->classify(*ges, cell_ptr, cell_size);
       ic->prefetch_memory_on_gpu(); // GPU only*/
 
@@ -190,15 +190,15 @@ namespace exaDEM
       	if(err > 0){ printf("ERREURS: %d\n", err); getchar(); }
       	//getchar();*/
       
-      auto& waves = ic->waves;
+      /*auto& waves = ic->waves;
       
       waves[0].clear();
       waves[0] = *interaction_type0;
       
       waves[4].clear();
-      waves[4] = *interaction_type4;
+      waves[4] = *interaction_type4;*/
       
-      /*for(int type = 0; type < 13; type++)
+      for(int type = 0; type < 13; type++)
       {
       
       auto [data, size] = c.get_info(type);
@@ -237,7 +237,7 @@ namespace exaDEM
       find_common_elements<<<numBlocks, blockSize>>>( keys.data(), old.keys, size, old.size, interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, indices_sorted.data(), old.indices);
       
       }
-      }*/
+      }
       
      //printf("END_CLASSIFY\n");  
     }

@@ -48,7 +48,7 @@ namespace exaDEM
   
 
   
-  __global__ void filtre_un( double* ft_x,
+  /*__global__ void filtre_un( double* ft_x,
   			double* ft_y,
   			double* ft_z,
   			double* mom_x,
@@ -168,7 +168,7 @@ namespace exaDEM
 
 	    // Free temporary storage and double-buffered arrays
 	    cudaFree(d_temp_storage);
-	}
+	}*/
 
   template <typename GridT, class = AssertGridHasFields<GridT>> class UnclassifyInteractions : public OperatorNode
   {
@@ -194,7 +194,7 @@ namespace exaDEM
       
       //printf("UNCLASSIFY\n");
       
-      auto &olds = *ic_olds;
+      /*auto &olds = *ic_olds;
       
       if(olds.use)
       {
