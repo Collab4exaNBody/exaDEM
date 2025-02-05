@@ -55,8 +55,7 @@ namespace exaDEM
   			double* mom_y,
   			double* mom_z,
   			size_t size,
-  			int* blocks,
-  			int* total)
+  			int* filtre)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
   	
@@ -64,8 +63,7 @@ namespace exaDEM
   	{
   		if(ft_x[idx]!=0 || ft_y[idx]!=0 || ft_z[idx]!=0 || mom_x[idx]!=0 || mom_y[idx]!=0 || mom_z[idx]!=0)
   		{
-  			atomicAdd(&blocks[blockIdx.x], 1);
-  			atomicAdd(&total[0], 1);
+  			filtre[idx] = 1;
   		}
   	}
   }
@@ -75,7 +73,6 @@ namespace exaDEM
   				uint16_t* sub_j,
   				uint64_t* id_i_res,
   				uint64_t* id_j_res,
-  				uint16_t* sub_j_res,
   				double* ft_x,
   				double* ft_y,
   				double* ft_z,
@@ -88,56 +85,29 @@ namespace exaDEM
   				double* mom_x_res,
   				double* mom_y_res,
   				double* mom_z_res,
-  				int* blocks_incr,
+  				int* filtre_incr,
   				int* indices,
-  				uint64_t* keys,
   				int size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  	
-  	//printf("RAZ\n");
-  	
-  	int incr = blocks_incr[blockIdx.x];
-  	
-  	__shared__ int s[256];
-  	
-  	s[threadIdx.x] = 0;
-  	
-  	__syncthreads();
-  	
-  	
+
   	if(idx < size)
   	{
   		if(ft_x[idx]!=0 || ft_y[idx]!=0 || ft_z[idx]!=0 || mom_x[idx]!=0 || mom_y[idx]!=0 || mom_z[idx]!=0)
   		{
-  			s[threadIdx.x] = 1;
-  		}
-  		
-  		__syncthreads();
-  		
-  		int index = 0;
-  		
-  		if(s[threadIdx.x] == 1)
-  		{
-  			for(int i = 0; i < threadIdx.x; i++)
-  			{
-  				if( s[i] == 1 ) index++;
-  			}
+  			int &incr = filtre_incr[idx];
   			
-  			id_i_res[index + incr] = id_i[idx];
-  			id_j_res[index + incr] = id_j[idx];
-  			sub_j_res[index + incr] = sub_j[idx];
-  			ft_x_res[index + incr] = ft_x[idx];
-  			ft_y_res[index + incr] = ft_y[idx];
-  			ft_z_res[index + incr] = ft_z[idx];
-  			mom_x_res[index + incr] = mom_x[idx];
-  			mom_y_res[index + incr] = mom_y[idx];
-  			mom_z_res[index + incr] = mom_z[idx];
-
-  			indices[incr + index] = incr + index;
+  			id_i_res[incr] = id_i[idx];
+  			id_j_res[incr] = id_j[idx];
+  			ft_x_res[incr] = ft_x[idx];
+  			ft_y_res[incr] = ft_y[idx];
+  			ft_z_res[incr] = ft_z[idx];
+  			mom_x_res[incr] = mom_x[idx];
+  			mom_y_res[incr] = mom_y[idx];
+  			mom_z_res[incr] = mom_z[idx];
   			
+  			indices[incr] = incr;
   		}
-  		
   	}
   }
   
@@ -251,52 +221,60 @@ namespace exaDEM
       int numBlocks = ( size + blockSize - 1 ) / blockSize;
       
       
-      onika::memory::CudaMMVector<int> blocks;
-      blocks.resize(numBlocks);
+      //onika::memory::CudaMMVector<int> blocks;
+      //blocks.resize(numBlocks);
       
-      onika::memory::CudaMMVector<int> blocks_incr;
-      blocks_incr.resize(numBlocks);
+      //onika::memory::CudaMMVector<int> blocks_incr;
+      //blocks_incr.resize(numBlocks);
       
-      onika::memory::CudaMMVector<int> total;
-      total.resize(1);
+      //onika::memory::CudaMMVector<int> total;
+      //total.resize(1);
       
-      filtre_un<<<numBlocks, blockSize>>>( interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, size, blocks.data(), total.data());
+      onika::memory::CudaMMVector<int> filtre;
+      filtre.resize(size);
       
-      exclusive_sum( blocks.data(), blocks_incr.data(), numBlocks );
+      filtre_un<<<numBlocks, blockSize>>>( interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, size, filtre.data());
+      
+      onika::memory::CudaMMVector<int> filtre_incr;
+      filtre_incr.resize(size);
+      
+      exclusive_sum( filtre.data(), filtre_incr.data(), size );
+      
+      int total = filtre_incr[filtre_incr.size() - 1] + filtre[filtre.size() - 1];
       
       onika::memory::CudaMMVector<uint64_t> id_i_res;
-      id_i_res.resize(total[0]);
+      id_i_res.resize(total);
       
       onika::memory::CudaMMVector<uint64_t> id_j_res;
-      id_j_res.resize(total[0]);
+      id_j_res.resize(total);
       
       onika::memory::CudaMMVector<uint16_t> sub_j_res;
-      sub_j_res.resize(total[0]);
+      sub_j_res.resize(total);
 	
       onika::memory::CudaMMVector<int> indices;
-      indices.resize(total[0]);
+      indices.resize(total);
       
        onika::memory::CudaMMVector<uint64_t> keys;
-       keys.resize(total[0]);
+       keys.resize(total);
       
       auto &o = olds.waves[type];
       
-      o.set( total[0] );
+      o.set( total );
       
       OldClassifierWrapper old(o);
       
-      filtre_deux<<<numBlocks, blockSize>>>( interactions.id_i, interactions.id_j, interactions.sub_j, id_i_res.data(), id_j_res.data(), sub_j_res.data(), interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, blocks_incr.data(), indices.data(), keys.data(), size);
+      filtre_deux<<<numBlocks, blockSize>>>( interactions.id_i, interactions.id_j, interactions.sub_j, id_i_res.data(), id_j_res.data(), interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, filtre_incr.data(), indices.data(), size);
       
        cudaDeviceSynchronize();
        
        int min = 0;
        int max = grid->number_of_particles() - 1;
        
-       numBlocks = ( total[0] + blockSize - 1 ) / blockSize;
+       numBlocks = ( total + blockSize - 1 ) / blockSize;
 
-       generateKeys<<<numBlocks, blockSize>>>( keys.data(), id_i_res.data(), id_j_res.data(), min, max, type, total[0]);
+       generateKeys<<<numBlocks, blockSize>>>( keys.data(), id_i_res.data(), id_j_res.data(), min, max, type, total);
        
-       sortWithIndices( keys.data(), indices.data(), old.keys, old.indices, total[0]);
+       sortWithIndices( keys.data(), indices.data(), old.keys, old.indices, total);
        
       }
       }

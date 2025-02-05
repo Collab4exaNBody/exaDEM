@@ -83,15 +83,11 @@ namespace exaDEM
   
   bool is_in(int index, size_t* cells, size_t size)
   {
-  	//bool b = true;
   	int i = 0;
 
   	while( i < size)
   	{
   		if(index == cells[i]) return true;
-  		
-  		//if(index > cells[i]) b = false;
-  		
   		i++;
   	}
 
@@ -99,7 +95,6 @@ namespace exaDEM
   }
   
   template< class GridT > __global__ void kernelUN(GridT* cells,
-  							//GridT g,
   							int* ghost_cell,
   							int* cell_id,
   							int* nb_particles,
@@ -121,8 +116,6 @@ namespace exaDEM
   							int* id,
   							int* celli,
   							int* pi,
-  							//int* total_interactions,
-  							//int* total_interactions_driver,
   							int nombre_voisins_potentiels,
   							Cylinder driver,
   							int* interaction_driver)
@@ -154,7 +147,6 @@ namespace exaDEM
 		
 		if (driver.filter(rVerletMax, r))
 		{
-			//atomicAdd(&total_interactions_driver[0], 1);
 			interaction_driver[incr + p_a] = 1;
 			id[incr + p_a] = id_a;
 			pi[incr + p_a] = p_a;
@@ -180,7 +172,7 @@ namespace exaDEM
   				const Vec3d dr = { rx_a - cells[cell_b][field::rx][p_b] , ry_a - cells[cell_b][field::ry][p_b] , rz_a - cells[cell_b][field::rz][p_b] };
                 		double d2 = norm2( xform * dr );
                 	
-  				if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) //&& (cells[cell][field::id][p_a] < cells[cell_b][field::id][p_b]) && ) 
+  				if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) 
   				{
   					if( id_a < id_b)
   					{
@@ -212,12 +204,6 @@ namespace exaDEM
   				}				
 			}
 		}
-		
-		/*nb_nbh[incr + p_a] = nb_interactions;
-		id[incr + p_a] = cells[cell][field::id][p_a];
-		celli[incr + p_a] = cell;
-		pi[incr + p_a] = p_a;
-		atomicAdd(&total_interactions[0], nb_interactions);*/
 	}
    }
    
@@ -228,24 +214,6 @@ namespace exaDEM
   	if(idx < size)
   	{
   		int incr = nb_nbh_incr[idx];
-  		//int incr_driver = driver_incr[idx];
-  		
-  		/*if(interaction_driver[idx] == 1)
-  		{
-  			id_i_driver[incr_driver] = id[idx];
-  			id_j_driver[incr_driver] = 0;
-  			cell_i_driver[incr_driver] = cell[idx];
-  			p_i_driver[incr_driver] = p[idx];
-  			ftx_driver[incr_driver] = 0;
-  			fty_driver[incr_driver] = 0;
-  			ftz_driver[incr_driver] = 0;
-  			momx_driver[incr_driver] = 0;
-  			momy_driver[incr_driver] = 0;
-  			momz_driver[incr_driver] = 0;
-  		}*/
-  		
-  		//for(int i = 0; i < nb; i++)
-  		//{
   		if(nb_nbh[idx] == 1)
   		{
   			id_i_final[incr] = id_i[idx];
@@ -626,6 +594,11 @@ namespace exaDEM
 	cudaFree(d_temp_storage);
 	
 	int total_interactions_driver = driver_incr[interaction_driver.size() - 1] + interaction_driver[interaction_driver.size() - 1];
+	
+	//CLASSIFIER
+	
+	//if (!ic.has_value())
+        //	ic->initialize();
 	
 	auto& type0 = *interaction_type0;
 	auto& type4 = *interaction_type4;

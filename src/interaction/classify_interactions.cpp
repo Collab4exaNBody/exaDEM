@@ -188,15 +188,7 @@ namespace exaDEM
       		if(data.id_i[i] != type0.id_i[i] || data.id_j[i] != type0.id_j[i] || data.cell_i[i] != type0.cell_i[i] || data.cell_j[i] != type0.cell_j[i] || data.p_i[i] != type0.p_i[i] || data.p_j[i] != type0.p_j[i]){ err++; printf("I:%d   ",i);       	printf("PREUVE: INTERACTION_UN(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)   INTERACTION_DEUX(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)\n", data.id_i[i], data.id_j[i], data.cell_i[i], data.cell_j[i], data.p_i[i], data.p_j[i], type0.id_i[i], type0.id_j[i], type0.cell_i[i], type0.cell_j[i], type0.p_i[i], type0.p_j[i]);}//printf("ERREUR_%d\n", i);
       	}
       	if(err > 0){ printf("ERREURS: %d\n", err); getchar(); }
-      	//getchar();
-      //}
-      /*if(size!=type0.ft_x.size()){
-      	printf("STOP\n"); 
-      	int index = loop - err;
-      	printf("PREUVE: INTERACTION_UN(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)   INTERACTION_DEUX(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)\n", data.id_i[index-1], data.id_j[index-1], data.cell_i[index-1], data.cell_j[index-1], data.p_i[index-1], data.p_j[index-1], type0.id_i[index-1], type0.id_j[index-1], type0.cell_i[index-1], type0.cell_j[index-1], type0.p_i[index-1], type0.p_j[index-1]);
-      	printf("PREUVE: INTERACTION_UN(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)   INTERACTION_DEUX(ID_I:%d ID_J:%d CELL_I:%d CELL_J:%d P_I:%d P_J:%d)\n", data.id_i[index], data.id_j[index], data.cell_i[index], data.cell_j[index], data.p_i[index], data.p_j[index], type0.id_i[index], type0.id_j[index], type0.cell_i[index], type0.cell_j[index], type0.p_i[index], type0.p_j[index]);
-      	getchar();
-      	}*/
+      	//getchar();*/
       
       auto& waves = ic->waves;
       
@@ -206,7 +198,7 @@ namespace exaDEM
       waves[4].clear();
       waves[4] = *interaction_type4;
       
-      for(int type = 0; type < 13; type++)
+      /*for(int type = 0; type < 13; type++)
       {
       
       auto [data, size] = c.get_info(type);
@@ -245,7 +237,7 @@ namespace exaDEM
       find_common_elements<<<numBlocks, blockSize>>>( keys.data(), old.keys, size, old.size, interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, indices_sorted.data(), old.indices);
       
       }
-      }
+      }*/
       
      //printf("END_CLASSIFY\n");  
     }
