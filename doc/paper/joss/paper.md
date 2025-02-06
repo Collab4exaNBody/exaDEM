@@ -74,9 +74,9 @@ In conclusion, the design of `ExaDEM`, guided by the `exaNBody` framework, facil
 
 # Main Features
 
-![Simulation of 700 thousand octahedra in a rotating drum running on 128 mpi processes with 8 OpenMP threads per MPI process (processor: AMD EPYC Milan 7763). \label{fig:rotating-drum}](./rotating-drum.png "test"){width=85%}
+![Simulation of 700 thousand octahedra in a rotating drum running on 128 MPI processes with 8 OpenMP threads per MPI process (processor: AMD EPYC Milan 7763). \label{fig:rotating-drum}](./rotating-drum.png "test"){width=85%}
 
-![Simulation of 20 million spherical particles falling into a funnel. This simulation runs on 512 mpi processes with 8 OpenMP threads per MPI process (processor: AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=70%}
+![Simulation of 20 million spherical particles falling into a funnel. This simulation runs on 512 MPI processes with 8 OpenMP threads per MPI process (processor: AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=70%}
 
 `ExaDEM` aims to to meet scientific expectations, particularly for nuclear fuel simulations involving scenarios such as rotating drums (see figure \autoref{fig:rotating-drum}) or compaction processes. To achieve this goal, `ExaDEM` provides the following key features:
 
