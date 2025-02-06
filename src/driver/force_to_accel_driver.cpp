@@ -41,6 +41,10 @@ namespace exaDEM
       arg.weigth = mass;
       arg.force_to_accel();
     }
+    void operator()(Stl_mesh& arg)
+    {
+      arg.force_to_accel();
+    }
     void operator()(auto&& arg) { arg.force_to_accel(); }
   };
 
