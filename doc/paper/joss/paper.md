@@ -92,7 +92,7 @@ In conclusion, the design of `ExaDEM`, guided by the `exaNBody` framework, facil
 - Contact detection: Linked-cell method and Verlet Lists,
 - Force fields: contact force (Hooke law), cohesive force, and gravity.
 
-All these functionalities are likely to evolve to accomodate new development needs, such as the addition of particle fragmentation. It is worth noting that most of these functionalities have been rigorously tested over 500 million spheres or 10 million polyhedra over ten thousand cores with hybrid `MPI` + `OpenMP` programming on AMD EPYC Milan 7763 processors. `ExaDEM` is available under an APACHE 2 license at https://github.com/Collab4exaNBody/exaDEM.git and the documentation is available at https://github.com/Collab4exaNBody/doc_exaDEM.git.
+All these functionalities are likely to evolve to accomodate new development needs, such as the addition of particle fragmentation. It is worth noting that most of these functionalities have been rigorously tested over 500 million spheres or 10 million polyhedra over ten thousand cores with hybrid `MPI` + `OpenMP` programming on AMD EPYC Milan 7763 processors. 
 
 # Acknowledgements
 
