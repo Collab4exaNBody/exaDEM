@@ -58,6 +58,7 @@ namespace exaDEM
       {
         // define paths
         std::stringstream stream;
+        stream << std::setprecision(16);
         std::string dir = *dir_name + "/CheckpointFiles/";
         std::string filepath = dir + *filename;
         lout << "Write shapes into: " << filepath << std::endl;
@@ -78,6 +79,7 @@ namespace exaDEM
           exaDEM::write_shp(*shp, stream);
         }
         // fill output file
+        outFile << std::setprecision(16);
         outFile << stream.rdbuf();
       }
     };

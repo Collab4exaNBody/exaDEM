@@ -161,6 +161,10 @@ namespace exaDEM
 		std::stringstream vels;
 		std::stringstream polygons;
 
+    file << std::setprecision(16);
+    vertices.precision(8);
+    vels.precision(16);
+
 		ids << "SCALARS Driver_Index int 1" << std::endl;
 		ids << "LOOKUP_TABLE Driver_Index" << std::endl;
 		vels << "SCALARS Velocity float 1" << std::endl;
@@ -211,6 +215,9 @@ namespace exaDEM
 			std::cerr << "Error: impossible to create the output file: " << full_path << std::endl;
 			return;
 		}
+    
+    file << std::setprecision(16);
+
 		std::stringstream stream;
 
 		stream << "# vtk DataFile Version 3.0" << std::endl;
@@ -222,6 +229,10 @@ namespace exaDEM
 		std::stringstream centers;
 		std::stringstream radii;
 		std::stringstream vels;
+
+    centers.precision(16);
+    radii.precision(16);
+    vels.precision(16);
 
 		centers << "POINTS " << balls.size() << " float" << std::endl;
 		ids << "SCALARS Driver_Index int 1" << std::endl;
