@@ -37,4 +37,8 @@ Two test cases showcase the use of the region operator:
 1. Applying the same velocity to all particles within a specific region: `impose_velocity/impose_velocity_full.msp`.
 2. Adding a hole to the lattice generation: `impose_velocity/impose_velocity_hole.msp`.
 
+## Compression with a Piston
 
+- **init_piston** This simulation sets up the particle sample.
+- **piston_linear_force_motion** This simulation sets the piston in motion above the sample, applying a constant force.
+- **piston_linear_compression_motion** This simulation sets the piston in motion above the sample, applying a pressure controlled by the variable sigma.

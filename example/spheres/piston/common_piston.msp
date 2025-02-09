@@ -1,0 +1,41 @@
+
+io_tree:
+  - io_config:
+     dir_name: "SpehreLinearForceMotionDir"
+
+setup_drivers:
+  - register_stl_mesh:
+     id: 0
+     filename: piston_bas.stl
+     scale: 0.5002
+     minskowski: 0.001
+     state: { quat: [0,0,1,0]}
+     params: { motion_type: STATIONARY }
+  - register_cylinder:
+     id: 2
+     state: {center: [0.0,0.0, 0.0], axis: [1, 1, 0], radius: 4.97 }
+     params: { motion_type: STATIONARY }
+
+compute_force:
+  - gravity_force:
+     gravity: [0,0,-0.00981]
+  - contact_sphere:
+     symetric: true
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 125700, kt: 107700, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 125700, kt: 107700, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
+
+particle_regions:
+   - AREA:
+      bounds: [ [ -4.97 , -4.97 , 90 ] , [ 4.97 , 4.97 , 92 ] ]
+   - MYSUPERZONE:
+      quadric:
+          shape: cylz
+          transform:
+            - scale: [4.45 , 4.45 ,2]
+domain:
+  cell_size: 10 m
+  periodic: [false,false,false]
+  grid_dims: [1, 1, 10]
+  bounds: [[-5 m , -5 m, 0 m],[5 m, 5 m, 100 m]]
+  expandable: true
+  periodic: [false,false,false]
