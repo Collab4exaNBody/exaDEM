@@ -135,7 +135,7 @@ namespace exaDEM
     //ADD_SLOT(OldClassifier, ic_old, INPUT_OUTPUT);
     ADD_SLOT(OldClassifiers, ic_olds, INPUT_OUTPUT);
     
-   // ADD_SLOT(InteractionSOA, interaction_type0, INPUT_OUTPUT);
+    //ADD_SLOT(InteractionSOA, interaction_type0, INPUT_OUTPUT);
     //ADD_SLOT(InteractionSOA, interaction_type4, INPUT_OUTPUT);
 
   public:
@@ -154,10 +154,10 @@ namespace exaDEM
       {
         return;
       }
-      //auto [cell_ptr, cell_size] = traversal_real->info();
-      //if (!ic.has_value())
-      //  ic->initialize();
-      /*ic->classify(*ges, cell_ptr, cell_size);
+      /*auto [cell_ptr, cell_size] = traversal_real->info();
+      if (!ic.has_value())
+        ic->initialize();
+      ic->classify(*ges, cell_ptr, cell_size);
       ic->prefetch_memory_on_gpu(); // GPU only*/
 
      auto &olds = *ic_olds;
@@ -176,8 +176,10 @@ namespace exaDEM
       
       printf("TYPE4: OLD: %d NEW: %d\n", size2, type4.ft_x.size());
       
-      //if(size!=type0.ft_x.size())
-      //{
+      if(size!=type0.ft_x.size())
+      {
+      	printf("ERREUR DE TAILLE\n"); getchar();
+      }
       	
       	int loop = std::min(size, type0.ft_x.size());
       	

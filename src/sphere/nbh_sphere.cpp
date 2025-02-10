@@ -122,10 +122,164 @@ namespace exaDEM
 
           // Reset storage, interaction history was stored in the manager
           storage.initialize(n_particles);
+          /*auto &info_particles = storage.m_info;
+
+          // Get data pointers
+          const uint64_t *__restrict__ id_a = cells[cell_a][field::id];
+          ONIKA_ASSUME_ALIGNED(id_a);
+          const double *__restrict__ rx = cells[cell_a][field::rx];
+          ONIKA_ASSUME_ALIGNED(rx);
+          const double *__restrict__ ry = cells[cell_a][field::ry];
+          ONIKA_ASSUME_ALIGNED(ry);
+          const double *__restrict__ rz = cells[cell_a][field::rz];
+          ONIKA_ASSUME_ALIGNED(rz);
+          const double *__restrict__ rad = cells[cell_a][field::radius];
+          ONIKA_ASSUME_ALIGNED(rad);
+
+          // Fill particle ids in the interaction storage
+          for (size_t it = 0; it < n_particles; it++)
+          {
+            info_particles[it].pid = id_a[it];
+          }
+
+          item.moment = Vec3d{0, 0, 0};
+          item.friction = Vec3d{0, 0, 0};
+          item.cell_i = cell_a;
+
+          // First, interaction between a sphere and a driver
+          if (drivers.has_value())
+          {
+            auto &drvs = *drivers;
+            // By default, if the interaction is between a particle and a driver
+            // Data about the particle j is set to -1
+            // Except for id_j that contains the driver id
+            item.id_j = decltype(item.p_j)(-1);
+            item.cell_j = decltype(item.p_j)(-1);
+            item.p_j = decltype(item.p_j)(-1);
+
+            for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++)
+            {
+              item.id_j = drvs_idx; // we store the driver idx
+              DRIVER_TYPE type = drvs.type(drvs_idx);
+
+              if (type == DRIVER_TYPE::UNDEFINED)
+              {
+                continue;
+              }
+
+              if (type == DRIVER_TYPE::CYLINDER)
+              {
+                item.type = 4;
+                item.id_j = drvs_idx;
+                Cylinder &driver = std::get<Cylinder>(drvs.data(drvs_idx));
+                for (size_t p = 0; p < n_particles; p++)
+                {
+                  const Vec3d r = {rx[p], ry[p], rz[p]};
+                  const double rVerletMax = rad[p] + rVerlet;
+                  if (driver.filter(rVerletMax, r))
+                  {
+                    item.p_i = p;
+                    item.id_i = id_a[p];
+                    manager.add_item(p, item);
+                  }
+                }
+              }
+              else if (type == DRIVER_TYPE::SURFACE)
+              {
+                item.type = 5;
+                item.id_j = drvs_idx;
+                Surface &driver = std::get<Surface>(drvs.data(drvs_idx));
+                for (size_t p = 0; p < n_particles; p++)
+                {
+                  const Vec3d r = {rx[p], ry[p], rz[p]};
+                  const double rVerletMax = rad[p] + rVerlet;
+                  if (driver.filter(rVerletMax, r))
+                  {
+                    item.p_i = p;
+                    item.id_i = id_a[p];
+                    manager.add_item(p, item);
+                  }
+                }
+              }
+              else if (type == DRIVER_TYPE::BALL)
+              {
+                item.type = 6;
+                item.id_j = drvs_idx;
+                Ball &driver = std::get<Ball>(drvs.data(drvs_idx));
+                for (size_t p = 0; p < n_particles; p++)
+                {
+                  const Vec3d r = {rx[p], ry[p], rz[p]};
+                  const double rVerletMax = rad[p] + rVerlet;
+                  if (driver.filter(rVerletMax, r))
+                  {
+                    item.p_i = p;
+                    item.id_i = id_a[p];
+                    manager.add_item(p, item);
+                  }
+                }
+              }
+              else if (type == DRIVER_TYPE::STL_MESH)
+              {
+                auto &driver = std::get<Stl_mesh>(drvs.data(drvs_idx));
+                for (size_t p = 0; p < n_particles; p++)
+                {
+                  // a sphere can have multiple interactions with a stl mesh
+                  auto items = detection_sphere_driver(driver, cell_a, p, id_a[p], drvs_idx, rx[p], ry[p], rz[p], rad[p], rVerlet);
+                  for (auto &it : items)
+                    manager.add_item(p, it);
+                }
+              }
+            }
+          }
 
           item.type = 0; // === Vertex - Vertex
 
+          if (sym)
+          {
+            // Second, we add interactions between two spheres.
+            apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */
+                /*[&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+                {
+                // default value of the interaction studied (A or i -> B or j)
+                const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+                if (id_a[p_a] >= id_nbh)
+                {
+                if (!g.is_ghost_cell(cell_b))
+                return;
+                }
 
+                // Add interactions
+                item.id_i = id_a[p_a];
+                item.p_i = p_a;
+                item.id_j = id_nbh;
+                item.p_j = p_b;
+                item.cell_j = cell_b;
+                manager.add_item(p_a, item);
+                });
+          }
+          else
+          {
+            // Second, we add interactions between two spheres.
+            apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */
+                /*[&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+                {
+                // default value of the interaction studied (A or i -> B or j)
+                const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+                // Add interactions
+                item.id_i = id_a[p_a];
+                item.p_i = p_a;
+                item.id_j = id_nbh;
+                item.p_j = p_b;
+                item.cell_j = cell_b;
+                manager.add_item(p_a, item);
+                });
+          }
+
+          manager.update_extra_storage<true>(storage);
+
+          assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
+
+          assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));*/
         } //    GRID_OMP_FOR_END
       }
     }
