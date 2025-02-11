@@ -188,9 +188,11 @@ namespace exaDEM
 
     inline void execute() override final
     {
+    
+      //printf("UNCLASSIFY\n");
 	
-      if (ic.has_value())
-      {
+      //if (ic.has_value())
+      //{
       
       auto &olds = *ic_olds;
       
@@ -210,8 +212,8 @@ namespace exaDEM
       
       if(size > 0)
       {
-      
-      //printf("PASSAGE_%d\n", type);
+            
+      //printf("TYPE UNCLASSIFY: %d\n", type);
       
       InteractionWrapper<InteractionSOA> interactions(data);
       
@@ -277,7 +279,7 @@ namespace exaDEM
       }
       }      
       
-      }
+      //}
 
       /*if (grid->number_of_cells() == 0)
       {
