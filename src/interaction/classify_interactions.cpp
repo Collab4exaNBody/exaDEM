@@ -155,7 +155,7 @@ namespace exaDEM
         return;
       }
       
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      /*auto [cell_ptr, cell_size] = traversal_real->info();
       if (!ic.has_value())
         ic->initialize();
       ic->classify(*ges, cell_ptr, cell_size);

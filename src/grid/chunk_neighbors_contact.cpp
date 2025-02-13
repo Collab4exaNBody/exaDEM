@@ -463,7 +463,7 @@ namespace exaDEM
         NullXForm xform = {};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
       }
-      /*
+      
       //UNCLASSIFY
       //printf("UNCLASSIFY\n");
       
@@ -653,7 +653,7 @@ namespace exaDEM
 	}
 	
 	printf("MAX: %d\n", max3);*/
-	/*
+	
 	onika::memory::CudaMMVector<int> cell_id;
 	onika::memory::CudaMMVector<int> incr_cell_id;
 	
@@ -880,7 +880,7 @@ namespace exaDEM
 	kernelTROIS<<<numBlocks, 256>>>(interaction_driver.data(), driver_incr.data(), id_particle.data(), cell_particle.data(), p_particle.data(), id_i_driver.data(), cell_i_driver.data(), p_i_driver.data(), interaction_driver.size());
 
 	//printf("CLASSIFIER END\n");	
-	*/
+	
     }
   };
 

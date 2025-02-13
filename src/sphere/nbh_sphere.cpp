@@ -122,7 +122,7 @@ namespace exaDEM
 
           // Reset storage, interaction history was stored in the manager
           storage.initialize(n_particles);
-          auto &info_particles = storage.m_info;
+          /*auto &info_particles = storage.m_info;
 
           // Get data pointers
           const uint64_t *__restrict__ id_a = cells[cell_a][field::id];
@@ -237,8 +237,8 @@ namespace exaDEM
           if (sym)
           {
             // Second, we add interactions between two spheres.
-            apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-                [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+            apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric *///,
+                /*[&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
                 {
                 // default value of the interaction studied (A or i -> B or j)
                 const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -260,8 +260,8 @@ namespace exaDEM
           else
           {
             // Second, we add interactions between two spheres.
-            apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-                [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+            apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric *///,
+                /*[&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
                 {
                 // default value of the interaction studied (A or i -> B or j)
                 const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -280,7 +280,7 @@ namespace exaDEM
           assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
 
           assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
-        } //    GRID_OMP_FOR_END
+        */} //    GRID_OMP_FOR_END
       }
     }
   };
