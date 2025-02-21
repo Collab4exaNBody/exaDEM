@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the license.
 set(exadem_field_LINK_LIBRARIES exanbCore exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exadem_shape exadem_interaction)
-xstamp_add_plugin(exadem_field ${CMAKE_CURRENT_SOURCE_DIR})
+onika_add_plugin(exadem_field ${CMAKE_CURRENT_SOURCE_DIR})

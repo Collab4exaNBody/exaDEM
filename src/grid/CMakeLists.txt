@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the license.
 set(exadem_grid_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exadem_interaction)
-xstamp_add_plugin(exadem_grid ${CMAKE_CURRENT_SOURCE_DIR})
+onika_add_plugin(exadem_grid ${CMAKE_CURRENT_SOURCE_DIR})

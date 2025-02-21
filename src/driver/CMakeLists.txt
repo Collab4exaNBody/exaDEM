@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the license.
 set(exadem_driver_LINK_LIBRARIES exadem_shape)
-xstamp_add_plugin(exadem_driver ${CMAKE_CURRENT_SOURCE_DIR})
+onika_add_plugin(exadem_driver ${CMAKE_CURRENT_SOURCE_DIR})
