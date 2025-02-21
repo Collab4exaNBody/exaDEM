@@ -20,7 +20,7 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/log.h>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 
 #include <memory>
 

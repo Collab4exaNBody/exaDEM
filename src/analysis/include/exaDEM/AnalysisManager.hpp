@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <mpi.h>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 
 namespace exaDEM
 {

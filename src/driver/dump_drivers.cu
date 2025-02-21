@@ -16,6 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
@@ -24,7 +25,7 @@ under the License.
 #include <memory>
 #include <exaDEM/stl_mesh.h>
 #include <exaDEM/drivers.h>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 
 namespace exaDEM
 {
@@ -35,15 +36,15 @@ namespace exaDEM
     std::string directory;
     std::stringstream &stream;
 
-    void operator()(exaDEM::Surface &surface) { surface.dump_driver(id++, stream); }
+    inline void operator()(exaDEM::Surface &surface) { surface.dump_driver(id++, stream); }
 
-    void operator()(exaDEM::Ball &ball) { ball.dump_driver(id++, stream); }
+    inline void operator()(exaDEM::Ball &ball) { ball.dump_driver(id++, stream); }
 
-    void operator()(exaDEM::Cylinder &cylinder) { cylinder.dump_driver(id++, stream); }
+    inline void operator()(exaDEM::Cylinder &cylinder) { cylinder.dump_driver(id++, stream); }
 
-    void operator()(exaDEM::Stl_mesh &stl) { stl.dump_driver(id++, directory, stream); }
+    inline void operator()(exaDEM::Stl_mesh &stl_param) { stl_param.dump_driver(id++, directory, stream); }
 
-    void operator()(auto &&others) { ldbg << "DumpDriverFunc is not defined for this driverr OR this driver is no longer defined." << std::endl; }
+    inline void operator()(auto &&others) { ldbg << "DumpDriverFunc is not defined for this driverr OR this driver is no longer defined." << std::endl; }
   };
 
   using namespace exanb;

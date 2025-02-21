@@ -25,7 +25,7 @@ under the License.
 #include <exaDEM/stl_mesh.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/paraview_driver.hpp>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 
 
 namespace exaDEM

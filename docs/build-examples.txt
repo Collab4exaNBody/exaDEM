@@ -1,0 +1,23 @@
+# Tested with 
+# Ubuntu 24.04 , g++-13.4.0 and Cuda 12.8
+#
+# Note: cofigure exaNBody with EXANB_BUILD_CONTRIB_MD=ON to enable contributed MD potentials
+# in exaStamp (i.e ML SNAP)
+#
+XNB_INSTALL_DIR=${HOME}/local/exaNBody
+EXADEM_SRC_DIR=${HOME}/dev/exaDEM
+EXADEM_INSTALL_DIR=${HOME}/local/exaDEM
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=${EXADEM_INSTALL_DIR} \
+      -DexaNBody_DIR=${XNB_INSTALL_DIR} \
+      ${EXADEM_SRC_DIR}
+
+# common build and cleanup
+make -j20 install
+
+# first time environment setup so you can use raw executable without wrapper script
+source ./exaDEM
+
+# run executable, with or without profiling tools
+/home/carrardt/local/onika/bin/onika-exec mytest.msp
+

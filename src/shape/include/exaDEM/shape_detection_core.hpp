@@ -24,6 +24,7 @@ under the License.
 #include <math.h>
 #include <exaDEM/shape_prepro.hpp>
 #include <exaDEM/type/contact.hpp>
+#include <onika/oarray.h>
 
 namespace exaDEM
 {

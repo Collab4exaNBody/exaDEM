@@ -18,13 +18,15 @@ under the License.
  */
 
 #pragma once
+
 #include <fstream>
 #include <vector>
 #include <cassert>
-#include <math.h>
+#include <cmath>
 #include <onika/log.h>
 #include <exaDEM/basic_types.hpp>
 #include <onika/cuda/cuda.h>
+#include <onika/memory/allocator.h>
 #include <onika/cuda/stl_adaptors.h>
 #include <onika/math/basic_types.h>
 

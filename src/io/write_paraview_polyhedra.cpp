@@ -32,7 +32,7 @@ under the License.
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <onika/math/basic_types_stream.h>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 
 #include <mpi.h>
 #include <exaDEM/shapes.hpp>

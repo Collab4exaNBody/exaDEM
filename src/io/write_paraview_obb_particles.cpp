@@ -40,7 +40,7 @@ under the License.
 #include <mpi.h>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_printer.hpp>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 
 namespace exaDEM
 {

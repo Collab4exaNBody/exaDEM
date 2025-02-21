@@ -37,7 +37,7 @@ under the License.
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
 #include <exaDEM/shapes.hpp>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 #include <exaDEM/network.hpp>
 
 namespace exaDEM
