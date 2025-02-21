@@ -21,7 +21,7 @@ under the License.
 #include <vector>
 #include <cassert>
 #include <math.h>
-#include <exanb/core/log.h>
+#include <onika/log.h>
 #include <exaDEM/basic_types.hpp>
 #include <onika/cuda/cuda.h>
 #include <onika/cuda/stl_adaptors.h>

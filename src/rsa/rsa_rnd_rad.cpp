@@ -11,7 +11,7 @@
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/grid.h>
 #include <onika/math/basic_types_stream.h>
-#include <exanb/core/log.h>
+#include <onika/log.h>
 //#include "ustamp/vector_utils.h"
 #include <exanb/core/file_utils.h>
 #include <exanb/core/domain.h>

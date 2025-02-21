@@ -20,7 +20,7 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exanb/core/log.h>
+#include <onika/log.h>
 #include <onika/math/basic_types_stream.h>
 #include <exanb/core/grid.h>
 #include <exanb/grid_cell_particles/grid_cell_values.h>

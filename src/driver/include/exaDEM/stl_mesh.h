@@ -18,8 +18,8 @@ under the License.
  */
 #pragma once
 #include <onika/math/basic_types.h>
-#include <exanb/core/quaternion.h>
-#include <exanb/core/quaternion_yaml.h>
+#include <onika/math/quaternion.h>
+#include <onika/math/quaternion_yaml.h>
 #include <exaDEM/driver_base.h>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_reader.hpp>

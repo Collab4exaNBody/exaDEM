@@ -18,7 +18,7 @@ under the License.
 */
 #pragma once
 
-#include <exanb/core/quaternion_operators.h>
+#include <onika/math/quaternion_operators.h>
 
 namespace exaDEM
 {

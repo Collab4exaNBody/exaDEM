@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 */
 #pragma once
-#include <exanb/core/quaternion_operators.h>
+#include <onika/math/quaternion_operators.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <exaDEM/type/OBB.hpp>

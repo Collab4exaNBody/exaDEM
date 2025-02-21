@@ -19,8 +19,8 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exanb/core/quaternion.h>
-#include <exanb/core/quaternion_yaml.h>
+#include <onika/math/quaternion.h>
+#include <onika/math/quaternion_yaml.h>
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/driver_base.h>
