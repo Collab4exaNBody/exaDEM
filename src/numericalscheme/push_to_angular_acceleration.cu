@@ -62,5 +62,5 @@ namespace exaDEM
   template <class GridT> using PushToAngularAccelerationTmpl = PushToAngularAcceleration<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("push_to_angular_acceleration", make_grid_variant_operator<PushToAngularAccelerationTmpl>); }
+  ONIKA_AUTORUN_INIT(push_to_angular_acceleration) { OperatorNodeFactory::instance()->register_factory("push_to_angular_acceleration", make_grid_variant_operator<PushToAngularAccelerationTmpl>); }
 } // namespace exaDEM

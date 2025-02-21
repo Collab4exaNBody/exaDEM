@@ -124,5 +124,5 @@ namespace exaDEM
   template <class GridT> using SetRandVelocityTmpl = SetRandVelocity<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_rand_velocity", make_grid_variant_operator<SetRandVelocityTmpl>); }
+  ONIKA_AUTORUN_INIT(set_rand_velocity) { OperatorNodeFactory::instance()->register_factory("set_rand_velocity", make_grid_variant_operator<SetRandVelocityTmpl>); }
 } // namespace exaDEM

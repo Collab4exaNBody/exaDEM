@@ -61,6 +61,6 @@ namespace exaDEM
   template <class GridT> using GravityForceTmpl = GravityForce<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("gravity_force", make_grid_variant_operator<GravityForceTmpl>); }
+  ONIKA_AUTORUN_INIT(gravity_force) { OperatorNodeFactory::instance()->register_factory("gravity_force", make_grid_variant_operator<GravityForceTmpl>); }
 
 } // namespace exaDEM

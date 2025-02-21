@@ -142,5 +142,5 @@ namespace exaDEM
   template <class GridT> using StressTensorTmpl = StressTensor<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("stress_tensor", make_grid_variant_operator<StressTensorTmpl>); }
+  ONIKA_AUTORUN_INIT(stress_tensor) { OperatorNodeFactory::instance()->register_factory("stress_tensor", make_grid_variant_operator<StressTensorTmpl>); }
 } // namespace exaDEM

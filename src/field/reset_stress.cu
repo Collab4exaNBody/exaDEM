@@ -80,6 +80,6 @@ namespace exaDEM
   template <class GridT> using ResetStressTensorTmpl = ResetStressTensor<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("reset_stress", make_grid_variant_operator<ResetStressTensorTmpl>); }
+  ONIKA_AUTORUN_INIT(reset_stress) { OperatorNodeFactory::instance()->register_factory("reset_stress", make_grid_variant_operator<ResetStressTensorTmpl>); }
 
 } // namespace exaDEM

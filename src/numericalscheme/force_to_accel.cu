@@ -60,6 +60,6 @@ namespace exaDEM
   template <class GridT> using ForceToAccelTmpl = ForceToAccel<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("force_to_accel", make_grid_variant_operator<ForceToAccelTmpl>); }
+  ONIKA_AUTORUN_INIT(force_to_accel) { OperatorNodeFactory::instance()->register_factory("force_to_accel", make_grid_variant_operator<ForceToAccelTmpl>); }
 
 } // namespace exaDEM

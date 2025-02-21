@@ -97,5 +97,5 @@ namespace exaDEM
   template <class GridT> using SetMaterialPropertiesTmpl = SetMaterialProperties<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_material_properties", make_grid_variant_operator<SetMaterialPropertiesTmpl>); }
+  ONIKA_AUTORUN_INIT(set_material_properties) { OperatorNodeFactory::instance()->register_factory("set_material_properties", make_grid_variant_operator<SetMaterialPropertiesTmpl>); }
 } // namespace exaDEM

@@ -57,6 +57,6 @@ namespace exanb
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("timestep_paraview_file", make_compatible_operator<TimeStepParaviewFileNameOperator>); }
+  ONIKA_AUTORUN_INIT(paraview_file_name) { OperatorNodeFactory::instance()->register_factory("timestep_paraview_file", make_compatible_operator<TimeStepParaviewFileNameOperator>); }
 
 } // namespace exanb

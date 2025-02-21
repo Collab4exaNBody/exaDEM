@@ -75,5 +75,5 @@ namespace exaDEM
   template <class GridT> using UnclassifyInteractionsTmpl = UnclassifyInteractions<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("unclassify_interactions", make_grid_variant_operator<UnclassifyInteractionsTmpl>); }
+  ONIKA_AUTORUN_INIT(unclassify_interactions) { OperatorNodeFactory::instance()->register_factory("unclassify_interactions", make_grid_variant_operator<UnclassifyInteractionsTmpl>); }
 } // namespace exaDEM

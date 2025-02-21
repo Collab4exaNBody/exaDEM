@@ -116,5 +116,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("register_stl_mesh", make_simple_operator<RegisterSTLMesh>); }
+  ONIKA_AUTORUN_INIT(register_stl_mesh) { OperatorNodeFactory::instance()->register_factory("register_stl_mesh", make_simple_operator<RegisterSTLMesh>); }
 } // namespace exaDEM

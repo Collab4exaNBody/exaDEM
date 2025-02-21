@@ -146,5 +146,5 @@ namespace exaDEM
   template <class GridT> using DEMRcutMaxTmpl = DEMRcutMax<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("dem_rcut_max", make_grid_variant_operator<DEMRcutMaxTmpl>); }
+  ONIKA_AUTORUN_INIT(dem_rcut_max) { OperatorNodeFactory::instance()->register_factory("dem_rcut_max", make_grid_variant_operator<DEMRcutMaxTmpl>); }
 }

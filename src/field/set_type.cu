@@ -82,6 +82,6 @@ namespace exaDEM
   template <class GridT> using SetParticleTypeTmpl = SetParticleType<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_type", make_grid_variant_operator<SetParticleTypeTmpl>); }
+  ONIKA_AUTORUN_INIT(set_type) { OperatorNodeFactory::instance()->register_factory("set_type", make_grid_variant_operator<SetParticleTypeTmpl>); }
 
 } // namespace exaDEM

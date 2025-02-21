@@ -117,5 +117,5 @@ namespace exaDEM
   template <class GridT> using UpdateInertiaTmpl = UpdateInertia<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("update_inertia", make_grid_variant_operator<UpdateInertiaTmpl>); }
+  ONIKA_AUTORUN_INIT(update_inertia) { OperatorNodeFactory::instance()->register_factory("update_inertia", make_grid_variant_operator<UpdateInertiaTmpl>); }
 } // namespace exaDEM

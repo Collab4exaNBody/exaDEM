@@ -187,6 +187,6 @@ namespace exaDEM
 	template <class GridT> using SetFieldsTmpl = SetFields<GridT>;
 
 	// === register factories ===
-	CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_fields", make_grid_variant_operator<SetFieldsTmpl>); }
+	ONIKA_AUTORUN_INIT(set_fields) { OperatorNodeFactory::instance()->register_factory("set_fields", make_grid_variant_operator<SetFieldsTmpl>); }
 
 } // namespace exaDEM

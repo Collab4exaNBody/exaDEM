@@ -28,5 +28,5 @@ namespace exaDEM
   template <class GridT> using MigrateCellParticlesInteractionTmpl = MigrateCellParticlesES<GridT, exaDEM::Interaction>;
 
   // === register factory ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("migrate_cell_particles_interaction", make_grid_variant_operator<MigrateCellParticlesInteractionTmpl>); }
+  ONIKA_AUTORUN_INIT(migrate_cell_particles_interaction) { OperatorNodeFactory::instance()->register_factory("migrate_cell_particles_interaction", make_grid_variant_operator<MigrateCellParticlesInteractionTmpl>); }
 } // namespace exaDEM

@@ -106,6 +106,6 @@ namespace exaDEM
   template <class GridT> using ParticleCounterAnalysisTmpl = ParticleCounterAnalysis<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("particle_counter", make_grid_variant_operator<ParticleCounterAnalysisTmpl>); }
+  ONIKA_AUTORUN_INIT(counter) { OperatorNodeFactory::instance()->register_factory("particle_counter", make_grid_variant_operator<ParticleCounterAnalysisTmpl>); }
 
 } // namespace exaDEM

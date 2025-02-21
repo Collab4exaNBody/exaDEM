@@ -72,6 +72,6 @@ namespace exaDEM
   template <class GridT> using SetDensitiesTmpl = SetDensities<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_densities_multiple_materials", make_grid_variant_operator<SetDensitiesTmpl>); }
+  ONIKA_AUTORUN_INIT(set_densities_multiple_materials) { OperatorNodeFactory::instance()->register_factory("set_densities_multiple_materials", make_grid_variant_operator<SetDensitiesTmpl>); }
 
 } // namespace exaDEM

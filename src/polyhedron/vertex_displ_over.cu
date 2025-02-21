@@ -121,6 +121,6 @@ sets result output to true if at least one particle has moved further than thres
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("vertex_displ_over", make_grid_variant_operator<VertexDisplacementOver>); }
+  ONIKA_AUTORUN_INIT(vertex_displ_over) { OperatorNodeFactory::instance()->register_factory("vertex_displ_over", make_grid_variant_operator<VertexDisplacementOver>); }
 
 } // namespace exaDEM

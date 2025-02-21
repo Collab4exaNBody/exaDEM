@@ -152,5 +152,5 @@ namespace exaDEM
   template <class GridT> using StatsInteractionsTmpl = StatsInteractions<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("stats_interactions", make_grid_variant_operator<StatsInteractionsTmpl>); }
+  ONIKA_AUTORUN_INIT(stats_interactions) { OperatorNodeFactory::instance()->register_factory("stats_interactions", make_grid_variant_operator<StatsInteractionsTmpl>); }
 } // namespace exaDEM

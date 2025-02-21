@@ -187,6 +187,6 @@ sets result output to true if at least one particle has moved further than thres
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("driver_displ_over", make_simple_operator<DriverDisplacementOver>); }
+  ONIKA_AUTORUN_INIT(driver_displ_over) { OperatorNodeFactory::instance()->register_factory("driver_displ_over", make_simple_operator<DriverDisplacementOver>); }
 
 } // namespace exaDEM

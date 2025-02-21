@@ -88,5 +88,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("paraview_driver", make_simple_operator<ParaviewDriver>); }
+  ONIKA_AUTORUN_INIT(paraview_driver) { OperatorNodeFactory::instance()->register_factory("paraview_driver", make_simple_operator<ParaviewDriver>); }
 } // namespace exaDEM

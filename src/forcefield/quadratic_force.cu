@@ -62,5 +62,5 @@ namespace exaDEM
   template <class GridT> using QuadraticForceTmpl = QuadraticForce<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("quadratic_force", make_grid_variant_operator<QuadraticForceTmpl>); }
+  ONIKA_AUTORUN_INIT(quadratic_force) { OperatorNodeFactory::instance()->register_factory("quadratic_force", make_grid_variant_operator<QuadraticForceTmpl>); }
 } // namespace exaDEM

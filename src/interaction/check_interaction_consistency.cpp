@@ -69,5 +69,5 @@ namespace exaDEM
   template <class GridT> using CheckInteractionConsistencyTmpl = CheckInteractionConsistency<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("check_interaction_consistency", make_grid_variant_operator<CheckInteractionConsistencyTmpl>); }
+  ONIKA_AUTORUN_INIT(check_interaction_consistency) { OperatorNodeFactory::instance()->register_factory("check_interaction_consistency", make_grid_variant_operator<CheckInteractionConsistencyTmpl>); }
 } // namespace exaDEM

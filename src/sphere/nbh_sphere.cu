@@ -287,5 +287,5 @@ namespace exaDEM
   template <class GridT> using UpdateContactInteractionSphereTmpl = UpdateContactInteractionSphere<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("nbh_sphere", make_grid_variant_operator<UpdateContactInteractionSphereTmpl>); }
+  ONIKA_AUTORUN_INIT(nbh_sphere) { OperatorNodeFactory::instance()->register_factory("nbh_sphere", make_grid_variant_operator<UpdateContactInteractionSphereTmpl>); }
 } // namespace exaDEM

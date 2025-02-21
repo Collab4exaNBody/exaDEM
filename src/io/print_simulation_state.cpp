@@ -179,6 +179,6 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("print_simulation_state", make_simple_operator<PrintSimulationStateNode>); }
+  ONIKA_AUTORUN_INIT(print_simulation_state) { OperatorNodeFactory::instance()->register_factory("print_simulation_state", make_simple_operator<PrintSimulationStateNode>); }
 
 } // namespace exaDEM

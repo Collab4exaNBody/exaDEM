@@ -92,6 +92,6 @@ namespace exaDEM
   template <class GridT> using SetRadiusTmpl = SetRadius<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_radius", make_grid_variant_operator<SetRadiusTmpl>); }
+  ONIKA_AUTORUN_INIT(set_radius) { OperatorNodeFactory::instance()->register_factory("set_radius", make_grid_variant_operator<SetRadiusTmpl>); }
 
 } // namespace exaDEM

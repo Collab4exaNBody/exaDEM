@@ -87,6 +87,6 @@ namespace exaDEM
   template <class GridT> using SetRandVrotArotTmpl = SetRandVrotArot<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_rand_vrot_arot", make_grid_variant_operator<SetRandVrotArotTmpl>); }
+  ONIKA_AUTORUN_INIT(set_rand_avrot_arot) { OperatorNodeFactory::instance()->register_factory("set_rand_vrot_arot", make_grid_variant_operator<SetRandVrotArotTmpl>); }
 
 } // namespace exaDEM

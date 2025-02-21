@@ -16,6 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+
 #pragma once
 #include <fstream>
 #include <vector>
@@ -25,6 +26,7 @@ under the License.
 #include <exaDEM/basic_types.hpp>
 #include <onika/cuda/cuda.h>
 #include <onika/cuda/stl_adaptors.h>
+#include <onika/math/basic_types.h>
 
 //#include <exaDEM/shape_printer.hpp>
 

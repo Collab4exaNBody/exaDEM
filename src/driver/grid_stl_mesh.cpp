@@ -214,5 +214,5 @@ namespace exaDEM
 
   // === register factories ==
   template <class GridT> using UpdateGridSTLMeshOperatorTemplate = UpdateGridSTLMeshOperator<GridT>;
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("grid_stl_mesh", make_grid_variant_operator<UpdateGridSTLMeshOperatorTemplate>); }
+  ONIKA_AUTORUN_INIT(grid_stl_mesh) { OperatorNodeFactory::instance()->register_factory("grid_stl_mesh", make_grid_variant_operator<UpdateGridSTLMeshOperatorTemplate>); }
 } // namespace exaDEM

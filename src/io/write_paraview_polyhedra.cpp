@@ -127,5 +127,5 @@ namespace exaDEM
   template <class GridT> using WriteParaviewPolyhedraOperatorTemplate = WriteParaviewPolyhedraOperator<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("write_paraview_polyhedra", make_grid_variant_operator<WriteParaviewPolyhedraOperatorTemplate>); }
+  ONIKA_AUTORUN_INIT(write_paraview_polyhedra) { OperatorNodeFactory::instance()->register_factory("write_paraview_polyhedra", make_grid_variant_operator<WriteParaviewPolyhedraOperatorTemplate>); }
 } // namespace exaDEM

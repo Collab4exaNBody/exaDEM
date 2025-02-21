@@ -129,6 +129,6 @@ namespace exaDEM
   template <class GridT> using PolyhedraDefineRadiusTmpl = PolyhedraDefineRadius<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("radius_from_shape", make_grid_variant_operator<PolyhedraDefineRadiusTmpl>); }
+  ONIKA_AUTORUN_INIT(radius_from_shape) { OperatorNodeFactory::instance()->register_factory("radius_from_shape", make_grid_variant_operator<PolyhedraDefineRadiusTmpl>); }
 
 } // namespace exaDEM

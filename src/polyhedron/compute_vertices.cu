@@ -70,6 +70,6 @@ namespace exaDEM
   template <class GridT> using PolyhedraComputeVerticesTmpl = PolyhedraComputeVertices<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("compute_vertices", make_grid_variant_operator<PolyhedraComputeVerticesTmpl>); }
+  ONIKA_AUTORUN_INIT(compute_vertices) { OperatorNodeFactory::instance()->register_factory("compute_vertices", make_grid_variant_operator<PolyhedraComputeVerticesTmpl>); }
 
 } // namespace exaDEM

@@ -68,5 +68,5 @@ namespace exaDEM
   template <class GridT> using CompressInteractionTmpl = CompressInteraction<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("compress_interaction", make_grid_variant_operator<CompressInteractionTmpl>); }
+  ONIKA_AUTORUN_INIT(compress_interaction) { OperatorNodeFactory::instance()->register_factory("compress_interaction", make_grid_variant_operator<CompressInteractionTmpl>); }
 } // namespace exaDEM

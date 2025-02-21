@@ -57,6 +57,6 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("io_config", make_simple_operator<IOConfigNode>); }
+  ONIKA_AUTORUN_INIT(io_config) { OperatorNodeFactory::instance()->register_factory("io_config", make_simple_operator<IOConfigNode>); }
 
 } // namespace exaDEM

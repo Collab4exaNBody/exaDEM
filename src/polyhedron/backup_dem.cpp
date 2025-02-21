@@ -97,5 +97,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("backup_dem", make_grid_variant_operator<DEMBackupNode>); }
+  ONIKA_AUTORUN_INIT(backup_dem) { OperatorNodeFactory::instance()->register_factory("backup_dem", make_grid_variant_operator<DEMBackupNode>); }
 } // namespace exaDEM

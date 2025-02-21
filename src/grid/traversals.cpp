@@ -87,5 +87,5 @@ namespace exaDEM
   template <class GridT> using UpdateCellListTmpl = UpdateCellList<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("update_traversals", make_grid_variant_operator<UpdateCellListTmpl>); }
+  ONIKA_AUTORUN_INIT(traversals) { OperatorNodeFactory::instance()->register_factory("update_traversals", make_grid_variant_operator<UpdateCellListTmpl>); }
 } // namespace exaDEM

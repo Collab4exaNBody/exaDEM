@@ -48,6 +48,6 @@ namespace exaDEM
   template <class GridT> using SphereFluidFriction = FluidFriction<GridT, SphereFrictionFunctor, FieldSet<field::_radius>>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("sphere_fluid_friction", make_grid_variant_operator<SphereFluidFriction>); }
+  ONIKA_AUTORUN_INIT(sphere_fluid_friction) { OperatorNodeFactory::instance()->register_factory("sphere_fluid_friction", make_grid_variant_operator<SphereFluidFriction>); }
 
 } // namespace exaDEM

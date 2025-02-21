@@ -86,5 +86,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("write_shape_file", make_simple_operator<WriteShapeFileOperator>); }
+  ONIKA_AUTORUN_INIT(write_shape_file) { OperatorNodeFactory::instance()->register_factory("write_shape_file", make_simple_operator<WriteShapeFileOperator>); }
 } // namespace exaDEM

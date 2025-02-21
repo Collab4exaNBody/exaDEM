@@ -105,5 +105,5 @@ namespace exaDEM
 	template <class GridT> using ContactNetworkTmpl = ContactNetwork<GridT>;
 
 	// === register factories ===
-	CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("dump_contact_network", make_grid_variant_operator<ContactNetwork>); }
+	ONIKA_AUTORUN_INIT(dump_contact_network) { OperatorNodeFactory::instance()->register_factory("dump_contact_network", make_grid_variant_operator<ContactNetwork>); }
 } // namespace exaDEM

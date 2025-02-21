@@ -133,6 +133,6 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("driver_vertices", make_simple_operator<DriverVertices>); }
+  ONIKA_AUTORUN_INIT(driver_vertices) { OperatorNodeFactory::instance()->register_factory("driver_vertices", make_simple_operator<DriverVertices>); }
 
 } // namespace exaDEM

@@ -127,6 +127,6 @@ namespace exaDEM
   template <class GridT> using ParticleBarycenterAnalysisTmpl = ParticleBarycenterAnalysis<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("particle_barycenter", make_grid_variant_operator<ParticleBarycenterAnalysisTmpl>); }
+  ONIKA_AUTORUN_INIT(barycenter) { OperatorNodeFactory::instance()->register_factory("particle_barycenter", make_grid_variant_operator<ParticleBarycenterAnalysisTmpl>); }
 
 } // namespace exaDEM

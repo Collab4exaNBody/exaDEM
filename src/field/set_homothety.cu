@@ -84,6 +84,6 @@ namespace exaDEM
   template <class GridT> using SetHomothetyTmpl = SetHomothety<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_homothety", make_grid_variant_operator<SetHomothetyTmpl>); }
+  ONIKA_AUTORUN_INIT(set_homothety) { OperatorNodeFactory::instance()->register_factory("set_homothety", make_grid_variant_operator<SetHomothetyTmpl>); }
 
 } // namespace exaDEM

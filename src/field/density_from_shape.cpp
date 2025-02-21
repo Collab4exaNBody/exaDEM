@@ -73,6 +73,6 @@ namespace exaDEM
   template <class GridT> using PolyhedraSetDensityTmpl = PolyhedraSetDensity<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("density_from_shape", make_grid_variant_operator<PolyhedraSetDensityTmpl>); }
+  ONIKA_AUTORUN_INIT(density_from_shape) { OperatorNodeFactory::instance()->register_factory("density_from_shape", make_grid_variant_operator<PolyhedraSetDensityTmpl>); }
 
 } // namespace exaDEM

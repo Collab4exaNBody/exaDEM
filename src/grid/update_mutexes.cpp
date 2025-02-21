@@ -63,5 +63,5 @@ namespace exaDEM
   template <class GridT> using UpdateMutexesTmpl = UpdateMutexes<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("update_mutexes", make_grid_variant_operator<UpdateMutexesTmpl>); }
+  ONIKA_AUTORUN_INIT(update_mutexes) { OperatorNodeFactory::instance()->register_factory("update_mutexes", make_grid_variant_operator<UpdateMutexesTmpl>); }
 } // namespace exaDEM

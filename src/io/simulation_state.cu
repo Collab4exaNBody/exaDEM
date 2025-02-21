@@ -169,6 +169,6 @@ namespace exaDEM
   template <class GridT> using SimulationStateNodeTmpl = SimulationStateNode<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("simulation_state", make_grid_variant_operator<SimulationStateNodeTmpl>); }
+  ONIKA_AUTORUN_INIT(simulation_state) { OperatorNodeFactory::instance()->register_factory("simulation_state", make_grid_variant_operator<SimulationStateNodeTmpl>); }
 
 } // namespace exaDEM

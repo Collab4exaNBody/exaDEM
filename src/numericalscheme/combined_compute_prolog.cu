@@ -129,5 +129,5 @@ namespace exaDEM
   template <class GridT> using CombinedComputePrologTmpl = CombinedComputeProlog<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("combined_compute_prolog", make_grid_variant_operator<CombinedComputePrologTmpl>); }
+  ONIKA_AUTORUN_INIT(combined_compute_prolog) { OperatorNodeFactory::instance()->register_factory("combined_compute_prolog", make_grid_variant_operator<CombinedComputePrologTmpl>); }
 } // namespace exaDEM

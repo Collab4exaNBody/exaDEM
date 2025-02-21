@@ -126,5 +126,5 @@ namespace exaDEM
   template <class GridT> using CombinedComputeEpilogTmpl = CombinedComputeEpilog<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("combined_compute_epilog", make_grid_variant_operator<CombinedComputeEpilogTmpl>); }
+  ONIKA_AUTORUN_INIT(combined_compute_epilog) { OperatorNodeFactory::instance()->register_factory("combined_compute_epilog", make_grid_variant_operator<CombinedComputeEpilogTmpl>); }
 } // namespace exaDEM

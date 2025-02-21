@@ -118,6 +118,6 @@ namespace exaDEM
   template <class GridT> using SetQuaternionTmpl = SetQuaternion<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_quaternion", make_grid_variant_operator<SetQuaternionTmpl>); }
+  ONIKA_AUTORUN_INIT(set_quaternion) { OperatorNodeFactory::instance()->register_factory("set_quaternion", make_grid_variant_operator<SetQuaternionTmpl>); }
 
 } // namespace exaDEM

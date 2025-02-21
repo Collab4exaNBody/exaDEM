@@ -121,5 +121,5 @@ namespace exaDEM
   template <class GridT> using DEMCostModelTmpl = DEMCostModel<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("dem_cost_model", make_grid_variant_operator<DEMCostModelTmpl>); }
+  ONIKA_AUTORUN_INIT(dem_cost_model) { OperatorNodeFactory::instance()->register_factory("dem_cost_model", make_grid_variant_operator<DEMCostModelTmpl>); }
 } // namespace exaDEM

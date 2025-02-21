@@ -76,6 +76,6 @@ namespace exaDEM
   template <class GridT> using SetMultipleRadiusTmpl = SetMultipleRadius<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_radius_multiple_materials", make_grid_variant_operator<SetMultipleRadiusTmpl>); }
+  ONIKA_AUTORUN_INIT(set_radius_multiple_materials) { OperatorNodeFactory::instance()->register_factory("set_radius_multiple_materials", make_grid_variant_operator<SetMultipleRadiusTmpl>); }
 
 } // namespace exaDEM

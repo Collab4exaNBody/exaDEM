@@ -49,5 +49,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("init_drivers", make_simple_operator<InitDrivers>); }
+  ONIKA_AUTORUN_INIT(init_drivers) { OperatorNodeFactory::instance()->register_factory("init_drivers", make_simple_operator<InitDrivers>); }
 } // namespace exaDEM

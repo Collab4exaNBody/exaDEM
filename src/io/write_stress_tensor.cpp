@@ -79,5 +79,5 @@ namespace exaDEM
   template <class GridT> using WriteStressTensorTmpl = WriteStressTensor<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("write_stress_tensor", make_grid_variant_operator<WriteStressTensorTmpl>); }
+  ONIKA_AUTORUN_INIT(write_stress_tensor) { OperatorNodeFactory::instance()->register_factory("write_stress_tensor", make_grid_variant_operator<WriteStressTensorTmpl>); }
 } // namespace exaDEM

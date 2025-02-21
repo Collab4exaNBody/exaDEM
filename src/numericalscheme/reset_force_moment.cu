@@ -56,6 +56,6 @@ namespace exaDEM
   template <class GridT> using ResetForceMomentNodeTmpl = ResetForceMomentNode<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("reset_force_moment", make_grid_variant_operator<ResetForceMomentNodeTmpl>); }
+  ONIKA_AUTORUN_INIT(reset_force_moment) { OperatorNodeFactory::instance()->register_factory("reset_force_moment", make_grid_variant_operator<ResetForceMomentNodeTmpl>); }
 
 } // namespace exaDEM

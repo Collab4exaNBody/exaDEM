@@ -67,6 +67,6 @@ namespace exaDEM
   template <class GridT> using DivStressVTmpl = DivStressV<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_div_stress_v", make_grid_variant_operator<DivStressVTmpl>); }
+  ONIKA_AUTORUN_INIT(set_div_stress_v) { OperatorNodeFactory::instance()->register_factory("set_div_stress_v", make_grid_variant_operator<DivStressVTmpl>); }
 
 } // namespace exaDEM

@@ -74,5 +74,5 @@ namespace exaDEM
   template <class GridT> using PolyhedraUpdateInertiaTmpl = PolyhedraUpdateInertia<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("inertia_from_shape", make_grid_variant_operator<PolyhedraUpdateInertiaTmpl>); }
+  ONIKA_AUTORUN_INIT(inertia_from_shape) { OperatorNodeFactory::instance()->register_factory("inertia_from_shape", make_grid_variant_operator<PolyhedraUpdateInertiaTmpl>); }
 } // namespace exaDEM

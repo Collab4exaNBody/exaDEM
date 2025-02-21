@@ -132,5 +132,5 @@ namespace exaDEM
   template <class GridT> using WriteParaviewOBBParticlesOperatorTemplate = WriteParaviewOBBParticlesOperator<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("write_paraview_obb_particles", make_grid_variant_operator<WriteParaviewOBBParticlesOperatorTemplate>); }
+  ONIKA_AUTORUN_INIT(write_paraview_obb_particles) { OperatorNodeFactory::instance()->register_factory("write_paraview_obb_particles", make_grid_variant_operator<WriteParaviewOBBParticlesOperatorTemplate>); }
 } // namespace exaDEM
