@@ -1,5 +1,4 @@
 #pragma once
-//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 
 #include <onika/parallel/parallel_for.h>
 

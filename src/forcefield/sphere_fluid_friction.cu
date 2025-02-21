@@ -16,7 +16,6 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-//#pragma xstamp_cuda_enable // DO NOT REMOVE THIS LINE
 
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>

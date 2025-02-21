@@ -16,7 +16,6 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-//#pragma xstamp_grid_variant
 
 #include <exanb/extra_storage/migrate_cell_particles_es.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
