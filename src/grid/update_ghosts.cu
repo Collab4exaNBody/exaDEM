@@ -26,7 +26,7 @@ under the License.
 #include <exanb/grid_cell_particles/grid_cell_values.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/particle_id_codec.h>
-#include <exanb/field_sets.h>
+#include <exanb/core/grid_fields.h>
 #include <exanb/core/check_particles_inside_cell.h>
 
 #include <onika/soatl/field_tuple.h>
@@ -41,7 +41,7 @@ under the License.
 #include <exanb/mpi/update_ghost_utils.h>
 #include <exanb/mpi/ghosts_comm_scheme.h>
 #include <exanb/mpi/update_ghosts.h>
-#include <exanb/mpi/data_types.h>
+#include <onika/mpi/data_types.h>
 
 namespace exaDEM
 {

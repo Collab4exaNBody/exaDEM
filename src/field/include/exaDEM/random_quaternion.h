@@ -29,9 +29,9 @@ namespace exaDEM
   struct RandomQuaternionFunctor
   {
     const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(exanb::Quaternion &q) const { randomize(q); }
+    inline void operator()(exanb::Quaternion &q) const { randomize(q); }
 
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(double rx, double ry, double rz, const uint64_t id, exanb::Quaternion &q) const
+    inline void operator()(double rx, double ry, double rz, const uint64_t id, exanb::Quaternion &q) const
     {
       Vec3d r = {rx, ry, rz};
       if (region.contains(r, id))

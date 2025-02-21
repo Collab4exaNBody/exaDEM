@@ -20,8 +20,8 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exanb/field_sets.h>
 #include <exanb/core/grid.h>
+#include <exanb/core/grid_fields.h>
 
 #include <mpi.h>
 
