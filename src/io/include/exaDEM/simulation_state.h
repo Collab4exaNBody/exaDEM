@@ -19,18 +19,18 @@ under the License.
 //#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 #pragma once
 
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 #include <exanb/compute/reduce_cell_particles.h>
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
 #include <exanb/core/log.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/fields.h>
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 #include <exanb/compute/reduce_cell_particles.h>
 #ifdef ONIKA_CUDA_VERSION
 # include <onika/cuda/cuda.h>

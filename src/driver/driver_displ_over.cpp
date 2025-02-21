@@ -19,10 +19,10 @@ under the License.
 //#pragma xstamp_cuda_enable
 
 #include <mpi.h>
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
-#include <exanb/core/basic_types.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/math/basic_types.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/reduce_stl_mesh.hpp>
 

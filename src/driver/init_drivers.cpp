@@ -17,9 +17,9 @@ specific language governing permissions and limitations
 under the License.
 */
 //#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/driver_base.h>

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
  */
 #pragma once
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 #include <exanb/core/quaternion.h>
 #include <exanb/core/quaternion_yaml.h>
 #include <exaDEM/driver_base.h>

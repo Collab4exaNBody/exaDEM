@@ -18,14 +18,14 @@ under the License.
  */
 //#pragma xstamp_cuda_enable
 
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/block_parallel_for.h>
 #include <onika/parallel/parallel_for.h>
 
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 #include <mpi.h>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/drivers.h>
