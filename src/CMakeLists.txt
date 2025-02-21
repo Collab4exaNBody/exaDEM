@@ -22,7 +22,7 @@
 add_subdirectory(grid)
 add_subdirectory(shape)
 add_subdirectory(field)
-#add_subdirectory(numericalscheme)
+add_subdirectory(numericalscheme)
 #add_subdirectory(forcefield)
 #add_subdirectory(io)
 #add_subdirectory(driver)
