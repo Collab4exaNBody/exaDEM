@@ -29,7 +29,7 @@ add_subdirectory(interaction)
 add_subdirectory(analysis)
 add_subdirectory(io)
 add_subdirectory(sphere)
-#add_subdirectory(polyhedron)
+add_subdirectory(polyhedron)
 
 
 if(USE_RSA)

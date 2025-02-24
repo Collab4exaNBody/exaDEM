@@ -72,7 +72,7 @@ namespace exaDEM
           Interaction &item, 
           const size_t n_particles, 
           const double rVerlet, 
-          const uint32_t *__restrict__ type, 
+          const ParticleTypeInt *__restrict__ type, 
           const uint64_t *__restrict__ id, 
           const double *__restrict__ rx, 
           const double *__restrict__ ry, 
@@ -220,7 +220,7 @@ namespace exaDEM
           Interaction &item, 
           const size_t n_particles, 
           const double rVerlet, 
-          const uint32_t *__restrict__ type, 
+          const ParticleTypeInt *__restrict__ type, 
           const uint64_t *__restrict__ id, 
           const VertexArray *__restrict__ vertices, 
           shapes &shps)
