@@ -23,7 +23,7 @@ under the License.
 #include <onika/math/basic_types.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/fields.h>
+#include <exanb/core/grid_fields.h>
 #include <exanb/core/domain.h>
 #include <exaDEM/backup_dem.h>
 

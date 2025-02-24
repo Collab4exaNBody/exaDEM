@@ -25,7 +25,7 @@ under the License.
 #include <onika/log.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/fields.h>
+#include <exanb/core/grid_fields.h>
 #include <onika/math/basic_types.h>
 #include <exanb/compute/reduce_cell_particles.h>
 

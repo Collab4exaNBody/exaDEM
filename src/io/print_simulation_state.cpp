@@ -21,7 +21,6 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/log.h>
 #include <onika/string_utils.h>
-#include <exanb/core/physics_constants.h>
 
 #include <exaDEM/dem_simulation_state.h>
 #include <mpi.h>
