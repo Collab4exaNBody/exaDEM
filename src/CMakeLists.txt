@@ -28,13 +28,13 @@ add_subdirectory(forcefield)
 add_subdirectory(interaction)
 add_subdirectory(analysis)
 add_subdirectory(io)
-#add_subdirectory(sphere)
+add_subdirectory(sphere)
 #add_subdirectory(polyhedron)
 
 
-#if(USE_RSA)
-#	add_subdirectory(rsa)
-#endif()
+if(USE_RSA)
+	add_subdirectory(rsa)
+endif()
 
 AddRegressionTestDir(${CMAKE_CURRENT_SOURCE_DIR}/regression)
 
