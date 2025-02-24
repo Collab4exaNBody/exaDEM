@@ -27,7 +27,7 @@ global:
   analysis_dump_stress_tensor_frequency: -1
 
 # default grid variant we use
-grid_flavor: grid_flavor_full
+grid_flavor: grid_flavor_dem
 
 make_empty_grid:
   rebind: { grid: null_grid }
