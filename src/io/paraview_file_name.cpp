@@ -16,6 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
@@ -38,7 +39,7 @@ namespace exanb
     inline void execute() override final
     {
       std::string paraview_filename = (*dir_name) + "/" + (*format);
-      *filename = format_string(paraview_filename, *timestep);
+      *filename = onika::format_string(paraview_filename, *timestep);
     }
 
     inline void yaml_initialize(const YAML::Node &node) override final

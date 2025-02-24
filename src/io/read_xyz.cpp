@@ -79,7 +79,7 @@ namespace exaDEM
     {
       //-------------------------------------------------------------------------------------------
       // Reading datas from YAML or previous input
-      std::string file_name = data_file_path(*file);
+      std::string file_name = onika::data_file_path(*file);
 
       if (*pbc_adjust_xform)
       {
