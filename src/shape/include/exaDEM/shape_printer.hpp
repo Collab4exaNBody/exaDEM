@@ -19,7 +19,7 @@ under the License.
 #pragma once
 
 #include <exaDEM/shape.hpp>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 #include <iostream>
 
 namespace exaDEM

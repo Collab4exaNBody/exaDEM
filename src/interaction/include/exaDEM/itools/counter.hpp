@@ -1,6 +1,5 @@
 #pragma once
 
-//#pragma xstamp_cuda_enable //! DO NOT REMOVE THIS LINE
 
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/itools/buffer.hpp>

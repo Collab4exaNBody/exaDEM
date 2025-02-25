@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the license.
 set(exadem_shape_LINK_LIBRARIES exanbCore)
-xstamp_add_plugin(exadem_shape ${CMAKE_CURRENT_SOURCE_DIR})
+onika_add_plugin(exadem_shape ${CMAKE_CURRENT_SOURCE_DIR})

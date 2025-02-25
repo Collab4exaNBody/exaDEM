@@ -18,12 +18,12 @@ under the License.
 */
 #include <vector>
 #include <iomanip>
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
-#include <exanb/core/basic_types.h>
-#include <exanb/core/basic_types_operators.h>
-#include <exanb/core/basic_types_stream.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/basic_types_operators.h>
+#include <onika/math/basic_types_stream.h>
 #include <onika/memory/allocator.h> // for ONIKA_ASSUME_ALIGNED macro
 #include <exanb/core/particle_type_id.h>
 #include <exaDEM/shapes.hpp>
@@ -63,5 +63,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("read_shape_file", make_simple_operator<ReadShapeFileOperator>); }
+  ONIKA_AUTORUN_INIT(read_shape_file) { OperatorNodeFactory::instance()->register_factory("read_shape_file", make_simple_operator<ReadShapeFileOperator>); }
 } // namespace exaDEM

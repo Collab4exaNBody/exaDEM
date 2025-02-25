@@ -18,8 +18,8 @@ under the License.
 */
 #pragma once
 
-#include <exanb/core/basic_types.h>
-#include <exanb/core/basic_types_operators.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/basic_types_operators.h>
 #include <cstdlib>
 
 namespace exaDEM
