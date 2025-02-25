@@ -16,9 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
@@ -63,5 +63,5 @@ namespace exaDEM
   template <class GridT> using UpdateMutexesTmpl = UpdateMutexes<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("update_mutexes", make_grid_variant_operator<UpdateMutexesTmpl>); }
+  ONIKA_AUTORUN_INIT(update_mutexes) { OperatorNodeFactory::instance()->register_factory("update_mutexes", make_grid_variant_operator<UpdateMutexesTmpl>); }
 } // namespace exaDEM

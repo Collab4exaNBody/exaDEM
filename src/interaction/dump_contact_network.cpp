@@ -26,9 +26,9 @@ under the License.
 #include <iostream>
 
 #include <memory>
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/grid.h>
 
@@ -37,7 +37,7 @@ under the License.
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
 #include <exaDEM/shapes.hpp>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 #include <exaDEM/network.hpp>
 
 namespace exaDEM
@@ -94,7 +94,7 @@ namespace exaDEM
 			}
 
 			std::string file = *filename + "/%06d.vtp";
-			file = format_string(file,  rank);
+			file = onika::format_string(file,  rank);
 			auto ids = manager.create_indirection_array();
 			manager.fill_position(ids);
 			manager.fill_connect_and_value(ids);
@@ -105,5 +105,5 @@ namespace exaDEM
 	template <class GridT> using ContactNetworkTmpl = ContactNetwork<GridT>;
 
 	// === register factories ===
-	CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("dump_contact_network", make_grid_variant_operator<ContactNetwork>); }
+	ONIKA_AUTORUN_INIT(dump_contact_network) { OperatorNodeFactory::instance()->register_factory("dump_contact_network", make_grid_variant_operator<ContactNetwork>); }
 } // namespace exaDEM

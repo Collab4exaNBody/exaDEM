@@ -16,9 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+
 #pragma once
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 #include <exaDEM/driver_base.h>
+#include <onika/physics/units.h>
 
 
 namespace exaDEM
@@ -53,8 +55,7 @@ namespace YAML
   using exaDEM::Ball_params;
   using exaDEM::MotionType;
   using exanb::lerr;
-  using exanb::Quantity;
-  using exanb::UnityConverterHelper;
+  using onika::physics::Quantity;
 
   template <> struct convert<Ball_params>
   {
@@ -105,7 +106,7 @@ namespace exaDEM
     /**
      * @brief Print information about the ball.
      */
-    void print()
+    inline void print() const
     {
       lout << "Driver Type: Ball" << std::endl;
       lout << "Radius: " << radius << std::endl;
@@ -328,3 +329,23 @@ namespace exaDEM
 		}
 	};
 } // namespace exaDEM
+
+
+
+namespace onika { namespace memory
+{
+
+  template<>
+  struct MemoryUsage< exaDEM::Ball >
+  {
+    static inline size_t memory_bytes(const exaDEM::Ball& obj)
+    {
+      const exaDEM::Ball_params * cparms = &obj;
+      const exaDEM::Driver_params * dparms = &obj;
+      return onika::memory::memory_bytes( *cparms , *dparms );
+    }
+  };
+
+} }
+
+

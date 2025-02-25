@@ -16,12 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
-#include <exanb/core/log.h>
-#include <exanb/core/string_utils.h>
-#include <exanb/core/physics_constants.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/log.h>
+#include <onika/string_utils.h>
 
 #include <exaDEM/dem_simulation_state.h>
 #include <mpi.h>
@@ -122,7 +121,7 @@ namespace exaDEM
         }
         else
         {
-          lb_value = format_string("%.1e", lb_inbalance);
+          lb_value = onika::format_string("%.1e", lb_inbalance);
         }
       }
 
@@ -147,7 +146,7 @@ namespace exaDEM
       double avg_act_I = double(active_interactions) / sim_info.particle_count();
       double avg_I = double(total_interactions) / sim_info.particle_count();
 
-      std::string line = format_string("%9ld % .6e %13ld  %c %c %8s %.3e    %9.3f  %9.3f % .3e % .3e % .3e % .3e % .4e",
+      std::string line = onika::format_string("%9ld % .6e %13ld  %c %c %8s %.3e    %9.3f  %9.3f % .3e % .3e % .3e % .3e % .4e",
                                        *timestep,                           // %9ld
                                        *physical_time,                      // %.6e
                                        sim_info.particle_count(),           // %13ld
@@ -179,6 +178,6 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("print_simulation_state", make_simple_operator<PrintSimulationStateNode>); }
+  ONIKA_AUTORUN_INIT(print_simulation_state) { OperatorNodeFactory::instance()->register_factory("print_simulation_state", make_simple_operator<PrintSimulationStateNode>); }
 
 } // namespace exaDEM

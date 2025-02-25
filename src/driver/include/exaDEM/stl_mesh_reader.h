@@ -20,7 +20,7 @@ under the License.
 
 #include <exaDEM/face.h>
 #include <sstream>
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 
 namespace exaDEM
 {

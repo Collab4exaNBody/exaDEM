@@ -2,6 +2,19 @@
 
 configuration:
 
+  # internal units
+  physics:
+    units:
+      length: meter
+      mass: gram
+      time: second
+      charge: elementary_charge
+      temperature: kelvin
+      amount: particle
+      luminosity: candela
+      angle: radian
+      energy: joule
+
   # default plugins to load
   plugins:  []
 
