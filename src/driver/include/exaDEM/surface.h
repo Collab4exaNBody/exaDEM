@@ -112,7 +112,7 @@ namespace exaDEM
     /**
      * @brief Print information about the surface.
      */
-    void print()
+    inline void print() const
     {
       lout << "Driver Type: Surface" << std::endl;
       lout << "Offset: " << offset << std::endl;
@@ -131,7 +131,7 @@ namespace exaDEM
     /**
      * @brief Write surface data into a stream.
      */
-    void dump_driver(int id, std::stringstream &stream)
+    inline void dump_driver(int id, std::stringstream &stream)
     {
       stream << "  - register_surface:" << std::endl;
       stream << "     id: " << id << std::endl;
@@ -226,7 +226,7 @@ namespace exaDEM
     /**
      * @brief return driver velocity
      */
-    ONIKA_HOST_DEVICE_FUNC inline Vec3d get_vel() { return normal * vel; }
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d get_vel() const { return normal * vel; }
 
     /**
      * @brief Update the position of the wall.
@@ -289,3 +289,22 @@ namespace exaDEM
     }
   };
 } // namespace exaDEM
+
+
+namespace onika { namespace memory
+{
+
+  template<>
+  struct MemoryUsage< exaDEM::Surface >
+  {
+    static inline size_t memory_bytes(const exaDEM::Surface& obj)
+    {
+      const exaDEM::Surface_params * cparms = &obj;
+      const exaDEM::Driver_params * dparms = &obj;
+      return onika::memory::memory_bytes( *cparms , *dparms );
+    }
+  };
+
+} }
+
+

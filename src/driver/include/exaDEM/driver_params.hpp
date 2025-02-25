@@ -88,29 +88,29 @@ namespace exaDEM
     Vec3d forces = {0,0,0}; /**< sum of the forces applied to the driver. */
     double weigth = 0;     /**< cumulated sum of particle weigth into the simulation or in the driver */
 
-    inline bool is_stationary() { return motion_type == STATIONARY; }
+    inline bool is_stationary() const { return motion_type == STATIONARY; }
 
     void set_params(Driver_params& in)
     { 
       (*this) = in;
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline bool is_linear()
+    ONIKA_HOST_DEVICE_FUNC inline bool is_linear() const
     {
       return (motion_type == LINEAR_MOTION || motion_type == LINEAR_FORCE_MOTION || motion_type == LINEAR_COMPRESSIVE_MOTION);
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline bool is_compressive()
+    ONIKA_HOST_DEVICE_FUNC inline bool is_compressive() const
     {
       return (motion_type == COMPRESSIVE_FORCE || motion_type == LINEAR_COMPRESSIVE_MOTION);
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline bool is_force_motion()
+    ONIKA_HOST_DEVICE_FUNC inline bool is_force_motion() const
     {
       return ( motion_type == FORCE_MOTION || motion_type == LINEAR_FORCE_MOTION );
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline bool need_forces()
+    ONIKA_HOST_DEVICE_FUNC inline bool need_forces() const
     {
       // Need for LINEAR_FORCE_MOTION
       // No need for STATIONARY
@@ -122,7 +122,7 @@ namespace exaDEM
     }
 
     // Getter
-    Vec3d sum_forces()
+    inline Vec3d sum_forces()
     {
       if( motion_type == FORCE_MOTION )
       {
@@ -139,13 +139,13 @@ namespace exaDEM
     }
 
     // Checks
-    bool is_valid_motion_type(const std::vector<MotionType>& valid_motion_types)
+    inline bool is_valid_motion_type(const std::vector<MotionType>& valid_motion_types) const
     {
       auto it = std::find(valid_motion_types.begin(), valid_motion_types.end(), motion_type);
       if( it == valid_motion_types.end() )
       {
         lout << "\033[31mThis motion type [" << motion_type_to_string(motion_type) << "] is not possible, MotionType availables are: ";
-        for(auto& motion: valid_motion_types)
+        for(const auto& motion: valid_motion_types)
         {
           lout << " " << motion_type_to_string(motion);
         }
@@ -198,13 +198,13 @@ namespace exaDEM
       return true;  // Return true if the motion is coherent
     }
 
-    bool is_motion_triggered(uint64_t timesteps, double dt) 
+    bool is_motion_triggered(uint64_t timesteps, double dt) const
     {
       const double time = timesteps * dt;
       return ( (time >= motion_start_threshold) && (time <= motion_end_threshold) );  
     }
 
-    void print_driver_params()
+    void print_driver_params() const
     {
       lout << "Motion type: " << motion_type_to_string(motion_type) << std::endl;
       if( !is_stationary() )

@@ -24,7 +24,7 @@ under the License.
 #include <exaDEM/ball.h>
 #include <exaDEM/stl_mesh.h>
 #include <exaDEM/undefined_driver.h>
-#include <variant>
+#include <onika/flat_tuple.h>
 
 namespace exaDEM
 {
@@ -36,17 +36,77 @@ namespace exaDEM
      * @brief Alias template for a CUDA memory managed vector.
      * @tparam T The type of elements in the vector.
      */
-    template <typename T> using vector_t = onika::memory::CudaMMVector<T>;
-    using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
-    using driver_t = DRIVER_TYPE;
-    vector_t<driver_t> m_type; /**< Vector storing the types of drivers. */
-    vector_t<data_t> m_data;   /**< Vector storing the data of drivers. */
+    template <typename T> using vector_t = onika::memory::CudaMMVector<T>;    
+
+    struct DriverTypeAndIndex
+    {
+      DRIVER_TYPE m_type = DRIVER_TYPE::UNDEFINED;
+      int m_index = -1;
+    };
+    
+    vector_t<DriverTypeAndIndex> m_type_index; /**< Vector storing the types of drivers. */
+    
+    //vector_t<data_t> m_data;   /**< Vector storing the data of drivers. */
+    onika::FlatTuple< vector_t<Cylinder> , vector_t<Surface> , vector_t<Ball> , vector_t<Stl_mesh> > m_data;
 
     /**
      * @brief Get the size of the Drivers collection.
      * @return The size of the Drivers collection.
      */
-    inline size_t get_size() { return m_type.size(); }
+    inline size_t get_size() const { return m_type_index.size(); }
+
+    template<size_t driver_type>
+    inline const auto & get_driver_vec() const
+    {
+      static_assert( driver_type != DRIVER_TYPE::UNDEFINED );
+      return m_data.get_nth_const< driver_type >();
+    }
+
+    template<size_t driver_type>
+    inline auto & get_driver_vec()
+    {
+      static_assert( driver_type != DRIVER_TYPE::UNDEFINED );
+      return m_data.get_nth< driver_type >();
+    }
+
+    template<class T>
+    inline const T& get_typed_driver(const int idx) const
+    {
+      constexpr DRIVER_TYPE t = get_type<T>();
+      static_assert( t != DRIVER_TYPE::UNDEFINED );
+      const auto & driver_vec = m_data.get_nth_const<t>();
+      assert( idx>=0 && idx<m_type_index.size() );
+      assert( m_type_index[idx].m_type == t );
+      assert( m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < driver_vec.size() );
+      return driver_vec[m_type_index[idx].m_index];
+    }
+
+    template<class T>
+    inline T& get_typed_driver(const int idx)
+    {
+      constexpr DRIVER_TYPE t = get_type<T>();
+      static_assert( t != DRIVER_TYPE::UNDEFINED );
+      auto & driver_vec = m_data.get_nth<t>();
+      assert( idx>=0 && idx<m_type_index.size() );
+      assert( m_type_index[idx].m_type == t );
+      assert( m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < driver_vec.size() );
+      return driver_vec[m_type_index[idx].m_index];
+    }
+
+    template<class FuncT>
+    inline auto apply(const int idx , const FuncT& func)
+    {
+      assert( idx>=0 && idx<m_type_index.size() );
+      DRIVER_TYPE t = m_type_index[idx].m_type;
+      assert( t != DRIVER_TYPE::UNDEFINED );
+           if (t == DRIVER_TYPE::CYLINDER) return func( m_data.get_nth<DRIVER_TYPE::CYLINDER>()[ m_type_index[idx].m_index ] );
+      else if (t == DRIVER_TYPE::SURFACE)  return func( m_data.get_nth<DRIVER_TYPE::SURFACE >()[ m_type_index[idx].m_index ] );
+      else if (t == DRIVER_TYPE::BALL)     return func( m_data.get_nth<DRIVER_TYPE::BALL    >()[ m_type_index[idx].m_index ] );
+      else if (t == DRIVER_TYPE::STL_MESH) return func( m_data.get_nth<DRIVER_TYPE::STL_MESH>()[ m_type_index[idx].m_index ] );
+      fatal_error() << "Internal error: unsupported driver type encountered"<<std::endl;
+      static Cylinder tmp;
+      return func( tmp );
+    }
 
     /**
      * @brief Adds a driver to the Drivers collection at the specified index.
@@ -57,12 +117,13 @@ namespace exaDEM
      *          If a driver already exists at the specified index, it will be replaced.
      *          If the type of driver is undefined, it will throw a static assertion error.
      */
-    template <typename T> void add_driver(const int idx, T &Driver)
+    template <typename T>
+    inline void add_driver(const int idx, T &Driver)
     {
       constexpr DRIVER_TYPE t = get_type<T>();
       static_assert(t != DRIVER_TYPE::UNDEFINED);
-      assert(m_type.size() == m_data.size());
-      const int size = m_type.size();
+      //assert(m_type_index.size() == m_data.size());
+      const int size = m_type_index.size();
       if (idx < size) // reallocation
       {
         DRIVER_TYPE current_type = type(idx);
@@ -71,30 +132,27 @@ namespace exaDEM
           lout << "You are currently removing a driver at index " << idx << std::endl;
           Driver.print();
         }
-        m_type[idx] = t;
-        m_data[idx] = Driver;
       }
       else // allocate
       {
-        int new_size = idx + 1;
-        m_type.resize(new_size);
-        m_data.resize(new_size);
-        for (int i = size; i < idx; i++)
-        {
-          m_type[i] = DRIVER_TYPE::UNDEFINED;
-          m_data[i] = exaDEM::UndefinedDriver();
-        }
-        m_type[idx] = t;
-        m_data[idx] = Driver;
+        m_type_index.resize(idx+1);
       }
+      m_type_index[idx].m_type = t;
+      auto & driver_vec = get_driver_vec<t>();
+      m_type_index[idx].m_index = driver_vec.size();
+      driver_vec.push_back( Driver );
     }
+    
     /**
      * @brief Clears the Drivers collection, removing all drivers.
      */
     void clear()
     {
-      m_type.clear();
-      m_data.clear();
+      m_type_index.clear();
+      m_data.get_nth<DRIVER_TYPE::CYLINDER>().clear();
+      m_data.get_nth<DRIVER_TYPE::SURFACE>().clear();
+      m_data.get_nth<DRIVER_TYPE::BALL>().clear();
+      m_data.get_nth<DRIVER_TYPE::STL_MESH>().clear();
     }
 
     // Accessors
@@ -107,68 +165,19 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC
     inline DRIVER_TYPE type(size_t idx)
     {
-      assert(idx < m_type.size());
-      return m_type[idx];
-    }
-
-    /**
-     * @brief Returns a constant reference to the data of the driver at the specified index.
-     * @param idx The index of the driver.
-     * @return A constant reference to the data of the driver at the specified index.
-     */
-    ONIKA_HOST_DEVICE_FUNC
-    inline const data_t &data(size_t idx) const
-    {
-      assert(idx < m_data.size());
-      const auto *const ptr = onika::cuda::vector_data(m_data);
-      return ptr[idx];
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline data_t &data(size_t idx)
-    {
-      // assert( idx < m_data.size());
-      assert(idx < onika::cuda::vector_size(m_data));
-      auto *const ptr = onika::cuda::vector_data(m_data);
-      return ptr[idx];
-    }
-
-    ONIKA_HOST_DEVICE_FUNC
-    inline data_t *data()
-    {
-      auto *const res = onika::cuda::vector_data(m_data);
-      return res;
-    }
-
-    template <typename Driver> ONIKA_HOST_DEVICE_FUNC inline Driver *ptr()
-    {
-      auto *const ptr = onika::cuda::vector_data(m_data);
-      return (Driver *)ptr;
-    }
-
-    void operator=(Drivers &d)
-    {
-      this->clear();
-      size_t size = d.get_size();
-
-      m_data.resize(size);
-      m_type.resize(size);
-      for (size_t i = 0; i < size; i++)
-      {
-        this->m_data[i] = d.m_data[i];
-        this->m_type[i] = d.m_type[i];
-      }
+      assert(idx < m_type_index.size());
+      return m_type_index[idx].m_type;
     }
 
     /**
      * @brief Checks if all drivers in the collection are well-defined.
      * @return True if all drivers are well-defined, false otherwise.
      */
-    bool well_defined()
+    inline bool well_defined() const
     {
-      for (auto &it : m_type)
+      for (const auto &it : m_type_index)
       {
-        if (it == DRIVER_TYPE::UNDEFINED)
+        if (it.m_type == DRIVER_TYPE::UNDEFINED)
           return false;
       }
       return true;
@@ -177,34 +186,18 @@ namespace exaDEM
     /**
      * @brief Prints Drivers informations.
      */
-    void print_drivers()
+    inline void print_drivers() const
     {
       for (size_t i = 0; i < this->get_size(); i++)
       {
-        auto type = m_type[i];
-        if (type != DRIVER_TYPE::UNDEFINED)
+        auto t = m_type_index[i].m_type;
+        if (t != DRIVER_TYPE::UNDEFINED)
         {
           lout << "Driver [" << i << "]:" << std::endl;
-          if (type == DRIVER_TYPE::CYLINDER)
-          {
-            auto &drv = std::get<Cylinder>(m_data[i]);
-            drv.print();
-          }
-          if (type == DRIVER_TYPE::SURFACE)
-          {
-            auto &drv = std::get<Surface>(m_data[i]);
-            drv.print();
-          }
-          if (type == DRIVER_TYPE::BALL)
-          {
-            auto &drv = std::get<Ball>(m_data[i]);
-            drv.print();
-          }
-          if (type == DRIVER_TYPE::STL_MESH)
-          {
-            auto &drv = std::get<Stl_mesh>(m_data[i]);
-            drv.print();
-          }
+               if (t == DRIVER_TYPE::CYLINDER) m_data.get_nth_const<DRIVER_TYPE::CYLINDER>()[ m_type_index[i].m_index ].print();
+          else if (t == DRIVER_TYPE::SURFACE)  m_data.get_nth_const<DRIVER_TYPE::SURFACE >()[ m_type_index[i].m_index ].print();
+          else if (t == DRIVER_TYPE::BALL)     m_data.get_nth_const<DRIVER_TYPE::BALL    >()[ m_type_index[i].m_index ].print();
+          else if (t == DRIVER_TYPE::STL_MESH) m_data.get_nth_const<DRIVER_TYPE::STL_MESH>()[ m_type_index[i].m_index ].print();
         }
       }
     }
@@ -213,23 +206,22 @@ namespace exaDEM
      * @brief Prints statistics about the drivers in the collection.
      * @details This function prints the total number of drivers and the count of each driver type.
      */
-    void stats_drivers()
+    inline void stats_drivers() const
     {
       std::array<int, DRIVER_TYPE_SIZE> Count; // defined in driver_base.h
       for (auto &it : Count)
       {
         it = 0;
       }
-      for (auto &it : m_type)
+      for (const auto &it : m_type_index)
       {
-        Count[it]++;
+        ++ Count[it.m_type];
       }
       lout << "Drivers Stats" << std::endl;
-      lout << "Number of drivers: " << m_type.size() << std::endl;
-      for (int t = 0; t < DRIVER_TYPE_SIZE; t++)
+      lout << "Number of drivers: " << m_type_index.size() << std::endl;
+      for (size_t t = 0; t < DRIVER_TYPE_SIZE; t++)
       {
-        DRIVER_TYPE tmp = DRIVER_TYPE(t);
-        lout << "Number of " << print(tmp) << "s: " << Count[t] << std::endl;
+        lout << "Number of " << print(DRIVER_TYPE(t)) << "s: " << Count[t] << std::endl;
       }
     }
   };

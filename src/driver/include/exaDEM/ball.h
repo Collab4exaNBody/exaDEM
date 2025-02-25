@@ -106,7 +106,7 @@ namespace exaDEM
     /**
      * @brief Print information about the ball.
      */
-    void print()
+    inline void print() const
     {
       lout << "Driver Type: Ball" << std::endl;
       lout << "Radius: " << radius << std::endl;
@@ -329,3 +329,23 @@ namespace exaDEM
 		}
 	};
 } // namespace exaDEM
+
+
+
+namespace onika { namespace memory
+{
+
+  template<>
+  struct MemoryUsage< exaDEM::Ball >
+  {
+    static inline size_t memory_bytes(const exaDEM::Ball& obj)
+    {
+      const exaDEM::Ball_params * cparms = &obj;
+      const exaDEM::Driver_params * dparms = &obj;
+      return onika::memory::memory_bytes( *cparms , *dparms );
+    }
+  };
+
+} }
+
+

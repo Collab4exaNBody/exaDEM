@@ -112,7 +112,7 @@ namespace exaDEM
    /**
      * @brief Print information about the STL mesh.
      */
-    void print()
+    inline void print() const
     {
       lout << "Driver Type: MESH STL" << std::endl;
       lout << "Name               : " << shp.m_name << std::endl;
@@ -329,3 +329,22 @@ namespace exaDEM
 		}
 	};
 } // namespace exaDEM
+
+
+namespace onika { namespace memory
+{
+
+  template<>
+  struct MemoryUsage< exaDEM::Stl_mesh >
+  {
+    static inline size_t memory_bytes(const exaDEM::Stl_mesh& obj)
+    {
+      const exaDEM::Stl_params * cparms = &obj;
+      const exaDEM::Driver_params * dparms = &obj;
+      return onika::memory::memory_bytes( *cparms , *dparms );
+    }
+  };
+
+} }
+
+

@@ -78,8 +78,7 @@ namespace exaDEM
 
       for (size_t i = 0; i < n_drivers; i++)
       {
-        auto &drv = drvs.data(i);
-        std::visit(func, drv);
+        drvs.apply( i , func );
       }
       std::ofstream file(filename.c_str());
       file << std::setprecision(16);
