@@ -118,7 +118,7 @@ namespace exaDEM
       }
 
       std::string file = *filename + "/%06d.vtp";
-      file = format_string(file,  rank);
+      file = onika::format_string(file,  rank);
       exaDEM::write_vtp_polyhedron(file, buffers);
     }
   };

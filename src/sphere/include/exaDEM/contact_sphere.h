@@ -203,7 +203,7 @@ namespace exaDEM
      */
     template <typename TMPLD> struct contact_law_driver
     {
-      using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
+      //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
       /**
        * @brief Handles particle interactions using contact law parameters and various drivers.
        *
@@ -215,11 +215,11 @@ namespace exaDEM
        * @param hkp Reference to the contact law parameters.
        * @param time Increment simulation time.
        */
-      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPLC *cells, driver_t *drvs, const ContactParams &hkp, const double time) const
+      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPLC *cells, const DriversGPUAccessor& drvs, const ContactParams &hkp, const double time) const
       {
         const int driver_idx = item.id_j; //
         // TMPLD& driver = std::get<TMPLD>(drvs[driver_idx]); // issue on GPU
-        TMPLD &driver = (TMPLD &)(drvs[driver_idx]);
+        TMPLD &driver = drvs.get_typed_driver<TMPLD>(driver_idx); // (TMPLD &)(drvs[driver_idx]);
         auto &cell = cells[item.cell_i];
         const size_t p = item.p_i;
         // === positions
@@ -274,7 +274,7 @@ namespace exaDEM
     template<int interaction_type>
     struct contact_law_stl
     {
-      using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
+      //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
       detect<interaction_type> detection; ///< STL mesh detector function object.
       /**
        * @brief Applies contact law interactions with STL drivers.
@@ -287,11 +287,11 @@ namespace exaDEM
        * @param hkp Reference to the contact law parameters.
        * @param time The simulation time increment.
        */
-      template <typename TMPC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPC *cells, driver_t *drvs, const ContactParams &hkp, const double time) const
+      template <typename TMPC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPC *cells, const DriversGPUAccessor& drvs, const ContactParams &hkp, const double time) const
       {
         const int driver_idx = item.id_j; //
         // auto& driver = std::get<Stl_mesh>(drvs[driver_idx]) ; // issue on gpu
-        Stl_mesh &driver = (Stl_mesh &)(drvs[driver_idx]);
+        Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(driver_idx); // (Stl_mesh &)(drvs[driver_idx]);
         auto &cell = cells[item.cell_i];
 
         const size_t p_i = item.p_i;

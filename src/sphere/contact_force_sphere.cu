@@ -51,7 +51,7 @@ namespace exaDEM
   {
     // attributes processed during computation
     using ComputeFields = FieldSet<field::_vrot, field::_arot>;
-    using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
+    //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
@@ -104,7 +104,7 @@ namespace exaDEM
       bool store_interactions = write_interactions || compute_stress_tensor || need_interactions_for_log_frequency;
 
       /** Get Driver */
-      driver_t *drvs = drivers->data();
+      const DriversGPUAccessor drvs = *drivers;
       auto *cells = grid->cells();
       const ContactParams hkp = *config;
       ContactParams hkp_drvs{};

@@ -294,7 +294,7 @@ namespace exaDEM
     std::string subfile = directory + "/%06d.vtp";
     for (size_t i = 0; i < number_of_files; i++)
     {
-      std::string file = format_string(subfile,  i);
+      std::string file = onika::format_string(subfile,  i);
       outFile << "    <Piece Source=\"" << file << "\"/>" << std::endl;
     }
     outFile << "  </PPolyData>" << std::endl;
@@ -329,7 +329,7 @@ namespace exaDEM
     std::string subfile = basename + "/%06d.vtp";
     for (size_t i = 0; i < number_of_files; i++)
     {
-      std::string file = format_string(subfile,  i);
+      std::string file = onika::format_string(subfile,  i);
       outFile << "    <Piece Source=\"" << file << "\"/>" << std::endl;
     }
     outFile << "  </PPolyData>" << std::endl;

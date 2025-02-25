@@ -170,7 +170,7 @@ namespace exaDEM
               {
                 item.type = 4;
                 item.id_j = drvs_idx;
-                Cylinder &driver = std::get<Cylinder>(drvs.data(drvs_idx));
+                Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx));
                 for (size_t p = 0; p < n_particles; p++)
                 {
                   const Vec3d r = {rx[p], ry[p], rz[p]};
@@ -187,7 +187,7 @@ namespace exaDEM
               {
                 item.type = 5;
                 item.id_j = drvs_idx;
-                Surface &driver = std::get<Surface>(drvs.data(drvs_idx));
+                Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
                 for (size_t p = 0; p < n_particles; p++)
                 {
                   const Vec3d r = {rx[p], ry[p], rz[p]};
@@ -204,7 +204,7 @@ namespace exaDEM
               {
                 item.type = 6;
                 item.id_j = drvs_idx;
-                Ball &driver = std::get<Ball>(drvs.data(drvs_idx));
+                Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
                 for (size_t p = 0; p < n_particles; p++)
                 {
                   const Vec3d r = {rx[p], ry[p], rz[p]};
@@ -219,7 +219,7 @@ namespace exaDEM
               }
               else if (type == DRIVER_TYPE::STL_MESH)
               {
-                auto &driver = std::get<Stl_mesh>(drvs.data(drvs_idx));
+                auto &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); //std::get<Stl_mesh>(drvs.data(drvs_idx));
                 for (size_t p = 0; p < n_particles; p++)
                 {
                   // a sphere can have multiple interactions with a stl mesh

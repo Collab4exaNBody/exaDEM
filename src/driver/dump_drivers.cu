@@ -32,19 +32,19 @@ namespace exaDEM
 
   struct DumpDriverFunc
   {
-    int id;
-    std::string directory;
-    std::stringstream &stream;
+    int * const id_ptr = nullptr;
+    const std::string directory = "";
+    std::stringstream * const stream_ptr = nullptr;
 
-    inline void operator()(exaDEM::Surface &surface) { surface.dump_driver(id++, stream); }
+    inline void operator()(exaDEM::Surface &surface) const { surface.dump_driver( (*id_ptr) ++ , *stream_ptr ); }
 
-    inline void operator()(exaDEM::Ball &ball) { ball.dump_driver(id++, stream); }
+    inline void operator()(exaDEM::Ball &ball) const { ball.dump_driver( (*id_ptr) ++ , *stream_ptr ); }
 
-    inline void operator()(exaDEM::Cylinder &cylinder) { cylinder.dump_driver(id++, stream); }
+    inline void operator()(exaDEM::Cylinder &cylinder) const { cylinder.dump_driver( (*id_ptr) ++ , *stream_ptr ); }
 
-    inline void operator()(exaDEM::Stl_mesh &stl_param) { stl_param.dump_driver(id++, directory, stream); }
+    inline void operator()(exaDEM::Stl_mesh &stl_param) const { stl_param.dump_driver( (*id_ptr) ++ , directory, *stream_ptr ); }
 
-    inline void operator()(auto &&others) { ldbg << "DumpDriverFunc is not defined for this driverr OR this driver is no longer defined." << std::endl; }
+    // inline void operator()(auto &&others) { ldbg << "DumpDriverFunc is not defined for this driverr OR this driver is no longer defined." << std::endl; }
   };
 
   using namespace exanb;
@@ -70,16 +70,18 @@ namespace exaDEM
       std::string path = *dir_name + "/CheckpointFiles/";
       std::stringstream data_stream;
       std::string filename = path + "driver_%010d.msp";
-      filename = format_string(filename, *timestep);
+      filename = onika::format_string(filename, *timestep);
       data_stream << "setup_drivers:" << std::endl;
       data_stream << std::setprecision(16);
 
-      DumpDriverFunc func = {0, path, data_stream};
-
+      int id_count = 0;
+      DumpDriverFunc func = {&id_count, path, &data_stream};
       for (size_t i = 0; i < n_drivers; i++)
       {
         drvs.apply( i , func );
       }
+      ldbg << id_count << " drivers have been dumped" << std::endl;
+      
       std::ofstream file(filename.c_str());
       file << std::setprecision(16);
       file << data_stream.rdbuf();

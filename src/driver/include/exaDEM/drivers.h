@@ -225,4 +225,38 @@ namespace exaDEM
       }
     }
   };
+  
+  // read only proxy for drivers list
+  struct DriversGPUAccessor
+  { 
+    size_t m_nb_drivers = 0;
+    Drivers::DriverTypeAndIndex * const __restrict__ m_type_index = nullptr;
+    onika::FlatTuple< Cylinder * __restrict__ , Surface * __restrict__ , Ball * __restrict__ , Stl_mesh* __restrict__ > m_data = { nullptr, nullptr, nullptr, nullptr };
+    onika::FlatTuple< size_t , size_t , size_t , size_t > m_data_size = { 0, 0, 0, 0 };
+
+    DriversGPUAccessor() = default;
+    DriversGPUAccessor(const DriversGPUAccessor &) = default;
+    DriversGPUAccessor(DriversGPUAccessor &&) = default;
+    inline DriversGPUAccessor(Drivers& drvs)
+      : m_nb_drivers( drvs.m_type_index.size() )
+      , m_type_index( drvs.m_type_index.data() )
+      , m_data( { drvs.m_data.get_nth<0>().data() , drvs.m_data.get_nth<1>().data() , drvs.m_data.get_nth<2>().data() , drvs.m_data.get_nth<3>().data() } )
+      , m_data_size( { drvs.m_data.get_nth<0>().size() , drvs.m_data.get_nth<1>().size() , drvs.m_data.get_nth<2>().size() , drvs.m_data.get_nth<3>().size() } )
+    {}
+
+    template<class T>
+    ONIKA_HOST_DEVICE_FUNC inline T& get_typed_driver(const int idx) const
+    {
+      constexpr DRIVER_TYPE t = get_type<T>();
+      static_assert( t != DRIVER_TYPE::UNDEFINED );
+      auto * __restrict__ driver_vec = m_data.get_nth_const<t>();
+      const size_t driver_vec_size = m_data_size.get_nth_const<t>();
+      assert( idx>=0 && idx<m_nb_drivers );
+      assert( m_type_index[idx].m_type == t );
+      assert( m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < driver_vec_size );
+      return driver_vec[m_type_index[idx].m_index];
+    }
+    
+  };
+  
 } // namespace exaDEM
