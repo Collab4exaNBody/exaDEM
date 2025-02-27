@@ -17,9 +17,9 @@ specific language governing permissions and limitations
 under the License.
  */
 #include <memory>
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
@@ -72,7 +72,7 @@ namespace exaDEM
           Interaction &item, 
           const size_t n_particles, 
           const double rVerlet, 
-          const uint32_t *__restrict__ type, 
+          const ParticleTypeInt *__restrict__ type, 
           const uint64_t *__restrict__ id, 
           const double *__restrict__ rx, 
           const double *__restrict__ ry, 
@@ -220,7 +220,7 @@ namespace exaDEM
           Interaction &item, 
           const size_t n_particles, 
           const double rVerlet, 
-          const uint32_t *__restrict__ type, 
+          const ParticleTypeInt *__restrict__ type, 
           const uint64_t *__restrict__ id, 
           const VertexArray *__restrict__ vertices, 
           shapes &shps)
@@ -351,24 +351,24 @@ namespace exaDEM
               if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER)
               {
                 item.type = 4;
-                Cylinder &driver = std::get<Cylinder>(drvs.data(drvs_idx));
+                Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx)) ;
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
               {
                 item.type = 5;
-                Surface &driver = std::get<Surface>(drvs.data(drvs_idx));
+                Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
               {
                 item.type = 6;
-                Ball &driver = std::get<Ball>(drvs.data(drvs_idx));
+                Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
               {
-                Stl_mesh &driver = std::get<STL_MESH>(drvs.data(drvs_idx));
+                Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); //std::get<STL_MESH>(drvs.data(drvs_idx));
                 // driver.grid_indexes_summary();
                 add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a, rz_a, vertices_a, orient_a, shps);
               }
@@ -546,5 +546,5 @@ namespace exaDEM
   template <class GridT> using UpdateGridCellInteractionTmpl = UpdateGridCellInteraction<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("nbh_polyhedron", make_grid_variant_operator<UpdateGridCellInteraction>); }
+  ONIKA_AUTORUN_INIT(nbh_polyhedron) { OperatorNodeFactory::instance()->register_factory("nbh_polyhedron", make_grid_variant_operator<UpdateGridCellInteraction>); }
 } // namespace exaDEM

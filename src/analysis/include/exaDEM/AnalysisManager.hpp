@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <mpi.h>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 
 namespace exaDEM
 {
@@ -30,7 +30,7 @@ namespace exaDEM
       void add_element(std::string name, T& new_element, std::string format)
       {
         header << name << " ";
-        std::string element = exanb::format_string(format, new_element);
+        std::string element = onika::format_string(format, new_element);
         line << element << " "; 
       }
 

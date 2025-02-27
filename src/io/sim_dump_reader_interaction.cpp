@@ -27,7 +27,7 @@ namespace exaDEM
   template <typename GridT> using SimDumpReadParticlesInteractionTmpl = SimDumpReadParticlesES<GridT, exaDEM::Interaction, DumpFieldSet>;
   template <typename GridT> using SimDumpReadParticlesDoubleTmpl = SimDumpReadParticlesES<GridT, double, DumpFieldSet>;
   // === register factories ===
-  CONSTRUCTOR_FUNCTION
+  ONIKA_AUTORUN_INIT(sim_dump_reader_interaction)
   {
 
     OperatorNodeFactory::instance()->register_factory("read_dump_particle_interaction", make_grid_variant_operator<SimDumpReadParticlesInteractionTmpl>);

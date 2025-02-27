@@ -20,8 +20,8 @@ under the License.
 
 #include <iostream>
 //#include <ostream>
-#include <exanb/core/basic_types.h>
-#include <exanb/core/basic_types_stream.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/basic_types_stream.h>
 
 namespace exaDEM
 {

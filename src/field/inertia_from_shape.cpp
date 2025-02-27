@@ -17,9 +17,9 @@ specific language governing permissions and limitations
 under the License.
 */
 
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
@@ -74,5 +74,5 @@ namespace exaDEM
   template <class GridT> using PolyhedraUpdateInertiaTmpl = PolyhedraUpdateInertia<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("inertia_from_shape", make_grid_variant_operator<PolyhedraUpdateInertiaTmpl>); }
+  ONIKA_AUTORUN_INIT(inertia_from_shape) { OperatorNodeFactory::instance()->register_factory("inertia_from_shape", make_grid_variant_operator<PolyhedraUpdateInertiaTmpl>); }
 } // namespace exaDEM

@@ -16,16 +16,16 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
-#include <exanb/core/basic_types.h>
-#include <exanb/core/basic_types_operators.h>
-#include <exanb/core/basic_types_stream.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/basic_types_operators.h>
+#include <onika/math/basic_types_stream.h>
 #include <onika/memory/allocator.h> // for ONIKA_ASSUME_ALIGNED macro
 //#include <exanb/compute/compute_pair_optional_args.h>
 #include <vector>
@@ -70,7 +70,7 @@ namespace exaDEM
       {
         if (drivers->type(id) == DRIVER_TYPE::STL_MESH)
         {
-          exaDEM::Stl_mesh &mesh = std::get<exaDEM::Stl_mesh>(drivers->data(id));
+          exaDEM::Stl_mesh &mesh = drivers->get_typed_driver<exaDEM::Stl_mesh>(id); // std::get<exaDEM::Stl_mesh>(drivers->data(id));
           auto &grid_stl = mesh.grid_indexes;
           auto &mutexes = mesh.grid_mutexes;
 
@@ -214,5 +214,5 @@ namespace exaDEM
 
   // === register factories ==
   template <class GridT> using UpdateGridSTLMeshOperatorTemplate = UpdateGridSTLMeshOperator<GridT>;
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("grid_stl_mesh", make_grid_variant_operator<UpdateGridSTLMeshOperatorTemplate>); }
+  ONIKA_AUTORUN_INIT(grid_stl_mesh) { OperatorNodeFactory::instance()->register_factory("grid_stl_mesh", make_grid_variant_operator<UpdateGridSTLMeshOperatorTemplate>); }
 } // namespace exaDEM
