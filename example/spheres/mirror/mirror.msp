@@ -1,0 +1,50 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+input_data:
+  - read_xyz:
+      file: input_file_mirror.xyz
+      bounds_mode: FILE
+      enlarge_bounds: 1.0 m
+  - replicate_domain:
+     repeat: [ 3 , 3 , 5 ]
+  - set_radius:
+     rad: 0.5
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.02
+  - set_rand_vrot_arot
+  - update_inertia
+
+compute_force:
+  - gravity_force
+  - contact_force:
+     symetric: true
+     config: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.2, damp_rate: 0.9} 
+
+domain:
+  cell_size: 4 m
+  periodic: [true, true,false]
+  mirror: [X-, X+, Y-, Y+,  Z-]
+
+write_paraview_generic:
+  binary: false
+  write_ghost: true
+  write_box: true
+  fields: ["type","vx","vy","vz","id","orient"]
+
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 50000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 2000
+  dt: 0.0001 s 
+  rcut_inc: 0.4 m
+  friction_rcut: 1.1 m
+

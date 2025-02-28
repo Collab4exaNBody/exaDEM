@@ -8,7 +8,7 @@ class Exanbody(CMakePackage):
     git = "https://github.com/Collab4exaNBody/exaNBody.git"
 
 
-    version("main", commit="ce4484d9e2db2dbfb559afa3a721af0893602b93")
+    version("main",  git='https://github.com/Collab4exaNBody/exaNBody.git', branch='main')
 
     depends_on("cmake")
     variant("cuda", default=False, description="Support for GPU")

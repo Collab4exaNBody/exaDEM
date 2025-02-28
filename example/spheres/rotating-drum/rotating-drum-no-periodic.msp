@@ -1,0 +1,78 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+replicate_domain:
+  repeat: [ 1 , 1 , 1 ]
+
+input_data:
+  - init_rcb_grid
+  - lattice:
+      structure: SC
+      types: [ 0 ]
+      size: [ 1.0 m , 1.0 m , 1.0 m ]
+  - set_radius:
+     rad: 0.5 m
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.02
+  - set_rand_vrot_arot
+  - update_inertia
+  - replicate_domain
+
+chunk_neighbors_contact:
+  config:
+    chunk_size: 1
+
+setup_drivers:
+  - add_cylinder:
+     id: 2
+     radius: 22 m
+     center: [15 m , 15 m , 15 m]
+     axis: [1, 0, 1]
+     angular_velocity: [0,0.25,0]
+  - add_surface:
+     id: 1
+     normal: [0,1,0]
+     offset: -0.8
+     center: [15 m ,-0.8 m , 15 m]
+     velocity: 0 m/s
+     angular_velocity: [0,0.25,0]
+  - add_surface:
+     id: 0
+     normal: [0,1,0]
+     offset: 30.8 m
+     velocity: 0 m/s
+     center: [15,30.8,15]
+     angular_velocity: [0,0.25,0]
+
+compute_force:
+  - gravity_force
+  - contact_sphere:
+     symetric: true
+     config: { rcut: 0.0 m , dncut: 1.0 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.05, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { rcut: 0.0 m , dncut: 1.0 m, kn: 100000, kt: 80000, kr: 0.0, fc: 0.05, mu: 0.3, damp_rate: 0.999} 
+
+domain:
+  cell_size: 2.5 m
+  periodic: [false,false,false]
+  grid_dims: [12, 12, 12]
+  bounds: [[0 m ,0 m, 0 m],[30 m, 30 m, 30 m]]
+  expandable: true
+
+write_vtklegacy:
+  ascii: true
+  ghost: false
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 1000000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 2000
+  dt: 0.00005 s 
+  rcut_inc: 0.4 m
+

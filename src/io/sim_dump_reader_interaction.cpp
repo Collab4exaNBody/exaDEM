@@ -20,17 +20,17 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 
 namespace exaDEM
-{ 
-	using namespace exanb;
-  using DumpFieldSet = FieldSet<field::_rx,field::_ry,field::_rz, field::_vx,field::_vy,field::_vz, field::_mass, field::_homothety, field::_radius, field::_orient , field::_mom , field::_vrot , field::_arot, field::_inertia , field::_id , field::_type>;
+{
+  using namespace exanb;
+  using DumpFieldSet = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type>;
 
-	template <typename GridT> using SimDumpReadParticlesInteractionTmpl = SimDumpReadParticlesES <GridT, exaDEM::Interaction, DumpFieldSet>;
-	template <typename GridT> using SimDumpReadParticlesDoubleTmpl = SimDumpReadParticlesES <GridT, double, DumpFieldSet>;
+  template <typename GridT> using SimDumpReadParticlesInteractionTmpl = SimDumpReadParticlesES<GridT, exaDEM::Interaction, DumpFieldSet>;
+  template <typename GridT> using SimDumpReadParticlesDoubleTmpl = SimDumpReadParticlesES<GridT, double, DumpFieldSet>;
   // === register factories ===
   CONSTRUCTOR_FUNCTION
-  { 
+  {
 
-    OperatorNodeFactory::instance()->register_factory( "read_dump_particle_interaction" , make_grid_variant_operator<SimDumpReadParticlesInteractionTmpl> );
-    OperatorNodeFactory::instance()->register_factory( "read_dump_particle_friction" , make_grid_variant_operator<SimDumpReadParticlesDoubleTmpl> );
+    OperatorNodeFactory::instance()->register_factory("read_dump_particle_interaction", make_grid_variant_operator<SimDumpReadParticlesInteractionTmpl>);
+    OperatorNodeFactory::instance()->register_factory("read_dump_particle_friction", make_grid_variant_operator<SimDumpReadParticlesDoubleTmpl>);
   }
-}
+} // namespace exaDEM

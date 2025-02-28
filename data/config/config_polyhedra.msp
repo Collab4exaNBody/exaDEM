@@ -1,30 +1,19 @@
 ######### POLYHEDRA mode ####################
 
-######## STL Mesh ##########################
-
-trigger_update_stl_mesh:
-  condition: enable_stl_mesh AND trigger_load_balance
-  body:
-    - update_grid_stl_mesh
-
-update_stl_mesh: trigger_update_stl_mesh
-
 ######### Move Particles ###################
 
-trigger_move_particles:
-  rebind: { threshold: max_displ , result: trigger_move_particles }
-  body:
+save_shapes: write_shape_file
+
+evaluate_particle_displ:
+  rebind: { threshold: max_displ , result: particle_displ }
+  body: 
     - vertex_displ_over
 
-#+dump_data_paraview:
-#  - write_paraview_polyhedra:
-#     basename: polyhedra
-
-
-
-+chunk_neighbors_impl:
+chunk_neighbors_impl:
+  - chunk_neighbors_contact
+  - unclassify_interactions
   - nbh_polyhedron
-  - update_mutexes
+  - classify_interactions
   - resize_particle_locks
 
 migrate_particles:
@@ -38,18 +27,5 @@ move_particles_extra_data: move_particles_interaction
 
 compute_new_vertices: polyhedra_compute_vertices
 
-compress_data: compress_interaction
-
 reorder_extra_data: nop
 
-dump_data_particles:
-  - timestep_file: "exaDEM_%09d.dump"
-  - message: { mesg: "Write dump " , endl: false }
-  - print_dump_file:
-      rebind: { mesg: filename }
-      body:
-        - message: { endl: true }
-  - compress_interaction
-  - stats_interactions
-  - write_dump_particle_interaction
-  - chunk_neighbors_impl #redbuild interactions

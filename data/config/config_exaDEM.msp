@@ -38,9 +38,9 @@ init_rcut_max:
   profiling: false
   rebind: { grid: null_grid, chunk_neighbors: null_neighbors }
   body:
-    - compute_force    # executed on an empty grid, just here to update rcut_max
+    - dem_rcut_max
     - nbh_dist:        # compute neighborhood distance in grid space (nbh_dist),
-        verbose: true  # also computes maximum particle move tolerance in grid space (max_displ)
+        verbose: false # also computes maximum particle move tolerance in grid space (max_displ)
                        # and ghost_dist, a constant scaling of of nbh_dist using scale factor nbh_ghost_scale
 
 # executed once (whitout verbosity) first to enable automatic cell_size calculation
@@ -51,19 +51,13 @@ preinit_rcut_max:
     - domain:
         cell_size: 0.0
         grid_dims: [ 0 , 0 , 0 ]
-    - compute_force
-    - nbh_dist
-
-initialize_friction: reorder_neighbor_friction
 
 setup_drivers: nop
 init_particle_regions: nop
 
 first_iteration:
-  - setup_drivers
   - init_particle_regions
   - init_particles
-  - initialize_friction
   - reset_force_moment
   - compute_force
 #  - force_to_accel
@@ -105,6 +99,22 @@ compute_loop:
     - next_time_step
     - compute_loop_stop
 
+# You can tune the output directories here:
+io_tree:
+  - io_config:
+     dir_name: "ExaDEMOutputDir"
+     log_name: "log.txt"
+     avg_stress_tensor_name: "AvgStressTensor.txt"
+     interaction_basename: "InteractionOutputDir-"      
+
+# Add your drivers by overriding setup_drivers
+setup_drivers: nop
+drivers:
+  - init_drivers
+  - setup_drivers
+  - print_drivers
+  - backup_drivers
+
 ######## simulation program description #################
 simulation:
   name: sim
@@ -113,15 +123,19 @@ simulation:
     - hw_device_init   # provides MPI_COMM_WORLD as a default communicator
     - make_empty_grid
     - global
-    - preinit_rcut_max
+    - io_tree
+    - drivers
+#    - preinit_rcut_max
     - domain
     - init_prolog
     - grid_flavor
     - particle_regions
     - input_data
-    - grid_post_processing
     - init_rcut_max
+    - init_prolog
+    - grid_post_processing
     - print_domain
+    - save_shapes
     - performance_adviser: { verbose: true }
     - init_epilog
     - first_iteration

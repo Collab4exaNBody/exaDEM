@@ -4,12 +4,11 @@ includes:
   - config_polyhedra.msp
 
 input_data:
+  - init_rcb_grid
   - lattice:
       structure: SC
       types: [ 0 ]
-      size: [ 0.8 , 0.8 , 1.0 ]
-      repeats: [ 11 , 11 , 30 ]
-      enlarge_bounds: 0.0 m
+      size: [ 1.0 , 1.0 , 1.0 ]
   - read_shape_file:
      filename: octahedron.shp
   - radius_from_shape
@@ -30,18 +29,20 @@ setup_drivers:
      id: 0
      filename: box_for_octa.stl
      minskowski: 0.01
-  - update_grid_stl_mesh
-
 
 compute_force:
   - gravity_force
-  - hooke_polyhedron:
+  - contact_polyhedron:
+     symetric: true
      config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 8000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 8000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2 m
+  cell_size: 1 m
   periodic: [false,false,false]
+  grid_dims: [9, 9, 30]
+  bounds: [[0 m ,0 m, 0 m], [9 m, 9 m, 30 m]]
+  expandable: true
 
 write_vtklegacy:
   ascii: true

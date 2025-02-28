@@ -4,6 +4,7 @@ includes:
   - config_polyhedra.msp
 
 input_data:
+  - init_rcb_grid
   - lattice:
       structure: BCC
       types: [ 0 , 1 ]
@@ -30,29 +31,29 @@ input_data:
 setup_drivers:
   - add_cylinder:
      id: 0
-     center: [7.5, 7.5, 7.5]
+     center: [3.75 m , 3.75 m , 3.75 m ]
      axis: [1, 0, 1]
-     radius: 13
+     radius: 6 m
      angular_velocity: [0,0.2,0]
 
 
 compute_force:
   - gravity_force
-  - hooke_polyhedron:
+  - contact_polyhedron:
+     symetric: true
      config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 8000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 8000, kr: 0.0, fc: 0.0, mu: 0.5, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2 m
+  cell_size: 2.5 m
   periodic: [false,true,false]
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
+  grid_dims: [3, 3, 3]
+  bounds: [[0 m ,0 m, 0 m],[7.5 m, 7.5 m, 7.5 m]]
+  expandable: true  
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 10000
+  simulation_end_iteration: 20000
   simulation_log_frequency: 1000
   simulation_paraview_frequency: -1
   dt: 0.00005 s 

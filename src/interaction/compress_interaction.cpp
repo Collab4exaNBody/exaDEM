@@ -31,50 +31,42 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	template<typename GridT
-		, class = AssertGridHasFields< GridT >
-		>
-		class CompressInteraction : public OperatorNode
-		{
-			ADD_SLOT( GridT       , grid              , INPUT_OUTPUT , REQUIRED );
-			ADD_SLOT( GridCellParticleInteraction , ges  , INPUT , DocString{"Interaction list"} );
+  template <typename GridT, class = AssertGridHasFields<GridT>> class CompressInteraction : public OperatorNode
+  {
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
 
-			public:
-
-			inline std::string documentation() const override final
-			{
-				return R"EOF(
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
 					"This opertor compress interaction by removing inactive interaction. Do not use it if interaction are not rebuilt after."
 				        )EOF";
-			}
+    }
 
-			inline void execute () override final
-			{
-				if( grid->number_of_cells() == 0 ) { return; }
-				auto & cell_interactions = ges->m_data;
+    inline void execute() override final
+    {
+      if (grid->number_of_cells() == 0)
+      {
+        return;
+      }
+      auto &cell_interactions = ges->m_data;
 
-				auto save = [] (const exaDEM::Interaction& interaction)
-				{
-					return interaction.is_active();
-				};
+      auto save = [](const exaDEM::Interaction &interaction) { return interaction.is_active(); };
 
-#pragma omp parallel for
-				for(size_t current_cell = 0 ; current_cell < cell_interactions.size() ; current_cell++)
-				{
-					auto& storage = cell_interactions[current_cell];
-					storage.compress_data(save);
-				}
-			}
-		};
+#     pragma omp parallel for
+      for (size_t current_cell = 0; current_cell < cell_interactions.size(); current_cell++)
+      {
+        auto &storage = cell_interactions[current_cell];
+        storage.compress_data(save);
+      }
+    }
+  };
 
-	template<class GridT> using CompressInteractionTmpl = CompressInteraction<GridT>;
+  template <class GridT> using CompressInteractionTmpl = CompressInteraction<GridT>;
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "compress_interaction", make_grid_variant_operator< CompressInteractionTmpl > );
-	}
-}
-
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("compress_interaction", make_grid_variant_operator<CompressInteractionTmpl>); }
+} // namespace exaDEM

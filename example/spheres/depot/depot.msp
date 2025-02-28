@@ -4,7 +4,7 @@ grid_flavor: grid_flavor_dem
 #  logging:
 #    debug: true
 #  debug:
-#    filter: [ ".*hooke_force" ]
+#    filter: [ ".*contact_sphere" ]
 
 includes:
   - config_spheres.msp
@@ -48,10 +48,9 @@ setup_drivers:
 
 compute_force:
   - gravity_force
-  - hooke_force_driver:
-      config: { rcut: 20.0 m , dncut: 0.0 m, kn: 80000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.1, damp_rate: 0.9} 
-  - hooke_force:
-      config: { rcut: 20.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.1, damp_rate: 0.9} 
+  - contact_sphere:
+     symetric: true
+     config: { rcut: 20.0 m , dncut: 0.0 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.1, damp_rate: 0.9} 
 
 domain:
   cell_size: 11 m

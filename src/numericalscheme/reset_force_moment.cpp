@@ -26,44 +26,37 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/compute/compute_cell_particles.h>
 #include <exaDEM/set_fields.h>
-
+#include <exaDEM/cell_list_wrapper.hpp>
 
 namespace exaDEM
 {
-	using namespace exanb;
-	template<typename GridT
-		, class = AssertGridHasFields< GridT, field::_fx, field::_fy, field::_fz, field::_mom >
-		>
-		class ResetForceMomentNode : public OperatorNode
-		{
-			ADD_SLOT( GridT , grid  , INPUT_OUTPUT );
+  using namespace exanb;
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz, field::_mom>> class ResetForceMomentNode : public OperatorNode
+  {
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(CellListWrapper, cell_list, INPUT, DocString{"list of non empty cells within the current grid"});
 
-			static inline constexpr FieldSet<field::_fx, field::_fy, field::_fz, field::_mom> compute_field_set = {};
+    static inline constexpr FieldSet<field::_fx, field::_fy, field::_fz, field::_mom> compute_field_set = {};
 
-			public:
-
-			inline std::string documentation() const override final
-			{
-				return R"EOF(
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator resets two grid fields : moments and forces.
         )EOF";
-			}
+    }
 
-			inline void execute () override final
-			{
-				//ResetForceMomentFunctor func = {};
-				SetFunctor<double,double, double, Vec3d> func = { {double(0.0), double(0.0), double(0.0), Vec3d{0.0,0.0,0.0}} };
-				compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
-			}
-		};
+    inline void execute() override final
+    {
+      auto [cell_ptr, cell_size] = cell_list->info();
+      SetFunctor<double, double, double, Vec3d> func = {{double(0.0), double(0.0), double(0.0), Vec3d{0.0, 0.0, 0.0}}};
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+    }
+  };
 
-	template<class GridT> using ResetForceMomentNodeTmpl = ResetForceMomentNode<GridT>;
+  template <class GridT> using ResetForceMomentNodeTmpl = ResetForceMomentNode<GridT>;
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "reset_force_moment", make_grid_variant_operator< ResetForceMomentNodeTmpl > );
-	}
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("reset_force_moment", make_grid_variant_operator<ResetForceMomentNodeTmpl>); }
 
-}
-
+} // namespace exaDEM

@@ -8,11 +8,12 @@ class Exadem(CMakePackage):
     git = "https://github.com/Collab4exaNBody/exaDEM.git"
 
 
-    version("main", commit="6df5d73d333679629e297e4952a0dffe863a4412")
+    version("1.0.1", commit="a68904c87f3889a36b9fdb64cdd03efc25d06914")
     variant("cuda", default=False, description="Support for GPU")
 
-    depends_on("cmake")
-    depends_on("yaml-cpp")
+    depends_on("cmake@3.27.9")
+    depends_on("yaml-cpp@0.6.3")
+    depends_on("openmpi")
     depends_on("exanbody")
     depends_on("cuda", when="+cuda")
 

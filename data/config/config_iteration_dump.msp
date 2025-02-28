@@ -9,34 +9,53 @@ trigger_dump_paraview:
   body:
     - nth_timestep: { first: false }
 
-dump_data_vtklegacy:
-  - timestep_file: "output_%010d.vtk"
-  - memory_stats
-  - message: { mesg: "Write vtk-legacy " , endl: false }
-  - print_dump_file:
-      rebind: { mesg: filename }
-      body:
-        - message: { endl: true }
-  - write_paraview_generic
-
 write_paraview_generic:
   binary: false
   write_ghost: false
   write_box: true
-  fields: ["type","vx","vy","vz","id","orient"]
+  fields: ["radius", "type","vx","vy","vz","id","orient"]
 #  fields: ["vx","vy","vz","id","radius"]
 
 dump_data_paraview:
-  - timestep_file: "paraview/output_%010d"
+  - timestep_paraview_file: "ParaviewOutputFiles/exadem_%010d"
   - message: { mesg: "Write paraview " , endl: false }
   - print_dump_file:
       rebind: { mesg: filename }
       body:
         - message: { endl: true }
   - write_paraview_generic
+  - paraview_driver
 
-## This operator is defined in spheres or polyhedra . msp
-dump_data_particles: nop
+compute_volume:
+  - domain_volume
+
+compute_stress_tensor:
+  - stress_tensor
+
+dump_stress_tensor_if_triggered:
+  condition: trigger_write_stress_tensor
+  body:
+    - compute_volume
+    - compute_stress_tensor
+    - write_stress_tensor
+#    - message: { mesg: "Update Avg Stress" , endl: true }
+
+compress_data: 
+  - unclassify_interactions
+  - compress_interaction
+
+dump_data_particles:
+  - timestep_paraview_file: "CheckpointFiles/exadem_%010d.dump"
+  - message: { mesg: "Write dump " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - compress_data
+  - stats_interactions
+  - write_dump_particle_interaction
+  - dump_driver
+  - chunk_neighbors_impl #redbuild interactions
 
 iteration_dump_writer: 
   - dump_data_particles

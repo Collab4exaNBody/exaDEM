@@ -11,20 +11,9 @@ includes:
 
 add_particles:
   - lattice:
-     init_domain: false
      structure: SC
      types: [ 0 ]
      size: [ 1.0 , 1.0 , 1.0 ]
-     repeats: [ 10 , 10 , 10 ]
-     region: AREA
-
-first_particles:
-  - lattice:
-     init_domain: true
-     structure: SC
-     types: [ 0 ]
-     size: [ 1.0 , 1.0 , 1.0 ]
-     repeats: [ 10 , 10 , 10 ]
      region: AREA
 
 init_new_particles:
@@ -40,17 +29,18 @@ init_new_particles:
      region: AREA
 
 input_data:
+  - init_rcb_grid
   - read_shape_file:
      filename: shapes.shp
-  - first_particles
+  - add_particles
   - init_new_particles
 
 setup_drivers:
   - add_cylinder:
      id: 0
-     center: [5, 5, 5]
+     center: [5 m, 5 m, 5 m]
      axis: [1, 0, 1]
-     radius: 8
+     radius: 8 m 
 
 add_generated_particles:
   - add_particles
@@ -58,18 +48,22 @@ add_generated_particles:
 
 compute_force:
   - gravity_force
-  - hooke_polyhedron:
+  - contact_polyhedron:
+     symetric: true
      config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
      config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 particle_regions:
    - AREA:
-      bounds: [ [ 0 , 0 , 9 ] , [ 10 , 10 , 10 ] ]
+      bounds: [ [ 0 , 0 , 9 m ] , [ 10 m , 10 m, 10 m] ]
 
 domain:
   cell_size: 2 m
   periodic: [false,true,false]
-
+  grid_dims: [5, 5, 5]
+  bounds: [[0 m ,0 m, 0 m], [10 m, 10 m, 10 m]]
+  expandable: true
+  
 write_vtklegacy:
   ascii: true
   ghost: false
@@ -78,7 +72,7 @@ global:
   simulation_dump_frequency: -1
   simulation_end_iteration: 100000
   simulation_log_frequency: 10000
-  simulation_paraview_frequency: -1
+  simulation_paraview_frequency: 10000
   simulation_generator_frequency: 45000
   dt: 0.00001 s 
   rcut_inc: 0.05 m

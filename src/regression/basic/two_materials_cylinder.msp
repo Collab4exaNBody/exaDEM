@@ -60,7 +60,7 @@ compute_loop:
 compute_force:
   - applyDrivers
   - gravity_force
-  - hooke_force:
+  - contact_force:
       config: {rcut: 1.1 m, dncut: 0.0,  kn: 100000, kt: 80000, kr: 0, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
 
 domain:

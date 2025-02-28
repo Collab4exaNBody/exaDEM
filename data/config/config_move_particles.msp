@@ -8,10 +8,22 @@ reorder_extra_data: nop
 
 # define a test node which outputs a boolean value 'trigger_move_particles'
 # which tells when to move particles across cells and update neighbor lists
-trigger_move_particles:
-  rebind: { threshold: max_displ , result: trigger_move_particles }
+evaluate_particle_displ:
+  rebind: { threshold: max_displ , result: particle_displ }
   body: 
     - particle_displ_over
+
+evaluate_driver_displ:
+  rebind: { threshold: max_displ , result: driver_displ }
+  body: 
+    - driver_displ_over
+
+trigger_move_particles:
+  - evaluate_particle_displ
+  - evaluate_driver_displ
+  - combine_move_particles:
+      rebind: { in1: driver_displ , in2: particle_displ, result: trigger_move_particles}
+      body: [ boolean_or ]
 
 
 ################### AMR ############################
@@ -49,33 +61,47 @@ ghost_full_update:
   - ghost_update_all
   - compute_new_vertices
 
-  
-
 ################### parallel particle migration ############################
 
 ## These operator should be define by your particle mode (spheres or polyhedra)
 migrate_particles: nop
 add_generated_particles: nop
-update_stl_mesh: nop
+
+trigger_grid_stl_mesh:
+  condition: trigger_grid_stl_mesh
+  body:
+    - grid_stl_mesh
+
+update_stl_mesh:
+  - combineSTL:
+      rebind: { in1: enable_stl_mesh , in2: trigger_load_balance, result: trigger_grid_stl_mesh}
+      body: [ boolean_and ]  
+  - trigger_grid_stl_mesh
 
 parallel_update_particles:
   - particle_generator:
       condition: trigger_generator
-      body: 
+      body:
+         - message: { mesg: "Add particles", endl: true} 
          - add_generated_particles
-#  - mpi_barrier
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - update_stl_mesh
+  - update_cell_list
+  - grid_stl_mesh
   - update_particle_neighbors
 
 # define actions to initialize particles at startup, just after file read
 init_particles:
-  - move_particles # standard move_particles, even if friction is enabled. just re-order particles in cells, if needed
+  - move_particles 
   - extend_domain
   - load_balance
-  - parallel_update_particles
+  - migrate_particles
+  - ghost_full_update
+  - grid_post_processing
+  - update_cell_list
+  - grid_stl_mesh
+  - update_particle_neighbors
 ###########################################################################
 
 ########################### Load balancing ############################
@@ -108,18 +134,17 @@ load_balancing_if_triggered:
     - load_balance
 
 update_particles_full_body:
-#  - mpi_barrier
   - compress_data
   - move_particles_extra_data
   - trigger_load_balance
   - load_balancing_if_triggered
-#  - mpi_barrier
   - parallel_update_particles
   - reorder_extra_data
 
 update_particles_full:
   condition: trigger_move_particles
   body:
+    - backup_drivers
     - update_particles_full_body
 
 update_particles_fast_body:

@@ -51,7 +51,7 @@ compute_force:
      cylinder_angular_velocity: [ 0 , 0.5 , 0 ]
      damprate: 0.999
   - gravity_force
-  - hooke_force:
+  - contact_force:
       config: { rcut: 1.1 m , dncut: 0.1 m, kn: 100000, kt: 80000, kr: 1, fc: 0.05, mu: 0.1, damp_rate: 0.999 } 
 
 cleanup_before_dump: nop

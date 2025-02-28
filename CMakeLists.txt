@@ -23,7 +23,7 @@ project(exaDEM LANGUAGES C CXX)
 # ===========================
 # === CMake customization ===
 # ===========================
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Release RelWithDebInfo Debug)
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Release Coverage RelWithDebInfo Debug)
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
 endif()
@@ -34,8 +34,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 # === Set Some default values for polyhedra ====
 # ==============================================
 # These values have to be set by exaNBody
-set(EXADEM_MAX_VERTICES "8" CACHE STRING "Maximum number of vertices per polyhedron")
-message(STATUS "Maximum number of vertices per polyhedron: ${EXADEM_MAX_VERTICES}, default is 8 vertices.")
+set(EXADEM_MAX_VERTICES "9" CACHE STRING "Maximum number of vertices per polyhedron")
+message(STATUS "Maximum number of vertices per polyhedron: ${EXADEM_MAX_VERTICES}, default is 9 vertices.")
 add_compile_options(-DEXADEM_MAX_VERTICES=${EXADEM_MAX_VERTICES})
 
 # ======================================
@@ -78,7 +78,7 @@ endforeach()
 # ==============================
 # === Application version    ===
 # ==============================
-set(EXASDEM_VERSION "exaDEM-3.3") 
+set(EXASDEM_VERSION "exaDEM-1.1.0") 
 message(STATUS "Project version : ${EXASDEM_VERSION}")
 
 # ==================================
@@ -123,6 +123,13 @@ endif()
 # === build exaNBody plugins and main ===
 # =======================================
 exaNBodyStartApplication()
+
+# ======================================
+# === add compiler option with CUDA  ===
+# ======================================
+if(XNB_BUILD_CUDA)
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+endif()
 
 
 # ==========================================

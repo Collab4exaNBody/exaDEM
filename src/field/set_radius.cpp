@@ -30,77 +30,69 @@ under the License.
 
 namespace exaDEM
 {
-	using namespace exanb;
+  using namespace exanb;
 
-	template<typename GridT
-		, class = AssertGridHasFields< GridT, field::_radius>
-		>
-		class SetRadius : public OperatorNode
-		{
-			static constexpr double default_radius = 0.5;
-			using ComputeFields = FieldSet< field::_radius>;
-			using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_radius>;
-			static constexpr ComputeFields compute_field_set {};
-			static constexpr ComputeRegionFields compute_region_field_set {};
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class SetRadius : public OperatorNode
+  {
+    static constexpr double default_radius = 0.5;
+    using ComputeFields = FieldSet<field::_radius>;
+    using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_radius>;
+    static constexpr ComputeFields compute_field_set{};
+    static constexpr ComputeRegionFields compute_region_field_set{};
 
-			ADD_SLOT( GridT             , grid             , INPUT_OUTPUT );
-			ADD_SLOT( double            , rad              , INPUT , default_radius	, DocString{"default radius value for all particles"} );
-			ADD_SLOT( ParticleRegions   , particle_regions , INPUT , OPTIONAL );
-			ADD_SLOT( ParticleRegionCSG , region           , INPUT , OPTIONAL );
-		  ADD_SLOT( double            , rcut_max         , INPUT_OUTPUT ,  DocString{"rcut_max"});
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(double, rad, INPUT, default_radius, DocString{"default radius value for all particles"});
+    ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+    ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
+    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, DocString{"rcut_max"});
 
-			public:
-
-			inline std::string documentation() const override final
-			{
-				return R"EOF(
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator sets the radius value for every particles.
         )EOF";
-			}
+    }
 
-			inline void execute () override final
-			{
-				if(rcut_max.has_value())
-				{
-					*rcut_max = std::max(*rcut_max, 2*(*rad));
-				}
-				else
-				{
-					*rcut_max = 2*(*rad);
-				}
-				
-				if( region.has_value() )
-				{
-					if( !particle_regions.has_value() )
-					{
-						fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
-					}
+    inline void execute() override final
+    {
+      if (rcut_max.has_value())
+      {
+        *rcut_max = std::max(*rcut_max, 2 * (*rad));
+      }
+      else
+      {
+        *rcut_max = 2 * (*rad);
+      }
 
-					if( region->m_nb_operands==0 )
-					{
-						ldbg << "rebuild CSG from expr "<< region->m_user_expr << std::endl;
-						region->build_from_expression_string( particle_regions->data() , particle_regions->size() );
-					}
+      if (region.has_value())
+      {
+        if (!particle_regions.has_value())
+        {
+          fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+        }
 
-					ParticleRegionCSGShallowCopy prcsg = *region;
-					SetRegionFunctor<double> func = { prcsg, {*rad} };
-					compute_cell_particles( *grid , false , func , compute_region_field_set , parallel_execution_context() );
-				}
-				else
-				{
-					SetFunctor<double> func = { {*rad} };
-					compute_cell_particles( *grid , false , func , compute_field_set , parallel_execution_context() );
-				}
-			}
-		};
+        if (region->m_nb_operands == 0)
+        {
+          ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
+          region->build_from_expression_string(particle_regions->data(), particle_regions->size());
+        }
 
-	template<class GridT> using SetRadiusTmpl = SetRadius<GridT>;
+        ParticleRegionCSGShallowCopy prcsg = *region;
+        SetRegionFunctor<double> func = {prcsg, {*rad}};
+        compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
+      }
+      else
+      {
+        SetFunctor<double> func = {{*rad}};
+        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context());
+      }
+    }
+  };
 
-	// === register factories ===  
-	CONSTRUCTOR_FUNCTION
-	{
-		OperatorNodeFactory::instance()->register_factory( "set_radius", make_grid_variant_operator< SetRadiusTmpl > );
-	}
+  template <class GridT> using SetRadiusTmpl = SetRadius<GridT>;
 
-}
+  // === register factories ===
+  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("set_radius", make_grid_variant_operator<SetRadiusTmpl>); }
 
+} // namespace exaDEM
