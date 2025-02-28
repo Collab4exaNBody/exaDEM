@@ -78,7 +78,7 @@ In conclusion, the design of `ExaDEM`, guided by the `exaNBody` framework, facil
 
 ![Simulation of 20 million spherical particles falling into a funnel. This simulation runs on 512 MPI processes with 8 OpenMP threads per MPI process (processor: AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=70%}
 
-`ExaDEM` aims to to meet scientific expectations, particularly for nuclear fuel simulations involving scenarios such as rotating drums (see figure \autoref{fig:rotating-drum}) or compaction processes. To achieve this goal, `ExaDEM` provides the following key features:
+`ExaDEM` aims to to meet scientific expectations, particularly for nuclear fuel simulations involving scenarios such as rotating drums (see \autoref{fig:rotating-drum}) or compaction processes. To achieve this goal, `ExaDEM` provides the following key features:
 
 - Handling of different particle types: spherical and polyhedral,
 - Hybrid parallelisation `MPI` + X,
@@ -87,7 +87,7 @@ In conclusion, the design of `ExaDEM`, guided by the `exaNBody` framework, facil
 	- The Recursive Coordinate Bissection method is used for the load balancing,
 - I/O support for check and restart files (MPI-IO files),
 - Paraview output files containing fields,
-- Drivers: rigid wall, rotating drum or mesh of polyhedron surface for complex geometries such as funnel (see figure \autoref{fig:funnel}),
+- Drivers: rigid wall, rotating drum or mesh of polyhedron surface for complex geometries such as funnel (see \autoref{fig:funnel}),
 - Time integration scheme: Velocity Verlet,
 - Contact detection: Linked-cell method and Verlet Lists,
 - Force fields: contact force (Hooke law), cohesive force, and gravity.
