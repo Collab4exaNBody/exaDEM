@@ -80,6 +80,7 @@ In conclusion, the design of `ExaDEM`, guided by the `exaNBody` framework, facil
 
 `ExaDEM` aims to to meet scientific expectations, particularly for nuclear fuel simulations involving scenarios such as rotating drums (see \autoref{fig:rotating-drum}) or compaction processes. To achieve this goal, `ExaDEM` provides the following key features:
 
+
 - Handling of different particle types: spherical and polyhedral,
 - Hybrid parallelisation `MPI` + X,
 	- X = `OpenMP` or `CUDA` for spherical particles,
