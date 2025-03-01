@@ -171,6 +171,7 @@ namespace exaDEM
         if (it == DRIVER_TYPE::UNDEFINED)
           return false;
       }
+      return true;
     }
 
     /**

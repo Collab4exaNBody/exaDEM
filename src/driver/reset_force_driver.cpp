@@ -16,9 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exaDEM/drivers.h>
 #include <mpi.h>
 
@@ -49,5 +49,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("reset_force_driver", make_simple_operator<ResetForceDriverFunctor>); }
+  ONIKA_AUTORUN_INIT(reset_force_driver) { OperatorNodeFactory::instance()->register_factory("reset_force_driver", make_simple_operator<ResetForceDriverFunctor>); }
 } // namespace exaDEM

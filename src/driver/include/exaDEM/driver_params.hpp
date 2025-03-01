@@ -16,12 +16,14 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+
 #pragma once
 
 #include <exaDEM/normalize.hpp>
 #include <climits>
 #include <chrono>
 #include <thread>
+#include <onika/physics/units.h>
 
 
 namespace exaDEM
@@ -283,8 +285,7 @@ namespace YAML
   using exaDEM::Driver_params;
   using exaDEM::MotionType;
   using exanb::lerr;
-  using exanb::Quantity;
-  using exanb::UnityConverterHelper;
+  using onika::physics::Quantity;
 
   template <> struct convert<Driver_params>
   {

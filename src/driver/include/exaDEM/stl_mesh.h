@@ -16,15 +16,17 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+ 
 #pragma once
-#include <exanb/core/basic_types.h>
-#include <exanb/core/quaternion.h>
-#include <exanb/core/quaternion_yaml.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/quaternion.h>
+#include <onika/math/quaternion_yaml.h>
 #include <exaDEM/driver_base.h>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_reader.hpp>
 //#include <exaDEM/interaction/interaction.hpp>
 #include <filesystem>
+#include <onika/physics/units.h>
 
 namespace exaDEM
 {
@@ -60,8 +62,7 @@ namespace YAML
   using exaDEM::Stl_params;
   using exaDEM::MotionType;
   using exanb::lerr;
-  using exanb::Quantity;
-  using exanb::UnityConverterHelper;
+  using onika::physics::Quantity;
 
   template <> struct convert<Stl_params>
   {
