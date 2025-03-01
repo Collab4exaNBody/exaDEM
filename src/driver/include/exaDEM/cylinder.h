@@ -126,7 +126,7 @@ namespace exaDEM
       stream << "     id: " << id << std::endl;
       stream << "     state: { radius: " << this->radius;
       stream << ",axis: [" << this->axis << "]";
-      stream << ",center: [" << this->axis << "]";
+      stream << ",center: [" << this->center << "]";
       stream << ",vel: [" << this->vel << "]";
       stream << ",vrot: [" << this->vrot << "]}" << std::endl;
       Driver_params::dump_driver_params(stream);
