@@ -22,16 +22,16 @@ under the License.
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
-#include <exanb/core/basic_types.h>
-#include <exanb/core/basic_types_operators.h>
-#include <exanb/core/basic_types_stream.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/basic_types_operators.h>
+#include <onika/math/basic_types_stream.h>
 #include <onika/memory/allocator.h> // for ONIKA_ASSUME_ALIGNED macro
 #include <exanb/compute/compute_pair_optional_args.h>
 
@@ -40,7 +40,7 @@ under the License.
 #include <mpi.h>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_printer.hpp>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 
 namespace exaDEM
 {
@@ -132,5 +132,5 @@ namespace exaDEM
   template <class GridT> using WriteParaviewOBBParticlesOperatorTemplate = WriteParaviewOBBParticlesOperator<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("write_paraview_obb_particles", make_grid_variant_operator<WriteParaviewOBBParticlesOperatorTemplate>); }
+  ONIKA_AUTORUN_INIT(write_paraview_obb_particles) { OperatorNodeFactory::instance()->register_factory("write_paraview_obb_particles", make_grid_variant_operator<WriteParaviewOBBParticlesOperatorTemplate>); }
 } // namespace exaDEM

@@ -18,7 +18,7 @@ under the License.
 */
 #pragma once
 #include <cassert>
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 #include <exanb/compute/compute_cell_particles.h>
 
 namespace exaDEM

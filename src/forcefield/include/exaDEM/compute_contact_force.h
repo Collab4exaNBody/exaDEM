@@ -18,7 +18,7 @@ under the License.
 */
 #pragma once
 
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 #include <exaDEM/common_compute_kernels.h>
 
 namespace exaDEM

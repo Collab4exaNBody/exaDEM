@@ -16,9 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/stl_mesh.h>
 
@@ -57,5 +57,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("push_av_to_quat_driver", make_simple_operator<PushAngularVelocityToQuaternionDriver>); }
+  ONIKA_AUTORUN_INIT(push_av_to_quat_driver) { OperatorNodeFactory::instance()->register_factory("push_av_to_quat_driver", make_simple_operator<PushAngularVelocityToQuaternionDriver>); }
 } // namespace exaDEM

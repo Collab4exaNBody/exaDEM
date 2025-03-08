@@ -16,11 +16,12 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_factory.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/log.h>
-#include <exanb/core/string_utils.h>
+
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/log.h>
+#include <onika/string_utils.h>
 
 #include <memory>
 
@@ -38,7 +39,7 @@ namespace exanb
     inline void execute() override final
     {
       std::string paraview_filename = (*dir_name) + "/" + (*format);
-      *filename = format_string(paraview_filename, *timestep);
+      *filename = onika::format_string(paraview_filename, *timestep);
     }
 
     inline void yaml_initialize(const YAML::Node &node) override final
@@ -57,6 +58,6 @@ namespace exanb
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("timestep_paraview_file", make_compatible_operator<TimeStepParaviewFileNameOperator>); }
+  ONIKA_AUTORUN_INIT(paraview_file_name) { OperatorNodeFactory::instance()->register_factory("timestep_paraview_file", make_compatible_operator<TimeStepParaviewFileNameOperator>); }
 
 } // namespace exanb

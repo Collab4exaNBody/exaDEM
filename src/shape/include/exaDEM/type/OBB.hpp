@@ -22,7 +22,7 @@
 #include "vec3.hpp"
 #include "quat.hpp"
 #include "mat9.hpp"
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 
 /// @ingroup Bounding_Volumes
 /// @brief Oriented Bounding Box

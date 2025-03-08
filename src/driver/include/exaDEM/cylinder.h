@@ -16,9 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+
 #pragma once
 
 #include <exaDEM/driver_base.h>
+#include <onika/physics/units.h>
 
 namespace exaDEM
 {
@@ -40,8 +42,7 @@ namespace YAML
   using exaDEM::Cylinder_params;
   using exaDEM::MotionType;
   using exanb::lerr;
-  using exanb::Quantity;
-  using exanb::UnityConverterHelper;
+  using onika::physics::Quantity;
 
   template <> struct convert<Cylinder_params>
   {

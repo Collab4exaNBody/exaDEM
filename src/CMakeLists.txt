@@ -23,13 +23,13 @@ add_subdirectory(grid)
 add_subdirectory(shape)
 add_subdirectory(field)
 add_subdirectory(numericalscheme)
-add_subdirectory(forcefield)
-add_subdirectory(io)
 add_subdirectory(driver)
+add_subdirectory(forcefield)
 add_subdirectory(interaction)
+add_subdirectory(analysis)
+add_subdirectory(io)
 add_subdirectory(sphere)
 add_subdirectory(polyhedron)
-add_subdirectory(analysis)
 
 
 if(USE_RSA)
@@ -39,6 +39,6 @@ endif()
 AddRegressionTestDir(${CMAKE_CURRENT_SOURCE_DIR}/regression)
 
  
-# automatically added by xstamp_add_plugin macro
+# automatically added by onika_add_plugin macro
 #add_subdirectory(tests)
 

@@ -16,11 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
-#include <exanb/core/quaternion.h>
-#include <exanb/core/quaternion_yaml.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/math/quaternion.h>
+#include <onika/math/quaternion_yaml.h>
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/driver_base.h>
@@ -116,5 +116,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("register_stl_mesh", make_simple_operator<RegisterSTLMesh>); }
+  ONIKA_AUTORUN_INIT(register_stl_mesh) { OperatorNodeFactory::instance()->register_factory("register_stl_mesh", make_simple_operator<RegisterSTLMesh>); }
 } // namespace exaDEM
