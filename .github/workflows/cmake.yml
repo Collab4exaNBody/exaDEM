@@ -27,20 +27,20 @@ jobs:
     - name: Get Onika
       run: git clone https://github.com/Collab4exaNBody/onika.git        
     - name: Configure Onika
-      run: cmake -B ${{github.workspace}}/onika/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{github.workspace}}/onika/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/onika/install
       working-directory: ${{github.workspace}}/onika    
     - name: Build Onika
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/onika/build --target install --prefix ${{github.workspace}}/onika/install --config ${{env.BUILD_TYPE}} -j 2 
+      run: cmake --build ${{github.workspace}}/onika/build --target install --config ${{env.BUILD_TYPE}} -j 2 
       
     - name: Get ExaNBody
       run: git clone https://github.com/Collab4exaNBody/exaNBody.git         
     - name: Configure ExaNBody
-      run: cmake -B ${{github.workspace}}/exaNBody/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -Donika_DIR=${{github.workspace}}/onika/install
+      run: cmake -B ${{github.workspace}}/exaNBody/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -Donika_DIR=${{github.workspace}}/onika/install -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/exaNBody/install
       working-directory: ${{github.workspace}}/exaNBody   
     - name: Build ExaNBody
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/exaNBody/build --target install --prefix ${{github.workspace}}/exaNBody/install --config ${{env.BUILD_TYPE}} -j 2
+      run: cmake --build ${{github.workspace}}/exaNBody/build --target install --config ${{env.BUILD_TYPE}} -j 2
       
     - name: Configure CMake
       run: cmake -DCMAKE_CXX_FLAGS="--coverage -g" -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DexaNBody_DIR=${{github.workspace}}/exaNBody/install
