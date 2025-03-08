@@ -26,7 +26,7 @@ namespace exaDEM
   template<class GridT> using RegionLegacyLatticeTmpl = exanb::RegionLegacyLattice<GridT,field::_type>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION
+  ONIKA_AUTORUN_INIT(region_lattice)
   {
     OperatorNodeFactory::instance()->register_factory("lattice", make_grid_variant_operator< RegionLatticeTmpl >);
     OperatorNodeFactory::instance()->register_factory("legacy_lattice", make_grid_variant_operator< RegionLegacyLatticeTmpl >);    
