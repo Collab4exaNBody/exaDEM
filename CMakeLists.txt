@@ -74,6 +74,12 @@ endif()
 # ======================================
 find_package(exaNBody)
 
+# ======================================
+# === add compiler option with CUDA  ===
+# ======================================
+if(ONIKA_BUILD_CUDA)
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+endif()
 
 # ==========================================
 # === build application plugins and libs ===
