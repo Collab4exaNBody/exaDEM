@@ -43,8 +43,6 @@ namespace exaDEM
     inline void operator()(exaDEM::Cylinder &cylinder) const { cylinder.dump_driver( (*id_ptr) ++ , *stream_ptr ); }
 
     inline void operator()(exaDEM::Stl_mesh &stl_param) const { stl_param.dump_driver( (*id_ptr) ++ , directory, *stream_ptr ); }
-
-    // inline void operator()(auto &&others) { ldbg << "DumpDriverFunc is not defined for this driverr OR this driver is no longer defined." << std::endl; }
   };
 
   using namespace exanb;

@@ -8,13 +8,18 @@ class Exanbody(CMakePackage):
     git = "https://github.com/Collab4exaNBody/exaNBody.git"
 
 
-    version("main",  git='https://github.com/Collab4exaNBody/exaNBody.git', branch='main')
+    version("main",  git='https://github.com/Collab4exaNBody/exaNBody.git', branch='main', preferred=True)
+    version("exadem-exanbody-2.0",  git='https://github.com/Collab4exaNBody/exaNBody.git', tag='exadem-exanbody-2.0')
 
+    depends_on("onika@main", when="@main")
+    depends_on("onika@exadem-exanbody-2.0", when="@exadem-exanbody-2.0")
+    depends_on("onika+cuda", when="+cuda")
     depends_on("cmake")
     variant("cuda", default=False, description="Support for GPU")
     depends_on("yaml-cpp")
     depends_on("cuda", when="+cuda")
 #    build_system("cmake", "autotools", default="cmake")
+    
     default_build_system = "cmake"
     build_system("cmake", default="cmake")
 
@@ -26,5 +31,5 @@ class Exanbody(CMakePackage):
         )
 
     def cmake_args(self):
-      args = [ self.define_from_variant("-DXNB_BUILD_CUDA=ON", "cuda"), ]
+      args = [ ]
       return args
