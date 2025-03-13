@@ -26,7 +26,7 @@ under the License.
 #include <exanb/compute/compute_cell_particles.h>
 #include <memory>
 #include <exaDEM/force_to_accel.h>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 
 namespace exaDEM
 {

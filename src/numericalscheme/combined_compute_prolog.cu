@@ -29,7 +29,7 @@ under the License.
 #include <memory>
 
 #include <exaDEM/push_to_quaternion.h>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 #include <exanb/defbox/push_vec3_2nd_order.h>
 #include <exanb/defbox/push_vec3_1st_order.h>
 

@@ -22,7 +22,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 #include <memory>
 
 namespace exaDEM

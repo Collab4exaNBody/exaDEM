@@ -250,7 +250,7 @@ namespace exaDEM
       constexpr DRIVER_TYPE t = get_type<T>();
       static_assert( t != DRIVER_TYPE::UNDEFINED );
       auto * __restrict__ driver_vec = m_data.get_nth_const<t>();
-      const size_t driver_vec_size = m_data_size.get_nth_const<t>();
+      [[maybe_unused]]const size_t driver_vec_size = m_data_size.get_nth_const<t>();
       assert( idx>=0 && idx<m_nb_drivers );
       assert( m_type_index[idx].m_type == t );
       assert( m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < driver_vec_size );

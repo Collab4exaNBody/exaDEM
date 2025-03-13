@@ -17,25 +17,23 @@
 
 #pragma once
 
-namespace exanb
+struct Traversal
 {
-	/**
-	 * @brief Calculate the length of a 3D vector.
-	 * @param v The input vector.
-	 * @return The length of the vector.
-	 */
-	inline double length(Vec3d &v) { return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z); }
+  template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
+  VectorT<size_t> m_data;
+  
+  bool iterator = false;
 
-	/**
-	 * @brief Calculate the length of a const 3D vector.
-	 * @param v The input vector.
-	 * @return The length of the vector.
-	 */
-	inline double length(const Vec3d &v) { return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z); }
+  size_t *data() { return onika::cuda::vector_data(m_data); }
 
-	/**
-	 * @brief Normalize a 3D vector.
-	 * @param v The input vector to be normalized.
-	 */
-	inline void _normalize(Vec3d &v) { v = v / exanb::norm(v); }
-}
+  size_t size() { return onika::cuda::vector_size(m_data); }
+
+  std::tuple<size_t *, size_t> info()
+  {
+    const size_t s = this->size();
+    if (s == 0)
+      return {nullptr, 0};
+    else
+      return {this->data(), this->size()};
+  }
+};

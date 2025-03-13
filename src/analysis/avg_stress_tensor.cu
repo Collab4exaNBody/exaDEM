@@ -15,7 +15,8 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
- */
+*/
+
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
@@ -25,7 +26,7 @@ under the License.
 #include <exanb/compute/reduce_cell_particles.h>
 
 #include <exanb/core/grid.h>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 #include <exaDEM/type/add_contribution_mat3d.hpp>
 
 #include <memory>
