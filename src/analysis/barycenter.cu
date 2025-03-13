@@ -26,7 +26,7 @@ under the License.
 #include <exanb/core/grid.h>
 
 #include <memory>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 #include <exaDEM/AnalysisManager.hpp>
 #include <exaDEM/barycenter.hpp>
 

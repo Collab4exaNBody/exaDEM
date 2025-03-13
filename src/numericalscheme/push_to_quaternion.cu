@@ -28,7 +28,7 @@ under the License.
 #include <memory>
 
 #include <exaDEM/push_to_quaternion.h>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 
 namespace exaDEM
 {

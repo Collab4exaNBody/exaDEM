@@ -34,7 +34,7 @@ under the License.
 
 #include <exaDEM/simulation_state.h>
 #include <exaDEM/dem_simulation_state.h>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/itools/itools.hpp>
 

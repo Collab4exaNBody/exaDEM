@@ -34,7 +34,7 @@ under the License.
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 
 #include <cassert>
 

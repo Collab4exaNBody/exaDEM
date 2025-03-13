@@ -27,7 +27,7 @@ under the License.
 #include <random>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/compute_vertices.hpp>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 
 namespace exaDEM
 {

@@ -33,7 +33,7 @@ under the License.
 #include <exanb/mpi/particle_displ_over_async_request.h>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/backup_dem.h>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 
 namespace exaDEM
 {
