@@ -70,7 +70,7 @@ namespace exaDEM
       {
         if (drivers->type(id) == DRIVER_TYPE::STL_MESH)
         {
-          exaDEM::Stl_mesh &mesh = std::get<exaDEM::Stl_mesh>(drivers->data(id));
+          exaDEM::Stl_mesh &mesh = drivers->get_typed_driver<exaDEM::Stl_mesh>(id); // std::get<exaDEM::Stl_mesh>(drivers->data(id));
           auto &grid_stl = mesh.grid_indexes;
           auto &mutexes = mesh.grid_mutexes;
 

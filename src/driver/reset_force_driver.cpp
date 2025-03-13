@@ -42,8 +42,7 @@ namespace exaDEM
     {
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        auto &driver = drivers->data(id);
-        std::visit([](auto&& arg){arg.forces = {0,0,0};}, driver);
+        drivers->apply( id , [](auto& drv){ drv.forces = {0,0,0}; } );
       }
     }
   };

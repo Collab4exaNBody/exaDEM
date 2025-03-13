@@ -77,9 +77,9 @@ namespace exaDEM
       std::string rk = "%06d"; 
 
       std::string directory = (*dir_name) + "/ParaviewOutputFiles/" + (*basename) + "_" + ts;
-      directory = format_string(directory, *timestep);
+      directory = onika::format_string(directory, *timestep);
       std::string filename = directory + "/" + rk + ".vtp";
-      filename  = format_string(filename,  rank);
+      filename  = onika::format_string(filename,  rank);
 
       // prepro
       if (rank == 0)
@@ -121,7 +121,7 @@ namespace exaDEM
       {
         std::string dir = *dir_name + "/ParaviewOutputFiles/";
         std::string name = *basename + "_" + ts;
-        name  = format_string(name,  *timestep); 
+        name  = onika::format_string(name,  *timestep); 
         exaDEM::write_pvtp_obb(dir, name, size);
       }
       exaDEM::write_vtp_obb(filename, buffers);

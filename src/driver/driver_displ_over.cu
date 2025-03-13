@@ -30,19 +30,27 @@ namespace exaDEM
   using namespace exanb;
   template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
 
-  template<typename Operator> struct driver_displ_over
+  template<class ParallelExecutionContextFunctor>
+  struct driver_displ_over
   {
-    Operator* op;
-    double r2; // square distance
+    ParallelExecutionContextFunctor m_parallel_execution_context;
+    const double r2; // square distance
     MPI_Comm &comm;
     int * storage;
+    
+    // backup drivers
+    Drivers &bcpd;
+    // backup driver idx
+    const size_t bd_idx;
+    
     /* Ignored */   
-    int operator()(exaDEM::UndefinedDriver &a, exaDEM::UndefinedDriver &b) { return 0; }
-    int operator()(exaDEM::Cylinder &a, exaDEM::Cylinder &b) { return 0; } // WARNING should not move
+    // inline int operator()(exaDEM::UndefinedDriver &) const { return 0; }
+    inline int operator()(exaDEM::Cylinder &a) const { return 0; } // WARNING should not move
 
     /* Active */
-    int operator()(exaDEM::Surface &a, exaDEM::Surface &b)
+    inline int operator()(exaDEM::Surface &a) const
     {
+      exaDEM::Surface &b = bcpd.get_typed_driver<exaDEM::Surface>(bd_idx);
       Vec3d d = a.center_proj - b.center_proj;
       if (exanb::dot(d, d) >= r2)
         return 1;
@@ -50,8 +58,9 @@ namespace exaDEM
         return 0;
     }
 
-    int operator()(exaDEM::Ball &a, exaDEM::Ball &b)
+    inline int operator()(exaDEM::Ball &a) const
     {
+      exaDEM::Ball &b = bcpd.get_typed_driver<exaDEM::Ball>(bd_idx);
       Vec3d d = a.center - b.center;
       if (exanb::dot(d, d) >= r2)
         return 1;
@@ -59,8 +68,10 @@ namespace exaDEM
         return 0;
     }
 
-    int operator()(exaDEM::Stl_mesh &a, exaDEM::Stl_mesh &b)
+    inline int operator()(exaDEM::Stl_mesh &a) const
     {
+      exaDEM::Stl_mesh &b = bcpd.get_typed_driver<exaDEM::Stl_mesh>(bd_idx);
+      
       if ((a.center == b.center) && (a.quat == b.quat))
         return 0;
 
@@ -72,7 +83,7 @@ namespace exaDEM
 
       ParallelForOptions opts;
       opts.omp_scheduling = OMP_SCHED_STATIC;
-      parallel_for(size, func, op->parallel_execution_context(), opts);   
+      parallel_for(size, func, m_parallel_execution_context(), opts);   
       return *storage;
 #else
       int sum = 0;
@@ -110,11 +121,6 @@ namespace exaDEM
 #endif
     }
 
-    int operator()(auto &&a, auto &&b)
-    {
-      lout << "WARNING: driver_displ_over is not defined for this driver. " << std::endl;
-      return 0;
-    }
   };
 
   struct Accumulator
@@ -172,13 +178,12 @@ sets result output to true if at least one particle has moved further than thres
       Drivers &bcpd = *backup_drvs;
       size_t bcpd_size = bcpd.get_size();
       assert(bcpd_size == size);
-      driver_displ_over<DriverDisplacementOver> func = {this, max_dist2, comm, pddc};
 
+      auto pec_func = [this]() { return this->parallel_execution_context(); };
       for (size_t i = 0; i < bcpd_size && local_drivers_displ == 0 ; i++)
       {
-        auto &drv1 = drvs.data(i);
-        auto &drv2 = bcpd.data(i);
-        local_drivers_displ += std::visit(func, drv1, drv2);
+        driver_displ_over<decltype(pec_func)> func = {pec_func, max_dist2, comm, pddc, bcpd, i };
+        local_drivers_displ += drvs.apply( i , func );
       }
 
       MPI_Allreduce(&local_drivers_displ, &(global_drivers_displ), 1, MPI_INT, MPI_SUM, comm);

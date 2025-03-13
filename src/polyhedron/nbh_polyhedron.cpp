@@ -351,24 +351,24 @@ namespace exaDEM
               if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER)
               {
                 item.type = 4;
-                Cylinder &driver = std::get<Cylinder>(drvs.data(drvs_idx));
+                Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx)) ;
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
               {
                 item.type = 5;
-                Surface &driver = std::get<Surface>(drvs.data(drvs_idx));
+                Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
               {
                 item.type = 6;
-                Ball &driver = std::get<Ball>(drvs.data(drvs_idx));
+                Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
               {
-                Stl_mesh &driver = std::get<STL_MESH>(drvs.data(drvs_idx));
+                Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); //std::get<STL_MESH>(drvs.data(drvs_idx));
                 // driver.grid_indexes_summary();
                 add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a, rz_a, vertices_a, orient_a, shps);
               }

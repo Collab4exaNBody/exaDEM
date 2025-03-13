@@ -50,7 +50,7 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class ComputeContactClassifierPolyhedronGPU : public OperatorNode
   {
-    using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
+    //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(ContactParams, config, INPUT, REQUIRED);        // can be re-used for to dump contact network
     ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL); // can be re-used for to dump contact network
@@ -93,7 +93,8 @@ namespace exaDEM
       bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
 
       /** Get driver and particles data */
-      driver_t *drvs = drivers->data();
+      //driver_t *drvs = drivers->data();
+      const DriversGPUAccessor drvs = *drivers;
       const auto cells = grid->cells();
 
       /** Get Contact Parameters and Shape */

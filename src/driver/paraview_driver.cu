@@ -55,17 +55,17 @@ namespace exaDEM
       {
         if (drivers->type(id) == DRIVER_TYPE::BALL)
         {
-          exaDEM::Ball &ball = std::get<exaDEM::Ball>(drivers->data(id));
+          exaDEM::Ball &ball = drivers->get_typed_driver<exaDEM::Ball>(id); //std::get<exaDEM::Ball>(drivers->data(id));
           balls.push_back({int(id), ball.center, ball.radius, ball.vel});
         }
         if (drivers->type(id) == DRIVER_TYPE::SURFACE)
         {
-          exaDEM::Surface &surface = std::get<exaDEM::Surface>(drivers->data(id));
+          exaDEM::Surface &surface = drivers->get_typed_driver<exaDEM::Surface>(id); //std::get<exaDEM::Surface>(drivers->data(id));
           surfaces.push_back({int(id), surface.normal, surface.offset, surface.vel});
         }
         if (drivers->type(id) == DRIVER_TYPE::STL_MESH)
         {
-          exaDEM::Stl_mesh &mesh = std::get<exaDEM::Stl_mesh>(drivers->data(id));
+          exaDEM::Stl_mesh &mesh = drivers->get_typed_driver<exaDEM::Stl_mesh>(id); //std::get<exaDEM::Stl_mesh>(drivers->data(id));
           mesh.shp.write_move_paraview(path, *timestep, mesh.center, mesh.quat);
         }
       }
@@ -74,14 +74,14 @@ namespace exaDEM
       {
         std::filesystem::path dir(path);
         std::string driver_ball_name = "driver_balls_%010d.vtk";
-        driver_ball_name = format_string(driver_ball_name,  *timestep);
+        driver_ball_name = onika::format_string(driver_ball_name,  *timestep);
         write_balls_paraview(balls, path, driver_ball_name);
       }
       if( surfaces.size() > 0 )
       {
         std::filesystem::path dir(path);
         std::string driver_surface_name = "driver_surfaces_%010d.vtk";
-        driver_surface_name = format_string(driver_surface_name,  *timestep);
+        driver_surface_name = onika::format_string(driver_surface_name,  *timestep);
         write_surfaces_paraview(*domain, surfaces, path, driver_surface_name);
       }
     }

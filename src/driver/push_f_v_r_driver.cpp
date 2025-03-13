@@ -40,11 +40,10 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      const double& t = *dt;
+      const double t = *dt;
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        auto& driver = drivers->data(id);
-        std::visit([&t](auto&& arg){arg.push_f_v_r(t);}, driver);
+        drivers->apply( id , [t](auto& drv){ drv.push_f_v_r(t); } );
       }
     }
   };

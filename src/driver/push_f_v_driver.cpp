@@ -28,21 +28,23 @@ namespace exaDEM
   struct push_f_v_r
   {
     const double dt;
-    void operator()(Ball& arg)
+
+    inline void operator()(Ball& arg) const
+    { 
+      arg.push_f_v(dt);
+    }
+
+    inline void operator()(Surface& arg) const
     {
       arg.push_f_v(dt);
     }
 
-    void operator()(Surface& arg)
+    inline void operator()(Stl_mesh& arg) const
     {
       arg.push_f_v(dt);
     }
-
-    void operator()(Stl_mesh& arg)
-    {
-      arg.push_f_v(dt);
-    }
-    void operator()(auto&& arg)
+    
+    inline void operator()(Cylinder&) const
     {
       /** nothing */
     }
@@ -63,12 +65,11 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      double t = *dt;
+      const double t = *dt;
       push_f_v_r func = {t};
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        auto &driver = drivers->data(id);
-        std::visit(func, driver);
+        drivers->apply( id , func );
       }
     }
   };

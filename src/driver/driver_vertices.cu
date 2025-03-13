@@ -64,39 +64,42 @@ namespace exaDEM
   using namespace onika::parallel;
   class DriverVertices : public OperatorNode
   {
-    template<typename Operator>
-      struct driver_compute_vertices
+  
+    template<class ParallelExcutionContextFuncT>
+    struct driver_compute_vertices
+    {
+      ParallelExcutionContextFuncT m_parallel_execution_context;
+      inline void operator()(exaDEM::Stl_mesh &mesh) const
       {
-        Operator* op; // I don't know how to do it properly
-        void operator()(exaDEM::Stl_mesh &mesh)
+        const size_t size = mesh.shp.get_number_of_vertices();
+
+        if(mesh.stationary()) 
         {
-          const size_t size = mesh.shp.get_number_of_vertices();
-
-          if(mesh.stationary()) 
-          {
-            return;
-          }
-
-          ParallelForOptions opts;
-          opts.omp_scheduling = OMP_SCHED_STATIC;
-
-          Vec3d stl_center = mesh.center;
-          Quaternion stl_quat = mesh.quat;
-          Vec3d* ptr_stl_vertices = onika::cuda::vector_data(mesh.vertices);
-          Vec3d* ptr_shp_vertices = onika::cuda::vector_data(mesh.shp.m_vertices);
-          WrapperSTLMeshComputeVertices func = {stl_center, stl_quat, ptr_stl_vertices, ptr_shp_vertices};
-          parallel_for(size, func, op->parallel_execution_context(), opts);
+          return;
         }
-        /**
-          Add another driver type here 
-         */
 
-        void operator()(auto &&a) 
-        {
-          //lout << "WARNING: driver_compute_vertices is not defined for this driver. " << std::endl;
-          //return 0;
-        }
-      };
+        ParallelForOptions opts;
+        opts.omp_scheduling = OMP_SCHED_STATIC;
+
+        Vec3d stl_center = mesh.center;
+        Quaternion stl_quat = mesh.quat;
+        Vec3d* ptr_stl_vertices = onika::cuda::vector_data(mesh.vertices);
+        Vec3d* ptr_shp_vertices = onika::cuda::vector_data(mesh.shp.m_vertices);
+        WrapperSTLMeshComputeVertices func = {stl_center, stl_quat, ptr_stl_vertices, ptr_shp_vertices};
+        parallel_for(size, func, m_parallel_execution_context(), opts);
+      }
+      /**
+        Add another driver type here 
+       */
+
+      template<class OtherDriverType>
+      inline void operator()(const OtherDriverType &) const
+      {
+        static_assert( get_type<OtherDriverType>() != DRIVER_TYPE::UNDEFINED );
+        //lout << "WARNING: driver_compute_vertices is not defined for this driver. " << std::endl;
+        //return 0;
+      }
+    };
 
     // -----------------------------------------------
     // -----------------------------------------------
@@ -122,11 +125,11 @@ namespace exaDEM
       Drivers &drvs = *drivers;
       size_t size = drvs.get_size();
       set_gpu_enabled(!(*force_host));
+      auto pec_func = [this]() { return this->parallel_execution_context(); } ;
       for (size_t i = 0; i <size; i++)
       {
-        driver_compute_vertices<DriverVertices> func = {this}; // I don't know how to do it properly
-        auto & drv = drvs.data(i);
-        std::visit(func, drv);
+        driver_compute_vertices<decltype(pec_func)> func = {pec_func}; // now, you do know how to make it
+        drivers->apply( i , func );
       }
       // 
     }

@@ -31,27 +31,27 @@ namespace exaDEM
   {
     const double dt;
     const double mass;
-    void operator()(Ball& arg)
+    
+    template<class T>
+    inline void operator()(T& arg) const
     {
-      arg.weigth = mass;
-      arg.f_ra(dt);
+      static_assert( get_type<T>() != DRIVER_TYPE::UNDEFINED );
+      if constexpr ( std::is_same_v< std::remove_cv_t<T> , Ball > )
+      {
+        arg.weigth = mass;
+        arg.f_ra(dt);
+      }
+      if constexpr ( std::is_same_v< std::remove_cv_t<T> , Surface > )
+      {
+        arg.weigth = mass;
+      }
       arg.force_to_accel();
     }
-    void operator()(Surface& arg)
-    {
-      arg.weigth = mass;
-      arg.force_to_accel();
-    }
-    void operator()(Stl_mesh& arg)
-    {
-      arg.force_to_accel();
-    }
-    void operator()(auto&& arg) { arg.force_to_accel(); }
   };
 
   struct tmp_reduce
   {
-    std::tuple<bool, Vec3d> operator()(Ball& arg)
+    inline std::tuple<bool, Vec3d> operator()(Ball& arg) const
     {
       if( arg.is_compressive() || arg.is_force_motion() )
       {
@@ -62,7 +62,8 @@ namespace exaDEM
         return {false, {0,0,0}};
       }
     }
-    std::tuple<bool, Vec3d> operator()(Surface& arg)
+    
+    inline std::tuple<bool, Vec3d> operator()(Surface& arg) const
     {
       if( arg.is_compressive() || arg.is_force_motion() )
       {
@@ -73,7 +74,16 @@ namespace exaDEM
         return {false, {0,0,0}};
       }
     }
-    std::tuple<bool, Vec3d> operator()(auto && arg) { return {false, {0,0,0}};}
+    
+    inline std::tuple<bool, Vec3d> operator()(Cylinder & arg) const
+    {
+      return {false, {0,0,0}};
+    }
+
+    inline std::tuple<bool, Vec3d> operator()(Stl_mesh & arg) const
+    {
+      return {false, {0,0,0}};
+    }
   };
 
 
@@ -100,8 +110,7 @@ namespace exaDEM
       tmp_reduce reduce;
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        auto &driver = drivers->data(id);
-        auto [update , forces] = std::visit(reduce, driver);
+        auto [update , forces] = drivers->apply( id , reduce );
         if( update )
         {
           ids.push_back(id);
@@ -118,16 +127,15 @@ namespace exaDEM
         //for(size_t i = 0 ; i < pack.size() ; i++)
         for(size_t i = 0 ; i < ids.size() ; i++)
         {
-          Vec3d forces = Vec3d{unpack[i*3], unpack[i*3+1], unpack[i*3+2]};
+          const Vec3d forces = Vec3d{unpack[i*3], unpack[i*3+1], unpack[i*3+2]};
           int id = ids[i];
-          std::visit([&forces](auto&& args) {args.forces = forces;}, drivers->data(id));
+          drivers->apply( id , [forces](auto& args) {args.forces = forces;} );
         }
       }
       force_to_accel func = {*dt, *system_mass};
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        auto &driver = drivers->data(id);
-        std::visit(func, driver);
+        drivers->apply( id , func );
       }
     }
   };

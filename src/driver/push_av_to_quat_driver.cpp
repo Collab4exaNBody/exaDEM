@@ -29,11 +29,15 @@ namespace exaDEM
 
   struct func_push_av_to_quat
   {
-    double t;
-    template <typename T> inline void operator()(T &&arg)
-    { /* do nothing */
+    const double t;
+    template <typename T>
+    inline void operator()(T& drv) const
+    {
+       if constexpr ( std::is_same_v< std::remove_cv_t<T> , exaDEM::Stl_mesh > )
+       {
+         drv.push_av_to_quat(t);
+       }
     }
-    inline void operator()(exaDEM::Stl_mesh &arg) { arg.push_av_to_quat(t); }
   };
 
   class PushAngularVelocityToQuaternionDriver : public OperatorNode
@@ -50,8 +54,7 @@ namespace exaDEM
       func_push_av_to_quat func = {t};
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        auto &driver = drivers->data(id);
-        std::visit(func, driver);
+        drivers->apply( id , func );
       }
     }
   };
