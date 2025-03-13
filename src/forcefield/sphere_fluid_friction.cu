@@ -28,7 +28,7 @@ under the License.
 #include <onika/soatl/field_pointer_tuple.h>
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/grid_cell_particles/particle_region.h>
-#include <exanb/grid_cell_particles/particle_cell_projection.h>
+#include <exanb/analytics/particle_cell_projection.h>
 #include <exanb/compute/fluid_friction.h>
 
 namespace exaDEM
