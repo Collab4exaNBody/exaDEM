@@ -237,23 +237,14 @@ namespace exaDEM
    * in parallel using the specified execution context. Depending on the `dataPacker` flag, it either
    * applies a null data packer or uses a data packer to process interaction data.
    */
-  template <typename Kernel, typename T, typename... Args> static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext *exec_ctx, int type, Classifier<T> &ic, Kernel &kernel, bool dataPacker, Args &&...args)
+  template <typename Kernel, typename T, typename... Args> static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext *exec_ctx, int type, Classifier<T> &ic, Kernel &kernel, Args &&...args)
   {
     ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_STATIC;
     auto [data, size] = ic.get_info(type);
     InteractionWrapper<T> interactions(data);
-    if (!dataPacker)
-    {
-      AnalysisDataPackerNull nop;
-      WrapperContactLawForAll func(interactions, kernel, nop, args...);
-      return parallel_for(size, func, exec_ctx, opts);
-    }
-    else
-    {
-      AnalysisDataPacker packer(ic, type);
-      WrapperContactLawForAll func(interactions, kernel, packer, args...);
-      return parallel_for(size, func, exec_ctx, opts);
-    }
+    AnalysisDataPacker packer(ic, type);
+    WrapperContactLawForAll func(interactions, kernel, packer, args...);
+    return parallel_for(size, func, exec_ctx, opts);
   }
 } // namespace exaDEM

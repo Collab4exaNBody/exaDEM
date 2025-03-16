@@ -23,6 +23,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
+#include <exanb/core/domain.h>
 
 #include <memory>
 
@@ -50,7 +51,6 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class ComputeContactClassifierPolyhedronGPU : public OperatorNode
   {
-    //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(ContactParams, config, INPUT, REQUIRED);        // can be re-used for to dump contact network
     ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL); // can be re-used for to dump contact network
@@ -88,7 +88,6 @@ namespace exaDEM
       }
 
       /** Analysis */
-      const bool store_interactions = true;
       const long frequency_interaction = *analysis_interaction_dump_frequency;
       bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
 
@@ -121,8 +120,8 @@ namespace exaDEM
         std::abort();
       }
 
-#     define __params__ store_interactions, cells, hkp, shps, time
-#     define __params_driver__ store_interactions, cells, drvs, hkp_drvs, shps, time
+#     define __params__ cells, hkp, shps, time
+#     define __params_driver__ cells, drvs, hkp_drvs, shps, time
 
       constexpr int poly_type_start = 0;
       constexpr int poly_type_end = 3;
