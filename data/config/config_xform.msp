@@ -1,0 +1,51 @@
+xform_function: xform_time_interpolate_byparts
+
+compute_loop_prolog:
+  - xform_function
+  - nbh_dist
+
+init_prolog:
+  - deformation_xform:
+      defbox: { extension: [ 1.0 , 1.0 , 1.0 ] }
+
+compute_velocity_bias:
+  rebind: {out: velbias}
+  body:
+    - avg_v_m
+
+shift_with_velocity_bias:
+  rebind: {value: velbias}
+  body:
+    - shift_v
+
+trigger_remove_velocity_bias:
+  rebind: { freq: remove_velocity_bias_frequency , result: trigger_remove_velocity_bias }
+  body: 
+    - nth_timestep: {first: false}
+
+velocity_bias:
+  - trigger_remove_velocity_bias
+  - remove_velocity_bias
+ 
+remove_velocity_bias:
+  condition: trigger_remove_velocity_bias
+  body:
+    - compute_velocity_bias
+    - shift_with_velocity_bias
+
+compute_loop:
+  loop: true
+  name: loop
+  condition: compute_loop_continue
+  body:
+    - start_iteration
+    - compute_loop_prolog
+    - numerical_scheme
+    - end_iteration
+    - compute_loop_epilog
+    - next_time_step
+    - compute_loop_stop
+    - velocity_bias
+
+global:
+  remove_velocity_bias_frequency: 300
