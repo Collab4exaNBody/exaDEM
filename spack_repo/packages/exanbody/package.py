@@ -9,10 +9,10 @@ class Exanbody(CMakePackage):
 
 
     version("main",  git='https://github.com/Collab4exaNBody/exaNBody.git', branch='main', preferred=True)
-    version("exadem-exanbody-2.0",  git='https://github.com/Collab4exaNBody/exaNBody.git', tag='exadem-exanbody-2.0')
+    version("v2.0.0",  git='https://github.com/Collab4exaNBody/exaNBody.git', tag='v2.0.0')
 
     depends_on("onika@main", when="@main")
-    depends_on("onika@exadem-exanbody-2.0", when="@exadem-exanbody-2.0")
+    depends_on("onika@main", when="@v2.0.0")
     depends_on("onika+cuda", when="+cuda")
     depends_on("cmake")
     variant("cuda", default=False, description="Support for GPU")
