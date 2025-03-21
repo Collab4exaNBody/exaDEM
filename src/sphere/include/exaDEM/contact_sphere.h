@@ -73,8 +73,10 @@ namespace exaDEM
      *
      * @tparam sym Boolean indicating whether the calculations should be symmetric.
      */
-    template <bool sym> struct contact_law
+    template <bool sym, bool defxform> 
+    struct contact_law
     {
+       const Mat3d xform;
 
       /**
        * @brief Retrieves the position vector of a particle.
@@ -88,7 +90,8 @@ namespace exaDEM
        */
       template <typename Cell> ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_r(Cell &cell, const int p_id) const
       {
-        const Vec3d res = {cell[field::rx][p_id], cell[field::ry][p_id], cell[field::rz][p_id]};
+        Vec3d res = {cell[field::rx][p_id], cell[field::ry][p_id], cell[field::rz][p_id]};
+        if constexpr(defxform) res = xform * res;
         return res;
       };
 
@@ -201,9 +204,9 @@ namespace exaDEM
      *
      * @tparam TMPLD Template parameter for specifying the type of driver.
      */
-    template <typename TMPLD> struct contact_law_driver
+    template <typename TMPLD, bool defxform> struct contact_law_driver
     {
-      //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
+       const Mat3d xform;
       /**
        * @brief Handles particle interactions using contact law parameters and various drivers.
        *
@@ -223,7 +226,8 @@ namespace exaDEM
         auto &cell = cells[item.cell_i];
         const size_t p = item.p_i;
         // === positions
-        const Vec3d r = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
+        Vec3d r = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
+        if constexpr (defxform) r = xform * r;
         const double rad = cell[field::radius][p];
         // === vertex array
         constexpr Vec3d null = {0, 0, 0};
@@ -271,10 +275,10 @@ namespace exaDEM
      * This structure provides methods for applying contact law interactions between
      * particles and STL drivers (such as cylinders, spheres, surfaces, or mesh faces).
      */
-    template<int interaction_type>
+    template<int interaction_type, bool defxform>
     struct contact_law_stl
     {
-      //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
+      const Mat3d xform;
       detect<interaction_type> detection; ///< STL mesh detector function object.
       /**
        * @brief Applies contact law interactions with STL drivers.
@@ -290,7 +294,6 @@ namespace exaDEM
       template <typename TMPC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPC *cells, const DriversGPUAccessor& drvs, const ContactParams &hkp, const double time) const
       {
         const int driver_idx = item.id_j; //
-        // auto& driver = std::get<Stl_mesh>(drvs[driver_idx]) ; // issue on gpu
         Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(driver_idx); // (Stl_mesh &)(drvs[driver_idx]);
         auto &cell = cells[item.cell_i];
 
@@ -298,7 +301,8 @@ namespace exaDEM
         const size_t sub_j = item.sub_j;
 
         // === particle i
-        const Vec3d r_i = {cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i]};
+        Vec3d r_i = {cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i]};
+        if constexpr(defxform) r_i = xform * r_i; /** Def box */
         const Vec3d &vrot_i = cell[field::vrot][p_i];
         const double radius_i = cell[field::radius][p_i];
         // === driver j

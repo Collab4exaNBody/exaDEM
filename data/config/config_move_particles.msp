@@ -69,7 +69,7 @@ ghost_full_update:
 
 ################### parallel particle migration ############################
 
-## These operator should be define by your particle mode (spheres or polyhedra)
+## These operator should be defined by your particle mode (spheres or polyhedra)
 migrate_particles: nop
 add_generated_particles: nop
 

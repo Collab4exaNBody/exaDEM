@@ -23,6 +23,8 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/core/grid.h>
+#include <exanb/core/domain.h>
+
 #include <memory>
 #include <random>
 #include <exaDEM/shapes.hpp>
@@ -38,6 +40,7 @@ namespace exaDEM
     using ComputeFields = FieldSet<field::_type, field::_rx, field::_ry, field::_rz, field::_homothety, field::_orient, field::_vertices>;
     static constexpr ComputeFields compute_field_set{};
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
     ADD_SLOT(Traversal, traversal_all, INPUT_OUTPUT, DocString{"list of non empty cells [REAL] within the current grid"});
 
@@ -53,7 +56,8 @@ namespace exaDEM
     inline void execute() override final
     {
       const shape *shps = shapes_collection->data();
-      PolyhedraComputeVerticesFunctor func{shps};
+      bool is_def_box = !domain->xform_is_identity();
+
       
       size_t* cell_ptr = nullptr;
       size_t cell_size = size_t(-1);
@@ -63,7 +67,16 @@ namespace exaDEM
       	std::tie(cell_ptr, cell_size) = traversal_all->info();
       }
       
-      compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+      if( is_def_box )
+      {
+        PolyhedraComputeVerticesFunctor<true> func{shps, domain->xform()};
+        compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+      }
+      else
+      {
+        PolyhedraComputeVerticesFunctor<false> func{shps, domain->xform() };
+        compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+      }
     }
   };
 

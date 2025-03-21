@@ -14,6 +14,7 @@ class Onika(CMakePackage):
     depends_on("cmake")
     variant("cuda", default=False, description="Support for GPU")
     depends_on("yaml-cpp")
+    depends_on("openmpi")
     depends_on("cuda", when="+cuda")
     default_build_system = "cmake"
     build_system("cmake", default="cmake")

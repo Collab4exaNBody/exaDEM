@@ -23,6 +23,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
+#include <exanb/core/domain.h>
 
 #include <memory>
 
@@ -50,8 +51,8 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class ComputeContactClassifierPolyhedronGPU : public OperatorNode
   {
-    //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(ContactParams, config, INPUT, REQUIRED);        // can be re-used for to dump contact network
     ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL); // can be re-used for to dump contact network
     ADD_SLOT(double, dt, INPUT, REQUIRED);
@@ -69,14 +70,16 @@ namespace exaDEM
     inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
 
 
-    template<int start, int end, template<int> typename FuncT, typename T, typename... Args>
-      void loop_contact_force(Classifier<T>& classifier, Args &&... args)
+    template<int start, int end, bool def_xform, template<int, bool> typename FuncT, typename T, typename... Args>
+      void loop_contact_force(Classifier<T>& classifier, const Mat3d& xform, Args &&... args)
       {
-        FuncT<start> contact_law;
+        //FuncT<start, def_xform> contact_law = {xform};
+        FuncT<start, def_xform> contact_law;
+        if constexpr (def_xform) contact_law.xform = xform;
         run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
         if constexpr( start + 1 <= end )
         {
-          loop_contact_force<start+1, end, FuncT>(classifier, std::forward<Args>(args)...);
+          loop_contact_force<start+1, end, def_xform, FuncT>(classifier, xform, std::forward<Args>(args)...);
         }
       }
 
@@ -88,12 +91,10 @@ namespace exaDEM
       }
 
       /** Analysis */
-      const bool store_interactions = true;
       const long frequency_interaction = *analysis_interaction_dump_frequency;
       bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
 
       /** Get driver and particles data */
-      //driver_t *drvs = drivers->data();
       const DriversGPUAccessor drvs = *drivers;
       const auto cells = grid->cells();
 
@@ -101,6 +102,11 @@ namespace exaDEM
       const ContactParams hkp = *config;
       ContactParams hkp_drvs{};
       const shape *const shps = shapes_collection->data();
+
+      /** deform matrice */
+      const Mat3d& xform = domain->xform();
+      bool is_def_xform = !domain->xform_is_identity();
+
 
       if (drivers->get_size() > 0 && config_driver.has_value())
       {
@@ -121,16 +127,23 @@ namespace exaDEM
         std::abort();
       }
 
-#     define __params__ store_interactions, cells, hkp, shps, time
-#     define __params_driver__ store_interactions, cells, drvs, hkp_drvs, shps, time
+#     define __params__ cells, hkp, shps, time
+#     define __params_driver__ cells, drvs, hkp_drvs, shps, time
 
       constexpr int poly_type_start = 0;
       constexpr int poly_type_end = 3;
       constexpr int stl_type_start = 7;
       constexpr int stl_type_end = 12;
 
-      loop_contact_force<poly_type_start, poly_type_end,     contact_law>(classifier,        __params__);
-      loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, __params_driver__);
+      if(is_def_xform)
+      {
+        loop_contact_force<poly_type_start, poly_type_end, true, contact_law>(classifier, xform, __params__);
+      }
+      else
+      {
+        loop_contact_force<poly_type_start, poly_type_end, false, contact_law>(classifier, xform, __params__);
+      }
+      loop_contact_force <stl_type_start,  stl_type_end, false, contact_law_stl>(classifier, xform, __params_driver__);
       run_contact_law(parallel_execution_context(), 4, classifier, cyli, __params_driver__);
       run_contact_law(parallel_execution_context(), 5, classifier, surf, __params_driver__);
       run_contact_law(parallel_execution_context(), 6, classifier, ball, __params_driver__);

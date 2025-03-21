@@ -23,6 +23,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
+#include <exanb/core/domain.h>
 
 #include <memory>
 
@@ -51,10 +52,10 @@ namespace exaDEM
   {
     // attributes processed during computation
     using ComputeFields = FieldSet<field::_vrot, field::_arot>;
-    //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(ContactParams, config, INPUT, REQUIRED, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
     ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL, DocString{"Contact parameters for drivers, optional"}); // can be re-used for to dump contact network
     ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"Time step value"});
@@ -63,51 +64,34 @@ namespace exaDEM
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
     // analysis
     ADD_SLOT(long, timestep, INPUT, REQUIRED);
-    ADD_SLOT(bool, save_interactions, INPUT, false, DocString{"Store interactions into the classifier"});
     ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
-    ADD_SLOT(long, analysis_dump_stress_tensor_frequency, INPUT, REQUIRED, DocString{"Compute avg Stress Tensor."});
-    ADD_SLOT(long, simulation_log_frequency, INPUT, REQUIRED, DocString{"Log frequency."});
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
     ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
 
   public:
     inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
 
-    template<int start, int end, template<int> typename FuncT, typename T, typename... Args>
+    template<int start, int end, template<int, bool> typename FuncT, bool def_box, typename T, typename... Args>
     void loop_contact_force(Classifier<T>& classifier, Args &&... args)
     {
-      FuncT<start> contact_law;
+      FuncT<start, def_box> contact_law;
       run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
       if constexpr( start + 1 <= end )
       {
-        loop_contact_force<start+1, end, FuncT>(classifier, std::forward<Args>(args)...);
+        loop_contact_force<start+1, end, FuncT, def_box>(classifier, std::forward<Args>(args)...);
       }
     }
 
-    inline void execute() override final
+    template<bool is_sym, bool def_box>
+    void core()
     {
-      if (grid->number_of_cells() == 0)
-      {
-        return;
-      }
-
-      /** Analysis */
-      const long frequency_interaction = *analysis_interaction_dump_frequency;
-      bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
-
-      const long frequency_stress_tensor = *analysis_dump_stress_tensor_frequency;
-      bool compute_stress_tensor = (frequency_stress_tensor > 0 && (*timestep) % frequency_stress_tensor == 0);
-
-      const long log_frequency = *simulation_log_frequency;
-      bool need_interactions_for_log_frequency = (*timestep) % log_frequency;
-
-      bool store_interactions = write_interactions || compute_stress_tensor || need_interactions_for_log_frequency;
-
-      /** Get Driver */
       const DriversGPUAccessor drvs = *drivers;
       auto *cells = grid->cells();
       const ContactParams hkp = *config;
       ContactParams hkp_drvs{};
+
+      /** Def Box */
+      const Mat3d& xform = domain->xform();
 
       if (drivers->get_size() > 0 && config_driver.has_value())
       {
@@ -117,36 +101,51 @@ namespace exaDEM
       const double time = *dt;
       auto &classifier = *ic;
 
-      contact_law_driver<Cylinder> cyli;
-      contact_law_driver<Surface> surf;
-      contact_law_driver<Ball> ball;
+      contact_law<is_sym, def_box> sph = {xform};
+      contact_law_driver<Cylinder, def_box> cyl = {xform};
+      contact_law_driver<Surface, def_box> surf = {xform};
+      contact_law_driver<Ball, def_box> ball = {xform};
 
-      if (*symetric)
-      {
-        contact_law<true> sph;
-        run_contact_law(parallel_execution_context(), 0, classifier, sph, store_interactions, cells, hkp, time);
-      }
-      else
-      {
-        contact_law<false> sph;
-        run_contact_law(parallel_execution_context(), 0, classifier, sph, store_interactions, cells, hkp, time);
-      }
-      run_contact_law(parallel_execution_context(), 4, classifier, cyli, store_interactions, cells, drvs, hkp_drvs, time);
-      run_contact_law(parallel_execution_context(), 5, classifier, surf, store_interactions, cells, drvs, hkp_drvs, time);
-      run_contact_law(parallel_execution_context(), 6, classifier, ball, store_interactions, cells, drvs, hkp_drvs, time);
+      run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
+      run_contact_law(parallel_execution_context(), 4, classifier, cyl, cells, drvs, hkp_drvs, time);
+      run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs, hkp_drvs, time);
+      run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);
 
       constexpr int stl_type_start = 7;
       constexpr int stl_type_end = 9;
-      loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, store_interactions, cells, drvs, hkp_drvs, time);
+      loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl, def_box>(classifier, cells, drvs, hkp_drvs, time);
+    }
 
-      // printf("EXECUTE\n");
-      // getchar();
+    void save_results()
+    {
+      auto &classifier = *ic;
+      auto stream = itools::create_buffer(*grid, classifier);
+      std::string ts = std::to_string(*timestep);
+      itools::write_file(stream, *dir_name, (*interaction_basename) + ts);
+    }
+
+    inline void execute() override final
+    {
+      if (grid->number_of_cells() == 0)
+      {
+        return;
+      }
+
+      /** Def Box */
+      bool is_def_box = !domain->xform_is_identity();
+
+      /** Analysis */
+      const long frequency_interaction = *analysis_interaction_dump_frequency;
+      bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
+
+      if(*symetric == false && is_def_box == false) {core<false, false>();}      
+      if(*symetric == true  && is_def_box == false) {core<true , false>();}      
+      if(*symetric == false && is_def_box ==  true) {core<false,  true>();}      
+      if(*symetric == true  && is_def_box ==  true) {core<true ,  true>();}      
 
       if (write_interactions)
       {
-        auto stream = itools::create_buffer(*grid, classifier);
-        std::string ts = std::to_string(*timestep);
-        itools::write_file(stream, *dir_name, (*interaction_basename) + ts);
+        save_results();
       }
     }
   };

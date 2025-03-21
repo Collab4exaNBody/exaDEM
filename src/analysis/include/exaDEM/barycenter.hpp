@@ -71,3 +71,13 @@ namespace exaDEM
     }
   };
 }
+
+namespace exanb
+{
+  template <> struct ReduceCellParticlesTraits<exaDEM::ReduceParticleBarycenterTypeFunctor>
+  {
+    static inline constexpr bool RequiresBlockSynchronousCall = false;
+    static inline constexpr bool RequiresCellParticleIndex = false;
+    static inline constexpr bool CudaCompatible = true;
+  };
+}

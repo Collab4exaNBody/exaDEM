@@ -1,0 +1,54 @@
+includes:
+  - xform_shear.cfg
+  - config_polyhedra.msp
+  - config_xform.msp
+
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraDefBoxDir"
+
+grid_flavor: grid_flavor_dem
+
+input_data:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: octahedron.shp
+  - lattice:
+      structure: SC
+      types: [ Octahedron ]
+      size: [ 0.9 , 0.9 , 0.9 ]
+  - radius_from_shape
+  - density_from_shape
+  - set_quaternion:
+     random: true
+  - set_rand_velocity:
+     var: 0.0001
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.02
+  - set_rand_vrot_arot
+  - inertia_from_shape
+
+compute_force:
+  - contact_polyhedron:
+     symetric: true
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
+
+domain:
+  cell_size: 1.0 m
+  periodic: [true, true, true]
+  grid_dims: [18, 9, 18]
+  bounds: [[-9, -4.5, -9], [9, 4.5, 9]]
+  expandable: false
+
+
+global:
+  simulation_dump_frequency: -1
+  simulation_paraview_frequency: 10000 
+  simulation_end_iteration: 800000
+  simulation_log_frequency: 1000
+  remove_velocity_bias_frequency: 1000
+  dt: 0.00001 s 
+  rcut_inc: 0.1 m
+#  enable_contact_network: true
