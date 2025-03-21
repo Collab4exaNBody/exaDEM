@@ -22,8 +22,8 @@ class Exadem(CMakePackage):
     depends_on("rsampi", when="+rsampi")
 
 # v1.1.0
-    depends_on("exanbody@exadem-exanbody-2.0", when="@1.1.0")
-    depends_on("onika@exadem-exanbody-2.0", when="@1.1.0")
+    depends_on("exanbody@v2.0.0", when="@1.1.0")
+    depends_on("onika@main", when="@1.1.0")
     depends_on("exanbody+cuda", when="+cuda")
     depends_on("onika+cuda", when="+cuda")
 
