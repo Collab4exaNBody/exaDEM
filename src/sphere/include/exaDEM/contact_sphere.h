@@ -73,7 +73,7 @@ namespace exaDEM
      *
      * @tparam sym Boolean indicating whether the calculations should be symmetric.
      */
-    template <bool sym, bool def_box> 
+    template <bool sym, bool defxform> 
     struct contact_law
     {
        const Mat3d xform;
@@ -91,7 +91,7 @@ namespace exaDEM
       template <typename Cell> ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_r(Cell &cell, const int p_id) const
       {
         Vec3d res = {cell[field::rx][p_id], cell[field::ry][p_id], cell[field::rz][p_id]};
-        if constexpr(def_box) res = xform * res;
+        if constexpr(defxform) res = xform * res;
         return res;
       };
 
@@ -204,7 +204,7 @@ namespace exaDEM
      *
      * @tparam TMPLD Template parameter for specifying the type of driver.
      */
-    template <typename TMPLD, bool def_box> struct contact_law_driver
+    template <typename TMPLD, bool defxform> struct contact_law_driver
     {
        const Mat3d xform;
       /**
@@ -227,7 +227,7 @@ namespace exaDEM
         const size_t p = item.p_i;
         // === positions
         Vec3d r = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
-        if constexpr (def_box) r = xform * r;
+        if constexpr (defxform) r = xform * r;
         const double rad = cell[field::radius][p];
         // === vertex array
         constexpr Vec3d null = {0, 0, 0};
@@ -275,7 +275,7 @@ namespace exaDEM
      * This structure provides methods for applying contact law interactions between
      * particles and STL drivers (such as cylinders, spheres, surfaces, or mesh faces).
      */
-    template<int interaction_type, bool def_box>
+    template<int interaction_type, bool defxform>
     struct contact_law_stl
     {
       const Mat3d xform;
@@ -302,7 +302,7 @@ namespace exaDEM
 
         // === particle i
         Vec3d r_i = {cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i]};
-        if constexpr(def_box) r_i = xform * r_i; /** Def box */
+        if constexpr(defxform) r_i = xform * r_i; /** Def box */
         const Vec3d &vrot_i = cell[field::vrot][p_i];
         const double radius_i = cell[field::radius][p_i];
         // === driver j

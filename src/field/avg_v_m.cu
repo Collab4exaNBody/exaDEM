@@ -123,7 +123,7 @@ namespace exaDEM
       Vec3d v_m = {global[1] / global[0], global[2] / global[0], global[3] / global[0]};
 
       // Set the result into the output slot
-      *out = -v_m;
+      *out = -v_m; // 
     }
   };
 
