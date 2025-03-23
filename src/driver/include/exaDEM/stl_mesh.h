@@ -230,7 +230,7 @@ namespace exaDEM
 			}
 		}
 
-		inline void push_f_v_r(const double dt)
+		inline void push_f_v_r(const double time, const double dt)
 		{
 			if( !is_stationary() )
 			{
