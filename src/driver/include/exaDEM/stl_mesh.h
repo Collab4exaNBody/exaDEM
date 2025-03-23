@@ -85,7 +85,7 @@ namespace YAML
 
 namespace exaDEM
 {
-  const std::vector<MotionType> stl_valid_motion_types = {STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION};
+  const std::vector<MotionType> stl_valid_motion_types = {STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION, TABULATED};
 
   using namespace exanb;
   /**
@@ -232,7 +232,12 @@ namespace exaDEM
 
 		inline void push_f_v_r(const double time, const double dt)
 		{
-			if( !is_stationary() )
+      if( is_tabulated() ) 
+      {
+        center = tab_to_position(time);
+        vel = tab_to_velocity(time);
+      }
+			else if( !is_stationary() )
 			{
 				if( motion_type == LINEAR_MOTION )
 				{
@@ -331,20 +336,20 @@ namespace exaDEM
 } // namespace exaDEM
 
 
-namespace onika { namespace memory
-{
-
-  template<>
-  struct MemoryUsage< exaDEM::Stl_mesh >
+namespace onika 
+{ 
+  namespace memory
   {
-    static inline size_t memory_bytes(const exaDEM::Stl_mesh& obj)
+    template<> struct MemoryUsage< exaDEM::Stl_mesh >
     {
-      const exaDEM::Stl_params * cparms = &obj;
-      const exaDEM::Driver_params * dparms = &obj;
-      return onika::memory::memory_bytes( *cparms , *dparms );
-    }
-  };
-
-} }
+      static inline size_t memory_bytes(const exaDEM::Stl_mesh& obj)
+      {
+        const exaDEM::Stl_params * cparms = &obj;
+        const exaDEM::Driver_params * dparms = &obj;
+        return onika::memory::memory_bytes( *cparms , *dparms );
+      }
+    };
+  } 
+}
 
 
