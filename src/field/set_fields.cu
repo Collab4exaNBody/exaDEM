@@ -84,22 +84,22 @@ namespace exaDEM
     static constexpr ComputeRegionFields compute_region_fields{};
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     // vector version
-    ADD_SLOT(std::vector<double>, density, INPUT, OPTIONAL, DocString{""});
-    ADD_SLOT(std::vector<double>, radius, INPUT, OPTIONAL, DocString{""});
-    ADD_SLOT(std::vector<Vec3d>, velocity, INPUT, OPTIONAL, DocString{""});
-    ADD_SLOT(std::vector<double>, sigma_velocity, INPUT, OPTIONAL, DocString{"Standard deviation"});
-    ADD_SLOT(std::vector<Vec3d>, angular_velocity, INPUT, OPTIONAL, DocString{""});
-    ADD_SLOT(std::vector<double>, sigma_angular_velocity, INPUT, OPTIONAL, DocString{"Standard deviation"});
-    ADD_SLOT(std::vector<Quaternion>, quaternion, INPUT, OPTIONAL, DocString{""});
-    ADD_SLOT(std::vector<bool>, random_quaternion, INPUT, OPTIONAL, DocString{""});
+    ADD_SLOT(std::vector<double>, density, INPUT, OPTIONAL, DocString{"List of density values. If not defined, density is 1"});
+    ADD_SLOT(std::vector<double>, radius, INPUT, OPTIONAL, DocString{"List of radius values. If not defined, radius is 0.5 for spheres, do not define it for polyhedra."});
+    ADD_SLOT(std::vector<Vec3d>, velocity, INPUT, OPTIONAL, DocString{"List of velocity values. If not defined, velocity is [0,0,0]."});
+    ADD_SLOT(std::vector<double>, sigma_velocity, INPUT, OPTIONAL, DocString{"Standard deviation (sigma). If not defined, the normal distribution is not applied."});
+    ADD_SLOT(std::vector<Vec3d>, angular_velocity, INPUT, OPTIONAL, DocString{"List of angular velocity values. If not defined, angular velocity is [0,0,0]."});
+    ADD_SLOT(std::vector<double>, sigma_angular_velocity, INPUT, OPTIONAL, DocString{"Standard deviation (sigma). If not defined, the normal distribution is not applied."});
+    ADD_SLOT(std::vector<Quaternion>, quaternion, INPUT, OPTIONAL, DocString{"List of orientations. If not defined, quaternion is [w = 1,0,0,0]"});
+    ADD_SLOT(std::vector<bool>, random_quaternion, INPUT, OPTIONAL, DocString{"Choice if the orientation is random or not. If not defined, random is false."});
     ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED );
-    ADD_SLOT(std::vector<std::string>, type, INPUT, REQUIRED);
+    ADD_SLOT(std::vector<std::string>, type, INPUT, REQUIRED, DocString{"Particle type names"});
 
     // outputs
     ADD_SLOT(double, rcut_max, INPUT_OUTPUT, DocString{"rcut_max"});
 
     // others
-    ADD_SLOT(bool, polyhedra, INPUT, REQUIRED, DocString{""});
+    ADD_SLOT(bool, polyhedra, INPUT, REQUIRED, DocString{"Define if the kind of particles is polyhedron or sphere."});
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
     ADD_SLOT(shapes, shapes_collection, INPUT, OPTIONAL, DocString{"Collection of shapes"});
