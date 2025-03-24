@@ -30,8 +30,7 @@ namespace exaDEM
 
   class RegisterSurface : public OperatorNode
   {
-
-    static constexpr Driver_params default_params = Driver_params();
+    const Driver_params default_params = Driver_params();
 
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(size_t, id, INPUT, REQUIRED, DocString{"Driver index"});

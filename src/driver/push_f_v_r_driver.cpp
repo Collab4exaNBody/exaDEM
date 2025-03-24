@@ -28,7 +28,8 @@ namespace exaDEM
   class PushAccVelocityToPositionDriver : public OperatorNode
   {
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(double, dt, INPUT, DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT(double, physical_time, INPUT, REQUIRED);
+    ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
 
   public:
     inline std::string documentation() const override final
@@ -40,10 +41,11 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      const double t = *dt;
+      const double time = *physical_time;
+      const double delta_t = *dt;
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        drivers->apply( id , [t](auto& drv){ drv.push_f_v_r(t); } );
+        drivers->apply( id , [time,delta_t](auto& drv){ drv.push_f_v_r(time, delta_t); } );
       }
     }
   };

@@ -82,7 +82,7 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  const std::vector<MotionType> ball_valid_motion_types = { STATIONARY, LINEAR_MOTION, COMPRESSIVE_FORCE};
+  const std::vector<MotionType> ball_valid_motion_types = { STATIONARY, LINEAR_MOTION, COMPRESSIVE_FORCE, TABULATED};
 
 
   /**
@@ -188,9 +188,14 @@ namespace exaDEM
      * @brief Update the position of the ball.
      * @param dt The time step.
      */
-    inline void push_f_v_r(const double dt) 
+    inline void push_f_v_r(const double time, const double dt) 
     {
-      if( !is_stationary() )
+      if( is_tabulated() ) 
+      {
+        center = tab_to_position(time);
+        vel = tab_to_velocity(time);
+      }
+      else if( !is_stationary() )
       {
         if( is_compressive() )
         {

@@ -232,7 +232,7 @@ namespace exaDEM
      * @brief Update the position of the wall.
      * @param t The time step.
      */
-    inline void push_f_v_r(const double dt)
+    inline void push_f_v_r(const double time, const double dt)
     {
       if( !is_stationary() )
       {

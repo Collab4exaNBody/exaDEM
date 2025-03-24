@@ -76,14 +76,6 @@ namespace exaDEM
    */
   struct Cylinder : public Cylinder_params, Driver_params
   {
-
-/*
-    Cylinder(Cylinder_params& bp, Driver_params& dp) : Cylinder_params{bp}, Driver_params()
-    {
-      Driver_params::set_params(dp);
-    }
-*/
-
     /**
      * @brief Get the type of the driver (in this case, CYLINDER).
      * @return The type of the driver.
@@ -137,7 +129,7 @@ namespace exaDEM
      */
     ONIKA_HOST_DEVICE_FUNC inline void force_to_accel() { /** not implemented */}
     ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt) { /** not implemented */}
-    ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt) { /** not implemented */ }
+    ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double time, const double dt) { /** not implemented */ }
     ONIKA_HOST_DEVICE_FUNC inline Vec3d get_vel() { return vel; }
 
     /**
