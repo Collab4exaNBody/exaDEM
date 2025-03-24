@@ -188,6 +188,11 @@ namespace exaDEM
           lout << "\033[31m[Warning] The \"positions\" and \"time\" input slot are not the same size.\033[0m" << std::endl;
           return false;
         }
+        if(!is_sorted(tab_time.begin(), tab_time.end()))
+        {
+          lout << "\033[31m[Warning] The \"time\" array used for a TABULATED motion is not sorted.\033[0m" << std::endl;
+          return false;
+        }
       }
       if( is_linear() )
       {
