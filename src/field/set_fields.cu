@@ -149,6 +149,8 @@ namespace exaDEM
       mat.set_q         = quaternion.has_value();
       mat.set_rnd_q     = random_quaternion.has_value();
 
+
+      lout << "======= Particle Fields =========" << std::endl;
       for(auto& type_name : types)
       {
         if( type_map.find(type_name) == type_map.end())
@@ -178,25 +180,24 @@ namespace exaDEM
         if(mat.set_q) { auto& qq = *quaternion; quat = qq[type_id]; }
 
 
-        lout << "Particle Initialization: " << std::endl;
-        lout << "["<<type_name<<"]:" << std::endl;;
-        lout << "- velocity: (" << vx << "," << vy << "," << vz << ") ";
+        lout << "[>>"<<type_name<<"<<]" << std::endl;;
+        lout << "Velocity         = (" << vx << "," << vy << "," << vz << ") ";
         if(mat.set_rnd_v)
         {
           sigma_v = (*sigma_velocity)[type_id];
           lout << ", standart deviation (sigma): " << sigma_v;
         }
         lout << std::endl; 
-        lout << "- angular velocity: " << ang_v;
+        lout << "Angular velocity = " << ang_v;
         if(mat.set_rnd_ang_v)
         {
           sigma_ang_v = (*sigma_angular_velocity)[type_id];
           lout << ", standart deviation (sigma): " << sigma_ang_v;
         }
         lout << std::endl; 
-        lout << "- density: " << d << std::endl;;
-        if( !mat.set_rnd_q ) lout << "- quaternion: [w: " << quat.w << ", v: (" << quat.x << "," << quat.y << "," << quat.z << ")]" ;
-        else lout << "- quaternion: random";
+        lout << "Density          = " << d << std::endl;;
+        if( !mat.set_rnd_q ) lout << "Quaternion       = [w: " << quat.w << ", v: (" << quat.x << "," << quat.y << "," << quat.z << ")]" ;
+        else lout << "Quaternion       = random";
         lout << std::endl; 
 
 
@@ -210,9 +211,9 @@ namespace exaDEM
           if( mat.set_r ) { lout << "[WARNING] The radius slot is ignored when using polyhedra, it is automaticly deducted from the shape file."<< std::endl; }
           r = shp->compute_max_rcut();
           *rcut_max = std::max(*rcut_max, 2 * r); // r * maxrcut
-          lout << "- radius (polyhedron): " << r << std::endl;;
-          lout << "- mass: " << m << std::endl;
-          lout << "- inertia: " << inertia << std::endl;
+          lout << "Radius (poly)    = " << r << std::endl;;
+          lout << "Mass             = " << m << std::endl;
+          lout << "Inertia          = " << inertia << std::endl;
         }
         else // spheres
         {
@@ -228,12 +229,11 @@ namespace exaDEM
           m = V  * d ;
           const double inertia_value = 0.4 * m * r * r;
           inertia = {inertia_value, inertia_value, inertia_value};
-          lout << "- radius: " << r << std::endl;
-          lout << "- mass: " << m << std::endl;
-          lout << "- inertia: " << inertia << std::endl;
+          lout << "Radius           =" << r << std::endl;
+          lout << "Mass             = " << m << std::endl;
+          lout << "Inertia          =" << inertia << std::endl;
         }
 
-        lout << std::endl;
         if (is_region)
         {
           ParticleRegionCSGShallowCopy prcsg = *region;
@@ -296,6 +296,7 @@ namespace exaDEM
           }
         }
       }
+      lout << "=================================" << std::endl;
     }
   };
 
