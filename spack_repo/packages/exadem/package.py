@@ -7,10 +7,10 @@ class Exadem(CMakePackage):
     homepage = "https://github.com/Collab4exaNBody/exaDEM"
     git = "https://github.com/Collab4exaNBody/exaDEM.git"
 
-
     version("main", git='https://github.com/Collab4exaNBody/exaDEM.git',  branch='main') 
-    version("1.0.2", git='https://github.com/Collab4exaNBody/exaDEM.git', branch='v1.0.2', preferred=True )
-    version("1.0.1", commit="a68904c87f3889a36b9fdb64cdd03efc25d06914")
+    version("1.1.0", git='https://github.com/Collab4exaNBody/exaDEM.git', branch='v1.1.0', preferred=True )
+    version("1.0.2", git='https://github.com/Collab4exaNBody/exaDEM.git', tag='v1.0.2')
+    version("1.0.1", git='https://github.com/Collab4exaNBody/exaDEM.git', tag='v1.0.1')
     variant("cuda", default=False, description="Support for GPU")
     variant("rsampi", default=False, description="Support for particles generation using the RSA package")
 
@@ -18,9 +18,14 @@ class Exadem(CMakePackage):
     depends_on("yaml-cpp@0.6.3")
     depends_on("openmpi")
     depends_on("exanbody")
-    depends_on("rsampi", when="+rsampi")
     depends_on("cuda", when="+cuda")
     depends_on("rsampi", when="+rsampi")
+
+# v1.1.0
+    depends_on("exanbody@v2.0.0", when="@1.1.0")
+    depends_on("onika@main", when="@1.1.0")
+    depends_on("exanbody+cuda", when="+cuda")
+    depends_on("onika+cuda", when="+cuda")
 
 
     build_system("cmake", default="cmake")
@@ -29,10 +34,12 @@ class Exadem(CMakePackage):
     def pre_install(self):
         with working_dir(self.build_directory):
             # When building shared libraries these need to be installed first
-            make("UpdatePluginDataBase")
+            if self.spec.version <= Version("1.0.2"):
+              make("UpdatePluginDataBase")
 
     def cmake_args(self):
-        args = [
-          self.define_from_variant("-DXNB_BUILD_CUDA=ON", "cuda"),
-        ]
+        if self.spec.version <= Version("1.0.2"):
+          args = [self.define_from_variant("-DRSA_MPI=ON", "rsampi"), self.define_from_variant("-DXNB_BUILD_CUDA=ON", "cuda"), ]
+        else:
+          args = [self.define_from_variant("-DRSA_MPI=ON", "rsampi"), ]
         return args

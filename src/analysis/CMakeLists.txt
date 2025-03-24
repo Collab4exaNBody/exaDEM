@@ -14,5 +14,5 @@
 # kind, either express or implied.  see the license for the
 # specific language governing permissions and limitations
 # under the license.
-set(exadem_analysis_LINK_LIBRARIES exanbDefBox exanbCompute exanbIO exanbMPI exanbParticleNeighbors exanbGridCellParticles exanbExtraStorage exadem_grid exadem_driver exadem_shape exadem_interaction)
-xstamp_add_plugin(exadem_analysis ${CMAKE_CURRENT_SOURCE_DIR})
+set(exadem_analysis_LINK_LIBRARIES exanbGridCellParticles exadem_grid exadem_driver exadem_shape exadem_interaction)
+onika_add_plugin(exadem_analysis ${CMAKE_CURRENT_SOURCE_DIR})

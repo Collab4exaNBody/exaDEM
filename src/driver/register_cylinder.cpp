@@ -16,9 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exaDEM/driver_base.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/cylinder.h>
@@ -30,7 +30,7 @@ namespace exaDEM
 
   class RegisterCylinder : public OperatorNode
   {
-    static constexpr Driver_params default_params = Driver_params();
+    const Driver_params default_params = Driver_params();
 
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
@@ -55,5 +55,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("register_cylinder", make_simple_operator<RegisterCylinder>); }
+  ONIKA_AUTORUN_INIT(register_cylinder) { OperatorNodeFactory::instance()->register_factory("register_cylinder", make_simple_operator<RegisterCylinder>); }
 } // namespace exaDEM

@@ -16,9 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+ 
 #pragma once
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 #include <exaDEM/driver_base.h>
+#include <onika/physics/units.h>
 
 namespace exaDEM
 {
@@ -45,8 +47,7 @@ namespace YAML
   using exaDEM::Surface_params;
   using exaDEM::MotionType;
   using exanb::lerr;
-  using exanb::Quantity;
-  using exanb::UnityConverterHelper;
+  using onika::physics::Quantity;
 
   template <> struct convert<Surface_params>
   {
@@ -111,7 +112,7 @@ namespace exaDEM
     /**
      * @brief Print information about the surface.
      */
-    void print()
+    inline void print() const
     {
       lout << "Driver Type: Surface" << std::endl;
       lout << "Offset: " << offset << std::endl;
@@ -130,7 +131,7 @@ namespace exaDEM
     /**
      * @brief Write surface data into a stream.
      */
-    void dump_driver(int id, std::stringstream &stream)
+    inline void dump_driver(int id, std::stringstream &stream)
     {
       stream << "  - register_surface:" << std::endl;
       stream << "     id: " << id << std::endl;
@@ -225,13 +226,13 @@ namespace exaDEM
     /**
      * @brief return driver velocity
      */
-    ONIKA_HOST_DEVICE_FUNC inline Vec3d get_vel() { return normal * vel; }
+    ONIKA_HOST_DEVICE_FUNC inline Vec3d get_vel() const { return normal * vel; }
 
     /**
      * @brief Update the position of the wall.
      * @param t The time step.
      */
-    inline void push_f_v_r(const double dt)
+    inline void push_f_v_r(const double time, const double dt)
     {
       if( !is_stationary() )
       {
@@ -288,3 +289,22 @@ namespace exaDEM
     }
   };
 } // namespace exaDEM
+
+
+namespace onika { namespace memory
+{
+
+  template<>
+  struct MemoryUsage< exaDEM::Surface >
+  {
+    static inline size_t memory_bytes(const exaDEM::Surface& obj)
+    {
+      const exaDEM::Surface_params * cparms = &obj;
+      const exaDEM::Driver_params * dparms = &obj;
+      return onika::memory::memory_bytes( *cparms , *dparms );
+    }
+  };
+
+} }
+
+

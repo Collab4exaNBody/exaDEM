@@ -16,15 +16,16 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+
 #pragma once
 
 #include <exaDEM/driver_base.h>
+#include <onika/physics/units.h>
 
 namespace exaDEM
 {
   using namespace exanb;
 
-  using namespace exanb;
   struct Cylinder_params
   {
     double radius = -1;       /**< Radius of the cylinder. */
@@ -40,8 +41,7 @@ namespace YAML
   using exaDEM::Cylinder_params;
   using exaDEM::MotionType;
   using exanb::lerr;
-  using exanb::Quantity;
-  using exanb::UnityConverterHelper;
+  using onika::physics::Quantity;
 
   template <> struct convert<Cylinder_params>
   {
@@ -76,14 +76,6 @@ namespace exaDEM
    */
   struct Cylinder : public Cylinder_params, Driver_params
   {
-
-/*
-    Cylinder(Cylinder_params& bp, Driver_params& dp) : Cylinder_params{bp}, Driver_params()
-    {
-      Driver_params::set_params(dp);
-    }
-*/
-
     /**
      * @brief Get the type of the driver (in this case, CYLINDER).
      * @return The type of the driver.
@@ -106,7 +98,7 @@ namespace exaDEM
     /**
      * @brief Print information about the cylinder.
      */
-    void print()
+    inline void print() const
     {
       lout << "Driver Type: Cylinder" << std::endl;
       lout << "Radius: " << radius << std::endl;
@@ -137,7 +129,7 @@ namespace exaDEM
      */
     ONIKA_HOST_DEVICE_FUNC inline void force_to_accel() { /** not implemented */}
     ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt) { /** not implemented */}
-    ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double dt) { /** not implemented */ }
+    ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double time, const double dt) { /** not implemented */ }
     ONIKA_HOST_DEVICE_FUNC inline Vec3d get_vel() { return vel; }
 
     /**
@@ -207,3 +199,22 @@ namespace exaDEM
     }
   };
 } // namespace exaDEM
+
+
+namespace onika { namespace memory
+{
+
+  template<>
+  struct MemoryUsage< exaDEM::Cylinder >
+  {
+    static inline size_t memory_bytes(const exaDEM::Cylinder& obj)
+    {
+      const exaDEM::Cylinder_params * cparms = &obj;
+      const exaDEM::Driver_params * dparms = &obj;
+      return onika::memory::memory_bytes( *cparms , *dparms );
+    }
+  };
+
+} }
+
+

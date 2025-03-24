@@ -18,12 +18,13 @@ under the License.
  */
 #pragma once
 
-#include <exanb/core/basic_types.h>
-#include <exanb/core/basic_types_operators.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/basic_types_operators.h>
 #include <exaDEM/shape.hpp>
 #include <math.h>
 #include <exaDEM/shape_prepro.hpp>
 #include <exaDEM/type/contact.hpp>
+#include <onika/oarray.h>
 
 namespace exaDEM
 {

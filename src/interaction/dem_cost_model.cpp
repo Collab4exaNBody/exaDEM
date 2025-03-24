@@ -16,13 +16,13 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <exanb/fields.h>
+#include <exanb/core/grid_fields.h>
 #include <exanb/core/domain.h>
 #include <exanb/core/cell_costs.h>
 
@@ -121,5 +121,5 @@ namespace exaDEM
   template <class GridT> using DEMCostModelTmpl = DEMCostModel<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("dem_cost_model", make_grid_variant_operator<DEMCostModelTmpl>); }
+  ONIKA_AUTORUN_INIT(dem_cost_model) { OperatorNodeFactory::instance()->register_factory("dem_cost_model", make_grid_variant_operator<DEMCostModelTmpl>); }
 } // namespace exaDEM

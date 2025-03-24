@@ -16,9 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/grid.h>
 #include <memory>
@@ -28,7 +28,7 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/shapes.hpp>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 
 namespace exaDEM
 {
@@ -69,5 +69,5 @@ namespace exaDEM
   template <class GridT> using ClassifyInteractionsTmpl = ClassifyInteractions<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("classify_interactions", make_grid_variant_operator<ClassifyInteractionsTmpl>); }
+  ONIKA_AUTORUN_INIT(classify_interactions) { OperatorNodeFactory::instance()->register_factory("classify_interactions", make_grid_variant_operator<ClassifyInteractionsTmpl>); }
 } // namespace exaDEM

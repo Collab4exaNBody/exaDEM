@@ -29,7 +29,7 @@ namespace exaDEM
   template <typename GridT> using SimDumpWriteParticleDoubleTmpl = SimDumpWriteParticleES<GridT, double, DumpFieldSet>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION
+  ONIKA_AUTORUN_INIT(sim_dump_writer_interaction)
   {
     OperatorNodeFactory::instance()->register_factory("write_dump_particle_interaction", make_grid_variant_operator<SimDumpWriteParticleInteractionTmpl>);
     OperatorNodeFactory::instance()->register_factory("write_dump_particle_friction", make_grid_variant_operator<SimDumpWriteParticleDoubleTmpl>);

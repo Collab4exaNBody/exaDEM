@@ -16,12 +16,14 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+
 #pragma once
 
 #include <exaDEM/normalize.hpp>
 #include <climits>
 #include <chrono>
 #include <thread>
+#include <onika/physics/units.h>
 
 
 namespace exaDEM
@@ -37,6 +39,7 @@ namespace exaDEM
     LINEAR_FORCE_MOTION,       /**< Linear motion type influenced by applied forces. */
     FORCE_MOTION,              /**< General movement caused by applied forces. */
     LINEAR_COMPRESSIVE_MOTION, /**< Linear movement combined with compressive forces. */
+    TABULATED,                 /**< Motion defined by precomputed or tabulated data. */
     UNKNOWN
   };
 
@@ -51,6 +54,7 @@ namespace exaDEM
       case LINEAR_FORCE_MOTION: return "LINEAR_FORCE_MOTION";
       case FORCE_MOTION: return "FORCE_MOTION";
       case LINEAR_COMPRESSIVE_MOTION: return "LINEAR_COMPRESSIVE_MOTION";
+      case TABULATED: return "TABULATED";
       default: return "UNKNOWN";
     }
   }
@@ -63,6 +67,7 @@ namespace exaDEM
     if (str == "LINEAR_FORCE_MOTION") return LINEAR_FORCE_MOTION;
     if (str == "FORCE_MOTION") return FORCE_MOTION;
     if (str == "LINEAR_COMPRESSIVE_MOTION") return LINEAR_COMPRESSIVE_MOTION;
+    if (str == "TABULATED") return TABULATED;
 
     // If the string doesn't match any valid MotionType, return a default value
     return UNKNOWN;  // Or some other default action like throwing an exception or logging
@@ -70,7 +75,7 @@ namespace exaDEM
 
   struct Driver_params
   {
-    // motio, part
+    // Common motion stuff
     MotionType motion_type = STATIONARY;
     Vec3d motion_vector = {0,0,0};
     double motion_start_threshold = 0;
@@ -86,29 +91,37 @@ namespace exaDEM
     Vec3d forces = {0,0,0}; /**< sum of the forces applied to the driver. */
     double weigth = 0;     /**< cumulated sum of particle weigth into the simulation or in the driver */
 
-    inline bool is_stationary() { return motion_type == STATIONARY; }
+    // Motion: Tabulated
+    std::vector<double> tab_time;
+    std::vector<Vec3d> tab_pos;
+
+//    Driver_params() = default;
+//    ~Driver_params() = default;
+
+    inline bool is_stationary() const { return motion_type == STATIONARY; }
+    inline bool is_tabulated() const { return motion_type == TABULATED; }
 
     void set_params(Driver_params& in)
     { 
       (*this) = in;
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline bool is_linear()
+    ONIKA_HOST_DEVICE_FUNC inline bool is_linear() const
     {
       return (motion_type == LINEAR_MOTION || motion_type == LINEAR_FORCE_MOTION || motion_type == LINEAR_COMPRESSIVE_MOTION);
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline bool is_compressive()
+    ONIKA_HOST_DEVICE_FUNC inline bool is_compressive() const
     {
       return (motion_type == COMPRESSIVE_FORCE || motion_type == LINEAR_COMPRESSIVE_MOTION);
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline bool is_force_motion()
+    ONIKA_HOST_DEVICE_FUNC inline bool is_force_motion() const
     {
       return ( motion_type == FORCE_MOTION || motion_type == LINEAR_FORCE_MOTION );
     }
 
-    ONIKA_HOST_DEVICE_FUNC inline bool need_forces()
+    ONIKA_HOST_DEVICE_FUNC inline bool need_forces() const
     {
       // Need for LINEAR_FORCE_MOTION
       // No need for STATIONARY
@@ -120,7 +133,7 @@ namespace exaDEM
     }
 
     // Getter
-    Vec3d sum_forces()
+    inline Vec3d sum_forces()
     {
       if( motion_type == FORCE_MOTION )
       {
@@ -128,22 +141,20 @@ namespace exaDEM
       }
       if( motion_type == LINEAR_FORCE_MOTION )
       {
-        //lout <<  " avant " << forces <<std::endl;
         forces = (exanb::dot(forces, motion_vector) + const_force) * motion_vector;
-        //lout <<  " apres " << forces <<std::endl;
         return forces;
       }
       return Vec3d{0,0,0};
     }
 
     // Checks
-    bool is_valid_motion_type(const std::vector<MotionType>& valid_motion_types)
+    inline bool is_valid_motion_type(const std::vector<MotionType>& valid_motion_types) const
     {
       auto it = std::find(valid_motion_types.begin(), valid_motion_types.end(), motion_type);
       if( it == valid_motion_types.end() )
       {
         lout << "\033[31mThis motion type [" << motion_type_to_string(motion_type) << "] is not possible, MotionType availables are: ";
-        for(auto& motion: valid_motion_types)
+        for(const auto& motion: valid_motion_types)
         {
           lout << " " << motion_type_to_string(motion);
         }
@@ -155,6 +166,34 @@ namespace exaDEM
 
     bool check_motion_coherence()
     {
+      if( is_tabulated() )
+      {
+        if(tab_time.size() == 0)
+        {
+          lout << "\033[31m[Warning] The \"time\" input slot is not defined while the tabulated motion is activated.\033[0m" << std::endl;
+          return false;
+        }
+        else if(tab_time[0] != 0.0)
+        {
+          lout << "\033[31m[Warning] Please set the first element of your input time vector to 0.\033[0m" << std::endl;
+          return false;
+        }
+        if(tab_pos.size() == 0)
+        {
+          lout << "\033[31m[Warning] The \"positions\" input slot is not defined while the tabulated motion is activated.\033[0m" << std::endl;
+          return false;
+        }
+        if(tab_time.size() != tab_pos.size())
+        {
+          lout << "\033[31m[Warning] The \"positions\" and \"time\" input slot are not the same size.\033[0m" << std::endl;
+          return false;
+        }
+        if(!is_sorted(tab_time.begin(), tab_time.end()))
+        {
+          lout << "\033[31m[Warning] The \"time\" array used for a TABULATED motion is not sorted.\033[0m" << std::endl;
+          return false;
+        }
+      }
       if( is_linear() )
       {
         // Check if motion vector is zero (invalid for linear motion)
@@ -196,15 +235,44 @@ namespace exaDEM
       return true;  // Return true if the motion is coherent
     }
 
-    bool is_motion_triggered(uint64_t timesteps, double dt) 
+    bool is_motion_triggered(uint64_t timesteps, double dt) const
     {
       const double time = timesteps * dt;
       return ( (time >= motion_start_threshold) && (time <= motion_end_threshold) );  
     }
 
-    void print_driver_params()
+    void tabulations_to_stream(std::stringstream& times, std::stringstream& positions) const
+    {
+      if( is_tabulated() )
+      {
+        times << "time: [";
+        positions << "positions: [";
+
+        assert(tab_time.size() == tab_pos.size());
+        size_t last = tab_time.size() - 1;
+        for(size_t i = 0; i < last ; i++)
+        {
+          times     << tab_time[i] << ",";
+          positions << "[ " << tab_pos[i] << " ],";
+        }
+        times     << tab_time[last] << "]";
+        positions << "[ " << tab_pos[last]  << " ]]";
+      }
+    }
+
+    void print_driver_params() const
     {
       lout << "Motion type: " << motion_type_to_string(motion_type) << std::endl;
+
+      if( is_tabulated() )
+      {
+        std::stringstream times;
+        std::stringstream positions;
+        tabulations_to_stream(times, positions);
+        lout << times.rdbuf() << std::endl;
+        lout << positions.rdbuf() << std::endl;
+      }
+
       if( !is_stationary() )
       {
         if( motion_start_threshold != 0 || motion_end_threshold != std::numeric_limits<double>::max() )
@@ -258,22 +326,61 @@ namespace exaDEM
       }
       if( is_compressive() )
       {
-        stream << ", sigma; " << sigma;
-        stream << ", damprate; " << damprate;
+        stream << ", sigma: " << sigma;
+        stream << ", damprate: " << damprate;
+      }
+      if(motion_type == TABULATED)
+      {
+        std::stringstream times;
+        std::stringstream positions;
+        tabulations_to_stream(times, positions);
+        stream << ", " << times.rdbuf() << ", " << positions.rdbuf();
       }
       stream  <<" }" << std::endl;
     }
 
-    /*
-       void operator=(const Driver_params& in)
-       {
-       motion_type            = in.motion_type;
-       motion_vector          = in.motion_vector;
-       motion_start_threshold = in.motion_start_threshold;
-       motion_end_threshold   = in.motion_end_threshold;
-       const_vel              = in.const_vel;
-       sigma                  = in.sigma;
-       }*/
+    /* Tabulated motion routines */
+    Vec3d tab_to_position(double time)
+    {
+      assert(time >= 0.0);
+      auto ite = std::lower_bound(tab_time.begin(), tab_time.end(), time);
+      if(ite == tab_time.end())
+      {
+        return tab_pos.back();
+      }
+      else
+      {
+        size_t idx_lower = ite - tab_time.begin() - 1;
+        size_t idx_upper = idx_lower + 1;
+        //std::cout << idx_lower  << " " << tab_time[idx_lower]  << " " << time << std::endl;
+        assert(tab_time[idx_lower] >= time);
+        if(idx_upper >= tab_time.size()) return tab_pos.back();
+        double Dt = (time - tab_time[idx_lower]) / (tab_time[idx_upper] - tab_time[idx_lower]);
+        Vec3d P = (tab_pos[idx_upper] - tab_pos[idx_lower]) * Dt + tab_pos[idx_lower];
+        return P;
+      }
+    }
+
+    Vec3d tab_to_velocity(double time)
+    {
+      assert(time >= 0.0);
+      auto ite = std::lower_bound(tab_time.begin(), tab_time.end(), time);
+      if(ite == tab_time.end())
+      {
+        return Vec3d(0,0,0); // stationnary
+      }
+      else
+      {
+        size_t idx_lower = ite - tab_time.begin() - 1;
+        size_t idx_upper = idx_lower + 1;
+        assert(tab_time[idx_lower] >= time);
+        if(idx_upper >= tab_time.size()) return Vec3d(0,0,0);
+        double Dt = tab_time[idx_upper] - tab_time[idx_lower];
+        assert(Dt != 0.0);
+        Vec3d V = (tab_pos[idx_upper] - tab_pos[idx_lower])/Dt;
+        return V;
+      }
+    }
   };
 }
 
@@ -283,8 +390,7 @@ namespace YAML
   using exaDEM::Driver_params;
   using exaDEM::MotionType;
   using exanb::lerr;
-  using exanb::Quantity;
-  using exanb::UnityConverterHelper;
+  using onika::physics::Quantity;
 
   template <> struct convert<Driver_params>
   {
@@ -343,6 +449,21 @@ namespace YAML
           return false;
         }
         v.damprate = node["damprate"].as<double>(); 
+      }
+      if( v.is_tabulated() )
+      { 
+        if (!node["time"])
+        {
+          lerr << "\033[31m time is missing \033[0m\n";
+          return false;
+        }
+        v.tab_time= node["time"].as<std::vector<double>>(); 
+        if (!node["positions"])
+        {
+          lerr << "\033[31m positions is missing \033[0m\n";
+          return false;
+        }
+        v.tab_pos = node["positions"].as<std::vector<Vec3d>>(); 
       }
       if( node["motion_start_threshold"] ) v.motion_start_threshold = node["motion_start_threshold"].as<double>();
       if( node["motion_end_threshold"] ) v.motion_start_threshold = node["motion_end_threshold"].as<double>();

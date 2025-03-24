@@ -16,10 +16,12 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+
 #pragma once 
 
 #include <yaml-cpp/yaml.h>
-#include <exanb/core/quantity_yaml.h>
+#include <onika/physics/units.h>
+//#include <exaDEM/unit_system.h>
 
 namespace exaDEM
 {
@@ -41,8 +43,7 @@ namespace YAML
 {
   using exaDEM::ContactParams;
   using exanb::lerr;
-  using exanb::Quantity;
-  using exanb::UnityConverterHelper;
+  using onika::physics::Quantity;
 
   template <> struct convert<ContactParams>
   {

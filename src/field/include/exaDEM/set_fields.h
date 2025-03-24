@@ -18,7 +18,7 @@ under the License.
 */
 #pragma once
 
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/grid_cell_particles/particle_region.h>
 #include <onika/flat_tuple.h>
