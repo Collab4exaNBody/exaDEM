@@ -19,7 +19,7 @@ under the License.
 #pragma once
 
 #include <exaDEM/shape.hpp>
-#include <exanb/core/string_utils.h>
+#include <onika/string_utils.h>
 #include <iostream>
 
 namespace exaDEM
@@ -37,6 +37,7 @@ namespace exaDEM
 
   struct par_poly_helper
   {
+    bool mpi_rank;
     int n_vertices = 0;
     int n_polygons = 0;
     uint64_t incr_offset = 0;
@@ -46,6 +47,7 @@ namespace exaDEM
     std::stringstream ids;
     std::stringstream types;
     std::stringstream velocities;
+    std::stringstream ranks; 
   };
 
   inline void build_buffer_polyhedron(const exanb::Vec3d &pos, const shape *shp, const exanb::Quaternion &orient, uint64_t id, uint16_t type, double vx, double vy, double vz, par_poly_helper& buffers)
@@ -176,18 +178,24 @@ namespace exaDEM
     outFile << "  <PolyData>" << std::endl;
     outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices << "\" NumberOfPolys=\"" << buffers.n_polygons << "\">" << std::endl;
     outFile << "    <PointData>" << std::endl;
+
+    /// PARTICLE FIELDS
     outFile << "      <DataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
     if (buffers.n_polygons != 0)
     outFile << buffers.ids.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
     outFile << "      <DataArray type=\"Int32\" Name=\"Type\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
-    if (buffers.n_polygons != 0)
-    outFile << buffers.types.rdbuf() << std::endl;
+    if (buffers.n_polygons != 0) outFile << buffers.types.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
     outFile << "      <DataArray type=\"Float64\" Name=\"Velocity\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-    if (buffers.n_polygons != 0)
-    outFile << buffers.velocities.rdbuf() << std::endl;
+    if (buffers.n_polygons != 0) outFile << buffers.velocities.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
+    if(buffers.mpi_rank) // MPI  rank - optional
+    {
+      outFile << "      <DataArray type=\"Int32\" Name=\"MPI rank\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+      if (buffers.n_vertices != 0) outFile << buffers.ranks.rdbuf() << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+    }
     outFile << "    </PointData>" << std::endl;
     outFile << "    <Points>" << std::endl;
     outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
@@ -197,6 +205,8 @@ namespace exaDEM
     outFile << "    </Points>" << std::endl;
     outFile << "    <Polys>" << std::endl;
     outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
+    
+    /// PARTICLE FACES
     if (buffers.n_polygons != 0)
       outFile << buffers.faces.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
@@ -254,9 +264,8 @@ namespace exaDEM
     outFile << "</VTKFile>" << std::endl;
   }
 
-  inline void write_pvtp_polyhedron(std::string filename, size_t number_of_files)
+  inline void write_pvtp_polyhedron(std::string filename, size_t number_of_files, par_poly_helper& buffers)
   {
-
     std::string name = filename + ".pvtp";
     std::ofstream outFile(name);
     if (!outFile)
@@ -268,9 +277,14 @@ namespace exaDEM
     outFile << "<VTKFile type=\"PPolyData\"> " << std::endl;
     outFile << "  <PPolyData GhostLevel=\"0\">" << std::endl;
     outFile << "    <PPointData>" << std::endl;
+    /// PARTICLE FIELDS
     outFile << "      <PDataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\"/>" << std::endl;
     outFile << "      <PDataArray type=\"Int32\" Name=\"Type\"  NumberOfComponents=\"1\"/>" << std::endl;
     outFile << "      <PDataArray type=\"Float64\" Name=\"Velocity\"  NumberOfComponents=\"3\"/>" << std::endl;
+    if( buffers.mpi_rank) 
+    {
+      outFile << "      <PDataArray type=\"Int32\" Name=\"MPI rank\"  NumberOfComponents=\"1\"/>" << std::endl;
+    }
     outFile << "    </PPointData>" << std::endl;
     outFile << "    <PPoints>" << std::endl;
     outFile << "      <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
@@ -280,7 +294,7 @@ namespace exaDEM
     std::string subfile = directory + "/%06d.vtp";
     for (size_t i = 0; i < number_of_files; i++)
     {
-      std::string file = format_string(subfile,  i);
+      std::string file = onika::format_string(subfile,  i);
       outFile << "    <Piece Source=\"" << file << "\"/>" << std::endl;
     }
     outFile << "  </PPolyData>" << std::endl;
@@ -315,7 +329,7 @@ namespace exaDEM
     std::string subfile = basename + "/%06d.vtp";
     for (size_t i = 0; i < number_of_files; i++)
     {
-      std::string file = format_string(subfile,  i);
+      std::string file = onika::format_string(subfile,  i);
       outFile << "    <Piece Source=\"" << file << "\"/>" << std::endl;
     }
     outFile << "  </PPolyData>" << std::endl;

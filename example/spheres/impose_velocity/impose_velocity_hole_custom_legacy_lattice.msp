@@ -1,0 +1,76 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+  
+input_data:
+  - particle_regions:
+      - CYL1:
+          quadric:
+            shape: cyly
+            transform:
+              - scale: [ 8, 1, 8 ]
+              - translate: [ 25.5 m , 0 , 25.5 m ]
+      - PLANE1:
+          quadric:
+            shape: { plane: [ 0 , 0 , -1 , 0 ] }
+            transform:
+              - translate: [ 0 , 0 , 10 m ]  
+  - domain:
+      cell_size: 2.0 m
+      grid_dims: [25,5,25]
+      bounds: [[0 m ,0 m,0 m],[50 m, 10 m, 50 m]]
+      xform: [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]
+      periodic: [true,true,false]
+      expandable: false
+  - legacy_lattice:
+      init_rcb_grid: true
+      structure: CUSTOM
+      np: 4
+      types: [ 0, 0, 0, 0 ]
+      positions: [ [ 0, 0, 0], [0.5,0,0.5], [0,0.5,0.5], [0.5,0.5,0.] ]
+      size: [ 2.0 m, 2.0 m, 2.0 m ]
+      shift: [0.1,0.1,0.1]
+      region: not CYL1
+  - set_radius:
+     rad: 0.5
+  - set_quaternion
+  - set_rand_velocity:
+     var: 0.1
+     mean: [0.0,0.0,0.0]
+  - set_density:
+     density: 0.02
+  - update_inertia:
+  - set_rand_vrot_arot
+
+
+transverse_velocity_slab:
+  body:  [ set_velocity: { value: [ -13. m/s ,   0 , 0 ], region: not PLANE1 } ]
+
+compute_force:
+  - gravity_force  
+  - contact_sphere:
+     symetric: true
+     config: {rcut: 1.0 m, dncut: 0.0,  kn: 100000, kt: 80000, kr: 0, fc: 0.00, mu: 0.3, damp_rate: 0.9}
+  - transverse_velocity_slab
+
+domain:
+  cell_size: 2.0 m
+  periodic: [true, true, false]
+
+dump_data_xyz:
+  - timestep_file: "xyz_datas/dembis_%09d"
+  - write_xyz_generic:
+      fields: [ velocity, radius ]
+      units: { velocity: "m/s", radius: "m" }
+
+iteration_dump_writer:
+  - dump_data_xyz
+
+global:
+  simulation_dump_frequency: 1000
+  simulation_paraview_frequency: 1000
+  simulation_end_iteration: 20000
+  simulation_log_frequency: 1000
+  dt: 0.0001 s 
+  rcut_inc: 0.4 m

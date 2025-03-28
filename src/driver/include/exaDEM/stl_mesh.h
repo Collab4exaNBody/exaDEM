@@ -16,15 +16,17 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+ 
 #pragma once
-#include <exanb/core/basic_types.h>
-#include <exanb/core/quaternion.h>
-#include <exanb/core/quaternion_yaml.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/quaternion.h>
+#include <onika/math/quaternion_yaml.h>
 #include <exaDEM/driver_base.h>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_reader.hpp>
 //#include <exaDEM/interaction/interaction.hpp>
 #include <filesystem>
+#include <onika/physics/units.h>
 
 namespace exaDEM
 {
@@ -49,7 +51,8 @@ namespace exaDEM
     exanb::Vec3d center = Vec3d{0,0,0}; /**< Center position of the STL mesh. */
     exanb::Vec3d vel = Vec3d{0,0,0};    /**< Velocity of the STL mesh. */
     exanb::Vec3d vrot = Vec3d{0,0,0};   /**< Angular velocity of the STL mesh. */
-    exanb::Quaternion quat = {1,0,0,0};             /**< Quaternion of the STL mesh. */
+    exanb::Quaternion quat = {1,0,0,0}; /**< Quaternion of the STL mesh. */
+    double surface = -1;                /**< Surface, used with linear_compression_motion. */
     double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the ball */
   };
 }
@@ -59,8 +62,7 @@ namespace YAML
   using exaDEM::Stl_params;
   using exaDEM::MotionType;
   using exanb::lerr;
-  using exanb::Quantity;
-  using exanb::UnityConverterHelper;
+  using onika::physics::Quantity;
 
   template <> struct convert<Stl_params>
   {
@@ -75,16 +77,15 @@ namespace YAML
       if( check(node, "vrot") )   { v.vrot = node["vrot"].as<Vec3d>(); }
       if( check(node, "mass") ) { v.mass = node["mass"].as<double>(); }
       if( check(node, "quat") ) { v.quat = node["quat"].as<exanb::Quaternion>(); }
+      if( check(node, "surface") ) { v.surface = node["surface"].as<double>(); }
       return true;
     }
   };
 }
 
-
-
 namespace exaDEM
 {
-  const std::vector<MotionType> stl_valid_motion_types = {STATIONARY, LINEAR_MOTION};
+  const std::vector<MotionType> stl_valid_motion_types = {STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION, TABULATED};
 
   using namespace exanb;
   /**
@@ -111,17 +112,19 @@ namespace exaDEM
    /**
      * @brief Print information about the STL mesh.
      */
-    void print()
+    inline void print() const
     {
       lout << "Driver Type: MESH STL" << std::endl;
-      lout << "Name   : " << shp.m_name << std::endl;
-      lout << "Center : " << center << std::endl;
-      lout << "Vel    : " << vel << std::endl;
-      lout << "AngVel : " << vrot << std::endl;
-      lout << "Quat   : " << quat.w << " " << quat.x << " " << quat.y << " " << quat.z << std::endl;
+      lout << "Name               : " << shp.m_name << std::endl;
+      lout << "Center             : " << center << std::endl;
+      lout << "Velocity           : " << vel << std::endl;
+      lout << "Angular Velocity   : " << vrot << std::endl;
+      lout << "Orientation        : " << quat.w << " " << quat.x << " " << quat.y << " " << quat.z << std::endl;
+      if(surface > 0.0) lout << "Surface            : " << surface << std::endl;
       lout << "Number of faces    : " << shp.get_number_of_faces() << std::endl;
       lout << "Number of edges    : " << shp.get_number_of_edges() << std::endl;
       lout << "Number of vertices : " << shp.get_number_of_vertices() << std::endl;
+      Driver_params::print_driver_params();
     }
 
     /**
@@ -157,14 +160,43 @@ namespace exaDEM
         lout << "Please, define a positive mass." << std::endl;
         std::exit(EXIT_FAILURE);
       }
+
+      if( is_compressive() )
+      {
+        double s = shp.compute_surface();
+        if( surface <= 0 )
+        {
+          lout << "\033[31m[STL Error]: The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl;
+          lout << "\033[33m[STL Error]: The computed surface of all faces is: " << s << "\033[0m" << std::endl;
+          std::exit(EXIT_FAILURE);
+          lout << "\033[3221m[STL Warning]: The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl;
+        }
+        if ( s - surface > 1e-6 )
+        {
+          lout << "\033[32m[STL Error]: The computed surface of all faces is: " << s << "\033[0m" << std::endl;
+        }
+      }
     }
 
     inline void force_to_accel()
     {
-      if( is_force_motion() )
+      if( is_compressive() )
+      {
+        constexpr double C = 0.5;
+        if( mass != 0 )
+        {
+          const double s = surface;
+          // compute acceleration
+          Vec3d tmp = (forces - sigma * s - (damprate * vel) ) / (mass * C);
+          // get acc into the motion vector axis
+          acc =  exanb::dot(tmp, this->motion_vector) * this->motion_vector; 
+        }
+      }
+      else if( is_force_motion() )
       {
         if( mass >= 1e100 ) lout << "Warning, the mass of the stl mesh is set to " << mass << std::endl;
         acc = Driver_params::sum_forces() / mass;
+        //lout << "acceleration: " << acc << std::endl;
       }
       else
       {
@@ -174,28 +206,46 @@ namespace exaDEM
 
 		inline void push_f_v(const double dt)
 		{
-			if( is_force_motion() )
-			{
-				vel = acc * dt;
-			}
 
-			if( motion_type == LINEAR_MOTION )
+			if ( is_stationary() )
 			{
-				vel = motion_vector * const_vel; 
+				vel = Vec3d{0,0,0};
+			}
+			else
+			{
+				if( is_force_motion() )
+				{
+					vel += acc * dt;
+				}
+
+				if( motion_type == LINEAR_MOTION )
+				{
+					vel = motion_vector * const_vel; 
+				}
+
+				if( is_compressive() )
+				{
+					if( this->sigma != 0 ) vel += 0.5 * dt * acc;
+				}
 			}
 		}
 
-		inline void push_f_v_r(const double dt)
-    {
-      if( !is_stationary() )
+		inline void push_f_v_r(const double time, const double dt)
+		{
+      if( is_tabulated() ) 
       {
-        if( motion_type == LINEAR_MOTION )
-        {
-          assert( vel = this->const_vel );
-        }
-        center += dt * vel + 0.5 * dt * dt * acc;
+        center = tab_to_position(time);
+        vel = tab_to_velocity(time);
       }
-    }
+			else if( !is_stationary() )
+			{
+				if( motion_type == LINEAR_MOTION )
+				{
+					assert( vel = this->const_vel );
+				}
+				center += dt * vel + 0.5 * dt * dt * acc;
+			}
+		}
 
 
 		ONIKA_HOST_DEVICE_FUNC 
@@ -228,15 +278,16 @@ namespace exaDEM
 			stream << "     minskowski: " << this->shp.m_radius << std::endl;
 			stream << "     state: {";
 			stream << "center: [" << this->center << "]";
-			stream << ",vel: [" << this->vel << "]";
-			stream << ",vrot: [" << this->vrot << "]";
-			stream << ",quat: [" << quat.w << "," << quat.x << "," << quat.y << "," << quat.z << "]";
+			stream << ", vel: [" << this->vel << "]";
+			stream << ", vrot: [" << this->vrot << "]";
+			stream << ", surface: " << surface;
+			stream << ", quat: [" << quat.w << "," << quat.x << "," << quat.y << "," << quat.z << "]";
 			if ( is_force_motion() )
 			{
 				stream << ",mass: " << this->mass;
 			}
 			stream << "}" <<std::endl;
-      Driver_params::dump_driver_params(stream);
+			Driver_params::dump_driver_params(stream);
 			write_shp(this->shp, filename);
 		}
 
@@ -283,3 +334,22 @@ namespace exaDEM
 		}
 	};
 } // namespace exaDEM
+
+
+namespace onika 
+{ 
+  namespace memory
+  {
+    template<> struct MemoryUsage< exaDEM::Stl_mesh >
+    {
+      static inline size_t memory_bytes(const exaDEM::Stl_mesh& obj)
+      {
+        const exaDEM::Stl_params * cparms = &obj;
+        const exaDEM::Driver_params * dparms = &obj;
+        return onika::memory::memory_bytes( *cparms , *dparms );
+      }
+    };
+  } 
+}
+
+

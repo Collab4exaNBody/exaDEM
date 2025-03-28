@@ -7,7 +7,7 @@ trigger_dump_data:
 trigger_dump_paraview:
   rebind: { freq: simulation_paraview_frequency , result: trigger_dump_paraview }
   body:
-    - nth_timestep: { first: true }
+    - nth_timestep: { first: false }
 
 trigger_dump_contact_network_paraview:
   rebind: { freq: simulation_contact_network_paraview_frequency , result: trigger_contact_network_dump_paraview }
@@ -15,10 +15,10 @@ trigger_dump_contact_network_paraview:
     - nth_timestep: { first: false }
 
 write_paraview_generic:
-  binary: false
+  binary: true
   write_ghost: false
   write_box: true
-  fields: ["radius", "type","vx","vy","vz","id","orient","stress"]
+  fields: ["processor_id", "radius", "type","vx", "vy", "vz","id","orient","stress"]
 
 
 contact_network: nop

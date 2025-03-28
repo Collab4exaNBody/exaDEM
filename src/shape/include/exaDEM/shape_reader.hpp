@@ -72,6 +72,7 @@ namespace exaDEM
   inline void write_shp(const shape &shp, std::string filename)
   {
     std::stringstream stream;
+    stream.precision(16);
     write_shp(shp, stream);
     std::ofstream file(filename.c_str());
     file << stream.rdbuf();

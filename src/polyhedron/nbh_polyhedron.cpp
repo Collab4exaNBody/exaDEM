@@ -17,12 +17,14 @@ specific language governing permissions and limitations
 under the License.
  */
 #include <memory>
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
+#include <exanb/core/domain.h>
+
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
@@ -34,7 +36,7 @@ under the License.
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
-#include <exaDEM/traversal.hpp>
+#include <exaDEM/traversal.h>
 
 #include <cassert>
 
@@ -49,6 +51,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(exanb::GridChunkNeighbors, chunk_neighbors, INPUT, OPTIONAL, DocString{"Neighbor list"});
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
     ADD_SLOT(shapes, shapes_collection, INPUT, DocString{"Collection of shapes"});
@@ -72,7 +75,7 @@ namespace exaDEM
           Interaction &item, 
           const size_t n_particles, 
           const double rVerlet, 
-          const uint32_t *__restrict__ type, 
+          const ParticleTypeInt *__restrict__ type, 
           const uint64_t *__restrict__ id, 
           const double *__restrict__ rx, 
           const double *__restrict__ ry, 
@@ -220,7 +223,7 @@ namespace exaDEM
           Interaction &item, 
           const size_t n_particles, 
           const double rVerlet, 
-          const uint32_t *__restrict__ type, 
+          const ParticleTypeInt *__restrict__ type, 
           const uint64_t *__restrict__ id, 
           const VertexArray *__restrict__ vertices, 
           shapes &shps)
@@ -252,6 +255,16 @@ namespace exaDEM
       auto &interactions = ges->m_data;
       auto &shps = *shapes_collection;
       double rVerlet = *rcut_inc;
+      Mat3d xform = domain->xform();
+      bool is_xform = !domain->xform_is_identity();
+      if (drivers.has_value() && is_xform)
+      {
+        if(drivers->get_size() > 0)
+        {
+          lout<< "Error: Contact detection with drivers is deactivated when the simulation box is deformed." << std::endl;
+          std::exit(0);
+        }
+      }
 
       // if grid structure (dimensions) changed, we invalidate thie whole data
       if (interactions.size() != n_cells)
@@ -260,6 +273,7 @@ namespace exaDEM
         interactions.clear();
         interactions.resize(n_cells);
       }
+
       assert(interactions.size() == n_cells);
 
       if (!chunk_neighbors.has_value())
@@ -351,24 +365,24 @@ namespace exaDEM
               if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER)
               {
                 item.type = 4;
-                Cylinder &driver = std::get<Cylinder>(drvs.data(drvs_idx));
+                Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx)) ;
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
               {
                 item.type = 5;
-                Surface &driver = std::get<Surface>(drvs.data(drvs_idx));
+                Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
               {
                 item.type = 6;
-                Ball &driver = std::get<Ball>(drvs.data(drvs_idx));
+                Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
               {
-                Stl_mesh &driver = std::get<STL_MESH>(drvs.data(drvs_idx));
+                Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); //std::get<STL_MESH>(drvs.data(drvs_idx));
                 // driver.grid_indexes_summary();
                 add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a, rz_a, vertices_a, orient_a, shps);
               }
@@ -376,8 +390,9 @@ namespace exaDEM
           }
 
           // Second, we add interactions between two polyhedra.
+
           apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-              [&g, cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, vertices_a, &add_contact](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+              [&g, cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, vertices_a, &add_contact, xform, is_xform](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
               {
               // default value of the interaction studied (A or i -> B or j)
               const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -390,10 +405,27 @@ namespace exaDEM
               // Get particle pointers for the particle b.
               const uint32_t type_nbh = cells[cell_b][field::type][p_b];
               const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
-              const double rx_nbh = cells[cell_b][field::rx][p_b];
-              const double ry_nbh = cells[cell_b][field::ry][p_b];
-              const double rz_nbh = cells[cell_b][field::rz][p_b];
+              double rx_nbh = cells[cell_b][field::rx][p_b];
+              double ry_nbh = cells[cell_b][field::ry][p_b];
+              double rz_nbh = cells[cell_b][field::rz][p_b];
+              double rx = rx_a[p_a];
+              double ry = ry_a[p_a];
+              double rz = rz_a[p_a];
               const auto &vertices_b = cells[cell_b][field::vertices][p_b];
+
+              if( is_xform )
+              {
+                Vec3d tmp = {rx_nbh, ry_nbh, rz_nbh};
+                tmp = xform * tmp;
+                rx_nbh = tmp.x;
+                ry_nbh = tmp.y;
+                rz_nbh = tmp.z;
+                tmp = {rx, ry, rz};
+                tmp = xform * tmp;
+                rx = tmp.x;
+                ry = tmp.y;
+                rz = tmp.z;
+              }
 
               // prev
               const shape *shp = shps[t_a[p_a]];
@@ -403,9 +435,6 @@ namespace exaDEM
               OBB obb_i = shp->obb;
               OBB obb_j = shp_nbh->obb;
               const Quaternion &orient = orient_a[p_a];
-              const double rx = rx_a[p_a];
-              const double ry = ry_a[p_a];
-              const double rz = rz_a[p_a];
               quat conv_orient_i = quat{vec3r{orient.x, orient.y, orient.z}, orient.w};
               quat conv_orient_j = quat{vec3r{orient_nbh.x, orient_nbh.y, orient_nbh.z}, orient_nbh.w};
               obb_i.rotate(conv_orient_i);
@@ -546,5 +575,5 @@ namespace exaDEM
   template <class GridT> using UpdateGridCellInteractionTmpl = UpdateGridCellInteraction<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("nbh_polyhedron", make_grid_variant_operator<UpdateGridCellInteraction>); }
+  ONIKA_AUTORUN_INIT(nbh_polyhedron) { OperatorNodeFactory::instance()->register_factory("nbh_polyhedron", make_grid_variant_operator<UpdateGridCellInteraction>); }
 } // namespace exaDEM

@@ -65,9 +65,10 @@ namespace exaDEM
      * @struct contact_law
      * @brief Structure defining contact law interactions for particles (polyhedra).
      */
-    template<int interaction_type>
+    template<int interaction_type, bool def_xform>
       struct contact_law
       {
+        Mat3d xform;
         detect<interaction_type> detection;
         /**
          * @brief Default constructor for contact_law struct.
@@ -88,7 +89,8 @@ namespace exaDEM
          */
         template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_r(TMPLC &cell, const int p_id) const
         {
-          const Vec3d res = {cell[field::rx][p_id], cell[field::ry][p_id], cell[field::rz][p_id]};
+          Vec3d res = {cell[field::rx][p_id], cell[field::ry][p_id], cell[field::rz][p_id]};
+          if constexpr(def_xform) res = xform * res;
           return res;
         };
 
@@ -196,7 +198,7 @@ namespace exaDEM
      */
     template <typename TMPLD> struct contact_law_driver
     {
-      using driven_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
+      //using driven_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
       /**
        * @brief Functor for applying contact law interactions driven by drivers.
        *
@@ -212,11 +214,11 @@ namespace exaDEM
        * @param shps Pointer to the shapes array providing shape information for interactions.
        * @param dt Time increment for the simulation step.
        */
-      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPLC * __restrict__ cells, driven_t *const drvs, const ContactParams &hkp, const shape *shps, const double dt) const
+      template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction &item, TMPLC * __restrict__ cells, const DriversGPUAccessor& drvs, const ContactParams &hkp, const shape *shps, const double dt) const
       {
         const int driver_idx = item.id_j; //
                                           // TMPLD& driver        = std::get<TMPLD>(drvs[driver_idx]) ;
-        TMPLD &driver = (TMPLD &)(drvs[driver_idx]);
+        TMPLD &driver = drvs.get_typed_driver<TMPLD>(driver_idx); // (TMPLD &)(drvs[driver_idx]);
         auto &cell = cells[item.cell_i];
         const auto type = cell[field::type][item.p_i];
         auto &shp = shps[type];
@@ -271,11 +273,11 @@ namespace exaDEM
     /**
      * @brief Functor for applying contact law interactions with STL mesh objects.
      */
-    template<int interaction_type>
+    template<int interaction_type, bool def_xform> /* def xform does nothing*/
       struct contact_law_stl
       {
-        using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
-
+        //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
+        Mat3d xform;
         detect<interaction_type> detection;
 
         /* Default constructor */
@@ -300,13 +302,13 @@ namespace exaDEM
           ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
               Interaction &item, 
               TMPLC * __restrict__ cells, 
-              driver_t *const drvs, 
+              const DriversGPUAccessor& drvs, 
               const ContactParams &hkp, 
               const shape *shps, 
               const double dt) const
           {
             const int driver_idx = item.id_j; //
-            Stl_mesh &driver = (exaDEM::Stl_mesh &)(drvs[driver_idx]);
+            Stl_mesh &driver = drvs.get_typed_driver<exaDEM::Stl_mesh>(driver_idx); // (exaDEM::Stl_mesh &)(drvs[driver_idx]);
             auto &cell = cells[item.cell_i];
             // renaming
             const size_t p_i = item.p_i;

@@ -16,7 +16,6 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-//#pragma xstamp_grid_variant
 
 #include <exanb/extra_storage/migrate_cell_particles_es.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
@@ -29,5 +28,5 @@ namespace exaDEM
   template <class GridT> using MigrateCellParticlesInteractionTmpl = MigrateCellParticlesES<GridT, exaDEM::Interaction>;
 
   // === register factory ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("migrate_cell_particles_interaction", make_grid_variant_operator<MigrateCellParticlesInteractionTmpl>); }
+  ONIKA_AUTORUN_INIT(migrate_cell_particles_interaction) { OperatorNodeFactory::instance()->register_factory("migrate_cell_particles_interaction", make_grid_variant_operator<MigrateCellParticlesInteractionTmpl>); }
 } // namespace exaDEM

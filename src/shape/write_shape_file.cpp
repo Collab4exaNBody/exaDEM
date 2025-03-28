@@ -16,12 +16,12 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
-#include <exanb/core/basic_types.h>
-#include <exanb/core/basic_types_operators.h>
-#include <exanb/core/basic_types_stream.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/basic_types_operators.h>
+#include <onika/math/basic_types_stream.h>
 #include <onika/memory/allocator.h> // for ONIKA_ASSUME_ALIGNED macro
 #include <vector>
 #include <iomanip>
@@ -58,6 +58,7 @@ namespace exaDEM
       {
         // define paths
         std::stringstream stream;
+        stream << std::setprecision(16);
         std::string dir = *dir_name + "/CheckpointFiles/";
         std::string filepath = dir + *filename;
         lout << "Write shapes into: " << filepath << std::endl;
@@ -78,11 +79,12 @@ namespace exaDEM
           exaDEM::write_shp(*shp, stream);
         }
         // fill output file
+        outFile << std::setprecision(16);
         outFile << stream.rdbuf();
       }
     };
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("write_shape_file", make_simple_operator<WriteShapeFileOperator>); }
+  ONIKA_AUTORUN_INIT(write_shape_file) { OperatorNodeFactory::instance()->register_factory("write_shape_file", make_simple_operator<WriteShapeFileOperator>); }
 } // namespace exaDEM

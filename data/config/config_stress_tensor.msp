@@ -6,6 +6,7 @@ trigger_stress_tensor:
 compute_stress_tensor:
   - reset_stress
   - stress_tensor
+  - set_div_stress_v
 #  - avg_stress_tensor
 
 update_stress_tensor:

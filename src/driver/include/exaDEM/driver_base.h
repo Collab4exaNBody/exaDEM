@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 */
 #pragma once
-#include <exanb/core/basic_types.h>
+#include <onika/math/basic_types.h>
 #include <string.h>
 #include <tuple>
 #include <exaDEM/driver_params.hpp>
@@ -53,14 +53,14 @@ namespace exaDEM
    */
   enum DRIVER_TYPE
   {
-    CYLINDER, /**< Cylinder driver type. */
-    SURFACE,  /**< Surface driver type. */
-    BALL,     /**< Ball driver type. */
-    STL_MESH, /**< STL mesh driver type. */
-    UNDEFINED /**< Undefined driver type. */
+    CYLINDER  = 0, /**< Cylinder driver type. */
+    SURFACE   = 1,  /**< Surface driver type. */
+    BALL      = 2,     /**< Ball driver type. */
+    STL_MESH  = 3, /**< STL mesh driver type. */
+    UNDEFINED = 4 /**< Undefined driver type. */
   };
 
-  constexpr int DRIVER_TYPE_SIZE = 5; /**< Size of the driver type enum. */
+  constexpr size_t DRIVER_TYPE_SIZE = DRIVER_TYPE::UNDEFINED; /**< Size of the driver type enum. */
 
   /**
    * @brief Converts a DRIVER_TYPE enum value to its corresponding string representation.
@@ -128,7 +128,6 @@ namespace exaDEM
   template <> constexpr DRIVER_TYPE get_type<exaDEM::Surface>() { return DRIVER_TYPE::SURFACE; }
   template <> constexpr DRIVER_TYPE get_type<exaDEM::Ball>() { return DRIVER_TYPE::BALL; }
   template <> constexpr DRIVER_TYPE get_type<exaDEM::Stl_mesh>() { return DRIVER_TYPE::STL_MESH; }
-  template <> constexpr DRIVER_TYPE get_type<exaDEM::UndefinedDriver>() { return DRIVER_TYPE::UNDEFINED; }
 
   /**
    * @brief Abstract base class representing a driver in the exaDEM simulation.

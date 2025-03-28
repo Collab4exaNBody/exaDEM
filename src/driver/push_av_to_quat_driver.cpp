@@ -16,9 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/stl_mesh.h>
 
@@ -29,11 +29,15 @@ namespace exaDEM
 
   struct func_push_av_to_quat
   {
-    double t;
-    template <typename T> inline void operator()(T &&arg)
-    { /* do nothing */
+    const double t;
+    template <typename T>
+    inline void operator()(T& drv) const
+    {
+       if constexpr ( std::is_same_v< std::remove_cv_t<T> , exaDEM::Stl_mesh > )
+       {
+         drv.push_av_to_quat(t);
+       }
     }
-    inline void operator()(exaDEM::Stl_mesh &arg) { arg.push_av_to_quat(t); }
   };
 
   class PushAngularVelocityToQuaternionDriver : public OperatorNode
@@ -50,12 +54,11 @@ namespace exaDEM
       func_push_av_to_quat func = {t};
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        auto &driver = drivers->data(id);
-        std::visit(func, driver);
+        drivers->apply( id , func );
       }
     }
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("push_av_to_quat_driver", make_simple_operator<PushAngularVelocityToQuaternionDriver>); }
+  ONIKA_AUTORUN_INIT(push_av_to_quat_driver) { OperatorNodeFactory::instance()->register_factory("push_av_to_quat_driver", make_simple_operator<PushAngularVelocityToQuaternionDriver>); }
 } // namespace exaDEM

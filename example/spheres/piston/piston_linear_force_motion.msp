@@ -1,0 +1,34 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+  - common_piston.msp
+
+io_tree:
+  - io_config:
+     dir_name: "SpehreForceMotionDir"
+
++setup_drivers:
+  - register_stl_mesh:
+     id: 1
+     filename: piston_haut.stl
+     scale: 0.5002
+     minskowski: 0.001
+     state: { center: [0.0, 0.0, 9.], vel: [0,0,-0.025], quat: [1,0,0,0], mass: 1}
+     params: { motion_type: LINEAR_FORCE_MOTION, motion_vector: [0,0,-1], const_force: 100 }
+
+
+input_data:
+  - init_rcb_grid
+  - read_dump_particle_interaction:
+     filename: SpehreLinearForceMotionDir/CheckpointFiles/exadem_0002000000.dump
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration:  2300000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 10000
+  dt: 0.0000025 s
+  rcut_max: 1.0 # 2x rmax
+  rcut_inc: 0.4 m # rayon plus petite sphere
+  enable_contact_network: true

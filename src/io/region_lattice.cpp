@@ -17,13 +17,19 @@ specific language governing permissions and limitations
 under the License.
 */
 #include <exanb/grid_cell_particles/lattice_generator.h>
+#include <exanb/grid_cell_particles/legacy_lattice_generator.h>
 
 namespace exaDEM
 {
-  using namespace exanb;
-  template <class GridT> using RegionLatticeTmpl = exanb::RegionLattice<GridT, field::_type>;
+	using namespace exanb;
+  template<class GridT> using RegionLatticeTmpl = exanb::RegionLattice<GridT,field::_type>;
+  template<class GridT> using RegionLegacyLatticeTmpl = exanb::RegionLegacyLattice<GridT,field::_type>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("lattice", make_grid_variant_operator<RegionLatticeTmpl>); }
+  ONIKA_AUTORUN_INIT(region_lattice)
+  {
+    OperatorNodeFactory::instance()->register_factory("lattice", make_grid_variant_operator< RegionLatticeTmpl >);
+    OperatorNodeFactory::instance()->register_factory("legacy_lattice", make_grid_variant_operator< RegionLegacyLatticeTmpl >);    
+  }
 
-} // namespace exaDEM
+}

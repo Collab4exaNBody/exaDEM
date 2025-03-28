@@ -4,7 +4,7 @@
 # default global values
 global:
   dt: 1.0e-4 s
-  rcut_inc: 0.1 m   # additional distance so that we d'ont have to rebuild neighbor list each time step
+  rcut_inc: 0.0 m   # additional distance so that we d'ont have to rebuild neighbor list each time step
   compute_loop_continue: true
   simulation_end_iteration: 10000
   simulation_log_frequency: 10
@@ -27,7 +27,7 @@ global:
   analysis_dump_stress_tensor_frequency: -1
 
 # default grid variant we use
-grid_flavor: grid_flavor_full
+grid_flavor: grid_flavor_dem
 
 make_empty_grid:
   rebind: { grid: null_grid }

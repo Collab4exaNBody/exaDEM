@@ -16,9 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exaDEM/drivers.h>
 
 namespace exaDEM
@@ -28,7 +28,8 @@ namespace exaDEM
   class PushAccVelocityToPositionDriver : public OperatorNode
   {
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(double, dt, INPUT, DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT(double, physical_time, INPUT, REQUIRED);
+    ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
 
   public:
     inline std::string documentation() const override final
@@ -40,15 +41,15 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      const double& t = *dt;
+      const double time = *physical_time;
+      const double delta_t = *dt;
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        auto& driver = drivers->data(id);
-        std::visit([&t](auto&& arg){arg.push_f_v_r(t);}, driver);
+        drivers->apply( id , [time,delta_t](auto& drv){ drv.push_f_v_r(time, delta_t); } );
       }
     }
   };
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("push_f_v_r_driver", make_simple_operator<PushAccVelocityToPositionDriver>); }
+  ONIKA_AUTORUN_INIT(push_f_v_r_driver) { OperatorNodeFactory::instance()->register_factory("push_f_v_r_driver", make_simple_operator<PushAccVelocityToPositionDriver>); }
 } // namespace exaDEM

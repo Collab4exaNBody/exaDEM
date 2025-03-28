@@ -1,0 +1,39 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+  - common_piston.msp
+
+first_particles:
+  - rsa_rnd_rad:
+     bounds: [[ -4.97 , -4.97 , 1 ] , [ 4.97 , 4.97 , 20 ] ]
+     r_min: 0.2
+     r_max: 0.5
+     n_max: 5200
+     region: MYSUPERZONE
+     type: 0
+
+init_spheres:
+  - set_rand_velocity:
+     var: 0.01
+     mean: [0.0,0.0,-1.0]  
+  - set_density:
+     density: 0.0026
+     region: MYSUPERZONE
+  - set_quaternion
+  - update_inertia
+
+input_data:
+  - init_rcb_grid
+  - first_particles
+  - init_spheres
+
+global:
+  simulation_dump_frequency: 2000000
+  simulation_end_iteration:  2000000
+  simulation_log_frequency: 10000
+  simulation_paraview_frequency: 100000
+  dt: 0.00001 s
+  rcut_max: 1.0 # 2x rmax
+  rcut_inc: 0.4 m # rayon plus petite sphere
+  enable_contact_network: true

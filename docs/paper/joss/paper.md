@@ -59,7 +59,7 @@ The `DEM` method, employed to study granular media, falls within the scope of so
 
 Efficient neighbor particle detection is a critical aspect of `DEM` simulation codes. Typically, this is achieved by combining the linked cells method [@ciccotti1987simulation] and Verlet lists [@verlet1967computer], which optimize neighbor searches using a cartesian grid of cells (with a complexity of N, N is the number of particles) while limiting the refresh rate of neighbor lists.  
   
-Several `DEM` software packages have emerged in recent years, offering `HPC` capabilities. Examples include `LIGGGTHS` [@kloss2012models], which is based on `LAMMPS` [@thompson2022lammps] data structures for Molecular Dynamics simulations with spherical particles (`MPI`), and `Blaze-DEM` [@govender2018study] which employs spheres and polyhedra on `GPU` via `CUDA`. `ExaDEM` aims to establish itself as a software solution that combines `MPI` parallelization, `OpenMP` thread parallelization for both polyhedral and spherical particles, and `CUDA` `GPU` parallelization for spherical particles. Similar to `LIGGGTHS` with `LAMMPS`, `ExaDEM` benefits from various `HPC` features developed in the Molecular Dynamics code `ExaSTAMP` [@cieren2014exastamp] that have been mutualized in the `exaNBody` framework, such as `AMR` data structures [@prat2018combining] with load balancing [@prat2020amr] and in-situ analysis [@dirand2018tins]. `ExaDEM` aims to incorporate the physics of interest from the `Rockable` [@richefeu_2016, @gitrockable] (open source), originally created at CNRS for polyhedra on an `HPC` framework. To the best of our knowledge, this is a non-exhaustive list of other well-known `DEM` codes: `EDEM` (not open source), `Rocky DEM` (not open source), `MercuryDPM` [@weinhart2020fast] (open source), and `Yade` [@smilauer2023yade] (open source).
+Several `DEM` software packages have emerged in recent years, offering `HPC` capabilities. Examples include `LIGGGHTS` [@kloss2012models], which is based on `LAMMPS` [@thompson2022lammps] data structures for Molecular Dynamics simulations with spherical particles (`MPI`), and `Blaze-DEM` [@govender2018study] which employs spheres and polyhedra on `GPU` via `CUDA`. `ExaDEM` aims to establish itself as a software solution that combines `MPI` parallelization, `OpenMP` thread parallelization for both polyhedral and spherical particles, and `CUDA` `GPU` parallelization for spherical particles. Similar to `LIGGGHTS` with `LAMMPS`, `ExaDEM` benefits from various `HPC` features developed in the Molecular Dynamics code `ExaSTAMP` [@cieren2014exastamp] that have been mutualized in the `exaNBody` framework, such as `AMR` data structures [@prat2018combining] with load balancing [@prat2020amr] and in-situ analysis [@dirand2018tins]. `ExaDEM` aims to incorporate the physics of interest from the `Rockable` [@richefeu_2016, @gitrockable] (open source), originally created at CNRS for polyhedra on an `HPC` framework. To the best of our knowledge, this is a non-exhaustive list of other well-known `DEM` codes: `EDEM` (not open source), `Rocky DEM` (not open source), `MercuryDPM` [@weinhart2020fast] (open source), and `Yade` [@smilauer2023yade] (open source).
 
 # Implementation Details
 
@@ -70,34 +70,32 @@ Regarding the intra-`MPI` parallelization, we distinguish two main differences b
 - For spherical particles, `OpenMP` parallelization involves iterating over cells. In `GPU` parallelization, a block of `GPU` threads is assigned to a cell, with each `GPU` thread processing a particle.
 - For polyhedral particles, another parallel level is chosen for thread parallelization, the interaction. Unlike spherical particles, polyhedra can have multiple contacts of different types (vertex-vertex, vertex-edge, vertex-face, edge-edge). Hence, it is more effective to consider interactions rather than cells to achieve thread parallelization. However, this strategy introduces synchronizations, such as the usage of mutexes. The `GPU` parallelization of polyhedra is still an upcoming development.
 
-In conclusion, the design of `ExaDEM`, guided by the `exaNBody` framework, facilitates the addition or removal of individual operators or features without disrupting other functionalities, provided these operators are independent. For instance, removing the `gravity_force` from the `ExaDEM` repository is feasible while ensuring the preservation of the `contact_neighbor` operator (building neighbor lists for every particle), which is crucial for running the `hooke_force` operator. Significant efforts have been made to minimize interactions between operators, simplifying the process of adding or removing new modules/operators. 
+In conclusion, the design of `ExaDEM`, guided by the the `exaNBody` framework, facilitates the addition or removal of individual operators or features without disrupting other functionalities, provided these operators are independent. For instance, removing the `gravity_force` from the `ExaDEM` repository is feasible while ensuring the preservation of the `contact_neighbor` operator (building neighbor lists for every particle), which is crucial for running the `hooke_force` operator. Significant efforts have been made to minimize interactions between operators, simplifying the process of adding or removing new modules/operators. 
 
 # Main Features
 
-![Simulation of 700 thousands octahedra in a rotating drum running on 128 mpi processes with 8 OpenMP threads per mpi process (processor: AMD EPYC Milan 7763). \label{fig:rotating-drum}](./rotating-drum.png "test"){width=85%}
+![Simulation of 700 thousands octahedra in a rotating drum running on 128 MPI processes with 8 OpenMP threads per MPI process (processor: AMD EPYC Milan 7763). \label{fig:rotating-drum}](./rotating-drum.png "test"){width=85%}
 
-![Simulation of 20 million spherical particles falling into a funnel. This simulation runs on 512 mpi processes with 8 OpenMP threads per mpi process (processor: AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=70%}
+![Simulation of 20 million spherical particles falling into a funnel. This simulation runs on 512 MPI processes with 8 OpenMP threads per MPI process (processor: AMD EPYC Milan 7763).  \label{fig:funnel}](./funnel.png "test"){width=70%}
 
-`ExaDEM` aims to meet scientific expectations, particularly for nuclear fuel simulations involving scenarios such as rotating drums (see figure \ref{fig:rotating-drum}) or compaction processes. To achieve this goal, `ExaDEM` provides the following key features:
+`ExaDEM` aims to meet scientific expectations, particularly for nuclear fuel simulations involving scenarios such as rotating drums (see figure \autoref{fig:rotating-drum}) or compaction processes. To achieve this goal, `ExaDEM` provides the following key features:
 
 - Handling of different particle types: spherical and polyhedral,
 - Hybrid parallelisation `MPI` + X,
 	- X = `OpenMP` or `CUDA` for spherical particles,
 	- X = `OpenMP` for polyhedral particles,
 	- The Recursive Coordinate Bisection method is used for the load balancing,
-- I/O support for check and restart files (MPIIO files),
+- I/O support for check and restart files (MPI-IO files),
 - Paraview output files containing fields,
-- Drivers: rigid wall, rotating drum, or mesh of polyhedron surface for complex geometries such as funnel (see figure \ref{fig:funnel}),
+- Drivers: rigid wall, rotating drum, or mesh of polyhedron surface for complex geometries such as funnel (see figure \autoref{fig:funnel}),
 - Time integration scheme: Velocity Verlet,
 - Contact detection: Linked-cell method and Verlet lists,
 - Force fields: contact force (Hooke law), cohesive force, and gravity.
 
-All these functionalities are likely to evolve to accommodate new development needs, such as the addition of particle fragmentation. It is worth noting that most of these functionalities have been rigorously tested over 500 million spheres or 10 million polyhedra over ten thousand cores with hybrid `MPI` + `OpenMP` programming on AMD EPYC Milan 7763 processors.
-
-# Future of `ExaDEM`
-
-In the upcoming years, we plan to add several `DEM` features such as complex geometries (propeller), particle fragmentation, and additional diagnostics/outputs. On the other hand, we will develop other parallel strategies, especially on `GPU`, to run on future supercomputers. A specific focus will be done for handling properly polyhedron particles. `ExaDEM` is available under an APACHE 2 license at \url{https://github.com/Collab4exaNBody/exaDEM.git} and the documentation is available at \url{https://github.com/Collab4exaNBody/doc_exaDEM.git}.
+All these functionalities are likely to evolve to accommodate new development needs, such as the addition of particle fragmentation. It is worth noting that most of these functionalities have been rigorously tested over 500 million spheres or 10 million polyhedra over ten thousand cores with hybrid `MPI` + `OpenMP` programming on AMD EPYC Milan 7763 processors. `ExaDEM` is available under an APACHE 2 license at https://github.com/Collab4exaNBody/exaDEM.git and the documentation is available at https://github.com/Collab4exaNBody/doc_exaDEM.git.
 
 # Acknowledgements
 
 This work was performed using HPC resources from CCRT funded by the CEA/DEs simulation program. `ExaDEM` is part of the `PLEIADES` platform which has been developed in collaboration with the French nuclear industry - mainly CEA, EDF, and Framatome - for simulation of fuel elements.
+
+# References

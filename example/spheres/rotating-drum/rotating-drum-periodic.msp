@@ -17,21 +17,20 @@ particle_regions:
 
 input_data:
   - init_rcb_grid
+  - particle_type:
+     type: [ Sphere1 , Sphere2 ]
   - lattice:
       structure: SC
-      types: [ 0 ]
+      types: [ Sphere1 ]
       size: [ 1.0 , 1.0 , 1.0 ]
       region: CYL1
-  - set_radius:
-     rad: 0.5
-  - set_quaternion
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_density:
-     density: 0.02
-  - set_rand_vrot_arot
-  - update_inertia
+  - set_fields:
+     radius: [0.5]
+     density: [0.02]
+     type: [ Sphere1 ]
+     velocity: [[0,0,0]]
+     sigma_velocity: [0.1]
+     polyhedra: false
 
 chunk_neighbors_contact:
   config:

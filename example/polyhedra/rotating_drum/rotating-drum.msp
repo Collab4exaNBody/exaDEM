@@ -27,7 +27,7 @@ input_data:
   - radius_from_shape
   - density_from_shape
   - set_rand_velocity:
-     var: 0.01
+     var: 0.00
      mean: [0.0,0.0,0.0]
   - set_rand_vrot_arot
   - set_quaternion

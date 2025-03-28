@@ -22,17 +22,17 @@ under the License.
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <exanb/core/operator.h>
-#include <exanb/core/operator_slot.h>
-#include <exanb/core/operator_factory.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
-#include <exanb/core/basic_types.h>
-#include <exanb/core/basic_types_operators.h>
-#include <exanb/core/basic_types_stream.h>
-#include <exanb/core/string_utils.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/basic_types_operators.h>
+#include <onika/math/basic_types_stream.h>
+#include <onika/string_utils.h>
 
 #include <mpi.h>
 #include <exaDEM/shapes.hpp>
@@ -48,9 +48,12 @@ namespace exaDEM
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
-    ADD_SLOT( std::string , filename     , INPUT , "output");
+    ADD_SLOT(std::string , filename, INPUT , "output");
     ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
+
+    // optionnal
+    ADD_SLOT(bool, mpi_rank, INPUT, false, DocString{"Add a field containing the mpi rank."});
 
   public:
     inline std::string documentation() const override final
@@ -76,7 +79,7 @@ namespace exaDEM
       auto &shps = *shapes_collection;
       const auto cells = grid->cells();
       const size_t n_cells = grid->number_of_cells();
-      par_poly_helper buffers; // it conatins streams 
+      par_poly_helper buffers = {*mpi_rank}; // it conatins streams 
 
       // fill string buffers
       for (size_t cell_a = 0; cell_a < n_cells; cell_a++)
@@ -103,10 +106,19 @@ namespace exaDEM
 
       if (rank == 0)
       {
-        exaDEM::write_pvtp_polyhedron(*filename, size);
+        exaDEM::write_pvtp_polyhedron(*filename, size, buffers);
       }
+
+      if(buffers.mpi_rank) // add ranks 
+      {
+        for(int i = 0 ; i < buffers.n_vertices ; i++)
+        {
+          buffers.ranks << rank << " ";
+        }
+      }
+
       std::string file = *filename + "/%06d.vtp";
-      file = format_string(file,  rank);
+      file = onika::format_string(file,  rank);
       exaDEM::write_vtp_polyhedron(file, buffers);
     }
   };
@@ -115,5 +127,5 @@ namespace exaDEM
   template <class GridT> using WriteParaviewPolyhedraOperatorTemplate = WriteParaviewPolyhedraOperator<GridT>;
 
   // === register factories ===
-  CONSTRUCTOR_FUNCTION { OperatorNodeFactory::instance()->register_factory("write_paraview_polyhedra", make_grid_variant_operator<WriteParaviewPolyhedraOperatorTemplate>); }
+  ONIKA_AUTORUN_INIT(write_paraview_polyhedra) { OperatorNodeFactory::instance()->register_factory("write_paraview_polyhedra", make_grid_variant_operator<WriteParaviewPolyhedraOperatorTemplate>); }
 } // namespace exaDEM
