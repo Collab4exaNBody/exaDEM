@@ -126,6 +126,39 @@ namespace exaDEM
       for_all(func);
     }
 
+    /** not sure */
+    template<typename T>
+    ONIKA_HOST_DEVICE_FUNC void set(size_t idx, VectorT<T>& data, T& value)
+    {
+      onika::cuda::vector_data(data)[idx] = value; 
+    } 
+
+    /**
+     *@briefs Fills the lists.
+     */
+    ONIKA_HOST_DEVICE_FUNC void set(size_t idx, exaDEM::Interaction& interaction)
+    {
+        set(idx, ft_x, interaction.friction.x);
+        set(idx, ft_y, interaction.friction.y);
+        set(idx, ft_z, interaction.friction.z);
+
+        set(idx, mom_x, interaction.moment.x);
+        set(idx, mom_y, interaction.moment.y);
+        set(idx, mom_z, interaction.moment.z);
+
+        set(idx, id_i, interaction.id_i);
+        set(idx, id_j, interaction.id_j);
+
+        set(idx, cell_i, interaction.cell_i);
+        set(idx, cell_j, interaction.cell_j);
+
+        set(idx, p_i, interaction.p_i);
+        set(idx, p_j, interaction.p_j);
+
+        set(idx, sub_i, interaction.sub_i);
+        set(idx, sub_j, interaction.sub_j);
+    }
+
     /**
      *@briefs Fills the lists.
      */

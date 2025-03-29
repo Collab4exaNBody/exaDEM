@@ -18,13 +18,13 @@ public:
   // static const mat9 zero;
   // static const mat9 unit;
 
-  mat9() : xx(0), xy(0), xz(0), yx(0), yy(0), yz(0), zx(0), zy(0), zz(0) {}
-  mat9(const T XX, const T XY, const T XZ, const T YX, const T YY, const T YZ, const T ZX, const T ZY, const T ZZ) : xx(XX), xy(XY), xz(XZ), yx(YX), yy(YY), yz(YZ), zx(ZX), zy(ZY), zz(ZZ) {}
-  /*explicit*/ mat9(const T val) : xx(val), xy(val), xz(val), yx(val), yy(val), yz(val), zx(val), zy(val), zz(val) {}
+  ONIKA_HOST_DEVICE_FUNC mat9() : xx(0), xy(0), xz(0), yx(0), yy(0), yz(0), zx(0), zy(0), zz(0) {}
+  ONIKA_HOST_DEVICE_FUNC mat9(const T XX, const T XY, const T XZ, const T YX, const T YY, const T YZ, const T ZX, const T ZY, const T ZZ) : xx(XX), xy(XY), xz(XZ), yx(YX), yy(YY), yz(YZ), zx(ZX), zy(ZY), zz(ZZ) {}
+  ONIKA_HOST_DEVICE_FUNC mat9(const T val) : xx(val), xy(val), xz(val), yx(val), yy(val), yz(val), zx(val), zy(val), zz(val) {}
 
-  mat9(const vec3<T> &col1, const vec3<T> &col2, const vec3<T> &col3) { set(col1, col2, col3); }
+  ONIKA_HOST_DEVICE_FUNC mat9(const vec3<T> &col1, const vec3<T> &col2, const vec3<T> &col3) { set(col1, col2, col3); }
 
-  /*explicit*/ mat9(const T M[])
+  ONIKA_HOST_DEVICE_FUNC mat9(const T M[])
   {
     xx = M[0];
     xy = M[1];
@@ -37,9 +37,9 @@ public:
     zz = M[8];
   }
 
-  mat9(const mat9 &M) : xx(M.xx), xy(M.xy), xz(M.xz), yx(M.yx), yy(M.yy), yz(M.yz), zx(M.zx), zy(M.zy), zz(M.zz) {}
+  ONIKA_HOST_DEVICE_FUNC mat9(const mat9 &M) : xx(M.xx), xy(M.xy), xz(M.xz), yx(M.yx), yy(M.yy), yz(M.yz), zx(M.zx), zy(M.zy), zz(M.zz) {}
 
-  mat9 &operator=(const mat9 &M)
+  ONIKA_HOST_DEVICE_FUNC mat9 &operator=(const mat9 &M)
   {
     xx = M.xx;
     xy = M.xy;
@@ -58,7 +58,7 @@ public:
   static mat9 unit() { return mat9(1, 0, 0, 0, 1, 0, 0, 0, 1); }
   static mat9 one() { return mat9(1, 1, 1, 1, 1, 1, 1, 1, 1); }
 
-  void set(const vec3<T> &col1, const vec3<T> &col2, const vec3<T> &col3)
+  ONIKA_HOST_DEVICE_FUNC void set(const vec3<T> &col1, const vec3<T> &col2, const vec3<T> &col3)
   {
     xx = col1.x;
     xy = col2.x;
@@ -71,14 +71,14 @@ public:
     zz = col3.z;
   }
 
-  void reset()
+  ONIKA_HOST_DEVICE_FUNC void reset()
   {
     xx = xy = xz = 0.0;
     yx = yy = yz = 0.0;
     zx = zy = zz = 0.0;
   }
 
-  void reset(const T val)
+  ONIKA_HOST_DEVICE_FUNC void reset(const T val)
   {
     xx = xy = xz = val;
     yx = yy = yz = val;

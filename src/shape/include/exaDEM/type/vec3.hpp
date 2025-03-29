@@ -119,7 +119,7 @@ public:
 
   ONIKA_HOST_DEVICE_FUNC inline T &operator[](int i) { return (&x)[i]; }
 
-  const T &operator[](int i) const { return (&x)[i]; }
+  ONIKA_HOST_DEVICE_FUNC const T &operator[](int i) const { return (&x)[i]; }
 
   // For local frames, the notation n,t and s is more appropriate than x,y and z
   ONIKA_HOST_DEVICE_FUNC inline const T n() const { return x; }
@@ -208,7 +208,7 @@ public:
   /// Cross product
   ONIKA_HOST_DEVICE_FUNC inline friend vec3<T> operator^(const vec3<T> &a, const vec3<T> &b) { return vec3<T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
 
-  friend vec3<T> cross(const vec3<T> &a, const vec3<T> &b) { return vec3<T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
+  ONIKA_HOST_DEVICE_FUNC friend vec3<T> cross(const vec3<T> &a, const vec3<T> &b) { return vec3<T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
 
   /// Squared length of the vector
   ONIKA_HOST_DEVICE_FUNC inline friend T norm2(const vec3 &a) { return a * a; }
