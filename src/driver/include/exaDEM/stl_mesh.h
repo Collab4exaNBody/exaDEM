@@ -280,7 +280,7 @@ namespace exaDEM
 			stream << "center: [" << this->center << "]";
 			stream << ", vel: [" << this->vel << "]";
 			stream << ", vrot: [" << this->vrot << "]";
-			stream << ", surface: " << surface;
+			if(surface > 0) stream << ", surface: " << surface;
 			stream << ", quat: [" << quat.w << "," << quat.x << "," << quat.y << "," << quat.z << "]";
 			if ( is_force_motion() )
 			{

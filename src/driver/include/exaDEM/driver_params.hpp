@@ -311,7 +311,7 @@ namespace exaDEM
      */
     void dump_driver_params(std::stringstream &stream)
     {
-      stream << "     driver_params: { ";
+      stream << "     params: { ";
       stream << " motion_type: "            << motion_type_to_string(motion_type);
       stream << ", motion_vector: ["         << motion_vector << "]"; 
       stream << ", motion_start_threshold: " << motion_start_threshold;
