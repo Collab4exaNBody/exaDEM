@@ -241,7 +241,7 @@ namespace exaDEM
 			{
 				if( motion_type == LINEAR_MOTION )
 				{
-					assert( vel = this->const_vel );
+					assert( vel == this->motion_vector * this->const_vel );
 				}
 				center += dt * vel + 0.5 * dt * dt * acc;
 			}

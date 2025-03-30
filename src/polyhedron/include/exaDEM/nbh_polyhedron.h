@@ -8,12 +8,14 @@ namespace exaDEM
 	{
 		uint64_t id;
 		Vec3d r;
-		Quaternion quaternion;
-		VerticesType vertices; 
+		Quaternion& quaternion;
+		VerticesType& vertices; 
 		const shape *shp;
 
 		template<typename Cells>
-			__host__ __device__ particle_info(Cells& cells, shapes& shps, int cell_id, int p_id)
+			__host__ __device__ particle_info(Cells& cells, shapes& shps, int cell_id, int p_id) : 
+        quaternion(cells[cell_id][field::orient][p_id]),
+        vertices(cells[cell_id][field::vertices][p_id])
 			{
 				auto& cell = cells[cell_id];
 				const uint32_t type = cell[field::type][p_id];
@@ -22,8 +24,6 @@ namespace exaDEM
 				double rz =  cell[field::rz][p_id];
 				id =  cell[field::id][p_id];
 				r = {rx, ry, rz};
-				quaternion = cell[field::orient][p_id];
-				vertices = cell[field::vertices][p_id];
 				shp = shps[type];
 			}
 
@@ -33,7 +33,7 @@ namespace exaDEM
 		} 
 	};	
 
-	__host__ __device__ bool filter_obb(double rVerlet, OBB& obb_i, particle_info& p_nbh)
+	__host__ __device__ bool intersect(double rVerlet, OBB& obb_i, particle_info& p_nbh)
 	{
 		// Get particle pointers for the particle b.
 		OBB obb_j = p_nbh.shp->obb;
@@ -42,7 +42,7 @@ namespace exaDEM
 		obb_j.translate(vec3r{p_nbh.r.x, p_nbh.r.y, p_nbh.r.z});
 		obb_j.enlarge(rVerlet);
 
-		return !obb_i.intersect(obb_j);
+		return obb_i.intersect(obb_j);
 	}
 
 	__device__ void count_interaction(
@@ -79,6 +79,7 @@ namespace exaDEM
 			{
 				if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
 				{
+          //printf("test case 0\n");
 					count[0]++; // vertex-vertex
 				}
 			}
@@ -86,12 +87,12 @@ namespace exaDEM
 			for (int j = threadIdx.y; j < ne_nbh; j+= blockDim.y)
 			{
 				bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
-				if (contact) count[1]++; // vertex - edge
+				count[1] += contact * 1; // vertex - edge
 			}
 			for (int j = threadIdx.y; j < nf_nbh; j+=blockDim.y)
 			{
 				bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
-				if (contact) count[2]++; // vertex - face
+				count[2] += contact * 1; // vertex - face
 			}
 		}
 		for (int i = threadIdx.x; i < ne; i+= blockDim.x)
@@ -99,24 +100,23 @@ namespace exaDEM
 			for (int j = threadIdx.y; j < ne_nbh; j+= blockDim.y)
 			{
 				bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
-				if (contact) count[3]++; // edge - edge
+				count[3] += contact * 1; // edge - edge
 			}
 		}
 
 		// interaction of from particle j to particle i
 		for (int j = threadIdx.x; j < nv_nbh; j+= blockDim.x)
 		{
-			auto& vj = vertices_b[j];//shp->get_vertex(j, r_nbh, orient_nbh);
 			for (int i = threadIdx.y; i < ne; i+=blockDim.y)
 			{
 				bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
-				if (contact) count[1]++; // edge - vertex
+				count[1] += contact * 1; // edge - vertex
 			}
 
 			for (int i = threadIdx.y; i < nf; i+=blockDim.y)
 			{
 				bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
-				if (contact) count[2]++; // face - vertex
+				count[2] += contact * 1; // face - vertex
 			}
 		}
 	}
@@ -137,11 +137,10 @@ namespace exaDEM
 				return;
 		}
 
-
 		/** some renames */
-		auto& shp = p.shp;
+		auto& shp        = p.shp;
 		auto& vertices_a = p.vertices;
-		auto& shp_nbh = p_nbh.shp;
+		auto& shp_nbh    = p_nbh.shp;
 		auto& vertices_b = p_nbh.vertices;
 
 		// get particle j data.
@@ -161,28 +160,30 @@ namespace exaDEM
 				if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
 				{
 					item.sub_j = j;
-					data[0].set(prefix[0]++, item);
+					data[item.type].set(prefix[item.type]++, item); 
 				}
 			}
 
 			item.type = 1;
+		  // vertex - edge
 			for (int j = threadIdx.y; j < ne_nbh; j+= blockDim.y)
 			{
 				bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
 				if (contact) 
 				{ 
 					item.sub_j = j;
-					data[1].set(prefix[1]++, item); // vertex - edge
+					data[item.type].set(prefix[item.type]++, item); 
 				}
 			}
 			item.type = 2;
+			// vertex - face
 			for (int j = threadIdx.y; j < nf_nbh; j+=blockDim.y)
 			{
 				bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
 				if (contact) 
 				{ 
 					item.sub_j = j;
-					data[2].set(prefix[2]++, item); // vertex - face
+					data[item.type].set(prefix[item.type]++, item); 
 				}
 			}
 		}
@@ -191,51 +192,76 @@ namespace exaDEM
 		for (int i = threadIdx.x; i < ne; i+= blockDim.x)
 		{
 			item.sub_i = i;
+		  // edge - edge
 			for (int j = threadIdx.y; j < ne_nbh; j+= blockDim.y)
 			{
 				bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
 				if (contact)
 				{
 					item.sub_j = j;
-					data[3].set(prefix[3]++, item); // edge - edge
+					data[item.type].set(prefix[item.type]++, item); 
 				}
 			}
 		}
 
 		swap(item.cell_j, item.cell_i);
-		swap(item.p_j, item.p_i);
-		swap(item.id_j, item.id_i);
+		swap(   item.p_j,    item.p_i);
+		swap(  item.id_j,   item.id_i);
 
 		// interaction of from particle j to particle i
 		for (int j = threadIdx.x; j < nv_nbh; j+= blockDim.x)
 		{
 			item.type = 1;
 			item.sub_i = j;
-			auto& vj = vertices_b[j];//shp->get_vertex(j, r_nbh, orient_nbh);
+      // edge - vertex
 			for (int i = threadIdx.y; i < ne; i+=blockDim.y)
 			{
 				bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
 				if (contact)
 				{
 					item.sub_j = i;
-					data[1].set(prefix[1]++, item); // edge - vertex
+					data[item.type].set(prefix[item.type]++, item); 
 				}
 			}
 
 			item.type = 2;
+      // face - vertex
 			for (int i = threadIdx.y; i < nf; i+=blockDim.y)
 			{
 				bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
 				if (contact)
 				{
 					item.sub_j = i;
-					data[2].set(prefix[2]++, item);// face - vertex
+					data[item.type].set(prefix[item.type]++, item); 
 				}
 			}
 		}
 	}
 
-	template<typename TMPLC>
+	struct header_nbh
+	{
+		uint16_t nchunks;
+		int cell_b;
+		const uint16_t* chunk_idx;
+		bool is_ghost_b;
+	};
+
+	// stream is shifted
+	__host__ __device__ 
+		header_nbh decode_stream_header_nbh(const IJK& loc_a, const IJK dims, const uint16_t*& stream)
+		{
+			header_nbh res;
+			uint16_t cell_b_enc = *(stream++);
+			IJK loc_b = loc_a + decode_cell_index(cell_b_enc);
+			res.cell_b =  grid_ijk_to_index( dims , loc_b );
+			res.nchunks = *(stream++);
+			res.chunk_idx = stream;
+			res.is_ghost_b = inside_grid_shell(dims, 0, 1, loc_b);
+			stream += res.nchunks; /*do not forget to shift stream*/
+			return res; 
+		}
+
+	template<int BLOCKX, int BLOCKY, typename TMPLC>
 		__global__ void fill_classifier_gpu(
 				InteractionSOA* data,
 				TMPLC cells,
@@ -244,13 +270,9 @@ namespace exaDEM
 				shapes shps,
 				double rVerlet,
 				NumberOfInteractionPerTypes * shift_data,
-				NumberOfInteractionPerTypes * count_data,
 				size_t* cell_idx)
 		{
-			constexpr int blockDimXY = 64;//blockDim.x * blockDim.y; 
-			constexpr int CS = 1; // chunk size
-			using BlockScan = cub::BlockScan<int, 64>;
-			const int threadId = blockDim.x * threadIdx.x + threadIdx.y;
+			using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
 			const size_t cell_a = cell_idx[blockIdx.x];
 			IJK loc_a = grid_index_to_ijk( dims, cell_a);
 
@@ -266,29 +288,18 @@ namespace exaDEM
 				prefix[i] = 0;
 			}
 
-			// for obbs
-			__shared__ int check_obb[64]; // 8*8
-			check_obb[threadId] = false;
-
+			/** Get stream info containing neighbors data */
 			const unsigned int cell_a_particles = cells[cell_a].size();
 			const auto stream_info = chunknbh_stream_info( nbh[cell_a] , cell_a_particles );
 			const uint16_t* stream_base = stream_info.stream;
-			const uint16_t* __restrict__ stream = stream_base;
+			const uint16_t* stream = stream_base;
 			const uint32_t* __restrict__ particle_offset = stream_info.offset;
-
-			if( particle_offset == nullptr ) return;
-
 			const int32_t poffshift = stream_info.shift;
 
-			for(unsigned int p_a=0; p_a<cell_a_particles ; p_a++)
+			for(unsigned int p_a=0; p_a< cell_a_particles ; p_a++)
 			{
-				size_t p_nbh_index = 0;
+				if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
 				unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
-				size_t cell_b = cell_a;
-				unsigned int chunk = 0;
-				unsigned int nchunks = 0;
-				unsigned int cg = 0; // cell group index.
-				bool symcont = false;
 
 				/** load data */
 				particle_info p(cells, shps, cell_a, p_a);
@@ -300,97 +311,83 @@ namespace exaDEM
 				obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
 				obb_i.enlarge(rVerlet);
 
-				auto stream_checkpoint = stream;
-
-				for(cg=0; cg<cell_groups && symcont ;cg++)
+        /** Count the number of interactions per thread */
+				for(unsigned int cg=0; cg<cell_groups ;cg++)
 				{
-					uint16_t cell_b_enc = *(stream++);
-					IJK loc_b = loc_a + decode_cell_index(cell_b_enc);
-					cell_b = grid_ijk_to_index( dims , loc_b );
-					unsigned int nbh_cell_particles = cells[cell_b].size();
-					nchunks = *(stream++); // should be 1
-					for(chunk=threadId;chunk<nchunks && symcont;chunk+= blockDim.x * blockDim.y)
+          header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
+					unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
+					for(unsigned int chunk=0 ; chunk<nbh_cg.nchunks ; chunk++)
 					{
-						unsigned int chunk_start = static_cast<unsigned int>( *(stream++) ) * CS;
-						for(unsigned int i=0;i<CS && symcont;i++)
+						unsigned int p_b = nbh_cg.chunk_idx[chunk];
+						if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
 						{
-							unsigned int p_b = chunk_start + i;
-							if( p_b<nbh_cell_particles && (cell_b!=cell_a || p_b!=p_a) )
+							particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
+							if( intersect(rVerlet, obb_i, p_nbh) )
 							{
-								particle_info p_nbh(cells, shps, cell_b, p_b);
-								check_obb[chunk] = check_obb[chunk] || filter_obb(rVerlet, obb_i, p_nbh);
+								count_interaction( rVerlet, count, !nbh_cg.is_ghost_b, p, p_nbh);
 							}
 						}
 					}
 				}
+			}
+		  __syncthreads();
+
+			NumberOfInteractionPerTypes sdata = shift_data[blockIdx.x];
+			for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
+			{
+				BlockScan(temp_storage).ExclusiveSum(count[type], prefix[type]);
 				__syncthreads();
-				stream = stream_checkpoint;
+				prefix[type] += sdata[type];
+			}
 
-				for(cg=0; cg<cell_groups && symcont ;cg++)
+			Interaction item;
+			for(unsigned int p_a=0 ; p_a< cell_a_particles ; p_a++)
+			{
+				if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
+				unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
+
+				/** Get current particle info */
+				particle_info p(cells, shps, cell_a, p_a);
+
+				/** compute obb */
+				OBB obb_i = p.shp->obb;
+				quat conv_orient_i = p.get_quat();
+				obb_i.rotate(conv_orient_i);
+				obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
+				obb_i.enlarge(rVerlet);
+
+				for(unsigned int cg=0; cg<cell_groups ;cg++)
 				{
-					uint16_t cell_b_enc = *(stream++);
-					IJK loc_b = loc_a + decode_cell_index(cell_b_enc);
-					cell_b = grid_ijk_to_index( dims , loc_b );
-					unsigned int nbh_cell_particles = cells[cell_b].size();
-					nchunks = *(stream++); // should be 1
-
-					bool is_ghost_b = inside_grid_shell(dims, 0, 1, loc_b); //grid.is_ghost_cell(cell_b);
-					for(chunk=0;chunk<nchunks && symcont;chunk++)
+          header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
+					unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
+					for(unsigned int chunk=0 ; chunk<nbh_cg.nchunks ;chunk++)
 					{
-						unsigned int chunk_start = static_cast<unsigned int>( *(stream++) ) * CS;
-						for(unsigned int i=0;i<CS && symcont;i++)
+						unsigned int p_b = nbh_cg.chunk_idx[chunk]; 
+						if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
 						{
-							unsigned int p_b = chunk_start + i;
-							if( p_b<nbh_cell_particles && (cell_b!=cell_a || p_b!=p_a) )
+						  /** Get nbh particle info */
+							particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
+							if( intersect(rVerlet, obb_i, p_nbh) )
 							{
-								if( check_obb[p_b] );
-								{
-									particle_info p_nbh(cells, shps, cell_b, p_b);
-									count_interaction( rVerlet, count, !is_ghost_b, p, p_nbh);
-								}
-							}
-						}
-					}
-				}
-				__syncthreads();
-				BlockScan(temp_storage).ExclusiveSum(count, prefix);
-				auto& sdata = shift_data[blockIdx.x];
-				for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
-				{
-					prefix[type] += sdata[type];
-				}
+								/** Define interaction (section particle i) */
+								item.id_i = p.id;
+								item.cell_i = cell_a;
+								item.p_i = p_a;
+								/** Define interaction (section particle j) */
+								item.cell_j = nbh_cg.cell_b;
+								item.id_j = p_nbh.id;
+								item.p_j = p_b;
 
-				stream = stream_checkpoint;
-				Interaction item;
-				item.id_i = p.id;
-				item.cell_i = cell_a;
+								/** some basic checks */
+								assert( cells[cell_a].size() == cell_a_particles);
+								assert( p_a == item.p_i );
+								assert(item.p_j < cells[cell_b].size());
+								assert(item.p_i < cells[cell_a].size());
 
-				for(cg=0; cg<cell_groups && symcont ;cg++)
-				{
-					uint16_t cell_b_enc = *(stream++);
-					IJK loc_b = loc_a + decode_cell_index(cell_b_enc);
-					cell_b = grid_ijk_to_index( dims , loc_b );
-					unsigned int nbh_cell_particles = cells[cell_b].size();
-					nchunks = *(stream++); // should be 1
-
-					item.cell_j = cell_b;
-					bool is_ghost_b = inside_grid_shell(dims, 0, 1, loc_b); //grid.is_ghost_cell(cell_b);
-					for(chunk=0;chunk<nchunks && symcont;chunk++)
-					{
-						unsigned int chunk_start = static_cast<unsigned int>( *(stream++) ) * CS;
-						for(unsigned int i=0;i<CS && symcont;i++)
-						{
-							unsigned int p_b = chunk_start + i;
-							if( p_b<nbh_cell_particles && (cell_b!=cell_a || p_b!=p_a) )
-							{
-								if( check_obb[p_b] );
-								{
-									particle_info p_nbh(cells, shps, cell_b, p_b);
-									item.id_j = p_b;
-									fill_interaction( data, item, rVerlet, prefix, !is_ghost_b, p, p_nbh);
-								} // check
-							} // p_b
-						} // CS
+								/** here, we fill directly the interactionSOA data storage */
+								fill_interaction( data, item, rVerlet, prefix, !nbh_cg.is_ghost_b, p, p_nbh);
+							} // check
+						} // p_b
 					} // chunk
 				} // cg
 			} // p_a 

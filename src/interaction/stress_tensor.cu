@@ -55,6 +55,7 @@ namespace exaDEM
             const Vec3d *const __restrict__ ftp, 
             const Vec3d *const __restrict__ cpp) const
         {
+          if(type != I.type) printf("type %d I type %d, idx %d\n", int(type), int(I.type), int(idx));
           assert( type == I.type );
           if( dnp[idx] < 0.0)
           {

@@ -138,6 +138,8 @@ namespace exaDEM
      */
     ONIKA_HOST_DEVICE_FUNC void set(size_t idx, exaDEM::Interaction& interaction)
     {
+        //if(idx >= size()) printf("idx %d / size %d\n", int(idx), int(size()));
+        type = interaction.type;
         set(idx, ft_x, interaction.friction.x);
         set(idx, ft_y, interaction.friction.y);
         set(idx, ft_z, interaction.friction.z);
@@ -174,6 +176,8 @@ namespace exaDEM
       {
         const size_t idx = old_size + i;
         auto& interaction = tmp[i];
+        set(idx, interaction);
+/* 
         ft_x[idx] = interaction.friction.x;
         ft_y[idx] = interaction.friction.y;
         ft_z[idx] = interaction.friction.z;
@@ -193,7 +197,8 @@ namespace exaDEM
 
         sub_i[idx] = interaction.sub_i;
         sub_j[idx] = interaction.sub_j;
-      }
+*/ 
+     }
     }
 
     void copy(size_t start, size_t size, std::vector<exaDEM::Interaction> &tmp, int w)

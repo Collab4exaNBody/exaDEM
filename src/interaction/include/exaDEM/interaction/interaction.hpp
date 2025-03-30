@@ -76,6 +76,12 @@ namespace exaDEM
                 << " [cell: " << cell_j << ", idx " << p_j << ", particle id: " << id_j << "] : (friction: " << friction << ", moment: " << moment << ")" << std::endl;
     }
 
+    ONIKA_HOST_DEVICE_FUNC void PrintF()
+    {
+      printf("Interaction(type = %d [cell: %d, idx %d, particle id: %d] and [cell: %d , idx %d, particle id: %d]\n", 
+             int(type), int(cell_i), int(p_i), int(id_i), int(cell_j), int(p_j), int(id_j));
+    }
+
     /**
      * @brief Displays the Interaction data.
      */

@@ -148,6 +148,19 @@ namespace exaDEM
           const shape &shp_i = shps[type_i];
           const shape &shp_j = shps[type_j];
 
+          // === debug
+/*          if(threadIdx.x == 0 && (item.p_i >= cell_i.size() || item.p_j >= cell_j.size()))
+          {
+            printf("cell_i.size(): %d cell_j.size(): %d\n", int(cell_i.size()), int(cell_j.size()));
+            item.PrintF();
+          }
+*/
+/*
+          if((item.cell_i == item.cell_j) && (item.p_i == item.p_j))
+          {
+            item.PrintF();
+          }
+*/
           auto [contact, dn, n, contact_position] = detection(vertices_i, item.sub_i, &shp_i, vertices_j, item.sub_j, &shp_j);
           // temporary vec3d to store forces.
           Vec3d f = {0, 0, 0};

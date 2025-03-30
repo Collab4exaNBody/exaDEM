@@ -160,7 +160,7 @@ namespace exaDEM
   };
 
   /*******************************************/
-  /*            WrapperFoAll                 */
+  /*            WrapperForAll                */
   /*******************************************/
   template <typename T, typename K, typename... Args> struct WrapperForAll
   {
@@ -242,6 +242,7 @@ namespace exaDEM
     ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_STATIC;
     auto [data, size] = ic.get_info(type);
+    //lout << "Number of interaction (type=" << type << ") = " << size << std::endl;
     InteractionWrapper<T> interactions(data);
     AnalysisDataPacker packer(ic, type);
     WrapperContactLawForAll func(interactions, kernel, packer, args...);

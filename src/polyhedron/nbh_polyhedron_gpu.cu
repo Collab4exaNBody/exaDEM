@@ -51,7 +51,21 @@ namespace exaDEM
 	//constexpr int NumberOfInteractionTypes = 13;
 	using NumberOfInteractionPerTypes = ::onika::oarray_t<int, NumberOfInteractionTypes>;
 
-	template<typename TMPLC>
+  // one block
+  __global__ void stupid_prefix_sum(size_t size, NumberOfInteractionPerTypes * count_data, NumberOfInteractionPerTypes * prefix_data)
+  {
+    if(threadIdx.x < NumberOfInteractionTypes)
+    {
+      prefix_data[0][threadIdx.x] = 0;
+      for(int i = 1 ; i < size ; i++)
+      {
+        prefix_data[i][threadIdx.x] = prefix_data[i-1][threadIdx.x] + count_data[i-1][threadIdx.x];
+      }
+    
+    }
+  }
+
+	template<int BLOCKX, int BLOCKY, typename TMPLC>
 		__global__ void get_number_of_interations_gpu(
 				TMPLC cells, 
 				IJK dims, 
@@ -61,10 +75,7 @@ namespace exaDEM
 				NumberOfInteractionPerTypes * count_data, 
 				size_t* cell_idx)
 		{
-			constexpr int blockDimXY = 64;//blockDim.x * blockDim.y; 
-			constexpr int CS = 1; // chunk size
-			using BlockReduce = cub::BlockReduce<int, 64>; // 8*8 blockDimXY>;
-			const int threadId = blockDim.x * threadIdx.x + threadIdx.y;
+			using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING, BLOCKY>; // 8*8 blockDimXY>;
 			const size_t cell_a = cell_idx[blockIdx.x];
 			IJK loc_a = grid_index_to_ijk( dims, cell_a);
 
@@ -79,28 +90,20 @@ namespace exaDEM
 			}
 
 			// for obbs
-			__shared__ int check_obb[64]; // 8*8
-			check_obb[threadId] = false; 
-
 			const unsigned int cell_a_particles = cells[cell_a].size();
 			const auto stream_info = chunknbh_stream_info( nbh[cell_a] , cell_a_particles );
 			const uint16_t* stream_base = stream_info.stream;
-			const uint16_t* __restrict__ stream = stream_base;
+			const uint16_t* stream = stream_base;
 			const uint32_t* __restrict__ particle_offset = stream_info.offset;
 
-			if( particle_offset == nullptr ) return;
 
 			const int32_t poffshift = stream_info.shift;
 
 			for(unsigned int p_a=0; p_a<cell_a_particles ; p_a++)
 			{
-				size_t p_nbh_index = 0;
+        if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
+
 				unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
-				size_t cell_b = cell_a;
-				unsigned int chunk = 0;
-				unsigned int nchunks = 0;
-				unsigned int cg = 0; // cell group index.
-				bool symcont = false;
 
 				/** load data */ 
 				particle_info p(cells, shps, cell_a, p_a);
@@ -112,64 +115,30 @@ namespace exaDEM
 				obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
 				obb_i.enlarge(rVerlet);
 
-				auto stream_checkpoint = stream;
-
-				for(cg=0; cg<cell_groups && symcont ;cg++)
-				{
-					uint16_t cell_b_enc = *(stream++);
-					IJK loc_b = loc_a + decode_cell_index(cell_b_enc);
-					cell_b = grid_ijk_to_index( dims , loc_b );
-					unsigned int nbh_cell_particles = cells[cell_b].size();
-					nchunks = *(stream++); // should be 1
-					for(chunk=threadId;chunk<nchunks && symcont;chunk+= blockDim.x * blockDim.y)
-					{
-						unsigned int chunk_start = static_cast<unsigned int>( *(stream++) ) * CS;
-						for(unsigned int i=0;i<CS && symcont;i++)
-						{
-							unsigned int p_b = chunk_start + i;
-							if( p_b<nbh_cell_particles && (cell_b!=cell_a || p_b!=p_a) )
-							{
-								particle_info p_nbh(cells, shps, cell_b, p_b); 
-								check_obb[chunk] = check_obb[chunk] || filter_obb(rVerlet, obb_i, p_nbh);
-							}
-						}
-					}
-				}
-				__syncthreads();
-				stream = stream_checkpoint;
-
-				for(cg=0; cg<cell_groups && symcont ;cg++)
-				{
-					uint16_t cell_b_enc = *(stream++);
-					IJK loc_b = loc_a + decode_cell_index(cell_b_enc);
-					cell_b = grid_ijk_to_index( dims , loc_b );
-					unsigned int nbh_cell_particles = cells[cell_b].size();
-					nchunks = *(stream++); // should be 1
-
-					bool is_ghost_b = inside_grid_shell(dims, 0, 1, loc_b); //grid.is_ghost_cell(cell_b);
-					for(chunk=0;chunk<nchunks && symcont;chunk++)
-					{
-						unsigned int chunk_start = static_cast<unsigned int>( *(stream++) ) * CS;
-						for(unsigned int i=0;i<CS && symcont;i++)
-						{
-							unsigned int p_b = chunk_start + i;
-							if( p_b<nbh_cell_particles && (cell_b!=cell_a || p_b!=p_a) )
-							{
-								if( check_obb[p_b] );
-								{
-									particle_info p_nbh(cells, shps, cell_b, p_b); 
-									count_interaction( rVerlet, count, !is_ghost_b, p, p_nbh);
-								}
-							}
-						}
-					}
-				}
-				__syncthreads();
+        /** Count the number of interactions per thread */
+        for(unsigned int cg=0; cg<cell_groups ;cg++)
+        {
+          header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
+          unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
+          for(unsigned int chunk=0 ; chunk<nbh_cg.nchunks ; chunk++)
+          {
+            unsigned int p_b = nbh_cg.chunk_idx[chunk];
+            if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
+            {
+              particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
+              if( intersect(rVerlet, obb_i, p_nbh))
+              {
+                count_interaction( rVerlet, count, !nbh_cg.is_ghost_b, p, p_nbh);
+              }
+            }
+          }
+        }
 			}
 			for(int i = 0; i < NumberOfInteractionTypes ; i++)
 			{
 				int aggregate = BlockReduce(temp_storage).Sum(count[i]);
-				if(threadIdx.x == 0) count_data[blockIdx.x][i] = aggregate;
+        __syncthreads();
+				if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) count_data[blockIdx.x][i] = aggregate;
 			}
 		}
 
@@ -187,6 +156,11 @@ namespace exaDEM
 		ADD_SLOT(double, rcut_inc, INPUT_OUTPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
 		ADD_SLOT(Drivers, drivers, INPUT, DocString{"List of Drivers"});
 		ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
+
+    using VectorTypes = onika::memory::CudaMMVector<NumberOfInteractionPerTypes>;
+
+    ADD_SLOT(VectorTypes, nbOfInteractionsCell, PRIVATE);
+    ADD_SLOT(VectorTypes, prefixInteractionsCell, PRIVATE);
 
 		public:
 		inline std::string documentation() const override final
@@ -396,6 +370,8 @@ namespace exaDEM
 				}
 			}
 
+			lout << "start nbh_polyhedron_gpu" << std::endl;
+
 			// if grid structure (dimensions) changed, we invalidate thie whole data
 			if (interactions.size() != n_cells)
 			{
@@ -416,14 +392,23 @@ namespace exaDEM
 
 			auto [cell_ptr, cell_size] = traversal_real->info();
 
+      // declare n int and prefix
+      auto& number_of_interactions_cell = *nbOfInteractionsCell;
+      auto& prefix_interactions_cell = *prefixInteractionsCell;
 
-			onika::memory::CudaMMVector<NumberOfInteractionPerTypes> number_of_interactions_cell;
-			onika::memory::CudaMMVector<NumberOfInteractionPerTypes> prefix_interactions_cell;
-			number_of_interactions_cell.resize(cell_size);
-			prefix_interactions_cell.resize(cell_size);
-			dim3 BlockSize(8,8,1);
+      if(number_of_interactions_cell.size() != cell_size)
+      {
+			  number_of_interactions_cell.resize(cell_size);
+			  prefix_interactions_cell.resize(cell_size);
+      }
+
+      // get n int 
+			lout << "start get_number_of_interations_gpu" << std::endl;
+      constexpr int block_x = 8;
+      constexpr int block_y = 8;
+			dim3 BlockSize(block_x, block_y, 1);
 			dim3 GridSize(cell_size,1,1);
-			get_number_of_interations_gpu<<<GridSize, BlockSize>>>(
+			get_number_of_interations_gpu<block_x, block_y><<<GridSize, BlockSize>>>(
 					grid->cells(),
 					grid->dimension(), 
 					chunk_neighbors->data(), 
@@ -431,24 +416,31 @@ namespace exaDEM
 					rVerlet,
 					onika::cuda::vector_data(number_of_interactions_cell), 
 					cell_ptr); 
+      cudaDeviceSynchronize();
+			lout << "end get_number_of_interations_gpu" << std::endl;
 
-			for(int type = 0 ; type < NumberOfInteractionTypes ; type++) prefix_interactions_cell[0][type] = 0;
-			for(int i = 1 ; i < cell_size ; i++)
-			{
-				for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
-				{
-					prefix_interactions_cell[i][type] = prefix_interactions_cell[i-1][type] + number_of_interactions_cell[i][type];
-				}
-			}    
+      // compute prefix sum using the most stupid way
+      stupid_prefix_sum<<<1,32>>>(
+        cell_size, 
+        onika::cuda::vector_data(number_of_interactions_cell),
+        onika::cuda::vector_data(prefix_interactions_cell)
+      ); 
 
 			NumberOfInteractionPerTypes total_nb_int;
+      cudaDeviceSynchronize();
 			for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
 			{
 				total_nb_int[type] = prefix_interactions_cell[cell_size-1][type] + number_of_interactions_cell[cell_size-1][type];
+				lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
 			}
+      // resize classifier
 			classifier.resize(total_nb_int, ResizeClassifier::POLYHEDRON);
+      cudaDeviceSynchronize();
 
-			fill_classifier_gpu<<<GridSize, BlockSize>>>(
+      // fill data
+			lout << "start fill_classifier_gpu" << std::endl;
+			lout << "GridSize: " << GridSize.x << std::endl;
+			fill_classifier_gpu<block_x, block_y><<<GridSize, BlockSize>>>(
 					onika::cuda::vector_data(classifier.waves),
 					grid->cells(),
 					grid->dimension(),
@@ -456,8 +448,8 @@ namespace exaDEM
 					shps,
 					rVerlet,
 					onika::cuda::vector_data(prefix_interactions_cell),
-					onika::cuda::vector_data(number_of_interactions_cell),
 					cell_ptr);
+			lout << "end fill_classifier_gpu" << std::endl;
 
 
 
@@ -570,6 +562,7 @@ namespace exaDEM
 				}
 				//    GRID_OMP_FOR_END
 			}
+			lout << "end of nbh_polyhedron gpu" << std::endl;
 		}
 	};
 
