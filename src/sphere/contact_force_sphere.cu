@@ -138,13 +138,13 @@ namespace exaDEM
       {
         LinearXForm cp_xform = {domain->xform()};
         if(*symetric) core<true>(cp_xform);
-        else core<true>(cp_xform);
+        else core<false>(cp_xform);
       }
       else     
       {
         NullXForm cp_xform;
         if(*symetric) core<true>(cp_xform);
-        else core<true>(cp_xform);
+        else core<false>(cp_xform);
       }     
 
       if (write_interactions)
