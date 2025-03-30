@@ -12,8 +12,11 @@ evaluate_particle_displ:
 chunk_neighbors_impl:
   - chunk_neighbors_contact
   - unclassify_interactions
-#  - nbh_polyhedron
-  - nbh_polyhedron_gpu
+  - nbh_polyhedron
+#  - nbh_polyhedron_gpu:
+#     block_version: true
+#     particle_version: false
+#     pair_version: false #true
   - classify_interactions
 #  - stats_interactions
   - resize_particle_locks

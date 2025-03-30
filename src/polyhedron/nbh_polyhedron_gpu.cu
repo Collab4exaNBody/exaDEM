@@ -41,6 +41,9 @@ under the License.
 #include <exaDEM/shape_detection_driver.hpp>
 #include <exaDEM/traversal.h>
 #include <exaDEM/nbh_polyhedron.h>
+#include <exaDEM/nbh_polyhedron_block.h>
+#include <exaDEM/nbh_polyhedron_particle.h>
+#include <exaDEM/nbh_polyhedron_pair.h>
 
 #include <cassert>
 
@@ -48,99 +51,6 @@ namespace exaDEM
 {
 	using namespace exanb;
 	using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
-	//constexpr int NumberOfInteractionTypes = 13;
-	using NumberOfInteractionPerTypes = ::onika::oarray_t<int, NumberOfInteractionTypes>;
-
-  // one block
-  __global__ void stupid_prefix_sum(size_t size, NumberOfInteractionPerTypes * count_data, NumberOfInteractionPerTypes * prefix_data)
-  {
-    if(threadIdx.x < NumberOfInteractionTypes)
-    {
-      prefix_data[0][threadIdx.x] = 0;
-      for(int i = 1 ; i < size ; i++)
-      {
-        prefix_data[i][threadIdx.x] = prefix_data[i-1][threadIdx.x] + count_data[i-1][threadIdx.x];
-      }
-    
-    }
-  }
-
-	template<int BLOCKX, int BLOCKY, typename TMPLC>
-		__global__ void get_number_of_interations_gpu(
-				TMPLC cells, 
-				IJK dims, 
-				GridChunkNeighborsData nbh, 
-				shapes shps, 
-				double rVerlet, 
-				NumberOfInteractionPerTypes * count_data, 
-				size_t* cell_idx)
-		{
-			using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING, BLOCKY>; // 8*8 blockDimXY>;
-			const size_t cell_a = cell_idx[blockIdx.x];
-			IJK loc_a = grid_index_to_ijk( dims, cell_a);
-
-			// cub stuff
-			__shared__ typename BlockReduce::TempStorage temp_storage;
-
-			// Struct to fill count_data at the enf
-			int count[NumberOfInteractionTypes];
-			for(size_t i = 0; i < NumberOfInteractionTypes ; i++)
-			{ 
-				count[i] = 0;
-			}
-
-			// for obbs
-			const unsigned int cell_a_particles = cells[cell_a].size();
-			const auto stream_info = chunknbh_stream_info( nbh[cell_a] , cell_a_particles );
-			const uint16_t* stream_base = stream_info.stream;
-			const uint16_t* stream = stream_base;
-			const uint32_t* __restrict__ particle_offset = stream_info.offset;
-
-
-			const int32_t poffshift = stream_info.shift;
-
-			for(unsigned int p_a=0; p_a<cell_a_particles ; p_a++)
-			{
-        if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
-
-				unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
-
-				/** load data */ 
-				particle_info p(cells, shps, cell_a, p_a);
-
-				/** compute obb */
-				OBB obb_i = p.shp->obb;
-				quat conv_orient_i = p.get_quat();
-				obb_i.rotate(conv_orient_i);
-				obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
-				obb_i.enlarge(rVerlet);
-
-        /** Count the number of interactions per thread */
-        for(unsigned int cg=0; cg<cell_groups ;cg++)
-        {
-          header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
-          unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
-          for(unsigned int chunk=0 ; chunk<nbh_cg.nchunks ; chunk++)
-          {
-            unsigned int p_b = nbh_cg.chunk_idx[chunk];
-            if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
-            {
-              particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
-              if( intersect(rVerlet, obb_i, p_nbh))
-              {
-                count_interaction( rVerlet, count, !nbh_cg.is_ghost_b, p, p_nbh);
-              }
-            }
-          }
-        }
-			}
-			for(int i = 0; i < NumberOfInteractionTypes ; i++)
-			{
-				int aggregate = BlockReduce(temp_storage).Sum(count[i]);
-        __syncthreads();
-				if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) count_data[blockIdx.x][i] = aggregate;
-			}
-		}
 
 	template <typename GridT, class = AssertGridHasFields<GridT>> class UpdateGridCellInteractionGPU : public OperatorNode
 	{
@@ -159,6 +69,9 @@ namespace exaDEM
 
     using VectorTypes = onika::memory::CudaMMVector<NumberOfInteractionPerTypes>;
 
+    ADD_SLOT(bool, block_version, false, PRIVATE);
+    ADD_SLOT(bool, pair_version, false, PRIVATE);
+    ADD_SLOT(bool, particle_version, false, PRIVATE);
     ADD_SLOT(VectorTypes, nbOfInteractionsCell, PRIVATE);
     ADD_SLOT(VectorTypes, prefixInteractionsCell, PRIVATE);
 
@@ -365,8 +278,8 @@ namespace exaDEM
 			{
 				if(drivers->get_size() > 0)
 				{
-					lout<< "Error: Contact detection with drivers is deactivated when the simulation box is deformed." << std::endl;
-					std::exit(0);
+//					lout<< "Error: Contact detection with drivers is deactivated when the simulation box is deformed." << std::endl;
+//					std::exit(0);
 				}
 			}
 
@@ -400,58 +313,175 @@ namespace exaDEM
       {
 			  number_of_interactions_cell.resize(cell_size);
 			  prefix_interactions_cell.resize(cell_size);
-      }
-
-      // get n int 
-			lout << "start get_number_of_interations_gpu" << std::endl;
-      constexpr int block_x = 8;
-      constexpr int block_y = 8;
-			dim3 BlockSize(block_x, block_y, 1);
-			dim3 GridSize(cell_size,1,1);
-			get_number_of_interations_gpu<block_x, block_y><<<GridSize, BlockSize>>>(
-					grid->cells(),
-					grid->dimension(), 
-					chunk_neighbors->data(), 
-					shps, 
-					rVerlet,
-					onika::cuda::vector_data(number_of_interactions_cell), 
-					cell_ptr); 
-      cudaDeviceSynchronize();
-			lout << "end get_number_of_interations_gpu" << std::endl;
-
-      // compute prefix sum using the most stupid way
-      stupid_prefix_sum<<<1,32>>>(
-        cell_size, 
-        onika::cuda::vector_data(number_of_interactions_cell),
-        onika::cuda::vector_data(prefix_interactions_cell)
-      ); 
-
-			NumberOfInteractionPerTypes total_nb_int;
-      cudaDeviceSynchronize();
-			for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
-			{
-				total_nb_int[type] = prefix_interactions_cell[cell_size-1][type] + number_of_interactions_cell[cell_size-1][type];
-				lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
 			}
-      // resize classifier
-			classifier.resize(total_nb_int, ResizeClassifier::POLYHEDRON);
-      cudaDeviceSynchronize();
-
-      // fill data
-			lout << "start fill_classifier_gpu" << std::endl;
-			lout << "GridSize: " << GridSize.x << std::endl;
-			fill_classifier_gpu<block_x, block_y><<<GridSize, BlockSize>>>(
-					onika::cuda::vector_data(classifier.waves),
-					grid->cells(),
-					grid->dimension(),
-					chunk_neighbors->data(),
-					shps,
-					rVerlet,
-					onika::cuda::vector_data(prefix_interactions_cell),
-					cell_ptr);
-			lout << "end fill_classifier_gpu" << std::endl;
 
 
+			if( *block_version )
+			{
+        lout << "NBH polyhedron Block version" << std::endl;
+				lout << "Start get_number_of_interations_block ..." << std::endl;
+        /** Define cuda block and grid size */
+				constexpr int block_x = 4;
+				constexpr int block_y = 4;
+				dim3 BlockSize(block_x, block_y, 1);
+				dim3 GridSize(cell_size,1,1);
+
+        /** first count the number of interactions per cell */
+				get_number_of_interations_block<block_x, block_y><<<GridSize, BlockSize>>>(
+						grid->cells(),
+						grid->dimension(), 
+						chunk_neighbors->data(), 
+						shps, 
+						rVerlet,
+						onika::cuda::vector_data(number_of_interactions_cell), 
+						cell_ptr); 
+				cudaDeviceSynchronize();
+				lout << "End get_number_of_interations_block" << std::endl;
+
+				// compute prefix sum using the most stupid way
+				stupid_prefix_sum<<<1,32>>>(
+						cell_size, 
+						onika::cuda::vector_data(number_of_interactions_cell),
+						onika::cuda::vector_data(prefix_interactions_cell)
+						); 
+
+        /** Get the total number of interaction per type */
+				NumberOfInteractionPerTypes total_nb_int;
+				cudaDeviceSynchronize();
+				for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
+				{
+					total_nb_int[type] = prefix_interactions_cell[cell_size-1][type] + number_of_interactions_cell[cell_size-1][type];
+					lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
+				}
+
+				// resize classifier
+				classifier.resize(total_nb_int, ResizeClassifier::POLYHEDRON);
+				cudaDeviceSynchronize();
+
+				/** Now, we fill the classifier */
+  			lout << "Run fill_classifier_gpu ... " << std::endl;
+				fill_classifier_block<block_x, block_y><<<GridSize, BlockSize>>>(
+						onika::cuda::vector_data(classifier.waves),
+						grid->cells(),
+						grid->dimension(),
+						chunk_neighbors->data(),
+						shps,
+						rVerlet,
+						onika::cuda::vector_data(prefix_interactions_cell),
+						cell_ptr);
+				lout << "End fill_classifier_gpu" << std::endl;
+			}
+
+			if( *pair_version )
+			{
+        lout << "NBH polyhedron Pair version" << std::endl;
+				lout << "Start get_number_of_interations_pair ..." << std::endl;
+        /** Define cuda block and grid size */
+				constexpr int block_x = 4;
+				constexpr int block_y = 4;
+				dim3 BlockSize(block_x, block_y, 1);
+				dim3 GridSize(cell_size,1,1);
+
+        /** first count the number of interactions per cell */
+				get_number_of_interations_pair<block_x, block_y><<<GridSize, BlockSize>>>(
+						grid->cells(),
+						grid->dimension(), 
+						chunk_neighbors->data(), 
+						shps, 
+						rVerlet,
+						onika::cuda::vector_data(number_of_interactions_cell), 
+						cell_ptr); 
+				cudaDeviceSynchronize();
+				lout << "End get_number_of_interations_pair" << std::endl;
+
+				// compute prefix sum using the most stupid way
+				stupid_prefix_sum<<<1,32>>>(
+						cell_size, 
+						onika::cuda::vector_data(number_of_interactions_cell),
+						onika::cuda::vector_data(prefix_interactions_cell)
+						); 
+
+        /** Get the total number of interaction per type */
+				NumberOfInteractionPerTypes total_nb_int;
+				cudaDeviceSynchronize();
+				for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
+				{
+					total_nb_int[type] = prefix_interactions_cell[cell_size-1][type] + number_of_interactions_cell[cell_size-1][type];
+					lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
+				}
+
+				// resize classifier
+				classifier.resize(total_nb_int, ResizeClassifier::POLYHEDRON);
+				cudaDeviceSynchronize();
+
+				/** Now, we fill the classifier */
+  			lout << "Run fill_classifier_gpu ... " << std::endl;
+				fill_classifier_pair<block_x, block_y><<<GridSize, BlockSize>>>(
+						onika::cuda::vector_data(classifier.waves),
+						grid->cells(),
+						grid->dimension(),
+						chunk_neighbors->data(),
+						shps,
+						rVerlet,
+						onika::cuda::vector_data(prefix_interactions_cell),
+						cell_ptr);
+				lout << "End fill_classifier_gpu" << std::endl;
+			}
+
+      if( *particle_version ) //particle version
+      {  
+        lout << "NBH polyhedron Particle version" << std::endl;
+				lout << "Start get_number_of_interations_gpu ..." << std::endl;
+        /** Define cuda block and grid size */
+				constexpr int block_x = 128;
+				dim3 BlockSize(block_x, 1, 1);
+				dim3 GridSize(cell_size,1,1);
+
+        /** first count the number of interactions per cell */
+				get_number_of_interations<block_x><<<GridSize, BlockSize>>>(
+						grid->cells(),
+						grid->dimension(), 
+						chunk_neighbors->data(), 
+						shps, 
+						rVerlet,
+						onika::cuda::vector_data(number_of_interactions_cell), 
+						cell_ptr); 
+				cudaDeviceSynchronize();
+				lout << "End get_number_of_interations" << std::endl;
+
+				// compute prefix sum using the most stupid way
+				stupid_prefix_sum<<<1,32>>>(
+						cell_size, 
+						onika::cuda::vector_data(number_of_interactions_cell),
+						onika::cuda::vector_data(prefix_interactions_cell)
+						); 
+
+        /** Get the total number of interaction per type */
+				NumberOfInteractionPerTypes total_nb_int;
+				cudaDeviceSynchronize();
+				for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
+				{
+					total_nb_int[type] = prefix_interactions_cell[cell_size-1][type] + number_of_interactions_cell[cell_size-1][type];
+					lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
+				}
+
+				// resize classifier
+				classifier.resize(total_nb_int, ResizeClassifier::POLYHEDRON);
+				cudaDeviceSynchronize();
+
+				/** Now, we fill the classifier */
+  			lout << "Run fill_classifier ... " << std::endl;
+				fill_classifier<block_x><<<GridSize, BlockSize>>>(
+						onika::cuda::vector_data(classifier.waves),
+						grid->cells(),
+						grid->dimension(),
+						chunk_neighbors->data(),
+						shps,
+						rVerlet,
+						onika::cuda::vector_data(prefix_interactions_cell),
+						cell_ptr);
+				lout << "End fill_classifier" << std::endl;
+      }
 
 #     pragma omp parallel
 			{
