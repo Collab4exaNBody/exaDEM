@@ -65,10 +65,11 @@ namespace exaDEM
      * @struct contact_law
      * @brief Structure defining contact law interactions for particles (polyhedra).
      */
-    template<int interaction_type, bool def_xform>
+    template<int interaction_type, typename XFormT>
       struct contact_law
       {
-        Mat3d xform;
+        
+        XFormT xform;
         detect<interaction_type> detection;
         /**
          * @brief Default constructor for contact_law struct.
@@ -87,12 +88,13 @@ namespace exaDEM
          * @param p_id Index of the particle.
          * @return Vec3d Position vector of the particle.
          */
-        template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_r(TMPLC &cell, const int p_id) const
-        {
-          Vec3d res = {cell[field::rx][p_id], cell[field::ry][p_id], cell[field::rz][p_id]};
-          if constexpr(def_xform) res = xform * res;
-          return res;
-        };
+        template <typename TMPLC> 
+          ONIKA_HOST_DEVICE_FUNC 
+          inline const Vec3d get_r(TMPLC &cell, const int p_id) const
+          {
+            Vec3d res = {cell[field::rx][p_id], cell[field::ry][p_id], cell[field::rz][p_id]};
+            return xform.transformCoord(res);
+          };
 
         /**
          * @brief Retrieves the velocity vector of a particle from a cell.
@@ -273,11 +275,11 @@ namespace exaDEM
     /**
      * @brief Functor for applying contact law interactions with STL mesh objects.
      */
-    template<int interaction_type, bool def_xform> /* def xform does nothing*/
+    template<int interaction_type, typename XFormT> /* def xform does nothing*/
       struct contact_law_stl
       {
         //using driver_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::Ball, exaDEM::Stl_mesh, exaDEM::UndefinedDriver>;
-        Mat3d xform;
+        XFormT xform;
         detect<interaction_type> detection;
 
         /* Default constructor */
@@ -379,7 +381,7 @@ namespace exaDEM
                 item.friction = -item.friction;
                 if( driver.need_forces() ) lockAndAdd( driver.forces, f);
               }
- 
+
             }
             else
             {
