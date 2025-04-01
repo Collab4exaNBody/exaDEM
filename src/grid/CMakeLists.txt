@@ -15,5 +15,5 @@
 # specific language governing permissions and limitations
 # under the license.
 
-set(exadem_grid_LINK_LIBRARIES exanbCore exanbParticleNeighbors)
+set(exadem_grid_LINK_LIBRARIES exanbCore exanbParticleNeighbors exadem_shape exadem_driver exadem_force_field exadem_grid exadem_interaction)
 onika_add_plugin(exadem_grid ${CMAKE_CURRENT_SOURCE_DIR})
