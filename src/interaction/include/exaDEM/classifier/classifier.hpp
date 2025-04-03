@@ -247,6 +247,7 @@ namespace exaDEM
   template <typename T> struct Classifier
   {
     static constexpr int types = 13;
+    using NumberOfInteractionPerTypes = ::onika::oarray_t<int, types>;
     std::vector<T> waves;                             ///< Storage for interactions categorized by type.
     std::vector<itools::interaction_buffers> buffers; ///< Storage for analysis. Empty if there is no analysis
 
@@ -280,6 +281,16 @@ namespace exaDEM
         wave.clear();
       }
     }
+    
+    void resize( NumberOfInteractionPerTypes& sizes)
+    {
+    	for(int type = 0; type < 13; type++)
+    	{
+    		waves[type].resize(sizes[type]);
+    	}
+    }
+    
+    void prout() {}
 
     /**
      * @brief Retrieves the CUDA memory-managed vector of interactions for a specific type.

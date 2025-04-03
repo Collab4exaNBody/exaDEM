@@ -59,6 +59,8 @@ namespace exaDEM
 {
   using namespace exanb;
   
+  
+  
     template< class GridT > ONIKA_HOST_DEVICE_FUNC bool nbh_filter_GPU(GridT* cells,
   						double rcut_inc,
   						double d2,
@@ -97,7 +99,44 @@ namespace exaDEM
   	return false;
   }
   
-  /*template< class GridT > __global__ void kernelUN(GridT* cells,
+  template< class GridT > __global__ void kernelDriver(GridT* cells,
+  							int* cell_id,
+  							int* cell_particle_start,
+  							double rcut_inc,
+  							Cylinder driver,
+  							int* interaction_driver,
+  							int* id,
+  							int* pi,
+  							int* celli)
+  {
+  	int cell_a = cell_id[blockIdx.x];
+  	int num_particles_a = cells[cell_a].size();
+  	
+  	if(threadIdx.x < num_particles_a)
+  	{
+  		int p_a = threadIdx.x;
+  		int incr = cell_particle_start[blockIdx.x];
+  		
+  		const double rVerletMax = cells[cell_a][field::radius][p_a] + rcut_inc;
+  		
+  		auto rx_a = cells[cell_a][field::rx][p_a];
+  		auto ry_a = cells[cell_a][field::ry][p_a];
+  		auto rz_a = cells[cell_a][field::rz][p_a];
+  		auto id_a = cells[cell_a][field::id][p_a];
+  		
+  		const Vec3d r = {rx_a, ry_a, rz_a};
+  		
+  		if(driver.filter(rVerletMax, r))
+  		{
+  			interaction_driver[incr + p_a] = 1;
+  			id[incr + p_a] = id_a;
+  			pi[incr + p_a] = p_a;
+  			celli[incr + p_a] = cell_a;
+  		}
+  	}
+  }
+  
+  template< class GridT > __global__ void kernelUN(GridT* cells,
   							int* ghost_cell,
   							int* cell_id,
   							int* nb_particles,
@@ -120,30 +159,45 @@ namespace exaDEM
   							int* celli,
   							int* pi,
   							int nombre_voisins_potentiels,
-  							Cylinder driver,
-  							int* interaction_driver,
+  							int* cell_nb_nbh,
   							int* resultat)
   {
   	
-	int nb = nb_particles[blockIdx.x];
+	//int nb = nb_particles[blockIdx.x];
+	int num_cells_nbh = cell_nb_nbh[blockIdx.x];
 	
-	//if(threadIdx.x < nb)
-	for(int i = threadIdx.x; i < nb; i+=blockDim.x)
+	double rcut2 = dist_lab * dist_lab;
+	
+	int nb_interactions = 0;
+	
+	int global_x = blockIdx.x * blockDim.x + threadIdx.x;
+	int global_y = blockIdx.y * blockDim.y + threadIdx.y;
+	
+	int grid_width = gridDim.x * blockDim.x;
+	int gid = global_y * grid_width + global_x;
+	
+	for( int cellb = 0; cellb < num_cells_nbh; cellb++ )
 	{
-		int cell = cell_id[blockIdx.x];
+		int cell_a = cell_id[blockIdx.x];
 		int start = cell_start[blockIdx.x];
-		int end = cell_end[blockIdx.x];
-		int incr = cell_particle_start[blockIdx.x];
 		
-		int p_a = i;//threadIdx.x;
+		int cell_b = cell_neighbors_ids[start + cellb];
+		
+		int num_particles_a = cells[cell_a].size();
+		int num_particles_b = cells[cell_b].size();
+		
+		//int end = cell_end[blockIdx.x];
+		//int incr = cell_particle_start[blockIdx.x];
+		
+		//int p_a = i;//threadIdx.x;
 				
-		int incr2 = incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels;
+		//int incr2 = incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels;
 		
-		int nb_interactions = 0;
+		//int nb_interactions = 0;
 		
-		const double rVerletMax = cells[cell][field::radius][p_a] + rcut_inc;
+		//const double rVerletMax = cells[cell][field::radius][p_a] + rcut_inc;
 		
-		auto &rx_a = cells[cell][field::rx][p_a];
+		/*auto &rx_a = cells[cell][field::rx][p_a];
 		auto &ry_a = cells[cell][field::ry][p_a];
 		auto &rz_a = cells[cell][field::rz][p_a];
 		auto &id_a = cells[cell][field::id][p_a];
@@ -160,237 +214,97 @@ namespace exaDEM
 		else
 		{
 			interaction_driver[incr + p_a] = 0;
-		}
-		
-		for(int i = start; i < end; i++)
-		{
-			int cell_b = cell_neighbors_ids[i];
-			
-			for(int j = 0; j < cell_neighbors_size[i]; j++)
-			{
-				int p_b = j;
-				
-				auto &id_b = cells[cell_b][field::id][p_b];
-	  			
-	  			double rcut2 = dist_lab * dist_lab;
-  		
-  				const Vec3d dr = { rx_a - cells[cell_b][field::rx][p_b] , ry_a - cells[cell_b][field::ry][p_b] , rz_a - cells[cell_b][field::rz][p_b] };
-                		double d2 = norm2( xform * dr );
-                	
-  				if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) 
-  				{
-  					if( id_a < id_b)
-  					{
-  						/*id_i[incr2 + nb_interactions] = id_a;
-  						id_j[incr2 + nb_interactions] = id_b;
-  						cell_i[incr2 + nb_interactions] = cell;
-  						cell_j[incr2 + nb_interactions] = cell_b;
-  						p_i[incr2 + nb_interactions] = p_a;
-  						p_j[incr2 + nb_interactions] = p_b;
-  						
-  						nb_nbh[incr2 + nb_interactions] = 1;
-  					
-  						nb_interactions++;*/
-  						/*atomicAdd(&resultat[0], 1);
-  					}
-  					else if( ghost_cell[i]==1 )
-  					{
-   						/*id_i[incr2 + nb_interactions] = id_a;
-  						id_j[incr2 + nb_interactions] = id_b;
-  						cell_i[incr2 + nb_interactions] = cell;
-  						cell_j[incr2 + nb_interactions] = cell_b;
-  						p_i[incr2 + nb_interactions] = p_a;
-  						p_j[incr2 + nb_interactions] = p_b;
-  						
-  						nb_nbh[incr2 + nb_interactions] = 1;
-  					
-  						nb_interactions++;*/
-  						/*atomicAdd(&resultat[0], 1);
-  					}
-  				}				
-			}
-		}
-	}
-   }*/
-   
-     template< class GridT > __global__ void kernelUN(GridT* cells,
-     							IJK dims,
-  							int* ghost_cell,
-  							int* cell_id,
-  							int* nb_particles,
-  							int* cell_neighbors_ids,
-  							int* cell_neighbors_size,
-  							int* cell_start,
-  							int* cell_end,
-  							const double dist_lab,
-  							Mat3d xform,
-  							double rcut_inc,
-  							uint64_t* id_i,
-  							uint64_t* id_j,
-  							uint32_t* cell_i,
-  							uint32_t* cell_j,
-  							uint16_t* p_i,
-  							uint16_t* p_j,
-  							int* nb_nbh,
-  							int* id,
-  							int* celli,
-  							int* pi,
-  							int nombre_voisins_potentiels,
-  							int* resultat,
-  							int* cell_nb_nbh,
-  							const size_t* sub_grid_start,
-  							const unsigned int n_nbh_cell,
-  							const AmrSubCellPairCache& amr_grid_pairs,
-  							const unsigned int nbh_cell_side,
-  							const uint32_t* sub_grid_cells)
-  {
-  	
-	//int nb = nb_particles[blockIdx.x];
-	int nb = cell_nb_nbh[blockIdx.x];
-	
-	if(threadIdx.x < nb)
-	{
-		int cell = cell_id[blockIdx.x];
-		int start = cell_start[blockIdx.x];
-		int end = cell_end[blockIdx.x];
-		
-		IJK loc_a = grid_index_to_ijk( dims , cell );
-		
-          	ssize_t sgstart_a = sub_grid_start[cell];
-          	ssize_t sgsize_a = sub_grid_start[cell+1] - sgstart_a;
-          	ssize_t n_sub_cells_a = sgsize_a+1;
-          	ssize_t sgside_a = icbrt64( n_sub_cells_a );		
-		
-		int nb_interactions = 0;
-		
-		int cell_b = cell_neighbors_ids[start + threadIdx.x];
-		
-          	ssize_t sgstart_b = sub_grid_start[cell];
-          	ssize_t sgsize_b = sub_grid_start[cell+1] - sgstart_b;
-          	ssize_t n_sub_cells_b = sgsize_b+1;
-          	ssize_t sgside_b = icbrt64( n_sub_cells_b );		
-          	
-          	IJK loc_b = grid_index_to_ijk( dims , cell_b );
-          	
-          	IJK rloc_b = loc_b - loc_a;
-          	uint16_t cell_b_enc = encode_cell_index( rloc_b );
-          	
-          	size_t res_pair_id = unique_pair_id( sgside_a-1 , sgside_b-1 );
-          	
-            	IJK rl = rloc_b;
-           	bool rev_ab = ( sgside_a > sgside_b );
-            	if( rev_ab ) { rl = IJK{ -rloc_b.i , -rloc_b.j , -rloc_b.k }; }
-            	bool rev_i = (rl.i<0);
-            	bool rev_j = (rl.j<0);
-            	bool rev_k = (rl.k<0);
-            	if( rev_i ) { rl.i = - rl.i; }
-            	if( rev_j ) { rl.j = - rl.j; }
-            	if( rev_k ) { rl.k = - rl.k; }
-            	
-            	const size_t cpoffset = res_pair_id * n_nbh_cell;
-            	const size_t block_index = rl.k*nbh_cell_side*nbh_cell_side + rl.j*nbh_cell_side + rl.i;
-            	const auto* sub_cell_pairs = onika::cuda::vector_data(amr_grid_pairs.m_sub_cell_pairs);
-            	const auto& cp = sub_cell_pairs[ cpoffset + block_index ];
-            	
-            	const size_t n_pairs = onika::cuda::vector_size(cp.m_pair_ab);
-            	const uint16_t* pair_ab = onika::cuda::vector_data(cp.m_pair_ab);
-            	const unsigned int A=rev_ab, B=!rev_ab;
-            	
-            	for(unsigned int scp=0;scp<n_pairs;scp++)
-            	{
-	              
-	              uint16_t ax = pair_ab[scp*2+A];
-	              unsigned int sca_i = ax & 31; ax = ax >> 5;
-	              assert( sca_i < sgside_a );
-	              unsigned int sca_j = ax & 31; ax = ax >> 5;
-	              assert( sca_j < sgside_a );
-	              unsigned int sca_k = ax;
-	              assert( sca_k < sgside_a );
-
-	              uint16_t bx = pair_ab[scp*2+B];
-	              unsigned int scb_i = bx & 31; bx = bx >> 5;
-	              assert( scb_i < sgside_b );
-	              unsigned int scb_j = bx & 31; bx = bx >> 5;
-	              assert( scb_j < sgside_b );
-	              unsigned int scb_k = bx;
-	              assert( scb_k < sgside_b );
-	              
-              		if( rev_i ) { sca_i = sgside_a-1-sca_i; scb_i = sgside_b-1-scb_i; }
-              		if( rev_j ) { sca_j = sgside_a-1-sca_j; scb_j = sgside_b-1-scb_j; }
-              		if( rev_k ) { sca_k = sgside_a-1-sca_k; scb_k = sgside_b-1-scb_k; }
-
-	              unsigned int sgindex_a = grid_ijk_to_index( IJK{sgside_a,sgside_a,sgside_a} , IJK{sca_i,sca_j,sca_k} );//sg_cell_index( sgside_a , IJK{sca_i,sca_j,sca_k} , enable_z_order ); // grid_ijk_to_index( IJK{sgside_a,sgside_a,sgside_a} , IJK{sca_i,sca_j,sca_k} );
-        	      unsigned int p_start_a = 0;
-        	      unsigned int p_end_a = cells[cell].size();
-        	      if( sgindex_a > 0 ) { p_start_a = sub_grid_cells[sgstart_a+sgindex_a-1]; }
-        	      if( sgindex_a < sgsize_a ) { p_end_a = sub_grid_cells[sgstart_a+sgindex_a]; }
-
-        	      unsigned int sgindex_b = grid_ijk_to_index( IJK{sgside_b,sgside_b,sgside_b} , IJK{scb_i,scb_j,scb_k} );//sg_cell_index( sgside_b , IJK{scb_i,scb_j,scb_k} , enable_z_order ); // grid_ijk_to_index( IJK{sgside_b,sgside_b,sgside_b} , IJK{scb_i,scb_j,scb_k} );
-        	      unsigned int p_start_b = 0;
-        	      unsigned int p_end_b = cells[cell_b].size();
-        	      if( sgindex_b > 0 ) { p_start_b = sub_grid_cells[sgstart_b+sgindex_b-1]; }
-        	      if( sgindex_b < sgsize_b ) { p_end_b = sub_grid_cells[sgstart_b+sgindex_b]; }	              
-	              
-	              if( p_end_b > p_start_b )
-	              {
-	              	for(unsigned int p_a=p_start_a;p_a<p_end_a;p_a++)
-	              	{
-	              		for(unsigned int p_b=p_start_b;p_b<p_end_b;)
-	              		{
-	              			double rcut2 = dist_lab * dist_lab;
-	              			const Vec3d dr = { cells[cell][field::rx][p_a] - cells[cell_b][field::rx][p_b] , cells[cell][field::ry][p_a] - cells[cell_b][field::ry][p_b] , cells[cell][field::rz][p_a] - cells[cell_b][field::rz][p_b] };
-	              			double d2 = norm2( xform * dr );
-	              			
-  					if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) 
-  					{
-  						if( cells[cell][field::id][p_a] < cells[cell_b][field::id][p_b] )
-  						{
-  							atomicAdd(&resultat[0], 1);
-  						}
-  						else if( ghost_cell[start+threadIdx.x]==1 )
-  						{
-  							atomicAdd(&resultat[0], 1);
-  						}
-  					}	              			
-	              		}
-	              	}
-	              }
-	              
-            	}
-
-		/*for(int i = start; i < end; i++)
-		{
-			int cell_b = cell_neighbors_ids[i];
-			
-			for(int j = 0; j < cell_neighbors_size[i]; j++)
-			{
-				int p_b = j;
-				
-				auto &id_b = cells[cell_b][field::id][p_b];
-	  			
-	  			double rcut2 = dist_lab * dist_lab;
-  		
-  				const Vec3d dr = { rx_a - cells[cell_b][field::rx][p_b] , ry_a - cells[cell_b][field::ry][p_b] , rz_a - cells[cell_b][field::rz][p_b] };
-                		double d2 = norm2( xform * dr );
-                	
-  				if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) 
-  				{
-  					if( id_a < id_b)
-  					{
-  						atomicAdd(&resultat[0], 1);
-  					}
-  					else if( ghost_cell[i]==1 )
-  					{
-  						atomicAdd(&resultat[0], 1);
-  					}
-  				}				
-			}
 		}*/
+		
+		//for(int i = start; i < end; i++)
+		for(int p_b = threadIdx.y; p_b < num_particles_b; p_b+= blockDim.y)
+		{
+			for(int p_a = threadIdx.x; p_a < num_particles_a; p_a+= blockDim.x)
+			{
+				const Vec3d dr = { cells[cell_a][field::rx][p_a] - cells[cell_b][field::rx][p_b] , cells[cell_a][field::ry][p_a] - cells[cell_b][field::ry][p_b] , cells[cell_a][field::rz][p_a] - cells[cell_b][field::rz][p_b] };
+                		double d2 = norm2( xform * dr );
+                		
+                		if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell_a, p_a, cell_b, p_b)) 
+                		{
+                			if( cells[cell_a][field::id][p_a] < cells[cell_b][field::id][p_b] )
+                			{
+                				id_i[gid * 30 + nb_interactions] = cells[cell_a][field::id][p_a];
+                				id_j[gid * 30 + nb_interactions] = cells[cell_b][field::id][p_b];
+                				cell_i[gid * 30 + nb_interactions] = cell_a;
+                				cell_j[gid * 30 + nb_interactions] = cell_b;
+                				p_i[gid * 30 + nb_interactions] = p_a;
+                				p_j[gid * 30 + nb_interactions] = p_b;
+                				
+                				nb_nbh[gid * 30 + nb_interactions] = 1;
+                				
+                				nb_interactions++;
+                				//atomicAdd(&resultat[0], 1);
+                			}
+                			else if( ghost_cell[start + cellb] == 1 )
+                			{
+                				id_i[gid * 30 + nb_interactions] = cells[cell_a][field::id][p_a];
+                				id_j[gid * 30 + nb_interactions] = cells[cell_b][field::id][p_b];
+                				cell_i[gid * 30 + nb_interactions] = cell_a;
+                				cell_j[gid * 30 + nb_interactions] = cell_b;
+                				p_i[gid * 30 + nb_interactions] = p_a;
+                				p_j[gid * 30 + nb_interactions] = p_b;
+                				
+                				nb_nbh[gid * 30 + nb_interactions] = 1;
+                				
+                				nb_interactions++;
+                				//atomicAdd(&resultat[0], 1);
+                			}
+                		}
+			}
+		}
+			//int cell_b = cell_neighbors_ids[i];
+			
+			/*for(int j = 0; j < cell_neighbors_size[i]; j++)
+			{
+				int p_b = j;
+				
+				auto &id_b = cells[cell_b][field::id][p_b];
+	  			
+	  			//double rcut2 = dist_lab * dist_lab;
+  		
+  				const Vec3d dr = { rx_a - cells[cell_b][field::rx][p_b] , ry_a - cells[cell_b][field::ry][p_b] , rz_a - cells[cell_b][field::rz][p_b] };
+                		double d2 = norm2( xform * dr );
+                	
+  				if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) 
+  				{
+  					if( id_a < id_b)
+  					{
+  						id_i[incr2 + nb_interactions] = id_a;
+  						id_j[incr2 + nb_interactions] = id_b;
+  						cell_i[incr2 + nb_interactions] = cell;
+  						cell_j[incr2 + nb_interactions] = cell_b;
+  						p_i[incr2 + nb_interactions] = p_a;
+  						p_j[incr2 + nb_interactions] = p_b;
+  						
+  						nb_nbh[incr2 + nb_interactions] = 1;
+  					
+  						nb_interactions++;
+  						atomicAdd(&resultat[0], 1);
+  					}
+  					else if( ghost_cell[i]==1 )
+  					{
+   						id_i[incr2 + nb_interactions] = id_a;
+  						id_j[incr2 + nb_interactions] = id_b;
+  						cell_i[incr2 + nb_interactions] = cell;
+  						cell_j[incr2 + nb_interactions] = cell_b;
+  						p_i[incr2 + nb_interactions] = p_a;
+  						p_j[incr2 + nb_interactions] = p_b;
+  						
+  						nb_nbh[incr2 + nb_interactions] = 1;
+  					
+  						nb_interactions++;
+  						atomicAdd(&resultat[0], 1);
+  					}
+  				}				
+			}*/
+		}
 	}
-   }
-   
-
-   
+	
   __global__ void kernelDEUX(int* nb_nbh, int* nb_nbh_incr, uint64_t* id_i, uint64_t* id_j, uint32_t* cell_i, uint32_t* cell_j, uint16_t* p_i, uint16_t* p_j, uint64_t* id_i_final, uint64_t* id_j_final, uint32_t* cell_i_final, uint32_t* cell_j_final, uint16_t* p_i_final, uint16_t* p_j_final, double* ftx_final, double* fty_final, double* ftz_final, double* momx_final, double* momy_final, double* momz_final, int size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -608,6 +522,7 @@ namespace exaDEM
     {
     
       //printf("CHUNK_START\n");
+      using NumberOfInteractionPerTypes = ::onika::oarray_t<int, 13>;
       
       unsigned int cs = config->chunk_size;
       unsigned int cs_log2 = 0;
@@ -933,19 +848,30 @@ namespace exaDEM
 	
 	int numBlocks = cell_id.size();
 
-	onika::memory::CudaMMVector<uint64_t> id_i;
-	onika::memory::CudaMMVector<uint64_t> id_j;
-	onika::memory::CudaMMVector<uint32_t> cell_i;
-	onika::memory::CudaMMVector<uint32_t> cell_j;
-	onika::memory::CudaMMVector<uint16_t> p_i;
-	onika::memory::CudaMMVector<uint16_t> p_j;
+	//onika::memory::CudaMMVector<uint64_t> id_i;
+	uint64_t* id_i;
+	//onika::memory::CudaMMVector<uint64_t> id_j;
+	uint64_t* id_j;
+	//onika::memory::CudaMMVector<uint32_t> cell_i;
+	uint32_t* cell_i;
+	//onika::memory::CudaMMVector<uint32_t> cell_j;
+	uint32_t* cell_j;
+	//onika::memory::CudaMMVector<uint16_t> p_i;
+	uint16_t* p_i;
+	//onika::memory::CudaMMVector<uint16_t> p_j;
+	uint16_t* p_j;
 	
-	onika::memory::CudaMMVector<int> nb_nbh;
-	onika::memory::CudaMMVector<int> id_particle;
-	onika::memory::CudaMMVector<int> cell_particle;
-	onika::memory::CudaMMVector<int> p_particle;
+	//onika::memory::CudaMMVector<int> nb_nbh;
+	int* nb_nbh;
+	//onika::memory::CudaMMVector<int> id_particle;
+	int* id_particle;
+	//onika::memory::CudaMMVector<int> cell_particle;
+	int* cell_particle;
+	//onika::memory::CudaMMVector<int> p_particle;
+	int* p_particle;
 
-	onika::memory::CudaMMVector<int> interaction_driver;
+	//onika::memory::CudaMMVector<int> interaction_driver;
+	int* interaction_driver;
 	
 	int total = 0;
 	for(int i = 0; i < nb_particles.size(); i++)
@@ -953,22 +879,38 @@ namespace exaDEM
 		total+= nb_particles[i];
 	}
 
-	id_particle.resize(total);
-	cell_particle.resize(total);
-	p_particle.resize(total);
-	interaction_driver.resize(total);
+	//id_particle.resize(total);
+	cudaMalloc(&id_particle, total * sizeof(int) );
+	//cell_particle.resize(total);
+	cudaMalloc(&cell_particle, total * sizeof(int) );
+	//p_particle.resize(total);
+	cudaMalloc(&p_particle, total * sizeof(int) );
+	//interaction_driver.resize(total);
+	cudaMalloc(&interaction_driver, total * sizeof(int) );
 	
-	int nombre_voisins_potentiels = 20;
+	int nombre_voisins_potentiels = 30;
 	
-	total = total* nombre_voisins_potentiels;
+	constexpr int block_x = 32;
+        constexpr int block_y = 32;
+        
+        int total_1 = total;
 	
-	nb_nbh.resize(total);
-	id_i.resize(total);
-	id_j.resize(total);
-	cell_i.resize(total);
-	cell_j.resize(total);
-	p_i.resize(total);
-	p_j.resize(total);
+	total = numBlocks * block_x * block_y * 30;
+	
+	//nb_nbh.resize(total);
+	cudaMalloc(&nb_nbh, total * sizeof(int) );
+	//id_i.resize(total);
+	cudaMalloc(&id_i, total * sizeof(uint64_t) );
+	//id_j.resize(total);
+	cudaMalloc(&id_j, total * sizeof(uint64_t) );
+	//cell_i.resize(total);
+	cudaMalloc(&cell_i, total * sizeof(uint32_t) );
+	//cell_j.resize(total);
+	cudaMalloc(&cell_j, total * sizeof(uint32_t) );
+	//p_i.resize(total);
+	cudaMalloc(&p_i, total * sizeof(uint16_t) );
+	//p_j.resize(total);
+	cudaMalloc(&p_j, total * sizeof(uint16_t) );
 	
 	auto &drvs = *drivers;
 	Cylinder &driver = drvs.get_typed_driver<Cylinder>(0);
@@ -976,45 +918,65 @@ namespace exaDEM
 	onika::memory::CudaMMVector<int> resultat;
 	resultat.resize(1);
 	
-	kernelUN<<<numBlocks, 27>>>(cells, dims, ghost_cell.data(), cell_id.data(), nb_particles.data(), cell_neighbors_ids.data(), cell_neighbors_size.data(), cell_start.data(), cell_end.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), nb_nbh.data(), id_particle.data(), cell_particle.data(), p_particle.data(), nombre_voisins_potentiels, resultat.data(), cell_nb_nbh.data(), sub_grid_start, n_nbh_cell, amr_grid_pairs_gpu, nbh_cell_side, sub_grid_cells);
+        dim3 BlockSize(block_x, block_y, 1);
+        
+        kernelDriver<<<numBlocks, 1024>>>( cells, cell_id.data(), nb_particles_start.data(), *rcut_inc, driver, interaction_driver, id_particle, p_particle, cell_particle );
+        
+	kernelUN<<<numBlocks, BlockSize>>>(cells, ghost_cell.data(), cell_id.data(), nb_particles.data(), cell_neighbors_ids.data(), cell_neighbors_size.data(), cell_start.data(), cell_end.data(), nb_particles_start.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, id_i, id_j, cell_i, cell_j, p_i, p_j, nb_nbh, id_particle, cell_particle, p_particle, nombre_voisins_potentiels, cell_nb_nbh.data(), resultat.data() );
 	
 		//kernelUN_2<<<numBlocks, 1024>>>(cells, dims, ghost_cell.data(), cell_id.data(), nb_particles_start.data(), loc_max_gap, *nbh_dist_lab, domain->xform(), *rcut_inc, id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), nb_nbh.data(), id_particle.data(), cell_particle.data(), p_particle.data(), nombre_voisins_potentiels, driver, interaction_driver.data());
 	
 	cudaDeviceSynchronize();
-	
-	printf("RESULTAT : %d\n", resultat[0]);
 
-	/*onika::memory::CudaMMVector<int> nb_nbh_incr;
-	nb_nbh_incr.resize(nb_nbh.size());
+	//onika::memory::CudaMMVector<int> nb_nbh_incr;
+	int* nb_nbh_incr;
+	//nb_nbh_incr.resize(nb_nbh.size());
+	cudaMalloc(&nb_nbh_incr, total * sizeof(int) );
 	
 	d_temp_storage = nullptr;
 	temp_storage_bytes = 0;
 	
-	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_incr.data(), nb_nbh.size());
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh, nb_nbh_incr, total);
 	
 	cudaMalloc(&d_temp_storage, temp_storage_bytes);
 	
-	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_incr.data(), nb_nbh.size());
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh, nb_nbh_incr, total);
 	
 	cudaFree(d_temp_storage);
 	
-	int total_interactions = nb_nbh_incr[nb_nbh.size() - 1] + nb_nbh[nb_nbh.size() - 1];
+	int nb_nbh_incr_final;
+	cudaMemcpy( &nb_nbh_incr_final, nb_nbh_incr + total - 1, sizeof(int), cudaMemcpyDeviceToHost);
+	int nb_nbh_final;
+	cudaMemcpy( &nb_nbh_final, nb_nbh + total - 1, sizeof(int), cudaMemcpyDeviceToHost);
 	
-	onika::memory::CudaMMVector<int> driver_incr;
-	driver_incr.resize(interaction_driver.size());
+	int total_interactions = nb_nbh_incr_final + nb_nbh_final;
+	
+	//int total_interactions = nb_nbh_incr[nb_nbh.size() - 1] + nb_nbh[nb_nbh.size() - 1];
+	
+	//onika::memory::CudaMMVector<int> driver_incr;
+	int* driver_incr;
+	//driver_incr.resize(interaction_driver.size());
+	cudaMalloc(&driver_incr, total_1 * sizeof(int) );
 	
 	d_temp_storage = nullptr;
 	temp_storage_bytes = 0;
 	
-	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, interaction_driver.data(), driver_incr.data(), interaction_driver.size());
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, interaction_driver, driver_incr, total_1);
 	
 	cudaMalloc(&d_temp_storage, temp_storage_bytes);
 	
-	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, interaction_driver.data(), driver_incr.data(), interaction_driver.size());
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, interaction_driver, driver_incr, total_1);
 	
 	cudaFree(d_temp_storage);
 	
-	int total_interactions_driver = driver_incr[interaction_driver.size() - 1] + interaction_driver[interaction_driver.size() - 1];
+	int driver_incr_final;
+	cudaMemcpy( &driver_incr_final, driver_incr + total_1 - 1, sizeof(int), cudaMemcpyDeviceToHost);
+	int interaction_driver_final;
+	cudaMemcpy( &interaction_driver_final, interaction_driver + total_1 - 1, sizeof(int), cudaMemcpyDeviceToHost);
+	
+	//int total_interactions_driver = driver_incr[interaction_driver.size() - 1] + interaction_driver[interaction_driver.size() - 1];
+	
+	int total_interactions_driver = driver_incr_final + interaction_driver_final;
 	
 	//printf("CHUNK END\n");
 	
@@ -1022,21 +984,44 @@ namespace exaDEM
 	
 	//printf("CLASSIFIER\n");
 	
+	NumberOfInteractionPerTypes sizes;
+	
+	for(int i = 0; i < 13; i++)
+	{
+		if(i == 0)
+		{
+			sizes[i] = total_interactions;
+		}
+		else if(i == 4)
+		{
+			sizes[i] = total_interactions_driver;
+		}
+		else
+		{
+			sizes[i] = 0;
+		}
+	}
+	
 	if (!ic.has_value())
         	ic->initialize();
+        	
+        ic->resize(sizes);
+        
+        //ic.prout();
 	
-	auto& type0 = ic->get_wave(0);
-	auto& type4 = ic->get_wave(4);
+	//auto& type0 = ic->get_wave(0);
+	//auto& type4 = ic->get_wave(4);
 	
-	type0.clear();
-	type4.clear();
+	//type0.clear();
+	//type4.clear();
 	
-	type0.type = 0;
-	type4.type = 4;
+	//type0.type = 0;
+	//type4.type = 4;
 	
-	type0.resize(total_interactions);
-	type4.resize(total_interactions_driver);
+	//type0.resize(total_interactions);
+	/*type4.resize(total_interactions_driver); 
 	
+	/*
 	onika::memory::CudaMMVector<uint64_t> &id_i_final = type0.id_i;
 	onika::memory::CudaMMVector<uint64_t> &id_j_final = type0.id_j;
 	onika::memory::CudaMMVector<uint32_t> &cell_i_final = type0.cell_i;
@@ -1071,6 +1056,20 @@ namespace exaDEM
 
 	//printf("CLASSIFIER END\n");*/	
 	
+	cudaFree(id_particle);
+	cudaFree(cell_particle);
+	cudaFree(p_particle);
+	cudaFree(interaction_driver);
+	cudaFree(nb_nbh);
+	cudaFree(id_i);
+	cudaFree(id_j);
+	cudaFree(cell_i);
+	cudaFree(cell_j);
+	cudaFree(p_i);
+	cudaFree(p_j);
+	
+	cudaFree(nb_nbh_incr);
+	cudaFree(driver_incr);
     }
   };
   

@@ -194,17 +194,17 @@ namespace exaDEM
       
       //}
 
-      if (grid->number_of_cells() == 0)
+      /*if (grid->number_of_cells() == 0)
       {
         return;
       }
       if (!ic.has_value())
         return;
-      ic->unclassify(*ges);
+      ic->unclassify(*ges);*/
       
      //printf("UNCLASSIFY_END\n");
      
-       /*    if (ic.has_value())
+      if (ic.has_value())
       {
       
       auto &olds = *ic_olds;
@@ -292,9 +292,7 @@ namespace exaDEM
       }
       }
       
-      }*/
-     
-      
+      }
     }
   };
 
