@@ -39,10 +39,16 @@ namespace exaDEM
   {
     bool mpi_rank;
     int n_vertices = 0;
+    int n_lines = 0;
+    int n_faces = 0;
     int n_polygons = 0;
     uint64_t incr_offset = 0;
+    uint64_t incr_line_offset = 0;
     std::stringstream vertices; 
+    std::stringstream lines;
     std::stringstream faces;
+    std::stringstream line_offsets;
+    std::stringstream tube_size;
     std::stringstream offsets;
     std::stringstream ids;
     std::stringstream types;
@@ -70,6 +76,18 @@ namespace exaDEM
 
     size_t n_faces = shp->get_number_of_faces();
     buffers.n_polygons += n_faces;
+
+    if(n_faces == 0)
+    {
+      auto writer_e = [&buffers, &shp](const int first, const int second)
+      {
+        buffers.n_lines ++;
+        buffers.lines << " " << buffers.n_vertices + first << " " << buffers.n_vertices + second;
+        buffers.tube_size << " " << shp->m_radius;
+        buffers.line_offsets << " " << buffers.incr_line_offset; buffers.incr_line_offset += 2; 
+      };
+      shp->for_all_edges(writer_e);
+    }
 
     // faces
     auto writer_f = [&buffers](const size_t size, const int *data)
@@ -176,19 +194,18 @@ namespace exaDEM
     outFile << "<?xml version=\"1.0\"?>" << std::endl;
     outFile << "<VTKFile type=\"PolyData\">" << std::endl;
     outFile << "  <PolyData>" << std::endl;
-    outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices << "\" NumberOfPolys=\"" << buffers.n_polygons << "\">" << std::endl;
+    outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices << "\" NumberOfLines=\"" << buffers.n_lines << "\" NumberOfPolys=\"" << buffers.n_polygons << "\">" << std::endl;
     outFile << "    <PointData>" << std::endl;
 
     /// PARTICLE FIELDS
     outFile << "      <DataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
-    if (buffers.n_polygons != 0)
     outFile << buffers.ids.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
     outFile << "      <DataArray type=\"Int32\" Name=\"Type\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
-    if (buffers.n_polygons != 0) outFile << buffers.types.rdbuf() << std::endl;
+    outFile << buffers.types.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
     outFile << "      <DataArray type=\"Float64\" Name=\"Velocity\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-    if (buffers.n_polygons != 0) outFile << buffers.velocities.rdbuf() << std::endl;
+    outFile << buffers.velocities.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
     if(buffers.mpi_rank) // MPI  rank - optional
     {
@@ -203,18 +220,32 @@ namespace exaDEM
       outFile << buffers.vertices.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
     outFile << "    </Points>" << std::endl;
-    outFile << "    <Polys>" << std::endl;
-    outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
-    
+    if (buffers.n_lines != 0)
+    { 
+      outFile << "    <Lines>" << std::endl;
+      outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
+      outFile << buffers.lines.rdbuf() << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
+      outFile << buffers.line_offsets.rdbuf() << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "      <DataArray type=\"Float64\" Name=\"TubeSize\" format=\"ascii\">" << std::endl;
+      outFile << buffers.tube_size.rdbuf() << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "    </Lines>" << std::endl;
+    }
     /// PARTICLE FACES
     if (buffers.n_polygons != 0)
+    {
+      outFile << "    <Polys>" << std::endl;
       outFile << buffers.faces.rdbuf() << std::endl;
-    outFile << "      </DataArray>" << std::endl;
-    outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
-    if (buffers.n_polygons != 0)
-      outFile << buffers.offsets.rdbuf() << std::endl;
-    outFile << "      </DataArray>" << std::endl;
-    outFile << "    </Polys>" << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
+      if (buffers.n_polygons != 0)
+        outFile << buffers.offsets.rdbuf() << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "    </Polys>" << std::endl;
+    }
     outFile << "    </Piece>" << std::endl;
     outFile << "  </PolyData>" << std::endl;
     outFile << "</VTKFile>" << std::endl;
@@ -289,6 +320,10 @@ namespace exaDEM
     outFile << "    <PPoints>" << std::endl;
     outFile << "      <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
     outFile << "    </PPoints> " << std::endl;
+    outFile << "    <PLines>" << std::endl;
+    outFile << "      <PDataArray type=\"Int32\" Name=\"connectivity\"  NumberOfComponents=\"1\"/>" << std::endl;
+    outFile << "      <PDataArray type=\"Float64\" Name=\"TubeSize\"  NumberOfComponents=\"1\"/>" << std::endl;
+    outFile << "    </PLines> " << std::endl;
     std::filesystem::path full_path(filename);
     std::string directory = full_path.filename().string();
     std::string subfile = directory + "/%06d.vtp";
