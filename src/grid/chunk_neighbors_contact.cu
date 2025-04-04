@@ -98,16 +98,13 @@ namespace exaDEM
 
   	return false;
   }
-  
+
   template< class GridT > __global__ void kernelDriver(GridT* cells,
   							int* cell_id,
   							int* cell_particle_start,
   							double rcut_inc,
   							Cylinder driver,
-  							int* interaction_driver,
-  							int* id,
-  							int* pi,
-  							int* celli)
+  							int* interaction_driver)
   {
   	int cell_a = cell_id[blockIdx.x];
   	int num_particles_a = cells[cell_a].size();
@@ -129,38 +126,48 @@ namespace exaDEM
   		if(driver.filter(rVerletMax, r))
   		{
   			interaction_driver[incr + p_a] = 1;
-  			id[incr + p_a] = id_a;
-  			pi[incr + p_a] = p_a;
-  			celli[incr + p_a] = cell_a;
+ 			
   		}
   	}
   }
   
+  template< class GridT > __global__ void kernelTROIS(GridT* cells, int* cell_id, int* cell_particle_start, int* interaction_driver, int* driver_incr, uint64_t* id_i_driver, uint32_t* cell_i_driver, uint16_t* p_i_driver )
+  {
+  	int cell_a = cell_id[blockIdx.x];
+  	int num_particles_a = cells[cell_a].size();
+  	
+  	if(threadIdx.x < num_particles_a)
+  	{
+  		int p_a = threadIdx.x;
+  		int incr = cell_particle_start[blockIdx.x];
+  		
+  		if(interaction_driver[incr + p_a]==1)
+  		{
+  			int idx = driver_incr[incr + p_a];
+  			
+  			id_i_driver[idx] = cells[cell_a][field::id][p_a];
+  			cell_i_driver[idx] = cell_a;
+  			p_i_driver[idx] = p_a;
+  		}  		
+  	}
+  }
+  
+
+  
   template< class GridT > __global__ void kernelUN(GridT* cells,
   							int* ghost_cell,
   							int* cell_id,
-  							int* nb_particles,
   							int* cell_neighbors_ids,
-  							int* cell_neighbors_size,
   							int* cell_start,
-  							int* cell_end,
-  							int* cell_particle_start,
   							const double dist_lab,
   							Mat3d xform,
   							double rcut_inc,
-  							uint64_t* id_i,
-  							uint64_t* id_j,
-  							uint32_t* cell_i,
-  							uint32_t* cell_j,
-  							uint16_t* p_i,
-  							uint16_t* p_j,
   							int* nb_nbh,
-  							int* id,
-  							int* celli,
-  							int* pi,
-  							int nombre_voisins_potentiels,
-  							int* cell_nb_nbh,
-  							int* resultat)
+  							int* p_i,
+  							int* p_j,
+  							int* cell_i,
+  							int* cell_j,
+  							int* cell_nb_nbh)
   {
   	
 	//int nb = nb_particles[blockIdx.x];
@@ -186,37 +193,6 @@ namespace exaDEM
 		int num_particles_a = cells[cell_a].size();
 		int num_particles_b = cells[cell_b].size();
 		
-		//int end = cell_end[blockIdx.x];
-		//int incr = cell_particle_start[blockIdx.x];
-		
-		//int p_a = i;//threadIdx.x;
-				
-		//int incr2 = incr*nombre_voisins_potentiels + p_a*nombre_voisins_potentiels;
-		
-		//int nb_interactions = 0;
-		
-		//const double rVerletMax = cells[cell][field::radius][p_a] + rcut_inc;
-		
-		/*auto &rx_a = cells[cell][field::rx][p_a];
-		auto &ry_a = cells[cell][field::ry][p_a];
-		auto &rz_a = cells[cell][field::rz][p_a];
-		auto &id_a = cells[cell][field::id][p_a];
-		
-		const Vec3d r = { rx_a , ry_a , rz_a };
-		
-		if (driver.filter(rVerletMax, r))
-		{
-			interaction_driver[incr + p_a] = 1;
-			id[incr + p_a] = id_a;
-			pi[incr + p_a] = p_a;
-			celli[incr + p_a] = cell;
-		}
-		else
-		{
-			interaction_driver[incr + p_a] = 0;
-		}*/
-		
-		//for(int i = start; i < end; i++)
 		for(int p_b = threadIdx.y; p_b < num_particles_b; p_b+= blockDim.y)
 		{
 			for(int p_a = threadIdx.x; p_a < num_particles_a; p_a+= blockDim.x)
@@ -228,84 +204,31 @@ namespace exaDEM
                 		{
                 			if( cells[cell_a][field::id][p_a] < cells[cell_b][field::id][p_b] )
                 			{
-                				id_i[gid * 30 + nb_interactions] = cells[cell_a][field::id][p_a];
-                				id_j[gid * 30 + nb_interactions] = cells[cell_b][field::id][p_b];
-                				cell_i[gid * 30 + nb_interactions] = cell_a;
-                				cell_j[gid * 30 + nb_interactions] = cell_b;
+                				nb_nbh[gid * 30 + nb_interactions] = 1;
                 				p_i[gid * 30 + nb_interactions] = p_a;
                 				p_j[gid * 30 + nb_interactions] = p_b;
-                				
-                				nb_nbh[gid * 30 + nb_interactions] = 1;
+                				cell_i[gid * 30 + nb_interactions] = cell_a;
+                				cell_j[gid * 30 + nb_interactions] = cell_b;
                 				
                 				nb_interactions++;
-                				//atomicAdd(&resultat[0], 1);
                 			}
                 			else if( ghost_cell[start + cellb] == 1 )
                 			{
-                				id_i[gid * 30 + nb_interactions] = cells[cell_a][field::id][p_a];
-                				id_j[gid * 30 + nb_interactions] = cells[cell_b][field::id][p_b];
-                				cell_i[gid * 30 + nb_interactions] = cell_a;
-                				cell_j[gid * 30 + nb_interactions] = cell_b;
+                				nb_nbh[gid * 30 + nb_interactions] = 1;
                 				p_i[gid * 30 + nb_interactions] = p_a;
                 				p_j[gid * 30 + nb_interactions] = p_b;
-                				
-                				nb_nbh[gid * 30 + nb_interactions] = 1;
+                				cell_i[gid * 30 + nb_interactions] = cell_a;
+                				cell_j[gid * 30 + nb_interactions] = cell_b;
                 				
                 				nb_interactions++;
-                				//atomicAdd(&resultat[0], 1);
                 			}
                 		}
 			}
 		}
-			//int cell_b = cell_neighbors_ids[i];
-			
-			/*for(int j = 0; j < cell_neighbors_size[i]; j++)
-			{
-				int p_b = j;
-				
-				auto &id_b = cells[cell_b][field::id][p_b];
-	  			
-	  			//double rcut2 = dist_lab * dist_lab;
-  		
-  				const Vec3d dr = { rx_a - cells[cell_b][field::rx][p_b] , ry_a - cells[cell_b][field::ry][p_b] , rz_a - cells[cell_b][field::rz][p_b] };
-                		double d2 = norm2( xform * dr );
-                	
-  				if(nbh_filter_GPU(cells, rcut_inc, d2, rcut2, cell, p_a, cell_b, p_b)) 
-  				{
-  					if( id_a < id_b)
-  					{
-  						id_i[incr2 + nb_interactions] = id_a;
-  						id_j[incr2 + nb_interactions] = id_b;
-  						cell_i[incr2 + nb_interactions] = cell;
-  						cell_j[incr2 + nb_interactions] = cell_b;
-  						p_i[incr2 + nb_interactions] = p_a;
-  						p_j[incr2 + nb_interactions] = p_b;
-  						
-  						nb_nbh[incr2 + nb_interactions] = 1;
-  					
-  						nb_interactions++;
-  						atomicAdd(&resultat[0], 1);
-  					}
-  					else if( ghost_cell[i]==1 )
-  					{
-   						id_i[incr2 + nb_interactions] = id_a;
-  						id_j[incr2 + nb_interactions] = id_b;
-  						cell_i[incr2 + nb_interactions] = cell;
-  						cell_j[incr2 + nb_interactions] = cell_b;
-  						p_i[incr2 + nb_interactions] = p_a;
-  						p_j[incr2 + nb_interactions] = p_b;
-  						
-  						nb_nbh[incr2 + nb_interactions] = 1;
-  					
-  						nb_interactions++;
-  						atomicAdd(&resultat[0], 1);
-  					}
-  				}				
-			}*/
-		}
 	}
+}
 	
-  __global__ void kernelDEUX(int* nb_nbh, int* nb_nbh_incr, uint64_t* id_i, uint64_t* id_j, uint32_t* cell_i, uint32_t* cell_j, uint16_t* p_i, uint16_t* p_j, uint64_t* id_i_final, uint64_t* id_j_final, uint32_t* cell_i_final, uint32_t* cell_j_final, uint16_t* p_i_final, uint16_t* p_j_final, double* ftx_final, double* fty_final, double* ftz_final, double* momx_final, double* momy_final, double* momz_final, int size)
+  template < class GridT > __global__ void kernelDEUX(GridT* cells, int* nb_nbh, int* nb_nbh_incr, uint64_t* id_i_final, uint64_t* id_j_final, uint32_t* cell_i_final, uint32_t* cell_j_final, uint16_t* p_i_final, uint16_t* p_j_final, double* ftx_final, double* fty_final, double* ftz_final, double* momx_final, double* momy_final, double* momz_final, int* p_i, int* p_j, int* cell_i, int* cell_j, int size)
   {
   	int idx = threadIdx.x + blockIdx.x * blockDim.x;
   	
@@ -314,160 +237,29 @@ namespace exaDEM
   		int incr = nb_nbh_incr[idx];
   		if(nb_nbh[idx] == 1)
   		{
-  			id_i_final[incr] = id_i[idx];
-  			id_j_final[incr] = id_j[idx];
-  			cell_i_final[incr] = cell_i[idx];
-  			cell_j_final[incr] = cell_j[idx];
-  			p_i_final[incr] = p_i[idx];
-  			p_j_final[incr] = p_j[idx];
-  			ftx_final[incr] = 0;
+  			int cell_a = cell_i[idx];
+  			int cell_b = cell_j[idx];
+  			int p_a = p_i[idx];
+  			int p_b = p_j[idx];
+  			
+  			id_i_final[incr] = cells[cell_a][field::id][p_a];
+  			id_j_final[incr] = cells[cell_b][field::id][p_b];
+  			cell_i_final[incr] = cell_a;
+  			cell_j_final[incr] = cell_b;
+  			p_i_final[incr] = p_a;
+  			p_j_final[incr] = p_b;
+  			/*ftx_final[incr] = 0;
   			fty_final[incr] = 0;
   			ftz_final[incr] = 0;
   			momx_final[incr] = 0;
   			momy_final[incr] = 0;
-  			momz_final[incr] = 0;
+  			momz_final[incr] = 0;*/
   		}
   	}
   }
   
-  __global__ void kernelTROIS(int* interaction_driver, int* driver_incr, int* id, int* cell, int* p, uint64_t* id_i_driver, uint32_t* cell_i_driver, uint16_t* p_i_driver, int size)
-  {
-  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  	
-  	if(idx < size)
-  	{
-  		int incr = driver_incr[idx];
-  		
-  		if(interaction_driver[idx] == 1)
-  		{
-  			id_i_driver[incr] = id[idx];
-  			cell_i_driver[incr] = cell[idx];
-  			p_i_driver[incr] = p[idx];
-  		}
-  	}
-  }
-  
-  /*__global__ void filtre_un( double* ft_x,
-  			double* ft_y,
-  			double* ft_z,
-  			double* mom_x,
-  			double* mom_y,
-  			double* mom_z,
-  			size_t size,
-  			int* filtre)
-  {
-  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  	
-  	if(idx < size)
-  	{
-  		if(ft_x[idx]!=0 || ft_y[idx]!=0 || ft_z[idx]!=0 || mom_x[idx]!=0 || mom_y[idx]!=0 || mom_z[idx]!=0)
-  		{
-  			filtre[idx] = 1;
-  		}
-  	}
-  }
-  
-  __global__ void filtre_deux( uint64_t* id_i,
-  				uint64_t* id_j,
-  				uint16_t* sub_j,
-  				uint64_t* id_i_res,
-  				uint64_t* id_j_res,
-  				double* ft_x,
-  				double* ft_y,
-  				double* ft_z,
-  				double* ft_x_res,
-  				double* ft_y_res,
-  				double* ft_z_res,
-  				double* mom_x,
-  				double* mom_y,
-  				double* mom_z,
-  				double* mom_x_res,
-  				double* mom_y_res,
-  				double* mom_z_res,
-  				int* filtre_incr,
-  				int* indices,
-  				int size)
-  {
-  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
 
-  	if(idx < size)
-  	{
-  		if(ft_x[idx]!=0 || ft_y[idx]!=0 || ft_z[idx]!=0 || mom_x[idx]!=0 || mom_y[idx]!=0 || mom_z[idx]!=0)
-  		{
-  			int &incr = filtre_incr[idx];
-  			
-  			id_i_res[incr] = id_i[idx];
-  			id_j_res[incr] = id_j[idx];
-  			ft_x_res[incr] = ft_x[idx];
-  			ft_y_res[incr] = ft_y[idx];
-  			ft_z_res[incr] = ft_z[idx];
-  			mom_x_res[incr] = mom_x[idx];
-  			mom_y_res[incr] = mom_y[idx];
-  			mom_z_res[incr] = mom_z[idx];
-  			
-  			indices[incr] = incr;
-  		}
-  	}
-  }
-  
-  __global__ void generateKeys( uint64_t* keys, 
-  				const uint64_t* id_i, 
-  				const uint64_t* id_j,
-  				int min,
-  				int max,
-  				int type,
-  				int size)
-  {
-  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  	
-  	if(idx < size)
-  	{
-  		int range = max - min + 1;
-  		if(type == 0)keys[idx] = (id_i[idx] - min) * range + (id_j[idx] - min);
-  		if(type == 4)keys[idx] = id_i[idx];
-  	}
-  }
-  
-  
-  void exclusive_sum( int* d_in, int* d_out, int size )https://meet.jit.si/reunion-dev-exanbody
-  {
-  	void* d_temp_storage = nullptr;
-  	size_t temp_storage_bytes = 0;
-  	
-  	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, size);
-  	
-  	cudaMalloc(&d_temp_storage, temp_storage_bytes);
-  	
-  	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, d_in, d_out, size);
-  	
-  	cudaFree(d_temp_storage);
-  }
-  
-	void sortWithIndices(uint64_t* id_in, int *indices_in, uint64_t* id_out, int* indices_out, int size) {
-	    // Allocate temporary storage
-	    void *d_temp_storage = nullptr;
-	    size_t temp_storage_bytes = 0;
 
-	    // Step 1: Determine temporary storage size
-	    cub::DeviceRadixSort::SortPairs(
-		d_temp_storage, temp_storage_bytes, 
-		id_in, id_out, 
-		indices_in, indices_out, 
-		size);
-
-	    // Step 2: Allocate temporary storage
-	    cudaMalloc(&d_temp_storage, temp_storage_bytes);
-
-	    // Step 3: Perform the radix sort (key-value pair sorting)
-	    cub::DeviceRadixSort::SortPairs(
-		d_temp_storage, temp_storage_bytes, 
-		id_in, id_out, 
-		indices_in, indices_out, 
-		size);
-
-	    // Free temporary storage and double-buffered arrays
-	    cudaFree(d_temp_storage);
-	}*/
 
   template <class CellsT> struct ContactNeighborFilterFunc
   {
@@ -521,8 +313,7 @@ namespace exaDEM
     inline void execute() override final
     {
     
-      //printf("CHUNK_START\n");
-      using NumberOfInteractionPerTypes = ::onika::oarray_t<int, 13>;
+      printf("CHUNK_START\n");
       
       unsigned int cs = config->chunk_size;
       unsigned int cs_log2 = 0;
@@ -550,7 +341,7 @@ namespace exaDEM
       ContactNeighborFilterFunc<decltype(cells)> nbh_filter{cells, *rcut_inc};
       static constexpr std::false_type no_z_order = {};
       
-      if (!domain->xform_is_identity())
+      /*if (!domain->xform_is_identity())
       {
         LinearXForm xform = {domain->xform()};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
@@ -559,7 +350,7 @@ namespace exaDEM
       {
         NullXForm xform = {};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
-      }
+      }*/
       
       //UNCLASSIFY
       //printf("UNCLASSIFY\n");
@@ -757,6 +548,8 @@ namespace exaDEM
 	
 	auto [cell_ptr, cell_size] = traversal_real->info();
 	
+	printf("NUM_CELLS: %d\n", cell_size);
+	
 	int incr_cell = 0;
 
 	for(int i=0; i < nb_particles_cell.size(); i++)
@@ -816,19 +609,6 @@ namespace exaDEM
 	cudaFree(d_temp_storage);	
 	
 	//CELL END
-	onika::memory::CudaMMVector<int> cell_end;
-	cell_end.resize(cell_nb_nbh.size());
-	
-	d_temp_storage = nullptr;
-	temp_storage_bytes = 0;
-	
-	cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, cell_nb_nbh.data(), cell_end.data(), cell_end.size());
-	
-	cudaMalloc(&d_temp_storage, temp_storage_bytes);
-	
-	cub::DeviceScan::InclusiveSum(d_temp_storage, temp_storage_bytes, cell_nb_nbh.data(), cell_end.data(), cell_end.size());
-		
-	cudaFree(d_temp_storage);
 	
 	//CELL PARTICLES START		
 
@@ -846,46 +626,26 @@ namespace exaDEM
 	
 	cudaFree(d_temp_storage);	
 	
-	int numBlocks = cell_id.size();
-
-	//onika::memory::CudaMMVector<uint64_t> id_i;
-	uint64_t* id_i;
-	//onika::memory::CudaMMVector<uint64_t> id_j;
-	uint64_t* id_j;
-	//onika::memory::CudaMMVector<uint32_t> cell_i;
-	uint32_t* cell_i;
-	//onika::memory::CudaMMVector<uint32_t> cell_j;
-	uint32_t* cell_j;
-	//onika::memory::CudaMMVector<uint16_t> p_i;
-	uint16_t* p_i;
-	//onika::memory::CudaMMVector<uint16_t> p_j;
-	uint16_t* p_j;
+	int numCells = cell_id.size();
+	
+	int numBlocks = numCells;
 	
 	//onika::memory::CudaMMVector<int> nb_nbh;
 	int* nb_nbh;
-	//onika::memory::CudaMMVector<int> id_particle;
-	int* id_particle;
-	//onika::memory::CudaMMVector<int> cell_particle;
-	int* cell_particle;
-	//onika::memory::CudaMMVector<int> p_particle;
-	int* p_particle;
+	int* p_i;
+	int* p_j;
+	int* cell_i;
+	int* cell_j;
 
 	//onika::memory::CudaMMVector<int> interaction_driver;
 	int* interaction_driver;
-	
+
 	int total = 0;
 	for(int i = 0; i < nb_particles.size(); i++)
 	{
 		total+= nb_particles[i];
 	}
 
-	//id_particle.resize(total);
-	cudaMalloc(&id_particle, total * sizeof(int) );
-	//cell_particle.resize(total);
-	cudaMalloc(&cell_particle, total * sizeof(int) );
-	//p_particle.resize(total);
-	cudaMalloc(&p_particle, total * sizeof(int) );
-	//interaction_driver.resize(total);
 	cudaMalloc(&interaction_driver, total * sizeof(int) );
 	
 	int nombre_voisins_potentiels = 30;
@@ -899,34 +659,35 @@ namespace exaDEM
 	
 	//nb_nbh.resize(total);
 	cudaMalloc(&nb_nbh, total * sizeof(int) );
-	//id_i.resize(total);
-	cudaMalloc(&id_i, total * sizeof(uint64_t) );
-	//id_j.resize(total);
-	cudaMalloc(&id_j, total * sizeof(uint64_t) );
-	//cell_i.resize(total);
-	cudaMalloc(&cell_i, total * sizeof(uint32_t) );
-	//cell_j.resize(total);
-	cudaMalloc(&cell_j, total * sizeof(uint32_t) );
-	//p_i.resize(total);
-	cudaMalloc(&p_i, total * sizeof(uint16_t) );
-	//p_j.resize(total);
-	cudaMalloc(&p_j, total * sizeof(uint16_t) );
-	
+	cudaMalloc(&p_i, total * sizeof(int) );
+	cudaMalloc(&p_j, total * sizeof(int) );
+	cudaMalloc(&cell_i, total * sizeof(int) );
+	cudaMalloc(&cell_j, total * sizeof(int) ); 
+
 	auto &drvs = *drivers;
 	Cylinder &driver = drvs.get_typed_driver<Cylinder>(0);
 	
-	onika::memory::CudaMMVector<int> resultat;
-	resultat.resize(1);
-	
         dim3 BlockSize(block_x, block_y, 1);
+
+        printf("CELLS: %d\n", cell_id.size());
         
-        kernelDriver<<<numBlocks, 1024>>>( cells, cell_id.data(), nb_particles_start.data(), *rcut_inc, driver, interaction_driver, id_particle, p_particle, cell_particle );
+        /*for(int i = 0; i < cell_nb_nbh.size(); i++)
+        {
+        	printf("cell_nb_nbh :%d\n", cell_nb_nbh[i]);
+        }*/
         
-	kernelUN<<<numBlocks, BlockSize>>>(cells, ghost_cell.data(), cell_id.data(), nb_particles.data(), cell_neighbors_ids.data(), cell_neighbors_size.data(), cell_start.data(), cell_end.data(), nb_particles_start.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, id_i, id_j, cell_i, cell_j, p_i, p_j, nb_nbh, id_particle, cell_particle, p_particle, nombre_voisins_potentiels, cell_nb_nbh.data(), resultat.data() );
-	
+        kernelDriver<<<cell_id.size(), 1024>>>( cells, cell_id.data(), nb_particles_start.data(), *rcut_inc, driver, interaction_driver );
+        
+        //int cells_max = 0;
+
+    
+	  kernelUN<<<cell_id.size(), BlockSize>>>( cells, ghost_cell.data(), cell_id.data(), cell_neighbors_ids.data(), cell_start.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh, p_i, p_j, cell_i, cell_j, cell_nb_nbh.data() );
+	  
+	  cudaDeviceSynchronize();
+
 		//kernelUN_2<<<numBlocks, 1024>>>(cells, dims, ghost_cell.data(), cell_id.data(), nb_particles_start.data(), loc_max_gap, *nbh_dist_lab, domain->xform(), *rcut_inc, id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), nb_nbh.data(), id_particle.data(), cell_particle.data(), p_particle.data(), nombre_voisins_potentiels, driver, interaction_driver.data());
 	
-	cudaDeviceSynchronize();
+	//cudaDeviceSynchronize();
 
 	//onika::memory::CudaMMVector<int> nb_nbh_incr;
 	int* nb_nbh_incr;
@@ -984,44 +745,22 @@ namespace exaDEM
 	
 	//printf("CLASSIFIER\n");
 	
-	NumberOfInteractionPerTypes sizes;
-	
-	for(int i = 0; i < 13; i++)
-	{
-		if(i == 0)
-		{
-			sizes[i] = total_interactions;
-		}
-		else if(i == 4)
-		{
-			sizes[i] = total_interactions_driver;
-		}
-		else
-		{
-			sizes[i] = 0;
-		}
-	}
-	
 	if (!ic.has_value())
         	ic->initialize();
-        	
-        ic->resize(sizes);
-        
-        //ic.prout();
+
+	auto& type0 = ic->get_wave(0);
+	auto& type4 = ic->get_wave(4);
 	
-	//auto& type0 = ic->get_wave(0);
-	//auto& type4 = ic->get_wave(4);
+	type0.clear();
+	type4.clear();
 	
-	//type0.clear();
-	//type4.clear();
+	type0.type = 0;
+	type4.type = 4;
 	
-	//type0.type = 0;
-	//type4.type = 4;
+	type0.resize(total_interactions);
+	type4.resize(total_interactions_driver); 
 	
-	//type0.resize(total_interactions);
-	/*type4.resize(total_interactions_driver); 
 	
-	/*
 	onika::memory::CudaMMVector<uint64_t> &id_i_final = type0.id_i;
 	onika::memory::CudaMMVector<uint64_t> &id_j_final = type0.id_j;
 	onika::memory::CudaMMVector<uint32_t> &cell_i_final = type0.cell_i;
@@ -1046,30 +785,34 @@ namespace exaDEM
 	onika::memory::CudaMMVector<double> &momy_driver = type4.mom_y;
 	onika::memory::CudaMMVector<double> &momz_driver = type4.mom_z;
 
-	numBlocks = (nb_nbh.size() + 256 - 1) / 256;
+	numBlocks = (total + 256 - 1) / 256;
 	
-	kernelDEUX<<<numBlocks, 256>>>(nb_nbh.data(), nb_nbh_incr.data(), id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), id_i_final.data(), id_j_final.data(), cell_i_final.data(), cell_j_final.data(), p_i_final.data(), p_j_final.data(), ftx_final.data(), fty_final.data(), ftz_final.data(), momx_final.data(), momy_final.data(), momz_final.data(), nb_nbh.size());
+	kernelDEUX<<<numBlocks, 256>>>(cells, nb_nbh, nb_nbh_incr, id_i_final.data(), id_j_final.data(), cell_i_final.data(), cell_j_final.data(), p_i_final.data(), p_j_final.data(), ftx_final.data(), fty_final.data(), ftz_final.data(), momx_final.data(), momy_final.data(), momz_final.data(), p_i, p_j, cell_i, cell_j, total);
 	
-	numBlocks = (interaction_driver.size() + 256 - 1) / 256;
+	cudaDeviceSynchronize();
 	
-	kernelTROIS<<<numBlocks, 256>>>(interaction_driver.data(), driver_incr.data(), id_particle.data(), cell_particle.data(), p_particle.data(), id_i_driver.data(), cell_i_driver.data(), p_i_driver.data(), interaction_driver.size());
+	numBlocks = numCells;//(total_1 + 256 - 1) / 256;
+	
+	kernelTROIS<<<numBlocks, 1024>>>( cells, cell_id.data(), nb_particles_start.data(), interaction_driver, driver_incr, id_i_driver.data(), cell_i_driver.data(), p_i_driver.data() );
+	
+	cudaDeviceSynchronize();
 
 	//printf("CLASSIFIER END\n");*/	
 	
-	cudaFree(id_particle);
-	cudaFree(cell_particle);
-	cudaFree(p_particle);
+
 	cudaFree(interaction_driver);
 	cudaFree(nb_nbh);
-	cudaFree(id_i);
-	cudaFree(id_j);
-	cudaFree(cell_i);
-	cudaFree(cell_j);
-	cudaFree(p_i);
-	cudaFree(p_j);
+
 	
 	cudaFree(nb_nbh_incr);
 	cudaFree(driver_incr);
+	
+	cudaFree(p_i);
+	cudaFree(p_j);
+	cudaFree(cell_i);
+	cudaFree(cell_j);
+
+	//printf("CHUNK_END\n");
     }
   };
   
