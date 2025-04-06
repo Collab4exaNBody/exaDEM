@@ -42,3 +42,11 @@ Two test cases showcase the use of the region operator:
 - **init_piston** This simulation sets up the particle sample.
 - **piston_linear_force_motion** This simulation sets the piston in motion above the sample, applying a constant force.
 - **piston_linear_compression_motion** This simulation sets the piston in motion above the sample, applying a pressure controlled by the variable sigma.
+
+## Shaker
+
+Two test cases demonstrate the use of the shaker motion:
+
+- **shaker_surface:** Simulation of a sphere deposit on a vibrating surface.
+- **shaker_surface_start_stop:** Simulation of a sphere deposit on a vibrating surface, where the surface vibration is triggered and then stopped.
+
