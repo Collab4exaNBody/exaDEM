@@ -9,7 +9,7 @@ class Onika(CMakePackage):
 
 
     version("main",  git='https://github.com/Collab4exaNBody/onika.git', branch='main')
-    version("exadem-exanbody-2.0",  git='https://github.com/Collab4exaNBody/onika.git', tag='exadem-exanbody-2.0')
+    version("v1.0.0",  git='https://github.com/Collab4exaNBody/onika.git', tag='v1.0.0')
 
     depends_on("cmake")
     variant("cuda", default=False, description="Support for GPU")
