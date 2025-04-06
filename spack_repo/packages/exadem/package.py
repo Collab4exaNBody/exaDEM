@@ -20,7 +20,7 @@ class Exadem(CMakePackage):
     depends_on("rsampi", when="+rsampi")
 	
 # main
-    depends_on("exanbody@v2.0.0", when="@1.1.0")
+    depends_on("exanbody@v2.0.0", when="@main")
 
 # v1.1.0
     depends_on("exanbody@v2.0.0", when="@1.1.0")
