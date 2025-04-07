@@ -126,7 +126,6 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      printf("CONTACT\n");
       if (grid->number_of_cells() == 0)
       {
         return;
@@ -148,7 +147,6 @@ namespace exaDEM
       {
         save_results();
       }
-      printf("CONTACT FIN\n");
     }
   };
 
