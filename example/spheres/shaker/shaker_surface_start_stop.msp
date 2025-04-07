@@ -1,0 +1,63 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "SpheresShakerStartStopDir"
+
+input_data:
+  - init_rcb_grid
+  - particle_type:
+     type: [  Sphere1,  Sphere2, Sphere3, Sphere4 ]
+  - lattice:
+     structure: FCC
+     types: [ Sphere1,  Sphere2, Sphere3, Sphere4 ]
+     size: [ 1.5 , 1.5 , 1.5 ]
+  - set_fields:
+     polyhedra: false
+     type:           [ Sphere1, Sphere2, Sphere3, Sphere4 ]
+     radius:         [     0.5,   0.25 ,    0.4 ,     0.3 ]
+     density:        [    0.02,   0.04 ,   0.03 ,    0.35 ]
+     velocity:       [ [0,0,0], [0,0,0], [0,0,0], [0,0,0] ]
+     sigma_velocity: [     0.1,     0.1,     0.1,     0.1 ]
+
+setup_drivers:
+  - register_surface: { id: 0, state: {normal: [0,1,0], offset: 11} }
+  - register_surface: { id: 1, state: {normal: [0,1,0], offset: -1} }
+  - register_surface: { id: 3, state: { normal: [1,0,0], offset: -1} }
+  - register_surface: { id: 4, state: { normal: [1,0,0], offset: 11} }
+  - register_surface:
+     id: 2
+     state: {normal: [0,0,1], offset: -1}
+     params:
+        motion_type: SHAKER
+        amplitude: 0.5
+        omega: 1e1
+        motion_start_threshold: 3.0
+        motion_end_threshold: 8.0
+
+compute_force:
+  - gravity_force
+  - contact_sphere:
+     symetric: true
+     config: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.0, damp_rate: 0.9} 
+     config_driver: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 90000, kr: 0.1, fc: 0.05, mu: 0.0, damp_rate: 0.9} 
+
+domain:
+  cell_size: 2 m
+  periodic: [false,false,false]
+  grid_dims: [5, 5, 20]
+  bounds: [[0.0 , 0.0, 0.0],[10, 10, 40]]
+  expandable: true
+
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 100000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 1000
+  dt: 0.0001 s 
+  rcut_inc: 0.4 m
+

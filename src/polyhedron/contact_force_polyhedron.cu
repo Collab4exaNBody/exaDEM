@@ -24,6 +24,7 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
+#include <exanb/core/xform.h>
 
 #include <memory>
 
@@ -70,16 +71,15 @@ namespace exaDEM
     inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
 
 
-    template<int start, int end, bool def_xform, template<int, bool> typename FuncT, typename T, typename... Args>
-      void loop_contact_force(Classifier<T>& classifier, const Mat3d& xform, Args &&... args)
+    template<int start, int end, template<int, typename> typename FuncT, typename XFormT,  typename T, typename... Args>
+      void loop_contact_force(Classifier<T>& classifier, XFormT& cp_xform, Args &&... args)
       {
-        //FuncT<start, def_xform> contact_law = {xform};
-        FuncT<start, def_xform> contact_law;
-        if constexpr (def_xform) contact_law.xform = xform;
+        FuncT<start, XFormT> contact_law;
+        contact_law.xform = cp_xform;
         run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
         if constexpr( start + 1 <= end )
         {
-          loop_contact_force<start+1, end, def_xform, FuncT>(classifier, xform, std::forward<Args>(args)...);
+          loop_contact_force<start+1, end, FuncT>(classifier, cp_xform, std::forward<Args>(args)...);
         }
       }
 
@@ -137,13 +137,16 @@ namespace exaDEM
 
       if(is_def_xform)
       {
-        loop_contact_force<poly_type_start, poly_type_end, true, contact_law>(classifier, xform, __params__);
+        LinearXForm cp_xform = {xform};
+        loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
+        loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
       }
       else
       {
-        loop_contact_force<poly_type_start, poly_type_end, false, contact_law>(classifier, xform, __params__);
+        NullXForm cp_xform;
+        loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
+        loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
       }
-      loop_contact_force <stl_type_start,  stl_type_end, false, contact_law_stl>(classifier, xform, __params_driver__);
       run_contact_law(parallel_execution_context(), 4, classifier, cyli, __params_driver__);
       run_contact_law(parallel_execution_context(), 5, classifier, surf, __params_driver__);
       run_contact_law(parallel_execution_context(), 6, classifier, ball, __params_driver__);

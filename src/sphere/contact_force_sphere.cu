@@ -24,6 +24,7 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
+#include <exanb/core/xform.h>
 
 #include <memory>
 
@@ -68,53 +69,51 @@ namespace exaDEM
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
     ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
 
-  public:
+    public:
     inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
 
-    template<int start, int end, template<int, bool> typename FuncT, bool def_box, typename T, typename... Args>
-    void loop_contact_force(Classifier<T>& classifier, Args &&... args)
-    {
-      FuncT<start, def_box> contact_law;
-      run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
-      if constexpr( start + 1 <= end )
+    template<int start, int end, template<int, typename> typename FuncT, typename XFormT, typename T, typename... Args>
+      void loop_contact_force(Classifier<T>& classifier, XFormT& cp_xform, Args &&... args)
       {
-        loop_contact_force<start+1, end, FuncT, def_box>(classifier, std::forward<Args>(args)...);
-      }
-    }
-
-    template<bool is_sym, bool def_box>
-    void core()
-    {
-      const DriversGPUAccessor drvs = *drivers;
-      auto *cells = grid->cells();
-      const ContactParams hkp = *config;
-      ContactParams hkp_drvs{};
-
-      /** Def Box */
-      const Mat3d& xform = domain->xform();
-
-      if (drivers->get_size() > 0 && config_driver.has_value())
-      {
-        hkp_drvs = *config_driver;
+        FuncT<start, XFormT> contact_law;
+        contact_law.xform = cp_xform;
+        run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
+        if constexpr( start + 1 <= end )
+        {
+          loop_contact_force<start+1, end, FuncT, XFormT>(classifier, cp_xform, std::forward<Args>(args)...);
+        }
       }
 
-      const double time = *dt;
-      auto &classifier = *ic;
+    template<bool is_sym, typename XFormT>
+      void core(XFormT& xform)
+      {
+        const DriversGPUAccessor drvs = *drivers;
+        auto *cells = grid->cells();
+        const ContactParams hkp = *config;
+        ContactParams hkp_drvs{};
 
-      contact_law<is_sym, def_box> sph = {xform};
-      contact_law_driver<Cylinder, def_box> cyl = {xform};
-      contact_law_driver<Surface, def_box> surf = {xform};
-      contact_law_driver<Ball, def_box> ball = {xform};
+        if (drivers->get_size() > 0 && config_driver.has_value())
+        {
+          hkp_drvs = *config_driver;
+        }
 
-      run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
-      run_contact_law(parallel_execution_context(), 4, classifier, cyl, cells, drvs, hkp_drvs, time);
-      run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs, hkp_drvs, time);
-      run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);
+        const double time = *dt;
+        auto &classifier = *ic;
 
-      constexpr int stl_type_start = 7;
-      constexpr int stl_type_end = 9;
-      loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl, def_box>(classifier, cells, drvs, hkp_drvs, time);
-    }
+        contact_law<is_sym, XFormT> sph = {xform};
+        contact_law_driver<Cylinder, XFormT> cyl = {xform};
+        contact_law_driver<Surface, XFormT> surf = {xform};
+        contact_law_driver<Ball, XFormT> ball = {xform};
+
+        run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
+        run_contact_law(parallel_execution_context(), 4, classifier, cyl, cells, drvs, hkp_drvs, time);
+        run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs, hkp_drvs, time);
+        run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);
+
+        constexpr int stl_type_start = 7;
+        constexpr int stl_type_end = 9;
+        loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl, XFormT>(classifier, xform, cells, drvs, hkp_drvs, time);
+      }
 
     void save_results()
     {
@@ -131,17 +130,22 @@ namespace exaDEM
         return;
       }
 
-      /** Def Box */
-      bool is_def_box = !domain->xform_is_identity();
-
       /** Analysis */
       const long frequency_interaction = *analysis_interaction_dump_frequency;
       bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
 
-      if(*symetric == false && is_def_box == false) {core<false, false>();}      
-      if(*symetric == true  && is_def_box == false) {core<true , false>();}      
-      if(*symetric == false && is_def_box ==  true) {core<false,  true>();}      
-      if(*symetric == true  && is_def_box ==  true) {core<true ,  true>();}      
+      if(!domain->xform_is_identity())
+      {
+        LinearXForm cp_xform = {domain->xform()};
+        if(*symetric) core<true>(cp_xform);
+        else core<false>(cp_xform);
+      }
+      else     
+      {
+        NullXForm cp_xform;
+        if(*symetric) core<true>(cp_xform);
+        else core<false>(cp_xform);
+      }     
 
       if (write_interactions)
       {

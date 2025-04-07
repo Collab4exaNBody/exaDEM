@@ -40,6 +40,7 @@ namespace exaDEM
     FORCE_MOTION,              /**< General movement caused by applied forces. */
     LINEAR_COMPRESSIVE_MOTION, /**< Linear movement combined with compressive forces. */
     TABULATED,                 /**< Motion defined by precomputed or tabulated data. */
+    SHAKER,                    /**< Oscillatory or vibratory motion, typically mimicking a shaking mechanism. */
     UNKNOWN
   };
 
@@ -55,6 +56,7 @@ namespace exaDEM
       case FORCE_MOTION: return "FORCE_MOTION";
       case LINEAR_COMPRESSIVE_MOTION: return "LINEAR_COMPRESSIVE_MOTION";
       case TABULATED: return "TABULATED";
+      case SHAKER: return "SHAKER";
       default: return "UNKNOWN";
     }
   }
@@ -68,6 +70,7 @@ namespace exaDEM
     if (str == "FORCE_MOTION") return FORCE_MOTION;
     if (str == "LINEAR_COMPRESSIVE_MOTION") return LINEAR_COMPRESSIVE_MOTION;
     if (str == "TABULATED") return TABULATED;
+    if (str == "SHAKER") return SHAKER;
 
     // If the string doesn't match any valid MotionType, return a default value
     return UNKNOWN;  // Or some other default action like throwing an exception or logging
@@ -95,11 +98,14 @@ namespace exaDEM
     std::vector<double> tab_time;
     std::vector<Vec3d> tab_pos;
 
-//    Driver_params() = default;
-//    ~Driver_params() = default;
+    // Motion: Shaker
+    double omega = 0;
+    double amplitude = 0;
+    Vec3d shaker_dir = Vec3d(0,0,1);
 
     inline bool is_stationary() const { return motion_type == STATIONARY; }
     inline bool is_tabulated() const { return motion_type == TABULATED; }
+    inline bool is_shaker() const { return motion_type == SHAKER; }
 
     void set_params(Driver_params& in)
     { 
@@ -166,6 +172,25 @@ namespace exaDEM
 
     bool check_motion_coherence()
     {
+      if( is_shaker() )
+      {
+        if( amplitude <= 0.0 ) 
+        {
+          lout << "\033[31m[Warning] The \"amplitude\" input slot is not defined correctly.\033[0m" << std::endl;
+          return false;
+        }
+        if( omega <= 0.0 ) 
+        {
+          lout << "\033[31m[Warning] The \"omega\" input slot is not defined correctly.\033[0m" << std::endl;
+          return false;
+        }
+        if( exanb::dot(shaker_dir, shaker_dir) - 1 >= 1e-14 ) 
+        {
+          Vec3d old = shaker_dir;
+          exanb::_normalize(shaker_dir);
+          lout << "\033[31m[Warning] Your shaker_dir vector [" << old <<"} has been normalized to [" << shaker_dir << "]\033[0m" << std::endl;
+        }
+      }
       if( is_tabulated() )
       {
         if(tab_time.size() == 0)
@@ -235,10 +260,15 @@ namespace exaDEM
       return true;  // Return true if the motion is coherent
     }
 
+    bool is_motion_triggered(double time) const
+    {
+      return ( (time >= motion_start_threshold) && (time <= motion_end_threshold) );  
+    }
+
     bool is_motion_triggered(uint64_t timesteps, double dt) const
     {
       const double time = timesteps * dt;
-      return ( (time >= motion_start_threshold) && (time <= motion_end_threshold) );  
+      return is_motion_triggered(time);
     }
 
     void tabulations_to_stream(std::stringstream& times, std::stringstream& positions) const
@@ -304,6 +334,13 @@ namespace exaDEM
           lout << "Damprate: " << damprate << std::endl;
         }
       }
+
+      if( is_shaker() )
+      {
+        lout << "Shaker.Omega: "     << omega << std::endl;
+        lout << "Shaker.Amplitude: " << amplitude << std::endl;
+        lout << "Shaker.Direction: " << shaker_dir << std::endl;
+      }
     };
 
     /**
@@ -336,6 +373,12 @@ namespace exaDEM
         tabulations_to_stream(times, positions);
         stream << ", " << times.rdbuf() << ", " << positions.rdbuf();
       }
+      if(motion_type == SHAKER)
+      {
+        stream << ", omega: " << omega;
+        stream << ", amplitude: " << amplitude;
+        stream << ", shaker_dir: " << shaker_dir;
+      }
       stream  <<" }" << std::endl;
     }
 
@@ -352,7 +395,6 @@ namespace exaDEM
       {
         size_t idx_lower = ite - tab_time.begin() - 1;
         size_t idx_upper = idx_lower + 1;
-        //std::cout << idx_lower  << " " << tab_time[idx_lower]  << " " << time << std::endl;
         assert(tab_time[idx_lower] >= time);
         if(idx_upper >= tab_time.size()) return tab_pos.back();
         double Dt = (time - tab_time[idx_lower]) / (tab_time[idx_upper] - tab_time[idx_lower]);
@@ -380,6 +422,17 @@ namespace exaDEM
         Vec3d V = (tab_pos[idx_upper] - tab_pos[idx_lower])/Dt;
         return V;
       }
+    }
+
+    /* Shaker routines */
+    Vec3d shaker_direction()
+    {
+      return shaker_dir;
+    }
+
+    double shaker_signal(double time)
+    {
+      return amplitude * sin(omega * time);
     }
   };
 }
@@ -450,6 +503,7 @@ namespace YAML
         }
         v.damprate = node["damprate"].as<double>(); 
       }
+      // Tabulation
       if( v.is_tabulated() )
       { 
         if (!node["time"])
@@ -465,8 +519,35 @@ namespace YAML
         }
         v.tab_pos = node["positions"].as<std::vector<Vec3d>>(); 
       }
+
+      // Shaker
+      if( v.is_shaker() )
+      {
+        if (!node["omega"])
+        {
+          lerr << "\033[31m omega is missing \033[0m\n";
+          return false;
+        }
+        v.omega = node["omega"].as<double>();
+        if (!node["amplitude"])
+        {
+          lerr << "\033[31m amplitude is missing \033[0m\n";
+          return false;
+        }
+        v.amplitude = node["amplitude"].as<double>();
+        if (!node["shaker_dir"])
+        {
+          onika::lout << "\033[31m shaker_dir is missing, default is [0,0,1] \033[0m\n";
+          v.shaker_dir = Vec3d{0,0,1};
+        }
+        else
+        {
+          v.shaker_dir = node["shaker_dir"].as<Vec3d>();
+        }
+      }
+
       if( node["motion_start_threshold"] ) v.motion_start_threshold = node["motion_start_threshold"].as<double>();
-      if( node["motion_end_threshold"] ) v.motion_start_threshold = node["motion_end_threshold"].as<double>();
+      if( node["motion_end_threshold"] ) v.motion_end_threshold = node["motion_end_threshold"].as<double>();
       return true;
     }
   };

@@ -45,7 +45,12 @@ namespace exaDEM
       const double delta_t = *dt;
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        drivers->apply( id , [time,delta_t](auto& drv){ drv.push_f_v_r(time, delta_t); } );
+        drivers->apply( id , [time,delta_t](auto& drv){ 
+          if( drv.is_motion_triggered(time + delta_t) )
+          {
+            drv.push_f_v_r(time, delta_t); 
+          }
+        });
       }
     }
   };

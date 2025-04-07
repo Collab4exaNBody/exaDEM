@@ -90,7 +90,7 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  const std::vector<MotionType> surface_valid_motion_types = { STATIONARY, LINEAR_MOTION, LINEAR_COMPRESSIVE_MOTION};
+  const std::vector<MotionType> surface_valid_motion_types = { STATIONARY, LINEAR_MOTION, LINEAR_COMPRESSIVE_MOTION, SHAKER};
 
   /**
    * @brief Struct representing a surface in the exaDEM simulation.
@@ -230,7 +230,8 @@ namespace exaDEM
 
     /**
      * @brief Update the position of the wall.
-     * @param t The time step.
+     * @param time Current physical time.
+     * @param dt The time step.
      */
     inline void push_f_v_r(const double time, const double dt)
     {
@@ -240,7 +241,18 @@ namespace exaDEM
         {
           assert( vel = this->const_vel );  
         }
-        const double displ = dt * vel + 0.5 * dt * dt * acc;
+
+        double displ = dt * vel + 0.5 * dt * dt * acc;
+
+        /** The shaker motion changes the displacement behavior */
+        /** the shaker direction vector is ignored, the normal vector is used */
+        if( motion_type == SHAKER )
+        {
+          double signal_next = shaker_signal(time + dt);
+          double signal_current = shaker_signal(time);
+          displ = signal_next - signal_current;           
+        }
+
         center += displ * normal;
         offset += displ; 
         center_proj +=  displ * normal;
