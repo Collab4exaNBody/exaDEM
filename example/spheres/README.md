@@ -4,10 +4,11 @@ This document provides a brief list of examples to showcase different test cases
 
 ## Rotating Drum
 
-Two test cases demonstrate the use of a rotating drum:
+Three test cases demonstrate the use of a rotating drum:
 
-1. A test case with periodic conditions: `rotating-drum/rotating-drum-full.msp`.
+1. A test case with periodic conditions: `rotating-drum/rotating-drum-periodic.msp`.
 2. A test case with surfaces instead of periodic conditions: `rotating-drum/rotating-drum-no-periodic.msp`.
+3. A test case with periodic condition and a cohesive laws: `rotating-drum/rotating-drum-periodic-cohesion.mspp`.
 
 These examples use a perfect cylinder to model the drum.
 

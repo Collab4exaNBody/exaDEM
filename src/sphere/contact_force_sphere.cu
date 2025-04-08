@@ -49,113 +49,150 @@ namespace exaDEM
   using namespace exanb;
   using namespace sphere;
 
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class ComputeContactClassifierSphereGPU : public OperatorNode
-  {
-    // attributes processed during computation
-    using ComputeFields = FieldSet<field::_vrot, field::_arot>;
-    static constexpr ComputeFields compute_field_set{};
+	template <bool cohesive, typename GridT, class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz, field::_mom, field::_orient, field::_vrot, field::_radius>> 
+		class ComputeContactClassifierSphere : public OperatorNode
+	{
+		// attributes processed during computation
+		using ComputeFields = FieldSet<field::_vrot, field::_arot>;
+		static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(Domain , domain, INPUT , REQUIRED );
-    ADD_SLOT(ContactParams, config, INPUT, REQUIRED, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
-    ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL, DocString{"Contact parameters for drivers, optional"}); // can be re-used for to dump contact network
-    ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"Time step value"});
-    ADD_SLOT(bool, symetric, INPUT_OUTPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
-    ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-    // analysis
-    ADD_SLOT(long, timestep, INPUT, REQUIRED);
-    ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
-    ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
-    ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
+		ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+		ADD_SLOT(Domain , domain, INPUT , REQUIRED );
+		ADD_SLOT(ContactParams, config, INPUT, REQUIRED, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
+		ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL, DocString{"Contact parameters for drivers, optional"}); // can be re-used for to dump contact network
+		ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"Time step value"});
+		ADD_SLOT(bool, symetric, INPUT_OUTPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
+		ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
+		ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+		// analysis
+		ADD_SLOT(long, timestep, INPUT, REQUIRED);
+		ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
+		ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
+		ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
 
-    public:
-    inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
+		public:
+		inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
 
-    template<int start, int end, template<int, typename> typename FuncT, typename XFormT, typename T, typename... Args>
-      void loop_contact_force(Classifier<T>& classifier, XFormT& cp_xform, Args &&... args)
-      {
-        FuncT<start, XFormT> contact_law;
-        contact_law.xform = cp_xform;
-        run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
-        if constexpr( start + 1 <= end )
-        {
-          loop_contact_force<start+1, end, FuncT, XFormT>(classifier, cp_xform, std::forward<Args>(args)...);
-        }
-      }
+		template<int start, int end, template<int, bool, typename> typename FuncT, typename XFormT, typename T, typename... Args>
+			void loop_contact_force(Classifier<T>& classifier, XFormT& cp_xform, Args &&... args)
+			{
+				FuncT<start, cohesive, XFormT> contact_law;
+				contact_law.xform = cp_xform;
+				run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
+				if constexpr( start + 1 <= end )
+				{
+					loop_contact_force<start+1, end, FuncT, XFormT>(classifier, cp_xform, std::forward<Args>(args)...);
+				}
+			}
 
-    template<bool is_sym, typename XFormT>
-      void core(XFormT& xform)
-      {
-        const DriversGPUAccessor drvs = *drivers;
-        auto *cells = grid->cells();
-        const ContactParams hkp = *config;
-        ContactParams hkp_drvs{};
+		template<bool is_sym, typename XFormT>
+			void core(XFormT& xform)
+			{
+				const DriversGPUAccessor drvs = *drivers;
+				auto *cells = grid->cells();
+				const ContactParams hkp = *config;
+				ContactParams hkp_drvs{};
 
-        if (drivers->get_size() > 0 && config_driver.has_value())
-        {
-          hkp_drvs = *config_driver;
-        }
+				if (drivers->get_size() > 0 )
+				{
+					hkp_drvs = *config_driver;
+				}
 
-        const double time = *dt;
-        auto &classifier = *ic;
+				const double time = *dt;
+				auto &classifier = *ic;
 
-        contact_law<is_sym, XFormT> sph = {xform};
-        contact_law_driver<Cylinder, XFormT> cyl = {xform};
-        contact_law_driver<Surface, XFormT> surf = {xform};
-        contact_law_driver<Ball, XFormT> ball = {xform};
+				contact_law<is_sym, cohesive, XFormT> sph = {xform};
+				contact_law_driver<cohesive, Cylinder, XFormT> cyl = {xform};
+				contact_law_driver<cohesive, Surface, XFormT> surf = {xform};
+				contact_law_driver<cohesive, Ball, XFormT> ball = {xform};
 
-        run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
-        run_contact_law(parallel_execution_context(), 4, classifier, cyl, cells, drvs, hkp_drvs, time);
-        run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs, hkp_drvs, time);
-        run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);
+				run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
+				run_contact_law(parallel_execution_context(), 4, classifier, cyl, cells, drvs, hkp_drvs, time);
+				run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs, hkp_drvs, time);
+				run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);
 
-        constexpr int stl_type_start = 7;
-        constexpr int stl_type_end = 9;
-        loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl, XFormT>(classifier, xform, cells, drvs, hkp_drvs, time);
-      }
+				constexpr int stl_type_start = 7;
+				constexpr int stl_type_end = 9;
+				loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl, XFormT>(classifier, xform, cells, drvs, hkp_drvs, time);
+			}
 
-    void save_results()
-    {
-      auto &classifier = *ic;
-      auto stream = itools::create_buffer(*grid, classifier);
-      std::string ts = std::to_string(*timestep);
-      itools::write_file(stream, *dir_name, (*interaction_basename) + ts);
-    }
+		void save_results()
+		{
+			/** Analysis */
+			const long frequency_interaction = *analysis_interaction_dump_frequency;
+			bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
+			if(write_interactions)
+			{
+				auto &classifier = *ic;
+				auto stream = itools::create_buffer(*grid, classifier);
+				std::string ts = std::to_string(*timestep);
+				itools::write_file(stream, *dir_name, (*interaction_basename) + ts);
+			}
+		}
 
-    inline void execute() override final
-    {
-      if (grid->number_of_cells() == 0)
-      {
-        return;
-      }
+		void check_parameters()
+		{
+			/** Some global checks */
+			/** Is cohesive force define while it's not used */
+			if constexpr (!cohesive)
+			{
+				if(config->dncut > 0)
+				{
+					lout << "Warning, dncut is != 0 while the cohesive force is not used." << std::endl;
+					lout << "         Please, use contact_sphere_with_cohesion operator." << std::endl;
+				}
+				if(drivers->get_size() > 0 && config_driver->dncut > 0)
+				{
+					lout << "Warning, dncut is != 0 while the cohesive force is not used." << std::endl;
+					lout << "         Please, use contact_sphere_with_cohesion operator." << std::endl;
+				}
+			}
 
-      /** Analysis */
-      const long frequency_interaction = *analysis_interaction_dump_frequency;
-      bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
+			/** polyhedron interactions are defined while the contact sphere operator is used */
+			{
+				auto &classifier = *ic;
+				for(int i = 1 ; i <= 3 ; i++)
+				{
+          auto& interactions = classifier.get_wave(i);
+					if(interactions.size() > 0)
+					{
+						lout << "Error, the contact operator for spheres is being used, but polyhedron interactions are defined." << std::endl;
+						lout << "       Please, use contact_polyhedron operators. " << std::endl;    
+					}
+				}
+			}
+		}
 
-      if(!domain->xform_is_identity())
-      {
-        LinearXForm cp_xform = {domain->xform()};
-        if(*symetric) core<true>(cp_xform);
-        else core<false>(cp_xform);
-      }
-      else     
-      {
-        NullXForm cp_xform;
-        if(*symetric) core<true>(cp_xform);
-        else core<false>(cp_xform);
-      }     
+		inline void execute() override final
+		{
+      check_parameters();
 
-      if (write_interactions)
-      {
-        save_results();
-      }
-    }
-  };
+			if (grid->number_of_cells() == 0)
+			{
+				return;
+			}
 
-  template <class GridT> using ComputeContactClassifierGPUTmpl = ComputeContactClassifierSphereGPU<GridT>;
+			if(!domain->xform_is_identity())
+			{
+				LinearXForm cp_xform = {domain->xform()};
+				if(*symetric) core<true>(cp_xform);
+				else core<false>(cp_xform);
+			}
+			else     
+			{
+				NullXForm cp_xform;
+				if(*symetric) core<true>(cp_xform);
+				else core<false>(cp_xform);
+			}     
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(contact_force_sphere) { OperatorNodeFactory::instance()->register_factory("contact_sphere", make_grid_variant_operator<ComputeContactClassifierGPUTmpl>); }
+			save_results();
+		}
+	};
+
+	template <class GridT> using ComputeContactSphereTmpl = ComputeContactClassifierSphere<false, GridT>;
+	template <class GridT> using ComputeContactSphereCohesiveTmpl = ComputeContactClassifierSphere<true, GridT>;
+
+	// === register factories ===
+	ONIKA_AUTORUN_INIT(contact_force_sphere) { OperatorNodeFactory::instance()->register_factory("contact_sphere", make_grid_variant_operator<ComputeContactSphereTmpl>); }
+	ONIKA_AUTORUN_INIT(contact_force_sphere) { OperatorNodeFactory::instance()->register_factory("contact_sphere_with_cohesion", make_grid_variant_operator<ComputeContactSphereCohesiveTmpl>); }
 } // namespace exaDEM

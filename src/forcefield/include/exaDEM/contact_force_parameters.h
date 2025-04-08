@@ -27,14 +27,13 @@ namespace exaDEM
 {
   struct ContactParams
   {
-    double rcut;
-    double dncut;
-    double m_kn;
-    double m_kt;
-    double m_kr;
-    double m_fc;
-    double m_mu;
-    double m_damp_rate;
+    double dncut = 0;
+    double kn;
+    double kt;
+    double kr;
+    double fc = 0;
+    double mu;
+    double damp_rate;
   };
 } // namespace exaDEM
 
@@ -49,24 +48,34 @@ namespace YAML
   {
     static bool decode(const Node &node, ContactParams &v)
     {
+      v = ContactParams{}; // initializes defaults values
       if (!node.IsMap())
       {
         return false;
       }
-      if (!node["rcut"])
+      if (!node["dncut"] && !node["fc"])
       {
-        lerr << "rcut is missing\n";
-        return false;
+        v.dncut = 0.0;
+        v.fc = 0.0;
       }
-      if (!node["dncut"])
+      else if(node["dncut"] && node["fc"])
+      {
+        v.dncut = node["dncut"].as<Quantity>().convert();
+        v.fc = node["fc"].as<Quantity>().convert();
+      }
+      else if(!node["dncut"])
       {
         lerr << "dncut is missing\n";
         return false;
       }
+      else if(!node["fc"])
+      {
+        lerr << "fc is missing\n";
+        return false;
+      }
+
       if (!node["kn"])
       {
-        lerr << "kn is missing\n";
-        return false;
       }
       if (!node["kt"])
       {
@@ -76,11 +85,6 @@ namespace YAML
       if (!node["kr"])
       {
         lerr << "kr is missing\n";
-        return false;
-      }
-      if (!node["fc"])
-      {
-        lerr << "fc is missing\n";
         return false;
       }
       if (!node["mu"])
@@ -94,16 +98,11 @@ namespace YAML
         return false;
       }
 
-      v = ContactParams{}; // initializes defaults values
-
-      v.rcut = node["rcut"].as<Quantity>().convert();
-      v.dncut = node["dncut"].as<Quantity>().convert();
-      v.m_kn = node["kn"].as<Quantity>().convert();
-      v.m_kt = node["kt"].as<Quantity>().convert();
-      v.m_kr = node["kr"].as<Quantity>().convert();
-      v.m_fc = node["fc"].as<Quantity>().convert();
-      v.m_mu = node["mu"].as<Quantity>().convert();
-      v.m_damp_rate = node["damp_rate"].as<Quantity>().convert();
+      v.kn = node["kn"].as<Quantity>().convert();
+      v.kt = node["kt"].as<Quantity>().convert();
+      v.kr = node["kr"].as<Quantity>().convert();
+      v.mu = node["mu"].as<Quantity>().convert();
+      v.damp_rate = node["damp_rate"].as<Quantity>().convert();
 
       return true;
     }

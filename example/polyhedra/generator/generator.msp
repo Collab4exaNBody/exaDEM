@@ -15,16 +15,10 @@ add_particles:
      region: AREA
 
 init_new_particles:
-  - density_from_shape
-  - set_rand_velocity: 
-     region: AREA
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - inertia_from_shape
-  - set_quaternion:
-     region: AREA
-  - radius_from_shape:
-     region: AREA
+  - set_fields:
+     polyhedra: true
+     type:             [ Octahedron ]
+     random_quaterion: [       true ]
 
 input_data:
   - init_rcb_grid
@@ -47,8 +41,8 @@ compute_force:
   - gravity_force
   - contact_polyhedron:
      symetric: true
-     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
-     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
+     config: { kn: 10000, kt: 10000, kr: 0.0, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { kn: 10000, kt: 10000, kr: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 particle_regions:
    - AREA:

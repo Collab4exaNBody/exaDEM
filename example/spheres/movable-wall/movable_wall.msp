@@ -47,10 +47,10 @@ setup_drivers:
 
 compute_force:
   - gravity_force
-  - contact_sphere:
+  - contact_sphere_with_cohesion:
      symetric: true
-     config: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.1, damp_rate: 0.9} 
-     config_driver: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 90000, kr: 0.1, fc: 0.05, mu: 0.5, damp_rate: 0.9} 
+     config: { dncut: 0.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.1, damp_rate: 0.9} 
+     config_driver: { dncut: 0.1 m, kn: 100000, kt: 90000, kr: 0.1, fc: 0.05, mu: 0.5, damp_rate: 0.9} 
 
 domain:
   cell_size: 2 m
@@ -63,5 +63,3 @@ global:
   simulation_paraview_frequency: 5000
   dt: 0.00005 s 
   rcut_inc: 0.01 m
-  friction_rcut: 1.1 m
-

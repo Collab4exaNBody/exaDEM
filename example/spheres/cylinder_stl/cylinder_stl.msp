@@ -46,8 +46,8 @@ compute_force:
   - gravity_force
   - contact_sphere:
      symetric: true
-     config: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.2, damp_rate: 0.999} 
-     config_driver: { rcut: 1.1 m , dncut: 1.1 m, kn: 100000, kt: 80000, kr: 0.1, fc: 0.05, mu: 0.1, damp_rate: 0.999} 
+     config: { kn: 100000, kt: 100000, kr: 0.1,mu: 0.2, damp_rate: 0.999} 
+     config_driver: { kn: 100000, kt: 80000, kr: 0.1,mu: 0.1, damp_rate: 0.999} 
 
 domain:
   cell_size: 5 m

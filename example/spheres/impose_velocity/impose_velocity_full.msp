@@ -48,7 +48,7 @@ compute_force:
   - gravity_force  
   - contact_sphere:
      symetric: true
-     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1000, kt: 1000, kr: 0.1, fc: 0.05, mu: 0.2, damp_rate: 0.9} 
+     config: { kn: 1000, kt: 1000, kr: 0.1, mu: 0.2, damp_rate: 0.9} 
   - transverse_velocity_slab
 
 domain:

@@ -29,7 +29,7 @@ compute_force:
   - gravity_force
   - contact_sphere:
      symetric: true
-     config: { rcut: 1.1 m , dncut: 1.1 m, kn: 1000, kt: 1000, kr: 0.1, fc: 0.05, mu: 0.2, damp_rate: 0.9} 
+     config: { kn: 1000, kt: 1000, kr: 0.1,mu: 0.2, damp_rate: 0.9} 
 
 domain:
   cell_size: 4 m

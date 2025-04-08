@@ -40,8 +40,8 @@ setup_drivers:
 compute_force:
   - contact_sphere:
      symetric: true
-     config: { rcut: 0.0 m , dncut: 1.0 m, kn: 5000, kt: 5000, kr: 0.0, fc: 0.05, mu: 0.1, damp_rate: 0.999} 
-     config_driver: { rcut: 0.0 m , dncut: 1.0 m, kn: 5000, kt: 4000, kr: 0.0, fc: 0.05, mu: 0.3, damp_rate: 0.999} 
+     config: { kn: 5000, kt: 5000, kr: 0.0, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { kn: 5000, kt: 4000, kr: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 domain:
   cell_size: 4 m
