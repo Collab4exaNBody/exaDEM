@@ -1,3 +1,4 @@
+
 namespace exaDEM
 {
   using namespace exanb;
@@ -8,7 +9,7 @@ namespace exaDEM
 /*  Device Block functions */
 /***************************/
 
-  __device__ void count_interaction_block(
+  ONIKA_HOST_DEVICE_FUNC void count_interaction_block(
       double rVerlet,
       int count[],
       bool is_not_ghost_b,
@@ -36,55 +37,55 @@ namespace exaDEM
     const int ne_nbh = shp_nbh->get_number_of_edges();
     const int nf_nbh = shp_nbh->get_number_of_faces();
 
-    for (int i = threadIdx.x; i < nv; i+= blockDim.x)
+    ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, nv)
     {
-      for (int j = threadIdx.y ; j < nv_nbh; j+= blockDim.y)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nv_nbh)
       {
         if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
         {
-          //printf("test case 0\n");
-          count[0]++; // vertex-vertex
+          count[VERTEX_VERTEX]++; // vertex-vertex
         }
       }
-      for (int j = threadIdx.y; j < ne_nbh; j+= blockDim.y)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
       {
         bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
-        count[1] += contact * 1; // vertex - edge
+        count[VERTEX_EDGE] += contact * 1; // vertex - edge
       }
-      for (int j = threadIdx.y; j < nf_nbh; j+=blockDim.y)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nf_nbh)
       {
         bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
-        count[2] += contact * 1; // vertex - face
+        count[VERTEX_FACE] += contact * 1; // vertex - face
       }
     }
-    for (int i = threadIdx.x; i < ne; i+= blockDim.x)
+
+    ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, ne)
     {
-      for (int j = threadIdx.y; j < ne_nbh; j+= blockDim.y)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
       {
         bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
-        count[3] += contact * 1; // edge - edge
+        count[EDGE_EDGE] += contact * 1; // edge - edge
       }
     }
 
     // interaction of from particle j to particle i
-    for (int j = threadIdx.x; j < nv_nbh; j+= blockDim.x)
+    ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nv_nbh)
     {
-      for (int i = threadIdx.y; i < ne; i+=blockDim.y)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, ne)
       {
         bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
-        count[1] += contact * 1; // edge - vertex
+        count[VERTEX_EDGE] += contact * 1; // edge - vertex
       }
 
-      for (int i = threadIdx.y; i < nf; i+=blockDim.y)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, nf)
       {
         bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
-        count[2] += contact * 1; // face - vertex
+        count[VERTEX_FACE] += contact * 1; // face - vertex
       }
     }
   }
 
 
-  __device__ void fill_interaction_block(
+  ONIKA_HOST_DEVICE_FUNC void fill_interaction_block(
       InteractionSOA* data,
       exaDEM::Interaction& item,
       double rVerlet,
@@ -114,11 +115,11 @@ namespace exaDEM
     const int ne_nbh = shp_nbh->get_number_of_edges();
     const int nf_nbh = shp_nbh->get_number_of_faces();
 
-    for (int i = threadIdx.x; i < nv; i+= blockDim.x)
+    ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, nv)
     {
       item.sub_i = i;
       item.type = 0;
-      for (int j = threadIdx.y ; j < nv_nbh; j+= blockDim.y)
+      ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nv_nbh)
       {
         if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
         {
@@ -129,7 +130,7 @@ namespace exaDEM
 
       item.type = 1;
       // vertex - edge
-      for (int j = threadIdx.y; j < ne_nbh; j+= blockDim.y)
+      ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, ne_nbh)
       {
         bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
         if (contact)
@@ -140,7 +141,7 @@ namespace exaDEM
       }
       item.type = 2;
       // vertex - face
-      for (int j = threadIdx.y; j < nf_nbh; j+=blockDim.y)
+      ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nf_nbh)
       {
         bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
         if (contact)
@@ -151,11 +152,11 @@ namespace exaDEM
       }
     }
     item.type = 3;
-    for (int i = threadIdx.x; i < ne; i+= blockDim.x)
+    ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, ne)
     {
       item.sub_i = i;
       // edge - edge
-      for (int j = threadIdx.y; j < ne_nbh; j+= blockDim.y)
+      ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, ne_nbh)
       {
         bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
         if (contact)
@@ -167,12 +168,12 @@ namespace exaDEM
     }
 
     // interaction of from particle j to particle i
-    for (int j = threadIdx.x; j < nv_nbh; j+= blockDim.x)
+    ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nv_nbh)
     {
       item.type = 1;
       item.sub_i = j;
       // edge - vertex
-      for (int i = threadIdx.y; i < ne; i+=blockDim.y)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, ne)
       {
         bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
         if (contact)
@@ -184,7 +185,7 @@ namespace exaDEM
 
       item.type = 2;
       // face - vertex
-      for (int i = threadIdx.y; i < nf; i+=blockDim.y)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, nf)
       {
         bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
         if (contact)
@@ -201,7 +202,7 @@ namespace exaDEM
 /***************************/
 
   template<int BLOCKX, int BLOCKY, typename TMPLC>
-    __global__ void get_number_of_interations_block(
+    ONIKA_DEVICE_KERNEL_FUNC void get_number_of_interations_block(
         TMPLC cells,
         IJK dims,
         GridChunkNeighborsData nbh,
@@ -211,11 +212,11 @@ namespace exaDEM
         size_t* cell_idx)
     {
       using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING, BLOCKY>; // 8*8 blockDimXY>;
-      const size_t cell_a = cell_idx[blockIdx.x];
+      const size_t cell_a = cell_idx[ONIKA_CU_BLOCK_IDX];
       IJK loc_a = grid_index_to_ijk( dims, cell_a);
 
       // cub stuff
-      __shared__ typename BlockReduce::TempStorage temp_storage;
+      ONIKA_CU_BLOCK_SHARED typename BlockReduce::TempStorage temp_storage;
 
       // Struct to fill count_data at the enf
       int count[NumberOfInteractionTypes];
@@ -271,15 +272,15 @@ namespace exaDEM
       for(int i = 0; i < NumberOfInteractionTypes ; i++)
       {
         int aggregate = BlockReduce(temp_storage).Sum(count[i]);
-        __syncthreads();
-        if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) count_data[blockIdx.x][i] = aggregate;
+        ONIKA_CU_BLOCK_SYNC();
+        if(ONIKA_CU_THREAD_IDX == 0 && threadIdx.y == 0 && threadIdx.z == 0) count_data[ONIKA_CU_BLOCK_IDX][i] = aggregate;
       }
     }
 
 
 
   template<int BLOCKX, int BLOCKY, typename TMPLC>
-    __global__ void fill_classifier_block(
+    ONIKA_DEVICE_KERNEL_FUNC void fill_classifier_block(
         InteractionSOA* data,
         TMPLC cells,
         IJK dims,
@@ -290,11 +291,11 @@ namespace exaDEM
         size_t* cell_idx)
     {
       using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
-      const size_t cell_a = cell_idx[blockIdx.x];
+      const size_t cell_a = cell_idx[ONIKA_CU_BLOCK_IDX];
       IJK loc_a = grid_index_to_ijk( dims, cell_a);
 
       // cub stuff
-      __shared__ typename BlockScan::TempStorage temp_storage;
+      ONIKA_CU_BLOCK_SHARED typename BlockScan::TempStorage temp_storage;
 
       // Struct to fill count_data at the enf
       int count[NumberOfInteractionTypes];
@@ -346,13 +347,13 @@ namespace exaDEM
           }
         }
       }
-      __syncthreads();
+      ONIKA_CU_BLOCK_SYNC();
 
-      NumberOfInteractionPerTypes sdata = shift_data[blockIdx.x];
+      NumberOfInteractionPerTypes sdata = shift_data[ONIKA_CU_BLOCK_IDX];
       for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
       {
         BlockScan(temp_storage).ExclusiveSum(count[type], prefix[type]);
-        __syncthreads();
+        ONIKA_CU_BLOCK_SYNC();
         prefix[type] += sdata[type];
       }
       Interaction item;

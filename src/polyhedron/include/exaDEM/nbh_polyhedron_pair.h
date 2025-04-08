@@ -10,7 +10,7 @@ namespace exaDEM
 /***************************/
 
   template<int BLOCKX, int BLOCKY, typename TMPLC>
-    __global__ void get_number_of_interations_pair(
+    ONIKA_DEVICE_KERNEL_FUNC void get_number_of_interations_pair(
         TMPLC cells,
         IJK dims,
         GridChunkNeighborsData nbh,
@@ -20,12 +20,12 @@ namespace exaDEM
         size_t* cell_idx)
     {
       using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING, BLOCKY>; // 8*8 blockDimXY>;
-      const size_t cell_a = cell_idx[blockIdx.x];
+      const size_t cell_a = cell_idx[ONIKA_CU_BLOCK_IDX];
       IJK loc_a = grid_index_to_ijk( dims, cell_a);
 
-      assert(blockDim.x == BLOCKX);
+      assert(ONIKA_CU_BLOCK_SIZE == BLOCKX);
       // cub stuff
-      __shared__ typename BlockReduce::TempStorage temp_storage;
+      ONIKA_CU_BLOCK_SHARED typename BlockReduce::TempStorage temp_storage;
 
       // Struct to fill count_data at the enf
       int count[NumberOfInteractionTypes];
@@ -35,6 +35,8 @@ namespace exaDEM
       }
 
       const unsigned int cell_a_particles = cells[cell_a].size();
+
+      /** Decode stream */
       const auto stream_info = chunknbh_stream_info( nbh[cell_a] , cell_a_particles );
       const uint16_t* stream_base = stream_info.stream;
       const uint16_t* stream = stream_base;
@@ -42,7 +44,7 @@ namespace exaDEM
 
       const int32_t poffshift = stream_info.shift;
 
-      for(unsigned int p_a= threadIdx.x; p_a<cell_a_particles ; p_a+= blockDim.x)
+      ONIKA_CU_BLOCK_Y_SIMD_FOR(unsigned int, p_a, 0, cell_a_particles)
       {
         if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
 
@@ -63,7 +65,7 @@ namespace exaDEM
         {
           header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
           unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
-          for(unsigned int chunk= threadIdx.y ; chunk<nbh_cg.nchunks ; chunk+= blockDim.y)
+          ONIKA_CU_BLOCK_SIMD_FOR(unsigned int, chunk, 0, nbh_cg.nchunks)
           {
             unsigned int p_b = nbh_cg.chunk_idx[chunk];
             if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
@@ -80,15 +82,15 @@ namespace exaDEM
       for(int i = 0; i < NumberOfInteractionTypes ; i++)
       {
         int aggregate = BlockReduce(temp_storage).Sum(count[i]);
-        __syncthreads();
-        if(threadIdx.x == 0 && threadIdx.y == 0) count_data[blockIdx.x][i] = aggregate;
+        ONIKA_CU_BLOCK_SYNC();
+        if(ONIKA_CU_THREAD_IDX == 0 && threadIdx.y == 0) count_data[ONIKA_CU_BLOCK_IDX][i] = aggregate;
       }
     }
 
 
 
   template<int BLOCKX, int BLOCKY, typename TMPLC>
-    __global__ void fill_classifier_pair(
+    ONIKA_DEVICE_KERNEL_FUNC void fill_classifier_pair(
         InteractionSOA* data,
         TMPLC cells,
         IJK dims,
@@ -98,13 +100,13 @@ namespace exaDEM
         NumberOfInteractionPerTypes * shift_data,
         size_t* cell_idx)
     {
-      assert(blockDim.x == BLOCKX);
+      assert(ONIKA_CU_BLOCK_SIZE == BLOCKX);
       using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
-      const size_t cell_a = cell_idx[blockIdx.x];
+      const size_t cell_a = cell_idx[ONIKA_CU_BLOCK_IDX];
       IJK loc_a = grid_index_to_ijk( dims, cell_a);
 
       // cub stuff
-      __shared__ typename BlockScan::TempStorage temp_storage;
+      ONIKA_CU_BLOCK_SHARED typename BlockScan::TempStorage temp_storage;
 
       // Struct to fill count_data at the enf
       int count[NumberOfInteractionTypes];
@@ -122,7 +124,8 @@ namespace exaDEM
       const uint16_t* stream = stream_base;
       const uint32_t* __restrict__ particle_offset = stream_info.offset;
       const int32_t poffshift = stream_info.shift;
-      for(unsigned int p_a=threadIdx.x; p_a< cell_a_particles ; p_a+=blockDim.x)
+ 
+      ONIKA_CU_BLOCK_Y_SIMD_FOR(unsigned int, p_a, 0, cell_a_particles)
       {
         if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
         unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
@@ -142,7 +145,7 @@ namespace exaDEM
         {
           header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
           unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
-          for(unsigned int chunk= threadIdx.y ; chunk<nbh_cg.nchunks ; chunk+= blockDim.y)
+          ONIKA_CU_BLOCK_SIMD_FOR(unsigned int, chunk, 0, nbh_cg.nchunks)
           {
             unsigned int p_b = nbh_cg.chunk_idx[chunk];
             if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
@@ -156,17 +159,18 @@ namespace exaDEM
           }
         }
       }
-      __syncthreads();
+      ONIKA_CU_BLOCK_SYNC();
 
-      NumberOfInteractionPerTypes sdata = shift_data[blockIdx.x];
+      NumberOfInteractionPerTypes sdata = shift_data[ONIKA_CU_BLOCK_IDX];
       for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
       {
         BlockScan(temp_storage).ExclusiveSum(count[type], prefix[type]);
-        __syncthreads();
+        ONIKA_CU_BLOCK_SYNC();
         prefix[type] += sdata[type];
       }
       Interaction item;
-      for(unsigned int p_a=threadIdx.x; p_a< cell_a_particles ; p_a+=blockDim.x)
+ 
+      ONIKA_CU_BLOCK_Y_SIMD_FOR(unsigned int, p_a, 0, cell_a_particles)
       {
         if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
         unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
@@ -185,7 +189,7 @@ namespace exaDEM
         {
           header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
           unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
-          for(unsigned int chunk= threadIdx.y ; chunk<nbh_cg.nchunks ; chunk+= blockDim.y)
+          ONIKA_CU_BLOCK_SIMD_FOR(unsigned int, chunk, 0, nbh_cg.nchunks)
           {
             unsigned int p_b = nbh_cg.chunk_idx[chunk];
             if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )

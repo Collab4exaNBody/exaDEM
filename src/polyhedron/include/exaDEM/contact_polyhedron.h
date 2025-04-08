@@ -151,7 +151,7 @@ namespace exaDEM
           const shape &shp_j = shps[type_j];
 
           // === debug
-/*          if(threadIdx.x == 0 && (item.p_i >= cell_i.size() || item.p_j >= cell_j.size()))
+/*          if(ONIKA_CU_THREAD_IDX == 0 && (item.p_i >= cell_i.size() || item.p_j >= cell_j.size()))
           {
             printf("cell_i.size(): %d cell_j.size(): %d\n", int(cell_i.size()), int(cell_j.size()));
             item.PrintF();
