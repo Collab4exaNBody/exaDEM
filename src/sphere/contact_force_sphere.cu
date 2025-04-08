@@ -138,13 +138,15 @@ namespace exaDEM
 			{
 				if(config->dncut > 0)
 				{
-					lout << "Warning, dncut is != 0 while the cohesive force is not used." << std::endl;
+					lout << "[Error]: dncut is != 0 while the cohesive force is not used." << std::endl;
 					lout << "         Please, use contact_sphere_with_cohesion operator." << std::endl;
+          std::exit(0);
 				}
 				if(drivers->get_size() > 0 && config_driver->dncut > 0)
 				{
-					lout << "Warning, dncut is != 0 while the cohesive force is not used." << std::endl;
+					lout << "[Error]: dncut is != 0 while the cohesive force is not used." << std::endl;
 					lout << "         Please, use contact_sphere_with_cohesion operator." << std::endl;
+          std::exit(0);
 				}
 			}
 
@@ -156,8 +158,9 @@ namespace exaDEM
           auto& interactions = classifier.get_wave(i);
 					if(interactions.size() > 0)
 					{
-						lout << "Error, the contact operator for spheres is being used, but polyhedron interactions are defined." << std::endl;
-						lout << "       Please, use contact_polyhedron operators. " << std::endl;    
+						lout << "[Error]: the contact operator for spheres is being used, but polyhedron interactions are defined." << std::endl;
+						lout << "         Please, use contact_polyhedron operators. " << std::endl;    
+            std::exit(0);
 					}
 				}
 			}

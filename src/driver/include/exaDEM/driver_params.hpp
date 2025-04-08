@@ -434,6 +434,11 @@ namespace exaDEM
     {
       return amplitude * sin(omega * time);
     }
+
+    Vec3d shaker_velocity(double time)
+    {
+      return amplitude * omega * cos(omega * time) * shaker_direction();
+    }
   };
 }
 
