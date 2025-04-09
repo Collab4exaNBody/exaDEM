@@ -28,21 +28,21 @@ input_data:
       periodic: [true,true,false]
       expandable: false
   - init_rcb_grid
+  - particle_type:
+     type: [ Sphere1 ]
   - lattice:
-      structure: SC
-      types: [ 0 ]
-      size: [ 2.0 m, 2.0 m, 2.0 m ]
-      region: not CYL1
-  - set_radius:
-     rad: 0.5
-  - set_quaternion
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_density:
-     density: 0.02
-  - update_inertia:
-  - set_rand_vrot_arot
+     structure: SC
+     types: [ Sphere1 ]
+     size: [ 2.0 , 2.0 , 2.0 ]
+     region: not CYL1
+  - set_fields:
+     polyhedra: false
+     type:           [ Sphere1 ]
+     radius:         [     0.5 ]
+     density:        [    0.02 ]
+     velocity:       [ [0,0,0] ]
+     sigma_velocity: [     0.1 ]
+     region: not CYL1
 
 compute_loop:
   loop: true
