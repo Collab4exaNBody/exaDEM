@@ -36,9 +36,3 @@ if(USE_RSA)
 	add_subdirectory(rsa)
 endif()
 
-AddRegressionTestDir(${CMAKE_CURRENT_SOURCE_DIR}/regression)
-
- 
-# automatically added by onika_add_plugin macro
-#add_subdirectory(tests)
-
