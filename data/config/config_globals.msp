@@ -20,7 +20,6 @@ global:
   enable_task_graph: false
   #amr_z_curve: false
   enable_grid_compact: true
-  enable_stl_mesh: false
   enable_contact_network: false
   trigger_generator: false
   analysis_interaction_dump_frequency: -1 

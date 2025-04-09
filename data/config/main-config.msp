@@ -44,7 +44,7 @@ init_rcut_max:
     - dem_rcut_max
     - nbh_dist:        # compute neighborhood distance in grid space (nbh_dist),
         verbose: false # also computes maximum particle move tolerance in grid space (max_displ)
-                       # and ghost_dist, a constant scaling of of nbh_dist using scale factor nbh_ghost_scale
+    - check_rcut
 
 # executed once (whitout verbosity) first to enable automatic cell_size calculation
 preinit_rcut_max:
