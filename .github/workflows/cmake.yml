@@ -51,7 +51,7 @@ jobs:
 
     - name: Test Example
       working-directory: ${{github.workspace}}/build
-      run: ctest --test-dir example -C --rerun-failed --output-on-failure ${{env.BUILD_TYPE}}
+      run: ctest -C --rerun-failed --output-on-failure ${{env.BUILD_TYPE}}
 
     - name: Generate a code coverage repor part1
       uses: threeal/gcovr-action@v1.1.0
