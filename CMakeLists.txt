@@ -100,15 +100,6 @@ if(EXADEM_BUILD_CONTRIBS)
   add_subdirectory(contribs)
 endif()
 
-# ===================================
-# === Documentation               ===
-# ===================================
-option(EXADEM_BUILD_DOC "Build documentation" OFF)
-if(EXADEM_BUILD_DOC)
-  add_subdirectory(doc)
-endif()
-
-
 # ===========================================================
 # === generate execution wrappers and environment scripts ===
 # ===========================================================
