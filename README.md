@@ -12,6 +12,9 @@ Additionally, ExaDEM offers compatibility with MPI+GPUs, using the CUDA programm
 
 ## Documentation
 
+![doc_exaDEM-QR-code](https://github.com/user-attachments/assets/a1891669-f579-4dd3-a109-82f2fe3cd587)
+
+
 Documentation is available here: 
 
 - Website: [ExaDEM Website](https://collab4exanbody.github.io/doc_exaDEM/)
