@@ -115,11 +115,11 @@ namespace exaDEM
     const int ne_nbh = shp_nbh->get_number_of_edges();
     const int nf_nbh = shp_nbh->get_number_of_faces();
 
-    ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, nv)
+    ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, nv)
     {
       item.sub_i = i;
       item.type = 0;
-      ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nv_nbh)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nv_nbh)
       {
         if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
         {
@@ -130,7 +130,7 @@ namespace exaDEM
 
       item.type = 1;
       // vertex - edge
-      ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, ne_nbh)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
       {
         bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
         if (contact)
@@ -141,7 +141,7 @@ namespace exaDEM
       }
       item.type = 2;
       // vertex - face
-      ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nf_nbh)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nf_nbh)
       {
         bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
         if (contact)
@@ -152,11 +152,11 @@ namespace exaDEM
       }
     }
     item.type = 3;
-    ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, ne)
+    ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, ne)
     {
       item.sub_i = i;
       // edge - edge
-      ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, ne_nbh)
+      ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
       {
         bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
         if (contact)
