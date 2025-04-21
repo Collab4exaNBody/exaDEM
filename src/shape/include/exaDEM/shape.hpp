@@ -442,6 +442,16 @@ namespace exaDEM
       for_all_vertices(writer_v, outFile);
 
       outFile << std::endl;
+
+      outFile << "LINES " << this->get_number_of_edges() << " " << 2*this->get_number_of_edges() << std::endl;
+
+      auto writer_e = [] (int a, int b, std::ofstream &out)
+      {
+        out << "2 " << a << " " << b << std::endl;
+      };
+
+      for_all_edges(writer_e, outFile);
+
       int count_polygon_size = this->get_number_of_faces();
       int count_polygon_table_size = 0;
       int *ptr = this->m_faces.data() + 1;
@@ -450,6 +460,7 @@ namespace exaDEM
         count_polygon_table_size += ptr[0] + 1; // number of vertices + vertex idexes
         ptr += ptr[0] + 1;                      // -> next face
       }
+      outFile << std::endl;
 
       outFile << "POLYGONS " << count_polygon_size << " " << count_polygon_table_size << std::endl;
       auto writer_f = [](const size_t size, const int *data, std::ofstream &out)
