@@ -231,6 +231,8 @@ namespace exaDEM
       const uint16_t* stream = stream_base;
       const uint32_t* __restrict__ particle_offset = stream_info.offset;
 
+      // get fields
+      cell_accessors cellA(cells[cell_a]);
 
       const int32_t poffshift = stream_info.shift;
 
@@ -241,7 +243,7 @@ namespace exaDEM
         unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
 
         /** load data */
-        particle_info p(cells, shps, cell_a, p_a);
+        particle_info p(shps, p_a, cellA);
 
         /** compute obb */
         OBB obb_i = p.shp->obb;
@@ -255,12 +257,13 @@ namespace exaDEM
         {
           header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
           unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
+          cell_accessors cellB(cells[nbh_cg.cell_b]);
           for(unsigned int chunk=0 ; chunk<nbh_cg.nchunks ; chunk++)
           {
             unsigned int p_b = nbh_cg.chunk_idx[chunk];
             if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
             {
-              particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
+              particle_info p_nbh(shps, p_b, cellB);
               if( intersect(rVerlet, obb_i, p_nbh))
               {
                 count_interaction_block( rVerlet, count, !nbh_cg.is_ghost_b, p, p_nbh);
@@ -313,13 +316,17 @@ namespace exaDEM
       const uint16_t* stream = stream_base;
       const uint32_t* __restrict__ particle_offset = stream_info.offset;
       const int32_t poffshift = stream_info.shift;
+ 
+      /** get fields from cell a */
+      cell_accessors cellA(cells[cell_a]);
+
       for(unsigned int p_a=0; p_a< cell_a_particles ; p_a++)
       {
         if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
         unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
 
         /** load data */
-        particle_info p(cells, shps, cell_a, p_a);
+        particle_info p(shps, p_a, cellA);
 
         /** compute obb */
         OBB obb_i = p.shp->obb;
@@ -333,12 +340,16 @@ namespace exaDEM
         {
           header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
           unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
+          
+          /** get fields from cell b */
+          cell_accessors cellB(cells[nbh_cg.cell_b]);
+
           for(unsigned int chunk=0 ; chunk<nbh_cg.nchunks ; chunk++)
           {
             unsigned int p_b = nbh_cg.chunk_idx[chunk];
             if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
             {
-              particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
+              particle_info p_nbh(shps, p_b, cellB);
               if( intersect(rVerlet, obb_i, p_nbh) )
               {
                 count_interaction_block( rVerlet, count, !nbh_cg.is_ghost_b, p, p_nbh);
@@ -363,7 +374,7 @@ namespace exaDEM
         unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
 
         /** Get current particle info */
-        particle_info p(cells, shps, cell_a, p_a);
+        particle_info p(shps, p_a, cellA);
 
         /** compute obb */
         OBB obb_i = p.shp->obb;
@@ -376,13 +387,16 @@ namespace exaDEM
         {
           header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
           unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
+
+          /** Get fields from cell B */
+          cell_accessors cellB(cells[nbh_cg.cell_b]);
           for(unsigned int chunk=0 ; chunk<nbh_cg.nchunks ;chunk++)
           {
             unsigned int p_b = nbh_cg.chunk_idx[chunk];
             if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
             {
               /** Get nbh particle info */
-              particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
+              particle_info p_nbh(shps, p_b, cellB);
               if( intersect(rVerlet, obb_i, p_nbh) )
               {
                 /** Define interaction (section particle i) */

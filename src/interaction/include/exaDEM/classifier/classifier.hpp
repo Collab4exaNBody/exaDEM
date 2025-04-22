@@ -323,8 +323,8 @@ namespace exaDEM
 
 				// Partial
 #pragma omp for
-				for (int w = 0; w < types; w++)
-				//for (int w = 4; w < types; w++) // skip polyhedron
+				//for (int w = 0; w < types; w++)
+				for (int w = 4; w < types; w++) // skip polyhedron
 				{
 					size_t size = bounds[n_threads-1][w].first + bounds[n_threads-1][w].second;
 					waves[w].resize(size);
@@ -333,8 +333,8 @@ namespace exaDEM
 #pragma omp barrier
 
 				// All
-				for (int w = 0; w < types; w++)
-				//for (int w = 4; w < types; w++) // skip polyhedron
+				//for (int w = 0; w < types; w++)
+				for (int w = 4; w < types; w++) // skip polyhedron
 				{
 					waves[w].copy(bound[w].first, bound[w].second, tmp[w], w);
 				}

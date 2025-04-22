@@ -322,7 +322,7 @@ namespace exaDEM
 				lout << "Start get_number_of_interations_block ..." << std::endl;
         /** Define cuda block and grid size */
 				constexpr int block_x = 32;
-				constexpr int block_y = 32;
+				constexpr int block_y = 8;
 				dim3 BlockSize(block_x, block_y, 1);
 				dim3 GridSize(cell_size,1,1);
 
