@@ -62,8 +62,8 @@ namespace exaDEM
       for (size_t p = 0; p < list.size(); p++)
       {
         info[p].offset = offset;
-        //if constexpr (use_history)
-          //update_friction_moment(list[p], hist);
+        if constexpr (use_history)
+          update_friction_moment(list[p], hist);
         std::copy(list[p].begin(), list[p].end(), data.data() + offset);
         info[p].size = list[p].size();
         offset += list[p].size();

@@ -151,7 +151,7 @@ namespace exaDEM
     inline void execute() override final
     {
     
-      //printf("CLASSIFY\n");
+      printf("CLASSIFY\n");
     
       if (grid->number_of_cells() == 0)
       {
@@ -161,7 +161,9 @@ namespace exaDEM
       auto [cell_ptr, cell_size] = traversal_real->info();
       if (!ic.has_value())
         ic->initialize();
+        printf("SIMONE\n");
       ic->classify(*ges, cell_ptr, cell_size);
+      printf("SIMONE2\n");
       ic->prefetch_memory_on_gpu(); // GPU only
 
      //auto &olds = *ic_olds;
@@ -204,9 +206,9 @@ namespace exaDEM
       waves[4].clear();
       waves[4] = *interaction_type4;*/
       
-      //for(int type = 0; type < 13; type++)
-      //{
-      /*
+      /*for(int type = 0; type < 13; type++)
+      {
+      
       auto [data, size] = c.get_info(type);
       
       if(size > 0)
@@ -242,10 +244,10 @@ namespace exaDEM
       
       find_common_elements<<<numBlocks, blockSize>>>( keys.data(), old.keys, size, old.size, interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, indices_sorted.data(), old.indices);
       
+      }
       }*/
-      //}
       
-     //printf("END_CLASSIFY\n");  
+     printf("END_CLASSIFY\n");  
     }
   };
 

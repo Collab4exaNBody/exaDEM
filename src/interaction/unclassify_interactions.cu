@@ -190,7 +190,7 @@ namespace exaDEM
     inline void execute() override final
     {
     
-      //printf("UNCLASSIFY\n");
+      printf("UNCLASSIFY\n");
       
       //}
 
@@ -294,7 +294,7 @@ namespace exaDEM
       */
       //}
       
-      //printf("UNCLASSIFY END\n");
+      printf("UNCLASSIFY END\n");
       
     }
   };
