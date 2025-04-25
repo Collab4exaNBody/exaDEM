@@ -21,12 +21,12 @@ Documentation is available here:
 - Github: [ExaDEM Documentation](https://github.com/Collab4exaNBody/doc_exaDEM.git)
 
 - Main Sections:
-  - [Overview](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Introduction.html)
+  - [Overview](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Overview.html#overview-of-exadem)
   - [Installation](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Installation.html)
   - [ExaNBody](https://collab4exanbody.github.io/doc_exaDEM/project_exaNBody/index.html)
-  - [Spheres](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Spheres.html) / [Polyhedra](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Polyhedra.html)
-  - [Force field](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/ForceField.html)
-  - [I/O](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Analysis.html)
+  - [Spheres](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/spheres.html) / [Polyhedra](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/polyhedra.html)
+  - [Force field](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/force_field.html)
+  - [I/O](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/IO.html)
   - [Examples](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Test_cases.html)
   - [Tutorials](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Tutorial.html)
 
