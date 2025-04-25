@@ -392,7 +392,6 @@ namespace exaDEM
 							OBB obb_j = p_nbh.shp->obb;
 							obb_j.rotate(p_nbh.get_quat());
 							obb_j.translate(vec3r{p_nbh.r.x, p_nbh.r.y, p_nbh.r.z});
-							//obb_i.enlarge(rVerlet);
 							if( obb_i.intersect(obb_j) )
 							{
 								obb_j.enlarge(rVerlet);

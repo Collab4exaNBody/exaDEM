@@ -71,9 +71,13 @@ namespace exaDEM
             if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
             {
               particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
-              if( intersect(rVerlet, obb_i, p_nbh))
+              OBB obb_j = p_nbh.shp->obb;
+              obb_j.rotate(p_nbh.get_quat());
+              obb_j.translate(vec3r{p_nbh.r.x, p_nbh.r.y, p_nbh.r.z});
+              if( obb_i.intersect(obb_j) )
               {
-                count_interactions( rVerlet, count, !nbh_cg.is_ghost_b, p, p_nbh);
+                obb_j.enlarge(rVerlet);
+                count_interactions( rVerlet, count, !nbh_cg.is_ghost_b, p, p_nbh, obb_i, obb_j);
               }
             }
           }
@@ -151,9 +155,13 @@ namespace exaDEM
             if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
             {
               particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
-              if( intersect(rVerlet, obb_i, p_nbh) )
+              OBB obb_j = p_nbh.shp->obb;
+              obb_j.rotate(p_nbh.get_quat());
+              obb_j.translate(vec3r{p_nbh.r.x, p_nbh.r.y, p_nbh.r.z});
+              if( obb_i.intersect(obb_j) )
               {
-                count_interactions( rVerlet, count, !nbh_cg.is_ghost_b, p, p_nbh);
+                obb_j.enlarge(rVerlet);
+                count_interactions( rVerlet, count, !nbh_cg.is_ghost_b, p, p_nbh, obb_i, obb_j);
               }
             }
           }
@@ -196,8 +204,12 @@ namespace exaDEM
             {
               /** Get nbh particle info */
               particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
-              if( intersect(rVerlet, obb_i, p_nbh) )
+              OBB obb_j = p_nbh.shp->obb;
+              obb_j.rotate(p_nbh.get_quat());
+              obb_j.translate(vec3r{p_nbh.r.x, p_nbh.r.y, p_nbh.r.z});
+              if( obb_i.intersect(obb_j) )
               {
+                obb_j.enlarge(rVerlet);
                 /** Define interaction (section particle i) */
                 item.id_i = p.id;
                 item.cell_i = cell_a;
@@ -214,7 +226,7 @@ namespace exaDEM
                 assert(item.p_i < cells[cell_a].size());
 
                 /** here, we fill directly the interactionSOA data storage */
-                fill_interactions( data, item, rVerlet, prefix, !nbh_cg.is_ghost_b, p, p_nbh);
+                fill_interactions( data, item, rVerlet, prefix, !nbh_cg.is_ghost_b, p, p_nbh, obb_i, obb_j);
               } // check
             } // p_b
           } // chunk
