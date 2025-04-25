@@ -1,9 +1,9 @@
 #pragma once
     /************** start of Cuda code definitions ***************/
 #   if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
-#   define ONIKA_CU_BLOCK_Y_SIMD_FOR(T,j,s,e)           for(T j=s+threadIdx.y ; j<e ; j+=blockDim.y )
+#   define ONIKA_CU_BLOCK_Y_SIMD_FOR(yT,yj,ys,ye)           for(yT yj=ys+threadIdx.y ; yj<ye ; yj+=blockDim.y )
 #   else
-#   define ONIKA_CU_BLOCK_Y_SIMD_FOR(T,j,s,e) _Pragma("omp simd") for(T j=s ; j<e ; ++j)
+#   define ONIKA_CU_BLOCK_Y_SIMD_FOR(yT,yj,ys,ye) _Pragma("omp simd") for(yT yj=ys ; yj<ye ; ++yj)
 #   endif
 
 
@@ -16,7 +16,7 @@ namespace exaDEM
 {
   using namespace exanb;
   using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
-  using NumberOfInteractionPerTypes = ::onika::oarray_t<int, NumberOfInteractionTypes>;
+  using NumberOfPolyhedronInteractionPerTypes = ::onika::oarray_t<int, NumberOfPolyhedronInteractionTypes>;
 
 
   struct cell_accessors
@@ -121,9 +121,9 @@ namespace exaDEM
 		}
 
 	// one block
-	ONIKA_DEVICE_KERNEL_FUNC void stupid_prefix_sum(size_t size, NumberOfInteractionPerTypes * count_data, NumberOfInteractionPerTypes * prefix_data)
+	ONIKA_DEVICE_KERNEL_FUNC void stupid_prefix_sum(size_t size, NumberOfPolyhedronInteractionPerTypes * count_data, NumberOfPolyhedronInteractionPerTypes * prefix_data)
 	{
-		if(ONIKA_CU_THREAD_IDX < NumberOfInteractionTypes)
+		if(ONIKA_CU_THREAD_IDX < NumberOfPolyhedronInteractionTypes)
 		{
 			prefix_data[0][ONIKA_CU_THREAD_IDX] = 0;
 			int prefix = 0;

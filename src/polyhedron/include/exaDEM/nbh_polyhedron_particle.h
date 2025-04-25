@@ -2,7 +2,7 @@ namespace exaDEM
 {
   using namespace exanb;
   using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
-  using NumberOfInteractionPerTypes = ::onika::oarray_t<int, NumberOfInteractionTypes>;
+  using NumberOfPolyhedronInteractionPerTypes = ::onika::oarray_t<int, NumberOfPolyhedronInteractionTypes>;
 
 /***************************/
 /*  Device Block functions */
@@ -206,7 +206,7 @@ namespace exaDEM
         GridChunkNeighborsData nbh,
         shapes shps,
         double rVerlet,
-        NumberOfInteractionPerTypes * count_data,
+        NumberOfPolyhedronInteractionPerTypes * count_data,
         size_t* cell_idx)
     {
       using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING>; // 8*8 blockDimXY>;
@@ -218,8 +218,8 @@ namespace exaDEM
       ONIKA_CU_BLOCK_SHARED typename BlockReduce::TempStorage temp_storage;
 
       // Struct to fill count_data at the enf
-      int count[NumberOfInteractionTypes];
-      for(size_t i = 0; i < NumberOfInteractionTypes ; i++)
+      int count[NumberOfPolyhedronInteractionTypes];
+      for(size_t i = 0; i < NumberOfPolyhedronInteractionTypes ; i++)
       {
         count[i] = 0;
       }
@@ -267,7 +267,7 @@ namespace exaDEM
           }
         }
       }
-      for(int i = 0; i < NumberOfInteractionTypes ; i++)
+      for(int i = 0; i < NumberOfPolyhedronInteractionTypes ; i++)
       {
         int aggregate = BlockReduce(temp_storage).Sum(count[i]);
         ONIKA_CU_BLOCK_SYNC();
@@ -285,7 +285,7 @@ namespace exaDEM
         GridChunkNeighborsData nbh,
         shapes shps,
         double rVerlet,
-        NumberOfInteractionPerTypes * shift_data,
+        NumberOfPolyhedronInteractionPerTypes * shift_data,
         size_t* cell_idx)
     {
       assert(ONIKA_CU_BLOCK_SIZE == BLOCKX);
@@ -297,9 +297,9 @@ namespace exaDEM
       ONIKA_CU_BLOCK_SHARED typename BlockScan::TempStorage temp_storage;
 
       // Struct to fill count_data at the enf
-      int count[NumberOfInteractionTypes];
-      int prefix[NumberOfInteractionTypes];
-      for(size_t i = 0; i < NumberOfInteractionTypes ; i++)
+      int count[NumberOfPolyhedronInteractionTypes];
+      int prefix[NumberOfPolyhedronInteractionTypes];
+      for(size_t i = 0; i < NumberOfPolyhedronInteractionTypes ; i++)
       {
         count[i] = 0;
         prefix[i] = 0;
@@ -348,8 +348,8 @@ namespace exaDEM
       }
       ONIKA_CU_BLOCK_SYNC();
 
-      NumberOfInteractionPerTypes sdata = shift_data[ONIKA_CU_BLOCK_IDX];
-      for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
+      NumberOfPolyhedronInteractionPerTypes& sdata = shift_data[ONIKA_CU_BLOCK_IDX];
+      for(int type = 0 ; type < NumberOfPolyhedronInteractionTypes ; type++)
       {
         BlockScan(temp_storage).ExclusiveSum(count[type], prefix[type]);
         ONIKA_CU_BLOCK_SYNC();

@@ -26,7 +26,9 @@ under the License.
 namespace exaDEM
 {
 	constexpr int NumberOfInteractionTypes = 13;
+	constexpr int NumberOfPolyhedronInteractionTypes = 4;
 	using NumberOfInteractionPerTypes = ::onika::oarray_t<int, NumberOfInteractionTypes>;
+	using NumberOfPolyhedronInteractionPerTypes = ::onika::oarray_t<int, NumberOfPolyhedronInteractionTypes>;
 
 	enum ResizeClassifier
 	{
@@ -272,6 +274,9 @@ namespace exaDEM
 			//reset_waves();          // Clear existing waves
 			auto &ces = ges.m_data; // Reference to cells containing interactions
 
+      //constexpr int s = 4;
+      constexpr int s = 0;
+
 			size_t n_threads;
 #     pragma omp parallel
 			{
@@ -309,7 +314,7 @@ namespace exaDEM
 
 				// All
 				auto& bound = bounds[threads];
-				for (int w = 0; w < types; w++) 
+				for (int w = s; w < types; w++) 
 				{
 					size_t start = 0;
 					for ( size_t i = 0 ; i < threads ; i++)
@@ -324,7 +329,7 @@ namespace exaDEM
 				// Partial
 #pragma omp for
 				//for (int w = 0; w < types; w++)
-				for (int w = 4; w < types; w++) // skip polyhedron
+				for (int w = s; w < types; w++) // skip polyhedron
 				{
 					size_t size = bounds[n_threads-1][w].first + bounds[n_threads-1][w].second;
 					waves[w].resize(size);
@@ -334,7 +339,7 @@ namespace exaDEM
 
 				// All
 				//for (int w = 0; w < types; w++)
-				for (int w = 4; w < types; w++) // skip polyhedron
+				for (int w = s; w < types; w++) // skip polyhedron
 				{
 					waves[w].copy(bound[w].first, bound[w].second, tmp[w], w);
 				}
@@ -402,7 +407,8 @@ namespace exaDEM
 			//reset_waves(); keep the memory alive
 		}
 
-		void resize(int start_t, int end_t, const NumberOfInteractionPerTypes& sizes)
+    template<typename NbOfIntPerTypes>
+		void resize(int start_t, int end_t, const NbOfIntPerTypes& sizes)
 		{
 			assert(start_t < NumberOfInteractionTypes);
 			assert(end_t < NumberOfInteractionTypes);
@@ -412,7 +418,8 @@ namespace exaDEM
 			}
 		}
 
-		void resize(const NumberOfInteractionPerTypes& types, ResizeClassifier resize_type)
+    template<typename NbOfIntPerTypes>
+		void resize(const NbOfIntPerTypes& types, ResizeClassifier resize_type)
 		{
 			switch (resize_type)
 			{

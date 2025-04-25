@@ -67,7 +67,7 @@ namespace exaDEM
 		ADD_SLOT(Drivers, drivers, INPUT, DocString{"List of Drivers"});
 		ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
 
-    using VectorTypes = onika::memory::CudaMMVector<NumberOfInteractionPerTypes>;
+    using VectorTypes = onika::memory::CudaMMVector<NumberOfPolyhedronInteractionPerTypes>;
 
     ADD_SLOT(bool, block_version, false, PRIVATE);
     ADD_SLOT(bool, pair_version, false, PRIVATE);
@@ -321,7 +321,11 @@ namespace exaDEM
         lout << "NBH polyhedron Block version" << std::endl;
 				lout << "Start get_number_of_interations_block ..." << std::endl;
         /** Define cuda block and grid size */
+/*
 				constexpr int block_x = 32;
+				constexpr int block_y = 4;
+*/
+				constexpr int block_x = 8;
 				constexpr int block_y = 8;
 				dim3 BlockSize(block_x, block_y, 1);
 				dim3 GridSize(cell_size,1,1);
@@ -346,9 +350,9 @@ namespace exaDEM
 						); 
 
         /** Get the total number of interaction per type */
-				NumberOfInteractionPerTypes total_nb_int;
+				NumberOfPolyhedronInteractionPerTypes total_nb_int;
 				cudaDeviceSynchronize();
-				for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
+				for(int type = 0 ; type < NumberOfPolyhedronInteractionTypes ; type++)
 				{
 					total_nb_int[type] = prefix_interactions_cell[cell_size-1][type] + number_of_interactions_cell[cell_size-1][type];
 					lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
@@ -377,8 +381,8 @@ namespace exaDEM
         lout << "NBH polyhedron Pair version" << std::endl;
 				lout << "Start get_number_of_interations_pair ..." << std::endl;
         /** Define cuda block and grid size */
-				constexpr int block_x = 32;
-				constexpr int block_y = 32;
+				constexpr int block_x = 16;
+				constexpr int block_y = 16;
 				dim3 BlockSize(block_x, block_y, 1);
 				dim3 GridSize(cell_size,1,1);
 
@@ -402,9 +406,9 @@ namespace exaDEM
 						); 
 
         /** Get the total number of interaction per type */
-				NumberOfInteractionPerTypes total_nb_int;
+				NumberOfPolyhedronInteractionPerTypes total_nb_int;
 				cudaDeviceSynchronize();
-				for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
+				for(int type = 0 ; type < NumberOfPolyhedronInteractionTypes ; type++)
 				{
 					total_nb_int[type] = prefix_interactions_cell[cell_size-1][type] + number_of_interactions_cell[cell_size-1][type];
 					lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
@@ -457,9 +461,9 @@ namespace exaDEM
 						); 
 
         /** Get the total number of interaction per type */
-				NumberOfInteractionPerTypes total_nb_int;
+				NumberOfPolyhedronInteractionPerTypes total_nb_int;
 				cudaDeviceSynchronize();
-				for(int type = 0 ; type < NumberOfInteractionTypes ; type++)
+				for(int type = 0 ; type < NumberOfPolyhedronInteractionTypes ; type++)
 				{
 					total_nb_int[type] = prefix_interactions_cell[cell_size-1][type] + number_of_interactions_cell[cell_size-1][type];
 					lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
@@ -492,7 +496,6 @@ namespace exaDEM
 				for (size_t ci = 0; ci < cell_size; ci++)
 				{
 					size_t cell_a = cell_ptr[ci];
-					IJK loc_a = grid_index_to_ijk(dims, cell_a);
 
 					const unsigned int n_particles = cells[cell_a].size();
 					CellExtraDynamicDataStorageT<Interaction> &storage = interactions[cell_a];
@@ -551,9 +554,9 @@ namespace exaDEM
 						// By default, if the interaction is between a particle and a driver
 						// Data about the particle j is set to -1
 						// Except for id_j that contains the driver id
-						item.id_j = -1;
-						item.cell_j = -1;
-						item.p_j = -1;
+						item.id_j = size_t(-1);
+						item.cell_j = size_t(-1);
+						item.p_j = size_t(-1);
 						item.moment = Vec3d{0, 0, 0};
 						item.friction = Vec3d{0, 0, 0};
 						for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++)
