@@ -166,11 +166,50 @@ template< class GridT > __global__ void kernelUN(GridT* cells,
 		}
 	}
 	
-	atomicAdd(&res[0], nb_interactions);
+	//atomicAdd(&res[0], nb_interactions);
 	
 	int aggregate = BlockReduce(temp_storage).Sum(nb_interactions);
 	__syncthreads();
 	if(threadIdx.x == 0 && threadIdx.y == 0) nb_nbh[blockIdx.x] = aggregate;
+}
+
+template < class GridT > __global__ void kernelDriver( GridT* cells,
+							IJK dims,
+							int* cells_a,
+							double rcut_inc,
+							Cylinder driver,
+							int* interaction_driver)
+{
+	using BlockReduce = cub::BlockReduce<int, 32, cub::BLOCK_REDUCE_RAKING, 32>;
+	__shared__ typename BlockReduce::TempStorage temp_storage;
+	
+	int cell_a = cells_a[blockIdx.x];
+	auto* __restrict__ rx_a = cells[cell_a][field::rx];
+	auto* __restrict__ ry_a = cells[cell_a][field::ry];
+	auto* __restrict__ rz_a = cells[cell_a][field::rz];
+	auto* __restrict__ rad_a = cells[cell_a][field::radius];
+	
+	int local_id = threadIdx.y * blockDim.x + threadIdx.x;
+	int total_threads = blockDim.x * blockDim.y;
+	
+	int nb_interactions = 0;
+	
+	for(int p_a = local_id; p_a < cells[cell_a].size(); p_a+= total_threads)
+	{
+		const double rVerletMax = rad_a[p_a] + rcut_inc;
+		
+		const Vec3d r = {rx_a[p_a], ry_a[p_a], rz_a[p_a]};
+		
+		if(driver.filter(rVerletMax, r))
+		{
+			nb_interactions++;
+		}
+	}
+	
+	int aggregate = BlockReduce(temp_storage).Sum(nb_interactions);
+	__syncthreads();
+	if(threadIdx.x == 0 && threadIdx.y == 0) interaction_driver[blockIdx.x] = aggregate;
+	
 }
 
 template< class GridT > __global__ void kernelDEUX(GridT* cells,
@@ -191,7 +230,11 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
                              uint32_t* cell_i,
                              uint32_t* cell_j,
                              uint16_t* p_i,
-                             uint16_t* p_j)
+                             uint16_t* p_j,
+                             uint64_t* keys,
+                             int* indices,
+                             int min,
+                             int max)
 {
 	using BlockScan = cub::BlockScan<int, 32, cub::BLOCK_SCAN_RAKING, 32>;
 	 __shared__ typename BlockScan::TempStorage temp_storage;
@@ -218,6 +261,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	double rcut2 = dist_lab * dist_lab;
 	int nb_interactions = 0;
 	int prefix = 0;
+	
+	int range = max - min + 1;
 	
 	bool is_ghost = ghost_cell[blockIdx.x];
 	
@@ -278,6 +323,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 						cell_j[prefix + nb2] = cell_b;
 						p_i[prefix + nb2] = p_a;
 						p_j[prefix + nb2] = p_b;
+						keys[prefix + nb2] = (ida - min) * range + (id_b[p_b] - min);
+						indices[prefix + nb2] = prefix + nb2;
 						
 						nb2++;
 					}
@@ -286,6 +333,178 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 		}
 	}   
 }
+
+template < class GridT > __global__ void kernelTROIS( GridT* cells,
+							IJK dims,
+							int* cells_a,
+							double rcut_inc,
+							Cylinder driver,
+							int* interaction_driver_incr,
+							uint64_t* id_driver,
+							uint32_t* cell_driver,
+							uint16_t* p_driver,
+							int* indices,
+							int min,
+							int max)
+{
+	using BlockScan = cub::BlockScan<int, 32, cub::BLOCK_SCAN_RAKING, 32>;
+	__shared__ typename BlockScan::TempStorage temp_storage;
+	
+	int cell_a = cells_a[blockIdx.x];
+	auto* __restrict__ rx_a = cells[cell_a][field::rx];
+	auto* __restrict__ ry_a = cells[cell_a][field::ry];
+	auto* __restrict__ rz_a = cells[cell_a][field::rz];
+	auto* __restrict__ rad_a = cells[cell_a][field::radius];
+	auto* __restrict__ id_a = cells[cell_a][field::id];
+	
+	int local_id = threadIdx.y * blockDim.x + threadIdx.x;
+	int total_threads = blockDim.x * blockDim.y;
+	
+	int nb_interactions = 0;
+	int prefix = 0;
+	
+	int range = max - min + 1;
+	
+	for(int p_a = local_id; p_a < cells[cell_a].size(); p_a+= total_threads)
+	{
+		const double rVerletMax = rad_a[p_a] + rcut_inc;
+		
+		const Vec3d r = {rx_a[p_a], ry_a[p_a], rz_a[p_a]};
+		
+		if(driver.filter(rVerletMax, r))
+		{
+			nb_interactions++;
+		}
+	}
+	
+	BlockScan(temp_storage).ExclusiveSum( nb_interactions, prefix );
+	__syncthreads();
+	prefix+= interaction_driver_incr[blockIdx.x];
+	
+	int nb2 = 0;
+	
+	for(int p_a = local_id; p_a < cells[cell_a].size(); p_a+= total_threads)
+	{
+		const double rVerletMax = rad_a[p_a] + rcut_inc;
+		
+		const Vec3d r = {rx_a[p_a], ry_a[p_a], rz_a[p_a]};
+		
+		if(driver.filter(rVerletMax, r))
+		{
+			id_driver[prefix + nb2] = id_a[p_a];
+			cell_driver[prefix + nb2] = cell_a;
+			p_driver[prefix + nb2] = p_a;
+			indices[prefix + nb2] = prefix + nb2;
+			
+			nb2++;
+		}
+	}	
+	
+}
+
+   __global__ void filterUN( double* ft_x,
+  			double* ft_y,
+  			double* ft_z,
+  			double* mom_x,
+  			double* mom_y,
+  			double* mom_z,
+  			size_t size,
+  			int* filter)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		if(ft_x[idx]!=0 || ft_y[idx]!=0 || ft_z[idx]!=0 || mom_x[idx]!=0 || mom_y[idx]!=0 || mom_z[idx]!=0)
+  		{
+  			filter[idx] = 1;
+  		}
+  	}
+  }
+  
+  //filterDEUX<<<numBlocks, BlockSize>>>( interactions.id_i, interactions_id_j, interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, keys, indices, filter_0_incr.data(), min, max, type, size);
+  
+  __global__ void filterDEUX( uint64_t* id_i,
+  				uint64_t* id_j,
+  				double* ft_x,
+  				double* ft_y,
+  				double* ft_z,
+  				double* mom_x,
+  				double* mom_y,
+  				double* mom_z,
+  				uint64_t* keys,
+  				int* indices,
+  				int* filter_incr,
+  				int min,
+  				int max,
+  				int type,
+  				size_t size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if(idx < size)
+  	{
+  		if(ft_x[idx]!=0 || ft_y[idx]!=0 || ft_z[idx]!=0 || mom_x[idx]!=0 || mom_y[idx]!=0 || mom_z[idx]!=0)
+  		{
+  			int incr = filter_incr[idx];
+  			
+  			int range = max - min + 1;
+  			
+  			if(type == 0) keys[incr] = (id_i[idx] - min) * range + (id_j[idx] - min);
+  			if(type == 4) keys[incr] = id_i[idx];
+  			
+  			indices[incr] = idx;
+  		}
+  	}
+  }
+  
+  void sortWithIndices( uint64_t* keys, int* indices, uint64_t* keys_sorted, int* indices_sorted, int size)
+  {
+  	void *d_temp_storage = nullptr;
+  	size_t temp_storage_bytes = 0;
+  	
+  	cub::DeviceRadixSort::SortPairs( d_temp_storage, temp_storage_bytes, keys, keys_sorted, indices, indices_sorted, size);
+  	
+  	cudaMalloc(&d_temp_storage, temp_storage_bytes);
+  	
+  	cub::DeviceRadixSort::SortPairs( d_temp_storage, temp_storage_bytes, keys, keys_sorted, indices, indices_sorted, size);
+  	
+  	cudaFree(d_temp_storage);
+  }
+  
+  __global__ void find_common_elements(const uint64_t* keys, const uint64_t* keys_old, size_t size1, size_t size2, double* ftx, double* fty, double* ftz, double* ftx_old, double* fty_old, double* ftz_old, double* momx, double* momy, double* momz, double* momx_old, double* momy_old, double* momz_old, int* indices, int* indices_old)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	
+  	if (idx < size1)
+  	{
+  		uint64_t key = keys[idx];
+  		int low = 0, high = size2 - 1;
+  		while(low <= high)
+  		{
+  			int mid = low + (high - low) / 2;
+  			if( keys_old[mid] == key)
+  			{
+  				ftx[indices[idx]] = ftx_old[indices_old[mid]];
+  				fty[indices[idx]] = fty_old[indices_old[mid]];
+  				ftz[indices[idx]] = ftz_old[indices_old[mid]];
+  				
+  				momx[indices[idx]] = momx_old[indices_old[mid]];
+  				momy[indices[idx]] = momy_old[indices_old[mid]];
+  				momz[indices[idx]] = momz_old[indices_old[mid]];
+  				return;
+  			}
+  			else if( keys_old[mid] < key)
+  			{
+  				low = mid + 1;
+  			}
+  			else
+  			{
+  				high = mid - 1;
+  			}
+  		}
+  	}
+  }
 
   template <class CellsT> struct ContactNeighborFilterFunc
   {
@@ -378,6 +597,139 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
         NullXForm xform = {};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
       }
+      
+      auto& c = *ic;
+      
+      uint64_t* keys_0;
+      int* indices_0;
+      size_t size0 = 0;
+      
+      uint64_t* keys_4;
+      int* indices_4;
+      size_t size4 = 0;
+      
+      //printf("UNCLASSIFY\n");
+      
+      /*if (ic.has_value())
+      {
+	   auto [data, size] = c.get_info(0);
+	   
+	   if(size > 0)
+	   {
+	   	size0 = size;
+	   
+	   	InteractionWrapper<InteractionSOA> interactions(data);
+	   	
+	   	int BlockSize = 256;
+	   	int numBlocks = (size + BlockSize - 1) / BlockSize;
+	   	
+	   	//int* filter_0;
+	   	onika::memory::CudaMMVector<int> filter_0;
+	   	//cudaMalloc(&filter_0, size * sizeof(int));
+	   	filter_0.resize(size);
+	   	
+	   	filterUN<<<numBlocks, BlockSize>>>( interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, size, filter_0.data());
+	   	
+	   	onika::memory::CudaMMVector<int> filter_0_incr;
+	   	filter_0_incr.resize(size);
+	   	
+       		void* d_temp_storage = nullptr;
+		size_t temp_storage_bytes = 0;
+	
+		cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, filter_0.data(), filter_0_incr.data(), size);
+	
+		cudaMalloc(&d_temp_storage, temp_storage_bytes);
+	
+		cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, filter_0.data(), filter_0_incr.data(), size);
+	
+		cudaFree(d_temp_storage);
+		
+		int filter_0_total = filter_0[size - 1] + filter_0_incr[size - 1];
+
+		uint64_t* keys;
+		cudaMalloc(&keys, filter_0_total * sizeof(uint64_t));
+		
+		int* indices;
+		cudaMalloc(&indices, filter_0_total * sizeof(int));
+		
+		int min = 0;
+		int max = grid->number_of_particles() - 1;
+
+		filterDEUX<<<numBlocks, BlockSize>>>( interactions.id_i, interactions.id_j, interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, keys, indices, filter_0_incr.data(), min, max, 0, size);
+		
+		cudaDeviceSynchronize();
+		
+		cudaMalloc(&keys_0, filter_0_total * sizeof(uint64_t));
+		cudaMalloc(&indices_0, filter_0_total * sizeof(int));
+		
+		sortWithIndices( keys, indices, keys_0, indices_0, filter_0_total);
+		
+		cudaFree(keys);
+		cudaFree(indices);
+		
+	   }
+	   
+	   auto [data2, size2] = c.get_info(4);
+	   
+	   if(size2 > 0)
+	   {
+	   	size4 = size2;
+	   	
+	   	InteractionWrapper<InteractionSOA> interactions(data2);
+	   	
+	   	int BlockSize = 256;
+	   	int numBlocks = (size2 + BlockSize - 1) / BlockSize;
+	   	
+	   	//int* filter_0;
+	   	onika::memory::CudaMMVector<int> filter_4;
+	   	//cudaMalloc(&filter_0, size * sizeof(int));
+	   	filter_4.resize(size2);
+	   	
+	   	filterUN<<<numBlocks, BlockSize>>>( interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, size2, filter_4.data());
+	   	
+	   	onika::memory::CudaMMVector<int> filter_4_incr;
+	   	filter_4_incr.resize(size2);
+	   	
+       		void* d_temp_storage = nullptr;
+		size_t temp_storage_bytes = 0;
+	
+		cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, filter_4.data(), filter_4_incr.data(), size2);
+	
+		cudaMalloc(&d_temp_storage, temp_storage_bytes);
+	
+		cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, filter_4.data(), filter_4_incr.data(), size2);
+	
+		cudaFree(d_temp_storage);
+		
+		int filter_4_total = filter_4[size2 - 1] + filter_4_incr[size2 - 1];
+		
+		//cudaFree(filter_4);
+		
+		uint64_t* keys;
+		cudaMalloc(&keys, filter_4_total * sizeof(uint64_t));
+		
+		int* indices;
+		cudaMalloc(&indices, filter_4_total * sizeof(int));
+		
+		int min = 0;
+		int max = grid->number_of_particles() - 1;
+
+		filterDEUX<<<numBlocks, BlockSize>>>( interactions.id_i, interactions.id_j, interactions.ft_x, interactions.ft_y, interactions.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, keys, indices, filter_4_incr.data(), min, max, 4, size2);
+		
+		cudaDeviceSynchronize();
+		
+		cudaMalloc(&keys_4, filter_4_total * sizeof(uint64_t));
+		cudaMalloc(&indices_4, filter_4_total * sizeof(int));
+		
+		sortWithIndices( keys, indices, keys_4, indices_4, filter_4_total);
+		
+		cudaFree(keys);
+		cudaFree(indices);
+		
+	   }	    
+      }*/
+      
+      //printf("UNCLASSIFY_END\n");
       
  	onika::memory::CudaMMVector<int> cellsb_ids;
  	
@@ -512,6 +864,17 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	
 	kernelUN<<<cellsa.size(), BlockSize>>>( cells, dims, cellsa_GPU, cellsb_GPU, ghost_cells_GPU, *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh.data(), res.data(), m_origin, m_offset, m_cell_size );
 	
+	int* cells_a_GPU;
+	cudaMalloc(&cells_a_GPU, cells_a.size() * sizeof(int));
+	cudaMemcpy(cells_a_GPU, cells_a.data(), cells_a.size() * sizeof(int), cudaMemcpyHostToDevice );
+	
+	onika::memory::CudaMMVector<int> interaction_driver;
+	//int* interaction_driver;
+	interaction_driver.resize(cells_a.size());
+	//cudaMalloc(&interaction_driver, cells_a.size() * sizeof(int));
+	
+	kernelDriver<<<cells_a.size(), BlockSize>>>( cells, dims, cells_a_GPU, *rcut_inc, driver, interaction_driver.data());
+	
 	cudaDeviceSynchronize();
 	
 	printf("RES: %d\n", res[0]);
@@ -540,47 +903,150 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	
 	int total_interactions = nb_nbh[cellsa.size() - 1] + nb_nbh_incr[cellsa.size() - 1];
 	
-	//onika::memory::CudaMMVector<uint64_t> id_i;
-	uint64_t* id_i;
-	//onika::memory::CudaMMVector<uint64_t> id_j;
-	uint64_t* id_j;
-	//onika::memory::CudaMMVector<uint32_t> cell_i;
-	uint32_t* cell_i;
-	//onika::memory::CudaMMVector<uint32_t> cell_j;
-	uint32_t* cell_j;
-	//onika::memory::CudaMMVector<uint16_t> p_i;
-	uint16_t* p_i;
-	//onika::memory::CudaMMVector<uint16_t> p_j;
-	uint16_t* p_j;
+	onika::memory::CudaMMVector<int> interaction_driver_incr;
+	interaction_driver_incr.resize(cells_a.size());
 	
-	//id_i.resize(total_interactions);
-	cudaMalloc(&id_i, total_interactions * sizeof(uint64_t));
-	//id_j.resize(total_interactions);
-	cudaMalloc(&id_j, total_interactions * sizeof(uint64_t));
-	//cell_i.resize(total_interactions);
-	cudaMalloc(&cell_i, total_interactions * sizeof(uint32_t));
-	//cell_j.resize(total_interactions);
-	cudaMalloc(&cell_j, total_interactions * sizeof(uint32_t));
-	//p_i.resize(total_interactions);
-	cudaMalloc(&p_i, total_interactions * sizeof(uint16_t));
-	//p_j.resize(total_interactions);
-	cudaMalloc(&p_j, total_interactions * sizeof(uint16_t));
+	d_temp_storage = nullptr;
+	temp_storage_bytes = 0;
 	
-	kernelDEUX<<<cellsa.size(), BlockSize>>>( cells, dims, cellsa_GPU, cellsb_GPU, ghost_cells_GPU, *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh_incr.data(), res.data(), m_origin, m_offset, m_cell_size, id_i, id_j, cell_i, cell_j, p_i, p_j );
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, interaction_driver.data(), interaction_driver_incr.data(), cells_a.size());
+	
+	cudaMalloc(&d_temp_storage, temp_storage_bytes);
+	
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, interaction_driver.data(), interaction_driver_incr.data(), cells_a.size());
+	
+	cudaFree(d_temp_storage);
+	
+	int total_interactions_driver = interaction_driver[cells_a.size() - 1] + interaction_driver_incr[cells_a.size() - 1];	
+	
+	auto& type0 = c.get_wave(0);
+	auto& type4 = c.get_wave(4);
+	
+	type0.clear();
+	
+	onika::memory::CudaMMVector<uint64_t> &id_i = type0.id_i;
+	//uint64_t* id_i;
+	onika::memory::CudaMMVector<uint64_t> &id_j = type0.id_j;
+	//uint64_t* id_j;
+	onika::memory::CudaMMVector<uint32_t> &cell_i = type0.cell_i;
+	//uint32_t* cell_i;
+	onika::memory::CudaMMVector<uint32_t> &cell_j = type0.cell_j;
+	//uint32_t* cell_j;
+	onika::memory::CudaMMVector<uint16_t> &p_i = type0.p_i;
+	//uint16_t* p_i;
+	onika::memory::CudaMMVector<uint16_t> &p_j = type0.p_j;
+	//uint16_t* p_j;
+	
+	uint64_t* keys_new0;
+	cudaMalloc(&keys_new0, total_interactions * sizeof(uint64_t));
+	int* indices_new0;
+	cudaMalloc(&indices_new0, total_interactions * sizeof(int));
+	
+	uint64_t* keys_sorted0;
+	cudaMalloc(&keys_sorted0, total_interactions * sizeof(uint64_t));
+	int* indices_sorted0;
+	cudaMalloc(&indices_sorted0, total_interactions * sizeof(int));
+	
+	onika::memory::CudaMMVector<uint64_t> &id_driver = type4.id_i;
+	//uint64_t* id_driver;
+	onika::memory::CudaMMVector<uint32_t> &cell_driver = type4.cell_i;
+	//uint32_t* cell_driver;
+	onika::memory::CudaMMVector<uint16_t> &p_driver = type4.p_i;
+	//uint16_t* p_driver;
+	
+	//uint64_t* keys_new4;
+	//cudaMalloc(&keys_new4, total_interactions_driver * sizeof(uint64_t));
+	int* indices_new4;
+	cudaMalloc(&indices_new4, total_interactions_driver * sizeof(int));
+	
+	uint64_t* keys_sorted4;
+	cudaMalloc(&keys_sorted4, total_interactions_driver * sizeof(uint64_t));
+	int* indices_sorted4;
+	cudaMalloc(&indices_sorted4, total_interactions_driver * sizeof(int));
+	
+	id_driver.resize(total_interactions_driver);
+	//cudaMalloc(&id_driver, total_interactions_driver * sizeof(uint64_t));
+	cell_driver.resize(total_interactions_driver); 
+	//cudaMalloc(&cell_driver, total_interactions_driver * sizeof(uint32_t));
+	p_driver.resize(total_interactions_driver);
+	//cudaMalloc(&p_driver, total_interactions_driver * sizeof(uint16_t));
+	
+	id_i.resize(total_interactions);
+	//cudaMalloc(&id_i, total_interactions * sizeof(uint64_t));
+	id_j.resize(total_interactions);
+	//cudaMalloc(&id_j, total_interactions * sizeof(uint64_t));
+	cell_i.resize(total_interactions);
+	//cudaMalloc(&cell_i, total_interactions * sizeof(uint32_t));
+	cell_j.resize(total_interactions);
+	//cudaMalloc(&cell_j, total_interactions * sizeof(uint32_t));
+	p_i.resize(total_interactions);
+	//cudaMalloc(&p_i, total_interactions * sizeof(uint16_t));
+	p_j.resize(total_interactions);
+	//cudaMalloc(&p_j, total_interactions * sizeof(uint16_t));
+	
+	int min = 0;
+	int max = grid->number_of_particles() - 1;
+	
+	kernelDEUX<<<cellsa.size(), BlockSize>>>( cells, dims, cellsa_GPU, cellsb_GPU, ghost_cells_GPU, *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh_incr.data(), res.data(), m_origin, m_offset, m_cell_size, id_i.data(), id_j.data(), cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), keys_new0, indices_new0, min, max );
+	
+	//kernelDriver<<<cells_a.size(), BlockSize>>>( cells, dims, cells_a_GPU, *rcut_inc, driver, interaction_driver.data());
+	
+	kernelTROIS<<<cells_a.size(), BlockSize>>>( cells, dims, cells_a_GPU, *rcut_inc, driver, interaction_driver_incr.data(), id_driver.data(), cell_driver.data(), p_driver.data(), indices_new4, min, max );
 	
 	cudaDeviceSynchronize();
+	
+	/*__global__ void find_common_elements(const uint64_t* keys, const uint64_t* keys_old, size_t size1, size_t size2, double* ftx, double* fty, double* ftz, double* ftx_old, double* fty_old, double* ftz_old, double* momx, double* momy, double* momz, double* momx_old, double* momy_old, double* momz_old, int* indices, int* indices_old)
+	
+	if(size0 > 0)
+	{
+		int numBlocks = (total_interactions + 256 - 1) / 256;
+	
+		sortWithIndices( keys_new0, indices_new0, keys_sorted0, indices_sorted0, total_interactions);
+		
+		find_common_elements<<<numBlocks, 256>>>( keys_sorted0, keys_0, total_interactions, size0, 
+	}
+	
+	if(size4 > 0)
+	{
+		int numBlocks = (total_interactions_driver + 256 - 1) / 256;
+		
+		sortWithIndices( id_driver, indices_new4, keys_sorted4, indices_sorted4, total_interactions_driver);		
+	}*/
 	
 	cudaFree(cellsa_GPU);
 	cudaFree(cellsb_GPU);
 	cudaFree(ghost_cells_GPU);
 	//cudaFree(nb_nbh);
 	//cudaFree(nb_nbh_incr);
-	cudaFree(id_i);
+	
+	/*cudaFree(id_i);
 	cudaFree(id_j);
 	cudaFree(p_i);
 	cudaFree(p_j);
 	cudaFree(cell_i);
-	cudaFree(cell_j);
+	cudaFree(cell_j);*/
+	
+	cudaFree(cells_a_GPU);
+	/*cudaFree(id_driver);
+	cudaFree(cell_driver);
+	cudaFree(p_driver);*/
+	
+	//cudaFree(keys_0);
+	//cudaFree(indices_0);
+	
+	//cudaFree(keys_4);
+	//cudaFree(indices_4);
+	
+	cudaFree(keys_new0);
+	cudaFree(indices_new0);
+	
+	cudaFree(indices_new4);
+	
+	cudaFree(keys_sorted0);
+	cudaFree(indices_sorted0);
+	
+	cudaFree(keys_sorted4);
+	cudaFree(indices_sorted4);
     }
   };
   

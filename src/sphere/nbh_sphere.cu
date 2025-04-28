@@ -120,10 +120,10 @@ namespace exaDEM
 
           // Reset storage, interaction history was stored in the manager
           storage.initialize(n_particles);
-          auto &info_particles = storage.m_info;
+          //auto &info_particles = storage.m_info;
 
           // Get data pointers
-          const uint64_t *__restrict__ id_a = cells[cell_a][field::id];
+          /*const uint64_t *__restrict__ id_a = cells[cell_a][field::id];
           ONIKA_ASSUME_ALIGNED(id_a);
           const double *__restrict__ rx = cells[cell_a][field::rx];
           ONIKA_ASSUME_ALIGNED(rx);
@@ -142,10 +142,10 @@ namespace exaDEM
 
           item.moment = Vec3d{0, 0, 0};
           item.friction = Vec3d{0, 0, 0};
-          item.cell_i = cell_a;
+          item.cell_i = cell_a;*/
 
           // First, interaction between a sphere and a driver
-          if (drivers.has_value())
+          /*if (drivers.has_value())
           {
             auto &drvs = *drivers;
             // By default, if the interaction is between a particle and a driver
@@ -228,15 +228,15 @@ namespace exaDEM
                 }
               }
             }
-          }
+          }*/
 
           item.type = 0; // === Vertex - Vertex
 
-          if (sym)
+          /*if (sym)
           {
             // Second, we add interactions between two spheres.
-            apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-                [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+            apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric *///,
+                /*[&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
                 {
                 // default value of the interaction studied (A or i -> B or j)
                 const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -258,8 +258,8 @@ namespace exaDEM
           else
           {
             // Second, we add interactions between two spheres.
-            apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-                [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+            apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric *///,
+                /*[&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
                 {
                 // default value of the interaction studied (A or i -> B or j)
                 const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -271,13 +271,13 @@ namespace exaDEM
                 item.cell_j = cell_b;
                 manager.add_item(p_a, item);
                 });
-          }
+          }*/
 
-          manager.update_extra_storage<true>(storage);
+          //manager.update_extra_storage<true>(storage);
 
-          assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
+          //assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
 
-          assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
+          //assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
         } //    GRID_OMP_FOR_END
       }
     }

@@ -153,7 +153,7 @@ namespace exaDEM
     
       printf("CLASSIFY\n");
     
-      if (grid->number_of_cells() == 0)
+      /*if (grid->number_of_cells() == 0)
       {
         return;
       }
