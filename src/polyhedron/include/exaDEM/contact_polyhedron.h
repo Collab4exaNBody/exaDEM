@@ -118,17 +118,18 @@ namespace exaDEM
          * @brief Operator function for performing interactions between particles (polyhedra).
          *
          * @tparam TMPLC Type of the cells or particles container.
+         * @tparam TCFPA Template Contact Force Parameters Accessor.
          * @param item Reference to the Interaction object representing the interaction details.
          * @param cells Pointer to the cells or particles container.
-         * @param hkp Reference to the ContactParams object containing interaction parameters.
+         * @param cpa Reference to the ContactParams object containing interaction parameters.
          * @param shps Pointer to the shapes array providing shape information for interactions.
          * @param dt Time increment for the simulation step.
          */
-				template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC 
+				template <typename TMPLC, typename TCFPA> ONIKA_HOST_DEVICE_FUNC 
 					inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
 							Interaction &item, 
 							TMPLC *const __restrict__ cells, 
-							const ContactParams &hkp, 
+							TCFPA& cpa, 
 							const shape * const shps, 
 							const double dt) const
 					{
@@ -161,8 +162,11 @@ namespace exaDEM
 						Vec3d f = {0, 0, 0};
 						Vec3d fn = {0, 0, 0};
 
+            // === Contact Force parameters
+            const ContactParams& cp = cpa(type_i, type_j);
+
 						/** if cohesive force */
-						if constexpr ( cohesive ) contact = ( contact || dn <= hkp.dncut );
+						if constexpr ( cohesive ) contact = ( contact || dn <= cp.dncut );
 
 						if (contact)
 						{
@@ -173,7 +177,7 @@ namespace exaDEM
 
 							const double meff = compute_effective_mass(m_i, m_j);
 
-							contact_force_core<cohesive>(dn, n, dt, hkp, meff, item.friction, contact_position, 
+							contact_force_core<cohesive>(dn, n, dt, cp, meff, item.friction, contact_position, 
 									ri, vi, f, item.moment, vrot_i, // particle 1
 									rj, vj, vrot_j // particle nbh
 									);
@@ -220,6 +224,7 @@ namespace exaDEM
 			 * (`shps`), and a time increment (`dt`) for simulation.
 			 *
 			 * @tparam TMPLC Type of the cells or particles container.
+       * @tparam TCFPA Template Contact Force Parameters Accessor.
 			 * @param item Reference to the Interaction object representing the interaction details.
 			 * @param cells Pointer to the cells or particles container.
 			 * @param drvs Pointer to the Drivers object providing driving forces.
@@ -227,12 +232,12 @@ namespace exaDEM
 			 * @param shps Pointer to the shapes array providing shape information for interactions.
 			 * @param dt Time increment for the simulation step.
 			 */
-			template <typename TMPLC> 
+			template <typename TMPLC, typename TCFPA> 
 				ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
 						Interaction &item, 
 						TMPLC * __restrict__ cells, 
 						const DriversGPUAccessor& drvs, 
-						const ContactParams &hkp, 
+						TCFPA &cpa,
 						const shape *shps, 
 						const double dt) const
 				{
@@ -255,8 +260,11 @@ namespace exaDEM
 					Vec3d f = null;
 					Vec3d fn = null;
 
+          // === Contact Force Parameters
+          const ContactParams& cp = cpa(type, driver_idx);
+
           /** if cohesive force */
-          if constexpr ( cohesive ) contact = ( contact || dn <= hkp.dncut );
+          if constexpr ( cohesive ) contact = ( contact || dn <= cp.dncut );
 
 					if (contact)
 					{
@@ -266,7 +274,7 @@ namespace exaDEM
 						auto &mom = cell[field::mom][p];
 						const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
 						const double meff = cell[field::mass][p];
-						contact_force_core<cohesive>(dn, n, dt, hkp, meff, item.friction, contact_position, 
+						contact_force_core<cohesive>(dn, n, dt, cp, meff, item.friction, contact_position, 
 								r, v, f, item.moment, vrot, // particle i
 								driver.center, driver.get_vel(), driver.vrot // particle j
 								);
@@ -315,6 +323,7 @@ namespace exaDEM
 				 * (`shps`), and a time increment (`dt`) for simulation.
 				 *
 				 * @tparam TMPLC Type of the cells or particles container.
+         * @tparam TCFPA Template Contact Force Parameters Accessor.
 				 * @param item Reference to the Interaction object representing the interaction details.
 				 * @param cells Pointer to the cells or particles container.
 				 * @param drvs Pointer to the Drivers object providing driving forces.
@@ -322,12 +331,12 @@ namespace exaDEM
 				 * @param shps Pointer to the shapes array providing shape information for interactions.
 				 * @param dt Time increment for the simulation step.
 				 */
-				template <typename TMPLC> 
+				template <typename TMPLC, typename TCFPA> 
 					ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
 							Interaction &item, 
 							TMPLC * __restrict__ cells, 
 							const DriversGPUAccessor& drvs, 
-							const ContactParams &hkp, 
+							TCFPA& cpa, 
 							const shape *shps, 
 							const double dt) const
 					{
@@ -358,8 +367,11 @@ namespace exaDEM
 						constexpr Vec3d null = {0, 0, 0};
 						Vec3d fn = null;
 
+            // === Contact Force Parameters
+            const ContactParams& cp = cpa(type, driver_idx);
+
             /** if cohesive force */
-            if constexpr ( cohesive ) contact = ( contact || dn <= hkp.dncut );
+            if constexpr ( cohesive ) contact = ( contact || dn <= cp.dncut );
 
 						if (contact)
 						{
@@ -371,7 +383,7 @@ namespace exaDEM
 							// i to j
 							if constexpr (interaction_type <= 10 && interaction_type >= 7 )
 							{
-								contact_force_core<cohesive>(dn, n, dt, hkp, meff, 
+								contact_force_core<cohesive>(dn, n, dt, cp, meff, 
 										item.friction, contact_position, 
 										r_i, v_i, f, item.moment, vrot_i,       // particle i
 										driver.center, driver.vel, driver.vrot  // particle j
@@ -390,7 +402,7 @@ namespace exaDEM
 							//  j to i 
 							if constexpr (interaction_type <= 12 && interaction_type >= 11 )
 							{
-								contact_force_core<cohesive>(dn, n, dt, hkp, meff, 
+								contact_force_core<cohesive>(dn, n, dt, cp, meff, 
 										item.friction, contact_position, 
 										driver.center, driver.get_vel(), f, item.moment, driver.vrot,  // particle j
 										r_i, v_i,  vrot_i       // particle i

@@ -276,8 +276,6 @@ namespace exaDEM
 						{
 							// === vrot
 							const Vec3d &vrot = cell[field::vrot][p];
-
-
 							auto &mom = cell[field::mom][p];
 							const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
 							const double meff = cell[field::mass][p];

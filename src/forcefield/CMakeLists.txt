@@ -14,5 +14,5 @@
 # kind, either express or implied.  see the license for the
 # specific language governing permissions and limitations
 # under the license.
-set(exadem_force_field_LINK_LIBRARIES exanbGridCellParticles exadem_grid exadem_driver)
+set(exadem_force_field_LINK_LIBRARIES exanbGridCellParticles exadem_grid exadem_driver exadem_shape)
 onika_add_plugin(exadem_force_field ${CMAKE_CURRENT_SOURCE_DIR})

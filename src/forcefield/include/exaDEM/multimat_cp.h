@@ -59,17 +59,17 @@ namespace exaDEM
 
 			MultiMatContactParamsTAccessor<ContactParamsT> get_multimat_accessor() const
 			{
-				MultiMatContactParamsTAccessor<ContactParamsT> res = { multimat_cp.data() , int(multimat_cp.size()) };
+				MultiMatContactParamsTAccessor<ContactParamsT> res = { multimat_cp.data() , number_of_materials };
 				return res;
 			}
 
 			MultiMatContactParamsTAccessor<ContactParamsT> get_drivers_accessor() const
 			{
-				MultiMatContactParamsTAccessor<ContactParamsT> res = { drivers_cp.data() , int(drivers_cp.size()) };
+				MultiMatContactParamsTAccessor<ContactParamsT> res = { drivers_cp.data() , number_of_drivers };
 				return res;
 			}
 
-			void setup_multimat(const ParticleTypeMap& input_map) 
+			void setup_multimat(const ParticleTypeMap& input_map, ContactParamsT cp = {}) 
 			{
 				/** Define type map and reverse type map */
 				type_map = input_map;
@@ -77,26 +77,21 @@ namespace exaDEM
 				{
 					reverse_type_map[it.second] = it.first;
 				}
-				ContactParamsT cp = {};
 				// Allocate array of Contact Force Parameters
 				number_of_materials = input_map.size();
-				multimat_cp.resize(number_of_materials, cp);
+				multimat_cp.resize(number_of_materials * number_of_materials, cp);
 			}
 
-			void setup_drivers(int n_drivers) 
-			{
-				ContactParamsT cp = {};
-				number_of_drivers = n_drivers;
-				drivers_cp.resize(n_drivers, cp);
-			}
-
-			void set_driver_map(const ParticleTypeMap& input_map)
+			void setup_drivers(const ParticleTypeMap& input_map, ContactParamsT cp = {}) 
 			{
 				driver_map = input_map;
 				for(auto it : driver_map)
 				{
 					reverse_driver_map[it.second] = it.first;
 				}
+				number_of_drivers = input_map.size();
+        assert(number_of_materials > 0);
+				drivers_cp.resize(number_of_drivers * number_of_materials, cp);
 			}
 
 			ONIKA_HOST_DEVICE_FUNC inline int get_idx_multimat(int mat1, int mat2) 
@@ -123,7 +118,7 @@ namespace exaDEM
 
 			void register_driver(int mat, int driver, ContactParamsT& cp)
 			{
-				int id = get_idx_multimat(mat, driver);
+				int id = get_idx_drivers(mat, driver);
 				drivers_cp[id] = cp;
 			}
 
@@ -163,6 +158,7 @@ namespace exaDEM
 
 			void display(bool multimat_mode = true, bool drivers_mode = true)
 			{
+				display_header<ContactParamsT>();
 				for(int m1 = 0 ; m1 < number_of_materials ; m1++)
 				{
 					if(multimat_mode)
@@ -183,6 +179,7 @@ namespace exaDEM
 						}
 					}
 				}
+				display_end_table<ContactParamsT>();
 			}
 
 

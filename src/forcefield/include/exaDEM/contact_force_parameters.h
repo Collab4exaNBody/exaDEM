@@ -50,16 +50,24 @@ namespace exaDEM
 
 	template<typename CPT>
 		inline void display_header();
+	template<typename CPT>
+		inline void display_end_table();
 
 	template<> inline void display_header<ContactParams>()
 	{
-		lout << "----------------------------------------------------------------------------------------------" << std::endl;
-		lout << "| typeA | typeB | kn       | kt       | kr       | mu       | fc       | damprate | dncut    |" << std::endl;
+		lout << "===================================================================================================================" << std::endl;
+		lout << "|        typeA |        typeB |        kn |        kt |        kr |        mu |        fc |  damprate |    dncut  |" << std::endl;
+		lout << "-------------------------------------------------------------------------------------------------------------------" << std::endl;
+	}
+
+	template<> inline void display_end_table<ContactParams>()
+	{
+		lout << "===================================================================================================================" << std::endl;
 	}
 
 	inline std::string display(ContactParams& params)
 	{
-		std::string line = onika::format_string(" %.7e | %.7e | %.7e | %.7e | %.7e | %.7e | %.7e |", 
+		std::string line = onika::format_string(" %.3e | %.3e | %.3e | %.3e | %.3e | %.3e | %.3e |", 
 				params.kn, 
 				params.kt, 
 				params.kr, 
@@ -72,7 +80,7 @@ namespace exaDEM
 
 	inline void display_multimat(std::string typeA, std::string typeB, ContactParams& params)
 	{
-		std::string line_types = onika::format_string("| %5ld | %5ld |", typeA, typeB); 
+		std::string line_types = onika::format_string("| %12s | %12s |", typeA, typeB); 
 		std::string line_params = display(params);
 		lout << line_types << line_params << std::endl;
 	}
