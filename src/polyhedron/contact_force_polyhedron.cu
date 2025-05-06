@@ -61,7 +61,7 @@ namespace exaDEM
     ADD_SLOT(ContactParamsMultiMat<ContactParams>, multimat_cp, INPUT, DocString{"List of contact parameters for simulations with multiple materials"});
 
 		ADD_SLOT(double, dt, INPUT, REQUIRED);
-		ADD_SLOT(bool, symetric, INPUT_OUTPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
+		ADD_SLOT(bool, symetric, INPUT_OUTPUT, true, DocString{"Activate the use of symetric feature (contact law)"});
 		ADD_SLOT(Drivers, drivers, INPUT, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
 		ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
 		ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
@@ -195,7 +195,7 @@ namespace exaDEM
 
 		void check_parameters()
 		{
-			bool pw = true;
+			bool pw = *print_warning;
 
 			if (*symetric == false)
 			{
@@ -213,13 +213,13 @@ namespace exaDEM
 						<< std::endl;
 					std::exit(EXIT_FAILURE);
 				}
-				if( *print_warning && config.has_value() )
+				if( (*print_warning) && config.has_value() )
 				{
 					lout << "\033[1;33m[WARNING]: You are using the multi-material contact force operator, but you have also defined the input slot \"config\" which is intended for the single-material version. This slot will be ignored.\033[0m"
 						<< std::endl;
 					pw = false;
 				}
-				if( *print_warning && config_driver.has_value() )
+				if( (*print_warning) && config_driver.has_value() )
 				{
 					lout << "\033[1;33m[WARNING]: You are using the multi-material contact force operator, but you have also defined the input slot \"config_driver\" which is intended for the single-material version. This slot will be ignored.\033[0m"
 						<< std::endl;
@@ -233,14 +233,16 @@ namespace exaDEM
 					lout << "\033[1;31m[ERROR]: The input slot \"config\" is not defined, yet the single-material version of the contact operator is being used. "
 						<< "Please specify the \"config\" input slot, and use the \"config_driver\" slot if you want to define a contact law between a particle and a driver.\033[0m"
 						<< std::endl;
+          std::exit(EXIT_FAILURE);
 				}
-				if( !multimat_cp.has_value() )
+				if( (*print_warning) && multimat_cp.has_value() )
 				{
 					lout << "\033[1;33m[WARNING] You have defined a list of contact law parameters for different material types, "
 						<< "but you are using the version that only considers the parameter defined in the \"config\" input slot. "
 						<< "The parameter list will be ignored. If you want to use it, please use the operator "
 						<< "\"contact_sphere_multimat\" or \"contact_sphere_multimat_with_cohesion\".\033[0m"
 						<< std::endl;
+          pw = false;
 				}
 				/** Some global checks */
 				/** Is cohesive force define while it's not used */
@@ -250,13 +252,13 @@ namespace exaDEM
 					{
 						lout << "[ERROR]: dncut is != 0 while the cohesive force is not used." << std::endl;
 						lout << "         Please, use contact_sphere_with_cohesion operator." << std::endl;
-						std::exit(0);
+						std::exit(EXIT_FAILURE);
 					}
 					if(drivers->get_size() > 0 && config_driver->dncut > 0)
 					{
 						lout << "[ERROR]: dncut is != 0 while the cohesive force is not used." << std::endl;
 						lout << "         Please, use contact_sphere_with_cohesion operator." << std::endl;
-						std::exit(0);
+						std::exit(EXIT_FAILURE);
 					}
 				}
 			}
@@ -264,10 +266,10 @@ namespace exaDEM
 		}
 	};
 
-	template <class GridT> using ComputeContactClassifierPolySingleMatTmpl        = ComputeContactClassifierPolyhedron<false, false, GridT>;
+	template <class GridT> using ComputeContactClassifierPolySingleMatTmpl         = ComputeContactClassifierPolyhedron<false, false, GridT>;
 	template <class GridT> using ComputeContactClassifierPolySingleMatCohesionTmpl = ComputeContactClassifierPolyhedron<false,  true, GridT>;
-	template <class GridT> using ComputeContactClassifierPolyMultiMatTmpl         = ComputeContactClassifierPolyhedron< true, false, GridT>;
-	template <class GridT> using ComputeContactClassifierPolyMultiMatCohesionTmpl = ComputeContactClassifierPolyhedron< true,  true, GridT>;
+	template <class GridT> using ComputeContactClassifierPolyMultiMatTmpl          = ComputeContactClassifierPolyhedron< true, false, GridT>;
+	template <class GridT> using ComputeContactClassifierPolyMultiMatCohesionTmpl  = ComputeContactClassifierPolyhedron< true,  true, GridT>;
 
 	// === register factories ===
 	ONIKA_AUTORUN_INIT(contact_force_polyhedron) { OperatorNodeFactory::instance()->register_factory("contact_polyhedron", make_grid_variant_operator<ComputeContactClassifierPolySingleMatTmpl>); }
