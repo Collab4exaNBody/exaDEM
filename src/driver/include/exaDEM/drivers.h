@@ -99,7 +99,7 @@ namespace exaDEM
       assert( idx>=0 && idx<m_type_index.size() );
       DRIVER_TYPE t = m_type_index[idx].m_type;
       assert( t != DRIVER_TYPE::UNDEFINED );
-           if (t == DRIVER_TYPE::CYLINDER) return func( m_data.get_nth<DRIVER_TYPE::CYLINDER>()[ m_type_index[idx].m_index ] );
+      if (t == DRIVER_TYPE::CYLINDER) return func( m_data.get_nth<DRIVER_TYPE::CYLINDER>()[ m_type_index[idx].m_index ] );
       else if (t == DRIVER_TYPE::SURFACE)  return func( m_data.get_nth<DRIVER_TYPE::SURFACE >()[ m_type_index[idx].m_index ] );
       else if (t == DRIVER_TYPE::BALL)     return func( m_data.get_nth<DRIVER_TYPE::BALL    >()[ m_type_index[idx].m_index ] );
       else if (t == DRIVER_TYPE::STL_MESH) return func( m_data.get_nth<DRIVER_TYPE::STL_MESH>()[ m_type_index[idx].m_index ] );
@@ -194,7 +194,7 @@ namespace exaDEM
         if (t != DRIVER_TYPE::UNDEFINED)
         {
           lout << "Driver [" << i << "]:" << std::endl;
-               if (t == DRIVER_TYPE::CYLINDER) m_data.get_nth_const<DRIVER_TYPE::CYLINDER>()[ m_type_index[i].m_index ].print();
+          if (t == DRIVER_TYPE::CYLINDER) m_data.get_nth_const<DRIVER_TYPE::CYLINDER>()[ m_type_index[i].m_index ].print();
           else if (t == DRIVER_TYPE::SURFACE)  m_data.get_nth_const<DRIVER_TYPE::SURFACE >()[ m_type_index[i].m_index ].print();
           else if (t == DRIVER_TYPE::BALL)     m_data.get_nth_const<DRIVER_TYPE::BALL    >()[ m_type_index[i].m_index ].print();
           else if (t == DRIVER_TYPE::STL_MESH) m_data.get_nth_const<DRIVER_TYPE::STL_MESH>()[ m_type_index[i].m_index ].print();
