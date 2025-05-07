@@ -229,13 +229,14 @@ namespace exaDEM
           m = V  * d ;
           const double inertia_value = 0.4 * m * r * r;
           inertia = {inertia_value, inertia_value, inertia_value};
-          lout << "Radius           =" << r << std::endl;
+          lout << "Radius           = " << r << std::endl;
           lout << "Mass             = " << m << std::endl;
-          lout << "Inertia          =" << inertia << std::endl;
+          lout << "Inertia          = " << inertia << std::endl;
         }
 
         if (is_region)
         {
+std::cout << "Used region" << std::endl;
           ParticleRegionCSGShallowCopy prcsg = *region;
           if (!particle_regions.has_value())
           {
@@ -277,6 +278,7 @@ namespace exaDEM
         }
         else // no region
         {
+std::cout << "Not region" << std::endl;
           FilteredSetFunctor<double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {uint32_t(type_id), {vx, vy, vz, m, r, ang_v, inertia, quat}};
           compute_cell_particles(*grid, false, func, compute_fields, parallel_execution_context());
 
