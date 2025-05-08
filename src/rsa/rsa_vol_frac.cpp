@@ -29,14 +29,12 @@ under the License.
 #include <exanb/core/grid.h>
 #include <onika/math/basic_types_stream.h>
 #include <onika/log.h>
-//#include "ustamp/vector_utils.h"
 #include <onika/file_utils.h>
 #include <exanb/core/domain.h>
 #include <exanb/core/check_particles_inside_cell.h>
 #include <exanb/core/simple_block_rcb.h>
 #include <exanb/grid_cell_particles/particle_region.h>
 #include <exanb/core/particle_type_id.h>
-
 
 // rsa_mpi stuff
 #include <rsa_data_storage.hxx>
@@ -104,21 +102,43 @@ namespace exaDEM
 {
   template <typename GridT> class RSAVolFrac : public OperatorNode
   {
-    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(Domain, domain, INPUT_OUTPUT);
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED );
-    ADD_SLOT(double, enlarge_bounds, INPUT, 0.0);
-    ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
-    ADD_SLOT(std::vector<bool>, periodicity, INPUT, OPTIONAL, DocString{"if set, overrides domain's periodicity stored in file with this value"});
-    ADD_SLOT(bool, expandable, INPUT, OPTIONAL, DocString{"if set, override domain expandability stored in file"});
-    ADD_SLOT(AABB, bounds, INPUT, REQUIRED, DocString{"if set, override domain's bounds, filtering out particle outside of overriden bounds"});
-    ADD_SLOT(bool, pbc_adjust_xform, INPUT, true);
-    ADD_SLOT(std::vector<RSAParameters>, params, INPUT, REQUIRED, DocString{"List of RSA particle parameters, where each entry is [radius, volume fraction, type]."});
-    ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
-    ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
+    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD,
+        DocString{"MPI communicator used for parallel RSA particle generation."});
+    ADD_SLOT(Domain, domain, INPUT_OUTPUT,
+        DocString{"Simulation domain in which particles are inserted. Can be updated during initialization."});
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT,
+        DocString{"Grid structure to be filled with particles. Will be modified by the RSA operator."});
+    ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED,
+        DocString{"Mapping between particle type names and their internal identifiers."});
+    ADD_SLOT(double, enlarge_bounds, INPUT, 0.0,
+        DocString{"Optional value to enlarge the domain bounds by a fixed margin."});
+    ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS,
+        DocString{"Controls how bounds are interpreted: from file or overridden manually."});
+    ADD_SLOT(std::vector<bool>, periodicity, INPUT, OPTIONAL,
+        DocString{"If set, overrides the periodicity of the domain stored in the input file."});
+    ADD_SLOT(bool, expandable, INPUT, OPTIONAL,
+        DocString{"If set, overrides the domain expandability flag stored in the input file."});
+    ADD_SLOT(AABB, bounds, INPUT, REQUIRED,
+        DocString{"Overrides the domain bounds. Particles outside these bounds will be filtered out."});
+    ADD_SLOT(bool, pbc_adjust_xform, INPUT, true,
+        DocString{"If true, adjusts particle transformations to enforce periodic boundary conditions."});
+    ADD_SLOT(std::vector<RSAParameters>, params, INPUT, REQUIRED,
+        DocString{"List of RSA particle parameters. Each entry defines [radius, volume fraction, type name]."});
+    ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL,
+        DocString{"Optional region-based filtering for particle placement."});
+    ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL,
+        DocString{"Optional CSG (constructive solid geometry) region used to restrict where particles can be placed."});
 
     public:
+
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
+This operator generates a grid populated with a set of particles using the RSA MPI library. Each particle set is defined by a radius, a volume fraction, and a particle type name. This operator should only be used during the initialization phase of a simulation."
+        )EOF";
+    }
+
+
     inline void execute() override final
     {
       //-------------------------------------------------------------------------------------------
