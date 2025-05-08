@@ -151,8 +151,9 @@ namespace exaDEM
 
 
       lout << "======= Particle Fields =========" << std::endl;
-      for(auto& type_name : types)
+      for(size_t i = 0 ; i < types.size(); i++)
       {
+        std::string type_name = types[i];
         if( type_map.find(type_name) == type_map.end())
         {
           lout << "The type [" << type_name << "] is not defined" << std::endl;
@@ -161,7 +162,7 @@ namespace exaDEM
           lout << std::endl;
           std::exit(EXIT_FAILURE);  
         }
-        int64_t type_id = type_map.at(type_name); 
+        int64_t type_id = type_map.at(type_name);
         // default values;
         double vx = 0;
         double vy = 0;
@@ -174,24 +175,24 @@ namespace exaDEM
         Vec3d inertia;
         double sigma_v, sigma_ang_v;
 
-        if(mat.set_d) { auto& dd = *density; d = dd[type_id]; }
-        if(mat.set_v) { auto& vv = *velocity; const Vec3d& v = vv[type_id]; vx = v.x; vy = v.y; vz = v.z; }
-        if(mat.set_ang_v) { auto& ang_vv = *angular_velocity; ang_v = ang_vv[type_id]; }
-        if(mat.set_q) { auto& qq = *quaternion; quat = qq[type_id]; }
+        if(mat.set_d) { auto& dd = *density; d = dd[i]; }
+        if(mat.set_v) { auto& vv = *velocity; const Vec3d& v = vv[i]; vx = v.x; vy = v.y; vz = v.z; }
+        if(mat.set_ang_v) { auto& ang_vv = *angular_velocity; ang_v = ang_vv[i]; }
+        if(mat.set_q) { auto& qq = *quaternion; quat = qq[i]; }
 
 
         lout << "[>>"<<type_name<<"<<]" << std::endl;;
         lout << "Velocity         = (" << vx << "," << vy << "," << vz << ") ";
         if(mat.set_rnd_v)
         {
-          sigma_v = (*sigma_velocity)[type_id];
+          sigma_v = (*sigma_velocity)[i];
           lout << ", standart deviation (sigma): " << sigma_v;
         }
         lout << std::endl; 
         lout << "Angular velocity = " << ang_v;
         if(mat.set_rnd_ang_v)
         {
-          sigma_ang_v = (*sigma_angular_velocity)[type_id];
+          sigma_ang_v = (*sigma_angular_velocity)[i];
           lout << ", standart deviation (sigma): " << sigma_ang_v;
         }
         lout << std::endl; 
@@ -204,7 +205,7 @@ namespace exaDEM
         if(*polyhedra)
         {
           const shapes& shps = *shapes_collection;
-          const auto& shp = shps[type_id];
+          const auto& shp = shps[i];
           m         = d * shp->get_volume();
           inertia   = m * shp->get_Im();
 
@@ -221,7 +222,7 @@ namespace exaDEM
           else
           { 
             auto& rr = *radius; 
-            r = rr[type_id]; 
+            r = rr[i]; 
           }
           *rcut_max = std::max(*rcut_max, 2 * r); // r * maxrcut
           const double pi = 4 * std::atan(1);
