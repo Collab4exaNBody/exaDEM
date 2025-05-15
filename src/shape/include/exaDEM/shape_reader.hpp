@@ -205,8 +205,8 @@ namespace exaDEM
         return read_shp(input, big_shape);
       }
     }
-    lout << "Warning, no shape find into the file " << file_name << "." << std::endl;
-    lout << "Warning, this file is ignored." << file_name << std::endl;
+    lout << "[read_shape, WARNING] No shape find into the file " << file_name << "." << std::endl;
+    lout << "[read_shape, WARNING] This file is ignored." << file_name << std::endl;
     return shape();
   }
 
@@ -228,7 +228,7 @@ namespace exaDEM
         if( ptm.find(shp.m_name) != ptm.end() )
         {
           shp.m_name = shp.m_name + "X";
-          lout << "Warning, this polyhedron name is already taken, exaDEM has renamed it to: " << shp.m_name << std::endl;
+          lout << "[read_shape, WARNING] This polyhedron name is already taken, exaDEM has renamed it to: " << shp.m_name << std::endl;
         } 
         ptm[shp.m_name] = shps.get_size();
         shps.add_shape(&shp);

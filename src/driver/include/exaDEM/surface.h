@@ -154,7 +154,7 @@ namespace exaDEM
 			center_proj = normal * offset;
 			// checks
 			if (exanb::dot(center, normal) != exanb::dot(center_proj, normal))
-				lout << "Warning, center point (surface) is not correctly defined" << std::endl;
+				lout << "[register_surface, WARNING] The Center point (surface) is not correctly defined" << std::endl;
 
 			if (exanb::dot(center, normal) != exanb::dot(center_proj, normal))
 			{
@@ -165,14 +165,14 @@ namespace exaDEM
 			if( !Driver_params::check_motion_coherence()) std::exit(EXIT_FAILURE);
 			if( mass <= 0.0 )
 			{
-				lout << "Please, define a positive mass." << std::endl;
+				lout << "[register_surface, ERROR] Please, define a positive mass." << std::endl;
 				std::exit(EXIT_FAILURE);
 			}
 			if( is_linear() )
 			{
 				if( normal != motion_vector )
 				{
-					lout << "\033[32m[Warning: The motion vector of the surface has been adjusted to align with the normal vector, i.e. the motion vecor[" << motion_vector<<"] is now equal to ["<<normal<<"].\033[0m" <<std::endl;
+					lout << "\033[32m[register_surface, WARNING] The motion vector of the surface has been adjusted to align with the normal vector, i.e. the motion vecor[" << motion_vector<<"] is now equal to ["<<normal<<"].\033[0m" <<std::endl;
 					motion_vector = normal;
 				}
 			}
@@ -180,7 +180,7 @@ namespace exaDEM
 			{
 				if( surface <= 0 )
 				{
-					lout << "\033[31m[Surface Error]: The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl; 
+					lout << "\033[31m[register_surface, ERROR] The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl; 
 					std::exit(EXIT_FAILURE);
 				}
 			}

@@ -122,7 +122,8 @@ namespace exaDEM
       if ( to_swap == -666 ) 
       {
         // It should not append, but ... 
-        lout << "Error when dumping surface drivers" << std::endl;
+        lout << "[ERROR] When dumping surface drivers" << std::endl;
+        std::exit(EXIT_FAILURE);
       }
       else
       {
@@ -146,7 +147,7 @@ namespace exaDEM
 		file.open(full_path);
 		if (!file)
 		{
-			std::cerr << "Error: impossible to create the output file: " << full_path << std::endl;
+			std::cerr << "[ERROR] Impossible to create the output file: " << full_path << std::endl;
 			return;
 		}
 		std::stringstream stream;
@@ -218,7 +219,7 @@ namespace exaDEM
 		file.open(full_path);
 		if (!file)
 		{
-			std::cerr << "Error: impossible to create the output file: " << full_path << std::endl;
+			std::cerr << "[ERROR] Impossible to create the output file: " << full_path << std::endl;
 			return;
 		}
     

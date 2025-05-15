@@ -164,7 +164,7 @@ namespace exaDEM
       std::ofstream outFile(name);
       if (!outFile)
       {
-        std::cerr << "Erreur : impossible de créer le fichier de sortie suivant: " << name << std::endl;
+        std::cerr << "[dump_network, ERROR] Impossible to create the output file: " << name << std::endl;
         return;
       }
 
@@ -216,7 +216,7 @@ namespace exaDEM
       std::ofstream outFile(name);
       if (!outFile)
       {
-        std::cerr << "Erreur : impossible de créer le fichier de sortie suivant: " << name << std::endl;
+        std::cerr << "[dump_network, ERROR] Impossible to create the output file: " << name << std::endl;
         return;
       }
       outFile << "<?xml version=\"1.0\"?>" << std::endl;

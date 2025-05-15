@@ -138,7 +138,7 @@ namespace exaDEM
         file.open(file_name, std::ifstream::in);
         if (!file.is_open())
         {
-          lerr << "Error in reading xyz : file " << file_name << " not found !" << std::endl;
+          lerr << "[read_xyz, ERROR] File " << file_name << " not found !" << std::endl;
           std::abort();
         }
 
@@ -205,7 +205,7 @@ namespace exaDEM
         {
           assert(*enlarge_bounds >= 0);
           if ((*enlarge_bounds) == 0)
-            lout << "Warning, enlarge_bounds is equal to 0" << std::endl;
+            lout << "[read_xyz, WARNING] Enlarge_bounds is equal to 0" << std::endl;
           file_bounds = {{min_x - (*enlarge_bounds), min_y - (*enlarge_bounds), min_z - (*enlarge_bounds)}, {max_x + (*enlarge_bounds), max_y + (*enlarge_bounds), max_z + (*enlarge_bounds)}};
           lout << "File bounds (fit)= " << file_bounds << std::endl;
         }

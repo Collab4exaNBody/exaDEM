@@ -113,30 +113,40 @@ namespace exaDEM
         )EOF";
     }
 
-    public:
-    inline void execute() override final
+    void check_slots()
     {
-
-      const auto& type_map = *particle_type_map; 
-      const auto& types = *type;
-
-      bool is_region  = region.has_value();
-
+      if(grid->cells()->size() == 0)
+      {
+        lout << "\033[1;31m[set_fields, ERROR] the grid is not defined. Please define a grid before calling set_fields.\033[0m" << std::endl;
+        std::exit(EXIT_FAILURE);
+      }
 
       if(shapes_collection.has_value())
       {
         if(!(*polyhedra))
         {
-          lout << "[ERROR], shapes are defined in sphere mode" << std::endl;
+          lout << "[set_fields, ERROR] Shapes are defined in sphere mode" << std::endl;
           std::exit(EXIT_FAILURE);  
         }
         size_t size_shps = shapes_collection->get_size();
         if(size_shps == 0 && (*polyhedra))
         {
-          lout << "[ERROR], you are defining polyhedra without using shapes" << std::endl;
+          lout << "[set_fields, ERROR] You are defining polyhedra without using shapes" << std::endl;
           std::exit(EXIT_FAILURE);  
         }
       }
+    }
+
+    public:
+    inline void execute() override final
+    {
+
+      check_slots();
+
+      const auto& type_map = *particle_type_map; 
+      const auto& types = *type;
+
+      bool is_region  = region.has_value();
 
       field_manager mat; // multi-materials
       mat.set_t         = type.has_value();
@@ -181,7 +191,7 @@ namespace exaDEM
         if(mat.set_q) { auto& qq = *quaternion; quat = qq[i]; }
 
 
-        lout << "[>>"<<type_name<<"<<]" << std::endl;;
+        lout << "[>> "<<type_name<<" <<]" << std::endl;;
         lout << "Velocity         = (" << vx << "," << vy << "," << vz << ") ";
         if(mat.set_rnd_v)
         {
@@ -209,7 +219,7 @@ namespace exaDEM
           m         = d * shp->get_volume();
           inertia   = m * shp->get_Im();
 
-          if( mat.set_r ) { lout << "[WARNING] The radius slot is ignored when using polyhedra, it is automaticly deducted from the shape file."<< std::endl; }
+          if( mat.set_r ) { lout << "[set_fields, WARNING] The radius slot is ignored when using polyhedra, it is automaticly deducted from the shape file."<< std::endl; }
           r = shp->compute_max_rcut();
           *rcut_max = std::max(*rcut_max, 2 * r); // r * maxrcut
           lout << "Radius (poly)    = " << r << std::endl;;
@@ -218,7 +228,7 @@ namespace exaDEM
         }
         else // spheres
         {
-          if(!mat.set_r) { lout << "You should define a radius: radius: \"[1.0]\"" ; std::exit(0); }
+          if(!mat.set_r) { lout << "[set_fields, ERROR] You should define a radius: radius: \"[1.0]\"" ; std::exit(EXIT_FAILURE); }
           else
           { 
             auto& rr = *radius; 
@@ -237,7 +247,6 @@ namespace exaDEM
 
         if (is_region)
         {
-std::cout << "Used region" << std::endl;
           ParticleRegionCSGShallowCopy prcsg = *region;
           if (!particle_regions.has_value())
           {
@@ -279,7 +288,6 @@ std::cout << "Used region" << std::endl;
         }
         else // no region
         {
-std::cout << "Not region" << std::endl;
           FilteredSetFunctor<double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {uint32_t(type_id), {vx, vy, vz, m, r, ang_v, inertia, quat}};
           compute_cell_particles(*grid, false, func, compute_fields, parallel_execution_context());
 
