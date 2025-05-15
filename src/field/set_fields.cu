@@ -115,7 +115,7 @@ namespace exaDEM
 
     void check_slots()
     {
-      if(grid->cells()->size() == 0)
+      if(grid->number_of_cells() == 0)
       {
         lout << "\033[1;31m[set_fields, ERROR] the grid is not defined. Please define a grid before calling set_fields.\033[0m" << std::endl;
         std::exit(EXIT_FAILURE);
@@ -290,7 +290,6 @@ namespace exaDEM
         {
           FilteredSetFunctor<double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {uint32_t(type_id), {vx, vy, vz, m, r, ang_v, inertia, quat}};
           compute_cell_particles(*grid, false, func, compute_fields, parallel_execution_context());
-
           if(mat.set_rnd_v)
           {
             jammy gen(sigma_v);

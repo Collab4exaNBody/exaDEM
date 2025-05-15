@@ -51,7 +51,7 @@ namespace exaDEM
       if(*rcut_max <= 0.0) 
       {
         lout << "\033[1;31m[check_rcut, ERROR] rmax is not correctly defined (rcut max <= 0.0)\033[0m" << std::endl;
-        std::exit(0);
+        std::exit(EXIT_FAILURE);
       }
     }
 

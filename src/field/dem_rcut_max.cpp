@@ -107,7 +107,7 @@ namespace exaDEM
       double &rmax = *rcut_max;
       auto cells = grid->cells();
       const size_t n_cells = grid->number_of_cells(); // nbh.size();
-      lout << "grid size = " << n_cells << std::endl;
+      ldbg << "grid size = " << n_cells << std::endl;
       const IJK dims = grid->dimension();
       double rcm = 0;
 #     pragma omp parallel
@@ -123,22 +123,10 @@ namespace exaDEM
           }
         }
         GRID_OMP_FOR_END
-      } MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, comm);
+      } 
+      MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, comm);
       rmax = std::max(rmax, rcm);
       lout << "Rcut max= " << rmax << std::endl;
-      /*
-         auto& g = *grid;
-         MPI_Comm comm = *mpi;
-         const size_t n_cells = g.number_of_cells(); // nbh.size();
-         lout << "grid size = " << n_cells << std::endl;
-         double res = 0.0;
-         DEMRcutMaxFunctor func;
-         reduce_cell_particles( *grid , false , func , res, reduce_field_set , parallel_execution_context());
-         MPI_Allreduce(MPI_IN_PLACE, &res, 1, MPI_DOUBLE, MPI_MAX, comm);
-         double& rmax = *rcut_max;
-         rmax = std::max(rmax, res);
-         lout << "rcut max is equal to: " << rmax << std::endl;
-       */
     } // namespace exaDEM
   }
   ;
