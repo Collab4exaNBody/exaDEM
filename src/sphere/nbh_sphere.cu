@@ -230,7 +230,7 @@ namespace exaDEM
             }
           }*/
 
-          item.type = 0; // === Vertex - Vertex
+          //item.type = 0; // === Vertex - Vertex
 
           /*if (sym)
           {

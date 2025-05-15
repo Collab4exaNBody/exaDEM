@@ -62,6 +62,7 @@ namespace exaDEM
     ADD_SLOT(bool, symetric, INPUT_OUTPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
     ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier2, ic2, INPUT_OUTPUT);
     // analysis
     ADD_SLOT(long, timestep, INPUT, REQUIRED);
     ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
@@ -80,6 +81,19 @@ namespace exaDEM
       {
         loop_contact_force<start+1, end, FuncT, def_box>(classifier, std::forward<Args>(args)...);
       }
+    }
+    
+    template<int start, int end, template<int, bool> typename FuncT, bool def_box, typename... Args>
+    void loop_contact_force2(Classifier2& classifier, Args &&... args)
+    {
+      //printf("LOOP START\n");
+      FuncT<start, def_box> contact_law;
+      run_contact_law2(parallel_execution_context(), start, classifier, contact_law, args...);
+      if constexpr( start + 1 <= end )
+      {
+        loop_contact_force2<start+1, end, FuncT, def_box>(classifier, std::forward<Args>(args)...);
+      }
+      //printf("LOOP END\n");
     }
 
     template<bool is_sym, bool def_box>
@@ -111,9 +125,51 @@ namespace exaDEM
       run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs, hkp_drvs, time);
       run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);
 
+
       constexpr int stl_type_start = 7;
       constexpr int stl_type_end = 9;
       loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl, def_box>(classifier, cells, drvs, hkp_drvs, time);
+    }
+    
+    template<bool is_sym, bool def_box>
+    void core2()
+    {
+      const DriversGPUAccessor drvs = *drivers;
+      auto *cells = grid->cells();
+      const ContactParams hkp = *config;
+      ContactParams hkp_drvs{};
+
+      /** Def Box */
+      const Mat3d& xform = domain->xform();
+
+      if (drivers->get_size() > 0 && config_driver.has_value())
+      {
+        hkp_drvs = *config_driver;
+      }
+
+      const double time = *dt;
+      //auto &classifier = *ic;
+      auto &classifier = *ic2;
+
+      contact_law<is_sym, def_box> sph = {xform};
+      contact_law_driver<Cylinder, def_box> cyl = {xform};
+      contact_law_driver<Surface, def_box> surf = {xform};
+      contact_law_driver<Ball, def_box> ball = {xform};
+
+      /*run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
+      run_contact_law(parallel_execution_context(), 4, classifier, cyl, cells, drvs, hkp_drvs, time);
+      run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs, hkp_drvs, time);
+      run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);*/
+      
+      run_contact_law2(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
+      run_contact_law2(parallel_execution_context(), 4, classifier, cyl, cells, drvs, hkp_drvs, time);
+      run_contact_law2(parallel_execution_context(), 5, classifier, surf, cells, drvs, hkp_drvs, time);
+      run_contact_law2(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);
+
+      constexpr int stl_type_start = 7;
+      constexpr int stl_type_end = 9;
+      loop_contact_force2 <stl_type_start,  stl_type_end, contact_law_stl, def_box>(classifier, cells, drvs, hkp_drvs, time);
+      //printf("CORE END\n");
     }
 
     void save_results()
@@ -123,10 +179,18 @@ namespace exaDEM
       std::string ts = std::to_string(*timestep);
       itools::write_file(stream, *dir_name, (*interaction_basename) + ts);
     }
+    
+    void save_results2()
+    {
+      auto &classifier = *ic2;
+      auto stream = itools::create_buffer2(*grid, classifier);
+      std::string ts = std::to_string(*timestep);
+      itools::write_file(stream, *dir_name, (*interaction_basename) + ts);
+    }
 
     inline void execute() override final
     {
-      printf("CONTACT\n");
+      //printf("CONTACT\n");
       if (grid->number_of_cells() == 0)
       {
         return;
@@ -139,16 +203,25 @@ namespace exaDEM
       const long frequency_interaction = *analysis_interaction_dump_frequency;
       bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
 
-      if(*symetric == false && is_def_box == false) {core<false, false>();}      
+      /*if(*symetric == false && is_def_box == false) {core<false, false>();}      
       if(*symetric == true  && is_def_box == false) {core<true , false>();}      
       if(*symetric == false && is_def_box ==  true) {core<false,  true>();}      
-      if(*symetric == true  && is_def_box ==  true) {core<true ,  true>();}      
+      if(*symetric == true  && is_def_box ==  true) {core<true ,  true>();}*/
+      
+      if(*symetric == false && is_def_box == false) {core2<false, false>();}      
+      if(*symetric == true  && is_def_box == false) {core2<true , false>();}      
+      if(*symetric == false && is_def_box ==  true) {core2<false,  true>();}      
+      if(*symetric == true  && is_def_box ==  true) {core2<true ,  true>();}
 
+      //printf("SAVE\n");
       if (write_interactions)
       {
-        save_results();
+        //save_results();
+        save_results2();
       }
-      printf("CONTACT END\n");
+      //printf("SAVE END\n");
+      
+      //printf("CONTACT END\n");
     }
   };
 

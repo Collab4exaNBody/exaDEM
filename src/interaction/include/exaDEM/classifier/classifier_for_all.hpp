@@ -102,6 +102,52 @@ namespace exaDEM
       ftp[idx] = ft;
     }
   };
+  
+  struct AnalysisDataPacker2
+  {
+    double * __restrict__ dnp; /**< Pointer to the buffer storing overlap (dn) values between particles. */
+    Vec3d * __restrict__ cpp;  /**< Pointer to the buffer storing contact point positions. */
+    Vec3d * __restrict__ fnp;  /**< Pointer to the buffer storing normal force vectors (fn). */
+    Vec3d * __restrict__ ftp;  /**< Pointer to the buffer storing tangential force vectors (ft). */
+
+    /**
+     * @brief Constructor that initializes the data packer with buffers from a classifier.
+     *
+     * @param ic The classifier used to access the buffers for a given interaction type.
+     * @param type The interaction type identifier to retrieve the appropriate buffers.
+     *
+     * The constructor retrieves the buffers for overlap (dn), contact points, normal forces,
+     * and tangential forces from the classifier based on the interaction type.
+     */
+    AnalysisDataPacker2(Classifier2 &ic, int type)
+    {
+      auto [_dnp, _cpp, _fnp, _ftp] = ic.buffer_p(type);
+      dnp = _dnp;
+      cpp = _cpp;
+      fnp = _fnp;
+      ftp = _ftp;
+    }
+
+    /**
+     * @brief Stores the interaction data at a specific index in the corresponding buffers.
+     *
+     * @param idx The index of the interaction.
+     * @param dn The overlap between interacting particles.
+     * @param contact The contact point vector.
+     * @param fn The normal force vector at the contact point.
+     * @param ft The tangential force vector at the contact point.
+     *
+     * This operator writes the given interaction data to the respective buffers
+     * for overlap, contact point, normal force, and tangential force.
+     */
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(const uint64_t idx, const double dn, const Vec3d &contact, const Vec3d &fn, const Vec3d &ft) const
+    {
+      dnp[idx] = dn;
+      cpp[idx] = contact;
+      fnp[idx] = fn;
+      ftp[idx] = ft;
+    }
+  };
 
   /*******************************************/
   /*            WrapperContactLawForAll      */
@@ -135,6 +181,45 @@ namespace exaDEM
      * @param args Additional parameters passed to the kernel function.
      */
     WrapperContactLawForAll(InteractionWrapper<T> &d, K &k, AnalysisDataPacker &p, Args... args) : data(std::move(d)), kernel(k), packer(p), params(std::tuple<Args...>(args...)) {}
+
+    /**
+     * @brief Helper function to apply the kernel function to a single element.
+     *
+     * @tparam Is Index sequence for unpacking the parameter tuple.
+     * @param item Reference to the element from the array.
+     * @param indexes Index sequence to unpack the parameter tuple.
+     */
+    template <size_t... Is> ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const
+    {
+      exaDEM::Interaction item = data(i);
+      const auto [dn, pos, fn, ft] = kernel(item, std::get<Is>(params)...);
+      data.update(i, item);
+      packer(i, dn, pos, fn, ft); // packer is used to store interaction data
+    }
+
+    /**
+     * @brief Functor operator to apply the kernel function to each element in the array.
+     *
+     * @param i Index of the element in the array.
+     */
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const { apply(i, tuple_helper::gen_seq<sizeof...(Args)>{}); }
+  };
+  
+  template <typename K, typename AnalysisDataPacker, typename... Args> struct WrapperContactLawForAll2
+  {
+    InteractionSOA2 data;
+    const K kernel;             /**< Kernel function to be applied. */
+    AnalysisDataPacker2 packer;  /**< Kernel function to be applied. */
+    std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
+
+    /**
+     * @brief Constructor to initialize the WrapperForAll struct.
+     *
+     * @param d Wrapper that contains the array of elements.
+     * @param k Kernel function to be applied.
+     * @param args Additional parameters passed to the kernel function.
+     */
+    WrapperContactLawForAll2(InteractionSOA2 &d, K &k, AnalysisDataPacker &p, Args... args) : data(std::move(d)), kernel(k), packer(p), params(std::tuple<Args...>(args...)) {}
 
     /**
      * @brief Helper function to apply the kernel function to a single element.
@@ -194,6 +279,39 @@ namespace exaDEM
      */
     ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const { apply(i, tuple_helper::gen_seq<sizeof...(Args)>{}); }
   };
+  
+  template <typename K, typename... Args> struct WrapperForAll2
+  {
+    InteractionSOA2 data;
+    K kernel;                   /**< Kernel function to be applied. */
+    std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
+
+    /**
+     * @brief Constructor to initialize the WrapperForAll struct.
+     * @param d Wrapper that contains the array of elements.
+     * @param k Kernel function to be applied.
+     * @param args Additional parameters passed to the kernel function.
+     */
+    WrapperForAll2(InteractionSOA2 &d, K &k, Args... args) : data(std::move(d)), kernel(k), params(std::tuple<Args...>(args...)) {}
+
+    /**
+     * @brief Helper function to apply the kernel function to a single element.
+     * @tparam Is Index sequence for unpacking the parameter tuple.
+     * @param item Reference to the element from the array.
+     * @param indexes Index sequence to unpack the parameter tuple.
+     */
+    template <size_t... Is> ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const
+    {
+      exaDEM::Interaction item = data(i);
+      kernel(i, item, std::get<Is>(params)...);
+    }
+
+    /**
+     * @brief Functor operator to apply the kernel function to each element in the array.
+     * @param i Index of the element in the array.
+     */
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const { apply(i, tuple_helper::gen_seq<sizeof...(Args)>{}); }
+  };
 } // namespace exaDEM
 
 
@@ -206,8 +324,20 @@ namespace onika
       static inline constexpr bool RequiresBlockSynchronousCall = false;
       static inline constexpr bool CudaCompatible = true;
     };
-
+    
+    template <typename K, typename A, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperContactLawForAll2<K, A, Args...>>
+    {
+      static inline constexpr bool RequiresBlockSynchronousCall = false;
+      static inline constexpr bool CudaCompatible = true;
+    };
+    
     template <typename T, typename K, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperForAll<T, K, Args...>>
+    {
+      static inline constexpr bool RequiresBlockSynchronousCall = false;
+      static inline constexpr bool CudaCompatible = true;
+    };
+    
+    template <typename K, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperForAll2<K, Args...>>
     {
       static inline constexpr bool RequiresBlockSynchronousCall = false;
       static inline constexpr bool CudaCompatible = true;
@@ -245,6 +375,19 @@ namespace exaDEM
     InteractionWrapper<T> interactions(data);
     AnalysisDataPacker packer(ic, type);
     WrapperContactLawForAll func(interactions, kernel, packer, args...);
+    return parallel_for(size, func, exec_ctx, opts);
+  }
+  
+  template <typename Kernel, typename... Args> static inline ParallelExecutionWrapper run_contact_law2(ParallelExecutionContext *exec_ctx, int type, Classifier2 &ic, Kernel &kernel, Args &&...args)
+  {
+    //printf("TYPE: %d\n", type);
+    ParallelForOptions opts;
+    opts.omp_scheduling = OMP_SCHED_STATIC;
+    auto [data, size] = ic.get_info(type);
+    //InteractionWrapper<T> interactions(data);
+    AnalysisDataPacker2 packer(ic, type);
+    WrapperContactLawForAll2 func(data, kernel, packer, args...);
+   //printf("RUN END\n");
     return parallel_for(size, func, exec_ctx, opts);
   }
 } // namespace exaDEM

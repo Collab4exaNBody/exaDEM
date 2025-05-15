@@ -57,6 +57,7 @@ namespace exaDEM
 
     // DEM data
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier2, ic2, INPUT);
     ADD_SLOT(bool, symetric, INPUT, REQUIRED, DocString{"Use of symetric feature (contact law)"});
 
     static constexpr FieldSet<field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass> reduce_field_set{};
@@ -95,9 +96,118 @@ namespace exaDEM
       }
       return res;
     }
+    
+    inline IOSimInteractionResult reduce_sim_io2(Classifier2 &classifier, bool symetric)
+    {
+      IOSimInteractionResult res;
+      VectorT<IOSimInteractionResult> results;
+      int types = classifier.number_of_waves();
+      results.resize(types);
+      {
+        // std::vector<ParallelExecutionWrapper> pexw;
+        // pexw.resize(types);
+        for (int i = 0; i < types; i++)
+        {
+          const auto &buffs = classifier.buffers[i];
+          auto [data, size] = classifier.get_info(i);
+          const double *const dnp = onika::cuda::vector_data(buffs.dn);
+
+          int coef = 1;
+          if (i < 4 && symetric)
+            coef *= 2;
+
+          //InteractionWrapper<T> dataWrapper(data);
+          IOSimInteractionFunctor2 func = {dnp, coef};
+          
+          InteractionSOA2 data2;
+          
+          data2.size2 = data.size2;
+          data2.m_type = data.m_type;
+          
+	data2.ft_x = (double*) malloc(data.size2 * sizeof(double) );
+	data2.ft_y = (double*) malloc(data.size2 * sizeof(double) );
+	data2.ft_z = (double*) malloc(data.size2 * sizeof(double) );
+	
+	data2.mom_x = (double*) malloc(data.size2 * sizeof(double) );
+	data2.mom_y = (double*) malloc(data.size2 * sizeof(double) );
+	data2.mom_z = (double*) malloc(data.size2 * sizeof(double) );
+	
+	data2.id_i = (uint64_t*) malloc(data.size2 * sizeof(uint64_t) );
+	data2.id_j = (uint64_t*) malloc(data.size2 * sizeof(uint64_t) );
+	
+	data2.cell_i = (uint32_t*) malloc(data.size2 * sizeof(uint32_t) );
+	data2.cell_j = (uint32_t*) malloc(data.size2 * sizeof(uint32_t) );
+	
+	data2.p_i = (uint16_t*) malloc(data.size2 * sizeof(uint16_t) );
+	data2.p_j = (uint16_t*) malloc(data.size2 * sizeof(uint16_t) );
+	
+	data2.sub_i = (uint16_t*) malloc(data.size2 * sizeof(uint16_t) );
+	data2.sub_j = (uint16_t*) malloc(data.size2 * sizeof(uint16_t) );
+	
+	//printf("MALLOC\n");          
+          
+          cudaMemcpy(data2.ft_x, data.ft_x, data.size2 * sizeof(double), cudaMemcpyDeviceToHost );
+          
+          //printf("MEMCPY\n");
+          
+          cudaMemcpy(data2.ft_y, data.ft_y, data.size2 * sizeof(double), cudaMemcpyDeviceToHost );
+          cudaMemcpy(data2.ft_z, data.ft_z, data.size2 * sizeof(double), cudaMemcpyDeviceToHost );
+          
+          cudaMemcpy(data2.mom_x, data.mom_x, data.size2 * sizeof(double), cudaMemcpyDeviceToHost );
+          cudaMemcpy(data2.mom_y, data.mom_y, data.size2 * sizeof(double), cudaMemcpyDeviceToHost );
+          cudaMemcpy(data2.mom_z, data.mom_z, data.size2 * sizeof(double), cudaMemcpyDeviceToHost );
+          
+          cudaMemcpy(data2.id_i, data.id_i, data.size2 * sizeof(uint64_t), cudaMemcpyDeviceToHost );
+          cudaMemcpy(data2.id_j, data.id_j, data.size2 * sizeof(uint64_t), cudaMemcpyDeviceToHost );
+          
+          cudaMemcpy(data2.p_i, data.p_i, data.size2 * sizeof(uint16_t), cudaMemcpyDeviceToHost );
+          cudaMemcpy(data2.p_j, data.p_j, data.size2 * sizeof(uint16_t), cudaMemcpyDeviceToHost );
+          
+          cudaMemcpy(data2.sub_i, data.sub_i, data.size2 * sizeof(uint16_t), cudaMemcpyDeviceToHost );
+          cudaMemcpy(data2.sub_j, data.sub_j, data.size2 * sizeof(uint16_t), cudaMemcpyDeviceToHost );
+          
+          cudaMemcpy(data2.cell_i, data.cell_i, data.size2 * sizeof(uint32_t), cudaMemcpyDeviceToHost );
+          cudaMemcpy(data2.cell_j, data.cell_j, data.size2 * sizeof(uint32_t), cudaMemcpyDeviceToHost );
+          
+          //printf("REDUCE\n");
+          
+          /*for(int i = 0; i < data.size2; i++)
+          {
+          	printf("INTERACTION[%d] : I(CELL:%d P:%d ID:%d) J(CELL:%d P:%d ID:%d)\n", i, data.cell_i[i], data.p_i[i], data.id_i[i], data.cell_j[i], data.p_j[i], data.id_j[i]);
+          }*/
+
+          if (size > 0 && dnp != nullptr) // skip it if forces has not been computed
+          {
+            reduce_data2<IOSimInteractionFunctor2, IOSimInteractionResult>(parallel_execution_context(), data2, func, size, results[i]);
+          }
+          
+          free(data2.ft_x);
+          free(data2.ft_y);
+          free(data2.ft_z);
+          free(data2.mom_x);
+          free(data2.mom_y);
+          free(data2.mom_z);
+          free(data2.cell_i);
+          free(data2.cell_j);
+          free(data2.p_i);
+          free(data2.p_j);
+          free(data2.id_i);
+          free(data2.id_j);
+          free(data2.sub_i);
+          free(data2.sub_j);
+          
+        }
+      } // synchronize
+      for (int i = 0; i < types; i++)
+      {
+        res.update(results[i]);
+      }
+      return res;
+    }
 
     inline void execute() override final
     {
+      //printf("SIM\n");
       MPI_Comm comm = *mpi;
       SimulationState &sim_info = *simulation_state;
 
@@ -112,8 +222,10 @@ namespace exaDEM
       reduce_cell_particles(*grid, false, func, sim, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
 
       // get interaction informations
-      Classifier<InteractionSOA> &classifier = *ic;
-      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
+      //Classifier<InteractionSOA> &classifier = *ic;
+      Classifier2 &classifier = *ic2;
+      //exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
+      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io2(classifier, *symetric);
 
       // reduce partial sums and share the result
       uint64_t active_interactions, total_interactions;
@@ -163,6 +275,7 @@ namespace exaDEM
 
       // for other operators
       *system_mass = mass;
+      //printf("SIM END\n");
     }
   };
 

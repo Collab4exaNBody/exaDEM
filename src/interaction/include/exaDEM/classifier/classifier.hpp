@@ -133,123 +133,211 @@ namespace exaDEM
     }
   };
 
-  struct OldClassifier
-  {
-  	template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
-  	
-  	VectorT<uint64_t> keys;
-  	
-  	VectorT<double> ft_x;
-  	VectorT<double> ft_y;
-  	VectorT<double> ft_z;
-  	
-  	VectorT<double> mom_x;
-  	VectorT<double> mom_y;
-  	VectorT<double> mom_z;
-	
-	VectorT<int> indices;
-  	
-  	size_t size = 0;
-  	
-  	void set( int s )
-  	{
-  		size = s;
-  		
-  		keys.clear();
-  		
-  		keys.resize(size);
-  		
-  		ft_x.clear();
-  		ft_y.clear();
-  		ft_z.clear();
-  		
-  		ft_x.resize(size);
-  		ft_y.resize(size);
-  		ft_z.resize(size);
-  		
-  		mom_x.clear();
-  		mom_y.clear();
-  		mom_z.clear();
-  		
-  		mom_x.resize(size);
-  		mom_y.resize(size);
-  		mom_z.resize(size);
-  		
-  		indices.clear();
-  		
-  		indices.resize(size);
-  	}
-  };
-  
-  struct OldClassifierWrapper
-  {
-  	uint64_t * __restrict__ keys;
-  	
-  	double * __restrict__ ft_x;
-  	double * __restrict__ ft_y;
-  	double * __restrict__ ft_z;
-  	
-  	double * __restrict__ mom_x;
-  	double * __restrict__ mom_y;
-  	double * __restrict__ mom_z;
-  	
-  	int * __restrict__ indices;
-  	
-  	size_t size = 0;
-  	
-  	OldClassifierWrapper(OldClassifier& data)
-  	{
-  		keys = onika::cuda::vector_data(data.keys);
-  		
-  		ft_x = onika::cuda::vector_data(data.ft_x);
-  		ft_y = onika::cuda::vector_data(data.ft_y);
-  		ft_z = onika::cuda::vector_data(data.ft_z);
-  	
-  		mom_x = onika::cuda::vector_data(data.mom_x);
-  		mom_y = onika::cuda::vector_data(data.mom_y);
-  		mom_z = onika::cuda::vector_data(data.mom_z);
-  		
-  		indices = onika::cuda::vector_data(data.indices);
-  		
-  		size = data.size;
-  	}
-  };
-  
-  struct OldClassifiers
-  {
-  	template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
-  	
-  	static constexpr int types = 13;
-  	std::vector<OldClassifier> waves;
-  	
-  	bool use = true;
-  	
-  	bool stl_7 = true;
-  	bool stl_8 = true;
-  	bool stl_9 = true;
-  	
-  	uint16_t max_7;
-  	uint16_t min_7;
-  	
-  	uint16_t max_8;
-  	uint16_t min_8;
-  	
-  	uint16_t max_9;
-  	uint16_t min_9;
-  };
-
   /**
    * @brief Classifier for managing interactions categorized into different types.
    *
    * The Classifier struct manages interactions categorized into different types (up to 13 types).
    * It provides functionalities to store interactions in CUDA memory-managed vectors (`VectorT`).
    */
+   
+   struct InteractionSOA2
+   {
+ 
+      // forces
+      double * ft_x;
+      double * ft_y;
+      double * ft_z;
+      // moment
+      double * mom_x;
+      double * mom_y;
+      double * mom_z;
+      // particle id
+      uint64_t * id_i;
+      uint64_t * id_j;
+      // cell id
+      uint32_t * cell_i;
+      uint32_t * cell_j;
+      // position into the cell
+      uint16_t * p_i;
+      uint16_t * p_j;
+      // sub id
+      uint16_t * sub_i;
+      uint16_t * sub_j;
+      uint16_t m_type;
+      
+      size_t size2;
+      
+      ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
+      {
+        exaDEM::Interaction res = {
+          {ft_x[idx], ft_y[idx], ft_z[idx]}, 
+          {mom_x[idx], mom_y[idx], mom_z[idx]}, 
+          id_i[idx], id_j[idx], 
+          cell_i[idx], cell_j[idx], 
+          p_i[idx], p_j[idx], 
+          sub_i[idx], sub_j[idx], m_type};
+        return res;
+      }
+      
+      ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator[](const uint64_t idx) const
+      {
+        exaDEM::Interaction res = {
+          {ft_x[idx], ft_y[idx], ft_z[idx]}, 
+          {mom_x[idx], mom_y[idx], mom_z[idx]}, 
+          id_i[idx], id_j[idx], 
+          cell_i[idx], cell_j[idx], 
+          p_i[idx], p_j[idx], 
+          sub_i[idx], sub_j[idx], m_type};
+        return res;
+      }
+      
+      ONIKA_HOST_DEVICE_FUNC size_t size()
+      {
+      	return size2;
+      }
+      
+      ONIKA_HOST_DEVICE_FUNC size_t size() const
+      {
+      	return size2;
+      }
+      
+      ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
+      {
+        ft_x[idx] = item.friction.x;
+        ft_y[idx] = item.friction.y;
+        ft_z[idx] = item.friction.z;
+
+        mom_x[idx] = item.moment.x;
+        mom_y[idx] = item.moment.y;
+        mom_z[idx] = item.moment.z;
+      }
+      
+      void resize(int s, int type)
+      {
+      	if(type == 0)
+      	{
+      		cudaMalloc(&id_i, s * sizeof(uint64_t));
+      		cudaMalloc(&id_j, s * sizeof(uint64_t));
+      		cudaMalloc(&cell_i, s * sizeof(uint32_t));
+      		cudaMalloc(&cell_j, s * sizeof(uint32_t));
+      		cudaMalloc(&p_i, s * sizeof(uint16_t));
+      		cudaMalloc(&p_j, s * sizeof(uint16_t));
+      		cudaMalloc(&ft_x, s * sizeof(double));
+      		cudaMalloc(&ft_y, s * sizeof(double));
+      		cudaMalloc(&ft_z, s * sizeof(double));
+      		cudaMalloc(&mom_x, s * sizeof(double));
+      		cudaMalloc(&mom_y, s * sizeof(double));
+      		
+      	}
+      	else if(type == 4)
+      	{
+      		cudaMalloc(&id_i, s * sizeof(uint64_t));
+      		cudaMalloc(&cell_i, s * sizeof(uint32_t));
+      		cudaMalloc(&p_i, s * sizeof(uint16_t));
+      		
+      		cudaMalloc(&ft_x, s * sizeof(double));
+      		cudaMalloc(&ft_y, s * sizeof(double));
+      		cudaMalloc(&ft_z, s * sizeof(double));
+      		cudaMalloc(&mom_x, s * sizeof(double));
+      		cudaMalloc(&mom_y, s * sizeof(double));     		
+      	}
+      	
+      	size2 = s;
+      	m_type = type;
+      }
+      
+      void clear()
+      {
+      // forces
+      cudaFree(ft_x);
+      cudaFree(ft_y);
+      cudaFree(ft_z);
+      // moment
+      cudaFree(mom_x);
+      cudaFree(mom_y);
+      cudaFree(mom_z);
+      // particle id
+      cudaFree(id_i);
+      cudaFree(id_j);
+      // cell id
+      cudaFree(cell_i);
+      cudaFree(cell_j);
+      // position into the cell
+      cudaFree(p_i);
+      cudaFree(p_j);
+      // sub id
+      cudaFree(sub_i);
+      cudaFree(sub_j);
+      //m_type;
+      
+      size2 = 0;
+      }
+      
+   };
+   
+   struct Classifier2
+   {
+   	static constexpr int types = 13;
+   	std::vector<InteractionSOA2> waves;
+   	std::vector<itools::interaction_buffers> buffers;
+   	
+   	bool use = false;
+   	
+    std::pair<InteractionSOA2 &, size_t> get_info(size_t id)
+    {
+      const unsigned int data_size = waves[id].size();
+      InteractionSOA2 &data = waves[id];
+      return {data, data_size};
+    }
+
+    const std::pair<const InteractionSOA2 &, const size_t> get_info(size_t id) const
+    {
+      const unsigned int data_size = waves[id].size();
+      const InteractionSOA2 &data = waves[id];
+      return {data, data_size};
+    }
+    
+    std::tuple<double *, Vec3d *, Vec3d *, Vec3d *> buffer_p(int id)
+    {
+      auto &analysis = buffers[id];
+      // fit size if needed
+      const size_t size = waves[id].size();
+      analysis.resize(size);
+      double *const __restrict__ dnp = onika::cuda::vector_data(analysis.dn);
+      Vec3d *const __restrict__ cpp = onika::cuda::vector_data(analysis.cp);
+      Vec3d *const __restrict__ fnp = onika::cuda::vector_data(analysis.fn);
+      Vec3d *const __restrict__ ftp = onika::cuda::vector_data(analysis.ft);
+      return {dnp, cpp, fnp, ftp};
+    }
+    
+    size_t number_of_waves()
+    {
+      assert(types == waves.size());
+      return types;
+    }
+    size_t number_of_waves() const
+    {
+      assert(types == waves.size());
+      return types;
+    }
+    
+    InteractionSOA2 &get_wave(size_t id) { return waves[id]; }
+    const InteractionSOA2 get_wave(size_t id) const { return waves[id]; }
+    
+    void resize(){ waves.clear(); waves.resize(13);}
+    
+    void initialize(){ waves.resize(13); buffers.resize(13); }
+    
+   };
+   
   template <typename T> struct Classifier
   {
     static constexpr int types = 13;
     using NumberOfInteractionPerTypes = ::onika::oarray_t<int, types>;
     std::vector<T> waves;                             ///< Storage for interactions categorized by type.
     std::vector<itools::interaction_buffers> buffers; ///< Storage for analysis. Empty if there is no analysis
+    
+    bool use = false;
 
     /**
      * @brief Default constructor.
