@@ -57,6 +57,7 @@ namespace exaDEM
 
     inline void execute() override final
     {
+      check_slots();
       MPI_Comm comm = *mpi;
       double rmax = *rcut_max;
 
