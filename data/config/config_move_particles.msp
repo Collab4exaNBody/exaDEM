@@ -64,6 +64,7 @@ compute_all_vertices:
 ghost_full_update:
   - ghost_comm_scheme
   - ghost_update_all
+  - update_traversals
   - compute_all_vertices
 
 
@@ -83,7 +84,6 @@ parallel_update_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - update_traversals
   - grid_stl_mesh:
      force_reset: true
   - update_particle_neighbors
@@ -96,7 +96,6 @@ init_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - update_traversals
   - grid_stl_mesh:
      force_reset: true
   - update_particle_neighbors
