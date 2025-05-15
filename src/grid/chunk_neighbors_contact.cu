@@ -719,7 +719,7 @@ __global__ void find_common_elements(
     inline void execute() override final
     {
     
-      //printf("CHUNK_START\n");
+      printf("CHUNK_START\n");
       
       unsigned int cs = config->chunk_size;
       unsigned int cs_log2 = 0;
@@ -806,27 +806,27 @@ __global__ void find_common_elements(
 				cudaFree(d_temp_storage);
 				
 				/*int filtre_end;
-				cudaMemcpy(&filtre_end, filtre + size - 1, sizeof(int), cudaMemcpyHostToDevice);
+				cudaMemcpy(&filtre_end, filtre + size - 1, sizeof(int), cudaMemcpyHostToDevice);*/
 				
-				int filtre_incr_end;
+				/*int filtre_incr_end;
 				cudaMemcpy(&filtre_incr_end, filtre_incr + size - 1, sizeof(int), cudaMemcpyHostToDevice);*/
 	
 				int total = /*filtre_end + filtre_incr_end;*/filtre[size - 1] + filtre_incr[size - 1];
 				
-				onika::memory::CudaMMVector<uint64_t> id_i;
-				//uint64_t* id_i;
-				id_i.resize(total);
-				//cudaMalloc(&id_i, total * sizeof(uint64_t) );
+				//onika::memory::CudaMMVector<uint64_t> id_i;
+				uint64_t* id_i;
+				//id_i.resize(total);
+				cudaMalloc(&id_i, total * sizeof(uint64_t) );
 				
-				onika::memory::CudaMMVector<uint64_t> id_j;
-				//uint64_t* id_j;
-				id_j.resize(total);
-				//cudaMalloc(&id_j, total * sizeof(uint64_t) );
+				//onika::memory::CudaMMVector<uint64_t> id_j;
+				uint64_t* id_j;
+				//id_j.resize(total);
+				cudaMalloc(&id_j, total * sizeof(uint64_t) );
 				
-				onika::memory::CudaMMVector<int> indices;
-				//int* indices;
-				indices.resize(total);
-				//cudaMalloc(&indices, total * sizeof(uint64_t) );
+				//onika::memory::CudaMMVector<int> indices;
+				int* indices;
+				//indices.resize(total);
+				cudaMalloc(&indices, total * sizeof(uint64_t) );
 				
 				//auto& old = unc.waves[type];
 				auto& unc_type = unc.waves[type];
@@ -855,7 +855,7 @@ __global__ void find_common_elements(
 				
 				InteractionOLDWrapper old(unc_type);
        				
-       				filtre_deux<<<numBlocks, blockSize>>>( interactions.id_i, interactions.id_j, id_i.data(), id_j.data(), interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, filtre_incr.data(), size);
+       				filtre_deux<<<numBlocks, blockSize>>>( interactions.id_i, interactions.id_j, id_i, id_j, interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, filtre_incr.data(), size);
        				
        				cudaDeviceSynchronize();
        				
@@ -864,21 +864,21 @@ __global__ void find_common_elements(
        				
        				numBlocks = ( total + blockSize - 1 ) / blockSize;
        				
-       				onika::memory::CudaMMVector<uint64_t> keys;
-       				//uint64_t* keys;
-       				keys.resize(total);
-       				//cudaMalloc(&keys, total * sizeof(uint64_t) );
+       				//onika::memory::CudaMMVector<uint64_t> keys;
+       				uint64_t* keys;
+       				//keys.resize(total);
+       				cudaMalloc(&keys, total * sizeof(uint64_t) );
        				
-       				generateKeys<<<numBlocks, blockSize>>>( keys.data(), id_i.data(), id_j.data(), indices.data(), min, max, type, total);
+       				generateKeys<<<numBlocks, blockSize>>>( keys, id_i, id_j, indices, min, max, type, total);
        				
-       				sortWithIndices( keys.data(), indices.data(), old.keys, old.indices, total);
+       				sortWithIndices( keys, indices, old.keys, old.indices, total);
        				
-       				/*cudaFree(filtre);
-       				cudaFree(filtre_incr);*/
-       				/*cudaFree(id_i);
+       				//cudaFree(filtre);
+       				//cudaFree(filtre_incr);*/
+       				cudaFree(id_i);
        				cudaFree(id_j);
        				cudaFree(keys);
-       				cudaFree(indices);*/
+       				cudaFree(indices);
        				
        				/*cudaError_t err = cudaFree(interactions.ft_x);
        				err = cudaFree(interactions.ft_y);
@@ -997,9 +997,11 @@ __global__ void find_common_elements(
 	}
 	
 	onika::memory::CudaMMVector<int> cellsa;
+	//int* cellsa = (int*) malloc(incr_cell * sizeof(int));
 	cellsa.resize(incr_cell);
 	
 	onika::memory::CudaMMVector<int> cellsb;
+	//std::vector<int> cellsb;
 	cellsb.resize(incr_cell);
 	//int* cellsb = (int*) malloc(incr_cell * sizeof(int));
 	
@@ -1039,18 +1041,22 @@ __global__ void find_common_elements(
 	
 	onika::memory::CudaMMVector<int> nb_nbh;
 	//int* nb_nbh;
-	nb_nbh.resize( cellsa.size() );
+	nb_nbh.resize( incr_cell );
 	//cudaMalloc(&nb_nbh, cellsa.size() * sizeof(int) );
+	
+	/*int* cellsa_GPU;
+	cudaMalloc(&cellsa_GPU, incr_cell * sizeof(int) );
+	cudaMemcpy(cellsa_GPU, cellsa, incr_cell * sizeof(int), cudaMemcpyHostToDevice );*/
 	
 	/*int* cellsb_GPU;
 	cudaMalloc(&cellsb_GPU, incr_cell * sizeof(int) );
-	cudaMemcpy(cellsb_GPU, cellsb, incr_cell * sizeof(int), cudaMemcpyHostToDevice );
+	cudaMemcpy(cellsb_GPU, cellsb.data(), incr_cell * sizeof(int), cudaMemcpyHostToDevice );*/
 	
-	int* ghost_cells_GPU;
+	/*int* ghost_cells_GPU;
 	cudaMalloc(&ghost_cells_GPU, incr_cell * sizeof(int) );
 	cudaMemcpy(ghost_cells_GPU, ghost_cells, incr_cell * sizeof(int), cudaMemcpyHostToDevice);*/
 	
-	kernelUN<<<cellsa.size(), BlockSize>>>( cells, dims, cellsa.data(), cellsb.data(), ghost_cells.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh.data(), m_origin, m_offset, m_cell_size );
+	kernelUN<<<incr_cell, BlockSize>>>( cells, dims, cellsa.data(), cellsb.data(), ghost_cells.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh.data(), m_origin, m_offset, m_cell_size );
 	
 	onika::memory::CudaMMVector<int> interaction_driver;
 	//int* interaction_driver;
@@ -1067,17 +1073,17 @@ __global__ void find_common_elements(
 	
 	onika::memory::CudaMMVector<int> nb_nbh_incr;
 	//int* nb_nbh_incr;
-	nb_nbh_incr.resize(cellsa.size());
+	nb_nbh_incr.resize( incr_cell );
 	//cudaMalloc(&nb_nbh_incr, cellsa.size() * sizeof(int) );
 
 	void* d_temp_storage = nullptr;
 	size_t temp_storage_bytes = 0;
 	
-	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_incr.data(), cellsa.size());
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_incr.data(), incr_cell );
 	
 	cudaMalloc(&d_temp_storage, temp_storage_bytes);
 	
-	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_incr.data(), cellsa.size());
+	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_incr.data(), incr_cell );
 	
 	cudaFree(d_temp_storage);
 	
@@ -1088,7 +1094,7 @@ __global__ void find_common_elements(
 	
 	//int total_interactions = nb_nbh_incr_final + nb_nbh_final;
 	
-	int total_interactions = nb_nbh[cellsa.size() - 1] + nb_nbh_incr[cellsa.size() - 1];
+	int total_interactions = nb_nbh[incr_cell - 1] + nb_nbh_incr[incr_cell - 1];
 	
 	onika::memory::CudaMMVector<int> interaction_driver_incr;
 	//int* interaction_driver_incr;
@@ -1193,10 +1199,10 @@ __global__ void find_common_elements(
 	
 	//printf("UN\n");
 	
-	kernelDEUX<<<cellsa.size(), BlockSize>>>( cells, dims, cellsa.data(), cellsb.data(), ghost_cells.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh_incr.data(), m_origin, m_offset, m_cell_size, /*id_i.data()*/type0.id_i, /*id_j.data()*/type0.id_j, /*cell_i.data()*/type0.cell_i, /*cell_j.data()*/type0.cell_j, /*p_i.data()*/type0.p_i, /*p_j.data()*/type0.p_j );
+	kernelDEUX<<<incr_cell, BlockSize>>>( cells, dims, cellsa.data(), cellsb.data(), ghost_cells.data(), *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh_incr.data(), m_origin, m_offset, m_cell_size, /*id_i.data()*/type0.id_i, /*id_j.data()*/type0.id_j, /*cell_i.data()*/type0.cell_i, /*cell_j.data()*/type0.cell_j, /*p_i.data()*/type0.p_i, /*p_j.data()*/type0.p_j );
 	
 	cudaDeviceSynchronize();
-	
+
 	//printf("DEUX\n");
 	
 	kernelTROIS<<<cells_a.size(), BlockSize>>>( cells, dims, cells_a.data()/*cells_a_GPU*/, *rcut_inc, driver, interaction_driver_incr.data(), /*id_driver.data()*/type4.id_i, /*cell_driver.data()*/type4.cell_i, /*p_driver.data()*/type4.p_i );
@@ -1231,32 +1237,32 @@ __global__ void find_common_elements(
 				int blockSize = 256;
 				int numBlocks = ( size + blockSize - 1 ) / blockSize;
 				
-				onika::memory::CudaMMVector<uint64_t> keys;
-				//uint64_t* keys;
-				keys.resize(size);
-				//cudaMalloc(&keys, size * sizeof(uint64_t) );
+				//onika::memory::CudaMMVector<uint64_t> keys;
+				uint64_t* keys;
+				//keys.resize(size);
+				cudaMalloc(&keys, size * sizeof(uint64_t) );
 				
-				onika::memory::CudaMMVector<uint64_t> keys_sorted;
-				//uint64_t* keys_sorted;
-				keys_sorted.resize(size);
-				//cudaMalloc(&keys_sorted, size * sizeof(uint64_t) );
+				//onika::memory::CudaMMVector<uint64_t> keys_sorted;
+				uint64_t* keys_sorted;
+				//keys_sorted.resize(size);
+				cudaMalloc(&keys_sorted, size * sizeof(uint64_t) );
 				
-				onika::memory::CudaMMVector<int> indices;
-				//int* indices;
-				indices.resize(size);
-				//cudaMalloc(&indices, size * sizeof(int) );
+				//onika::memory::CudaMMVector<int> indices;
+				int* indices;
+				//indices.resize(size);
+				cudaMalloc(&indices, size * sizeof(int) );
 				
-				onika::memory::CudaMMVector<int> indices_sorted;
-				//int* indices_sorted;
-				indices_sorted.resize(size);
-				//cudaMalloc(&indices_sorted, size * sizeof(int) );
+				//onika::memory::CudaMMVector<int> indices_sorted;
+				int* indices_sorted;
+				//indices_sorted.resize(size);
+				cudaMalloc(&indices_sorted, size * sizeof(int) );
 				
 				int min = 0;
 				int max = grid->number_of_particles() - 1;
 				
-				generateKeys<<<numBlocks, blockSize>>>( keys.data(), interactions.id_i, interactions.id_j, indices.data(), min, max, type, size);
+				generateKeys<<<numBlocks, blockSize>>>( keys, interactions.id_i, interactions.id_j, indices, min, max, type, size);
 				
-				sortWithIndices( keys.data(), indices.data(), keys_sorted.data(), indices_sorted.data(), size);
+				sortWithIndices( keys, indices, keys_sorted, indices_sorted, size);
 				
 				auto& unc_type = unc.waves[type];
 				
@@ -1273,7 +1279,7 @@ __global__ void find_common_elements(
 				
 				InteractionOLDWrapper old(unc_type);
 				
-				find_common_elements<<<numBlocks, blockSize>>>( keys_sorted.data(), old.keys, size, old.size, interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, indices_sorted.data(), old.indices);
+				find_common_elements<<<numBlocks, blockSize>>>( keys_sorted, old.keys, size, old.size, interactions.ft_x, interactions.ft_y, interactions.ft_z, old.ft_x, old.ft_y, old.ft_z, interactions.mom_x, interactions.mom_y, interactions.mom_z, old.mom_x, old.mom_y, old.mom_z, indices_sorted, old.indices);
 				
 				cudaDeviceSynchronize();
   				/*cudaFree(old.keys);
@@ -1283,12 +1289,12 @@ __global__ void find_common_elements(
   				cudaFree(old.mom_x);
   				cudaFree(old.mom_y);
   				cudaFree(old.mom_z);
-  				cudaFree(old.indices);
+  				cudaFree(old.indices);*/
   				
   				cudaFree(keys);
   				cudaFree(keys_sorted);
   				cudaFree(indices);
-  				cudaFree(indices_sorted);*/
+  				cudaFree(indices_sorted);
 				//printf("TYPE END\n");
 			}
 		}
@@ -1299,14 +1305,15 @@ __global__ void find_common_elements(
 		c.use = true;
 	}
 	
-	/*cudaFree(cells_a_GPU);
-	cudaFree(ghost_cells_GPU);
-	cudaFree(cellsb_GPU);
+	//cudaFree(cellsa_GPU);
+	//cudaFree(ghost_cells_GPU);
+	//cudaFree(cellsb_GPU);
 	
-	free(ghost_cells);
-	free(cellsb);*/
+	//free(cellsa);
+	//free(ghost_cells);
+	//free(cellsb);
 	
-	//printf("CLASSIFY_END\n");
+	printf("CLASSIFY_END\n");
 
     }
   };
