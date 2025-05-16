@@ -70,12 +70,13 @@ namespace exaDEM
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
     ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
     ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
-    // outputs
+    // private
     ADD_SLOT(bool, print_warning, PRIVATE, true, DocString{"This variable is used to ensure that warning messages are displayed only once."});
+    // output
+    ADD_SLOT(double, highest_kn, OUTPUT, DocString{"Get the highest value of the input contact force parameters kn (used for dt_critical)"});
 
     public:
     inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
-
 
     template<int start, int end, template<int, bool, typename> typename FuncT, typename XFormT,  typename T, typename... Args>
       void loop_contact_force(Classifier<T>& classifier, XFormT& cp_xform, Args &&... args)
@@ -89,6 +90,20 @@ namespace exaDEM
         }
       }
 
+    /** fill highest kn */
+    void scan_kn()
+    {
+      double kn = 0.0;
+      if(config.has_value()) kn = std::max(kn, config->kn);
+      if(config_driver.has_value()) kn = std::max(kn, config->kn);
+      if(multimat_cp.has_value())
+      {
+        auto get_max_kn = [&kn] (const ContactParams& cp) -> void { kn = std::max(kn, cp.kn); };
+        multimat_cp->apply(get_max_kn);
+      }
+      *highest_kn = kn;
+    }
+
     inline void execute() override final
     {
       if (grid->number_of_cells() == 0)
@@ -97,6 +112,7 @@ namespace exaDEM
       }
 
       check_slots();
+      scan_kn();
 
       /** Analysis */
       const long frequency_interaction = *analysis_interaction_dump_frequency;

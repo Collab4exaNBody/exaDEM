@@ -89,6 +89,22 @@ namespace exaDEM
       }
 
       /**
+       * @brief Applies a function to each element of `multimat_cp` and `drivers_cp`.
+       *
+       * This generic method accepts a functor (or lambda) and applies it
+       * to all elements contained in `multimat_cp` followed by those in `drivers_cp`.
+       *
+       * @tparam Func The type of the functor or lambda to be applied.
+       * @param func A reference to the functor or lambda to apply to each element.
+       */
+      template<typename Func>
+        void apply(Func& func)
+        {
+          for(size_t i = 0 ; i < multimat_cp.size() ; i++) func(multimat_cp[i]); 
+          for(size_t i = 0 ; i < drivers_cp.size() ; i++) func(drivers_cp[i]); 
+        }
+
+      /**
        * @brief Initializes the material-to-material contact parameters.
        * 
        * Sets up the type maps (`type_map` and `reverse_type_map`) and allocates the
