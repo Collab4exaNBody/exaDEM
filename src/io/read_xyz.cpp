@@ -69,6 +69,7 @@ namespace exaDEM
     ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
     ADD_SLOT(Domain, domain, INPUT_OUTPUT);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(AABB, bounds, INPUT, OPTIONAL, DocString{"This option overide the domain bounds."});
     ADD_SLOT(double, enlarge_bounds, INPUT, 0.0);
     ADD_SLOT(bool, pbc_adjust_xform, INPUT, false);
     ADD_SLOT(bool, adjust_bounds_to_particles, INPUT, false);
@@ -155,6 +156,8 @@ namespace exaDEM
         std::stringstream(line) >> box_size_x >> box_size_y >> box_size_z;
 
         AABB file_bounds = {{0., 0., 0.}, {box_size_x, box_size_y, box_size_z}};
+        if(bounds.has_value()) file_bounds = *bounds; 
+           
         lout << "File bounds      = " << file_bounds << std::endl;
 
         // We need to define limits of the domain from the .xyz file
