@@ -71,8 +71,10 @@ namespace exaDEM
     ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
     ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
-    // outputs
+    // private
     ADD_SLOT(bool, print_warning, PRIVATE, true, DocString{"This variable is used to ensure that warning messages are displayed only once."});
+    // output
+    ADD_SLOT(double, max_kn, INPUT_OUTPUT, 0, DocString{"Get the highest value of the input contact force parameters kn (used for dt_critical)"});
 
 
     public:
@@ -156,7 +158,7 @@ namespace exaDEM
       }
     }
 
-    void check_parameters()
+    void check_slots()
     {
       bool pw = true;
 
@@ -237,9 +239,25 @@ namespace exaDEM
       *print_warning = pw;
     }
 
+    /** fill highest kn */
+    void scan_kn()
+    {
+      if(!(*print_warning)) return;
+      double kn = 0.0;
+      if(config.has_value()) kn = std::max(kn, config->kn);
+      if(config_driver.has_value()) kn = std::max(kn, config->kn);
+      if(multimat_cp.has_value())
+      {
+        auto get_max_kn = [&kn] (const ContactParams& cp) -> void { kn = std::max(kn, cp.kn); };
+        multimat_cp->apply(get_max_kn);
+      }
+      *max_kn = kn;
+    }
+
     inline void execute() override final
     {
-      check_parameters();
+      check_slots();
+      scan_kn();
 
       if (grid->number_of_cells() == 0)
       {

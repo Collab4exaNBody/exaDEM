@@ -82,6 +82,7 @@ namespace exaDEM
     using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_vx, field::_vy, field::_vz, field::_mass, field::_radius, field::_vrot, field::_inertia, field::_orient>;
     static constexpr ComputeFields compute_fields{};
     static constexpr ComputeRegionFields compute_region_fields{};
+
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     // vector version
     ADD_SLOT(std::vector<double>, density, INPUT, OPTIONAL, DocString{"List of density values. If not defined, density is 1"});

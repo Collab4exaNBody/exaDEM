@@ -24,6 +24,7 @@ includes:
   - config_stress_tensor.msp
   - config_end_iteration.msp
   - config_input.msp
+  - config_dt_critical.msp 
 
 # usually outputs ParticleSpecies type to a slot named species, in case the data reader doesn't provide species description
 reduce_species_after_read: nop
@@ -64,6 +65,7 @@ first_iteration:
   - reset_force_moment
   - compute_force
 #  - force_to_accel
+  - dt_critical
   - default_thermodynamic_state
   - default_print_thermodynamic_state: { lb_flag: false , move_flag: false , print_header: true }
   - next_time_step

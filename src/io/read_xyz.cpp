@@ -69,6 +69,7 @@ namespace exaDEM
     ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
     ADD_SLOT(Domain, domain, INPUT_OUTPUT);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(AABB, bounds, INPUT, OPTIONAL, DocString{"This option overide the domain bounds."});
     ADD_SLOT(double, enlarge_bounds, INPUT, 0.0);
     ADD_SLOT(bool, pbc_adjust_xform, INPUT, false);
     ADD_SLOT(bool, adjust_bounds_to_particles, INPUT, false);
@@ -155,6 +156,8 @@ namespace exaDEM
         std::stringstream(line) >> box_size_x >> box_size_y >> box_size_z;
 
         AABB file_bounds = {{0., 0., 0.}, {box_size_x, box_size_y, box_size_z}};
+        if(bounds.has_value()) file_bounds = *bounds; 
+           
         lout << "File bounds      = " << file_bounds << std::endl;
 
         // We need to define limits of the domain from the .xyz file
@@ -260,15 +263,11 @@ namespace exaDEM
       lout << "============================" << std::endl;
 
       grid->rebuild_particle_offsets();
+			assert(check_particles_inside_cell(*grid));
+		}
+	};
 
-#     ifndef NDEBUG
-        bool particles_inside_cell = check_particles_inside_cell(*grid);
-        assert(particles_inside_cell);
-#     endif
-    }
-  };
-
-  // === register factories ===
-  __attribute__((constructor)) static void register_factories() { OperatorNodeFactory::instance()->register_factory("read_xyz", make_grid_variant_operator<ReadXYZ>); }
+	// === register factories ===
+	__attribute__((constructor)) static void register_factories() { OperatorNodeFactory::instance()->register_factory("read_xyz", make_grid_variant_operator<ReadXYZ>); }
 
 } // namespace exaDEM
