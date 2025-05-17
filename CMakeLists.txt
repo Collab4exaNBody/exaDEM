@@ -85,7 +85,11 @@ endif()
 # === build application plugins and libs ===
 # ==========================================
 add_subdirectory(src)
+
+## Installation
+
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/exaDEM DESTINATION include)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/data/config DESTINATION data)
 
 # =============================
 # === check exaDEM examples ===
