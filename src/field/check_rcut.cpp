@@ -45,16 +45,21 @@ namespace exaDEM
     inline std::string documentation() const override final { return R"EOF(Check if the rcut_max is different of 0 or if the rcut_max is < particle rcut. )EOF"; }
 
     public:
+
+    void check_slots()
+    {
+      if(*rcut_max <= 0.0) 
+      {
+        lout << "\033[1;31m[check_rcut, ERROR] rmax is not correctly defined (rcut max <= 0.0)\033[0m" << std::endl;
+        std::exit(EXIT_FAILURE);
+      }
+    }
+
     inline void execute() override final
     {
+      check_slots();
       MPI_Comm comm = *mpi;
       double rmax = *rcut_max;
-
-      if(rmax <= 0.0) 
-      {
-        lout << "\033[1;31mError, rmax is not correctly defined (rcut max <= 0.0)\033[0m" << std::endl;
-        std::exit(0);
-      }
 
       auto cells = grid->cells();
       const IJK dims = grid->dimension();
@@ -78,7 +83,7 @@ namespace exaDEM
 
       if ( rcm > rmax )
       {
-        lout << "\033[1;31mError, at least one particle has a radius larger than the maximum radius cutoff\033[0m" << std::endl;       
+        lout << "\033[1;31m[check_rcut, ERROR] At least one particle has a radius larger than the maximum radius cutoff\033[0m" << std::endl;       
         std::exit(0);
       }
     } // namespace exaDEM

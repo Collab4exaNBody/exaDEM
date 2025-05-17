@@ -166,14 +166,14 @@ namespace exaDEM
         double s = shp.compute_surface();
         if( surface <= 0 )
         {
-          lout << "\033[31m[STL Error]: The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl;
-          lout << "\033[33m[STL Error]: The computed surface of all faces is: " << s << "\033[0m" << std::endl;
+          lout << "\033[31m[register_stl_mesh, ERROR] The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl;
+          lout << "\033[33m[register_stl_mesh, ERROR] The computed surface of all faces is: " << s << "\033[0m" << std::endl;
           std::exit(EXIT_FAILURE);
-          lout << "\033[3221m[STL Warning]: The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl;
+          lout << "\033[32m[register_stl_mesh, WARNING] The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl;
         }
         if ( s - surface > 1e-6 )
         {
-          lout << "\033[32m[STL Error]: The computed surface of all faces is: " << s << "\033[0m" << std::endl;
+          lout << "\033[32m[register_stl_mesh, WARNING]: The computed surface of all faces is: " << s << "\033[0m" << std::endl;
         }
       }
     }
@@ -194,7 +194,7 @@ namespace exaDEM
       }
       else if( is_force_motion() )
       {
-        if( mass >= 1e100 ) lout << "Warning, the mass of the stl mesh is set to " << mass << std::endl;
+        if( mass >= 1e100 ) lout << "[f_to_a, WARNING] The mass of the stl mesh is set to " << mass << std::endl;
         acc = Driver_params::sum_forces() / mass;
         //lout << "acceleration: " << acc << std::endl;
       }

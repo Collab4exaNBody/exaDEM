@@ -139,7 +139,7 @@ namespace exaDEM
         file.open(file_name, std::ifstream::in);
         if (!file.is_open())
         {
-          lerr << "Error in reading xyz : file " << file_name << " not found !" << std::endl;
+          lerr << "[read_xyz, ERROR] File " << file_name << " not found !" << std::endl;
           std::abort();
         }
 
@@ -208,7 +208,7 @@ namespace exaDEM
         {
           assert(*enlarge_bounds >= 0);
           if ((*enlarge_bounds) == 0)
-            lout << "Warning, enlarge_bounds is equal to 0" << std::endl;
+            lout << "[read_xyz, WARNING] Enlarge_bounds is equal to 0" << std::endl;
           file_bounds = {{min_x - (*enlarge_bounds), min_y - (*enlarge_bounds), min_z - (*enlarge_bounds)}, {max_x + (*enlarge_bounds), max_y + (*enlarge_bounds), max_z + (*enlarge_bounds)}};
           lout << "File bounds (fit)= " << file_bounds << std::endl;
         }
@@ -263,15 +263,11 @@ namespace exaDEM
       lout << "============================" << std::endl;
 
       grid->rebuild_particle_offsets();
+			assert(check_particles_inside_cell(*grid));
+		}
+	};
 
-#     ifndef NDEBUG
-        bool particles_inside_cell = check_particles_inside_cell(*grid);
-        assert(particles_inside_cell);
-#     endif
-    }
-  };
-
-  // === register factories ===
-  __attribute__((constructor)) static void register_factories() { OperatorNodeFactory::instance()->register_factory("read_xyz", make_grid_variant_operator<ReadXYZ>); }
+	// === register factories ===
+	__attribute__((constructor)) static void register_factories() { OperatorNodeFactory::instance()->register_factory("read_xyz", make_grid_variant_operator<ReadXYZ>); }
 
 } // namespace exaDEM

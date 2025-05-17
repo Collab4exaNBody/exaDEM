@@ -162,13 +162,13 @@ namespace exaDEM
         {
           if(did >= int(drvs.get_size()))
           {
-            lout << "\033[1;31m[Error]: driver id: " << did << " is out of range of the driver list: <" << drvs.get_size() << std::endl;
+            lout << "\033[1;31m[ERROR]: driver id: " << did << " is out of range of the driver list: <" << drvs.get_size() << std::endl;
             std::exit(EXIT_FAILURE);
           }
           auto driver_type = drvs.type(did);
           if( driver_type == DRIVER_TYPE::UNDEFINED )
           {
-            lout << "\033[1;31m[Error]: The driver type is undefined for id: " << did << std::endl;
+            lout << "\033[1;31m[ERROR]: The driver type is undefined for id: " << did << std::endl;
             std::exit(EXIT_FAILURE);
           }
         }

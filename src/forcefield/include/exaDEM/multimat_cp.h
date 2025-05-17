@@ -89,6 +89,22 @@ namespace exaDEM
       }
 
       /**
+       * @brief Applies a function to each element of `multimat_cp` and `drivers_cp`.
+       *
+       * This generic method accepts a functor (or lambda) and applies it
+       * to all elements contained in `multimat_cp` followed by those in `drivers_cp`.
+       *
+       * @tparam Func The type of the functor or lambda to be applied.
+       * @param func A reference to the functor or lambda to apply to each element.
+       */
+      template<typename Func>
+        void apply(Func& func)
+        {
+          for(size_t i = 0 ; i < multimat_cp.size() ; i++) func(multimat_cp[i]); 
+          for(size_t i = 0 ; i < drivers_cp.size() ; i++) func(drivers_cp[i]); 
+        }
+
+      /**
        * @brief Initializes the material-to-material contact parameters.
        * 
        * Sets up the type maps (`type_map` and `reverse_type_map`) and allocates the
@@ -221,7 +237,7 @@ namespace exaDEM
             {
               if(multimat_cp[this->get_idx_multimat(m1, m2)] == default_cp)
               {
-                lout << "\033[1;31mWarning: contact force parameters for the pair (mat: " 
+                lout << "\033[1;31m[WARNING] Contact force parameters for the pair (mat: " 
                   << m1 << ", mat: " << m2 << ") are not defined.\033[0m" << std::endl;
                 check = false;
               }
@@ -234,7 +250,7 @@ namespace exaDEM
             {
               if(drivers_cp[this->get_idx_drivers(m1, drv)] == default_cp)
               {
-                lout << "\033[1;31mWarning: contact force parameters for the pair (mat: " 
+                lout << "\033[1;31m[WARNING] Contact force parameters for the pair (mat: " 
                   << m1 << ", driver: " << drv << ") are not defined.\033[0m" << std::endl;
                 check = false;
               }

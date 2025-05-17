@@ -49,29 +49,6 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  struct ParticleType
-  {
-    static inline constexpr size_t MAX_STR_LEN = 16;
-
-    double m_mass = 1.0;
-    double m_radius = 1.0;
-    char m_name[MAX_STR_LEN] = {'\0'};
-
-    inline void set_name(const std::string &s)
-    {
-      if (s.length() >= MAX_STR_LEN)
-      {
-        std::cerr << "Particle name too long : length=" << s.length() << ", max=" << (MAX_STR_LEN - 1) << "\n";
-        std::abort();
-      }
-      std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
-      m_name[MAX_STR_LEN - 1] = '\0';
-    }
-    inline std::string name() const { return m_name; }
-  };
-
-  using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;
-
   template <typename GridT> class RSARndRad : public OperatorNode
   {
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);

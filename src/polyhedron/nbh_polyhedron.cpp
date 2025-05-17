@@ -261,7 +261,7 @@ namespace exaDEM
       {
         if(drivers->get_size() > 0)
         {
-          lout<< "Error: Contact detection with drivers is deactivated when the simulation box is deformed." << std::endl;
+          lout<< "[nbh_polyhedron, ERROR] Contact detection with drivers is deactivated when the simulation box is deformed." << std::endl;
           std::exit(0);
         }
       }
@@ -269,7 +269,7 @@ namespace exaDEM
       // if grid structure (dimensions) changed, we invalidate thie whole data
       if (interactions.size() != n_cells)
       {
-        ldbg << "number of cells has changed, reset friction data" << std::endl;
+        ldbg << "[nbh_polyhedron, WARNING] Number of cells has changed, reset friction data" << std::endl;
         interactions.clear();
         interactions.resize(n_cells);
       }

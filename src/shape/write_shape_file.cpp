@@ -69,7 +69,7 @@ namespace exaDEM
         std::ofstream outFile(filepath);
         if (!outFile)
         {
-          std::cerr << "Error: impossible to create the output file: " << filepath << std::endl;
+          std::cerr << "[write_shape, ERROR] Impossible to create the output file: " << filepath << std::endl;
           return;
         }
         // fill stream with shape data

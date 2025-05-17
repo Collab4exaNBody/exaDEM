@@ -73,13 +73,13 @@ namespace exaDEM
         is_shp = true;
       if ((is_stl == false) && (is_shp == false))
       {
-        lout << "Wrong file extension used in register_stl_mesh, available formats: [shp or stl]" << std::endl;
-        std::abort();
+        lout << "[register_stl_mesh, ERROR] Wrong file extension, available formats: [shp or stl]" << std::endl;
+        std::exit(EXIT_FAILURE);
       }
       if ((is_stl == true) && (is_shp == true))
       {
-        lout << "Error when checking file name, the file name contains shp and stl and this operator can't deduce the file format." << std::endl;
-        std::abort();
+        lout << "[register_stl_mesh, ERROR] The file name contains the stings \"shp\" and \"stl\", impossible to deduce the file format." << std::endl;
+        std::exit(EXIT_FAILURE);
       }
 
       assert(is_stl != is_shp);

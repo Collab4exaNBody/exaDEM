@@ -112,7 +112,7 @@ namespace exaDEM
         }
         else 
         { 
-          lout << "Warning: no particle into this region (particle_barycenter). Barycenter is set to {0,0,0}" << std::endl;
+          lout << "[barycenter, WARNING] No particle into this region (particle_barycenter). Barycenter is set to {0,0,0}" << std::endl;
         }
         // Add data to the output file
         manager.add_element(var_name_rx, global[1], "%f");

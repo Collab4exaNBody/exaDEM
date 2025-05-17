@@ -3,29 +3,20 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_spheres.msp
 
-replicate_domain:
-  repeat: [ 1 , 1 , 1 ]
-
 input_data:
+  - particle_type:
+     type: [ elastic_ball ]
   - init_rsa:
-      type: 0
-      bounds: [ [ 10 , 10 , 10 ] , [ 20, 20, 20] ]
-      radius: 0.5
-  - set_radius:
-     rad: 0.5
-  - set_quaternion
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_density:
-     density: 0.02
-  - set_rand_vrot_arot
-  - update_inertia
-  - replicate_domain
-
-chunk_neighbors_contact:
-  config:
-    chunk_size: 1
+     type: 0
+     bounds: [ [ 10 , 10 , 10 ] , [ 20, 20, 20] ]
+     radius: 0.5
+  - set_fields:
+     polyhedra: false
+     type:           [ elastic_ball ]
+     radius:         [          0.5 ] #we need to re-specify here, otherwise the default value is 1.0
+     density:        [         0.02 ]
+     velocity:       [      [0,0,0] ]
+     sigma_velocity: [          0.1 ]
 
 setup_drivers:
   - register_cylinder:
@@ -43,10 +34,6 @@ compute_force:
 domain:
   cell_size: 2 m
   periodic: [false,true,false]
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1

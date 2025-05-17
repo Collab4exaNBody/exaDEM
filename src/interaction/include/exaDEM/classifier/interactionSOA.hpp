@@ -165,7 +165,7 @@ namespace exaDEM
 
     void copy(size_t start, size_t size, std::vector<exaDEM::Interaction> &tmp, int w)
     {
-      if( tmp.size() != size ) std::cout << "Error when resizing wave " << w << std::endl; 
+      if( tmp.size() != size ) std::cout << "[ERROR] When resizing wave " << w << std::endl; 
       type = w;
 
       for (size_t i = 0 ; i < size ; i++)

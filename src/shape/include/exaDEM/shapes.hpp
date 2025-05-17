@@ -51,7 +51,6 @@ namespace exaDEM
           return &shp;
         }
       }
-      // std::cout << "Warning, the shape: " << name << " is not included in this collection of shapes. We return a nullptr." << std::endl;
       return nullptr;
     }
 
