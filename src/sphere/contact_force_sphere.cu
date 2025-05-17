@@ -74,7 +74,7 @@ namespace exaDEM
     // private
     ADD_SLOT(bool, print_warning, PRIVATE, true, DocString{"This variable is used to ensure that warning messages are displayed only once."});
     // output
-    ADD_SLOT(double, highest_kn, OUTPUT, DocString{"Get the highest value of the input contact force parameters kn (used for dt_critical)"});
+    ADD_SLOT(double, max_kn, INPUT_OUTPUT, 0, DocString{"Get the highest value of the input contact force parameters kn (used for dt_critical)"});
 
 
     public:
@@ -242,6 +242,7 @@ namespace exaDEM
     /** fill highest kn */
     void scan_kn()
     {
+      if(!(*print_warning)) return;
       double kn = 0.0;
       if(config.has_value()) kn = std::max(kn, config->kn);
       if(config_driver.has_value()) kn = std::max(kn, config->kn);
@@ -250,7 +251,7 @@ namespace exaDEM
         auto get_max_kn = [&kn] (const ContactParams& cp) -> void { kn = std::max(kn, cp.kn); };
         multimat_cp->apply(get_max_kn);
       }
-      *highest_kn = kn;
+      *max_kn = kn;
     }
 
     inline void execute() override final

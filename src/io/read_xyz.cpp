@@ -260,15 +260,11 @@ namespace exaDEM
       lout << "============================" << std::endl;
 
       grid->rebuild_particle_offsets();
+			assert(check_particles_inside_cell(*grid));
+		}
+	};
 
-#     ifndef NDEBUG
-        bool particles_inside_cell = check_particles_inside_cell(*grid);
-        assert(particles_inside_cell);
-#     endif
-    }
-  };
-
-  // === register factories ===
-  __attribute__((constructor)) static void register_factories() { OperatorNodeFactory::instance()->register_factory("read_xyz", make_grid_variant_operator<ReadXYZ>); }
+	// === register factories ===
+	__attribute__((constructor)) static void register_factories() { OperatorNodeFactory::instance()->register_factory("read_xyz", make_grid_variant_operator<ReadXYZ>); }
 
 } // namespace exaDEM

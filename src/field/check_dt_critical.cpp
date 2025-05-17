@@ -20,56 +20,90 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <onika/mpi/data_types.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/compute/reduce_cell_particles.h>
 #include <exanb/core/grid.h>
-#include <limits>
 
 namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename T, class FieldSetT, typename GridT, class = AssertGridHasFields<GridT, field::_mass>> class ReduceMinFieldOP : public OperatorNode
+  template <typename GridT> class CheckDTCritical : public OperatorNode
   {
-    using ReduceField = FieldSet<FieldSetT>;
-    static constexpr ReduceField reduce_field{};
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(double, mass, INPUT);
-    ADD_SLOT(double, kn, INPUT);
+    ADD_SLOT(double, mass, INPUT, OPTIONAL, DocString{"Mass of the particle"});
+    ADD_SLOT(double, kn, INPUT, OPTIONAL, DocString{"Contact force parameter (normal)"});
+    ADD_SLOT(double, treshold, INPUT, 1.0, DocString{"Ratio treshold."});
+    ADD_SLOT(double, dt, INPUT, DocString{"Time increment."});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
     inline std::string documentation() const override final
     {
       return R"EOF(
-        This operator checks the dt critical. 
+        This operator checks the dt critical according to a ratio treshold (dt/dt_critical). 
         )EOF";
     }
 
     public:
 
-    void check_slot()
+    bool check_slots()
     {
-      if(!mass.has_field())
+      if(!(mass.has_value()))
       {
-         
+        lout << "\033[38;5;208m[check_dt_critical, WARNING] The input slot 'mass' is not defined. Please use the 'min_mass' operator to retrieve the smallest particle mass (use rebind to rename the output slot).\033[0m" << std::endl;
+        lout << "\033[38;5;208mdt critical is not computed.\033[0m" << std::endl;
+        return false;
       }
-    }
+			else
+			{
+				if(*mass <= 0.0)
+				{
+					lout << "\033[31m[check_dt_critical, ERROR] Mass is not defined correctly, mass = " << *mass << "\033[0m" << std::endl;
+					std::exit(EXIT_FAILURE);
+				}
+			}
 
-    inline void execute() override final
-    {
-       
-    }
-  };
+			if(!(kn.has_value()))
+			{
+				lout << "\033[38;5;208m[check_dt_critical, WARNING] 'kn' is not defined. Please use the 'check_dt_critical' operator after the contact force has been applied.\033[0m" << std::endl;
+				lout << "\033[38;5;208mdt critical is not computed.\033[0m" << std::endl;
+				return false;
+			}
+			else
+			{
+				if(*kn <= 0.0)
+				{
+					lout << "\033[31m[check_dt_critical, ERROR] kn is not defined correctly, kn = " << *kn << "\033[0m" << std::endl;
+					std::exit(EXIT_FAILURE);
+				}
+			}
+			return true;
+		}
 
-  template <class GridT> using MinMassTmpl = ReduceMinFieldOP<double, field::_mass, GridT>;
+		inline void execute() override final
+		{
+			if(!check_slots()) return;
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(min_mass) { OperatorNodeFactory::instance()->register_factory("min_mass", make_grid_variant_operator<MinMassTmpl>); }
-  ONIKA_AUTORUN_INIT(min_rx)   { OperatorNodeFactory::instance()->register_factory("min_rx", make_grid_variant_operator<MinRxTmpl>); }
-  ONIKA_AUTORUN_INIT(min_ry)   { OperatorNodeFactory::instance()->register_factory("min_ry", make_grid_variant_operator<MinRyTmpl>); }
-  ONIKA_AUTORUN_INIT(min_rz)   { OperatorNodeFactory::instance()->register_factory("min_rz", make_grid_variant_operator<MinRzTmpl>); }
+			double _mass = *mass; 
+			double _kn = *kn;
+			double dt_critical = 4*std::atan(1) * std::sqrt( _mass / _kn );
+			double ratio_treshold = *treshold;
+			double ratio = *dt / dt_critical;
+			if(ratio < ratio_treshold)
+			{
+				lout << "\033[32m[check_dt_critical] The time step is correctly defined, dt_critical = " << dt_critical << "\033[0m" << std::endl;
+			}
+			else
+			{
+				lout << "\033[38;5;208m[check_dt_critical, WARNING] The time step is probably too high. Please consider reducing dt to: " << dt_critical << "\033[0m" << std::endl;
+			}
+		}
+	};
+
+	template <class GridT> using CheckDTCriticalTmpl = CheckDTCritical<GridT>;
+
+	// === register factories ===
+	ONIKA_AUTORUN_INIT(check_dt_critical) { OperatorNodeFactory::instance()->register_factory("check_dt_critical", make_grid_variant_operator<CheckDTCritical>); }
 
 } // namespace exaDEM

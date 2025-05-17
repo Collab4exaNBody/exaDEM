@@ -42,7 +42,6 @@ input_data:
      density:        [    0.02 ]
      velocity:       [ [0,0,0] ]
      sigma_velocity: [     0.1 ]
-     region: not CYL1
 
 compute_loop:
   loop: true

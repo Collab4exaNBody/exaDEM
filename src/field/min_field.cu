@@ -25,7 +25,9 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/compute/reduce_cell_particles.h>
 #include <exanb/core/grid.h>
+#include <exaDEM/traversal.h>
 #include <limits>
+
 
 namespace exaDEM
 {
@@ -34,9 +36,9 @@ namespace exaDEM
   template<typename T>
     struct ReduceMinFieldSet
     {
-      ONIKA_HOST_DEVICE_FUNC inline void operator()(T &local, const T field, reduce_thread_local_t = {}) const
+      ONIKA_HOST_DEVICE_FUNC inline void operator()(T &local, T field, reduce_thread_local_t = {}) const
       {
-        local = std::min(local, field);
+        local = field;
       }
 
       ONIKA_HOST_DEVICE_FUNC inline void operator()(T &global, const T& local, reduce_thread_block_t) const
@@ -66,13 +68,14 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename T, class FieldSetT, typename GridT, class = AssertGridHasFields<GridT, field::_mass>> class ReduceMinFieldOP : public OperatorNode
+  template <typename T, class FieldSetT, typename GridT> class ReduceMinFieldOP : public OperatorNode
   {
     using ReduceField = FieldSet<FieldSetT>;
     static constexpr ReduceField reduce_field{};
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(T, result, OUTPUT);
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -89,10 +92,14 @@ namespace exaDEM
     {
       T local = std::numeric_limits<T>::max();
       ReduceMinFieldSet<T> func;
-      reduce_cell_particles(*grid, false, func, local, reduce_field, parallel_execution_context());
+      auto [data, size] = traversal_real->info();
+      if(size > 0)
+      {
+        reduce_cell_particles(*grid, false, func, local, reduce_field, parallel_execution_context(), {}, data, size);
+      }
       T global;
       MPI_Allreduce(&local, &global, 1, onika::mpi::mpi_datatype<T>(), MPI_MIN, *mpi);
-      ldbg << "min result: " << global << std::endl;
+      lout << "min result: " << global << std::endl;
       *result = global; 
     }
   };
