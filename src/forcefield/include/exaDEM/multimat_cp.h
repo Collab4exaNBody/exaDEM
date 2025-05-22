@@ -50,7 +50,7 @@ namespace exaDEM
        */
       int size_types()
       {
-        assert(type_mpa.size() == reverse_type_map.size());
+        assert(type_map.size() == reverse_type_map.size());
         assert(type_map.size() == multimat_cp.size());
         assert(type_map.size() == number_of_materials);
         return number_of_materials;

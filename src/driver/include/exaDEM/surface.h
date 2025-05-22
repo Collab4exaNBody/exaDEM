@@ -242,7 +242,7 @@ namespace exaDEM
 			{
 				if( motion_type == LINEAR_MOTION )
 				{
-					assert( vel = this->const_vel * this->motion_vector );  
+					assert( vel == this->const_vel * this->motion_vector );  
 				}
 
 				double displ = dt * exanb::norm(vel) + 0.5 * dt * dt * acc;

@@ -42,7 +42,7 @@ namespace exaDEM
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
-    ADD_SLOT(Traversal, traversal_all, INPUT_OUTPUT, DocString{"list of non empty cells [REAL] within the current grid"});
+    ADD_SLOT(Traversal, traversal_all, INPUT, DocString{"list of non empty cells [ALL] within the current grid"});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -58,7 +58,6 @@ namespace exaDEM
       const shape *shps = shapes_collection->data();
       bool is_def_box = !domain->xform_is_identity();
 
-      
       size_t* cell_ptr = nullptr;
       size_t cell_size = size_t(-1);
       

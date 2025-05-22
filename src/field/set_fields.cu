@@ -216,7 +216,11 @@ namespace exaDEM
         if(*polyhedra)
         {
           const shapes& shps = *shapes_collection;
-          const auto& shp = shps[i];
+          const auto& shp = shps[type_id];
+          if( type_id >= shps.get_size() || shp->m_name != type_name ) {
+             
+             lout << "[set_fields, ERROR]  We can't find the shape related to the type "  <<type_name << ". Please verify that you have load all shape files." << std::endl; 
+          }
           m         = d * shp->get_volume();
           inertia   = m * shp->get_Im();
 
