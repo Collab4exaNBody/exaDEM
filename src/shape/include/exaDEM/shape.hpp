@@ -444,7 +444,7 @@ namespace exaDEM
 
       outFile << std::endl;
 
-      outFile << "LINES " << this->get_number_of_edges() << " " << 2*this->get_number_of_edges() << std::endl;
+      outFile << "LINES " << this->get_number_of_edges() << " " << 3*this->get_number_of_edges() << std::endl;
 
       auto writer_e = [] (int a, int b, std::ofstream &out)
       {
