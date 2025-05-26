@@ -10,7 +10,7 @@ io_tree:
 
 +setup_drivers:
   - register_stl_mesh:
-     id: 1
+     id: 2
      filename: piston_haut.stl
      scale: 0.5002
      minskowski: 0.001

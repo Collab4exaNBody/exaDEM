@@ -12,7 +12,7 @@ setup_drivers:
      state: { quat: [0,0,1,0]}
      params: { motion_type: STATIONARY }
   - register_cylinder:
-     id: 2
+     id: 1
      state: {center: [0.0,0.0, 0.0], axis: [1, 1, 0], radius: 4.97 }
      params: { motion_type: STATIONARY }
 
