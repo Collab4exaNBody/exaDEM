@@ -238,6 +238,7 @@ namespace exaDEM
     if (buffers.n_polygons != 0)
     {
       outFile << "    <Polys>" << std::endl;
+      outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
       outFile << buffers.faces.rdbuf() << std::endl;
       outFile << "      </DataArray>" << std::endl;
       outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
