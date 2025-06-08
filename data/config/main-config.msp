@@ -40,7 +40,6 @@ compute_loop_stop:
 # won't actually compute anything since grid is empty at this time
 init_rcut_max:
   profiling: false
-  rebind: { grid: null_grid, chunk_neighbors: null_neighbors }
   body:
     - dem_rcut_max
     - nbh_dist:        # compute neighborhood distance in grid space (nbh_dist),
@@ -146,6 +145,7 @@ simulation:
     - grid_post_processing
     - print_domain
     - save_shapes
+    - dump_data_paraview
     - performance_adviser: { verbose: true }
     - init_epilog
     - first_iteration

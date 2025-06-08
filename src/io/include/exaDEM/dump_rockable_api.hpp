@@ -2,6 +2,11 @@
 
 # include <exanb/core/particle_type_id.h>
 # include <exaDEM/shapes.hpp>
+# include <exaDEM/interaction/interaction.hpp>
+# include <exaDEM/shape_reader.hpp>
+# include <fstream>
+
+
 
 namespace rockable
 {
@@ -58,13 +63,13 @@ namespace rockable
     }
 
   template<typename STREAM>
-    Particle decrypt(const STREAM& input, ParticleTypeMap& ptm)
+    Particle decrypt_particle(STREAM&& input, ParticleTypeMap& ptm)
     {
       std::string type_name;
       Particle p;
       input >> type_name;
       // debug
-      lout << type_name << std::endl;
+      //lout << type_name << std::endl;
       p.type = ptm[type_name];
 
       input >> p.group >>  p.cluster >>  p.homothety
@@ -78,11 +83,11 @@ namespace rockable
     }
 
   template<typename STREAM>
-    Interaction decrypt(const STREAM& input)
+    Interaction decrypt_interaction(STREAM&& input)
     {
       Interaction I;
       input >> I.i >> I.j >> I.type >> I.subi >> I.subj;
-      input >> I.n >> I.dn; 
+      input >> I.n.x >> I.n.y >> I.n.z >> I.dn; 
       input >> I.pos.x >> I.pos.y >> I.pos.z; 
       input >> I.vel.x >> I.vel.y >> I.vel.z; 
       input >> I.fn.x >> I.fn.y >> I.fn.z; 
@@ -94,7 +99,7 @@ namespace rockable
 
   // skip pos, vel, fn, damp
   // missing, cell_i, cell_j, p_i, p_j
-  exaDEM::Interaction convert(const rockable::Interaction& input)
+  inline exaDEM::Interaction convert(const rockable::Interaction& input)
   {
     exaDEM::Interaction res;
     res.id_i     = input.i;
@@ -106,4 +111,156 @@ namespace rockable
     res.moment   = input.mom;
     return res;
   }
-}
+
+  struct ConfReader
+  {
+    std::string shapeFile = "undefined";
+    int precision = 13;
+    int Particles = 0;
+    int Interactions = 0;
+    int nDriven = 0;
+    double dt = -1;
+    double t = -1;  // physical time
+    std::vector<double> densities;
+    std::vector<rockable::Particle> particles;
+    std::vector<rockable::Particle> drivers;
+    std::vector<rockable::Interaction> interactions;
+    std::vector<rockable::Interaction> driver_interactions;
+
+    // for exaDEM
+    shapes shps;
+    ParticleTypeMap ptm;
+
+    bool check()
+    {
+      if( int(particles.size()) != (Particles - nDriven) ) return false;
+      if( int(interactions.size()) > Interactions ) return false; // remove interactions with drivers
+      for( auto& it : densities )
+      {
+        if( it <= 0.0 ) {
+          return false; 
+        }
+      } 
+      if( shapeFile == "undefined" ) return false;
+      if( nDriven < 0 ) return false;
+    }
+
+		void read_particles(std::ifstream &input)
+		{
+			std::string line;
+		  std::getline(input, line); // skip current line
+      drivers.resize(nDriven);
+			particles.resize(Particles);
+			for(size_t d = 0 ; d < drivers.size() ; d++)
+			{
+				std::getline(input, line);
+				if( line[0] != '#' )
+				{
+					drivers[d] = decrypt_particle(std::stringstream(line), ptm);
+				}
+				else d--;
+			}
+			for(size_t p = 0 ; p < particles.size() ; p++)
+			{
+				std::getline(input, line); 
+				particles[p] = decrypt_particle(std::stringstream(line), ptm); 
+			}
+		}
+
+		void read_interactions(std::ifstream &input)
+		{
+			std::string line;
+			int n_particle_particle = 0;
+			int n_driver_particle = 0;
+			interactions.resize(Interactions);
+			driver_interactions.resize(0);
+			for(int it = 0 ; it < Interactions ; it++)
+			{
+				std::getline(input, line);
+				if( line[0] != '#' )
+				{
+					rockable::Interaction I = decrypt_interaction(std::stringstream(line));
+
+					bool is_driver = false;
+					if( I.i < nDriven ) {
+						is_driver = true;
+					}
+					else {
+						I.i -= nDriven;
+					}
+					if( I.j < nDriven ) {
+						is_driver = true;
+					}
+					else {
+						I.j -= nDriven;
+					}
+
+					if( is_driver ) {
+						driver_interactions.push_back(I);
+						n_driver_particle++;
+					} else {
+						interactions[n_particle_particle++] = I;
+					}
+				}
+				else it--;
+			}
+			interactions.resize(n_particle_particle);
+		}
+
+		void read_stream(std::ifstream &input)
+		{
+			std::string key, line;
+			while (std::getline(input, line))
+			{
+				input >> key;
+				if ( key == "t" ) {
+					input >> t; 
+				}
+				else if ( key == "dt" ) {
+					input >> dt;
+					if(dt > 0.0) lout << "[WARNING, read_conf_rockable] dt is overloaded by the value defined within the rockable conf file" << std::endl;
+					else {
+						lout << "[ERROR, read_conf_rockable] dt is <= 0.0, please define a corret value of dt into your rockable conf file" << std::endl;  
+						std::exit(EXIT_FAILURE);
+					}
+				}
+				else if ( key == "density" ) {
+					int group;
+					input >> group;
+					if(group + 1 >= int(densities.size())) densities.resize(group + 1);
+					input >> densities[group];
+				}
+				else if ( key == "nDriven" ) {
+					input >> nDriven; 
+					if(Particles > 0) {
+						lout << "[ERROR, read_conf_rockable] nDriven is defined after Particles" << std::endl;
+						std::exit(EXIT_FAILURE);
+					}
+				}
+				else if ( key == "precision" ) {
+					input >> precision; 
+				}
+				else if ( key == "Particles" ) {
+					input >> Particles;
+					if( shapeFile == "undefined" ) {
+						lout << "[ERROR, read_conf_rockable] shapeFile is not defined before Particles" << std::endl;
+						std::exit(EXIT_FAILURE);
+					}
+          Particles -= nDriven;
+					read_particles(input);
+				}
+				else if ( key == "shapeFile" ) {
+					input >> shapeFile;
+					exaDEM::read_shp(ptm, shps, shapeFile, false);
+				}
+				else if (key ==  "Interactions") {
+					input >> Interactions;
+					read_interactions(input);
+				}
+				else {
+					lout << "[WARNING, read_conf_rockable] the key: " << key << " is skipped." << std::endl;
+				}
+			}
+		}
+	};
+};
