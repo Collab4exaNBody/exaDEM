@@ -65,7 +65,6 @@ namespace exaDEM
       } 
       MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, *mpi);
       rmax = std::max(rmax, rcm);
-      std::cout << rmax << std::endl;
     } // namespace exaDEM
   };
 

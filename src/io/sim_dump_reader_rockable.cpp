@@ -198,7 +198,7 @@ namespace exaDEM
 				{
 					file_bounds = *bounds; 
 				}
-				lout << "Domain bounds      = " << file_bounds << std::endl;
+				lout << "Domain bounds    = " << file_bounds << std::endl;
 
 
 				// domain->m_bounds = bounds;
