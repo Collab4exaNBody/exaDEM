@@ -16,26 +16,27 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <chrono>
-#include <ctime>
-#include <mpi.h>
-#include <string>
-#include <numeric>
+# include <chrono>
+# include <ctime>
+# include <mpi.h>
+# include <string>
+# include <numeric>
 
-#include <onika/math/basic_types_yaml.h>
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
-#include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/grid.h>
-#include <onika/math/basic_types_stream.h>
-#include <onika/log.h>
-//#include "ustamp/vector_utils.h"
-#include <onika/file_utils.h>
-#include <exanb/core/domain.h>
-#include <exanb/core/check_particles_inside_cell.h>
+# include <onika/math/basic_types_yaml.h>
+# include <onika/scg/operator.h>
+# include <onika/scg/operator_slot.h>
+# include <onika/scg/operator_factory.h>
+# include <exanb/core/make_grid_variant_operator.h>
+# include <exanb/core/grid.h>
+# include <onika/math/basic_types_stream.h>
+# include <onika/log.h>
+# include <onika/file_utils.h>
+# include <exanb/core/domain.h>
+# include <exanb/core/check_particles_inside_cell.h>
 # include <exaDEM/shapes.hpp>
 # include <exaDEM/dump_rockable_api.hpp>
+# include <exaDEM/drivers.h>
+# include <exaDEM/stl_mesh.h>
 
 namespace exaDEM
 {
@@ -76,6 +77,7 @@ namespace exaDEM
     ADD_SLOT(double, enlarge_bounds, INPUT, 0.0);
     ADD_SLOT(bool, pbc_adjust_xform, INPUT, false);
     ADD_SLOT(ParticleTypeMap, particle_type_map, OUTPUT );
+    ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
 
     // overloaded slots
     ADD_SLOT(double, physical_time, INPUT_OUTPUT);
@@ -115,29 +117,29 @@ namespace exaDEM
 
       // MPI Initialization
       int rank = 0, np = 1;
-      MPI_Comm_rank(*mpi, &rank);
-      MPI_Comm_size(*mpi, &np);
+			MPI_Comm_rank(*mpi, &rank);
+			MPI_Comm_size(*mpi, &np);
 
-      uint64_t n_particles = 0;
-      std::vector<ParticleTupleIO> particle_data;
+			uint64_t n_particles = 0;
+			std::vector<ParticleTupleIO> particle_data;
 
-      if (rank == 0)
-      {
-        rockable::ConfReader manager;
-        std::ifstream file;
-        file.open(file_name, std::ifstream::in);
-        if (!file.is_open())
-        {
-          lout << "[ERROR, read_conf_rockable] File " << file_name << " not found !" << std::endl;
-          std::exit(EXIT_FAILURE);
-        }
-        manager.read_stream(file);       
-        shapes shps = manager.shps;
-        *particle_type_map = manager.ptm;
-        *shapes_collection = shps;
-        if( manager.t > 0.0 ) *physical_time = manager.t;
-        if( manager.dt > 0.0 ) *dt = manager.dt;
+			rockable::ConfReader manager;
+			std::ifstream file;
+			file.open(file_name, std::ifstream::in);
+			if (!file.is_open())
+			{
+				lout << "[ERROR, read_conf_rockable] File " << file_name << " not found !" << std::endl;
+				std::exit(EXIT_FAILURE);
+			}
+			manager.read_stream(file);       
+			shapes shps = manager.shps;
+			*particle_type_map = manager.ptm;
+			*shapes_collection = shps;
+			if( manager.t > 0.0 ) *physical_time = manager.t;
+			if( manager.dt > 0.0 ) *dt = manager.dt;
 
+			if (rank == 0)
+			{
 				std::vector<rockable::Particle>& rockable_particles = manager.particles;
 				double min_x = std::numeric_limits<double>::max();
 				double min_y = std::numeric_limits<double>::max();
@@ -146,56 +148,56 @@ namespace exaDEM
 				double max_y = std::numeric_limits<double>::lowest();
 				double max_z = std::numeric_limits<double>::lowest();
 
-        n_particles = rockable_particles.size();
-        particle_data.resize(n_particles);
+				n_particles = rockable_particles.size();
+				particle_data.resize(n_particles);
 				for(size_t p = 0 ; p < rockable_particles.size() ; p++ )
 				{
-          const rockable::Particle& rp = rockable_particles[p];
+					const rockable::Particle& rp = rockable_particles[p];
 					Vec3d& pos = rockable_particles[p].pos;
-          min_x = std::min(min_x, pos.x);
-          max_x = std::max(max_x, pos.x);
+					min_x = std::min(min_x, pos.x);
+					max_x = std::max(max_x, pos.x);
 
-          min_y = std::min(min_y, pos.y);
-          max_y = std::max(max_y, pos.y);
+					min_y = std::min(min_y, pos.y);
+					max_y = std::max(max_y, pos.y);
 
-          min_z = std::min(min_z, pos.z);
-          max_z = std::max(max_z, pos.z);
-          ParticleTupleIO& ptio = particle_data[p];
-          // ID
-          ptio[field::id] = p;
-          // positions
-          ptio[field::rx] = rp.pos.x;
-          ptio[field::ry] = rp.pos.y;
-          ptio[field::rz] = rp.pos.z;
-          // velocities
-          ptio[field::vx] = rp.vel.x;
-          ptio[field::vy] = rp.vel.y;
-          ptio[field::vz] = rp.vel.z;
-          // accelerations
-          ptio[field::fx] = rp.acc.x;
-          ptio[field::fy] = rp.acc.y;
-          ptio[field::fz] = rp.acc.z;
-          // angular fields
-          ptio[field::orient] = rp.Q;
-          ptio[field::vrot] = rp.vrot;
-          ptio[field::arot] = rp.arot;
-          ptio[field::homothety] = rp.homothety;
+					min_z = std::min(min_z, pos.z);
+					max_z = std::max(max_z, pos.z);
+					ParticleTupleIO& ptio = particle_data[p];
+					// ID
+					ptio[field::id] = p;
+					// positions
+					ptio[field::rx] = rp.pos.x;
+					ptio[field::ry] = rp.pos.y;
+					ptio[field::rz] = rp.pos.z;
+					// velocities
+					ptio[field::vx] = rp.vel.x;
+					ptio[field::vy] = rp.vel.y;
+					ptio[field::vz] = rp.vel.z;
+					// accelerations
+					ptio[field::fx] = rp.acc.x;
+					ptio[field::fy] = rp.acc.y;
+					ptio[field::fz] = rp.acc.z;
+					// angular fields
+					ptio[field::orient] = rp.Q;
+					ptio[field::vrot] = rp.vrot;
+					ptio[field::arot] = rp.arot;
+					ptio[field::homothety] = rp.homothety;
 
-          // shapes 
-          ptio[field::type] = rp.type;
-          const auto& shp = shps[ptio[field::type]];
-          double d = manager.densities[ptio[field::type]];
-          ptio[field::mass] = d * shp->get_volume();
-          ptio[field::inertia] = ptio[field::mass] * shp->get_Im();
-          ptio[field::radius] = shp->compute_max_rcut();
-				} 
-
-        AABB particle_bounds = {{min_x, min_y, min_z},{ max_x, max_y, max_z}};
-        AABB file_bounds = particle_bounds;
+					// shapes 
+					ptio[field::type] = rp.type;
+					const auto& shp = shps[ptio[field::type]];
+					double d = manager.densities[ptio[field::type]];
+					ptio[field::mass] = d * shp->get_volume();
+					ptio[field::inertia] = ptio[field::mass] * shp->get_Im();
+					ptio[field::radius] = shp->compute_max_rcut();
+				}
+ 
+				AABB particle_bounds = {{min_x, min_y, min_z},{ max_x, max_y, max_z}};
+				AABB file_bounds = particle_bounds;
 				if(bounds.has_value())
-        {
-          file_bounds = *bounds; 
-        }
+				{
+					file_bounds = *bounds; 
+				}
 				lout << "Domain bounds      = " << file_bounds << std::endl;
 
 
@@ -242,16 +244,16 @@ namespace exaDEM
 					p[field::ry] = r.y;
 					p[field::rz] = r.z;
 					ParticleTuple t = p;
-          lout << "ID: " << t[field::id] << " pos " << "(" << t[field::rx] << "," << t[field::ry] << "," << t[field::rz] << ")" << std::endl;
-          ldbg << "ID: " << t[field::id] << " vel " << "(" << t[field::vx] << "," << t[field::vy] << "," << t[field::vz] << ")" << std::endl;
-          ldbg << "ID: " << t[field::id] << " acc " << "(" << t[field::fx] << "," << t[field::fy] << "," << t[field::fz] << ")" << std::endl;
-          ldbg << "ID: " << t[field::id] << " quat " << t[field::orient].w << " " << t[field::orient].x << " " << t[field::orient].y << " " << t[field::orient].z << std::endl;
-          ldbg << "ID: " << t[field::id] << " vrot " << "(" << t[field::vrot].x << "," << t[field::vrot].y << "," << t[field::vrot].z << ")" << std::endl;
-          ldbg << "ID: " << t[field::id] << " arot " << "(" << t[field::arot].x << "," << t[field::arot].y << "," << t[field::arot].z << ")" << std::endl;
-          ldbg << "ID: " << t[field::id] << " h " << t[field::homothety] << std::endl;
-          ldbg << "ID: " << t[field::id] << " radius " << t[field::radius] << std::endl;
-          lout << "ID: " << t[field::id] << " mass " << t[field::mass] << std::endl;
-          ldbg << "ID: " << t[field::id] << " intertia " << t[field::inertia] << std::endl;
+					ldbg << "ID: " << t[field::id] << " pos " << "(" << t[field::rx] << "," << t[field::ry] << "," << t[field::rz] << ")" << std::endl;
+					ldbg << "ID: " << t[field::id] << " vel " << "(" << t[field::vx] << "," << t[field::vy] << "," << t[field::vz] << ")" << std::endl;
+					ldbg << "ID: " << t[field::id] << " acc " << "(" << t[field::fx] << "," << t[field::fy] << "," << t[field::fz] << ")" << std::endl;
+					ldbg << "ID: " << t[field::id] << " quat " << t[field::orient].w << " " << t[field::orient].x << " " << t[field::orient].y << " " << t[field::orient].z << std::endl;
+					ldbg << "ID: " << t[field::id] << " vrot " << "(" << t[field::vrot].x << "," << t[field::vrot].y << "," << t[field::vrot].z << ")" << std::endl;
+					ldbg << "ID: " << t[field::id] << " arot " << "(" << t[field::arot].x << "," << t[field::arot].y << "," << t[field::arot].z << ")" << std::endl;
+					ldbg << "ID: " << t[field::id] << " h " << t[field::homothety] << std::endl;
+					ldbg << "ID: " << t[field::id] << " radius " << t[field::radius] << std::endl;
+					ldbg << "ID: " << t[field::id] << " mass " << t[field::mass] << std::endl;
+					ldbg << "ID: " << t[field::id] << " intertia " << t[field::inertia] << std::endl;
 					grid->cell(loc).push_back(t, grid->cell_allocator());
 				}
 			}
@@ -259,14 +261,40 @@ namespace exaDEM
 			lout << "============================" << std::endl;
 			grid->rebuild_particle_offsets();
 			assert(check_particles_inside_cell(*grid));
+
+
+			// Particles within the "nDriven" section become stl_mesh with a motion type "STATIONARY"
+			if( manager.nDriven > 0 )
+			{
+				auto& drvs = *drivers;
+        int next_id = drvs.get_size();
+        for(int id = 0 ; id < manager.nDriven ; id++)
+        {
+          Driver_params motion = Driver_params();
+          Stl_params state = Stl_params(); 
+
+          auto& particle = manager.drivers[id];
+          state.center = particle.pos;
+          state.vel = particle.pos; // will be reset by the motion type
+          state.vrot = particle.vrot; // will move evant with the STATIONARY motion type
+          state.quat = particle.Q;
+
+          int type = particle.type;
+          shape shp = *(manager.shps[type]);
+          Stl_mesh driver = {state, motion};
+          driver.set_shape(shp);
+          driver.initialize();
+          drvs.add_driver(next_id + id, driver);
+        }
+			}
 		}
 	};
 
-  template <typename GridT> using DumpReaderConfRockableTmpl = DumpReaderConfRockable<GridT>;
+	template <typename GridT> using DumpReaderConfRockableTmpl = DumpReaderConfRockable<GridT>;
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(sim_dump_writer_conf_rockable)
-  {
-    OperatorNodeFactory::instance()->register_factory("read_conf_rockable", make_grid_variant_operator<DumpReaderConfRockableTmpl>);
-  }
+	// === register factories ===
+	ONIKA_AUTORUN_INIT(sim_dump_writer_conf_rockable)
+	{
+		OperatorNodeFactory::instance()->register_factory("read_conf_rockable", make_grid_variant_operator<DumpReaderConfRockableTmpl>);
+	}
 } // namespace exaDEM

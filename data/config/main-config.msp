@@ -119,7 +119,6 @@ setup_drivers: nop
 drivers:
   - init_drivers
   - setup_drivers
-  - print_drivers
   - backup_drivers
   - driver_vertices:
      force_host: true
@@ -144,6 +143,7 @@ simulation:
     - init_prolog
     - grid_post_processing
     - print_domain
+    - print_drivers
     - save_shapes
     - dump_data_paraview
     - performance_adviser: { verbose: true }

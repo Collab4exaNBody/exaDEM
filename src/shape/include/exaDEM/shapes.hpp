@@ -18,7 +18,7 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/shape.hpp>
+# include <exaDEM/shape.hpp>
 
 namespace exaDEM
 {
@@ -57,6 +57,21 @@ namespace exaDEM
     inline void add_shape(shape *shp)
     {
       this->m_data.push_back(*shp); // copy
+    }
+
+    inline void add_shape(shape& shp)
+    {
+      this->m_data.push_back(shp); // copy
+    }
+    
+    inline bool contains(shape& shp)
+    {
+      for(auto& s : m_data) {
+        if(shp.m_name == s.m_name) {
+          return true;
+        }
+      }
+      return false;
     }
   };
 } // namespace exaDEM

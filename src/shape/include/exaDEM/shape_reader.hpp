@@ -21,6 +21,7 @@ under the License.
 #include <exanb/core/particle_type_id.h>
 #include <cassert>
 #include <fstream>
+#include <filesystem>
 #include <regex>
 
 namespace exaDEM
@@ -35,6 +36,7 @@ namespace exaDEM
     output << std::endl << "<" << std::endl;
     output << "name " << shp.m_name.c_str() << std::endl;
     output << "radius " << shp.m_radius << std::endl;
+    output << "preCompDone y" << std::endl;
     output << "nv " << nv << std::endl;
     for (int i = 0; i < nv; i++)
     {
@@ -253,4 +255,29 @@ namespace exaDEM
       }
     }
   }
+
+  inline void write_shps(shapes& shps, std::string filename, int precision = 16)
+	{
+		std::stringstream stream;
+		stream << std::setprecision(precision);
+		// creating directory if it does not already exist
+		const std::filesystem::path fspath(filename);
+		std::filesystem::create_directories(fspath.parent_path());
+		// open output file
+		std::ofstream outFile(filename);
+		if (!outFile)
+		{
+			std::cerr << "[write_shapes, ERROR] Impossible to create the output file: " << filename << std::endl;
+			std::exit(EXIT_FAILURE);
+		}
+		// fill stream with shape data
+		for (size_t i = 0; i < shps.get_size(); i++)
+		{
+			const shape *shp = shps[i];
+			exaDEM::write_shp(*shp, stream);
+		}
+		// fill output file
+		outFile << std::setprecision(16);
+		outFile << stream.rdbuf();
+	}
 } // namespace exaDEM
