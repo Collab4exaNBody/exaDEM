@@ -6,50 +6,59 @@
 # include <exaDEM/shape_reader.hpp>
 # include <fstream>
 
-
-
 namespace rockable
 {
   using namespace exanb;
   using namespace exaDEM;
 
-  // reader and writer
+  /**
+   * @brief Data structure representing a single particle for I/O purposes.
+   */
   struct Particle
   {
-    int type; // Use for exaDEM
-    int group;    ///< A number that relates to a 'category of bodies'
-    int cluster = 0;  ///< A number that identifies the cluster to which the particle belongs
+    int type;  ///< Internal type identifier (used by exaDEM)
+    int group; ///< Group identifier corresponding to a category of bodies
+    int cluster = 0; ///< Cluster identifier to which the particle belongs
 
     Vec3d pos;  ///< Position
-    Vec3d vel;  ///< Velocity
-    Vec3d acc;  ///< Acceleration
+    Vec3d vel;  ///< Linear velocity
+    Vec3d acc;  ///< Linear acceleration
 
-    Quaternion Q;      ///< Angular position
-    Vec3d vrot;  ///< Angular velocity
-    Vec3d arot;  ///< Angular acceleration
+    Quaternion Q; ///< Orientation as a quaternion
+    Vec3d vrot;   ///< Angular velocity (rotation speed)
+    Vec3d arot;   ///< Angular acceleration
 
-    double homothety;  ///< Homothety applied to the shape
+    double homothety; ///< Homothety (uniform scaling) factor applied to the shape
   };
 
-  // only used by the reader
+  /**
+   * @brief Data structure representing an interaction between two particles.
+   */
   struct Interaction
   {
-    int type; // Use for exaDEM
-    int i; // i is also id i
-    int j; // j is also id j
-    int subi;
-    int subj;
-
-    Vec3d n;  ///< normal
-    double dn;
-    Vec3d pos;  ///< Position
-    Vec3d vel;  ///< Velocity
-    Vec3d fn;  
-    Vec3d ft;  
-    Vec3d mom;  
-    double damp;
+    int type;    ///< Contact type identifier (used by exaDEM)
+    int i;       ///< ID of the first interacting particle (also referred to as id i)
+    int j;       ///< ID of the second interacting particle (also referred to as id j)
+    int subi;    ///< Sub-identifier or local index for particle i
+    int subj;    ///< Sub-identifier or local index for particle j
+    Vec3d n;     ///< Contact normal vector
+    double dn;   ///< Penetration depth or normal overlap
+    Vec3d pos;   ///< Contact position
+    Vec3d vel;   ///< Relative velocity at the contact point
+    Vec3d fn;    ///< Normal contact force
+    Vec3d ft;    ///< Tangential contact force
+    Vec3d mom;   ///< Contact moment (torque)
+    double damp; ///< Damping coefficient applied to the interaction
   };
 
+  /**
+   * @brief Streams the data of a particle to an output stream.
+   * 
+   * @tparam STREAM The output stream type (e.g., std::ostream).
+   * @param output The output stream to write the data to.
+   * @param p The particle to be serialized.
+   * @param shps The shape registry used to resolve the shape name from particle type.
+   */
   template<typename STREAM>
     void stream(STREAM& output, const Particle& p, exaDEM::shapes& shps)
     {
@@ -62,6 +71,14 @@ namespace rockable
         << p.arot.x << " " << p.arot.y << " " << p.arot.z;
     }
 
+  /**
+   * @brief Deserialize a Particle object from an input stream.
+   *
+   * @tparam STREAM Type of the input stream (e.g., std::istream).
+   * @param input Input stream to read from.
+   * @param ptm Map from particle type names to particle type IDs.
+   * @return Particle object initialized from the stream data.
+   */
   template<typename STREAM>
     Particle decrypt_particle(STREAM&& input, ParticleTypeMap& ptm)
     {
@@ -82,6 +99,13 @@ namespace rockable
       return p;
     }
 
+  /**
+   * @brief Deserialize an Interaction object from an input stream.
+   *
+   * @tparam STREAM Input stream type (e.g., std::istream).
+   * @param input The input stream to read from.
+   * @return Fully initialized Interaction object.
+   */
   template<typename STREAM>
     Interaction decrypt_interaction(STREAM&& input)
     {
@@ -97,10 +121,17 @@ namespace rockable
       return I;
     }
 
-  // skip pos, vel, fn, damp
-  // missing, cell_i, cell_j, p_i, p_j
+  /**
+   * @brief Deserializes an Interaction object from an input stream.
+   *
+   * @tparam STREAM The input stream type (e.g., std::istream).
+   * @param input The input stream to read from.
+   * @return The fully initialized Interaction object.
+   */
   inline exaDEM::Interaction convert(const rockable::Interaction& input)
   {
+    // skip pos, vel, fn, damp
+    // missing, cell_i, cell_j, p_i, p_j
     exaDEM::Interaction res;
     res.id_i     = input.i;
     res.id_j     = input.j;
@@ -112,46 +143,72 @@ namespace rockable
     return res;
   }
 
+  /**
+   * @brief Configuration reader structure for particle and interaction simulation from rockable files.
+   */
   struct ConfReader
   {
-    std::string shapeFile = "undefined";
-    int precision = 13;
-    int Particles = 0;
-    int Interactions = 0;
-    int nDriven = 0;
-    double dt = -1;
-    double t = -1;  // physical time
-    bool periodic[3] = {false, false, false};
-    std::vector<double> densities;
-    std::vector<rockable::Particle> particles;
-    std::vector<rockable::Particle> drivers;
-    std::vector<rockable::Interaction> interactions;
-    std::vector<rockable::Interaction> driver_interactions;
+    std::string shapeFile = "undefined";      ///< Filename of the shape file
+    int precision = 13;                       ///< Numeric precision for output or calculations (Particles)
+    int n_particles = 0;                      ///< Number of particles in the simulation
+    int n_interactions = 0;                   ///< Number of interactions (contacts)
+    int nDriven = 0;                          ///< Number of driven particles (or drivers)
+    double dt = -1;                           ///< Time step size (negative means undefined)
+    double t = -1;                            ///< Physical simulation time (negative means undefined)
+    bool periodic[3] = {false, false, false}; ///< Periodic boundary conditions flags in x, y, z directions
 
-    // for exaDEM
-    shapes shps;
-    ParticleTypeMap ptm;
+    std::vector<double> densities;                      ///< Material densities for particles
+    std::vector<rockable::Particle> particles;          ///< Vector of particles in the simulation
+    std::vector<rockable::Particle> drivers;            ///< Vector of driver particles (externally controlled)
+    std::vector<rockable::Interaction> interactions;    ///< Vector of particle interactions
+    std::vector<rockable::Interaction> driver_interactions; ///< Vector of interactions involving drivers
 
+    // For exaDEM integration
+    shapes shps;               ///< Registry of shapes indexed by particle type
+    ParticleTypeMap ptm;       ///< Map from particle type names to type IDs
+
+    /**
+     * @brief Validates the configuration data integrity.
+     *
+     * Checks consistency between the number of particles, interactions,
+     * densities, and other key parameters.
+     *
+     * @return true if the configuration passes all checks; false otherwise.
+     */
     bool check()
     {
-      if( int(particles.size()) != (Particles - nDriven) ) return false;
-      if( int(interactions.size()) > Interactions ) return false; // remove interactions with drivers
+      // Check if the number of particles excluding driven ones matches the vector size
+      if( int(particles.size()) != (n_particles - nDriven) ) return false;
+      // Check that interactions size is not larger than expected (drivers interactions may be excluded)
+      if( int(interactions.size()) > n_interactions ) return false; // remove interactions with drivers
+                                                                    // Check that all densities are positive
       for( auto& it : densities )
       {
         if( it <= 0.0 ) {
           return false; 
         }
       } 
+      // Check if shape file is defined
       if( shapeFile == "undefined" ) return false;
+      // Check that number of driven particles is non-negative
       if( nDriven < 0 ) return false;
+      // If all checks passed
+      return true;
     }
 
+    /**
+     * @brief Reads particle data from an input file stream.
+     *
+     * @param input Input file stream to read from.
+     */
     void read_particles(std::ifstream &input)
     {
       std::string line;
       drivers.resize(nDriven);
-      particles.resize(Particles);
-      
+      particles.resize(n_particles);
+
+      // Read driver particles
+
       for(int d = 0 ; d < nDriven ; d++)
       {
         std::getline(input, line);
@@ -162,6 +219,7 @@ namespace rockable
         }
         else d--;
       }
+      // Read regular particles
       for(size_t p = 0 ; p < particles.size() ; p++)
       {
         std::getline(input, line); 
@@ -169,52 +227,73 @@ namespace rockable
       }
     }
 
+    /**
+     * @brief Reads interaction data from an input file stream.
+     *
+     * @param input Input file stream to read from.
+     */
     void read_interactions(std::ifstream &input)
     {
       std::string line;
       int n_particle_particle = 0;
       int n_driver_particle = 0;
-      interactions.resize(Interactions);
-      driver_interactions.resize(0);
-      for(int it = 0 ; it < Interactions ; it++)
+      interactions.resize(n_interactions);
+      driver_interactions.clear();
+      for(int it = 0 ; it < n_interactions ; it++)
       {
         std::getline(input, line);
-        if( line[0] != '#' )
+        // Skip comment lines starting with '#'
+        if (line.empty() || line[0] == '#')
         {
-          rockable::Interaction I = decrypt_interaction(std::stringstream(line));
-
-          bool is_driver = false;
-          if( I.i < nDriven ) {
-            is_driver = true;
-          }
-          else {
-            I.i -= nDriven;
-          }
-          if( I.j < nDriven ) {
-            is_driver = true;
-          }
-          else {
-            I.j -= nDriven;
-          }
-
-          if( is_driver ) {
-            driver_interactions.push_back(I);
-            n_driver_particle++;
-          } else {
-            interactions[n_particle_particle++] = I;
-          }
+          it--;
+          continue;
         }
-        else it--;
+
+        rockable::Interaction I = decrypt_interaction(std::stringstream(line));
+        bool is_driver = false;
+
+        if( I.i < nDriven ) {
+          is_driver = true;
+        }
+        else {
+          I.i -= nDriven;
+        }
+        if( I.j < nDriven ) {
+          is_driver = true;
+        }
+        else {
+          I.j -= nDriven;
+        }
+
+        if( is_driver ) {
+          driver_interactions.push_back(I);
+          n_driver_particle++;
+        } else {
+          interactions[n_particle_particle++] = I;
+        }
       }
       interactions.resize(n_particle_particle);
     }
 
+    /**
+     * @brief Reads and parses the rockable configuration from an input file stream.
+     *
+     * This function reads the configuration line-by-line, processes known keys,
+     * sets the corresponding member variables, and calls relevant functions to
+     * read particles and interactions data.
+     *
+     * @param file Input file stream to read from.
+     */
     void read_stream(std::ifstream &file)
     {
       int max_warning_displayed = 40;
       std::string key, line;
       while (std::getline(file, line))
       {
+        size_t first_char_pos = line.find_first_not_of(" \t");
+        if (first_char_pos == std::string::npos) continue;   // empty line
+        if (line[first_char_pos] == '#') continue;           // comment line
+
         ldbg << line << std::endl;
         std::stringstream input(line);
         input >> key;
@@ -246,7 +325,7 @@ namespace rockable
         }
         else if ( key == "nDriven" ) {
           input >> nDriven; 
-          if(Particles > 0) {
+          if(n_particles > 0) {
             lout << "\033[31m[read_conf_rockable, ERROR] 'nDriven' is defined after 'Particles'.\033[0m" << std::endl;
             std::exit(EXIT_FAILURE);
           }
@@ -255,12 +334,12 @@ namespace rockable
           input >> precision; 
         }
         else if ( key == "Particles" ) {
-          input >> Particles;
+          input >> n_particles;
           if( shapeFile == "undefined" ) {
             lout << "\033[31m[read_conf_rockable, ERROR] 'shapeFile' is not defined before 'Particles'.\033[0m" << std::endl;
             std::exit(EXIT_FAILURE);
           }
-          Particles -= nDriven;
+          n_particles -= nDriven;
           std::getline(input, line);
           read_particles(file);
         }
@@ -269,7 +348,7 @@ namespace rockable
           exaDEM::read_shp(ptm, shps, shapeFile, false);
         }
         else if (key ==  "Interactions") {
-          input >> Interactions;
+          input >> n_interactions;
           read_interactions(file);
         }
         else {
@@ -279,7 +358,7 @@ namespace rockable
       }
       if(max_warning_displayed < 0) lout << "\033[31m";
       else lout << "\033[32m";
-      lout << "Rockable reader  = " << nDriven << " drivers - " << Particles << " particles - " << Interactions << " interactions - " << -max_warning_displayed * (-max_warning_displayed >= 0) << " warnings not displayed " << std::endl;
+      lout << "Rockable reader  = " << nDriven << " drivers - " << n_particles << " particles - " << n_interactions << " interactions - " << -max_warning_displayed * (-max_warning_displayed >= 0) << " warnings not displayed " << std::endl;
       lout << "\033[0m";
     }
   };

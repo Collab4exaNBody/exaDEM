@@ -254,9 +254,16 @@ namespace exaDEM
         shp.write_paraview();
       }
     }
-  }
+	}
 
-  inline void write_shps(shapes& shps, std::string filename, int precision = 16)
+	/**
+	 * @brief Writes shape data from the given shapes container to a file.
+	 *
+	 * @param shps The container of shapes to write.
+	 * @param filename The output file path.
+	 * @param precision The numeric precision for floating-point output (default 16).
+	 */
+	inline void write_shps(shapes& shps, std::string filename, int precision = 16)
 	{
 		std::stringstream stream;
 		stream << std::setprecision(precision);
