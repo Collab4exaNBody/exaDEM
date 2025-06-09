@@ -62,7 +62,7 @@ namespace exaDEM
     // ----------- Operator documentation ------------
     inline std::string documentation() const override final
     {
-      return R"EOF(This operator reads a rockable output file. However, some lines are not processed by the reader, such as the contact law type or its parameters.
+      return R"EOF(This operator writes a minimal rockable output file to use the rockable tool `see`.
 
          YAML example:
 
