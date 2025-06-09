@@ -26,63 +26,6 @@ under the License.
 #include <exanb/compute/reduce_cell_particles.h>
 #include <mpi.h>
 
-/*
-#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
-
-__device__ double atomicMax_double(double* address, double val)
-{
-unsigned long long int* address_as_ull = (unsigned long long int*) address;
-unsigned long long int old = *address_as_ull, assumed;
-do {
-assumed = old;
-old = atomicCAS(address_as_ull, assumed,
-__double_as_longlong(fmax(val, __longlong_as_double(assumed))));
-} while (assumed != old);
-return __longlong_as_double(old);
-}
-
-#define EXADEM_CU_ATOMIC_MAX(x,a,...) atomicMax_double( &x , static_cast<std::remove_reference_t<decltype(x)> >(a) );
-
-#else
-#define EXADEM_CU_ATOMIC_MAX(x,a,...) ::onika::capture_atomic_max( x , static_cast<std::remove_reference_t<decltype(x)> >(a) );
-#endif
-
-
-namespace exaDEM
-{
-using namespace exanb;
-
-struct DEMRcutMaxFunctor
-{
-ONIKA_HOST_DEVICE_FUNC inline void operator () (double& local_variable, const double rad, reduce_thread_local_t={} ) const
-{
-local_variable = std::max(local_variable, 2*rad);
-}
-
-ONIKA_HOST_DEVICE_FUNC inline void operator () ( double& global, double local, reduce_thread_block_t ) const
-{
-EXADEM_CU_ATOMIC_MAX( global, local );
-}
-
-ONIKA_HOST_DEVICE_FUNC inline void operator () (double& global , double local, reduce_global_t ) const
-{
-EXADEM_CU_ATOMIC_MAX( global, local );
-}
-};
-
-};
-
-namespace exanb
-{
-template<> struct ReduceCellParticlesTraits<exaDEM::DEMRcutMaxFunctor>
-{
-static inline constexpr bool RequiresBlockSynchronousCall = false;
-static inline constexpr bool RequiresCellParticleIndex = false;
-static inline constexpr bool CudaCompatible = true;
-};
-};
- */
-
 namespace exaDEM
 {
   using namespace exanb;
@@ -91,8 +34,7 @@ namespace exaDEM
   {
     //      using ReduceFields = FieldSet<field::_radius>;
     //      static constexpr ReduceFields reduce_field_set {};
-
-    ADD_SLOT(GridT, grid, INPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
 
@@ -103,11 +45,8 @@ namespace exaDEM
     public:
     inline void execute() override final
     {
-      MPI_Comm comm = *mpi;
       double &rmax = *rcut_max;
       auto cells = grid->cells();
-      const size_t n_cells = grid->number_of_cells(); // nbh.size();
-      ldbg << "grid size = " << n_cells << std::endl;
       const IJK dims = grid->dimension();
       double rcm = 0;
 #     pragma omp parallel
@@ -119,20 +58,21 @@ namespace exaDEM
 #     pragma omp simd
           for (size_t j = 0; j < n; j++)
           {
-            rcm = std::max(rcm, r[j]); // 4/3 * pi * r^3 * d
+            rcm = std::max(rcm, 2*r[j]); 
           }
         }
         GRID_OMP_FOR_END
       } 
-      MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, comm);
+      MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, *mpi);
       rmax = std::max(rmax, rcm);
-      lout << "Rcut max= " << rmax << std::endl;
     } // namespace exaDEM
-  }
-  ;
+  };
 
   template <class GridT> using DEMRcutMaxTmpl = DEMRcutMax<GridT>;
 
   // === register factories ===
-  ONIKA_AUTORUN_INIT(dem_rcut_max) { OperatorNodeFactory::instance()->register_factory("dem_rcut_max", make_grid_variant_operator<DEMRcutMaxTmpl>); }
+  ONIKA_AUTORUN_INIT(dem_rcut_max) 
+  { 
+    OperatorNodeFactory::instance()->register_factory("dem_rcut_max", make_grid_variant_operator<DEMRcutMaxTmpl>); 
+  }
 }
