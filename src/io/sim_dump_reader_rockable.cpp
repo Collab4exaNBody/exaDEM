@@ -69,54 +69,63 @@ namespace exaDEM
   {
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(std::string, filename, INPUT, REQUIRED);
-    ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
-    ADD_SLOT(shapes, shapes_collection, OUTPUT, DocString{"Collection of shapes"});
-    ADD_SLOT(Domain, domain, INPUT_OUTPUT);
-    ADD_SLOT(AABB, bounds, INPUT, OPTIONAL, DocString{"This option overide the domain bounds."});
-    ADD_SLOT(double, enlarge_bounds, INPUT, 0.0);
-    ADD_SLOT(bool, pbc_adjust_xform, INPUT, false);
-    ADD_SLOT(ParticleTypeMap, particle_type_map, OUTPUT );
-    ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+    ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{" Dump file name to read."});
+		ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
+		ADD_SLOT(shapes, shapes_collection, OUTPUT, DocString{"Collection of shapes"});
+		ADD_SLOT(Domain, domain, INPUT_OUTPUT);
+		ADD_SLOT(AABB, bounds, INPUT, OPTIONAL, DocString{"This option overide the domain bounds."});
+		ADD_SLOT(double, enlarge_bounds, INPUT, 0.0, DocString{"Define a layer around the volume size. Default size is 0."});
+		ADD_SLOT(ParticleTypeMap, particle_type_map, OUTPUT );
+		ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
 
-    // overloaded slots
-    ADD_SLOT(double, physical_time, INPUT_OUTPUT);
-    ADD_SLOT(double, dt, INPUT_OUTPUT);
 
-  public:
-    inline void execute() override final
-    {
-      //-------------------------------------------------------------------------------------------
-      // Reading datas from YAML or previous input
-      std::string file_name = onika::data_file_path(*filename);
+		// overloaded slots
+		ADD_SLOT(double, physical_time, INPUT_OUTPUT);
+		ADD_SLOT(double, dt, INPUT_OUTPUT);
 
-      if (*pbc_adjust_xform)
-      {
-        if (!domain->xform_is_identity())
-        {
-          lerr << "pbc_adjust_xform needs initial XForm to be identity, resetting XForm" << std::endl;
-          domain->set_xform(make_identity_matrix());
-        }
-      }
+		// -----------------------------------------------
+		// ----------- Operator documentation ------------
+		inline std::string documentation() const override final
+		{
+			return R"EOF(This operator reads a rockable output file. However, some lines are not processed by the reader, such as the contact law type or its parameters.
 
-      //      grid = GridT();
-      //-------------------------------------------------------------------------------------------
-      std::string basename;
-      std::string::size_type p = file_name.rfind("/");
-      if (p != std::string::npos)
-        basename = file_name.substr(p + 1);
-      else
-        basename = file_name;
-      lout << "======== " << basename << " ========" << std::endl;
-      //-------------------------------------------------------------------------------------------
+         YAML example:
 
-      using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_vrot, field::_arot, field::_orient, field::_type,  field::_inertia,  field::_mass,  field::_radius,  field::_homothety >;
-      using ParticleTuple = decltype(grid->cells()[0][0]);
+         input_data:
+           - read_conf_rockable:
+              filename: input_file/518_poly.conf
 
-      assert(grid->number_of_particles() == 0);
+          Options:
+          - bounds: This option defines the simulation domain. If not specified, the domain size is determined by the particle positions. Ex: [[0,0,0],[1,1,1]].
+          - filename: Dump file name to read.
+          - enlarge_bounds: Define a layer around the volume size. Default size is 0.
 
-      // MPI Initialization
-      int rank = 0, np = 1;
+        )EOF";
+		}
+
+		public:
+		inline void execute() override final
+		{
+			//-------------------------------------------------------------------------------------------
+			// Reading datas from YAML or previous input
+			std::string file_name = onika::data_file_path(*filename);
+			//-------------------------------------------------------------------------------------------
+			std::string basename;
+			std::string::size_type p = file_name.rfind("/");
+			if (p != std::string::npos)
+				basename = file_name.substr(p + 1);
+			else
+				basename = file_name;
+			lout << "======== " << basename << " ========" << std::endl;
+			//-------------------------------------------------------------------------------------------
+
+			using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_vrot, field::_arot, field::_orient, field::_type,  field::_inertia,  field::_mass,  field::_radius,  field::_homothety >;
+			using ParticleTuple = decltype(grid->cells()[0][0]);
+
+			assert(grid->number_of_particles() == 0);
+
+			// MPI Initialization
+			int rank = 0, np = 1;
 			MPI_Comm_rank(*mpi, &rank);
 			MPI_Comm_size(*mpi, &np);
 
@@ -128,7 +137,7 @@ namespace exaDEM
 			file.open(file_name, std::ifstream::in);
 			if (!file.is_open())
 			{
-				lout << "[ERROR, read_conf_rockable] File " << file_name << " not found !" << std::endl;
+				lout << "\033[31m[read_conf_rockable, ERROR] File " << file_name << " not found !\033[0m" << std::endl;
 				std::exit(EXIT_FAILURE);
 			}
 			manager.read_stream(file);       
@@ -191,7 +200,7 @@ namespace exaDEM
 					ptio[field::inertia] = ptio[field::mass] * shp->get_Im();
 					ptio[field::radius] = shp->compute_max_rcut();
 				}
- 
+
 				AABB particle_bounds = {{min_x, min_y, min_z},{ max_x, max_y, max_z}};
 				AABB file_bounds = particle_bounds;
 				if(bounds.has_value())
@@ -202,27 +211,17 @@ namespace exaDEM
 
 
 				// domain->m_bounds = bounds;
-				compute_domain_bounds(*domain, *bounds_mode, *enlarge_bounds, file_bounds, file_bounds, *pbc_adjust_xform);
-				if (*pbc_adjust_xform && !domain->xform_is_identity())
-				{
-					Mat3d inv_xform = domain->inv_xform();
-					for (auto &p : particle_data)
-					{
-						Vec3d r = inv_xform * Vec3d{p[field::rx], p[field::ry], p[field::rz]};
-						p[field::rx] = r.x;
-						p[field::ry] = r.y;
-						p[field::rz] = r.z;
-					}
-				}
+				compute_domain_bounds(*domain, *bounds_mode, *enlarge_bounds, file_bounds, file_bounds, false);
+				domain->set_periodic_boundary(manager.periodic[0], manager.periodic[1], manager.periodic[2]);
 				lout << "Particles        = " << particle_data.size() << std::endl;
 				lout << "Domain XForm     = " << domain->xform() << std::endl;
 				lout << "Domain bounds    = " << domain->bounds() << std::endl;
 				lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
+				lout << "Periodicity      = [" << domain->periodic_boundary_x() << "," << domain->periodic_boundary_y() << "," << domain->periodic_boundary_z() << "]" << std::endl;
 				lout << "Real size        = " << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33} << std::endl;
 				lout << "Cell size        = " << domain->cell_size() << std::endl;
 				lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension()) << " cells)" << std::endl;
 			}
-
 			// send bounds and size_box values to all cores
 			MPI_Bcast(&(*domain), sizeof(Domain), MPI_CHARACTER, 0, *mpi);
 			assert(check_domain(*domain));
@@ -267,25 +266,25 @@ namespace exaDEM
 			if( manager.nDriven > 0 )
 			{
 				auto& drvs = *drivers;
-        int next_id = drvs.get_size();
-        for(int id = 0 ; id < manager.nDriven ; id++)
-        {
-          Driver_params motion = Driver_params();
-          Stl_params state = Stl_params(); 
+				int next_id = drvs.get_size();
+				for(int id = 0 ; id < manager.nDriven ; id++)
+				{
+					Driver_params motion = Driver_params();
+					Stl_params state = Stl_params(); 
 
-          auto& particle = manager.drivers[id];
-          state.center = particle.pos;
-          state.vel = particle.pos; // will be reset by the motion type
-          state.vrot = particle.vrot; // will move evant with the STATIONARY motion type
-          state.quat = particle.Q;
+					auto& particle = manager.drivers[id];
+					state.center = particle.pos;
+					state.vel = particle.pos; // will be reset by the motion type
+					state.vrot = particle.vrot; // will move evant with the STATIONARY motion type
+					state.quat = particle.Q;
 
-          int type = particle.type;
-          shape shp = *(manager.shps[type]);
-          Stl_mesh driver = {state, motion};
-          driver.set_shape(shp);
-          driver.initialize();
-          drvs.add_driver(next_id + id, driver);
-        }
+					int type = particle.type;
+					shape shp = *(manager.shps[type]);
+					Stl_mesh driver = {state, motion};
+					driver.set_shape(shp);
+					driver.initialize();
+					drvs.add_driver(next_id + id, driver);
+				}
 			}
 		}
 	};
