@@ -148,23 +148,23 @@ namespace exaDEM
       }
 
       const double time = *dt;
-      //auto &classifier = *ic;
-      auto &classifier = *ic2;
+      auto &classifier = *ic;
+      //auto &classifier = *ic2;
 
       contact_law<is_sym, def_box> sph = {xform};
       contact_law_driver<Cylinder, def_box> cyl = {xform};
       contact_law_driver<Surface, def_box> surf = {xform};
       contact_law_driver<Ball, def_box> ball = {xform};
 
-      /*run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
+      run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
       run_contact_law(parallel_execution_context(), 4, classifier, cyl, cells, drvs, hkp_drvs, time);
       run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs, hkp_drvs, time);
-      run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);*/
+      run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);
       
-      run_contact_law2(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
+      /*run_contact_law2(parallel_execution_context(), 0, classifier, sph, cells, hkp, time);
       run_contact_law2(parallel_execution_context(), 4, classifier, cyl, cells, drvs, hkp_drvs, time);
       run_contact_law2(parallel_execution_context(), 5, classifier, surf, cells, drvs, hkp_drvs, time);
-      run_contact_law2(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);
+      run_contact_law2(parallel_execution_context(), 6, classifier, ball, cells, drvs, hkp_drvs, time);*/
 
       constexpr int stl_type_start = 7;
       constexpr int stl_type_end = 9;
@@ -203,21 +203,21 @@ namespace exaDEM
       const long frequency_interaction = *analysis_interaction_dump_frequency;
       bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
 
-      /*if(*symetric == false && is_def_box == false) {core<false, false>();}      
+      if(*symetric == false && is_def_box == false) {core<false, false>();}      
       if(*symetric == true  && is_def_box == false) {core<true , false>();}      
       if(*symetric == false && is_def_box ==  true) {core<false,  true>();}      
-      if(*symetric == true  && is_def_box ==  true) {core<true ,  true>();}*/
+      if(*symetric == true  && is_def_box ==  true) {core<true ,  true>();}
       
-      if(*symetric == false && is_def_box == false) {core2<false, false>();}      
+      /*if(*symetric == false && is_def_box == false) {core2<false, false>();}      
       if(*symetric == true  && is_def_box == false) {core2<true , false>();}      
       if(*symetric == false && is_def_box ==  true) {core2<false,  true>();}      
-      if(*symetric == true  && is_def_box ==  true) {core2<true ,  true>();}
+      if(*symetric == true  && is_def_box ==  true) {core2<true ,  true>();}*/
 
       //printf("SAVE\n");
       if (write_interactions)
       {
-        //save_results();
-        save_results2();
+        save_results();
+        //save_results2();
       }
       //printf("SAVE END\n");
       

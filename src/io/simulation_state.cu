@@ -222,10 +222,10 @@ namespace exaDEM
       reduce_cell_particles(*grid, false, func, sim, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
 
       // get interaction informations
-      //Classifier<InteractionSOA> &classifier = *ic;
-      Classifier2 &classifier = *ic2;
-      //exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
-      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io2(classifier, *symetric);
+      Classifier<InteractionSOA> &classifier = *ic;
+      //Classifier2 &classifier = *ic2;
+      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
+      //exaDEM::itools::IOSimInteractionResult red = reduce_sim_io2(classifier, *symetric);
 
       // reduce partial sums and share the result
       uint64_t active_interactions, total_interactions;

@@ -168,13 +168,13 @@ namespace exaDEM
 
       // get slot data
       auto cells = grid->cells();
-      //Classifier<InteractionSOA>& cf = *ic;
-      Classifier2& cf = *ic2;
+      Classifier<InteractionSOA>& cf = *ic;
+      //Classifier2& cf = *ic2;
       // get kernel
       constexpr bool sym = true;
-      compute_stress_tensors2<13, sym, StressTensor> runner = {this}; // 13 is the number of interaction types
+      //compute_stress_tensors2<13, sym, StressTensor> runner = {this}; // 13 is the number of interaction types
                                                                      // iterate over types
-      //compute_stress_tensors<13, sym, StressTensor> runner = {this}; // 13 is the number of interaction types
+      compute_stress_tensors<13, sym, StressTensor> runner = {this}; // 13 is the number of interaction types
                                                                      // iterate over types
                                                                      
       runner(cf, cells);

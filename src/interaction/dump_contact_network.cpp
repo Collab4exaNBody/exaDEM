@@ -70,9 +70,9 @@ namespace exaDEM
 			MPI_Comm_rank(*mpi, &rank);
 			MPI_Comm_size(*mpi, &size);
 
-			//Classifier<InteractionSOA>& classifier = (*ic);
-			Classifier2& classifier = (*ic2);
-			NetworkFunctor2<GridT> manager(*grid);
+			Classifier<InteractionSOA>& classifier = (*ic);
+			//Classifier2& classifier = (*ic2);
+			NetworkFunctor<GridT> manager(*grid);
 
 			if (rank == 0)
 			{
