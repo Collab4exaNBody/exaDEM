@@ -311,6 +311,7 @@ namespace exaDEM
   /*****************/
   /* Vertex - Face */
   /*****************/
+/*
   template<typename VecJ>
     ONIKA_HOST_DEVICE_FUNC 
     inline bool filter_vertex_face(
@@ -324,6 +325,7 @@ namespace exaDEM
       assert(j < shpj->get_number_of_faces());
       return filter_vertex_face(rVerlet, vi, ri, vaj, j, shpj);
     }
+*/
 
   template<typename VecI, typename VecJ>
     ONIKA_HOST_DEVICE_FUNC 

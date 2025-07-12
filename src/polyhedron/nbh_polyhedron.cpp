@@ -404,7 +404,7 @@ namespace exaDEM
               return;
               }
 
-              VertexGPUAccessor vertex_cell_b = grid_vertex[cell_b];
+              VertexGPUAccessor& vertex_cell_b = grid_vertex[cell_b];
               WrapperVertexGPUAccessor vertices_b = {p_b, vertex_cell_b};
               WrapperVertexGPUAccessor vertices_a = {p_a, vertex_cell_a};
 
