@@ -46,7 +46,7 @@ namespace exaDEM
     return filter(rcut + shpi->m_radius, vi);
   }
 
-  template <typename Driver> ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_driver(Driver &driver, const double rcut, const VertexArray &vertexes, const int i, const shape *shpi)
+  template <typename Driver, typename VertexType> ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_driver(Driver &driver, const double rcut, const VertexType &vertexes, const int i, const shape *shpi)
   {
     filter_driver<Driver> filter = {driver};
     return filter(rcut + shpi->m_radius, vertexes[i]);
@@ -67,7 +67,7 @@ namespace exaDEM
     return detector(shpi->m_radius, vi);
   }
 
-  template <typename Driver> ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector_vertex_driver(Driver &driver, const VertexArray &vertexes, const int i, const shape *shpi)
+  template <typename Driver, typename VertexType> ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector_vertex_driver(Driver &driver, const VertexType &vertexes, const int i, const shape *shpi)
   {
     detector_driver<Driver> detector = {driver};
     return detector(shpi->m_radius, vertexes[i]);

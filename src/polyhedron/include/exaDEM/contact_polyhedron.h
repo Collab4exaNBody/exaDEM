@@ -119,16 +119,18 @@ namespace exaDEM
          *
          * @tparam TMPLC Type of the cells or particles container.
          * @tparam TCFPA Template Contact Force Parameters Accessor.
+         * @tparam TMPLV Vertex Type container.
          * @param item Reference to the Interaction object representing the interaction details.
          * @param cells Pointer to the cells or particles container.
          * @param cpa Reference to the ContactParams object containing interaction parameters.
          * @param shps Pointer to the shapes array providing shape information for interactions.
          * @param dt Time increment for the simulation step.
          */
-        template <typename TMPLC, typename TCFPA> ONIKA_HOST_DEVICE_FUNC 
+        template <typename TMPLC, typename TCFPA, typename TMPLV> ONIKA_HOST_DEVICE_FUNC 
           inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
               Interaction &item, 
-              TMPLC *const __restrict__ cells, 
+              TMPLC* const __restrict__ cells, 
+              TMPLV* const __restrict__ gv, /* grid of vertices */
               TCFPA& cpa, 
               const shape * const shps, 
               const double dt) const
@@ -150,8 +152,8 @@ namespace exaDEM
             const auto &type_j = cell_j[field::type][item.p_j];
 
             // === vertex array
-            const auto &vertices_i = cell_i[field::vertices][item.p_i];
-            const auto &vertices_j = cell_j[field::vertices][item.p_j];
+            const WrapperVertexGPUAccessor vertices_i = { item.p_i, gv[item.cell_i] };
+            const WrapperVertexGPUAccessor vertices_j = { item.p_j, gv[item.cell_j] };
 
             // === shapes
             const shape &shp_i = shps[type_i];
@@ -225,6 +227,7 @@ namespace exaDEM
        *
        * @tparam TMPLC Type of the cells or particles container.
        * @tparam TCFPA Template Contact Force Parameters Accessor.
+       * @tparam TMPLV Vertex Type container.
        * @param item Reference to the Interaction object representing the interaction details.
        * @param cells Pointer to the cells or particles container.
        * @param drvs Pointer to the Drivers object providing driving forces.
@@ -232,10 +235,11 @@ namespace exaDEM
        * @param shps Pointer to the shapes array providing shape information for interactions.
        * @param dt Time increment for the simulation step.
        */
-      template <typename TMPLC, typename TCFPA> 
+      template <typename TMPLC, typename TCFPA, typename TMPLV> 
         ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
             Interaction &item, 
             TMPLC * __restrict__ cells, 
+            TMPLV* const __restrict__ gv, /* grid of vertices */
             const DriversGPUAccessor& drvs, 
             TCFPA &cpa,
             const shape *shps, 
@@ -253,7 +257,7 @@ namespace exaDEM
           // === positions
           const Vec3d r = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
           // === vertex array
-          const auto &vertices = cell[field::vertices][p];
+          WrapperVertexGPUAccessor vertices = { p, gv[item.cell_i] };
 
           auto [contact, dn, n, contact_position] = exaDEM::detector_vertex_driver(driver, vertices, sub, &shp);
           constexpr Vec3d null = {0, 0, 0};
@@ -324,6 +328,7 @@ namespace exaDEM
          *
          * @tparam TMPLC Type of the cells or particles container.
          * @tparam TCFPA Template Contact Force Parameters Accessor.
+         * @tparam TMPLV Vertex Type container.
          * @param item Reference to the Interaction object representing the interaction details.
          * @param cells Pointer to the cells or particles container.
          * @param drvs Pointer to the Drivers object providing driving forces.
@@ -331,10 +336,11 @@ namespace exaDEM
          * @param shps Pointer to the shapes array providing shape information for interactions.
          * @param dt Time increment for the simulation step.
          */
-        template <typename TMPLC, typename TCFPA> 
+        template <typename TMPLC, typename TCFPA, typename TMPLV> 
           ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
               Interaction &item, 
               TMPLC * __restrict__ cells, 
+              TMPLV* const __restrict__ gv, /* grid of vertices */
               const DriversGPUAccessor& drvs, 
               TCFPA& cpa, 
               const shape *shps, 
@@ -356,7 +362,7 @@ namespace exaDEM
 
             // === positions
             const Vec3d r_i = {cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i]};
-            const auto& vertices_i = cell[field::vertices][p_i]; 
+            const WrapperVertexGPUAccessor vertices_i = { p_i, gv[item.cell_i] };
             // === vrot
             const Vec3d &vrot_i = cell[field::vrot][p_i];
 

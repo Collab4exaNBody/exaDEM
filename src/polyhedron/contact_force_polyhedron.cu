@@ -28,6 +28,7 @@ under the License.
 
 #include <memory>
 
+#include <exaDEM/vertices.hpp>
 #include <exaDEM/contact_force_parameters.h>
 #include <exaDEM/compute_contact_force.h>
 
@@ -55,6 +56,7 @@ namespace exaDEM
     class ComputeContactClassifierPolyhedron : public OperatorNode
   {
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(GridVertex, gv, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
     ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(ContactParams, config, INPUT, OPTIONAL);        // can be re-used for to dump contact network
     ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL); // can be re-used for to dump contact network
@@ -119,9 +121,11 @@ namespace exaDEM
       const long frequency_interaction = *analysis_interaction_dump_frequency;
       bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
 
-      /** Get driver and particles data */
+
+      /** Get driver, vertices and particles data */
       const DriversGPUAccessor drvs = *drivers;
       const auto cells = grid->cells();
+      auto* grid_vertex = gv->data();
 
       /** Get Shape */
       const shape *const shps = shapes_collection->data();
@@ -139,8 +143,8 @@ namespace exaDEM
       contact_law_driver<cohesive, Ball> ball;
 
 
-#     define __params__ cells, cp, shps, time
-#     define __params_driver__ cells, drvs, cp_drvs, shps, time
+#     define __params__ cells, grid_vertex, cp, shps, time
+#     define __params_driver__ cells, grid_vertex, drvs, cp_drvs, shps, time
 
       constexpr int poly_type_start = 0;
       constexpr int poly_type_end = 3;
