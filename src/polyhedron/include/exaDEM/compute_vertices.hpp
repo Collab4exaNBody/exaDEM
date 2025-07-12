@@ -39,7 +39,6 @@ namespace exaDEM
       const unsigned int nv = shp.get_number_of_vertices();
       exanb::Vec3d position = {rx, ry, rz};
       if constexpr(def_box) position = xform * position;
-      assert(nv < EXADEM_MAX_VERTICES);
       for (size_t i = 0; i < nv; i++)
       {
         Vec3d vertex = shp.get_vertex(i, position, orient);

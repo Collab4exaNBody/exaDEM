@@ -27,44 +27,51 @@ namespace exaDEM
 	template <typename T> using vector_t = onika::memory::CudaMMVector<T>;
 	struct VertexGPUAccessor
 	{
+		int m_n_particles = 0;
 		int m_n_vertices = 0;
 		vector_t<double> m_vertices;
 
-    void resize(int size) { m_vertices.resize(3 * size * EXADEM_MAX_VERTICES); m_n_vertices = size; }
+    void resize(int np /* number of particels */, int nv /* number of vertices */ ) 
+    { 
+      m_n_particles = np; 
+      m_n_vertices = nv; 
+      m_vertices.resize(3 * m_n_particles * m_n_vertices); 
+    }
 
 		ONIKA_HOST_DEVICE_FUNC inline Vec3d operator() (int pid, int vid) // particle id, vertex id
 		{
-      assert(vid < EXADEM_MAX_VERTICES);
+      assert(vid < m_n_vertices);
 			Vec3d res;
-			int i = pid + 3 * m_n_vertices * vid;
+			int i = pid + 3 * m_n_particles * vid;
       double* data = onika::cuda::vector_data(m_vertices);
 			res.x = data[i];
-			res.y = data[i+m_n_vertices];
-			res.z = data[i+2*m_n_vertices];
+			res.y = data[i+m_n_particles];
+			res.z = data[i+2*m_n_particles];
       return res;
 		}
 
 		ONIKA_HOST_DEVICE_FUNC inline Vec3d operator() (int pid, int vid) const // particle id, vertex id
 		{
-      assert(vid < EXADEM_MAX_VERTICES);
+      assert(vid < m_n_vertices);
+      assert(pid < m_n_particles );
 			Vec3d res;
-			int i = pid + 3 * m_n_vertices * vid;
+			int i = pid + 3 * m_n_particles * vid;
       const double* data = onika::cuda::vector_data(m_vertices);
 			res.x = data[i];
-			res.y = data[i+m_n_vertices];
-			res.z = data[i+2*m_n_vertices];
+			res.y = data[i+m_n_particles];
+			res.z = data[i+2*m_n_particles];
       return res;
 		}
 
 		ONIKA_HOST_DEVICE_FUNC inline void set (Vec3d& value, int pid, int vid) // particle id, vertex id
 		{
-      assert(vid < EXADEM_MAX_VERTICES);
-      assert(pid < m_n_vertices );
-			int i = pid + 3 * m_n_vertices * vid;
+      assert(vid < m_n_vertices);
+      assert(pid < m_n_particles );
+			int i = pid + 3 * m_n_particles * vid;
       double* data = onika::cuda::vector_data(m_vertices);
 			data[i]                = value.x;
-			data[i+  m_n_vertices] = value.y;
-			data[i+2*m_n_vertices] = value.z;
+			data[i+  m_n_particles] = value.y;
+			data[i+2*m_n_particles] = value.z;
 		}
 	};
 
@@ -83,7 +90,7 @@ namespace exaDEM
     vector_t<VertexGPUAccessor> gv;
     VertexGPUAccessor* data() { return gv.data(); }
     void resize(int size) { gv.resize(size); }
-    void resize(int cell, int size) { gv[cell].resize(size); }
+    void resize(int cell, int np, int nv) { gv[cell].resize(np, nv); }
     ONIKA_HOST_DEVICE_FUNC inline VertexGPUAccessor& operator[](int i) { return gv[i]; }
   };
 }

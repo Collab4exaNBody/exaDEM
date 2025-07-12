@@ -28,13 +28,11 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
-  using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
 
   /*********/
   /* Utils */
   /*********/
   ONIKA_HOST_DEVICE_FUNC inline const Vec3d* get_ptr(const Vec3d* ptr) { return ptr; }
-  ONIKA_HOST_DEVICE_FUNC inline const Vec3d* get_ptr(const VertexArray& vec) { return vec.data(); }
 
   /********************/
   /* Vertex - Vertex  */

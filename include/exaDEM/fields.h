@@ -10,11 +10,6 @@
 #include <cstdint>
 #include <onika/oarray.h>
 
-namespace exaDEM
-{
-  using VerticesType = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES> ;
-}
-
 // DEM - reuse orient and angmom
 XNB_DECLARE_FIELD(double, mass, "particle mass");
 XNB_DECLARE_FIELD(double, homothety, "particle shape homothety");

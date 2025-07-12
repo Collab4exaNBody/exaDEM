@@ -29,8 +29,6 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
-  using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
-
   /**
    * @brief Normalizes a 3D vector in-place.
    *
