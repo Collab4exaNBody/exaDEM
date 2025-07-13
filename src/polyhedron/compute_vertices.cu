@@ -67,7 +67,7 @@ namespace exaDEM
       const size_t n_cells = grid->number_of_cells(); // nbh.size();
 
       size_t* cell_ptr = nullptr;
-      size_t cell_size = size_t(-1);
+      size_t cell_size = 0;
 
       if(traversal_all->iterator)
       {

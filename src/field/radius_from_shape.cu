@@ -53,8 +53,8 @@ namespace exanb
 {
   template <> struct ComputeCellParticlesTraits<exaDEM::UpdateRadiusPolyhedronFunctor>
   {
-    static inline constexpr bool RequiresBlockSynchronousCall = false;
-    static inline constexpr bool CudaCompatible = false; // true;
+    static inline constexpr bool RequiresBlockSynchronousCall = true;
+    static inline constexpr bool CudaCompatible = true; // true;
   };
 } // namespace exanb
 
@@ -91,7 +91,7 @@ namespace exaDEM
       const size_t size = shps.get_size();
       onika::memory::CudaMMVector<double> r;
       r.resize(size);
-      double rmax = 0;
+      double rmax = *rcut_max;
       for (size_t i = 0; i < size; i++)
       {
         double rad_max = shps[i]->compute_max_rcut();

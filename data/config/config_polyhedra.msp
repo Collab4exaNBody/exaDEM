@@ -35,7 +35,7 @@ compute_fast_vertices:
 reorder_extra_data: nop
 
 particle_write_paraview_generic:
-  - write_paraview_generic
+#  - write_paraview_generic
 #  - write_paraview_polyhedra
   - write_paraview_obb_particles
 

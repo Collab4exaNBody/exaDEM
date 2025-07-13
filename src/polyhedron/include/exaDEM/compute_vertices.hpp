@@ -29,7 +29,7 @@ namespace exaDEM
     const shape *shps;
     VertexGPUAccessor * gv;
     const Mat3d xform;
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(const size_t cell_idx, const size_t p, const uint32_t type, const double rx, const double ry, const double rz, const double h, const exanb::Quaternion &orient) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(const size_t cell_idx, const size_t p, const uint32_t type, const double& rx, const double& ry, const double& rz, const double& h, const exanb::Quaternion &orient) const
     {
       // get vertices
       WrapperVertexGPUAccessor vertices = { p , gv[cell_idx] };
