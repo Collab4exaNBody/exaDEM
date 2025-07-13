@@ -152,8 +152,8 @@ namespace exaDEM
             const auto &type_j = cell_j[field::type][item.p_j];
 
             // === vertex array
-            const WrapperVertexGPUAccessor vertices_i = { item.p_i, gv[item.cell_i] };
-            const WrapperVertexGPUAccessor vertices_j = { item.p_j, gv[item.cell_j] };
+            const ParticleVertexView vertices_i = { item.p_i, gv[item.cell_i] };
+            const ParticleVertexView vertices_j = { item.p_j, gv[item.cell_j] };
 
             // === shapes
             const shape &shp_i = shps[type_i];
@@ -257,7 +257,7 @@ namespace exaDEM
           // === positions
           const Vec3d r = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
           // === vertex array
-          WrapperVertexGPUAccessor vertices = { p, gv[item.cell_i] };
+          ParticleVertexView vertices = { p, gv[item.cell_i] };
 
           auto [contact, dn, n, contact_position] = exaDEM::detector_vertex_driver(driver, vertices, sub, &shp);
           constexpr Vec3d null = {0, 0, 0};
@@ -362,7 +362,7 @@ namespace exaDEM
 
             // === positions
             const Vec3d r_i = {cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i]};
-            const WrapperVertexGPUAccessor vertices_i = { p_i, gv[item.cell_i] };
+            const ParticleVertexView vertices_i = { p_i, gv[item.cell_i] };
             // === vrot
             const Vec3d &vrot_i = cell[field::vrot][p_i];
 

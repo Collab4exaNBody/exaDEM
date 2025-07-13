@@ -42,7 +42,7 @@ namespace exaDEM
     using ComputeFields = FieldSet<field::_type, field::_rx, field::_ry, field::_rz, field::_homothety, field::_orient>;
     static constexpr ComputeFields compute_field_set{};
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(GridVertex, gv, INPUT_OUTPUT, DocString{"Store vertex positions for every polyhedron"});
+    ADD_SLOT(CellVertexField, cvf, INPUT_OUTPUT, DocString{"Store vertex positions for every polyhedron"});
     ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
     ADD_SLOT(Traversal, traversal_all, INPUT, DocString{"list of non empty cells [ALL] within the current grid"});
@@ -62,7 +62,7 @@ namespace exaDEM
     {
       const shape *shps = shapes_collection->data();
       bool is_def_box = !domain->xform_is_identity();
-      auto& grid_vertex = *gv;
+      auto& vertex_fields = *cvf;
       const auto cells = grid->cells();
       const size_t n_cells = grid->number_of_cells(); // nbh.size();
 
@@ -76,7 +76,7 @@ namespace exaDEM
 
       if(*resize_vertex || *minimize_memory_footprint)
       {
-        grid_vertex.resize(n_cells);
+        vertex_fields.resize(n_cells);
         if( !(*minimize_memory_footprint) )
         {
           int max_number_of_vertices = shps->get_number_of_vertices();
@@ -84,7 +84,7 @@ namespace exaDEM
           for(size_t cell_id = 0 ; cell_id < n_cells ; cell_id++)
           {
             size_t np = cells[cell_id].size();       
-            grid_vertex.resize(cell_id, np, max_number_of_vertices); 
+            vertex_fields.resize(cell_id, np, max_number_of_vertices); 
           }
         }
         else
@@ -99,19 +99,19 @@ namespace exaDEM
             {
               max_number_of_vertices = std::max(max_number_of_vertices, shps[type[p]].get_number_of_vertices());
             }
-            grid_vertex.resize(cell_id, np, max_number_of_vertices); 
+            vertex_fields.resize(cell_id, np, max_number_of_vertices); 
           }
         }
       }
 
       if( is_def_box )
       {
-        PolyhedraComputeVerticesFunctor<true> func{shps, grid_vertex.data(), domain->xform()};
+        PolyhedraComputeVerticesFunctor<true> func{shps, vertex_fields.data(), domain->xform()};
         compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
       }
       else
       {
-        PolyhedraComputeVerticesFunctor<false> func{shps, grid_vertex.data(), domain->xform() };
+        PolyhedraComputeVerticesFunctor<false> func{shps, vertex_fields.data(), domain->xform() };
         compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
       }
     }

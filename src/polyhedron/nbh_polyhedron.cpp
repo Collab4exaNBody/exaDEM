@@ -51,7 +51,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(GridVertex, gv, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
+    ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
     ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(exanb::GridChunkNeighbors, chunk_neighbors, INPUT, OPTIONAL, DocString{"Neighbor list"});
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
@@ -81,7 +81,7 @@ namespace exaDEM
           const double *__restrict__ rx, 
           const double *__restrict__ ry, 
           const double *__restrict__ rz, 
-          VertexGPUAccessor& vertices,
+          VertexField& vertices,
           const exanb::Quaternion *__restrict__ orient, 
           shapes &shps)
       {
@@ -99,7 +99,7 @@ namespace exaDEM
         for (size_t p = 0; p < n_particles; p++)
         {
           Vec3d r = {rx[p], ry[p], rz[p]}; // position
-          WrapperVertexGPUAccessor vertices_i = {p, vertices};
+          ParticleVertexView vertices_i = {p, vertices};
           const Quaternion& orient_i = orient[p];
           item.p_i = p;
           item.id_i = id[p];
@@ -226,12 +226,12 @@ namespace exaDEM
           const double rVerlet, 
           const ParticleTypeInt *__restrict__ type, 
           const uint64_t *__restrict__ id, 
-          VertexGPUAccessor& vertices, 
+          VertexField& vertices, 
           shapes &shps)
       {
         for (size_t p = 0; p < n_particles; p++)
         {
-          WrapperVertexGPUAccessor va = {p, vertices};
+          ParticleVertexView va = {p, vertices};
           const shape *shp = shps[type[p]];
           int nv = shp->get_number_of_vertices();
           for (int sub = 0; sub < nv; sub++)
@@ -249,8 +249,8 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto &g = *grid;
-      auto& grid_vertex = *gv;
+      auto& g = *grid;
+      auto& vertex_fields = *cvf;
       const auto cells = g.cells();
       const size_t n_cells = g.number_of_cells(); // nbh.size();
       const IJK dims = g.dimension();
@@ -297,7 +297,7 @@ namespace exaDEM
         for (size_t ci = 0; ci < cell_size; ci++)
         {
           size_t cell_a = cell_ptr[ci];
-          auto& vertex_cell_a = grid_vertex[cell_a];
+          auto& vertex_cell_a = vertex_fields[cell_a];
           IJK loc_a = grid_index_to_ijk(dims, cell_a);
 
           const unsigned int n_particles = cells[cell_a].size();
@@ -393,7 +393,7 @@ namespace exaDEM
           // Second, we add interactions between two polyhedra.
 
           apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-              [&g, &grid_vertex, &cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &vertex_cell_a, &add_contact, xform, is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+              [&g, &vertex_fields, &cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &vertex_cell_a, &add_contact, xform, is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
               {
               // default value of the interaction studied (A or i -> B or j)
               const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -403,9 +403,9 @@ namespace exaDEM
               return;
               }
 
-              VertexGPUAccessor& vertex_cell_b = grid_vertex[cell_b];
-              WrapperVertexGPUAccessor vertices_b = {p_b, vertex_cell_b};
-              WrapperVertexGPUAccessor vertices_a = {p_a, vertex_cell_a};
+              VertexField& vertex_cell_b = vertex_fields[cell_b];
+              ParticleVertexView vertices_b = {p_b, vertex_cell_b};
+              ParticleVertexView vertices_a = {p_a, vertex_cell_a};
 
               // Get particle pointers for the particle b.
               const uint32_t type_nbh = cells[cell_b][field::type][p_b];

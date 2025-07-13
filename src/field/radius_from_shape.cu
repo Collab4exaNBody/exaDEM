@@ -54,7 +54,7 @@ namespace exanb
   template <> struct ComputeCellParticlesTraits<exaDEM::UpdateRadiusPolyhedronFunctor>
   {
     static inline constexpr bool RequiresBlockSynchronousCall = true;
-    static inline constexpr bool CudaCompatible = true; // true;
+    static inline constexpr bool CudaCompatible = true;
   };
 } // namespace exanb
 
@@ -71,7 +71,7 @@ namespace exaDEM
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
-    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
+    ADD_SLOT(double, rcut_max, OUTPUT);
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
@@ -91,7 +91,7 @@ namespace exaDEM
       const size_t size = shps.get_size();
       onika::memory::CudaMMVector<double> r;
       r.resize(size);
-      double rmax = *rcut_max;
+      double rmax = 0;
       for (size_t i = 0; i < size; i++)
       {
         double rad_max = shps[i]->compute_max_rcut();
@@ -101,7 +101,7 @@ namespace exaDEM
       *rcut_max = rmax;
 
       // now, fill the radius field
-      if (region.has_value())
+     if (region.has_value())
       {
         ParticleRegionCSGShallowCopy prcsg = *region;
         UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};

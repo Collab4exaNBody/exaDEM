@@ -56,7 +56,7 @@ namespace exaDEM
     class ComputeContactClassifierPolyhedron : public OperatorNode
   {
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(GridVertex, gv, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
+    ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
     ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(ContactParams, config, INPUT, OPTIONAL);        // can be re-used for to dump contact network
     ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL); // can be re-used for to dump contact network
@@ -125,7 +125,7 @@ namespace exaDEM
       /** Get driver, vertices and particles data */
       const DriversGPUAccessor drvs = *drivers;
       const auto cells = grid->cells();
-      auto* grid_vertex = gv->data();
+      auto* vertex_fields = cvf->data();
 
       /** Get Shape */
       const shape *const shps = shapes_collection->data();
@@ -143,8 +143,8 @@ namespace exaDEM
       contact_law_driver<cohesive, Ball> ball;
 
 
-#     define __params__ cells, grid_vertex, cp, shps, time
-#     define __params_driver__ cells, grid_vertex, drvs, cp_drvs, shps, time
+#     define __params__ cells, vertex_fields, cp, shps, time
+#     define __params_driver__ cells, vertex_fields, drvs, cp_drvs, shps, time
 
       constexpr int poly_type_start = 0;
       constexpr int poly_type_end = 3;
