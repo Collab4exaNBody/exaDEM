@@ -85,8 +85,7 @@ namespace exaDEM
       if (rank == 0)
       {
         namespace fs = std::filesystem;
-        fs::create_directory(*dir_name);
-        fs::create_directory(directory);
+        fs::create_directories(directory);
       }
 
       MPI_Barrier(*mpi);
