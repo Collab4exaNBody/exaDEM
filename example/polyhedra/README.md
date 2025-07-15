@@ -27,3 +27,7 @@ Three main examples showcase simulations involving large shapes imported via STL
 - Hexapods + Octahedra: stl_mesh/stl_mesh_box_mixte.msp
 
 An additional example of a particle falling into a funnel can be found at: funnel/funnel.msp.
+
+## Cylinder (STL)
+
+- **Cylinder with barriers:** Instead of a perfect cylinder, this example uses an STL file representing a cylinder with small barriers: `stl_cylinder/input.msp`.

@@ -79,7 +79,8 @@ namespace exaDEM
         vertex_fields.resize(n_cells);
         if( !(*minimize_memory_footprint) )
         {
-          int max_number_of_vertices = shps->get_number_of_vertices();
+          int max_number_of_vertices = shapes_collection->max_number_of_vertices();
+          ldbg << "[compute_vertices] max number of vertices: " << max_number_of_vertices << std::endl;
 #pragma omp parallel for schedule(guided)
           for(size_t cell_id = 0 ; cell_id < n_cells ; cell_id++)
           {

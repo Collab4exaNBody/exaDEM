@@ -54,17 +54,13 @@ namespace exaDEM
       return nullptr;
     }
 
-    inline void add_shape(shape *shp)
-    {
-      this->m_data.push_back(*shp); // copy
-      m_max_nv = std::max(m_max_nv, shp->get_number_of_vertices());
-    }
-
     inline void add_shape(shape& shp)
     {
       this->m_data.push_back(shp); // copy
       m_max_nv = std::max(m_max_nv, shp.get_number_of_vertices());
     }
+
+    inline void add_shape(shape *shp) { add_shape(*shp); }
     
     inline bool contains(shape& shp)
     {
