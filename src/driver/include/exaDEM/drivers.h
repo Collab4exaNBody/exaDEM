@@ -45,6 +45,8 @@ namespace exaDEM
     };
     
     vector_t<DriverTypeAndIndex> m_type_index; /**< Vector storing the types of drivers. */
+    /** just a duplicate on CPU to avoid weird copies from GPU */
+    std::vector<DriverTypeAndIndex> m_type_index_cpu; /**< Vector storing the types of drivers. */
     
     //vector_t<data_t> m_data;   /**< Vector storing the data of drivers. */
     onika::FlatTuple< vector_t<Cylinder> , vector_t<Surface> , vector_t<Ball> , vector_t<Stl_mesh> > m_data;
@@ -96,13 +98,13 @@ namespace exaDEM
     template<class FuncT>
     inline auto apply(const int idx , const FuncT& func)
     {
-      assert( idx>=0 && idx<m_type_index.size() );
-      DRIVER_TYPE t = m_type_index[idx].m_type;
+      assert( idx>=0 && idx<m_type_index_cpu.size() && m_type_index_cpu.size() == m_type_index.size() );
+      DRIVER_TYPE t = m_type_index_cpu[idx].m_type;
       assert( t != DRIVER_TYPE::UNDEFINED );
-      if (t == DRIVER_TYPE::CYLINDER) return func( m_data.get_nth<DRIVER_TYPE::CYLINDER>()[ m_type_index[idx].m_index ] );
-      else if (t == DRIVER_TYPE::SURFACE)  return func( m_data.get_nth<DRIVER_TYPE::SURFACE >()[ m_type_index[idx].m_index ] );
-      else if (t == DRIVER_TYPE::BALL)     return func( m_data.get_nth<DRIVER_TYPE::BALL    >()[ m_type_index[idx].m_index ] );
-      else if (t == DRIVER_TYPE::STL_MESH) return func( m_data.get_nth<DRIVER_TYPE::STL_MESH>()[ m_type_index[idx].m_index ] );
+      if (t == DRIVER_TYPE::CYLINDER) return func( m_data.get_nth<DRIVER_TYPE::CYLINDER>()[ m_type_index_cpu[idx].m_index ] );
+      else if (t == DRIVER_TYPE::SURFACE)  return func( m_data.get_nth<DRIVER_TYPE::SURFACE >()[ m_type_index_cpu[idx].m_index ] );
+      else if (t == DRIVER_TYPE::BALL)     return func( m_data.get_nth<DRIVER_TYPE::BALL    >()[ m_type_index_cpu[idx].m_index ] );
+      else if (t == DRIVER_TYPE::STL_MESH) return func( m_data.get_nth<DRIVER_TYPE::STL_MESH>()[ m_type_index_cpu[idx].m_index ] );
       fatal_error() << "Internal error: unsupported driver type encountered"<<std::endl;
       static Cylinder tmp;
       return func( tmp );
@@ -136,10 +138,13 @@ namespace exaDEM
       else // allocate
       {
         m_type_index.resize(idx+1);
+        m_type_index_cpu.resize(idx+1);
       }
       m_type_index[idx].m_type = t;
+      m_type_index_cpu[idx].m_type = t;
       auto & driver_vec = get_driver_vec<t>();
       m_type_index[idx].m_index = driver_vec.size();
+      m_type_index_cpu[idx].m_index = driver_vec.size();
       driver_vec.push_back( Driver );
     }
     
@@ -149,6 +154,7 @@ namespace exaDEM
     void clear()
     {
       m_type_index.clear();
+      m_type_index_cpu.clear();
       m_data.get_nth<DRIVER_TYPE::CYLINDER>().clear();
       m_data.get_nth<DRIVER_TYPE::SURFACE>().clear();
       m_data.get_nth<DRIVER_TYPE::BALL>().clear();
@@ -190,14 +196,14 @@ namespace exaDEM
     {
       for (size_t i = 0; i < this->get_size(); i++)
       {
-        auto t = m_type_index[i].m_type;
+        auto t = m_type_index_cpu[i].m_type;
         if (t != DRIVER_TYPE::UNDEFINED)
         {
           lout << "Driver [" << i << "]:" << std::endl;
-          if (t == DRIVER_TYPE::CYLINDER) m_data.get_nth_const<DRIVER_TYPE::CYLINDER>()[ m_type_index[i].m_index ].print();
-          else if (t == DRIVER_TYPE::SURFACE)  m_data.get_nth_const<DRIVER_TYPE::SURFACE >()[ m_type_index[i].m_index ].print();
-          else if (t == DRIVER_TYPE::BALL)     m_data.get_nth_const<DRIVER_TYPE::BALL    >()[ m_type_index[i].m_index ].print();
-          else if (t == DRIVER_TYPE::STL_MESH) m_data.get_nth_const<DRIVER_TYPE::STL_MESH>()[ m_type_index[i].m_index ].print();
+          if (t == DRIVER_TYPE::CYLINDER) m_data.get_nth_const<DRIVER_TYPE::CYLINDER>()[ m_type_index_cpu[i].m_index ].print();
+          else if (t == DRIVER_TYPE::SURFACE)  m_data.get_nth_const<DRIVER_TYPE::SURFACE >()[ m_type_index_cpu[i].m_index ].print();
+          else if (t == DRIVER_TYPE::BALL)     m_data.get_nth_const<DRIVER_TYPE::BALL    >()[ m_type_index_cpu[i].m_index ].print();
+          else if (t == DRIVER_TYPE::STL_MESH) m_data.get_nth_const<DRIVER_TYPE::STL_MESH>()[ m_type_index_cpu[i].m_index ].print();
         }
       }
     }
@@ -213,12 +219,12 @@ namespace exaDEM
       {
         it = 0;
       }
-      for (const auto &it : m_type_index)
+      for (const auto &it : m_type_index_cpu)
       {
         ++ Count[it.m_type];
       }
       lout << "Drivers Stats" << std::endl;
-      lout << "Number of drivers: " << m_type_index.size() << std::endl;
+      lout << "Number of drivers: " << m_type_index_cpu.size() << std::endl;
       for (size_t t = 0; t < DRIVER_TYPE_SIZE; t++)
       {
         lout << "Number of " << print(DRIVER_TYPE(t)) << "s: " << Count[t] << std::endl;

@@ -25,8 +25,8 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  template<typename Vec>
-    inline OBB build_OBB(const Vec &vec, double radius)
+//  template<typename Vec>
+    inline OBB build_OBB(const std::span<vec3r> vec, double radius)
     {
       OBB obb;
       vec3r mu;
@@ -115,8 +115,8 @@ namespace exaDEM
   inline OBB build_obb_vertex(const int index, const shape *shp, const Vec3d * v)
   {
     const double ext = shp->m_radius;
-    const auto& vertex = v[index];
-    std::vector<vec3r> vbuf = {conv_to_vec3r(vertex)};
+    const vec3r vertex = conv_to_vec3r(v[index]);
+    std::array<vec3r, 1> vbuf = {vertex};
     OBB res = build_OBB(vbuf, ext);
     return res;
   }
@@ -127,7 +127,7 @@ namespace exaDEM
     auto [first, second] = shp->get_edge(index);
     const Vec3d vf = shp->get_vertex(first, position, orientation);
     const Vec3d vs = shp->get_vertex(second, position, orientation);
-    std::vector<vec3r> v = {conv_to_vec3r(vf), conv_to_vec3r(vs)};
+    std::array<vec3r, 2> v = {conv_to_vec3r(vf), conv_to_vec3r(vs)};
     OBB res = build_OBB(v, ext);
     return res;
   }

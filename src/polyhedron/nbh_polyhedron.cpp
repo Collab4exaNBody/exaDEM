@@ -28,6 +28,7 @@ under the License.
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
+#include <exaDEM/vertices.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
@@ -43,7 +44,6 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
-  using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
 
   template <typename GridT, class = AssertGridHasFields<GridT>> class UpdateGridCellInteraction : public OperatorNode
   {
@@ -51,6 +51,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
     ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(exanb::GridChunkNeighbors, chunk_neighbors, INPUT, OPTIONAL, DocString{"Neighbor list"});
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
@@ -80,7 +81,7 @@ namespace exaDEM
           const double *__restrict__ rx, 
           const double *__restrict__ ry, 
           const double *__restrict__ rz, 
-          const VertexArray *__restrict__ vertices, 
+          VertexField& vertices,
           const exanb::Quaternion *__restrict__ orient, 
           shapes &shps)
       {
@@ -98,7 +99,7 @@ namespace exaDEM
         for (size_t p = 0; p < n_particles; p++)
         {
           Vec3d r = {rx[p], ry[p], rz[p]}; // position
-          auto& vertices_i = vertices[p];
+          ParticleVertexView vertices_i = {p, vertices};
           const Quaternion& orient_i = orient[p];
           item.p_i = p;
           item.id_i = id[p];
@@ -126,7 +127,7 @@ namespace exaDEM
           // loop j = stl mesh
           for (size_t i = 0; i < nv; i++)
           {
-            vec3r v = conv_to_vec3r(vertices[p][i]);
+            vec3r v = conv_to_vec3r(vertices_i[i]);
             OBB obb_v_i;
             obb_v_i.center = v; 
             obb_v_i.enlarge(rVerlet + shpi->m_radius);
@@ -225,12 +226,12 @@ namespace exaDEM
           const double rVerlet, 
           const ParticleTypeInt *__restrict__ type, 
           const uint64_t *__restrict__ id, 
-          const VertexArray *__restrict__ vertices, 
+          VertexField& vertices, 
           shapes &shps)
       {
         for (size_t p = 0; p < n_particles; p++)
         {
-          const auto va = vertices[p];
+          ParticleVertexView va = {p, vertices};
           const shape *shp = shps[type[p]];
           int nv = shp->get_number_of_vertices();
           for (int sub = 0; sub < nv; sub++)
@@ -248,7 +249,8 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto &g = *grid;
+      auto& g = *grid;
+      auto& vertex_fields = *cvf;
       const auto cells = g.cells();
       const size_t n_cells = g.number_of_cells(); // nbh.size();
       const IJK dims = g.dimension();
@@ -295,6 +297,7 @@ namespace exaDEM
         for (size_t ci = 0; ci < cell_size; ci++)
         {
           size_t cell_a = cell_ptr[ci];
+          auto& vertex_cell_a = vertex_fields[cell_a];
           IJK loc_a = grid_index_to_ijk(dims, cell_a);
 
           const unsigned int n_particles = cells[cell_a].size();
@@ -329,8 +332,6 @@ namespace exaDEM
           ONIKA_ASSUME_ALIGNED(t_a);
           const auto *__restrict__ orient_a = cells[cell_a][field::orient];
           ONIKA_ASSUME_ALIGNED(orient_a);
-          const auto *__restrict__ vertices_a = cells[cell_a][field::vertices];
-          ONIKA_ASSUME_ALIGNED(vertices_a);
 
           // Define a function to add a new interaction if a contact is possible.
           auto add_contact = [&manager](size_t p, Interaction &item, int sub_i, int sub_j) -> void
@@ -366,25 +367,25 @@ namespace exaDEM
               {
                 item.type = 4;
                 Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx)) ;
-                add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
+                add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
               {
                 item.type = 5;
                 Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
-                add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
+                add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
               {
                 item.type = 6;
                 Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
-                add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
+                add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
               {
                 Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); //std::get<STL_MESH>(drvs.data(drvs_idx));
                 // driver.grid_indexes_summary();
-                add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a, rz_a, vertices_a, orient_a, shps);
+                add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a, rz_a, vertex_cell_a, orient_a, shps);
               }
             }
           }
@@ -392,7 +393,7 @@ namespace exaDEM
           // Second, we add interactions between two polyhedra.
 
           apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-              [&g, cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, vertices_a, &add_contact, xform, is_xform](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+              [&g, &vertex_fields, &cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &vertex_cell_a, &add_contact, xform, is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
               {
               // default value of the interaction studied (A or i -> B or j)
               const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -401,6 +402,10 @@ namespace exaDEM
               if (!g.is_ghost_cell(cell_b))
               return;
               }
+
+              VertexField& vertex_cell_b = vertex_fields[cell_b];
+              ParticleVertexView vertices_b = {p_b, vertex_cell_b};
+              ParticleVertexView vertices_a = {p_a, vertex_cell_a};
 
               // Get particle pointers for the particle b.
               const uint32_t type_nbh = cells[cell_b][field::type][p_b];
@@ -411,7 +416,6 @@ namespace exaDEM
               double rx = rx_a[p_a];
               double ry = ry_a[p_a];
               double rz = rz_a[p_a];
-              const auto &vertices_b = cells[cell_b][field::vertices][p_b];
 
               if( is_xform )
               {
@@ -479,7 +483,7 @@ namespace exaDEM
                   item.type = 0; // === Vertex - Vertex
                   for (int j = 0; j < nv_nbh; j++)
                   {
-                    if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh))
+                    if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
                     {
                       add_contact(p_a, item, i, j);
                     }
@@ -488,7 +492,7 @@ namespace exaDEM
                   item.type = 1; // === vertex edge
                   for (int j = 0; j < ne_nbh; j++)
                   {
-                    bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh);
+                    bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
                     if (contact)
                     {
                       add_contact(p_a, item, i, j);
@@ -498,7 +502,7 @@ namespace exaDEM
                   item.type = 2; // === vertex face
                   for (int j = 0; j < nf_nbh; j++)
                   {
-                    bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh);
+                    bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
                     if (contact)
                     {
                       add_contact(p_a, item, i, j);
@@ -512,7 +516,7 @@ namespace exaDEM
               {
                 for (int j = 0; j < ne_nbh; j++)
                 {
-                  bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a[p_a], i, shp, vertices_b, j, shp_nbh);
+                  bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
                   if (contact)
                   {
                     add_contact(p_a, item, i, j);
@@ -531,7 +535,7 @@ namespace exaDEM
 
               for (int j = 0; j < nv_nbh; j++)
               {
-                auto& vj = vertices_b[j];//shp->get_vertex(j, r_nbh, orient_nbh);
+                auto vj = vertices_b[j];//shp->get_vertex(j, r_nbh, orient_nbh);
                 OBB obbvj;
                 obbvj.center = {vj.x, vj.y, vj.z};
                 obbvj.enlarge(shp_nbh->m_radius);
@@ -541,7 +545,7 @@ namespace exaDEM
                   item.type = 1; // === vertex edge
                   for (int i = 0; i < ne; i++)
                   {
-                    bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a[p_a], i, shp);
+                    bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
                     if (contact)
                     {
                       add_contact(p_a, item, j, i);
@@ -551,7 +555,7 @@ namespace exaDEM
                   item.type = 2; // === vertex face
                   for (int i = 0; i < nf; i++)
                   {
-                    bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a[p_a], i, shp);
+                    bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
                     if (contact)
                     {
                       add_contact(p_a, item, j, i);

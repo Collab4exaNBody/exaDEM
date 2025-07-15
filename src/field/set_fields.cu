@@ -173,7 +173,7 @@ namespace exaDEM
           lout << std::endl;
           std::exit(EXIT_FAILURE);  
         }
-        int64_t type_id = type_map.at(type_name);
+        size_t type_id = type_map.at(type_name);
         // default values;
         double vx = 0;
         double vy = 0;

@@ -28,13 +28,11 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
-  using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
 
   /*********/
   /* Utils */
   /*********/
   ONIKA_HOST_DEVICE_FUNC inline const Vec3d* get_ptr(const Vec3d* ptr) { return ptr; }
-  ONIKA_HOST_DEVICE_FUNC inline const Vec3d* get_ptr(const VertexArray& vec) { return vec.data(); }
 
   /********************/
   /* Vertex - Vertex  */
@@ -75,10 +73,10 @@ namespace exaDEM
   template<typename VecI, typename VecJ>
     ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex(
         const double rVerlet, 
-        const VecI &vai, 
+        VecI &vai, 
         const int i, 
         const shape *shpi, 
-        const VecJ &vaj, 
+        VecJ &vaj, 
         const int j, 
         const shape *shpj)
     {
@@ -220,17 +218,15 @@ namespace exaDEM
         const double rVerlet, 
         const Vec3d &vi, 
         const double ri, 
-        const VecJ &vaj, 
+        VecJ &vaj, 
         const int j, 
         const shape *shpj)
     {
       assert(j < shpj->get_number_of_edges());
 
       auto [first, second] = shpj->get_edge(j);
-      const Vec3d &vf = vaj[first];
-      const Vec3d &vs = vaj[second];
       double rj = shpj->m_radius;
-      return filter_vertex_edge_core(rVerlet, vi, ri, vf, vs, rj);
+      return filter_vertex_edge_core(rVerlet, vi, ri, vaj[first],  vaj[second], rj);
     }
 
   template<typename VecI, typename VecJ>
@@ -247,13 +243,10 @@ namespace exaDEM
       assert(i < shpi->get_number_of_vertices());
       assert(j < shpj->get_number_of_edges());
 
-      const Vec3d &vi = vai[i];
       auto [first, second] = shpj->get_edge(j);
-      const Vec3d &vf = vaj[first];
-      const Vec3d &vs = vaj[second];
       double ri = shpi->m_radius;
       double rj = shpj->m_radius;
-      return filter_vertex_edge_core(rVerlet, vi, ri, vf, vs, rj);
+      return filter_vertex_edge_core(rVerlet, vai[i], ri, vaj[first], vaj[second], rj);
     }
 
   // API detection_vertex_edge
@@ -298,40 +291,39 @@ namespace exaDEM
   template<typename VecI, typename VecJ>
     ONIKA_HOST_DEVICE_FUNC 
     inline contact detection_vertex_edge(
-        const VecI &vai, 
+        VecI &vai, 
         const int i, 
         const shape *shpi, 
-        const VecJ &vaj, 
+        VecJ &vaj, 
         const int j, 
         const shape *shpj)
     {
       assert(i < shpi->get_number_of_vertices());
       assert(j < shpj->get_number_of_edges());
-      const Vec3d &vi = vai[i];
       auto [first, second] = shpj->get_edge(j);
-      const Vec3d &vf = vaj[first];
-      const Vec3d &vs = vaj[second];
       double ri = shpi->m_radius;
       double rj = shpj->m_radius;
-      return detection_vertex_edge_core(vi, ri, vf, vs, rj);
+      return detection_vertex_edge_core(vai[i], ri, vaj[first], vaj[second], rj);
     }
 
   /*****************/
   /* Vertex - Face */
   /*****************/
+/*
   template<typename VecJ>
     ONIKA_HOST_DEVICE_FUNC 
     inline bool filter_vertex_face(
         const double rVerlet, 
         const Vec3d &vi, 
         const double ri, 
-        const VecJ &vaj, 
+        VecJ &vaj, 
         const int j, 
         const shape *shpj)
     {
       assert(j < shpj->get_number_of_faces());
-      return filter_vertex_face(rVerlet, vi, ri, get_ptr(vaj), j, shpj);
+      return filter_vertex_face(rVerlet, vi, ri, vaj, j, shpj);
     }
+*/
 
   template<typename VecI, typename VecJ>
     ONIKA_HOST_DEVICE_FUNC 
@@ -346,7 +338,7 @@ namespace exaDEM
     {
       assert(i < shpi->get_number_of_vertices());
       assert(j < shpj->get_number_of_faces());
-      return filter_vertex_face(rVerlet, vai[i], shpi->m_radius, get_ptr(vaj), j, shpj);
+      return filter_vertex_face(rVerlet, vai[i], shpi->m_radius, vaj, j, shpj);
     }
 
   template<typename VecJ>
@@ -354,27 +346,27 @@ namespace exaDEM
     inline contact detection_vertex_face(
         const Vec3d &vi, 
         const double ri, 
-        const VecJ &vaj, 
+        VecJ &vaj, 
         const int j, 
         const shape *shpj)
     {
       assert(j < shpj->get_number_of_faces());
-      return detection_vertex_face_core(vi, ri, get_ptr(vaj), j, shpj);
+      return detection_vertex_face_core(vi, ri, vaj, j, shpj);
     }
 
   template<typename VecI, typename VecJ>
     ONIKA_HOST_DEVICE_FUNC 
     inline contact detection_vertex_face(
-        const VecI &vai, 
+        VecI &vai, 
         const int i, 
         const shape *shpi, 
-        const VecJ &vaj, 
+        VecJ &vaj, 
         const int j, 
         const shape *shpj)
     {
       assert(i < shpi->get_number_of_vertices());
       assert(j < shpj->get_number_of_faces());
-      return detection_vertex_face_core(vai[i], shpi->m_radius, shpi, get_ptr(vaj), j, shpj);
+      return detection_vertex_face_core(vai[i], shpi->m_radius, shpi, vaj, j, shpj);
     }
 
   /***************/
@@ -399,13 +391,8 @@ namespace exaDEM
       double rj = shpj->m_radius;
       // === compute vertices from shapes
       auto [fi, si] = shpi->get_edge(i);
-      const Vec3d &vfi = vai[fi];
-      const Vec3d &vsi = vai[si];
-
       auto [fj, sj] = shpj->get_edge(j);
-      const Vec3d &vfj = vaj[fj];
-      const Vec3d &vsj = vaj[sj];
-      return filter_edge_edge_core(rVerlet, vfi, vsi, ri, vfj, vsj, rj);
+      return filter_edge_edge_core(rVerlet, vai[fi], vai[si], ri, vaj[fj], vaj[sj], rj);
     }
 
 
@@ -465,10 +452,10 @@ namespace exaDEM
   template<typename VecI, typename VecJ>
     ONIKA_HOST_DEVICE_FUNC 
     inline contact detection_edge_edge(
-        const VecI &vai, 
+        VecI &vai, 
         const int i, 
         const shape *shpi, 
-        const VecJ &vaj, 
+        VecJ &vaj, 
         const int j, 
         const shape *shpj)
     {
@@ -478,15 +465,53 @@ namespace exaDEM
       double rj = shpj->m_radius;
       // === compute vertices from shapes
       auto [fi, si] = shpi->get_edge(i);
-      const Vec3d &vfi = vai[fi];
-      const Vec3d &vsi = vai[si];
-
       auto [fj, sj] = shpj->get_edge(j);
-      const Vec3d &vfj = vaj[fj];
-      const Vec3d &vsj = vaj[sj];
-      return detection_edge_edge_core(vfi, vsi, ri, vfj, vsj, rj);
+      return detection_edge_edge_core(vai[fi], vai[si], ri, vaj[fj], vaj[sj], rj);
     }
 
+
+// NEW
+
+
+# define __params__ const VertexType &vai, const int i, const shape *shpi, const VertexType &vaj, const int j, const shape *shpj
+# define __params__use__ vai, i, shpi, vaj, j, shpj
+  template<int INTERACTION_TYPE> struct detect{};
+  template<> struct detect<0>{ template<typename VertexType> ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_vertex(__params__use__); } };
+  template<> struct detect<1>{ template<typename VertexType> ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_edge(__params__use__); } };
+  template<> struct detect<2>{ template<typename VertexType> ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_face(__params__use__); } };
+  template<> struct detect<3>{ template<typename VertexType> ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_edge_edge(__params__use__); } };
+# undef __params__
+# undef __params__use__
+
+  /** This part concerns detection between particles and “stl mesh”.  **/
+# define __params__ const VertexType &pi, const int i, const shape *shpi, const Vec3d *pj, const int j, const shape *shpj 
+# define __params__sph__ const Vec3d &pi, const double ri, const Vec3d &pj, const int j, const shape *shpj, const exanb::Quaternion &oj 
+# define __params__use__      pi, i, shpi, pj, j, shpj
+# define __params__use__inv__ pj, j, shpj, pi, i, shpi
+# define __params__use__sph__     pi, ri, pj, j, shpj, oj
+  template<> struct detect<7>{ 
+    template<typename VertexType> ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_vertex(__params__use__); } // polyhedron
+    ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__sph__) const { return detection_vertex_vertex(__params__use__sph__); } // sphere
+  };
+  template<> struct detect<8>{ 
+    template<typename VertexType> ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_edge(__params__use__); } // polyhedron
+    ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__sph__) const { return detection_vertex_edge(__params__use__sph__); } // sphere
+  };
+  template<> struct detect<9>{ 
+    template<typename VertexType> ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_face(__params__use__); } // polyhedron 
+    ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__sph__) const { return detection_vertex_face(__params__use__sph__); }  // sphere
+  };
+  template<> struct detect<10>{ template<typename VertexType> ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_edge_edge(__params__use__); } };
+  template<> struct detect<11>{ template<typename VertexType> ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_edge(__params__use__inv__); } };
+  template<> struct detect<12>{ template<typename VertexType> ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_vertex_face(__params__use__inv__); } };
+# undef __params__
+# undef __params__sph__
+# undef __params__use__
+# undef __params__use__inv__
+# undef __params__use__sph__
+
+// OLD
+/*
 # define __params__ const VertexArray &vai, const int i, const shape *shpi, const VertexArray &vaj, const int j, const shape *shpj
 # define __params__use__ vai, i, shpi, vaj, j, shpj
   template<int INTERACTION_TYPE> struct detect{};
@@ -496,8 +521,9 @@ namespace exaDEM
   template<> struct detect<3>{ ONIKA_HOST_DEVICE_FUNC inline contact operator()(__params__) const { return detection_edge_edge(__params__use__); } };
 # undef __params__
 # undef __params__use__
-
+*/
   /** This part concerns detection between particles and “stl mesh”.  **/
+/*
 # define __params__ const VertexArray &pi, const int i, const shape *shpi, const Vec3d *pj, const int j, const shape *shpj 
 # define __params__sph__ const Vec3d &pi, const double ri, const Vec3d &pj, const int j, const shape *shpj, const exanb::Quaternion &oj 
 # define __params__use__      pi, i, shpi, pj, j, shpj
@@ -523,6 +549,6 @@ namespace exaDEM
 # undef __params__use__
 # undef __params__use__inv__
 # undef __params__use__sph__
-
+*/
 
 } // namespace exaDEM

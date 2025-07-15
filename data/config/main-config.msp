@@ -46,15 +46,6 @@ init_rcut_max:
         verbose: false # also computes maximum particle move tolerance in grid space (max_displ)
     - check_rcut
 
-# executed once (whitout verbosity) first to enable automatic cell_size calculation
-preinit_rcut_max:
-  profiling: false
-  rebind: { grid: null_grid, chunk_neighbors: null_neighbors, domain: empty_domain }
-  body:
-    - domain:
-        cell_size: 0.0
-        grid_dims: [ 0 , 0 , 0 ]
-
 setup_drivers: nop
 init_particle_regions: nop
 
@@ -129,11 +120,9 @@ simulation:
   body:
     - print_logo_banner
     - hw_device_init   # provides MPI_COMM_WORLD as a default communicator
-    - make_empty_grid
     - global
     - io_tree
     - drivers
-#    - preinit_rcut_max
     - domain
     - init_prolog
     - grid_flavor

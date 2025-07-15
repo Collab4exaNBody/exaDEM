@@ -74,6 +74,7 @@ namespace exaDEM
     static constexpr ReduceField reduce_field{};
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(T, result, OUTPUT);
+    ADD_SLOT(bool, print_value, INPUT, false, DocString({"Enable to print the reduced value"}));
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
@@ -96,10 +97,11 @@ namespace exaDEM
       if(size > 0)
       {
         reduce_cell_particles(*grid, false, func, local, reduce_field, parallel_execution_context(), {}, data, size);
+        ONIKA_CU_DEVICE_SYNCHRONIZE();
       }
       T global;
       MPI_Allreduce(&local, &global, 1, onika::mpi::mpi_datatype<T>(), MPI_MIN, *mpi);
-      lout << "min result: " << global << std::endl;
+      if(*print_value) lout << "min result: " << global << std::endl;
       *result = global; 
     }
   };
