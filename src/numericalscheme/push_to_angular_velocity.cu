@@ -36,7 +36,7 @@ namespace exaDEM
   template <typename GridT, class = AssertGridHasFields<GridT, field::_vrot, field::_arot>> class PushToAngularVelocity : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet<field::_vrot, field::_arot>;
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_vrot, field::_arot>>;
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
@@ -55,9 +55,9 @@ namespace exaDEM
     {
       const double dt = *(this->dt);
       const double dt_2 = 0.5 * dt;
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
       PushToAngularVelocityFunctor func{dt_2};
-      auto [cell_ptr, cell_size] = traversal_real->info();
-      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }
   };
 

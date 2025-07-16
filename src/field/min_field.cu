@@ -93,10 +93,11 @@ namespace exaDEM
     {
       T local = std::numeric_limits<T>::max();
       ReduceMinFieldSet<T> func;
-      auto [data, size] = traversal_real->info();
-      if(size > 0)
+      const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
+lout << " size " << rcpo.m_num_cell_indices << std::endl;
+      if(rcpo.m_num_cell_indices > 0)
       {
-        reduce_cell_particles(*grid, false, func, local, reduce_field, parallel_execution_context(), {}, data, size);
+        reduce_cell_particles(*grid, false, func, local, reduce_field, parallel_execution_context(), {}, rcpo);
         ONIKA_CU_DEVICE_SYNCHRONIZE();
       }
       T global;

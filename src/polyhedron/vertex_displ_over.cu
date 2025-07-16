@@ -54,7 +54,7 @@ namespace exaDEM
     ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(ParticleDisplOverAsyncRequest, particle_displ_comm, INPUT_OUTPUT);
 
-  public:
+    public:
     // -----------------------------------------------
     // -----------------------------------------------
     inline std::string documentation() const override final
@@ -76,7 +76,7 @@ sets result output to true if at least one particle has moved further than thres
       const double max_dist = *threshold;
       const double max_dist2 = max_dist * max_dist;
 
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
 
       particle_displ_comm->m_comm = *mpi;
       particle_displ_comm->m_request = MPI_REQUEST_NULL;
@@ -92,7 +92,7 @@ sets result output to true if at least one particle has moved further than thres
         ldbg << "Async particle_displ_over => result set to false" << std::endl;
         particle_displ_comm->m_async_request = true;
         auto user_cb = onika::parallel::ParallelExecutionCallback{reduction_end_callback, &(*particle_displ_comm)};
-        reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set, parallel_execution_context(), user_cb, cell_ptr, cell_size);
+        reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set, parallel_execution_context(), user_cb, rcpo);
         particle_displ_comm->start_mpi_async_request();
         *result = false;
       }
@@ -102,7 +102,7 @@ sets result output to true if at least one particle has moved further than thres
         if (grid->number_of_cells() > 0)
         {
           auto user_cb = onika::parallel::ParallelExecutionCallback{};
-          reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set, parallel_execution_context(), user_cb, cell_ptr, cell_size);
+          reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set, parallel_execution_context(), user_cb, rcpo);
         }
         MPI_Allreduce(&(particle_displ_comm->m_particles_over), &(particle_displ_comm->m_all_particles_over), 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
         ldbg << "Nb part moved over " << max_dist << " (local/all) = " << particle_displ_comm->m_particles_over << " / " << particle_displ_comm->m_all_particles_over << std::endl;

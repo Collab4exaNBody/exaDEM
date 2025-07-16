@@ -107,12 +107,12 @@ namespace exaDEM
   public:
     inline void execute() override final
     {
-      auto [data, size] = traversal_real->info();
+      const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
 
       // Reduce over the subdomain
       ParticleVelMassValue value = {0.0, Vec3d{0.0,0.0,0.0}}; 
       ReduceParticleVelMassFunctor func;
-      reduce_cell_particles(*grid, false, func, value, reduce_field_set, parallel_execution_context(), {}, data, size);
+      reduce_cell_particles(*grid, false, func, value, reduce_field_set, parallel_execution_context(), {}, rcpo);
 
       // Reduce over MPI processes
       double local[4] = {value.m_tot, value.v_m_tot.x, value.v_m_tot.y, value.v_m_tot.z};

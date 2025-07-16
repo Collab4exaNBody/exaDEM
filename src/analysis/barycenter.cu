@@ -69,7 +69,7 @@ namespace exaDEM
 
       if( list_of_types.size() == 0 ) lout << "[Analysis/barycenter] types is empty, this operator is skipped" << std::endl;
 
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
 
       // iterate over types -- it could be optimized by computing all types in a single call of reduce_cell_particles.
       for(size_t i = 0 ; i < list_of_types.size() ; i++)
@@ -94,7 +94,7 @@ namespace exaDEM
         // Reduce over the subdomain
         ReduceParticleBarycenterTypeFunctor func = {prcsg, type};
         ParticleBarycenterTypeValue value = {0, {0.0,0.0,0.0}}; // int , Vec3d
-        reduce_cell_particles(*grid, false, func, value, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
+        reduce_cell_particles(*grid, false, func, value, reduce_field_set, parallel_execution_context(), {}, rcpo);
         // Reduce over MPI processes
         double local[4] = {(double)(value.count),value.barycenter.x, value.barycenter.y, value.barycenter.z};
         double global[4] = {0.0, 0.0, 0.0, 0.0}; // count, x, y, z
