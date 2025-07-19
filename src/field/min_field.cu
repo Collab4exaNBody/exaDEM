@@ -38,7 +38,7 @@ namespace exaDEM
     {
       ONIKA_HOST_DEVICE_FUNC inline void operator()(T &local, T field, reduce_thread_local_t = {}) const
       {
-        local = field;
+        local = std::min(local, field);
       }
 
       ONIKA_HOST_DEVICE_FUNC inline void operator()(T &global, const T& local, reduce_thread_block_t) const
@@ -94,11 +94,10 @@ namespace exaDEM
       T local = std::numeric_limits<T>::max();
       ReduceMinFieldSet<T> func;
       const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
-lout << " size " << rcpo.m_num_cell_indices << std::endl;
       if(rcpo.m_num_cell_indices > 0)
       {
-        reduce_cell_particles(*grid, false, func, local, reduce_field, parallel_execution_context(), {}, rcpo);
-        ONIKA_CU_DEVICE_SYNCHRONIZE();
+        auto user_cb = onika::parallel::ParallelExecutionCallback{};
+        reduce_cell_particles(*grid, false, func, local, reduce_field, parallel_execution_context(), user_cb, rcpo);
       }
       T global;
       MPI_Allreduce(&local, &global, 1, onika::mpi::mpi_datatype<T>(), MPI_MIN, *mpi);

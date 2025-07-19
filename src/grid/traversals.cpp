@@ -95,8 +95,8 @@ namespace exaDEM
       traversal_real->iterator = true;
       traversal_all->iterator = true;
 
-       traversal_real->reorder(REORDER::NONE);
-       traversal_all->reorder(REORDER::NONE);
+      traversal_real->reorder(REORDER::NONE);
+      traversal_all->reorder(REORDER::NONE);
     }
   };
 

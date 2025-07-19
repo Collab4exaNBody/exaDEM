@@ -38,9 +38,10 @@ namespace exaDEM
 
     bool iterator = false;
 
-    size_t * const __restrict__ data() { return onika::cuda::vector_data(m_data); }
+    size_t *__restrict__ data() { return onika::cuda::vector_data(m_data); }
     size_t size() { return onika::cuda::vector_size(m_data); }
-    size_t get_max_block_size() { return (m_max_block_size % EXADEM_BLOCK_UNIT + 1) * EXADEM_BLOCK_UNIT; }
+    size_t get_max_block_size() {return (  m_max_block_size / EXADEM_BLOCK_UNIT + 1) * EXADEM_BLOCK_UNIT; }
+
 
     exanb::ComputeCellParticlesOptions get_compute_cell_particles_options()
     {
