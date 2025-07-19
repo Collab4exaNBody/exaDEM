@@ -35,7 +35,7 @@ namespace exaDEM
   template <typename GridT, class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz, field::_vx, field::_vy, field::_vz>> class QuadraticForce : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet<field::_fx, field::_fy, field::_fz, field::_vx, field::_vy, field::_vz>;
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_fx, field::_fy, field::_fz, field::_vx, field::_vy, field::_vz>>;
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
@@ -53,9 +53,9 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
       QuadraticForceFunctor func{(*cx) * (*mu)};
-      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }
   };
 

@@ -30,25 +30,37 @@ namespace exaDEM
   using namespace exanb;
   template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
 
+  struct Accumulator
+  {
+    VectorT<int> data;
+    void reset()  
+    {
+      data.resize(1);
+      data[0] = 0;
+    }
+    int* __restrict__ get_ptr() { return data.data(); }
+    int get() { return data[0]; }
+  };
+
   template<class ParallelExecutionContextFunctor>
   struct driver_displ_over
   {
     ParallelExecutionContextFunctor m_parallel_execution_context;
     const double r2; // square distance
     MPI_Comm &comm;
-    int * storage;
     
     // backup drivers
     Drivers &bcpd;
     // backup driver idx
     const size_t bd_idx;
+    Accumulator storage;
     
     /* Ignored */   
     // inline int operator()(exaDEM::UndefinedDriver &) const { return 0; }
-    inline int operator()(exaDEM::Cylinder &a) const { return 0; } // WARNING should not move
+    inline int operator()(exaDEM::Cylinder &a) { return 0; } // WARNING should not move
 
     /* Active */
-    inline int operator()(exaDEM::Surface &a) const
+    inline int operator()(exaDEM::Surface &a) 
     {
       exaDEM::Surface &b = bcpd.get_typed_driver<exaDEM::Surface>(bd_idx);
       Vec3d d = a.center_proj - b.center_proj;
@@ -58,7 +70,7 @@ namespace exaDEM
         return 0;
     }
 
-    inline int operator()(exaDEM::Ball &a) const
+    inline int operator()(exaDEM::Ball &a) 
     {
       exaDEM::Ball &b = bcpd.get_typed_driver<exaDEM::Ball>(bd_idx);
       Vec3d d = a.center - b.center;
@@ -68,7 +80,7 @@ namespace exaDEM
         return 0;
     }
 
-    inline int operator()(exaDEM::Stl_mesh &a) const
+    inline int operator()(exaDEM::Stl_mesh &a)
     {
       exaDEM::Stl_mesh &b = bcpd.get_typed_driver<exaDEM::Stl_mesh>(bd_idx);
       
@@ -76,15 +88,16 @@ namespace exaDEM
         return 0;
 
 #ifdef ONIKA_CUDA_VERSION
+      storage.reset();
       size_t size = a.shp.get_number_of_vertices();
       const Vec3d * __restrict__ ptr_shp_vertices = onika::cuda::vector_data(a.shp.m_vertices);
       STLVertexDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.center, a.quat, b.center, b.quat};
-      ReduceMaxSTLVertexDisplacementFunctor func = {SVDFunc, storage};
+      ReduceMaxSTLVertexDisplacementFunctor func = {SVDFunc, storage.get_ptr()};
 
       ParallelForOptions opts;
       opts.omp_scheduling = OMP_SCHED_STATIC;
       parallel_for(size, func, m_parallel_execution_context(), opts);   
-      return *storage;
+      return storage.get();
 #else
       int sum = 0;
       // check each vertex
@@ -123,11 +136,6 @@ namespace exaDEM
 
   };
 
-  struct Accumulator
-  {
-    VectorT<int> data;
-  };
-
   class DriverDisplacementOver : public OperatorNode
   {
     // -----------------------------------------------
@@ -137,7 +145,6 @@ namespace exaDEM
     ADD_SLOT(bool, result, OUTPUT);
     ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(Drivers, backup_drvs, INPUT, REQUIRED, DocString{"List of backup Drivers"});
-    ADD_SLOT(Accumulator, displ_driver_count, PRIVATE);
     public:
     // -----------------------------------------------
     // -----------------------------------------------
@@ -154,9 +161,6 @@ sets result output to true if at least one particle has moved further than thres
     inline void execute() override final
     {
       MPI_Comm comm = *mpi;
-
-      auto& ddc = *displ_driver_count;
-
       const double max_dist = *threshold;
       const double max_dist2 = max_dist * max_dist;
 
@@ -170,10 +174,6 @@ sets result output to true if at least one particle has moved further than thres
         return;
       }
 
-      ddc.data.resize(1);
-      int * pddc = onika::cuda::vector_data(ddc.data);
-      // reset value (accumulator)
-      *pddc = 0;
       // get backup
       Drivers &bcpd = *backup_drvs;
       size_t bcpd_size = bcpd.get_size();
@@ -182,7 +182,7 @@ sets result output to true if at least one particle has moved further than thres
       auto pec_func = [this]() { return this->parallel_execution_context(); };
       for (size_t i = 0; i < bcpd_size && local_drivers_displ == 0 ; i++)
       {
-        driver_displ_over<decltype(pec_func)> func = {pec_func, max_dist2, comm, pddc, bcpd, i };
+        driver_displ_over<decltype(pec_func)> func = {pec_func, max_dist2, comm, bcpd, i };
         local_drivers_displ += drvs.apply( i , func );
       }
 

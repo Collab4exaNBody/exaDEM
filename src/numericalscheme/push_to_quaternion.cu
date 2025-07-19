@@ -37,7 +37,7 @@ namespace exaDEM
   template <typename GridT, class = AssertGridHasFields<GridT, field::_orient, field::_vrot, field::_arot>> class PushToQuaternion : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet<field::_orient, field::_vrot, field::_arot>;
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_orient, field::_vrot, field::_arot>>;
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
@@ -57,9 +57,9 @@ namespace exaDEM
       const double dt = *(this->dt);
       const double dt_2 = 0.5 * dt;
       const double dt2_2 = dt_2 * dt;
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
       PushToQuaternionFunctor func{dt, dt_2, dt2_2};
-      auto [cell_ptr, cell_size] = traversal_real->info();
-      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }
   };
 

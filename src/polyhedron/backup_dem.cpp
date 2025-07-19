@@ -62,10 +62,7 @@ namespace exaDEM
           const auto *__restrict__ rz = cells[i][field::rz];
           const auto *__restrict__ orient = cells[i][field::orient];
 
-
-#ifdef TRY_SOA //not activated
-         //try another data layout
-         const size_t block_size = n_particles * 7; 
+          const size_t block_size = n_particles;
 #         pragma omp simd
           for (size_t j = 0; j < n_particles; j++)
           {
@@ -77,19 +74,6 @@ namespace exaDEM
             rb[5 * block_size + j] = orient[j].y;
             rb[6 * block_size + j] = orient[j].z;
           }
-#else
-#         pragma omp simd
-          for (size_t j = 0; j < n_particles; j++)
-          {
-            rb[j * 7 + 0] = rx[j];
-            rb[j * 7 + 1] = ry[j];
-            rb[j * 7 + 2] = rz[j];
-            rb[j * 7 + 3] = orient[j].w;
-            rb[j * 7 + 4] = orient[j].x;
-            rb[j * 7 + 5] = orient[j].y;
-            rb[j * 7 + 6] = orient[j].z;
-          }
-#endif
         }
         GRID_OMP_FOR_END
       }

@@ -96,6 +96,21 @@ namespace exaDEM
     }
 
     template<class FuncT>
+    inline auto apply(int idx , FuncT& func)
+    {
+      assert( idx>=0 && idx<m_type_index_cpu.size() && m_type_index_cpu.size() == m_type_index.size() );
+      DRIVER_TYPE t = m_type_index_cpu[idx].m_type;
+      assert( t != DRIVER_TYPE::UNDEFINED );
+      if (t == DRIVER_TYPE::CYLINDER) return func( m_data.get_nth<DRIVER_TYPE::CYLINDER>()[ m_type_index_cpu[idx].m_index ] );
+      else if (t == DRIVER_TYPE::SURFACE)  return func( m_data.get_nth<DRIVER_TYPE::SURFACE >()[ m_type_index_cpu[idx].m_index ] );
+      else if (t == DRIVER_TYPE::BALL)     return func( m_data.get_nth<DRIVER_TYPE::BALL    >()[ m_type_index_cpu[idx].m_index ] );
+      else if (t == DRIVER_TYPE::STL_MESH) return func( m_data.get_nth<DRIVER_TYPE::STL_MESH>()[ m_type_index_cpu[idx].m_index ] );
+      fatal_error() << "Internal error: unsupported driver type encountered"<<std::endl;
+      static Cylinder tmp;
+      return func( tmp );
+    }
+
+    template<class FuncT>
     inline auto apply(const int idx , const FuncT& func)
     {
       assert( idx>=0 && idx<m_type_index_cpu.size() && m_type_index_cpu.size() == m_type_index.size() );

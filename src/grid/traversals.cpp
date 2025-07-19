@@ -58,29 +58,45 @@ namespace exaDEM
       tr_real.clear();
       tr_all.clear();
 
+      size_t max_n_particles = 0;
+
       // iterate over "real" cells
+      // sequential -> need #pragma omp parallel to activate it
       GRID_OMP_FOR_BEGIN (dims - 2 * gl, _, loc_no_gl)
       {
         const IJK loc = loc_no_gl + gl;
         const size_t i = grid_ijk_to_index(dims, loc);
         const size_t n_particles = cells[i].size();
         if (n_particles > 0)
+        {
+          max_n_particles = std::max(max_n_particles, n_particles);
           tr_real.push_back(i);
+        }
       }
       GRID_OMP_FOR_END
+      traversal_real->m_max_block_size = max_n_particles;
 
+      max_n_particles = 0;
+      // sequential -> need #pragma omp parallel to activate it
       GRID_OMP_FOR_BEGIN (dims, _ , loc)
       {
         //const IJK loc = loc;
         const size_t i = grid_ijk_to_index(dims, loc);
         const size_t n_particles = cells[i].size();
         if (n_particles > 0)
+        {
+          max_n_particles = std::max(max_n_particles, n_particles);
           tr_all.push_back(i);
+        }
       }
       GRID_OMP_FOR_END
+      traversal_all->m_max_block_size = max_n_particles;
       
       traversal_real->iterator = true;
       traversal_all->iterator = true;
+
+      traversal_real->reorder(REORDER::NONE);
+      traversal_all->reorder(REORDER::NONE);
     }
   };
 

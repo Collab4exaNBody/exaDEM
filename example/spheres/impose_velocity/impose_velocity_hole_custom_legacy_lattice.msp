@@ -60,7 +60,7 @@ domain:
 
 dump_data_xyz:
   - timestep_file: "xyz_datas/dembis_%09d"
-  - write_xyz_generic:
+  - write_xyz:
       fields: [ velocity, radius ]
       units: { velocity: "m/s", radius: "m" }
 

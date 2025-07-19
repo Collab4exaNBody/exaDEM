@@ -35,7 +35,7 @@ namespace exaDEM
   template <typename GridT, class = AssertGridHasFields<GridT, field::_mass, field::_fx, field::_fy, field::_fz>> class ForceToAccel : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet<field::_mass, field::_fx, field::_fy, field::_fz>;
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_mass, field::_fx, field::_fy, field::_fz>>;
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
@@ -51,9 +51,9 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
       ForceToAccelFunctor func{};
-      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }
   };
 
