@@ -26,7 +26,7 @@ jobs:
       
     - name: Get Onika
 #      run: git clone --depth 1 https://github.com/Collab4exaNBody/onika.git        
-      run: git clone --depth 1 --branch v1.0.2 https://github.com/Collab4exaNBody/onika.git        
+      run: git clone --depth 1 --branch v1.0.4 https://github.com/Collab4exaNBody/onika.git        
     - name: Configure Onika
       run: cmake -B ${{github.workspace}}/onika/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/onika/install
       working-directory: ${{github.workspace}}/onika    
