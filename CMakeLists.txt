@@ -40,7 +40,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 # ==============================
 # === Application version    ===
 # ==============================
-set(EXADEM_VERSION "exaDEM-1.1.0") 
+set(EXADEM_VERSION "exaDEM-1.1.2") 
 message(STATUS "Project version : ${EXADEM_VERSION}")
 
 
