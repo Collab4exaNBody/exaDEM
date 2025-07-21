@@ -45,9 +45,9 @@ domain:
 dump_data_xyz:
   - timestep_file: "dem_pos_vel_%09d.xyz"
   - message: { mesg: "Write positions-velocities dump " , endl: true }
-  - write_xyz_generic:
-      fields: [ id, velocity, radius ]
-      units: { velocity: "m/s", radius: "m" }
+  - write_xyz:
+     fields: [ id, vx, vy, vz, radius ]
+     units: { vx: "m/s",  vy: "m/s",  vz: "m/s", radius: "m" }
 
 iteration_dump_writer:
   - dump_data_xyz

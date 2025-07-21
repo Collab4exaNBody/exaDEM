@@ -35,7 +35,7 @@ namespace exaDEM
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
 
-    static inline constexpr FieldSet<field::_fx, field::_fy, field::_fz, field::_mom> compute_field_set = {};
+    static inline constexpr field_accessor_tuple_from_field_set_t<FieldSet<field::_fx, field::_fy, field::_fz, field::_mom>> compute_field_set = {};
 
   public:
     inline std::string documentation() const override final
@@ -47,9 +47,9 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
       SetFunctor<double, double, double, Vec3d> func = {{double(0.0), double(0.0), double(0.0), Vec3d{0.0, 0.0, 0.0}}};
-      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }
   };
 

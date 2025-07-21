@@ -39,7 +39,7 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_type, field::_homothety, field::_orient>> class PolyhedraComputeVertices : public OperatorNode
   {
-    using ComputeFields = FieldSet<field::_type, field::_rx, field::_ry, field::_rz, field::_homothety, field::_orient>;
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_type, field::_rx, field::_ry, field::_rz, field::_homothety, field::_orient>>;
     static constexpr ComputeFields compute_field_set{};
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(CellVertexField, cvf, INPUT_OUTPUT, DocString{"Store vertex positions for every polyhedron"});
@@ -66,13 +66,7 @@ namespace exaDEM
       const auto cells = grid->cells();
       const size_t n_cells = grid->number_of_cells(); // nbh.size();
 
-      size_t* cell_ptr = nullptr;
-      size_t cell_size = 0;
-
-      if(traversal_all->iterator)
-      {
-        std::tie(cell_ptr, cell_size) = traversal_all->info();
-      }
+      const ComputeCellParticlesOptions ccpo = traversal_all->get_compute_cell_particles_options();  
 
       if(*resize_vertex || *minimize_memory_footprint)
       {
@@ -108,12 +102,12 @@ namespace exaDEM
       if( is_def_box )
       {
         PolyhedraComputeVerticesFunctor<true> func{shps, vertex_fields.data(), domain->xform()};
-        compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+        compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), ccpo);
       }
       else
       {
         PolyhedraComputeVerticesFunctor<false> func{shps, vertex_fields.data(), domain->xform() };
-        compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+        compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), ccpo);
       }
     }
   };

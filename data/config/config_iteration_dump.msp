@@ -14,12 +14,12 @@ trigger_dump_contact_network_paraview:
   body:
     - nth_timestep: { first: false }
 
-write_paraview_generic:
-  binary: true
-  write_ghost: false
-  write_box: true
-  fields: ["processor_id", "radius", "type","vx", "vy", "vz","id","orient","stress"]
-
+write_paraview_generic_fields:
+  - write_paraview:
+     binary: true
+     write_ghost: false
+     write_box: true
+     fields: ["processor_id", "radius", "type","vx", "vy", "vz","id","orient","stress"]
 
 contact_network: nop
 

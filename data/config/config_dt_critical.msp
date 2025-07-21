@@ -1,11 +1,12 @@
 # It has to be called after contact_force And get_min_mass
-get_min_mass:
+compute_min_mass:
   rebind: { result: mass }
   body:
-    - min_mass
+    - min_mass:
+       print_value: false
 
 dt_critical:
   rebind: { kn: max_kn }
   body:
-    - get_min_mass:
+    - compute_min_mass
     - check_dt_critical

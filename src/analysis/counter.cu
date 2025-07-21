@@ -66,7 +66,7 @@ namespace exaDEM
 
       if( list_of_types.size() == 0 ) lout << "[Analysis/counter] types is empty, this operator is skipped" << std::endl;
 
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
 
       // iterate over types -- it could be optimized by computing all types in a single call of reduce_cell_particles.
       for(size_t i = 0 ; i < list_of_types.size() ; i++)
@@ -90,7 +90,7 @@ namespace exaDEM
         }
         ReduceParticleCounterTypeFunctor func = {prcsg, type};
         int count = 0;
-        reduce_cell_particles(*grid, false, func, count, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
+        reduce_cell_particles(*grid, false, func, count, reduce_field_set, parallel_execution_context(), {}, rcpo);
         uint64_t local(count), global(0);
         MPI_Reduce(&local, &global, 1, MPI_UINT64_T, MPI_SUM, 0, *mpi); 
         std::string var_name = "Type[" + std::to_string(type) + "]";
