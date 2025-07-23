@@ -66,6 +66,6 @@ If you are adding functionality, add tests accordingly.
 Pull request process
 --------------------
 
-Given the size of the code, only one reviewer will be assigned to you. If the assignment time exceeds one or two weeks, please tag `rprat-pro` or `carrardt` in the conversion.
+Given the size of the code, only one reviewer will be assigned to you. If the assignment time exceeds one or two weeks, please tag `rprat-pro` or `carrardt` in the conversation.
 
 IMPORTANT: By submitting a patch, you agree to allow the project owners to license your work under the the terms of the Apache2.0 License.
