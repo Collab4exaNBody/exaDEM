@@ -257,7 +257,6 @@ namespace exaDEM
 					displ = (signal_next - signal_current) * angle_factor;           
 					vel = shaker_velocity(time + dt);
 				}
-
 				center += displ * normal;
 				offset += displ; 
 				center_proj +=  displ * normal;

@@ -432,11 +432,15 @@ namespace exaDEM
 
     double shaker_signal(double time)
     {
+      assert(motion_start_threshold >= 0);
+      time -= motion_start_threshold;
       return amplitude * sin(omega * time);
     }
 
     Vec3d shaker_velocity(double time)
     {
+      assert(motion_start_threshold >= 0);
+      time -= motion_start_threshold;
       return amplitude * omega * cos(omega * time) * shaker_direction();
     }
   };
