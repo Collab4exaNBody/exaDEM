@@ -83,6 +83,3 @@ if isPolyhedra:
 print("  - read_dump_particle_interaction:")
 print("     filename: " + exadem_file) 
 
-if isPolyhedra:
-	print("  - radius_from_shape")
-
