@@ -85,7 +85,7 @@ namespace YAML
 
 namespace exaDEM
 {
-  const std::vector<MotionType> stl_valid_motion_types = {STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION, TABULATED};
+  const std::vector<MotionType> stl_valid_motion_types = {STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION, TABULATED, SHAKER};
 
   using namespace exanb;
   /**
@@ -227,6 +227,7 @@ namespace exaDEM
 				{
 					if( this->sigma != 0 ) vel += 0.5 * dt * acc;
 				}
+
 			}
 		}
 
@@ -243,6 +244,13 @@ namespace exaDEM
 				{
 					assert( exanb::norm(vel) == this->const_vel );
 				}
+
+        if( motion_type == SHAKER )
+        {
+          vel = shaker_velocity(time + dt) * this->shaker_direction();
+          acc = Vec3d{0,0,0}; // reset acc
+        }
+
 				center += dt * vel + 0.5 * dt * dt * acc;
 			}
 		}
