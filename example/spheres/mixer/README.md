@@ -15,3 +15,7 @@ Available in the directory:
 - `mixer_57k_sph.msp`  
 - `mixer_3M_sph.msp`  
 - `mixer_29M_sph.msp`
+
+### Documenation / Pictures
+
+See : https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Test_cases.html#mixer-simulation
