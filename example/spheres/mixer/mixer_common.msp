@@ -15,7 +15,7 @@ setup_drivers:
      scale: 100
      minskowski: 0.1
      binary: true
-     state: { vrot: [0,0,-0.25]} 
+     state: { vrot: [0,0,0.25]} 
      params: { motion_type: STATIONARY }
   - register_stl_mesh:
      id: 1

@@ -28,9 +28,9 @@ input_data:
 
 
 domain:
-  cell_size: 5 m
+  cell_size: 10 m
   periodic: [false,false,false]
-  grid_dims: [40, 40, 28 ]
+  grid_dims: [20, 20, 14 ]
   bounds: [ [ -100 , -100 , 30 m ] , [ 100 m , 100 m, 170 m] ]
   expandable: true
 
