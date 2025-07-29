@@ -1,0 +1,43 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+  - mixer_common.msp
+
+io_tree:
+  - io_config:
+     dir_name: "Mixer57KDir"
+
+input_data:
+  - init_rcb_grid
+  - particle_type:
+     type: [  Sphere1 ]
+  - lattice:
+     structure: SC
+     types: [ Sphere1 ]
+     size: [4.1 m , 4.1 m , 4.1 m ]
+     region: CYL and BOX
+  - set_fields:
+     polyhedra: false
+     type:              [ Sphere1 ]
+     radius:            [     2.0 ]
+     velocity:          [ [0,0,-1] ]
+     sigma_velocity:    [   0.001 ]
+     density:           [  0.0028 ]
+     region: CYL and BOX
+
+
+domain:
+  cell_size: 5 m
+  periodic: [false,false,false]
+  grid_dims: [40, 40, 28 ]
+  bounds: [ [ -100 , -100 , 30 m ] , [ 100 m , 100 m, 170 m] ]
+  expandable: true
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 300000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 1000
+  dt: 0.0001 
+  rcut_inc: 1.2 m
