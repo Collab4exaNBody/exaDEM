@@ -45,20 +45,20 @@ namespace exaDEM
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
   public:
-    inline std::string documentation() const override final { return R"EOF( This operator creates a parview file of stl meshes. This operator is performed with the rank 0.)EOF"; }
+    inline std::string documentation() const override final { return R"EOF( This operator creates a parview file of stl meshes.)EOF"; }
 
     inline void execute() override final
     {
       std::string path = *dir_name + "/ParaviewOutputFiles/";
 
-      constexpr int master_rank = 0;
-      int rank;
-      MPI_Comm_rank(*mpi, &rank);
-      if( rank != master_rank ) return;
+      int mpi_rank;
+      int mpi_size;
+      MPI_Comm_rank(*mpi, &mpi_rank);
+      MPI_Comm_size(*mpi, &mpi_size);
 
       std::vector<info_ball> balls;
       std::vector<info_surface> surfaces;
-      for (size_t id = 0; id < drivers->get_size(); id++)
+      for (size_t id = mpi_rank; id < drivers->get_size(); id+=mpi_size)
       {
         if (drivers->type(id) == DRIVER_TYPE::BALL)
         {
