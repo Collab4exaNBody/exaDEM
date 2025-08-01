@@ -52,6 +52,24 @@ For more details, see `CONTRIBUTING.md`. Main guidelines are:
 - Lhassan Amarsid (CEA/DES)
 - Vincent Richefeu (CNRS)
 
+### Citation
+
+To cite `exaDEM`, please use : [![DOI](https://joss.theoj.org/papers/10.21105/joss.07484/status.svg)](https://doi.org/10.21105/joss.07484) 
+
+```
+@article{prat2025exadem,
+  doi = {10.21105/joss.07484},
+  url = {https://doi.org/10.21105/joss.07484},
+  title={ExaDEM: a HPC application based on exaNBody targeting scalable DEM simulations with complex particle shapes},
+  author={Prat, Rapha{\"e}l and Carrard, Thierry and Amarsid, Lhassan and Richefeu, Vincent and Doncecchi, Carlo and Lafourcade, Paul and Latu, Guillaume and Vanson, Jean-Mathieu},
+  journal={Journal of Open Source Software},
+  volume={10},
+  number={106},
+  pages={7484},
+  year={2025}
+}
+```
+
 ### Acknowledgment
 
 `ExaDEM` is part of the `PLEIADES` platform which has been developped in collaboration with the French nuclear industry - mainly `CEA`, `EDF`, and `Framatome` - for simulation of fuel1 elements.
