@@ -1,6 +1,7 @@
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.07484/status.svg)](https://doi.org/10.21105/joss.07484)
 [![CMake](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/cmake.yml/badge.svg)](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/cmake.yml)
 [![Spack](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/spack.yml/badge.svg)](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/spack.yml)
-[![DOI](https://joss.theoj.org/papers/10.21105/joss.07484/status.svg)](https://doi.org/10.21105/joss.07484)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # ExaDEM
 
