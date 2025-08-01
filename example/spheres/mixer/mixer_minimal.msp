@@ -15,7 +15,7 @@ input_data:
   - lattice:
      structure: SC
      types: [ Sphere1 ]
-     size: [50 m , 50 m , 50 m ]
+     size: [ 25 m , 25 m , 25 m ]
      region: CYL and BOX
   - set_fields:
      polyhedra: false

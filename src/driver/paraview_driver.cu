@@ -37,21 +37,28 @@ namespace exaDEM
   {
     static constexpr Vec3d null = {0.0, 0.0, 0.0};
 
+
+    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
   public:
-    inline std::string documentation() const override final { return R"EOF( This operator creates a parview file of stl meshes. )EOF"; }
+    inline std::string documentation() const override final { return R"EOF( This operator creates a parview file of stl meshes.)EOF"; }
 
     inline void execute() override final
     {
       std::string path = *dir_name + "/ParaviewOutputFiles/";
 
+      int mpi_rank;
+      int mpi_size;
+      MPI_Comm_rank(*mpi, &mpi_rank);
+      MPI_Comm_size(*mpi, &mpi_size);
+
       std::vector<info_ball> balls;
       std::vector<info_surface> surfaces;
-      for (size_t id = 0; id < drivers->get_size(); id++)
+      for (size_t id = mpi_rank; id < drivers->get_size(); id+=mpi_size)
       {
         if (drivers->type(id) == DRIVER_TYPE::BALL)
         {

@@ -36,8 +36,8 @@ compute_force:
 domain:
   cell_size: 2.5 m
   periodic: [false, true, false]
-  grid_dims: [2, 2, 2]
-  bounds: [[0 m ,0 m, 0 m],[5 m, 5 m, 5 m]]
+  grid_dims: [2, 4, 2]
+  bounds: [[0 m ,0 m, 0 m],[5 m, 10 m, 5 m]]
   expandable: true
 
 global:

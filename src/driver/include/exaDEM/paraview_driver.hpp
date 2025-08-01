@@ -140,9 +140,6 @@ namespace exaDEM
 		{
 			std::filesystem::create_directories(path);
 		}
-		int rank;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		if(rank != 0) return;
 		std::ofstream file;
 		file.open(full_path);
 		if (!file)
@@ -211,9 +208,6 @@ namespace exaDEM
 		{
 			std::filesystem::create_directories(path);
 		}  
-		int rank;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		if(rank != 0) return;
 
 		std::ofstream file;
 		file.open(full_path);
