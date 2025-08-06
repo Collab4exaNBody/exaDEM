@@ -44,7 +44,7 @@ namespace exaDEM
 
       const int32_t poffshift = stream_info.shift;
 
-      ONIKA_CU_BLOCK_Y_SIMD_FOR(unsigned int, p_a, 0, cell_a_particles)
+      ONIKA_CU_BLOCK_Z_SIMD_FOR(unsigned int, p_a, 0, cell_a_particles)
       {
         if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
 
@@ -61,7 +61,8 @@ namespace exaDEM
         obb_i.enlarge(rVerlet);
 
         /** Count the number of interactions per thread */
-        for(unsigned int cg=0; cg<cell_groups ;cg++)
+        ONIKA_CU_BLOCK_Y_SIMD_FOR(unsigned int, cg, 0, cell_groups)
+        //for(unsigned int cg=0; cg<cell_groups ;cg++)
         {
           header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
           unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
@@ -129,7 +130,7 @@ namespace exaDEM
       const uint32_t* __restrict__ particle_offset = stream_info.offset;
       const int32_t poffshift = stream_info.shift;
  
-      ONIKA_CU_BLOCK_Y_SIMD_FOR(unsigned int, p_a, 0, cell_a_particles)
+      ONIKA_CU_BLOCK_Z_SIMD_FOR(unsigned int, p_a, 0, cell_a_particles)
       {
         if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
         unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
@@ -145,7 +146,8 @@ namespace exaDEM
         obb_i.enlarge(rVerlet);
 
         /** Count the number of interactions per thread */
-        for(unsigned int cg=0; cg<cell_groups ;cg++)
+        ONIKA_CU_BLOCK_Y_SIMD_FOR(unsigned int, cg, 0, cell_groups)
+        //for(unsigned int cg=0; cg<cell_groups ;cg++)
         {
           header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
           unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
@@ -178,7 +180,7 @@ namespace exaDEM
       }
       Interaction item;
  
-      ONIKA_CU_BLOCK_Y_SIMD_FOR(unsigned int, p_a, 0, cell_a_particles)
+      ONIKA_CU_BLOCK_Z_SIMD_FOR(unsigned int, p_a, 0, cell_a_particles)
       {
         if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
         unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
@@ -193,7 +195,8 @@ namespace exaDEM
         obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
         obb_i.enlarge(rVerlet);
 
-        for(unsigned int cg=0; cg<cell_groups ;cg++)
+	ONIKA_CU_BLOCK_Y_SIMD_FOR(unsigned int, cg, 0, cell_groups)
+        //for(unsigned int cg=0; cg<cell_groups ;cg++)
         {
           header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
           unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();

@@ -5,9 +5,12 @@ namespace exaDEM
 	using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
 	using NumberOfPolyhedronInteractionPerTypes = ::onika::oarray_t<int, NumberOfPolyhedronInteractionTypes>;
 
+
+
 	/***************************/
 	/*  Device Block functions */
 	/***************************/
+
 
 	ONIKA_HOST_DEVICE_FUNC void count_interaction_block(
 			double rVerlet,
@@ -40,14 +43,14 @@ namespace exaDEM
 		const int ne_nbh = shp_nbh->get_number_of_edges();
 		const int nf_nbh = shp_nbh->get_number_of_faces();
 
-		obb_j.enlarge(shp->m_radius);
-		obb_i.enlarge(shp_nbh->m_radius);
+		//obb_j.enlarge(shp->m_radius);
+		//obb_i.enlarge(shp_nbh->m_radius);
 
 		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, nv)
 		{
 			vec3r vi = conv_to_vec3r(vertices_a[i]);
-			if(obb_j.intersect(vi))
-			{
+			//if(obb_j.intersect(vi))
+			//{
 				ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nv_nbh)
 				{
 					if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
@@ -65,7 +68,7 @@ namespace exaDEM
 					bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
 					count[VERTEX_FACE] += contact * 1; // vertex - face
 				}
-			}
+			//}
 		}
 
 		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, ne)
@@ -81,8 +84,8 @@ namespace exaDEM
 		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nv_nbh)
 		{
 			vec3r vj = conv_to_vec3r(vertices_b[j]);
-			if( obb_i.intersect(vj))
-			{
+			//if( obb_i.intersect(vj))
+			//{
 				ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, ne)
 				{
 					bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
@@ -94,11 +97,12 @@ namespace exaDEM
 					bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
 					count[VERTEX_FACE] += contact * 1; // face - vertex
 				}
-			}
+			//}
 		}
-		obb_j.enlarge(-shp->m_radius);
-		obb_i.enlarge(-shp_nbh->m_radius);
+		//obb_j.enlarge(-shp->m_radius);
+		//obb_i.enlarge(-shp_nbh->m_radius);
 	}
+
 
 
 	ONIKA_HOST_DEVICE_FUNC void fill_interaction_block(
@@ -133,14 +137,14 @@ namespace exaDEM
 		const int ne_nbh = shp_nbh->get_number_of_edges();
 		const int nf_nbh = shp_nbh->get_number_of_faces();
 
-		obb_j.enlarge(shp->m_radius);
-		obb_i.enlarge(shp_nbh->m_radius);
+		//obb_j.enlarge(shp->m_radius);
+		//obb_i.enlarge(shp_nbh->m_radius);
 
 		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, nv)
 		{
 			vec3r vi = conv_to_vec3r(vertices_a[i]);
-			if(obb_j.intersect(vi))
-			{
+			//if(obb_j.intersect(vi))
+			//{
 				item.sub_i = i;
 				item.type = 0;
 				ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nv_nbh)
@@ -174,7 +178,7 @@ namespace exaDEM
 						data[item.type].set(prefix[item.type]++, item);
 					}
 				}
-			}
+			//}
 		}
 		item.type = 3;
 		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, ne)
@@ -200,8 +204,8 @@ namespace exaDEM
 		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nv_nbh)
 		{
 			vec3r vj = conv_to_vec3r(vertices_b[j]);
-			if( obb_i.intersect(vj))
-			{
+			//if( obb_i.intersect(vj))
+			//{
 				item.type = 1;
 				item.sub_i = j;
 				// edge - vertex
@@ -226,10 +230,10 @@ namespace exaDEM
 						data[item.type].set(prefix[item.type]++, item);
 					}
 				}
-			}
+			//}
 		}
-		obb_j.enlarge(-shp->m_radius);
-		obb_i.enlarge(-shp_nbh->m_radius);
+		//obb_j.enlarge(-shp->m_radius);
+		//obb_i.enlarge(-shp_nbh->m_radius);
 	}
 
 	/***************************/
@@ -302,7 +306,7 @@ namespace exaDEM
 							OBB obb_j = p_nbh.shp->obb;
 							obb_j.rotate(p_nbh.get_quat());
 							obb_j.translate(vec3r{p_nbh.r.x, p_nbh.r.y, p_nbh.r.z});
-							if( obb_i.intersect(obb_j) )
+							if(obb_i.intersect(obb_j))
 							{
 								obb_j.enlarge(rVerlet);
 								count_interaction_block( rVerlet, count, nbh_cg.is_ghost_b, p, p_nbh, obb_i, obb_j);
@@ -318,7 +322,6 @@ namespace exaDEM
 				if(threadIdx.x == 0 && threadIdx.y == 0 && threadIdx.z == 0) count_data[ONIKA_CU_BLOCK_IDX][i] = aggregate;
 			}
 		}
-
 
 
 	template<int BLOCKX, int BLOCKY, typename TMPLC>
@@ -411,6 +414,7 @@ namespace exaDEM
 				prefix[type] += sdata[type];
 			}
 			Interaction item;
+
 			for(unsigned int p_a=0 ; p_a< cell_a_particles ; p_a++)
 			{
 				if( particle_offset!=nullptr ) stream = stream_base + particle_offset[p_a] + poffshift;
@@ -445,6 +449,7 @@ namespace exaDEM
 							obb_j.rotate(p_nbh.get_quat());
 							obb_j.translate(vec3r{p_nbh.r.x, p_nbh.r.y, p_nbh.r.z});
 							//obb_i.enlarge(rVerlet);
+							//if( obb_i.intersect(obb_j) )
 							if( obb_i.intersect(obb_j) )
 							{
 								obb_j.enlarge(rVerlet);
@@ -470,6 +475,7 @@ namespace exaDEM
 					} // chunk
 				} // cg
 			} // p_a 
-		} // fill 
+		} // fill
+
 } // namespace exaDEM
 

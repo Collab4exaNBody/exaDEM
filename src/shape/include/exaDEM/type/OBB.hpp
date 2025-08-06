@@ -213,6 +213,67 @@ public:
     // Since no separating axis is found, the OBBs must be intersecting
     return true;
   }
+  
+ONIKA_HOST_DEVICE_FUNC
+bool intersectGPU(const OBB &obb, double tol = FLT_EPSILON) const
+{
+    double ra, rb;
+
+    const vec3r A[3] = { e1, e2, e3 };
+    const vec3r B[3] = { obb.e1, obb.e2, obb.e3 };
+
+    double R[3][3];     // produits scalaires
+    double AbsR[3][3];  // valeurs absolues
+
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            R[i][j] = A[i] * B[j];
+            AbsR[i][j] = fabs(R[i][j]) + tol;
+        }
+    }
+
+    vec3r tt = center - obb.center;
+    vec3r t(tt * e1, tt * e2, tt * e3);
+
+    const double Ea[3] = { extent.x, extent.y, extent.z };
+    const double Eb[3] = { obb.extent.x, obb.extent.y, obb.extent.z };
+
+    // Test axes de A
+    for (int i = 0; i < 3; ++i)
+    {
+        ra = Ea[i];
+        rb = Eb[0] * AbsR[i][0] + Eb[1] * AbsR[i][1] + Eb[2] * AbsR[i][2];
+        if (fabs(t[i]) > ra + rb) return false;
+    }
+
+    // Test axes de B
+    for (int j = 0; j < 3; ++j)
+    {
+        ra = Ea[0] * AbsR[0][j] + Ea[1] * AbsR[1][j] + Ea[2] * AbsR[2][j];
+        rb = Eb[j];
+        double proj = t.x * R[0][j] + t.y * R[1][j] + t.z * R[2][j];
+        if (fabs(proj) > ra + rb) return false;
+    }
+
+    // Axes croisés eAi x eBj
+    for (int i = 0; i < 3; ++i)
+    {
+        int u = (i + 1) % 3;
+        int v = (i + 2) % 3;
+        for (int j = 0; j < 3; ++j)
+        {
+            ra = Ea[u] * AbsR[v][j] + Ea[v] * AbsR[u][j];
+            rb = Eb[(j + 1) % 3] * AbsR[i][(j + 2) % 3] + Eb[(j + 2) % 3] * AbsR[i][(j + 1) % 3];
+            double proj = t[v] * R[u][j] - t[u] * R[v][j];
+            if (fabs(proj) > ra + rb) return false;
+        }
+    }
+
+    return true;
+}
+
 
   // To know wether a point inside the OBB
   ONIKA_HOST_DEVICE_FUNC

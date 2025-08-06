@@ -14,8 +14,9 @@ chunk_neighbors_impl:
   - unclassify_interactions
 #  - nbh_polyhedron
   - nbh_polyhedron_gpu:
+     block_pair_version: true
 #     block_version: true
-     particle_version: true
+#     particle_version: true
 #     pair_version: true
   - classify_interactions
   - stats_interactions

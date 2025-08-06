@@ -6,6 +6,11 @@
 #   define ONIKA_CU_BLOCK_Y_SIMD_FOR(yT,yj,ys,ye) _Pragma("omp simd") for(yT yj=ys ; yj<ye ; ++yj)
 #   endif
 
+#   if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+#   define ONIKA_CU_BLOCK_Z_SIMD_FOR(zT,zj,zs,ze)           for(zT zj=zs+threadIdx.z ; zj<ze ; zj+=blockDim.z )
+#   else
+#   define ONIKA_CU_BLOCK_Z_SIMD_FOR(zT,zj,zs,ze) _Pragma("omp simd") for(zT zj=zs ; zj<ze ; ++zj)
+#   endif
 
 #define VERTEX_VERTEX 0
 #define VERTEX_EDGE 1

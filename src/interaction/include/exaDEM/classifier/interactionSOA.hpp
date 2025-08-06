@@ -103,9 +103,9 @@ namespace exaDEM
     /**
      *briefs Returns the number of interactions.
      */
-    ONIKA_HOST_DEVICE_FUNC size_t size() const { return onika::cuda::vector_size(ft_x); }
+    ONIKA_HOST_DEVICE_FUNC size_t size() const { return onika::cuda::vector_size(p_i); }
 
-    ONIKA_HOST_DEVICE_FUNC size_t size() { return onika::cuda::vector_size(ft_x); }
+    ONIKA_HOST_DEVICE_FUNC size_t size() { return onika::cuda::vector_size(p_i); }
 
     struct PrefetchMemoryFunctor
     {

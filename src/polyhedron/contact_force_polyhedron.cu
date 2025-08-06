@@ -48,6 +48,19 @@ namespace exaDEM
 {
   using namespace exanb;
   using namespace polyhedron;
+  
+  __global__ void kornol(
+  		InteractionSOA2& soa,
+  		size_t size)
+  {
+  	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  	if(idx < size)
+  	{
+  		soa.ft_x[idx] = 0;
+  		soa.ft_y[idx] = 0;
+  		soa.ft_z[idx] = 0;
+  	}
+  }
 
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class ComputeContactClassifierPolyhedronGPU : public OperatorNode
@@ -66,6 +79,8 @@ namespace exaDEM
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
     ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED, DocString{"Write an Output file containing interactions."});
     ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
+    
+    ADD_SLOT(Classifier2, ic2, INPUT_OUTPUT);	
 
     public:
     inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
@@ -82,9 +97,25 @@ namespace exaDEM
           loop_contact_force<start+1, end, FuncT>(classifier, cp_xform, std::forward<Args>(args)...);
         }
       }
+      
+    template<int start, int end, template<int, typename> typename FuncT, typename XFormT, typename... Args>
+      void loop_contact_force2(Classifier2& classifier2, XFormT& cp_xform, Args &&... args)
+      {
+        //printf("LOOP2\n");
+        FuncT<start, XFormT> contact_law;
+        contact_law.xform = cp_xform;
+        run_contact_law2(parallel_execution_context(), start, classifier2, contact_law, args...);
+        //printf("START: %d END: %d\n", start, end);
+        if constexpr( start + 1 <= end )
+        {
+          //printf("RECURSIVE\n");
+          loop_contact_force2<start+1, end, FuncT>(classifier2, cp_xform, std::forward<Args>(args)...);
+        }
+      }
 
     inline void execute() override final
     {
+      //printf("CONTACT\n");
       if (grid->number_of_cells() == 0)
       {
         return;
@@ -115,11 +146,22 @@ namespace exaDEM
 
       const double time = *dt;
       auto &classifier = *ic;
+      auto &classifier2 = *ic2;
+      
+      auto& type0 = classifier2.waves[0];
+      auto size = type0.size();
+      
+      int numBlocks = ( size + 256 - 1 ) / 256;
+      
+      //kornol<<<numBlocks, 256>>>(type0, size); 
 
       /** Contact fexaDEM/orce kernels */
       contact_law_driver<Cylinder> cyli;
       contact_law_driver<Surface> surf;
       contact_law_driver<Ball> ball;
+      
+      auto& sym = *symetric;
+      sym = true;
 
       if (*symetric == false)
       {
@@ -138,13 +180,16 @@ namespace exaDEM
       if(is_def_xform)
       {
         LinearXForm cp_xform = {xform};
-        loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
+        //loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
+        loop_contact_force2<poly_type_start, poly_type_end, contact_law>(classifier2, cp_xform, __params__);
         loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
       }
       else
       {
+       //printf("ICI?\n");
         NullXForm cp_xform;
-        loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
+        //loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
+        loop_contact_force2<poly_type_start, poly_type_end, contact_law>(classifier2, cp_xform, __params__);
         loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
       }
       run_contact_law(parallel_execution_context(), 4, classifier, cyli, __params_driver__);
@@ -160,6 +205,7 @@ namespace exaDEM
         std::string ts = std::to_string(*timestep);
         itools::write_file(stream, (*dir_name), (*interaction_basename) + ts);
       }
+     // printf("CONTACT END\n");
     }
   };
 

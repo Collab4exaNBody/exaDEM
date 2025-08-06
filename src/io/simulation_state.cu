@@ -58,6 +58,8 @@ namespace exaDEM
     // DEM data
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
     ADD_SLOT(bool, symetric, INPUT, REQUIRED, DocString{"Use of symetric feature (contact law)"});
+    
+    ADD_SLOT(Classifier2, ic2, INPUT_OUTPUT);
 
     static constexpr FieldSet<field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass> reduce_field_set{};
 
@@ -95,9 +97,65 @@ namespace exaDEM
       }
       return res;
     }
+    
+    template <typename T> inline IOSimInteractionResult reduce_sim_io2(Classifier<T> &classifier, Classifier2 &classifier2, bool symetric)
+    {
+      IOSimInteractionResult res;
+      VectorT<IOSimInteractionResult> results;
+      int types = classifier.number_of_waves();
+      results.resize(types);
+      {
+        // std::vector<ParallelExecutionWrapper> pexw;
+        // pexw.resize(types);
+        for(int i = 0; i < 4; i++)
+        {
+          const auto &buffs = classifier2.buffers[i];
+          //auto [data, size] = classifier.get_info(i);
+          auto& data = classifier2.waves[i];
+          auto& size = data.size2;
+          const double *const dnp = onika::cuda::vector_data(buffs.dn);
+
+          int coef = 1;
+          if (i < 4 && symetric)
+            coef *= 2;
+
+          //InteractionWrapper<T> dataWrapper(data);
+          IOSimInteractionFunctor2 func = {dnp, coef};
+
+          if (size > 0 && dnp != nullptr) // skip it if forces has not been computed
+          {
+            reduce_data2<IOSimInteractionFunctor2, IOSimInteractionResult>(parallel_execution_context(), data, func, size, results[i]);
+          }
+        }
+        for (int i = 4; i < types; i++)
+        {
+          const auto &buffs = classifier.buffers[i];
+          auto [data, size] = classifier.get_info(i);
+          const double *const dnp = onika::cuda::vector_data(buffs.dn);
+
+          int coef = 1;
+          if (i < 4 && symetric)
+            coef *= 2;
+
+          InteractionWrapper<T> dataWrapper(data);
+          IOSimInteractionFunctor func = {dnp, coef};
+
+          if (size > 0 && dnp != nullptr) // skip it if forces has not been computed
+          {
+            reduce_data<T, IOSimInteractionFunctor, IOSimInteractionResult>(parallel_execution_context(), dataWrapper, func, size, results[i]);
+          }
+        }
+      } // synchronize
+      for (int i = 0; i < types; i++)
+      {
+        res.update(results[i]);
+      }
+      return res;
+    }
 
     inline void execute() override final
     {
+      //printf("SIMULATION\n");
       MPI_Comm comm = *mpi;
       SimulationState &sim_info = *simulation_state;
 
@@ -113,7 +171,9 @@ namespace exaDEM
 
       // get interaction informations
       Classifier<InteractionSOA> &classifier = *ic;
-      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
+      auto& classifier2 = *ic2;
+      //exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
+      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io2(classifier, classifier2, *symetric);	
 
       // reduce partial sums and share the result
       uint64_t active_interactions, total_interactions;
@@ -163,6 +223,7 @@ namespace exaDEM
 
       // for other operators
       *system_mass = mass;
+     // printf("SIMULATION END\n");
     }
   };
 

@@ -141,6 +141,158 @@ namespace exaDEM
 				item2.update_friction_and_moment(item);
 			}
 		};
+		
+		struct Interactions_intermediaire
+		{
+			uint16_t* p_i;
+			uint16_t* p_j;
+			uint32_t* cell_i;
+			uint32_t* cell_j;
+			
+			size_t size;
+		};
+		
+   struct InteractionSOA2
+   {
+ 
+      // forces
+      double * ft_x;
+      double * ft_y;
+      double * ft_z;
+      // moment
+      double * mom_x;
+      double * mom_y;
+      double * mom_z;
+      // particle id
+      uint64_t * id_i;
+      uint64_t * id_j;
+      // cell id
+      uint32_t * cell_i;
+      uint32_t * cell_j;
+      // position into the cell
+      uint16_t * p_i;
+      uint16_t * p_j;
+      // sub id
+      uint16_t * sub_i;
+      uint16_t * sub_j;
+      
+      uint16_t m_type;
+      
+      size_t size2;
+      
+      ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
+      {
+        exaDEM::Interaction res = {
+          {ft_x[idx], ft_y[idx], ft_z[idx]}, 
+          {mom_x[idx], mom_y[idx], mom_z[idx]}, 
+          id_i[idx], id_j[idx], 
+          cell_i[idx], cell_j[idx], 
+          p_i[idx], p_j[idx], 
+          sub_i[idx], sub_j[idx], m_type};
+        return res;
+      }
+      
+      ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator[](const uint64_t idx) const
+      {
+        exaDEM::Interaction res = {
+          {ft_x[idx], ft_y[idx], ft_z[idx]}, 
+          {mom_x[idx], mom_y[idx], mom_z[idx]}, 
+          id_i[idx], id_j[idx], 
+          cell_i[idx], cell_j[idx], 
+          p_i[idx], p_j[idx], 
+          sub_i[idx], sub_j[idx], m_type};
+        return res;
+      }
+      
+      ONIKA_HOST_DEVICE_FUNC size_t size()
+      {
+      	return size2;
+      }
+      
+      ONIKA_HOST_DEVICE_FUNC size_t size() const
+      {
+      	return size2;
+      }
+      
+      ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
+      {
+        ft_x[idx] = item.friction.x;
+        ft_y[idx] = item.friction.y;
+        ft_z[idx] = item.friction.z;
+
+        mom_x[idx] = item.moment.x;
+        mom_y[idx] = item.moment.y;
+        mom_z[idx] = item.moment.z;
+      }
+      
+    
+    ONIKA_HOST_DEVICE_FUNC void set(size_t idx, exaDEM::Interaction& interaction)
+    {
+        //if(idx >= size()) printf("idx %d / size %d\n", int(idx), int(size()));
+        m_type = interaction.type;
+        //set(idx, ft_x, interaction.friction.x);
+        ft_x[idx] = interaction.friction.x;
+        //set(idx, ft_y, interaction.friction.y);
+        ft_y[idx] = interaction.friction.y;
+        //set(idx, ft_z, interaction.friction.z);
+	ft_z[idx] = interaction.friction.z;
+
+        //set(idx, mom_x, interaction.moment.x);
+        mom_x[idx] = interaction.moment.x;
+        //set(idx, mom_y, interaction.moment.y);
+        mom_y[idx] = interaction.moment.y;
+        //set(idx, mom_z, interaction.moment.z);
+	mom_z[idx] = interaction.moment.z;
+
+        //set(idx, id_i, interaction.id_i);
+        id_i[idx] = interaction.id_i;
+        //set(idx, id_j, interaction.id_j);
+	id_j[idx] = interaction.id_j;
+
+        //set(idx, cell_i, interaction.cell_i);
+        cell_i[idx] = interaction.cell_i;
+        //set(idx, cell_j, interaction.cell_j);
+	cell_j[idx] = interaction.cell_j;
+
+        //set(idx, p_i, interaction.p_i);
+        p_i[idx] = interaction.p_i;
+        //set(idx, p_j, interaction.p_j);
+	p_j[idx] = interaction.p_j;
+
+        //set(idx, sub_i, interaction.sub_i);
+        sub_i[idx] = interaction.sub_i;
+        //set(idx, sub_j, interaction.sub_j);
+        sub_j[idx] = interaction.sub_j; 
+    }      
+      
+   };
+   
+   struct Classifier2
+   {
+   	//std::vector<InteractionSOA2> waves;
+   	//InteractionSOA2 waves[4];
+   	onika::memory::CudaMMVector<InteractionSOA2> waves;
+   	std::vector<itools::interaction_buffers> buffers;
+
+	bool use = false;
+	
+	void initialize(){ waves.resize(4); buffers.resize(4); /*use = true;*/ }
+    
+    std::tuple<double *, Vec3d *, Vec3d *, Vec3d *> buffer_p(int id)
+    {
+      auto &analysis = buffers[id];
+      // fit size if needed
+      const size_t size = waves[id].size();
+      analysis.resize(size);
+      double *const __restrict__ dnp = onika::cuda::vector_data(analysis.dn);
+      Vec3d *const __restrict__ cpp = onika::cuda::vector_data(analysis.cp);
+      Vec3d *const __restrict__ fnp = onika::cuda::vector_data(analysis.fn);
+      Vec3d *const __restrict__ ftp = onika::cuda::vector_data(analysis.ft);
+      return {dnp, cpp, fnp, ftp};
+    }
+
+    
+   };	
 
 	/**
 	 * @brief Classifier for managing interactions categorized into different types.

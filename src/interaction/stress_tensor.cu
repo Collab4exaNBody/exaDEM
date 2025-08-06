@@ -113,6 +113,58 @@ namespace exaDEM
       }
     };
 
+  template<int NTypes, bool Sym, typename Op>
+    struct compute_stress_tensors2
+    {
+      Op* oper;
+
+      template <int Type, typename TMPLC>
+        void iteration(Classifier<InteractionSOA>& classifier, Classifier2& classifier2, TMPLC *const __restrict__ cells)
+        {
+          static_assert(Type >= 0 && Type < NTypes);
+          if(Type < 4)
+          {
+          	auto& interactions = classifier2.waves[Type];
+          	auto& size = interactions.size2;
+          	if(size > 0)
+          	{
+	            ParallelForOptions opts;
+	            opts.omp_scheduling = OMP_SCHED_STATIC;
+	            const auto [dnp, cpp, fnp, ftp] = classifier2.buffer_p(Type); // get parameters: get forces (fn, ft) and contact positions (cp) computed into the contact force operators.
+	            //InteractionWrapper<InteractionSOA> interactions(Ip);         // get data: interaction
+	            compute_stress_tensor<Type, Sym> func;                       // get kernel
+	            WrapperForAll2 wrapper(interactions, func , cells, dnp, fnp, ftp, cpp); // pack data, kernel, and interaction in a wrapper
+	            parallel_for(size, wrapper, oper->parallel_execution_context(), opts); // launch kernel
+          	}
+          }
+          else
+          {
+          auto [Ip, size] = classifier.get_info(Type); // get interactions
+          if (size > 0 )
+          {
+            ParallelForOptions opts;
+            opts.omp_scheduling = OMP_SCHED_STATIC;
+            const auto [dnp, cpp, fnp, ftp] = classifier.buffer_p(Type); // get parameters: get forces (fn, ft) and contact positions (cp) computed into the contact force operators.
+            InteractionWrapper<InteractionSOA> interactions(Ip);         // get data: interaction
+            compute_stress_tensor<Type, Sym> func;                       // get kernel
+            WrapperForAll wrapper(interactions, func , cells, dnp, fnp, ftp, cpp); // pack data, kernel, and interaction in a wrapper
+            parallel_for(size, wrapper, oper->parallel_execution_context(), opts); // launch kernel
+          }
+          }
+        }
+
+      template<int Type, typename... Args> void loop(Args... args)
+      {
+        iteration<Type>(args...);
+        if constexpr (Type - 1 >= 0) loop<Type-1> (args...); 
+      }
+
+      template<typename... Args> void operator()(Args&&... args)
+      {
+        static_assert(NTypes >= 1);
+        loop<NTypes-1>(args...);
+      }
+    };
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_stress>> class StressTensor : public OperatorNode
   {
@@ -120,23 +172,29 @@ namespace exaDEM
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier2, ic2, INPUT_OUTPUT);
 
     public:
     inline std::string documentation() const override final { return R"EOF( This operator computes the total stress tensor and the stress tensor for each particles. )EOF"; }
 
     inline void execute() override final
     {
+      //printf("STRESS\n");
       if (grid->number_of_cells() == 0) { return; }
       if (!ic.has_value()) { return; }
 
       // get slot data
       auto cells = grid->cells();
       Classifier<InteractionSOA>& cf = *ic;
+      auto& cf2 = *ic2;
       // get kernel
       constexpr bool sym = true;
-      compute_stress_tensors<13, sym, StressTensor> runner = {this}; // 13 is the number of interaction types
+      //compute_stress_tensors<13, sym, StressTensor> runner = {this}; // 13 is the number of interaction types
                                                                      // iterate over types
-      runner(cf, cells);
+      compute_stress_tensors2<13, sym, StressTensor> runner = {this};
+      //runner(cf, cells);
+      runner(cf, cf2, cells);
+      //printf("STRESS END\n");
     }
   };
 

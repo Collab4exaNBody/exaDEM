@@ -112,6 +112,43 @@ namespace exaDEM
       }
     };
 
+    template <class FuncT, class ResultT> struct ReduceTFunctor2
+    {
+      //InteractionWrapper<T> m_data; /**< Pointer to the data to be reduced. */
+      InteractionSOA2 m_data;
+      const FuncT m_func;           /**< Functor that defines how reduction is performed. */
+      ResultT *m_reduced_val;       /**< Pointer to the result of the reduction. */
+
+      /**
+       * @brief Operator to perform the reduction.
+       * @param i The index of the data to reduce.
+       */
+      ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const
+      {
+        ResultT local_val = ResultT();
+        m_func(local_val, i, m_data, reduce_thread_local_t{});
+
+        ONIKA_CU_BLOCK_SHARED onika::cuda::UnitializedPlaceHolder<ResultT> team_val_place_holder;
+        ResultT &team_val = team_val_place_holder.get_ref();
+
+        if (ONIKA_CU_THREAD_IDX == 0)
+        {
+          team_val = local_val;
+        }
+        ONIKA_CU_BLOCK_SYNC();
+
+        if (ONIKA_CU_THREAD_IDX != 0)
+        {
+          m_func(team_val, local_val, reduce_thread_block_t{});
+        }
+        ONIKA_CU_BLOCK_SYNC();
+
+        if (ONIKA_CU_THREAD_IDX == 0)
+        {
+          m_func(*m_reduced_val, team_val, reduce_global_t{});
+        }
+      }
+    };
     /**
      * @struct IOSimInteractionResult
      * @brief Stores the results.
@@ -154,6 +191,76 @@ namespace exaDEM
       ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult &local, const uint64_t idx,
                                                     // const exaDEM::Interaction* const interactions,
                                                     const InteractionWrapper<T>& interactions, reduce_thread_local_t = {}) const
+      {
+        exaDEM::Interaction I = interactions(idx);
+
+        // filter duplicate (mpi ghost)
+        if (I.id_i < I.id_j)
+        {
+          const double &dn = dnp[idx];
+          local.n_tot_interaction += coef;
+          if (dn < 0.0)
+          {
+            local.n_act_interaction += coef;
+            local.min_dn = std::min(local.min_dn, dn);
+          }
+        }
+      }
+
+      /**
+       * @brief Operator to combine local results at the block level.
+       *
+       * @param global The global result.
+       * @param local The local result.
+       * @param reduce_thread_block_t Tag for block-level reduction.
+       */
+      ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult &global, IOSimInteractionResult &local, reduce_thread_block_t) const
+      {
+        if(local.n_act_interaction > 0)
+        {
+          ONIKA_CU_ATOMIC_ADD(global.n_act_interaction, local.n_act_interaction);
+          EXADEM_CU_ATOMIC_MIN(global.min_dn, local.min_dn);
+        }
+        ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction, local.n_tot_interaction);
+     }
+
+      /**
+       * @brief Operator to combine results globally.
+       *
+       * @param global The global result.
+       * @param local The local result.
+       * @param reduce_global_t Tag for global reduction.
+       */
+      ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult &global, IOSimInteractionResult &local, reduce_global_t) const
+      {
+        if(local.n_act_interaction > 0)
+        {
+          ONIKA_CU_ATOMIC_ADD(global.n_act_interaction, local.n_act_interaction);
+          EXADEM_CU_ATOMIC_MIN(global.min_dn, local.min_dn);
+        }
+        ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction, local.n_tot_interaction);
+      }
+    };
+
+    struct IOSimInteractionFunctor2
+    {
+      const double *const dnp; /**< Pointer to the array of overlapping distances (dn). */
+      const int coef;          /**< Coefficient for symmetry (if sym -> 2 else 1) and interaction type. (driver -> 1) */
+
+      /**
+       * @brief Operator to get local interaction data.
+       *
+       * @param local The local result.
+       * @param idx The index of the interaction.
+       * @param interactions Pointer to the interaction data.
+       * @param reduce_thread_local_t Tag for thread-local reduction.
+       *
+       * This operator processes individual particle interactions, filtering out duplicates
+       * and counting active interactions where particles are overlapping (dn < 0).
+       */
+      ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult &local, const uint64_t idx,
+                                                    // const exaDEM::Interaction* const interactions,
+                                                    const InteractionSOA2& interactions, reduce_thread_local_t = {}) const
       {
         exaDEM::Interaction I = interactions(idx);
 
@@ -263,6 +370,69 @@ namespace exaDEM
 				return parallel_for(0, kernel, exec_ctx, opts);
 #     endif
 			}
+			
+		template <typename Func, typename ResultT> 
+			static inline ParallelExecutionWrapper reduce_data2(
+					ParallelExecutionContext *exec_ctx, 
+					InteractionSOA2 &data, 
+					Func &func, 
+					uint64_t size,
+					ResultT &result)
+			{
+				//#     if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+#ifdef ONIKA_CUDA_VERSION
+				ParallelForOptions opts;
+				opts.omp_scheduling = OMP_SCHED_STATIC;
+				ReduceTFunctor2<Func, ResultT> kernel = {data, func, &result};
+				return parallel_for(size, kernel, exec_ctx, opts);
+#     else
+				// should be generic, later
+				int n_act_interaction(0), n_tot_interaction(0);
+				double min_dn = 0;
+				/*InteractionSOA2 data_cpu;
+				data_cpu.ft_x = (double*) malloc(data.size() * sizeof(double));
+				data_cpu.ft_y = (double*) malloc(data.size() * sizeof(double));
+				data_cpu.ft_z = (double*) malloc(data.size() * sizeof(double));
+				data_cpu.mom_x = (double*) malloc(data.size() * sizeof(double));
+				data_cpu.mom_y = (double*) malloc(data.size() * sizeof(double));
+				data_cpu.mom_z = (double*) malloc(data.size() * sizeof(double));
+				data_cpu.id_i = (uint64_t*) malloc(data.size() * sizeof(uint64_t));
+				data_cpu.id_j = (uint64_t*) malloc(data.size() * sizeof(uint64_t));
+				data_cpu.cell_i = (uint32_t*) malloc(data.size() * sizeof(uint32_t));
+				data_cpu.cell_j = (uint32_t*) malloc(data.size() * sizeof(uint32_t));
+				data_cpu.p_i = (uint16_t*) malloc(data.size() * sizeof(uint16_t));
+				data_cpu.p_j = (uint16_t*) malloc(data.size() * sizeof(uint16_t));
+				data_cpu.sub_i = (uint16_t*) malloc(data.size() * sizeof(uint16_t));
+				data_cpu.sub_j = (uint16_t*) malloc(data.size() * sizeof(uint16_t));
+				data_cpu.m_type = data.m_type;
+				data_cpu.size2 = data.size();*/
+#       pragma omp parallel for reduction(+: n_act_interaction, n_tot_interaction) reduction(min: min_dn)
+				for (uint64_t i = 0; i < size; i++)
+				{
+					exaDEM::Interaction I = data(i);
+					// filter duplicate (mpi ghost)
+					if (I.id_i < I.id_j)
+					{
+						const double &dn = func.dnp[i];
+						n_tot_interaction += func.coef;
+						if (dn < 0.0)
+						{
+							n_act_interaction += func.coef;
+							min_dn = std::min(min_dn, dn);
+						}
+					}
+				}
+				result.n_act_interaction = n_act_interaction;
+				result.n_tot_interaction = n_tot_interaction;
+				result.min_dn = min_dn;
+
+				// useless but it avoid bugs, TODO LATER
+				ParallelForOptions opts;
+				opts.omp_scheduling = OMP_SCHED_STATIC;
+				ReduceTFunctor2<Func, ResultT> kernel = {data, func, &result};
+				return parallel_for(0, kernel, exec_ctx, opts);
+#     endif
+			}
 	} // namespace itools
 } // namespace exaDEM
 
@@ -271,6 +441,11 @@ namespace onika
 	namespace parallel
 	{
 		template <typename T, class FuncT, class ResultT> struct ParallelForFunctorTraits<exaDEM::itools::ReduceTFunctor<T, FuncT, ResultT>>
+		{
+			static inline constexpr bool CudaCompatible = true;
+		};
+		
+		template <class FuncT, class ResultT> struct ParallelForFunctorTraits<exaDEM::itools::ReduceTFunctor2<FuncT, ResultT>>
 		{
 			static inline constexpr bool CudaCompatible = true;
 		};
