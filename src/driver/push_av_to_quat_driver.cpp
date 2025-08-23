@@ -43,7 +43,7 @@ namespace exaDEM
   class PushAngularVelocityToQuaternionDriver : public OperatorNode
   {
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(double, dt, INPUT, REQUIRED DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
 
     public:
     inline std::string documentation() const override final { 

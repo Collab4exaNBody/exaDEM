@@ -36,15 +36,19 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT>> class CheckInteractionConsistency : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+    ADD_SLOT(GridCellParticleInteraction, ges, INPUT, REQUIRED, DocString{"Interaction list"});
 
   public:
     inline std::string documentation() const override final
     {
       return R"EOF(
-          "This opertor checks if a interaction related to a particle contains its particle id. (i.e. , I_id(i,j), id == item.id_i || item.id_j)"
-                )EOF";
+          This opertor checks if a interaction related to a particle contains its particle id. (i.e. , I_id(i,j), id == item.id_i || item.id_j).
+
+          YAML example:
+
+            - check_interaction_consistency
+          )EOF";
     }
 
     inline void execute() override final
