@@ -78,7 +78,27 @@ namespace exaDEM
 
 
     public:
-    inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
+    inline std::string documentation() const override final { return 
+      R"EOF(
+      This operator computes forces between particles and particles/drivers using the contact law.
+
+      YAML example:
+
+        - contact_sphere:
+           symetric: true
+           config: { kn: 100000, kt: 100000, kr: 0.1, mu: 0.9, damp_rate: 0.9}
+
+        - contact_sphere_with_cohesion:
+           symetric: true
+           config: { dncut: 0.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.9, damp_rate: 0.9}
+
+        - contact_sphere_multimat:
+           symetric: true
+
+        - contact_sphere_multimat_with_cohesion:
+           symetric: true
+      )EOF"; 
+    }
 
     template<int start, int end, template<int, bool, typename> typename FuncT, typename XFormT, typename T, typename... Args>
       void loop_contact_force(Classifier<T>& classifier, XFormT& cp_xform, Args &&... args)
