@@ -91,7 +91,7 @@ namespace exaDEM
   {
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD, DocString{"MPI communicator for parallel processing."});
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(double, dt, INPUT, DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
     ADD_SLOT(double, system_mass, INPUT, REQUIRED); 
 
     public:
