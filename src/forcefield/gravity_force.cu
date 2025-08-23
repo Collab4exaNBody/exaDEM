@@ -38,8 +38,8 @@ namespace exaDEM
     using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_mass, field::_fx, field::_fy, field::_fz>>;
     static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(Vec3d, gravity, INPUT, default_gravity, DocString{"define the gravity constant in function of the gravity axis, default value are x axis = 0, y axis = 0 and z axis = -9.807"});
 
   public:
@@ -47,6 +47,11 @@ namespace exaDEM
     {
       return R"EOF(
         This operator computes forces related to the gravity.
+ 
+        YAML example:
+
+          - gravity_force:
+             gravity: [0,0,-0.009807]
         )EOF";
     }
 

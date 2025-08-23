@@ -38,16 +38,22 @@ namespace exaDEM
     using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_fx, field::_fy, field::_fz, field::_vx, field::_vy, field::_vz>>;
     static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(double, cx, INPUT, REQUIRED, DocString{"aerodynamic coefficient."});
     ADD_SLOT(double, mu, INPUT, REQUIRED, DocString{"drag coefficient. air = 0.000015"});
-    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
   public:
     inline std::string documentation() const override final
     {
       return R"EOF(
         This operator computes friction forces related to air or fluide.
+
+        YAML example:
+ 
+          - quadratic_force:
+             cx: 0.38
+             mu: 0.0000015
         )EOF";
     }
 
