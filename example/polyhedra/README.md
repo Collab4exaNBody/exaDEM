@@ -34,6 +34,10 @@ An additional example of a particle falling into a funnel can be found at: funne
 
 ## Complex shapes
 
+### Aggregate
+
+For more details, see the [README.md](aggregate/README.md)
+
 ### Samoyed
 
 For more details, see the [README.md](samoyed/README.md)
