@@ -36,4 +36,4 @@ An additional example of a particle falling into a funnel can be found at: funne
 
 ### Samoyed
 
-For more details, see the [README.md](.samoyed/README.md)
+For more details, see the [README.md](samoyed/README.md)
