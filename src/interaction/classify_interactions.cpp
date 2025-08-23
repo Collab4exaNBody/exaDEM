@@ -19,7 +19,6 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/grid.h>
 #include <memory>
 #include <exaDEM/interaction/interaction.hpp>
@@ -27,37 +26,36 @@ under the License.
 #include <exaDEM/classifier/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/shapes.hpp>
 #include <exaDEM/traversal.h>
 
 namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class ClassifyInteractions : public OperatorNode
+  class ClassifyInteractions : public OperatorNode
   {
     // attributes processed during computation
     using ComputeFields = FieldSet<field::_vrot, field::_arot>;
     static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
+    ADD_SLOT(GridCellParticleInteraction, ges, INPUT, REQUIRED, DocString{"Interaction list"});
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
   public:
     inline std::string documentation() const override final
     {
       return R"EOF(
-                )EOF";
+        This operator copies interactions from GridCellParticleInteraction to the Interaction Classifier.
+
+        YAML example [no option]:
+
+          - classify_interactions
+      )EOF";
     }
 
     inline void execute() override final
     {
-      if (grid->number_of_cells() == 0)
-      {
-        return;
-      }
       auto [cell_ptr, cell_size] = traversal_real->info();
       if (!ic.has_value())
         ic->initialize();
@@ -66,8 +64,6 @@ namespace exaDEM
     }
   };
 
-  template <class GridT> using ClassifyInteractionsTmpl = ClassifyInteractions<GridT>;
-
   // === register factories ===
-  ONIKA_AUTORUN_INIT(classify_interactions) { OperatorNodeFactory::instance()->register_factory("classify_interactions", make_grid_variant_operator<ClassifyInteractionsTmpl>); }
+  ONIKA_AUTORUN_INIT(classify_interactions) { OperatorNodeFactory::instance()->register_factory("classify_interactions", make_simple_operator<ClassifyInteractions>); }
 } // namespace exaDEM

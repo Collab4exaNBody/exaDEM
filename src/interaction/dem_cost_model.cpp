@@ -40,7 +40,7 @@ namespace exaDEM
   //
   template <class GridT> class DEMCostModel : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(CellCosts, cell_costs, OUTPUT);
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
 

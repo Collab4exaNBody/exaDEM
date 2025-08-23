@@ -44,6 +44,7 @@ namespace exaDEM
     ADD_SLOT(std::vector<double>,        mu, INPUT, REQUIRED, DocString{"List of mu values."});
     ADD_SLOT(std::vector<double>,        fc, INPUT, OPTIONAL, DocString{"List of fc values."});
     ADD_SLOT(std::vector<double>,  damprate, INPUT, REQUIRED, DocString{"List of damprate values."});
+    ADD_SLOT(ContactParams, default_config, INPUT, OPTIONAL, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -51,6 +52,18 @@ namespace exaDEM
     {
       return R"EOF(
         This operator fills type id to all particles. 
+
+        YAML example:
+
+          - multimat_contact_params:
+             mat1:      [  Type1, Type1, Type2 ]
+             mat2:      [  Type1, Type2, Type2 ]
+             kn:        [   5000, 10000, 15000 ]
+             kt:        [   4000,  8000, 12000 ]
+             kr:        [    0.0,   0.0,   0.0 ]
+             mu:        [    0.1,   0.2,   0.3 ]
+             damprate:  [  0.999, 0.999, 0.999 ]
+
         )EOF";
     }
 
@@ -140,6 +153,11 @@ namespace exaDEM
         }
       }
 
+      if(default_config.has_value()) 
+      {
+        auto& params = *default_config;
+        cp.setup_multimat(type_map, params);
+      }
 
       for(int p = 0 ; p < number_of_pairs ; p++)
       {

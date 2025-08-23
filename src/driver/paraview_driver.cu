@@ -40,8 +40,8 @@ namespace exaDEM
 
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
-    ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
+    ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
+    ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
   public:

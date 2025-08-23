@@ -118,10 +118,18 @@ namespace exaDEM
     // attributes processed during computation
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
 
     public:
-    inline std::string documentation() const override final { return R"EOF( This operator computes the total stress tensor and the stress tensor for each particles. )EOF"; }
+    inline std::string documentation() const override final { 
+      return R"EOF( 
+        This operator computes the total stress tensor and the stress tensor for each particles. 
+ 
+        YAML example [no option]:
+
+          - stress_tensor
+      )EOF"; 
+    }
 
     inline void execute() override final
     {

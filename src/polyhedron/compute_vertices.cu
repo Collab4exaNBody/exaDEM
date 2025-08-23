@@ -41,11 +41,11 @@ namespace exaDEM
   {
     using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_type, field::_rx, field::_ry, field::_rz, field::_homothety, field::_orient>>;
     static constexpr ComputeFields compute_field_set{};
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(CellVertexField, cvf, INPUT_OUTPUT, DocString{"Store vertex positions for every polyhedron"});
-    ADD_SLOT(Domain , domain, INPUT , REQUIRED );
-    ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
-    ADD_SLOT(Traversal, traversal_all, INPUT, DocString{"list of non empty cells [ALL] within the current grid"});
+    ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
+    ADD_SLOT(Traversal, traversal_all, INPUT, REQUIRED, DocString{"list of non empty cells [ALL] within the current grid"});
     ADD_SLOT(bool, resize_vertex, INPUT, true, DocString{"enable to resize the data storage used for vertices"});
     ADD_SLOT(bool, minimize_memory_footprint, INPUT, false, DocString{"enable to resize the data storage using only the maximum of vertices according to the particle shapes into a cell. This option is useful if there are some particles with a very high number of particles."});
 
@@ -54,6 +54,16 @@ namespace exaDEM
     inline std::string documentation() const override final
     {
       return R"EOF(
+        This operator computes the vertices for every polyhedron.
+
+        YAML example:
+
+					compute_new_vertices:
+						- compute_vertices:
+							 resize_vertex: true
+					compute_fast_vertices:
+						- compute_vertices:
+							 resize_vertex: false
         )EOF";
     }
 

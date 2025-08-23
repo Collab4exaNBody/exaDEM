@@ -33,8 +33,8 @@ namespace exaDEM
   using namespace exaDEM;
   template <typename GridT> struct DEMBackupNode : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT);
-    ADD_SLOT(Domain, domain, INPUT);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+    ADD_SLOT(Domain, domain, INPUT, REQUIRED);
     ADD_SLOT(DEMBackupData, backup_dem, INPUT_OUTPUT);
 
     inline void execute() override final

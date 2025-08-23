@@ -19,7 +19,6 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 
@@ -33,27 +32,25 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename GridT, class = AssertGridHasFields<GridT>> class CompressInteraction : public OperatorNode
+  class CompressInteraction : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(GridCellParticleInteraction, ges, INPUT, DocString{"Interaction list"});
+    ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED, DocString{"Interaction list"});
 
-  public:
+    public:
     inline std::string documentation() const override final
     {
       return R"EOF(
-					"This opertor compress interaction by removing inactive interaction. Do not use it if interaction are not rebuilt after."
-				        )EOF";
+        This opertor compress interaction by removing inactive interaction. Do not use it if interaction are not rebuilt after.
+
+        YAML example [no option]:
+
+          - compress_interaction
+                )EOF";
     }
 
     inline void execute() override final
     {
-      if (grid->number_of_cells() == 0)
-      {
-        return;
-      }
       auto &cell_interactions = ges->m_data;
-
       auto save = [](const exaDEM::Interaction &interaction) { return interaction.is_active(); };
 
 #     pragma omp parallel for
@@ -65,8 +62,6 @@ namespace exaDEM
     }
   };
 
-  template <class GridT> using CompressInteractionTmpl = CompressInteraction<GridT>;
-
   // === register factories ===
-  ONIKA_AUTORUN_INIT(compress_interaction) { OperatorNodeFactory::instance()->register_factory("compress_interaction", make_grid_variant_operator<CompressInteractionTmpl>); }
+  ONIKA_AUTORUN_INIT(compress_interaction) { OperatorNodeFactory::instance()->register_factory("compress_interaction", make_simple_operator<CompressInteraction>); }
 } // namespace exaDEM

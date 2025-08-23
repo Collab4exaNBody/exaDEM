@@ -37,7 +37,7 @@ namespace exaDEM
   {
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(std::string, filename, INPUT, "RestartShapeFile.shp", DocString{"Input filename"});
-    ADD_SLOT(shapes, shapes_collection, INPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
   public:

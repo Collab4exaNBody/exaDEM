@@ -37,8 +37,8 @@ namespace exaDEM
 
     static constexpr FieldSet<field::_rx,field::_ry,field::_rz,field::_type> reduce_field_set{};
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, DocString{"list of non empty cells [REAL] within the current grid"});
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, REQUIRED, DocString{"list of non empty cells [REAL] within the current grid"});
     ADD_SLOT(double, dt, INPUT, REQUIRED);
     ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Time iteration number"});
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
@@ -52,6 +52,11 @@ namespace exaDEM
     {
       return R"EOF(
         The purpose of this operator is to count the number of particles per type in a particular region.
+
+        YAML example:
+        
+          - particle_counter:
+             types: [0,1]
         )EOF";
     }
 

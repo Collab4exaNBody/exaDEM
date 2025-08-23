@@ -30,7 +30,7 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_mass>> class SetDensities : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(std::vector<double>, densities, INPUT, REQUIRED, DocString{"Array of density values"});
 
   public:
@@ -39,6 +39,7 @@ namespace exaDEM
     inline std::string documentation() const override final
     {
       return R"EOF(
+        DEPRECIATED, please use set_fields.
         This operator applies various densities according to their material properties.
         )EOF";
     }

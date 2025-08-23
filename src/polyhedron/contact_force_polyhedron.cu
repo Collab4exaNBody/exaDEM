@@ -78,7 +78,31 @@ namespace exaDEM
     ADD_SLOT(double, max_kn, INPUT_OUTPUT, 0, DocString{"Get the highest value of the input contact force parameters kn (used for dt_critical)"});
 
     public:
-    inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
+    inline std::string documentation() const override final { 
+      return R"EOF(
+        This operator computes forces between particles and particles/drivers using the contact law.
+ 
+        Note that to use multmaterials version, you need to predefine the parameters with multimat_contact_params and drivers_contact_params.  
+
+        YAML example:
+
+					one_parameter_no_cohesion:
+						- contact_polyhedron:
+							 config: { kn: 10000, kt: 10000, kr: 0.1, mu: 0.1, damp_rate: 0.9}
+							 config_driver: { kn: 10000, kt: 10000, kr: 0.1, mu: 0.3, damp_rate: 0.9}
+
+					one_parameter_with_cohesion:
+						- contact_polyhedron_with_cohesion:
+							 config: { dncut: 0.1 m, kn: 10000, kt: 10000, kr: 0.1, fc: 0.05, mu: 0.1, damp_rate: 0.9}
+							 config_driver: { dncut: 0.1 m, kn: 10000, kt: 10000, kr: 0.1, fc: 0.05, mu: 0.3, damp_rate: 0.9}
+
+					multi_parameters_no_cohesion:
+						- contact_polyhedron_multimat
+
+					multi_parameters_with_cohesion:
+						- contact_polyhedron_multimat_cohesion
+      )EOF"; 
+    }
 
     template<int start, int end, template<int, bool, typename> typename FuncT, typename XFormT,  typename T, typename... Args>
       void loop_contact_force(Classifier<T>& classifier, XFormT& cp_xform, Args &&... args)

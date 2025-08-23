@@ -69,9 +69,9 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
     static constexpr ComputeRegionFields compute_region_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
-    ADD_SLOT(double, rcut_max, OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
+    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
@@ -80,6 +80,11 @@ namespace exaDEM
     inline std::string documentation() const override final
     {
       return R"EOF(
+        DEPRECIATED [1.1.3], please use set_fields.
+
+        YAML example [no option]:
+
+          - radius_from_shape
         )EOF";
     }
 
@@ -91,7 +96,7 @@ namespace exaDEM
       const size_t size = shps.get_size();
       onika::memory::CudaMMVector<double> r;
       r.resize(size);
-      double rmax = 0;
+      double rmax = *rcut_max;
       for (size_t i = 0; i < size; i++)
       {
         double rad_max = shps[i]->compute_max_rcut();

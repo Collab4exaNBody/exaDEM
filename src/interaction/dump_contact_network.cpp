@@ -47,18 +47,20 @@ namespace exaDEM
 	template <typename GridT, class = AssertGridHasFields<GridT>> class ContactNetwork : public OperatorNode
 	{
 		ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-		ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-		ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-		ADD_SLOT( std::string , filename , INPUT , "output");
-		ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
-
-
+		ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+		ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
+		ADD_SLOT(std::string , filename , INPUT , "output");
+		ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
 		public:
 		inline std::string documentation() const override final
 		{
 			return R"EOF(
-                  This operator creates paraview files containing the contact network.
-				        )EOF";
+        This operator creates paraview files containing the contact network.
+
+        YAML example [no option]:
+ 
+          - dump_contact_network
+		  )EOF";
 		}
 
 		inline void execute() override final

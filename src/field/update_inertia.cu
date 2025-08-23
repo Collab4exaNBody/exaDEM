@@ -73,7 +73,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
     static constexpr ComputeRegionFields compute_region_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
@@ -84,6 +84,10 @@ namespace exaDEM
     {
       return R"EOF(
         This operator updates the inertia field (0.4*mass*radius*radius).
+
+        YAML example [no option]:
+ 
+          - update_inertia
         )EOF";
     }
 

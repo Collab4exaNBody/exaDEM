@@ -30,11 +30,11 @@ namespace exaDEM
 
   template <typename GridT> class CheckDTCritical : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(double, mass, INPUT, OPTIONAL, DocString{"Mass of the particle"});
     ADD_SLOT(double, kn, INPUT, OPTIONAL, DocString{"Contact force parameter (normal)"});
     ADD_SLOT(double, treshold, INPUT, 1.0, DocString{"Ratio treshold."});
-    ADD_SLOT(double, dt, INPUT, DocString{"Time increment."});
+    ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"Time increment."});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -42,6 +42,11 @@ namespace exaDEM
     {
       return R"EOF(
         This operator checks the dt critical according to a ratio treshold (dt/dt_critical). 
+
+        YAML example:
+
+          - check_dt_critical:
+             treshold: 0.02
         )EOF";
     }
 

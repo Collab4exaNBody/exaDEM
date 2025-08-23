@@ -36,7 +36,7 @@ namespace exaDEM
   {
     ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED );
     ADD_SLOT(ContactParamsMultiMat<ContactParams>, multimat_cp, INPUT_OUTPUT, REQUIRED, DocString{"List of contact parameters for simulations with multiple materials"});
-    ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+    ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(std::vector<std::string>,  mat, INPUT, OPTIONAL, DocString{"List of materials."});
     ADD_SLOT(std::vector<int>,    driver_id, INPUT, OPTIONAL, DocString{"List of drivers."});
     ADD_SLOT(std::vector<double>,     dncut, INPUT, OPTIONAL, DocString{"List of dncut values."});
@@ -54,6 +54,18 @@ namespace exaDEM
     {
       return R"EOF(
         This operator fills the list of contact parameters between particles and drivers. 
+ 
+        YAML example:
+
+          - drivers_contact_params:
+             mat:       [  Type1, Type2 ]
+             driver_id: [      0,     0 ]
+             kn:        [  10000, 15000 ]
+             kt:        [   8000, 12000 ]
+             kr:        [    0.0,   0.1 ]
+             mu:        [    0.5,   0.5 ]
+             damprate:  [  0.999, 0.999 ]
+
         )EOF";
     }
 

@@ -46,11 +46,11 @@ namespace exaDEM
     using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_orient>;
     static constexpr ComputeFields compute_field_set{};
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
     ADD_SLOT(std::string , filename, INPUT , "output");
-    ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
-    ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
+    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
 
     // optionnal
     ADD_SLOT(bool, mpi_rank, INPUT, false, DocString{"Add a field containing the mpi rank."});
@@ -58,7 +58,14 @@ namespace exaDEM
   public:
     inline std::string documentation() const override final
     {
-      return R"EOF( This operator initialize shapes data structure from a shape input file.
+      return R"EOF( 
+      This operator initialize shapes data structure from a shape input file.
+
+      YAML example:
+
+        - write_paraview_polyhedra:
+           filename: "OptionalFilename_%10d"
+           mpi_rank: true
     	    			)EOF";
     }
 

@@ -36,13 +36,21 @@ namespace exaDEM
     //      using ReduceFields = FieldSet<field::_radius>;
     //      static constexpr ReduceFields reduce_field_set {};
 
-    ADD_SLOT(GridT, grid, INPUT);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final { return R"EOF(Check if the rcut_max is different of 0 or if the rcut_max is < particle rcut. )EOF"; }
+    inline std::string documentation() const override final { 
+      return R"EOF(
+        Check if the rcut_max is different of 0 or if the rcut_max is < particle rcut. 
+
+        YAML example [no option]:
+
+          - check_rcut
+      )EOF"; 
+    }
 
     public:
 
