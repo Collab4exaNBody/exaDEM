@@ -80,8 +80,8 @@ namespace exaDEM
     static constexpr ReduceFields reduce_field_set{};
 
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(double, volume, INPUT, REQUIRED, DocString{"Volume of the domain simulation. >0 "});
     ADD_SLOT(Mat3d, stress_tensor, OUTPUT, DocString{"Write an Output file containing stress tensors."});
 

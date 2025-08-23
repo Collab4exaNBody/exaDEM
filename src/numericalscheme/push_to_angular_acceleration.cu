@@ -40,8 +40,8 @@ namespace exaDEM
     using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>>;
     static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
   public:
     inline std::string documentation() const override final

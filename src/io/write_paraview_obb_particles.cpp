@@ -50,17 +50,22 @@ namespace exaDEM
     using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_orient>;
     static constexpr ComputeFields compute_field_set{};
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
     ADD_SLOT(std::string, basename, INPUT, "obb", DocString{"Output filename"});
-    ADD_SLOT(std::string, dir_name, INPUT_OUTPUT, REQUIRED, DocString{"Main output directory."});
-    ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
-    ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
+    ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
+    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
 
   public:
     inline std::string documentation() const final
     {
-      return R"EOF( This operator dumps obb into a paraview output file.
+      return R"EOF( 
+      This operator dumps obb into a paraview output file.
+
+      YAML exmaple:
+ 
+        - write_paraview_obb_particles
     	    			)EOF";
     }
 

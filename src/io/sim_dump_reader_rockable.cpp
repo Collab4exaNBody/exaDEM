@@ -78,7 +78,6 @@ namespace exaDEM
     ADD_SLOT(ParticleTypeMap, particle_type_map, OUTPUT );
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
 
-
     // overloaded slots
     ADD_SLOT(double, physical_time, INPUT_OUTPUT);
     ADD_SLOT(double, dt, INPUT_OUTPUT);

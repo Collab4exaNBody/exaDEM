@@ -39,8 +39,8 @@ namespace exaDEM
 
     static constexpr FieldSet<field::_rx,field::_ry,field::_rz,field::_type> reduce_field_set{};
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(double, dt, INPUT, REQUIRED);
     ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
@@ -55,6 +55,11 @@ namespace exaDEM
     {
       return R"EOF(
         The purpose of this operator is to compute the barycenter of particles per type into a particular region.
+
+        YAML example:
+
+          - particle_barycenter:
+             types: [0,1]
         )EOF";
     }
 
