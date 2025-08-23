@@ -20,3 +20,11 @@ cd aggregate
 ```
 
 Duration on a latop with 12 cores: 144 s while `nbh_polyhedra` takes 137 s (95%)
+
+
+> **Note**  
+> Please use ``see`` from Rockable to visualize the result.
+> @see installation of rockable with spack
+> spack load rockable
+> cd AggregateDir/conf_rockable/
+> see conf0
