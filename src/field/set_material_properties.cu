@@ -41,7 +41,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
     static constexpr ComputeRegionFields compute_region_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(uint32_t, type, INPUT, REQUIRED, DocString{"type of particle to setialize"});
     ADD_SLOT(double, rad, INPUT, default_radius, DocString{"default radius value is 0.5 for all particles"});
     ADD_SLOT(double, density, INPUT, default_density, DocString{"default density value is 0 for all particles"});
@@ -53,6 +53,7 @@ namespace exaDEM
     inline std::string documentation() const override final
     {
       return R"EOF(
+        DEPRECIATED [1.1.3].
         This operator sets material properties for spheres, ie radius, denstiy and quaternion values.
         )EOF";
     }

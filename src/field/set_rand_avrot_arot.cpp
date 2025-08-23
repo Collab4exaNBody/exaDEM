@@ -31,17 +31,26 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_vrot, field::_arot>> class SetRandVrotArot : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(double, var_vrot, INPUT, 0, DocString{"Variance for angular velocity"});
-    ADD_SLOT(Vec3d, mean_arot, INPUT, Vec3d{0, 0, 0}, DocString{"Average values (Vec3d) for angular veloctiy"});
-    ADD_SLOT(double, var_arot, INPUT, 0, DocString{"Variance for angular acceleration"});
     ADD_SLOT(Vec3d, mean_vrot, INPUT, Vec3d{0, 0, 0}, DocString{"Average values for angular acceleration"});
+    ADD_SLOT(double, var_arot, INPUT, 0, DocString{"Variance for angular acceleration"});
+    ADD_SLOT(Vec3d, mean_arot, INPUT, Vec3d{0, 0, 0}, DocString{"Average values (Vec3d) for angular veloctiy"});
 
   public:
     inline std::string documentation() const override final
     {
       return R"EOF(
         This operator generates random angular velocities and angular accelerations using a normal distribution law (var[double], mean[vec3d]).
+        Note: CPU only.
+
+        YAML example:
+
+          -set_rand_vrot_arot:
+             var_vrot: 0.01
+             mean_vrot: [0,0,0]
+             var_arot: 0.01
+             mean_arot: [0,0,0]
         )EOF";
     }
 

@@ -39,7 +39,7 @@ namespace exaDEM
     using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_homothety>;
     static constexpr ComputeFields compute_field_set{};
     static constexpr ComputeRegionFields compute_region_field_set{};
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(double, homothety, INPUT, default_h, DocString{"homothety value"});
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
@@ -51,6 +51,12 @@ namespace exaDEM
     {
       return R"EOF(
         This operator sets the same homothety value to all particles in a region.
+
+        YAML example:
+   
+          - set_homothety:
+             homothety: 2.0
+
         )EOF";
     }
 

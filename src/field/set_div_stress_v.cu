@@ -38,7 +38,7 @@ namespace exaDEM
     static constexpr ComputeFieldType compute_field_set_type{};
     static constexpr ComputeFieldRadius compute_field_set_radius{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(shapes, shapes_collection, INPUT, OPTIONAL, DocString{"Collection of shapes"});
 
     public:
@@ -46,6 +46,10 @@ namespace exaDEM
     {
       return R"EOF(
         This operator divides the stress tensor field by the volume (spheres or polyhedra).
+
+        YAML example:
+
+          - set_div_stress_v
         )EOF";
     }
 

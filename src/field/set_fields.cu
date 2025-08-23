@@ -97,7 +97,7 @@ namespace exaDEM
     ADD_SLOT(std::vector<std::string>, type, INPUT, REQUIRED, DocString{"Particle type names"});
 
     // outputs
-    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, DocString{"rcut_max"});
+    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0, DocString{"rcut_max"});
 
     // others
     ADD_SLOT(bool, polyhedra, INPUT, REQUIRED, DocString{"Define if the kind of particles is polyhedron or sphere."});
@@ -111,6 +111,26 @@ namespace exaDEM
     {
       return R"EOF(
         This operator fills type id to all particles. 
+
+        YAML examples:
+
+          init_polyhedra: 
+						- set_fields:
+							 polyhedra: true
+							 type:              [ alpha3, Octahedron]
+							 velocity:          [[0,0,0],    [0,0,0]]
+							 sigma_velocity:    [    0.1,        0.1]
+							 random_quaternion: [   true,       true]
+ 
+          init_spheres:
+						- set_fields:
+							 polyhedra: false
+							 radius:         [     0.5 ]
+							 density:        [    0.02 ]
+							 type:           [ Sphere1 ]
+							 velocity:       [ [0,0,0] ]
+							 sigma_velocity: [     0.1 ]
+							 region: Region
         )EOF";
     }
 

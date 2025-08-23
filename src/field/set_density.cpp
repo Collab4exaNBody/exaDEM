@@ -31,8 +31,8 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_mass>> class SetDensity : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(double, density, INPUT, 1, DocString{"density value applied to all particles"});
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(double, density, INPUT, 1, DocString{"density value applied to all particles, default is 1.0 ."});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -40,6 +40,12 @@ namespace exaDEM
     {
       return R"EOF(
         This operator applies the same density to all particles. If you want to apply various densities according to their material properties, use set_densities_multiple_materials.
+        Note: Speres ONLY
+
+        YAML example:
+
+          - set_density:
+             density: 0.02
         )EOF";
     }
 

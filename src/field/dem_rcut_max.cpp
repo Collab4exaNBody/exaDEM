@@ -34,13 +34,21 @@ namespace exaDEM
   {
     //      using ReduceFields = FieldSet<field::_radius>;
     //      static constexpr ReduceFields reduce_field_set {};
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final { return R"EOF(Fill rcut_max with the maximum of the radii. )EOF"; }
+    inline std::string documentation() const override final { 
+      return R"EOF(
+        Fill rcut_max with the maximum of the radii. 
+
+        YAML example [no option]:
+  
+          - dem_rcut_max
+      )EOF"; 
+    }
 
     public:
     inline void execute() override final

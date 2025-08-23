@@ -32,16 +32,21 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_mass>> class PolyhedraSetDensity : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(double, density, INPUT, 1, DocString{"density value applied to all particles"});
-    ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
     inline std::string documentation() const override final
     {
       return R"EOF(
+        DEPRECIATED [1.1.3], please use set_fields 
         This operator applies the same density to all particles. If you want to apply various densities according to their material properties, use set_densities_multiple_materials.
+
+        YAML example [no option]:
+
+          - density_from_shape
         )EOF";
     }
 

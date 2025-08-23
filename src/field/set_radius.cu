@@ -39,17 +39,22 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
     static constexpr ComputeRegionFields compute_region_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(double, rad, INPUT, default_radius, DocString{"default radius value for all particles"});
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
-    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, DocString{"rcut_max"});
+    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0, DocString{"rcut_max"});
 
   public:
     inline std::string documentation() const override final
     {
       return R"EOF(
         This operator sets the radius value for every particles.
+
+        YAML example:
+
+          - set_radius:
+             rad: 0.5
         )EOF";
     }
 

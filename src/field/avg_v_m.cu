@@ -91,9 +91,9 @@ namespace exaDEM
   {
     using ReduceFields = FieldSet<field::_vx, field::_vy, field::_vz, field::_mass>;
     static constexpr ReduceFields reduce_field_set{};
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(Vec3d, out, OUTPUT, DocString("Sum[v_i*m_i] / mass_{systeme}"));
     // Remark : do not hesite to use rebind to rename the output variable
 
@@ -101,6 +101,15 @@ namespace exaDEM
     {
       return R"EOF(
         This operator returns out = Sum_{particles p}(v_p*m_p) / mass_{systeme}.
+        Remark: do not hesite to use rebind to rename the output variable
+
+        YAML example [no option]:
+
+          opex:
+            rebind:
+              out: output_name
+            body:
+              - avg_v_m
         )EOF";
     }
 
