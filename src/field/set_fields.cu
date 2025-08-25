@@ -149,7 +149,7 @@ namespace exaDEM
           lout << "[set_fields, ERROR] Shapes are defined in sphere mode" << std::endl;
           std::exit(EXIT_FAILURE);  
         }
-        size_t size_shps = shapes_collection->get_size();
+        size_t size_shps = shapes_collection->size();
         if(size_shps == 0 && (*polyhedra))
         {
           lout << "[set_fields, ERROR] You are defining polyhedra without using shapes" << std::endl;
@@ -205,11 +205,13 @@ namespace exaDEM
         Quaternion quat = {1,0,0,0};
         Vec3d inertia;
         double sigma_v, sigma_ang_v;
+        bool rnd_q = false;
 
         if(mat.set_d) { auto& dd = *density; d = dd[i]; }
         if(mat.set_v) { auto& vv = *velocity; const Vec3d& v = vv[i]; vx = v.x; vy = v.y; vz = v.z; }
         if(mat.set_ang_v) { auto& ang_vv = *angular_velocity; ang_v = ang_vv[i]; }
         if(mat.set_q) { auto& qq = *quaternion; quat = qq[i]; }
+        if(mat.set_rnd_q) { auto& rq = *random_quaternion; rnd_q = rq[i]; }
 
 
         lout << "[>> "<<type_name<<" <<]" << std::endl;;
@@ -228,7 +230,7 @@ namespace exaDEM
         }
         lout << std::endl; 
         lout << "Density          = " << d << std::endl;;
-        if( !mat.set_rnd_q ) lout << "Quaternion       = [w: " << quat.w << ", v: (" << quat.x << "," << quat.y << "," << quat.z << ")]" ;
+        if( !rnd_q ) lout << "Quaternion       = [w: " << quat.w << ", v: (" << quat.x << "," << quat.y << "," << quat.z << ")]" ;
         else lout << "Quaternion       = random";
         lout << std::endl; 
 
@@ -237,7 +239,7 @@ namespace exaDEM
         {
           const shapes& shps = *shapes_collection;
           const auto& shp = shps[type_id];
-          if( type_id >= shps.get_size() || shp->m_name != type_name ) {
+          if( type_id >= shps.size() || shp->m_name != type_name ) {
              
              lout << "[set_fields, ERROR]  We can't find the shape related to the type "  <<type_name << ". Please verify that you have load all shape files." << std::endl; 
           }
@@ -304,7 +306,7 @@ namespace exaDEM
             compute_cell_particles(*grid, false, generator, compute_rnd_ang_v, parallel_execution_context());
           }
 
-          if(mat.set_rnd_q) /** Random Quaternion */
+          if(rnd_q) /** Random Quaternion */
           {
             FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_orient> compute_orient;
             RandomQuaternionFunctor RndQuatFunc = {prcsg};
@@ -323,7 +325,7 @@ namespace exaDEM
             compute_cell_particles(*grid, false, generator, compute_rnd_v, parallel_execution_context());
           }
 
-          if(mat.set_rnd_q) /** Random Quaternion */
+          if(rnd_q) /** Random Quaternion */
           {
             FieldSet<field::_orient> compute_orient;
             RandomQuaternionFunctor RndQuatFunc = {};

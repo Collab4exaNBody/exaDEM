@@ -35,16 +35,40 @@ under the License.
 namespace exaDEM
 {
   using namespace onika;
+  struct subBox { size_t isub; int nbPoints;} ;
+
+  /**
+   * @brief Structure representing a polyhedral shape for DEM simulations.
+   */
   struct shape
   {
-
     template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
 
+    VectorT<exanb::Vec3d> m_vertices; ///< List of vertices of the shape
+    exanb::Vec3d m_inertia_on_mass;    ///< Inertia vector divided by mass
+    VectorT<OBB> m_obb_vertices;       ///< Oriented bounding boxes for each vertex (only for STL meshes)
+    VectorT<OBB> m_obb_edges;          ///< OBBs for edges (only for STL meshes)
+    VectorT<OBB> m_obb_faces;          ///< OBBs for faces (only for STL meshes)
+    OBB obb;                            ///< Global OBB of the shape
+    VectorT<int> m_edges;              ///< List of edges, stored as pairs of vertex indices
+    VectorT<int> m_faces;              ///< List of faces, stored as sequences of vertex indices
+    VectorT<int> m_offset_faces;       ///< Offsets for indexing faces in m_faces
+    double m_radius;                    ///< Radius used for contact detection
+    double m_volume;                    ///< Volume of the shape
+    std::string m_name = "undefined";  ///< Name of the shape
+    OBBtree<subBox> obbtree;           ///< Optional OBB tree for accelerated collision detection
+
+    /**
+     * @brief Default constructor.
+     */
     shape()
     {
       m_faces.push_back(0); // init
     }
 
+    /**
+     * @brief Clear vertices, edges, faces and reset the name.
+     */
     void clear()
     {
       m_vertices.clear();
@@ -55,26 +79,64 @@ namespace exaDEM
       m_name = "undefined";
     }
 
-    VectorT<exanb::Vec3d> m_vertices; ///<
-    exanb::Vec3d m_inertia_on_mass;
-    VectorT<OBB> m_obb_vertices; ///< only used for stl meshes
-    VectorT<OBB> m_obb_edges;
-    VectorT<OBB> m_obb_faces;
-    OBB obb;
-    VectorT<int> m_edges; ///<
-    VectorT<int> m_faces; ///<
-    VectorT<int> m_offset_faces; ///<
-    double m_radius;      ///< use for detection
-    double m_volume;      ///< use for detection
-    std::string m_name = "undefined";
-    inline void pre_compute_obb_edges(const exanb::Vec3d &particle_center, const exanb::Quaternion &particle_quat);
-    inline void pre_compute_obb_faces(const exanb::Vec3d &particle_center, const exanb::Quaternion &particle_quat);
-    inline void pre_compute_obb_vertices(const exanb::Vec3d * scratch);
-    inline void pre_compute_obb_edges(const exanb::Vec3d * scratch);
-    inline void pre_compute_obb_faces(const exanb::Vec3d * scratch);
-    inline void increase_obb(const double value);
-    void compute_prepro_obb(exanb::Vec3d * scratch, const exanb::Vec3d &particle_center, const exanb::Quaternion &particle_quat);
+    // #######  pre compute functions ######## //
 
+    /**
+     * @brief Precompute OBBs for edges based on particle center and orientation.
+     * @param particle_center Center of the particle.
+     * @param particle_quat Orientation of the particle.
+     */
+    inline void pre_compute_obb_edges
+      (const exanb::Vec3d &particle_center,
+       const exanb::Quaternion &particle_quat);
+
+    /**
+     * @brief Precompute OBBs for faces based on particle center and orientation.
+     * @param particle_center Center of the particle.
+     * @param particle_quat Orientation of the particle.
+     */
+    inline void pre_compute_obb_faces(
+        const exanb::Vec3d &particle_center,
+        const exanb::Quaternion &particle_quat);
+
+    /**
+     * @brief Precompute OBBs for vertices using scratch memory.
+     * @param scratch Temporary array of Vec3d.
+     */
+    inline void pre_compute_obb_vertices(const exanb::Vec3d *scratch);
+
+    /**
+     * @brief Precompute OBBs for edges using scratch memory.
+     * @param scratch Temporary array of Vec3d.
+     */
+    inline void pre_compute_obb_edges(const exanb::Vec3d *scratch);
+
+    /**
+     * @brief Precompute OBBs for faces using scratch memory.
+     * @param scratch Temporary array of Vec3d.
+     */
+    inline void pre_compute_obb_faces(const exanb::Vec3d *scratch);
+
+    /*
+     * @brief Enlarge all OBBs by a given value.
+     * @param value Amount to enlarge.
+     */
+    inline void increase_obb(const double value);
+
+    /**
+     * @brief Compute all OBBs with scratch memory, particle center, and orientation.
+     * @param scratch Temporary array of Vec3d.
+     * @param particle_center Center of the particle.
+     * @param particle_quat Orientation of the particle.
+     */
+    void compute_prepro_obb(exanb::Vec3d *scratch,
+        const exanb::Vec3d &particle_center,
+        const exanb::Quaternion &particle_quat);
+
+    /**
+     * @brief Get the volume of the shape.
+     * @return Volume (asserts if not initialized)
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline double get_volume() const
       {
@@ -82,24 +144,52 @@ namespace exaDEM
         return m_volume;
       }
 
+    /**
+     * @brief Get the inertia on mass vector.
+     * @return Reference to inertia vector
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline const exanb::Vec3d &get_Im() { return m_inertia_on_mass; }
 
+    /**
+     * @brief Get the inertia on mass vector (const version).
+     * @return Reference to inertia vector
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline const exanb::Vec3d &get_Im() const { return m_inertia_on_mass; }
 
+    /**
+     * @brief Get number of vertices.
+     * @return Number of vertices
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline int get_number_of_vertices() { return onika::cuda::vector_size(m_vertices); }
 
+    /**
+     * @brief Get number of vertices (const version).
+     * @return Number of vertices
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline int get_number_of_vertices() const { return onika::cuda::vector_size(m_vertices); }
 
+    /**
+     * @brief Get number of edges.
+     * @return Number of edges
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline int get_number_of_edges() { return onika::cuda::vector_size(m_edges) / 2; }
 
+    /**
+     * @brief Get number of edges (const version).
+     * @return Number of edges
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline int get_number_of_edges() const { return onika::cuda::vector_size(m_edges) / 2; }
 
+    /**
+     * @brief Get number of faces.
+     * @return Number of faces
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline int get_number_of_faces()
       {
@@ -107,6 +197,10 @@ namespace exaDEM
         return faces[0];
       }
 
+    /**
+     * @brief Get number of faces (const version).
+     * @return Number of faces
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline int get_number_of_faces() const
       {
@@ -114,55 +208,91 @@ namespace exaDEM
         return faces[0];
       }
 
+    /**
+     * @brief Access a vertex by index (non-const).
+     * @param i Vertex index
+     * @return Reference to the vertex
+     */
     ONIKA_HOST_DEVICE_FUNC
-      inline exanb::Vec3d &get_vertex(const int i)
+      inline exanb::Vec3d &get_vertex(int i)
       {
         Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices);
         return vertices[i];
       }
 
+    /**
+     * @brief Access a vertex by index (const version).
+     * @param i Vertex index
+     * @return Const reference to the vertex
+     */
     ONIKA_HOST_DEVICE_FUNC
-      inline const exanb::Vec3d &get_vertex(const int i) const
+      inline const exanb::Vec3d &get_vertex(int i) const
       {
         const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices);
         return vertices[i];
       }
 
+    /**
+     * @brief Get the transformed vertex position given particle center and orientation (non-const).
+     * @param i Vertex index
+     * @param p Particle center
+     * @param orient Particle orientation
+     * @return Transformed vertex position
+     */
     ONIKA_HOST_DEVICE_FUNC
-      inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d &p, const exanb::Quaternion &orient) 
-      {
-        const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices); 
-        return p + orient * vertices[i]; 
-      }
-
-    ONIKA_HOST_DEVICE_FUNC
-      inline exanb::Vec3d get_vertex(const int i, const exanb::Vec3d &p, const exanb::Quaternion &orient) const
+      inline exanb::Vec3d get_vertex(
+          int i, 
+          const exanb::Vec3d &p, 
+          const exanb::Quaternion &orient)
       {
         const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices);
         return p + orient * vertices[i];
       }
 
+    /**
+     * @brief Get the transformed vertex position given particle center and orientation (const version).
+     * @param i Vertex index
+     * @param p Particle center
+     * @param orient Particle orientation
+     * @return Transformed vertex position
+     */
     ONIKA_HOST_DEVICE_FUNC
-      inline std::pair<int, int> get_edge(const int i)
+      inline exanb::Vec3d get_vertex(int i, 
+          const exanb::Vec3d &p, 
+          const exanb::Quaternion &orient) const
+      {
+        const Vec3d *__restrict__ vertices = onika::cuda::vector_data(m_vertices);
+        return p + orient * vertices[i];
+      }
+
+    /**
+     * @brief Get an edge by index (non-const).
+     * @param i Edge index
+     * @return Pair of vertex indices defining the edge
+     */
+    ONIKA_HOST_DEVICE_FUNC
+      inline std::pair<int, int> get_edge(int i)
       {
         const int *__restrict__ edges = onika::cuda::vector_data(m_edges);
         return {edges[2 * i], edges[2 * i + 1]};
       }
 
+    /**
+     * @brief Get an edge by index (const version).
+     * @param i Edge index
+     * @return Pair of vertex indices defining the edge
+     */
     ONIKA_HOST_DEVICE_FUNC
-      inline std::pair<int, int> get_edge(const int i) const
+      inline std::pair<int, int> get_edge(int i) const
       {
         const int *__restrict__ edges = onika::cuda::vector_data(m_edges);
         return {edges[2 * i], edges[2 * i + 1]};
       }
 
-    ONIKA_HOST_DEVICE_FUNC
-      inline int *get_faces() const
-      {
-        const int *faces = onika::cuda::vector_data(m_faces);
-        return (int *)faces; // just get a copy of the pointer
-      }
-
+    /**
+     * @brief Get pointer to the faces array (non-const).
+     * @return Pointer to integer array of faces
+     */
     ONIKA_HOST_DEVICE_FUNC
       inline int *get_faces()
       {
@@ -170,6 +300,20 @@ namespace exaDEM
         return faces;
       }
 
+    /**
+     * @brief Get pointer to the faces array (const version).
+     * @return Pointer to integer array of faces
+     */
+    ONIKA_HOST_DEVICE_FUNC
+      inline int *get_faces() const
+      {
+        const int *faces = onika::cuda::vector_data(m_faces);
+        return (int *)faces;
+      }
+
+    /**
+     * @brief Compute offsets for each face in the flat faces array.
+     */
     inline void compute_offset_faces()
     {
       int n = this->get_number_of_faces();
@@ -190,9 +334,13 @@ namespace exaDEM
     }
 
 
-    // returns the pointor on data and the number of vertex in the faces
+    /**
+     * @brief Get a face by index.
+     * @param i Face index
+     * @return Pair {pointer to vertex indices, number of vertices}
+     */
     ONIKA_HOST_DEVICE_FUNC
-      const std::pair<int *, int> get_face(const int i)
+      const std::pair<int *, int> get_face(int i)
       {
         auto * __restrict__ data =  onika::cuda::vector_data(m_offset_faces);
         int *ptr = this->get_faces();
@@ -200,9 +348,13 @@ namespace exaDEM
         return {ptr + index + 1, ptr[index]};
       }
 
-    // returns the pointor on data and the number of vertex in the faces
+    /**
+     * @brief Get a face by index.
+     * @param i Face index
+     * @return Pair {pointer to vertex indices, number of vertices}
+     */
     ONIKA_HOST_DEVICE_FUNC
-      const std::pair<int *, int> get_face(const int i) const
+      const std::pair<int *, int> get_face(int i) const
       {
         auto * __restrict__ data =  onika::cuda::vector_data(m_offset_faces);
         int *ptr = this->get_faces();
@@ -210,8 +362,18 @@ namespace exaDEM
         return {ptr + index + 1, ptr[index]};
       }
 
+    /**
+     * @brief Get the oriented and translated OBB of an edge.
+     * @param position Particle center position
+     * @param index Edge index
+     * @param orientation Particle orientation
+     * @return Transformed OBB of the edge
+     */
     ONIKA_HOST_DEVICE_FUNC
-      inline OBB get_obb_edge(const exanb::Vec3d &position, const size_t index, const exanb::Quaternion& orientation) const
+      inline OBB get_obb_edge(
+          const exanb::Vec3d &position, 
+          const size_t index, 
+          const exanb::Quaternion& orientation) const
       {
         OBB res = m_obb_edges[index];
         res.rotate(conv_to_quat(orientation));
@@ -219,8 +381,18 @@ namespace exaDEM
         return res;
       }
 
+    /**
+     * @brief Get the oriented and translated OBB of an edge.
+     * @param position Particle center position
+     * @param index Edge index
+     * @param orientation Particle orientation
+     * @return Transformed OBB of the edge
+     */
     ONIKA_HOST_DEVICE_FUNC
-      inline OBB get_obb_face(const exanb::Vec3d &position, const size_t index, const exanb::Quaternion& orientation) const
+      inline OBB get_obb_face(
+          const exanb::Vec3d &position, 
+          const size_t index, 
+          const exanb::Quaternion& orientation) const
       {
         OBB res = m_obb_faces[index];
         res.rotate(conv_to_quat(orientation));
@@ -228,9 +400,23 @@ namespace exaDEM
         return res;
       }
 
-    void add_vertex(const exanb::Vec3d &vertex) { m_vertices.push_back(vertex); }
+    /**
+     * @brief Add a vertex to the shape.
+     * @param vertex 3D position of the vertex
+     */
+    void add_vertex(const exanb::Vec3d &vertex) 
+    { 
+      m_vertices.push_back(vertex); 
+    }
 
-    void add_edge(const int i, const int j)
+    /**
+     * @brief Add an edge to the shape.
+     * @param i Index of the first vertex (>= 0)
+     * @param j Index of the second vertex (>= 0)
+     */  
+    void add_edge(
+        int i, 
+        int j)
     {
       assert(i >= 0 && "add negatif vertex");
       assert(j >= 0 && "add negatif vertex");
@@ -238,36 +424,56 @@ namespace exaDEM
       m_edges.push_back(j);
     }
 
-    void add_face(const size_t n, const int *data)
+    /**
+     * @brief Add a face to the shape.
+     * @param n Number of vertices in the face (must be > 0)
+     * @param data Pointer to an array of vertex indices
+     */
+    void add_face(size_t num_vertices, int * const vertex_indices)
     {
       assert(n != 0);
       m_faces[0]++;
       const size_t old_size = m_faces.size();
-      m_faces.resize(old_size + n + 1); // number of vertex + 1 storage to this number
-      m_faces[old_size] = n;
-      for (size_t it = 0; it < n; it++)
+      m_faces.resize(old_size + num_vertices + 1); // number of vertex + 1 storage to this number
+      m_faces[old_size] = num_vertices;
+      for (size_t it = 0; it < num_vertices; it++)
       {
-        m_faces[old_size + 1 + it] = data[it];
+        m_faces[old_size + 1 + it] = vertex_indices[it];
       }
     }
 
+    /**
+     * @brief Set the particle radius used for detection.
+     * @param radius Minkowsku radius
+     */
     void add_radius(const double radius) { m_radius = radius; }
 
+    /**
+     * @brief Compute the maximum cutoff radius (distance from origin + Minkowski radius)
+     * @return Maximum cutoff radius
+     */
     double compute_max_rcut() const
     {
-      const size_t n = this->get_number_of_vertices();
+      const size_t n_vertices = this->get_number_of_vertices();
       double rcut = 0;
-      for (size_t it = 0; it < n; it++)
+      for (size_t vertex_idx = 0; vertex_idx < n_vertices; vertex_idx++)
       {
-        auto &vertex = this->get_vertex(it);
-        const double d = exanb::norm(vertex) + m_radius; // 2 * m_radius;
+        const auto &vertex = this->get_vertex(vertex_idx);
+        const double d = exanb::norm(vertex) + m_radius;
         rcut = std::max(rcut, d);
       }
-
       assert(rcut != 0);
       return rcut;
     }
 
+    /**
+     * @brief Apply a function to all vertices of the shape (non-const version).
+     * 
+     * @tparam Func Type of the function to apply. Should take a Vec3d reference as first argument.
+     * @tparam Args Additional arguments passed to the function
+     * @param func Function to apply on each vertex
+     * @param args Additional arguments forwarded to func
+     */
     template <typename Func, typename... Args> void for_all_vertices(Func &func, Args &&...args)
     {
       const size_t n = this->get_number_of_vertices();
@@ -278,6 +484,14 @@ namespace exaDEM
       }
     }
 
+    /**
+     * @brief Apply a function to all vertices of the shape (const version).
+     * 
+     * @tparam Func Type of the function to apply. Should take a Vec3d reference as first argument.
+     * @tparam Args Additional arguments passed to the function
+     * @param func Function to apply on each vertex
+     * @param args Additional arguments forwarded to func
+     */
     template <typename Func, typename... Args> void for_all_vertices(Func &func, Args &&...args) const
     {
       const size_t n = this->get_number_of_vertices();
@@ -288,46 +502,86 @@ namespace exaDEM
       }
     }
 
-    template <typename Func, typename... Args> void for_all_edges(Func &func, Args &&...args)
-    {
-      const size_t n = this->get_number_of_edges();
-      for (size_t it = 0; it < n; it++)
+    /**
+     * @brief Apply a function to all edges of the shape (non-const version).
+     * 
+     * @tparam Func Type of the function to apply. Should take two vertex indices as first arguments.
+     * @tparam Args Additional arguments passed to the function
+     * @param func Function to apply on each edge
+     * @param args Additional arguments forwarded to func
+     */
+    template <typename Func, typename... Args>
+      void for_all_edges(Func &func, Args &&...args)
       {
-        auto [first, second] = this->get_edge(it);
-        func(first, second, std::forward<Args>(args)...);
+        const size_t n_edges = this->get_number_of_edges();
+        for (size_t edge_idx = 0; edge_idx < n_edges; edge_idx++)
+        {
+          auto [v0, v1] = this->get_edge(edge_idx);
+          func(v0, v1, std::forward<Args>(args)...);
+        }
       }
-    }
 
-    template <typename Func, typename... Args> void for_all_edges(Func &func, Args &&...args) const
-    {
-      const size_t n = this->get_number_of_edges();
-      for (size_t it = 0; it < n; it++)
+    /**
+     * @brief Apply a function to all edges of the shape (const version).
+     *
+     * @tparam Func Type of the function to apply. Should take two vertex indices as first arguments.
+     * @tparam Args Additional arguments passed to the function
+     * @param func Function to apply on each edge
+     * @param args Additional arguments forwarded to func
+     */
+    template <typename Func, typename... Args>
+      void for_all_edges(Func &func, Args &&...args) const
       {
-        auto [first, second] = this->get_edge(it);
-        func(first, second, std::forward<Args>(args)...);
+        const size_t n_edges = this->get_number_of_edges();
+        for (size_t edge_idx = 0; edge_idx < n_edges; edge_idx++)
+        {
+          auto [v0, v1] = this->get_edge(edge_idx);
+          func(v0, v1, std::forward<Args>(args)...);
+        }
       }
-    }
 
-    template <typename Func, typename... Args> void for_all_faces(Func &func, Args &&...args)
-    {
-      const size_t n = this->get_number_of_faces();
-      for (size_t it = 0; it < n; it++)
+    /**
+     * @brief Apply a function to all faces of the shape (non-const version).
+     * 
+     * @tparam Func Type of the function to apply. Should take face size and pointer to vertex indices as first arguments.
+     * @tparam Args Additional arguments passed to the function
+     * @param func Function to apply on each face
+     * @param args Additional arguments forwarded to func
+     */
+    template <typename Func, typename... Args>
+      void for_all_faces(Func &func, Args &&...args)
       {
-        auto [data, size] = this->get_face(it);
-        func(size, data, std::forward<Args>(args)...);
+        const size_t n_faces = this->get_number_of_faces();
+        for (size_t face_idx = 0; face_idx < n_faces; face_idx++)
+        {
+          auto [vertices_ptr, face_size] = this->get_face(face_idx);
+          func(face_size, vertices_ptr, std::forward<Args>(args)...);
+        }
       }
-    }
 
-    template <typename Func, typename... Args> void for_all_faces(Func &func, Args &&...args) const
-    {
-      const size_t n = this->get_number_of_faces();
-      for (size_t it = 0; it < n; it++)
+    /**
+     * @brief Apply a function to all faces of the shape (const version).
+     *
+     * @tparam Func Type of the function to apply. Should take face size and pointer to vertex indices as first arguments.
+     * @tparam Args Additional arguments passed to the function
+     * @param func Function to apply on each face
+     * @param args Additional arguments forwarded to func
+     */
+    template <typename Func, typename... Args>
+      void for_all_faces(Func &func, Args &&...args) const
       {
-        auto [data, size] = this->get_face(it);
-        func(size, data, std::forward<Args>(args)...);
+        const size_t n_faces = this->get_number_of_faces();
+        for (size_t face_idx = 0; face_idx < n_faces; face_idx++)
+        {
+          auto [vertices_ptr, face_size] = this->get_face(face_idx);
+          func(face_size, vertices_ptr, std::forward<Args>(args)...);
+        }
       }
-    }
 
+    /**
+     * @brief Rescale the shape by a given factor.
+     * @param scale Scaling factor
+     */
     void rescale(const double scale)
     {
       auto scale_vertices = [] (exanb::Vec3d& v, double s) { v = s * v; };
@@ -336,78 +590,165 @@ namespace exaDEM
 
     }
 
-    void print_vertices()
-    {
-      int idx = 0;
-      auto printer = [&idx](exanb::Vec3d &vertex) { lout << "Vertex[" << idx++ << "]: [" << vertex.x << "," << vertex.y << "," << vertex.z << "]" << std::endl; };
-
-      lout << "Number of vertices= " << this->get_number_of_vertices() << std::endl;
-      for_all_vertices(printer);
-    }
-
-    void print_edges()
-    {
-      int idx = 0;
-      auto printer = [&idx](int first, int second) { lout << "Edge[" << idx++ << "]: [" << first << "," << second << "]" << std::endl; };
-
-      if (this->get_number_of_edges() == 0)
-      {
-        lout << "No edge" << std::endl;
-      }
-      else
-      {
-        lout << "Number of edge  = " << this->get_number_of_edges() << std::endl;
-        for_all_edges(printer);
-      }
-    }
-
-    void print_faces()
-    {
-      int idx = 0;
-      auto printer = [&idx](int vertices, int *data)
-      {
-        lout << "Face [" << idx++ << "]: ";
-        for (int it = 0; it < vertices - 1; it++)
-        {
-          lout << data[it] << ", ";
-        }
-        lout << data[vertices - 1] << std::endl;
-      };
-      if (this->get_number_of_faces() == 0)
-      {
-        lout << "No face" << std::endl;
-      }
-      else
-      {
-        lout << "Number of faces  = " << this->get_number_of_faces() << std::endl;
-        for_all_faces(printer);
-      }
-    }
-
+    /**
+     * @brief Compute the surface area of the shape.
+     * @return Total surface area
+     */
     double compute_surface() const
     {
       double surface = 0.0;
       const size_t n_faces = this->get_number_of_faces();
-#pragma omp parallel for reduction(+: surface)
-      for (size_t it = 0; it < n_faces; it++)
+
+#pragma omp parallel for reduction(+:surface)
+      for (size_t face_idx = 0; face_idx < n_faces; face_idx++)
       {
-        auto [data, size] = this->get_face(it);
-        const Vec3d& vi = m_vertices[data[0]];
-        if( size == 3 )
+        auto [vertices_ptr, face_size] = this->get_face(face_idx);
+        const Vec3d& v0 = m_vertices[vertices_ptr[0]];
+
+        if (face_size == 3)
         {
-          for(int j = 1; j < size - 1; j++)
+          for (int j = 1; j < face_size - 1; j++)
           {
             const size_t k = j + 1;
-            const Vec3d vij = m_vertices[data[j]] - vi;
-            const Vec3d vik = m_vertices[data[k]] - vi;
-            const Vec3d cross = exanb::cross(vij, vik);
-            surface += 0.5 * exanb::norm(cross);
+            const Vec3d v1 = m_vertices[vertices_ptr[j]] - v0;
+            const Vec3d v2 = m_vertices[vertices_ptr[k]] - v0;
+            surface += 0.5 * exanb::norm(exanb::cross(v1, v2));
           }
         }
       }
+
       return surface;
     }
+    /// OBBTree Section
 
+    /**
+     * @brief Build an OBB tree for the shape (faces, edges, vertices).
+     *
+     * Each face, edge, and vertex is wrapped in an OBBbundle, and then the tree
+     * is recursively built. The OBBs are enlarged by the particle radius.
+     */
+    void buildOBBtree()
+    {
+      obbtree.reset(obbtree.root);
+      std::vector<OBBbundle<subBox>> obb_bundles;
+
+      // Build OBBs for faces
+      for (int face_idx = 0; face_idx < this->get_number_of_faces(); ++face_idx)
+      {
+        auto [vertex_ids, n_vertices] = this->get_face(face_idx);
+        OBBbundle<subBox> bundle;
+        bundle.data.isub = face_idx;
+        bundle.data.nbPoints = n_vertices;
+
+        for (int vi = 0; vi < n_vertices; vi++)
+          bundle.points.push_back(conv_to_vec3r(m_vertices[vertex_ids[vi]]));
+
+        std::vector<OBBbundle<subBox>> single_bundle{bundle};
+        bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+        obb_bundles.push_back(bundle);
+      }
+
+      // Build OBBs for edges
+      for (int edge_idx = 0; edge_idx < this->get_number_of_edges(); ++edge_idx)
+      {
+        auto [v0, v1] = this->get_edge(edge_idx);
+        OBBbundle<subBox> bundle;
+        bundle.data.isub = edge_idx;
+        bundle.data.nbPoints = 2;
+        bundle.points.push_back(conv_to_vec3r(m_vertices[v0]));
+        bundle.points.push_back(conv_to_vec3r(m_vertices[v1]));
+
+        std::vector<OBBbundle<subBox>> single_bundle{bundle};
+        bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+        obb_bundles.push_back(bundle);
+      }
+
+      // Build OBBs for vertices
+      for (int vert_idx = 0; vert_idx < this->get_number_of_vertices(); ++vert_idx)
+      {
+        OBBbundle<subBox> bundle;
+        bundle.data.isub = vert_idx;
+        bundle.data.nbPoints = 1;
+        bundle.points.push_back(conv_to_vec3r(m_vertices[vert_idx]));
+
+        std::vector<OBBbundle<subBox>> single_bundle{bundle};
+        bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+        obb_bundles.push_back(bundle);
+      }
+
+      // Recursively build the OBB tree
+      obbtree.root = OBBtree<subBox>::recursiveBuild(obbtree.root, obb_bundles, m_radius);
+    }
+
+    /// IO Section
+    /**
+     * @brief Print all vertices of the shape to the logging output.
+     */
+    void print_vertices()
+    {
+      int vertex_idx = 0;
+      auto printer = [&vertex_idx](exanb::Vec3d &v)
+      {
+        lout << "Vertex[" << vertex_idx++ << "]: [" << v.x << "," << v.y << "," << v.z << "]" << std::endl;
+      };
+
+      lout << "Number of vertices = " << this->get_number_of_vertices() << std::endl;
+      for_all_vertices(printer);
+    }
+
+    /**
+     * @brief Print all edges of the shape to the logging output.
+     */
+    void print_edges()
+    {
+      int edge_idx = 0;
+      auto printer = [&edge_idx](int v0, int v1)
+      {
+        lout << "Edge[" << edge_idx++ << "]: [" << v0 << "," << v1 << "]" << std::endl;
+      };
+
+      if (this->get_number_of_edges() == 0)
+      {
+        lout << "No edges" << std::endl;
+      }
+      else
+      {
+        lout << "Number of edges = " << this->get_number_of_edges() << std::endl;
+        for_all_edges(printer);
+      }
+    }
+
+    /**
+     * @brief Print all faces of the shape to the logging output.
+     */
+    void print_faces()
+    {
+      int face_idx = 0;
+      auto printer = [&face_idx](int n_vertices, int *vertex_indices)
+      {
+        lout << "Face[" << face_idx++ << "]: ";
+        for (int i = 0; i < n_vertices; i++)
+        {
+          lout << vertex_indices[i];
+          if (i < n_vertices - 1) lout << ", ";
+        }
+        lout << std::endl;
+      };
+
+      if (this->get_number_of_faces() == 0)
+      {
+        lout << "No faces" << std::endl;
+      }
+      else
+      {
+        lout << "Number of faces = " << this->get_number_of_faces() << std::endl;
+        for_all_faces(printer);
+      }
+    }
+
+    /**
+     * @brief Print full shape information (name, radius, inertia, volume) and all vertices, edges, and faces.
+     */
     inline void print()
     {
       lout << std::endl;
@@ -422,6 +763,9 @@ namespace exaDEM
       lout << "=================================" << std::endl << std::endl;
     }
 
+    /**
+     * @brief Export the shape to a Paraview-compatible VTK file.
+     */
     inline void write_paraview()
     {
       ldbg << " writting paraview for shape " << this->m_name << std::endl;
@@ -474,7 +818,18 @@ namespace exaDEM
       for_all_faces(writer_f, outFile);
     }
 
-    inline void write_move_paraview(std::string path, int timestep, Vec3d &center, Quaternion &quat)
+    /**
+     * @brief Export the shape at a given timestep (position + orientation) to Paraview.
+     * @param path Output directory.
+     * @param timestep Current timestep (used in filename).
+     * @param center Translation vector of the shape.
+     * @param quat Orientation quaternion of the shape.
+     */
+    inline void write_move_paraview(
+        std::string path, 
+        int timestep, 
+        Vec3d &center, 
+        Quaternion &quat)
     {
       std::string time = std::to_string(timestep);
       ldbg << " writting paraview for shape " << this->m_name << " timestep: " << time << std::endl;
@@ -519,18 +874,6 @@ namespace exaDEM
       for_all_faces(writer_f, outFile);
     }
   };
-
-  inline int contact_possibilities(const shape *s1, const shape *s2)
-  {
-    const int nv1 = s1->get_number_of_vertices();
-    const int ne1 = s1->get_number_of_edges();
-    const int nf1 = s1->get_number_of_faces();
-    const int nv2 = s2->get_number_of_vertices();
-    const int ne2 = s2->get_number_of_edges();
-    const int nf2 = s2->get_number_of_faces();
-    return nv1 * (nv2 + ne2 + nf2) + ne1 * ne2 + nv2 * (ne1 + nf1);
-  }
-
 }; // namespace exaDEM
 
 #include <exaDEM/shape_prepro.hpp>
