@@ -33,7 +33,6 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
-#include <exaDEM/shapes.hpp>
 #include <exaDEM/nbh_polyhedron_driver.hpp>
 #include <exaDEM/traversal.h>
 
@@ -43,7 +42,8 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename GridT, class = AssertGridHasFields<GridT>> class UpdateGridCellInteraction : public OperatorNode
+  template <typename GridT, class = AssertGridHasFields<GridT>> 
+    class UpdateGridCellInteractionWithOBBTree : public OperatorNode
   {
     using ComputeFields = FieldSet<>;
     static constexpr ComputeFields compute_field_set{};
@@ -57,6 +57,7 @@ namespace exaDEM
     ADD_SLOT(double, rcut_inc, INPUT, REQUIRED, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
     ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(bool, enable_obb_tree, INPUT, REQUIRED);
 
     public:
     inline std::string documentation() const override final
@@ -66,13 +67,25 @@ namespace exaDEM
 
         YAML example [no option]:
 
-          - nbh_polyhedron
+          - nbh_polyhedron_obb_tree
+
+        Note: Before calling nbh_polyhedron_obb_tree, you need to use the operator: enable_obb_tree in input_data
        )EOF";
     }
 
-    inline void check_slots()
+    inline void execute() override final
     {
-      if (drivers.has_value() && !domain->xform_is_identity())
+      auto& g = *grid;
+      auto& vertex_fields = *cvf;
+      const auto cells = g.cells();
+      const size_t n_cells = g.number_of_cells(); // nbh.size();
+      const IJK dims = g.dimension();
+      auto &interactions = ges->m_data;
+      auto &shps = *shapes_collection;
+      double rVerlet = *rcut_inc;
+      Mat3d xform = domain->xform();
+      bool is_xform = !domain->xform_is_identity();
+      if (drivers.has_value() && is_xform)
       {
         if(drivers->get_size() > 0)
         {
@@ -80,21 +93,14 @@ namespace exaDEM
           std::exit(0);
         }
       }
-    }
 
-    inline void execute() override final
-    {
-      check_slots();
-      auto& g = *grid;
-      auto& vertex_fields = *cvf;
-      const auto cells = g.cells();
-      const size_t n_cells = g.number_of_cells(); // nbh.size();
-      const IJK dims = g.dimension();
-      auto &interactions = ges->m_data;
-      shapes &shps = *shapes_collection;
-      double rVerlet = *rcut_inc;
-      Mat3d xform = domain->xform();
-      bool is_xform = !domain->xform_is_identity();
+      // if grid structure (dimensions) changed, we invalidate thie whole data
+      if (interactions.size() != n_cells)
+      {
+        ldbg << "[nbh_polyhedron, WARNING] Number of cells has changed, reset friction data" << std::endl;
+        interactions.clear();
+        interactions.resize(n_cells);
+      }
 
       assert(interactions.size() == n_cells);
 
@@ -113,6 +119,7 @@ namespace exaDEM
         // local storage per thread
         Interaction item;
         interaction_manager manager;
+        std::vector<std::pair<subBox, subBox>> intersections;
 #       pragma omp for schedule(dynamic)
         for (size_t ci = 0; ci < cell_size; ci++)
         {
@@ -204,7 +211,7 @@ namespace exaDEM
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
               {
                 Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); //std::get<STL_MESH>(drvs.data(drvs_idx));
-                // driver.grid_indexes_summary();
+                                                                              // driver.grid_indexes_summary();
                 add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a, rz_a, vertex_cell_a, orient_a, shps);
               }
             }
@@ -213,7 +220,7 @@ namespace exaDEM
           // Second, we add interactions between two polyhedra.
 
           apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-              [&g, &vertex_fields, &cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &vertex_cell_a, &add_contact, xform, is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+              [&g, &vertex_fields, &cells, &info_particles, &intersections, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &vertex_cell_a, &add_contact, xform, is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
               {
               // default value of the interaction studied (A or i -> B or j)
               const uint64_t id_nbh = cells[cell_b][field::id][p_b];
@@ -229,7 +236,7 @@ namespace exaDEM
 
               // Get particle pointers for the particle b.
               const uint32_t type_nbh = cells[cell_b][field::type][p_b];
-              const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
+              const Quaternion& orient_nbh = cells[cell_b][field::orient][p_b];
               double rx_nbh = cells[cell_b][field::rx][p_b];
               double ry_nbh = cells[cell_b][field::ry][p_b];
               double rz_nbh = cells[cell_b][field::rz][p_b];
@@ -255,147 +262,129 @@ namespace exaDEM
               const shape *shp = shps[t_a[p_a]];
               const shape *shp_nbh = shps[type_nbh];
 
-              // Eliminate if two polyhedra are two far away if there is not intersection between their OBBs.
-              OBB obb_i = shp->obb;
-              OBB obb_j = shp_nbh->obb;
               const Quaternion &orient = orient_a[p_a];
               quat conv_orient_i = quat{vec3r{orient.x, orient.y, orient.z}, orient.w};
               quat conv_orient_j = quat{vec3r{orient_nbh.x, orient_nbh.y, orient_nbh.z}, orient_nbh.w};
-              obb_i.rotate(conv_orient_i);
-              obb_j.rotate(conv_orient_j);
-              obb_i.translate(vec3r{rx, ry, rz});
-              obb_j.translate(vec3r{rx_nbh, ry_nbh, rz_nbh});
 
-              obb_i.enlarge(rVerlet);
-              obb_j.enlarge(rVerlet);
+              intersections.clear();
+              vec3r ra = {rx, ry, rz};
+              vec3r rb = {rx_nbh, ry_nbh, rz_nbh};
 
-              if (!obb_i.intersect(obb_j))
-                return;
+              quat QAconj = conv_orient_i.get_conjugated();
+              vec3r posB_relativeTo_posA = QAconj * (rb - ra);
+              quat QB_relativeTo_QA = QAconj * conv_orient_j;
 
-              // Add interactions
-              item.id_i = id_a[p_a];
-              item.p_i = p_a;
+              // Fill intersections
+              OBBtree<subBox>::TreeIntersectionIds(
+                  shp->obbtree.root, 
+                  shp_nbh->obbtree.root, 
+                  intersections,
+                  1.0,//cells[cell_a][field::homothety][p_a], 
+                  1.0,//cells[cell_b][field::homothety][p_b], 
+                  0.5*rVerlet,
+                  posB_relativeTo_posA, 
+                  QB_relativeTo_QA);
 
-              item.cell_i = cell_a;
-              item.p_j = p_b;
-              item.cell_j = cell_b;
+              auto set_info_i = [&item] (uint64_t id, size_t p, size_t cid) -> void { item.id_i = id; item.p_i = p; item.cell_i = cid; };
+              auto set_info_j = [&item] (uint64_t id, size_t p, size_t cid) -> void { item.id_j = id; item.p_j = p; item.cell_j = cid; };
 
-              const Vec3d r = {rx, ry, rz};
-
-              // get particle j data.
-              const int nv = shp->get_number_of_vertices();
-              const int ne = shp->get_number_of_edges();
-              const int nf = shp->get_number_of_faces();
-              const int nv_nbh = shp_nbh->get_number_of_vertices();
-              const int ne_nbh = shp_nbh->get_number_of_edges();
-              const int nf_nbh = shp_nbh->get_number_of_faces();
-
-              item.id_j = id_nbh;
-              // exclude possibilities with obb
-              for (int i = 0; i < nv; i++)
+              for (size_t c = 0; c < intersections.size(); c++) 
               {
-                auto vi = shp->get_vertex(i, r, orient);
-                OBB obbvi;
-                obbvi.center = {vi.x, vi.y, vi.z};
-                obbvi.enlarge(shp->m_radius);
-                if (obb_j.intersect(obbvi))
+                size_t i = intersections[c].first.isub;
+                size_t j = intersections[c].second.isub;
+                int i_nbPoints = intersections[c].first.nbPoints;
+                int j_nbPoints = intersections[c].second.nbPoints;
+                //lout << " i " << i << " j " << j << " i_nbPoints " << i_nbPoints << " j_nbPoints " << j_nbPoints << std::endl;
+
+                if (i_nbPoints == 1) 
                 {
-                  item.type = 0; // === Vertex - Vertex
-                  for (int j = 0; j < nv_nbh; j++)
-                  {
+                  if (j_nbPoints == 1) 
+                  {  
+                    set_info_i(id_a[p_a], p_a, cell_a);
+                    set_info_j(id_nbh,    p_b, cell_b);
+                    item.type = 0; // === Vertex - Vertex
                     if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
                     {
                       add_contact(p_a, item, i, j);
                     }
-                  }
-
-                  item.type = 1; // === vertex edge
-                  for (int j = 0; j < ne_nbh; j++)
+                  } 
+                  else if (j_nbPoints == 2) 
                   {
+                    set_info_i(id_a[p_a], p_a, cell_a);
+                    set_info_j(id_nbh,    p_b, cell_b);
+                    item.type = 1; // === vertex edge
                     bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
                     if (contact)
                     {
                       add_contact(p_a, item, i, j);
                     }
-                  }
-
-                  item.type = 2; // === vertex face
-                  for (int j = 0; j < nf_nbh; j++)
+                  } 
+                  else if (j_nbPoints >= 3) 
                   {
+                    set_info_i(id_a[p_a], p_a, cell_a);
+                    set_info_j(id_nbh,    p_b, cell_b);
+                    item.type = 2; // === vertex face
                     bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
                     if (contact)
                     {
                       add_contact(p_a, item, i, j);
                     }
                   }
-                }
-              }
-
-              item.type = 3; // === edge edge
-              for (int i = 0; i < ne; i++)
-              {
-                for (int j = 0; j < ne_nbh; j++)
+                } 
+                else if (i_nbPoints == 2) 
                 {
-                  bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
-                  if (contact)
+                  if (j_nbPoints == 1) 
                   {
-                    add_contact(p_a, item, i, j);
-                  }
-                }
-              }
-
-              // interaction of from particle j to particle i
-              item.cell_j = cell_a;
-              item.id_j = id_a[p_a];
-              item.p_j = p_a;
-
-              item.cell_i = cell_b;
-              item.p_i = p_b;
-              item.id_i = id_nbh;
-
-              for (int j = 0; j < nv_nbh; j++)
-              {
-                auto vj = vertices_b[j];//shp->get_vertex(j, r_nbh, orient_nbh);
-                OBB obbvj;
-                obbvj.center = {vj.x, vj.y, vj.z};
-                obbvj.enlarge(shp_nbh->m_radius);
-
-                if (obb_i.intersect(obbvj))
-                {
-                  item.type = 1; // === vertex edge
-                  for (int i = 0; i < ne; i++)
-                  {
+                    /** warning, a -> j and b -> i */
+                    set_info_i(id_nbh,    p_b, cell_b);
+                    set_info_j(id_a[p_a], p_a, cell_a);
+                    item.type = 1; // === vertex edge
                     bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
                     if (contact)
                     {
                       add_contact(p_a, item, j, i);
                     }
-                  }
-
-                  item.type = 2; // === vertex face
-                  for (int i = 0; i < nf; i++)
+                  } 
+                  else if (j_nbPoints == 2) 
                   {
-                    bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
+                    set_info_i(id_a[p_a], p_a, cell_a);
+                    set_info_j(id_nbh,    p_b, cell_b);
+                    // === edge edge
+                    item.type = 3; 
+                    bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
                     if (contact)
                     {
-                      add_contact(p_a, item, j, i);
+                      add_contact(p_a, item, i, j);
                     }
                   }
-                }
-              }
-              });
+                } 
+                else if (i_nbPoints >= 3) 
+                {
+									if (j_nbPoints == 1)
+									{
+										/** warning, a -> j and b -> i */
+										set_info_i(id_nbh,    p_b, cell_b);
+										set_info_j(id_a[p_a], p_a, cell_a);
+										item.type = 2; // === vertex face
+										bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
+										if (contact)
+										{
+											add_contact(p_a, item, j, i);
+										}
+									}
+								}
+							}  // end loop over intersections
+							});
 
-          manager.update_extra_storage<true>(storage);
-          assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
-          assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
-        }
-        //    GRID_OMP_FOR_END
-      }
-    }
-  };
+					manager.update_extra_storage<true>(storage);
+					assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
+					assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
+				}
+				//    GRID_OMP_FOR_END
+			}
+		}
+	};
 
-  template <class GridT> using UpdateGridCellInteractionTmpl = UpdateGridCellInteraction<GridT>;
-
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(nbh_polyhedron) { OperatorNodeFactory::instance()->register_factory("nbh_polyhedron", make_grid_variant_operator<UpdateGridCellInteraction>); }
+	// === register factories ===
+	ONIKA_AUTORUN_INIT(nbh_polyhedron_obb_tree) { OperatorNodeFactory::instance()->register_factory("nbh_polyhedron_obb_tree", make_grid_variant_operator<UpdateGridCellInteractionWithOBBTree>); }
 } // namespace exaDEM
