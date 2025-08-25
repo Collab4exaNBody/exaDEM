@@ -24,6 +24,7 @@ under the License.
 #include <exaDEM/driver_base.h>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_reader.hpp>
+#include <exaDEM/shape_writer.hpp>
 //#include <exaDEM/interaction/interaction.hpp>
 #include <filesystem>
 #include <onika/physics/units.h>
