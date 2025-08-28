@@ -82,7 +82,7 @@ namespace exaDEM
     MotionType motion_type = STATIONARY;
     Vec3d motion_vector = {0,0,0};
     double motion_start_threshold = 0;
-    double motion_end_threshold = std::numeric_limits<double>::max();
+    double motion_end_threshold = 1e300;
 
     // Motion: Linear
     double const_vel = 0;
@@ -339,7 +339,7 @@ namespace exaDEM
       {
         lout << "Shaker.Omega: "     << omega << std::endl;
         lout << "Shaker.Amplitude: " << amplitude << std::endl;
-        lout << "Shaker.Direction: " << shaker_dir << std::endl;
+        lout << "Shaker.Direction: [" << shaker_dir << "]" << std::endl;
       }
     };
 
@@ -348,7 +348,7 @@ namespace exaDEM
      */
     void dump_driver_params(std::stringstream &stream)
     {
-      stream << "     params: { ";
+      stream << "     params: {";
       stream << " motion_type: "            << motion_type_to_string(motion_type);
       stream << ", motion_vector: ["         << motion_vector << "]"; 
       stream << ", motion_start_threshold: " << motion_start_threshold;
@@ -377,7 +377,7 @@ namespace exaDEM
       {
         stream << ", omega: " << omega;
         stream << ", amplitude: " << amplitude;
-        stream << ", shaker_dir: " << shaker_dir;
+        stream << ", shaker_dir: [" << shaker_dir << "]";
       }
       stream  <<" }" << std::endl;
     }
