@@ -61,14 +61,12 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      stl_mesh_reader reader;
-      reader(*filename, *binary);
-      std::string output_name_vtk = *filename;
+      std::string output_name = *filename;
       std::string old_extension_stl = ".stl";
       std::string old_extension_shp = ".shp";
       bool is_stl(false), is_shp(false);
-      std::string::size_type it_stl = output_name_vtk.find(old_extension_stl);
-      std::string::size_type it_shp = output_name_vtk.find(old_extension_shp);
+      std::string::size_type it_stl = output_name.find(old_extension_stl);
+      std::string::size_type it_shp = output_name.find(old_extension_shp);
       if (it_stl != std::string::npos)
         is_stl = true;
       if (it_shp != std::string::npos)
@@ -88,14 +86,16 @@ namespace exaDEM
 
       if (is_stl)
       {
-        output_name_vtk.erase(it_stl, old_extension_stl.length());
-        shp = build_shape(reader, output_name_vtk);
+        stl_mesh_reader reader;
+        reader(*filename, *binary);
+        output_name.erase(it_stl, old_extension_stl.length());
+        shp = build_shape(reader, output_name);
       }
       else if (is_shp)
       {
         // not optimized
         bool big_shape = true;
-        shp = read_shp(shp, output_name_vtk, big_shape);
+        shp = read_shp(output_name, big_shape);
       }
 
       if( *scale != 1.0 )

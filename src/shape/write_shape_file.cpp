@@ -28,7 +28,7 @@ under the License.
 #include <mpi.h>
 #include <filesystem>
 #include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_reader.hpp>
+#include <exaDEM/shape_writer.hpp>
 
 namespace exaDEM
 {
@@ -41,14 +41,23 @@ namespace exaDEM
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
   public:
-    inline std::string documentation() const override final { return R"EOF( This operator writes shapes data structure into a "shp" file. )EOF"; }
+    inline std::string documentation() const override final { 
+      return R"EOF( 
+        This operator writes shapes data structure into a "shp" file. 
+
+        YAML example:
+ 
+          - write_shape_file:
+             filename: "MyRestartShapeFile.shp"
+      )EOF"; 
+    }
 
     inline void execute() override final
     {
       // get shapes
       auto &shps = *shapes_collection;
       // this operator does not writes data file if there is not any shape.
-      size_t size = shps.get_size();
+      size_t size = shps.size();
       if (size == 0)
         return;
       int rank;

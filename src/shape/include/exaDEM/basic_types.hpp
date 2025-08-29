@@ -22,6 +22,7 @@ under the License.
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <exaDEM/type/OBB.hpp>
+#include <exaDEM/type/OBBtree.hpp>
 
 namespace exaDEM
 {

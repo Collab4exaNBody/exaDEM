@@ -93,7 +93,7 @@ namespace exaDEM
     {
       // compute the biggest radius for each polyhedron
       const shapes shps = *shapes_collection;
-      const size_t size = shps.get_size();
+      const size_t size = shps.size();
       onika::memory::CudaMMVector<double> r;
       r.resize(size);
       double rmax = *rcut_max;
