@@ -54,7 +54,7 @@ namespace exaDEM
     {
       return R"EOF(
         This operator fills the list of contact parameters between particles and drivers. 
- 
+
         YAML example:
 
           - drivers_contact_params:
@@ -68,6 +68,8 @@ namespace exaDEM
 
         )EOF";
     }
+
+    inline std::string operator_name() { return "drivers_contact_params"; }
 
     public:
     inline void execute() override final
@@ -103,9 +105,9 @@ namespace exaDEM
 
       if( n_types == 1 && drvs.get_size() == 1)
       {
-        lout << "\033[1;32mAdvice: You are defining contact parameters while there is only one type of particle. "
-          << "You should use 'contact_force' or 'contact_force_singlemat' as the operator, "
-          << "and avoid using 'drivers_contact_params'.\033[0m" << std::endl;
+
+        color_log::warning(operator_name(), "Advice: You are defining contact parameters while there is only one type of particle.");
+        color_log::warning(operator_name(), "You should use 'contact_force' or 'contact_force_singlemat' as the operator, and avoid using 'drivers_contact_params'.");
       }
 
       // check input slots
@@ -124,16 +126,15 @@ namespace exaDEM
 
         int number_of_pairs = material_types.size();
 
-        auto check_lengths_match = [number_of_pairs]<typename Vec> (Vec& list, std::string cp_field_name) -> bool 
+        auto check_lengths_match = [number_of_pairs, this]<typename Vec> (Vec& list, std::string cp_field_name) -> bool 
         {
           if( number_of_pairs != int(list.size()) ) 
           {
-            lout << "\033[1;31mThe length of the field \"" << cp_field_name 
-              << "\" does not match the size of the other fields. "
-              << "mat1.size() = " << number_of_pairs 
-              << ", while " << cp_field_name << ".size() = " << list.size() 
-              << ".\033[0m" << std::endl;
-            std::exit(0);
+            std::string msg = "The length of the field \"" + cp_field_name;
+            msg            += "\" does not match the size of the other fields. ";
+            msg            += "mat1.size() = " + std::to_string(number_of_pairs);
+            msg            += ", while " + cp_field_name + ".size() = " + std::to_string(list.size());
+            color_log::error(this->operator_name(), msg);
           }
           return true;
         };
@@ -161,11 +162,11 @@ namespace exaDEM
         {
           if( type_map.find(type_name) == type_map.end())
           {
-            lout << "\033[1;31mThe type [" << type_name << "] is not defined" << std::endl;
-            lout << "Available types are = ";
-            for(auto& it : type_map) lout << it.first << " ";
-            lout << ".\033[0m" << std::endl;
-            std::exit(EXIT_FAILURE);
+            color_log::error(operator_name(), "The type [" + type_name + "] is not defined", false);
+            std::string msg = "Available types are = "; 
+            for(auto& it : type_map) msg += it.first + " ";
+            msg += ".";
+            color_log::error(operator_name(), msg);
           }
         }
 
@@ -174,14 +175,12 @@ namespace exaDEM
         {
           if(did >= int(drvs.get_size()))
           {
-            lout << "\033[1;31m[ERROR]: driver id: " << did << " is out of range of the driver list: <" << drvs.get_size() << std::endl;
-            std::exit(EXIT_FAILURE);
+            color_log::error(operator_name(), "driver id: " + std::to_string(did) + " is out of range of the driver list: " + std::to_string(drvs.get_size()));
           }
           auto driver_type = drvs.type(did);
           if( driver_type == DRIVER_TYPE::UNDEFINED )
           {
-            lout << "\033[1;31m[ERROR]: The driver type is undefined for id: " << did << std::endl;
-            std::exit(EXIT_FAILURE);
+            color_log::error(operator_name(),"The driver type is undefined for id: " + std::to_string(did));
           }
         }
 

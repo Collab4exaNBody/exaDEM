@@ -22,6 +22,7 @@ under the License.
 //#include <ostream>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_stream.h>
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 
 namespace exaDEM
@@ -165,7 +166,10 @@ namespace exaDEM
 
     void copy(size_t start, size_t size, std::vector<exaDEM::Interaction> &tmp, int w)
     {
-      if( tmp.size() != size ) std::cout << "[ERROR] When resizing wave " << w << std::endl; 
+      if( tmp.size() != size ) 
+      {
+        color_log::error("Classifier::copy", "When resizing wave: " +std::to_string(w));
+      }
       type = w;
 
       for (size_t i = 0 ; i < size ; i++)

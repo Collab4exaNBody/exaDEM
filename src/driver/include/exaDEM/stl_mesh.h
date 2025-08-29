@@ -21,6 +21,7 @@ under the License.
 #include <onika/math/basic_types.h>
 #include <onika/math/quaternion.h>
 #include <onika/math/quaternion_yaml.h>
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_base.h>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_reader.hpp>
@@ -137,8 +138,7 @@ namespace exaDEM
           && shp.get_number_of_edges() == 0 
           && shp.get_number_of_vertices() == 0)
       {
-        lout << "Your shape is not correctly defined, no vertex, no edge, and no face" << std::endl;
-        std::abort();
+        color_log::error("Stl_mesh::initialize", "Your shape is not correctly defined, no vertex, no edge, and no face.");
       }
 
       // resize and initialize vertices
@@ -157,8 +157,7 @@ namespace exaDEM
       if( !Driver_params::check_motion_coherence()) std::exit(EXIT_FAILURE);
       if( mass <= 0.0 )
       {
-        lout << "Please, define a positive mass." << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error("Stl_mesh::initialize", "Please, define a positive mass.");
       }
 
       if( is_compressive() )
@@ -166,14 +165,13 @@ namespace exaDEM
         double s = shp.compute_surface();
         if( surface <= 0 )
         {
-          lout << "\033[31m[register_stl_mesh, ERROR] The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl;
-          lout << "\033[33m[register_stl_mesh, ERROR] The computed surface of all faces is: " << s << "\033[0m" << std::endl;
-          std::exit(EXIT_FAILURE);
-          lout << "\033[32m[register_stl_mesh, WARNING] The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.\033[0m" << std::endl;
+          color_log::warning("Stl_mesh::initialize", "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.");
+          color_log::error("Stl_mesh::initialize", "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify surface: XX in the 'state' slot.", false);
+          color_log::error("Stl_mesh::initialize", "The computed surface of all faces is: " + std::to_string(s), true);
         }
         if ( s - surface > 1e-6 )
         {
-          lout << "\033[32m[register_stl_mesh, WARNING]: The computed surface of all faces is: " << s << "\033[0m" << std::endl;
+          color_log::warning("Stl_mesh::initialize", "The computed surface of all faces is: " + std::to_string(s));
         }
       }
     }
@@ -194,9 +192,8 @@ namespace exaDEM
       }
       else if( is_force_motion() )
       {
-        if( mass >= 1e100 ) lout << "[f_to_a, WARNING] The mass of the stl mesh is set to " << mass << std::endl;
+        if( mass >= 1e100 ) color_log::warning("f_to_a", "The mass of the stl mesh is set to " + std::to_string(mass));
         acc = Driver_params::sum_forces() / mass;
-        //lout << "acceleration: " << acc << std::endl;
       }
       else
       {
