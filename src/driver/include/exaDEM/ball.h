@@ -19,6 +19,7 @@
 
 #include <onika/physics/units.h>
 #include <onika/math/basic_types.h>
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_base.h>
 
 namespace exaDEM
@@ -170,7 +171,7 @@ namespace exaDEM
     {
       if( is_force_motion() )
       {
-        if( mass >= 1e100 ) lout << "[f_to_a, WARNING] The mass of the ball is set to " << mass << std::endl;
+        if( mass >= 1e100 ) color_log::warning("f_to_a", "The mass of the ball is set to " + std::to_string(mass));
         acc = Driver_params::sum_forces() / mass; 
       }
       else

@@ -26,6 +26,7 @@ under the License.
 #include <exanb/core/grid.h>
 
 #include <memory>
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/traversal.h>
 #include <exaDEM/AnalysisManager.hpp>
 #include <exaDEM/barycenter.hpp>
@@ -116,8 +117,8 @@ namespace exaDEM
           }
         }
         else 
-        { 
-          lout << "[barycenter, WARNING] No particle into this region (particle_barycenter). Barycenter is set to {0,0,0}" << std::endl;
+        {
+          color_log::warning("barycenter", "No particle into this region (particle_barycenter). Barycenter is set to {0,0,0}"); 
         }
         // Add data to the output file
         manager.add_element(var_name_rx, global[1], "%f");

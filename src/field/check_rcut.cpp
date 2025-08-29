@@ -25,6 +25,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/compute/reduce_cell_particles.h>
 #include <mpi.h>
+#include <exaDEM/color_log.hpp>
 
 
 namespace exaDEM
@@ -52,14 +53,15 @@ namespace exaDEM
       )EOF"; 
     }
 
+    inline std::string operator_name() { return "check_rcut"; }
+
     public:
 
     void check_slots()
     {
       if(*rcut_max <= 0.0) 
       {
-        lout << "\033[1;31m[check_rcut, ERROR] rmax is not correctly defined (rcut max <= 0.0)\033[0m" << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error(operator_name(), "rmax is not correctly defined (rcut max <= 0.0)");
       }
     }
 
@@ -91,8 +93,7 @@ namespace exaDEM
 
       if ( rcm > rmax )
       {
-        lout << "\033[1;31m[check_rcut, ERROR] At least one particle has a radius larger than the maximum radius cutoff\033[0m" << std::endl;       
-        std::exit(0);
+        color_log::error(operator_name(), "At least one particle has a radius larger than the maximum radius cutoff.");
       }
     } // namespace exaDEM
   }

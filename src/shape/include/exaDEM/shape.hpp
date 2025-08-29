@@ -24,6 +24,7 @@ under the License.
 #include <cassert>
 #include <cmath>
 #include <onika/log.h>
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/basic_types.hpp>
 #include <onika/cuda/cuda.h>
 #include <onika/memory/allocator.h>
@@ -773,8 +774,8 @@ namespace exaDEM
       std::ofstream outFile(name);
       if (!outFile)
       {
-        std::cerr << "[ERROR] Impossible to create an output file!" << std::endl;
-        std::cerr << "[ERROR] Impossible to open the file: " << name << std::endl;
+        color_log::error("Shape::write_paraview", "Impossible to create an output file!", false);
+        color_log::error("Shape::write_paraview", "Impossible to open the file: " + name, false);
         return;
       }
       outFile << "# vtk DataFile Version 3.0" << std::endl;
@@ -837,7 +838,7 @@ namespace exaDEM
       std::ofstream outFile(name);
       if (!outFile)
       {
-        std::cerr << "[ERROR] Impossible to create the output file: " << name << std::endl;
+        color_log::error("Shape::write_move_paraview", "Impossible to create the output file: " + name, false);
         return;
       }
       outFile << "# vtk DataFile Version 3.0" << std::endl;

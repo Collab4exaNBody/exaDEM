@@ -96,8 +96,6 @@ namespace exaDEM
       inline void operator()(const OtherDriverType &) const
       {
         static_assert( get_type<OtherDriverType>() != DRIVER_TYPE::UNDEFINED );
-        //lout << "WARNING: driver_compute_vertices is not defined for this driver. " << std::endl;
-        //return 0;
       }
     };
 

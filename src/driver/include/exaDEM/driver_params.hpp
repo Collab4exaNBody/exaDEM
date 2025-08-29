@@ -19,6 +19,7 @@ under the License.
 
 #pragma once
 
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/normalize.hpp>
 #include <climits>
 #include <chrono>
@@ -82,7 +83,7 @@ namespace exaDEM
     MotionType motion_type = STATIONARY;
     Vec3d motion_vector = {0,0,0};
     double motion_start_threshold = 0;
-    double motion_end_threshold = std::numeric_limits<double>::max();
+    double motion_end_threshold = 1e300;
 
     // Motion: Linear
     double const_vel = 0;
@@ -159,12 +160,12 @@ namespace exaDEM
       auto it = std::find(valid_motion_types.begin(), valid_motion_types.end(), motion_type);
       if( it == valid_motion_types.end() )
       {
-        lout << "\033[31mThis motion type [" << motion_type_to_string(motion_type) << "] is not possible, MotionType availables are: ";
+        color_log::warning("Driver_params::is_valid_motion_type", "This motion type [" + motion_type_to_string(motion_type) + "] is not possible, MotionType availables are: ");
         for(const auto& motion: valid_motion_types)
         {
-          lout << " " << motion_type_to_string(motion);
+          lout << " " << ansi::yellow(motion_type_to_string(motion));
         }
-        lout  << "\033[0m" << std::endl;
+        lout << std::endl;
         return false;
       }
       return true;
@@ -176,46 +177,46 @@ namespace exaDEM
       {
         if( amplitude <= 0.0 ) 
         {
-          lout << "\033[31m[WARNING] The \"amplitude\" input slot is not defined correctly.\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "The \"amplitude\" input slot is not defined correctly."); 
           return false;
         }
         if( omega <= 0.0 ) 
         {
-          lout << "\033[31m[WARNING] The \"omega\" input slot is not defined correctly.\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "The \"omega\" input slot is not defined correctly."); 
           return false;
         }
         if( exanb::dot(shaker_dir, shaker_dir) - 1 >= 1e-14 ) 
         {
           Vec3d old = shaker_dir;
           exanb::_normalize(shaker_dir);
-          lout << "\033[31m[WARNING] Your shaker_dir vector [" << old <<"} has been normalized to [" << shaker_dir << "]\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "Your shaker_dir vector [" + std::to_string(old) + "} has been normalized to ["  + std::to_string(shaker_dir) + "]"); 
         }
       }
       if( is_tabulated() )
       {
         if(tab_time.size() == 0)
         {
-          lout << "\033[31m[WARNING] The \"time\" input slot is not defined while the tabulated motion is activated.\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "The \"time\" input slot is not defined while the tabulated motion is activated."); 
           return false;
         }
         else if(tab_time[0] != 0.0)
         {
-          lout << "\033[31m[WARNING] Please set the first element of your input time vector to 0.\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "Please set the first element of your input time vector to 0."); 
           return false;
         }
         if(tab_pos.size() == 0)
         {
-          lout << "\033[31m[WARNING] The \"positions\" input slot is not defined while the tabulated motion is activated.\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "The \"positions\" input slot is not defined while the tabulated motion is activated."); 
           return false;
         }
         if(tab_time.size() != tab_pos.size())
         {
-          lout << "\033[31m[WARNING] The \"positions\" and \"time\" input slot are not the same size.\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "The \"positions\" and \"time\" input slot are not the same size."); 
           return false;
         }
         if(!is_sorted(tab_time.begin(), tab_time.end()))
         {
-          lout << "\033[31m[WARNING] The \"time\" array used for a TABULATED motion is not sorted.\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "The \"time\" array used for a TABULATED motion is not sorted."); 
           return false;
         }
       }
@@ -224,8 +225,8 @@ namespace exaDEM
         // Check if motion vector is zero (invalid for linear motion)
         if( motion_vector == Vec3d{0,0,0} )
         {
-          lout << "\033[31mYour motion type is a \"Linear Mode\" that requires a motion vector." << std::endl;
-          lout << "\033[31mPlease, define motion vector by adding \"motion_vector: [1,0,0]. It is defined to [0,0,0] by default.\033[0m" << std::endl;
+          lout << ansi::yellow("Your motion type is a \"Linear Mode\" that requires a motion vector.") << std::endl;
+          lout << ansi::yellow("Please, define motion vector by adding \"motion_vector: [1,0,0]. It is defined to [0,0,0] by default.") << std::endl;
           return false;
         }
         // Normalize motion vector if its magnitude is not equal to 1
@@ -233,15 +234,15 @@ namespace exaDEM
         {
           Vec3d old = motion_vector;
           exanb::_normalize(motion_vector);
-          lout << "\033[31m[WARNING] Your motion vector [" << old <<"} has been normalized to [" << motion_vector << "]\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "Your motion vector [" + std::to_string(old) + "} has been normalized to [" + std::to_string(motion_vector) + "]"); 
         }
         if( motion_type == LINEAR_MOTION && const_vel == 0 )
         {
-          lout << "\033[31m[WARNING] You have chosen constant linear motion with zero velocity, please use \"const_vel\" or use the motion type \"STATIONARY\"\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "You have chosen constant linear motion with zero velocity, please use \"const_vel\" or use the motion type \"STATIONARY\"."); 
         }
         if( motion_type == LINEAR_FORCE_MOTION && const_force == 0 )
         {
-          lout << "\033[31m[WARNING] You have chosen constant linear force motion with zero force, please use \"const_force\" or use the motion type \"STATIONARY\"\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "You have chosen constant linear force motion with zero force, please use \"const_force\" or use the motion type \"STATIONARY\"."); 
         }
       }
 
@@ -249,11 +250,11 @@ namespace exaDEM
       {
         if( sigma == 0 ) 
         {
-          lout << "\033[31m[WARNING] Sigma is to 0.0 while the compressive motion type is set to true.\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "Sigma is to 0.0 while the compressive motion type is set to true."); 
         }
         if( damprate <= 0 )
         {
-          lout << "\033[31m[WARNING] Dumprate is to 0.0 while the compressive motion type is set to true.\033[0m" << std::endl;
+          color_log::warning("Driver_params::check_motion_coherence", "Dumprate is to 0.0 while the compressive motion type is set to true."); 
         }
       }
 
@@ -339,7 +340,7 @@ namespace exaDEM
       {
         lout << "Shaker.Omega: "     << omega << std::endl;
         lout << "Shaker.Amplitude: " << amplitude << std::endl;
-        lout << "Shaker.Direction: " << shaker_dir << std::endl;
+        lout << "Shaker.Direction: [" << shaker_dir << "]" << std::endl;
       }
     };
 
@@ -348,7 +349,7 @@ namespace exaDEM
      */
     void dump_driver_params(std::stringstream &stream)
     {
-      stream << "     params: { ";
+      stream << "     params: {";
       stream << " motion_type: "            << motion_type_to_string(motion_type);
       stream << ", motion_vector: ["         << motion_vector << "]"; 
       stream << ", motion_start_threshold: " << motion_start_threshold;
@@ -377,7 +378,7 @@ namespace exaDEM
       {
         stream << ", omega: " << omega;
         stream << ", amplitude: " << amplitude;
-        stream << ", shaker_dir: " << shaker_dir;
+        stream << ", shaker_dir: [" << shaker_dir << "]";
       }
       stream  <<" }" << std::endl;
     }
@@ -451,29 +452,30 @@ namespace YAML
 {
   using exaDEM::Driver_params;
   using exaDEM::MotionType;
-  using exanb::lerr;
   using onika::physics::Quantity;
 
   template <> struct convert<Driver_params>
   {
     static bool decode(const Node &node, Driver_params &v)
     {
+      std::string function_name = "Driver_params::decode";
       if (!node.IsMap())
       {
         return false;
       }
       if (!node["motion_type"])
       {
-        lerr << "\033[31mmotion_type is missing\033[0m\n";
+        color_log::error(function_name, "mmotion_type is missing.", false);
         return false;
       }
+
       v = {};
       v.motion_type = exaDEM::string_to_motion_type(node["motion_type"].as<std::string>());
       if( v.is_linear() )
       {
         if (!node["motion_vector"])
         {
-          lerr << "\033[31mmotion_vector is missing \033[0m\n";
+          color_log::error(function_name, "motion_vector is missing.", false);
           return false;
         }
         v.motion_vector = node["motion_vector"].as<Vec3d>();
@@ -482,7 +484,7 @@ namespace YAML
         {
           if (!node["const_vel"])
           {
-            lerr << "\033[31mconst_vel is missing \033[0m\n";
+            color_log::error(function_name, "const_vel is missing.", false);
             return false;
           }
           if( node["const_vel"] ) v.const_vel = node["const_vel"].as<double>();
@@ -491,7 +493,7 @@ namespace YAML
         {
           if (!node["const_force"])
           {
-            lerr << "\033[31mconst_force is missing \033[0m\n";
+            color_log::error(function_name, "const_force is missing.", false);
             return false;
           }
           if( node["const_force"] ) v.const_force = node["const_force"].as<double>();
@@ -501,13 +503,13 @@ namespace YAML
       { 
         if (!node["sigma"])
         {
-          lerr << "\033[31msigma \033[0m\n";
+          color_log::error(function_name, "sigma is missing.", false);
           return false;
         }
         v.sigma = node["sigma"].as<double>(); 
         if (!node["damprate"])
         {
-          lerr << "\033[31mdamprate is missing \033[0m\n";
+          color_log::error(function_name, "damprate is missing.", false);
           return false;
         }
         v.damprate = node["damprate"].as<double>(); 
@@ -517,13 +519,13 @@ namespace YAML
       { 
         if (!node["time"])
         {
-          lerr << "\033[31m time is missing \033[0m\n";
+          color_log::error(function_name, "time is missing.", false);
           return false;
         }
         v.tab_time= node["time"].as<std::vector<double>>(); 
         if (!node["positions"])
         {
-          lerr << "\033[31m positions is missing \033[0m\n";
+          color_log::error(function_name, "position is missing.", false);
           return false;
         }
         v.tab_pos = node["positions"].as<std::vector<Vec3d>>(); 
@@ -534,19 +536,19 @@ namespace YAML
       {
         if (!node["omega"])
         {
-          lerr << "\033[31m omega is missing \033[0m\n";
+          color_log::error(function_name, "omega is missing.", false);
           return false;
         }
         v.omega = node["omega"].as<double>();
         if (!node["amplitude"])
         {
-          lerr << "\033[31m amplitude is missing \033[0m\n";
+          color_log::error(function_name, "amplitude is missing.", false);
           return false;
         }
         v.amplitude = node["amplitude"].as<double>();
         if (!node["shaker_dir"])
         {
-          onika::lout << "\033[31m shaker_dir is missing, default is [0,0,1] \033[0m\n";
+          color_log::warning("Driver_params::decode", "shaker_dir is missing, default is [0,0,1].");
           v.shaker_dir = Vec3d{0,0,1};
         }
         else

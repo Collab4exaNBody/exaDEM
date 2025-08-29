@@ -122,8 +122,7 @@ namespace exaDEM
       if ( to_swap == -666 ) 
       {
         // It should not append, but ... 
-        lout << "[ERROR] When dumping surface drivers" << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error("compute_intersections", "When dumping surface drivers");
       }
       else
       {
@@ -144,7 +143,7 @@ namespace exaDEM
 		file.open(full_path);
 		if (!file)
 		{
-			std::cerr << "[ERROR] Impossible to create the output file: " << full_path << std::endl;
+      color_log::error("write_surfaces_paraview", "Impossible to create the output file: " + full_path, false);
 			return;
 		}
 		std::stringstream stream;
@@ -213,7 +212,7 @@ namespace exaDEM
 		file.open(full_path);
 		if (!file)
 		{
-			std::cerr << "[ERROR] Impossible to create the output file: " << full_path << std::endl;
+      color_log::error("write_balls_paraview", "Impossible to create the output file: " + full_path, false);
 			return;
 		}
     

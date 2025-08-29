@@ -23,6 +23,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
+#include <exaDEM/color_log.hpp>
 
 namespace exaDEM
 {
@@ -50,37 +51,41 @@ namespace exaDEM
         )EOF";
     }
 
+    inline std::string operator_name() { return "check_dt_critical"; }
+
     public:
 
     bool check_slots()
     {
       if(!(mass.has_value()))
       {
-        lout << "\033[38;5;208m[check_dt_critical, WARNING] The input slot 'mass' is not defined. Please use the 'min_mass' operator to retrieve the smallest particle mass (use rebind to rename the output slot).\033[0m" << std::endl;
-        lout << "\033[38;5;208mdt critical is not computed.\033[0m" << std::endl;
+        std::string msg = "The input slot 'mass' is not defined. Please use the 'min_mass' operator to retrieve the smallest particle mass (use rebind to rename the output slot)";
+        msg += "\n";
+        msg = "dt critical can't be computed.";
+        color_log::warning(operator_name(), "msg");
         return false;
       }
 			else
 			{
 				if(*mass <= 0.0)
 				{
-					lout << "\033[31m[check_dt_critical, ERROR] Mass is not defined correctly, mass = " << *mass << "\033[0m" << std::endl;
-					std::exit(EXIT_FAILURE);
+          color_log::error(operator_name(), "Mass is not defined correctly, mass = " + std::to_string(*mass));
 				}
 			}
 
 			if(!(kn.has_value()))
 			{
-				lout << "\033[38;5;208m[check_dt_critical, WARNING] 'kn' is not defined. Please use the 'check_dt_critical' operator after the contact force has been applied.\033[0m" << std::endl;
-				lout << "\033[38;5;208mdt critical is not computed.\033[0m" << std::endl;
+        std::string msg = "'kn' is not defined. Please use the 'check_dt_critical' operator after the contact force has been applied.";
+        msg += "\n";
+        msg += "dt critical is not computed.";
+        color_log::warning(operator_name(), msg);
 				return false;
 			}
 			else
 			{
 				if(*kn <= 0.0)
 				{
-					lout << "\033[31m[check_dt_critical, ERROR] kn is not defined correctly, kn = " << *kn << "\033[0m" << std::endl;
-					std::exit(EXIT_FAILURE);
+          color_log::error(operator_name(), "kn is not defined correctly, kn: " + std::to_string(*kn));
 				}
 			}
 			return true;
@@ -97,11 +102,11 @@ namespace exaDEM
 			double ratio = *dt / dt_critical;
 			if(ratio < ratio_treshold)
 			{
-				lout << "\033[32m[check_dt_critical] The time step is correctly defined, dt_critical = " << dt_critical << "\033[0m" << std::endl;
+        color_log::highlight(operator_name(), "The time step is correctly defined, dt_critical: " + std::to_string(dt_critical));
 			}
 			else
 			{
-				lout << "\033[38;5;208m[check_dt_critical, WARNING] The time step is probably too high. Please consider reducing dt to: " << dt_critical << "\033[0m" << std::endl;
+        color_log::warning(operator_name(), "The time step is probably too high. Please consider reducing dt to: " + std::to_string(dt_critical));
 			}
 		}
 	};

@@ -57,6 +57,8 @@ namespace exaDEM
         )EOF";
     }
 
+    inline std::string operator_name() { return "register_stl_mesh"; }
+
     inline void execute() override final
     {
       std::string output_name = *filename;
@@ -71,13 +73,11 @@ namespace exaDEM
         is_shp = true;
       if ((is_stl == false) && (is_shp == false))
       {
-        lout << "[register_stl_mesh, ERROR] Wrong file extension, available formats: [shp or stl]" << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error(operator_name(), "Wrong file extension, available formats: [shp or stl]");
       }
       if ((is_stl == true) && (is_shp == true))
       {
-        lout << "[register_stl_mesh, ERROR] The file name contains the stings \"shp\" and \"stl\", impossible to deduce the file format." << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error(operator_name(), "The file name contains the stings \"shp\" and \"stl\", impossible to deduce the file format.");
       }
 
       assert(is_stl != is_shp);
