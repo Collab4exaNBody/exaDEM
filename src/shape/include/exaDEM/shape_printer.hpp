@@ -187,7 +187,7 @@ namespace exaDEM
     std::ofstream outFile(name);
     if (!outFile)
     {
-      std::cerr << "[ERROR] impossible to open the file: " << name << std::endl;
+      color_log::error("write_vtp_polyhedron", "Impossible to open the file: " + name, false);
       return;
     }
 
@@ -257,7 +257,7 @@ namespace exaDEM
     std::ofstream outFile(name);
     if (!outFile)
     {
-      std::cerr << "[ERROR] Impossible to open the file: " << name << std::endl;
+      color_log::error("write_vtp_obb", "Impossible to open the file: " + name, false);
       return;
     }
 
@@ -302,7 +302,7 @@ namespace exaDEM
     std::ofstream outFile(name);
     if (!outFile)
     {
-      std::cerr << "[ERROR] Impossible to open the file: " << name << std::endl;
+      color_log::error("write_pvtp_polyhedron", "Impossible to open the file: " + name, false);
       return;
     }
     outFile << "<?xml version=\"1.0\"?>" << std::endl;
@@ -344,7 +344,7 @@ namespace exaDEM
     std::ofstream outFile(name);
     if (!outFile)
     {
-      std::cerr << "[ERROR] Impossible to open the file: " << name << std::endl;
+      color_log::error("write_pvtp_obb", "Impossible to open the file: " + name, false);
       return;
     }
 

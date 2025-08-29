@@ -267,8 +267,7 @@ namespace exaDEM
       {
         if(drivers->get_size() > 0)
         {
-          lout<< "[nbh_polyhedron, ERROR] Contact detection with drivers is deactivated when the simulation box is deformed." << std::endl;
-          std::exit(0);
+          color_log::error("nbh_polyhedron", "Contact detection with drivers is deactivated when the simulation box is deformed.");
         }
       }
 

@@ -138,6 +138,7 @@ This operator generates a grid populated with a set of particles using the RSA M
         )EOF";
     }
 
+    std::string operator_name() { return "rsa_vol_frac"; }
 
     inline void execute() override final
     {
@@ -172,7 +173,6 @@ This operator generates a grid populated with a set of particles using the RSA M
         {
           lout << "\033[1;33mThe domain may be ill-formed. Please specify a domain that is a multiple of the cell size (" 
             << dcs << "). If you want to define a subdomain, please use a region.\033[0m" << std::endl;
-
         }
       }
 
@@ -191,11 +191,11 @@ This operator generates a grid populated with a set of particles using the RSA M
         auto type = type_map.find(type_name);        
         if( type == type_map.end())
         {
-          lout << "\033[1;31mThe type [" << type_name << "] is not defined" << std::endl;
-          lout << "Available types are = ";
-          for(auto& it : type_map) lout << it.first << " ";
-          lout << ".\033[0m" << std::endl;
-          std::exit(EXIT_FAILURE);
+          color_log::error(operator_name(), "The type [" + type_name + "] is not defined", false);
+          std::string msg = "Available types are = ";
+          for(auto& it : type_map) msg += it.first + " ";
+          mgs += ".";
+          color_log::error(operator_name(), msg);
         }
         cast_list.push_back(make_tuple(it.radius, it.volume_fraction, type->second));
       }

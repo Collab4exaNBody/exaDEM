@@ -19,6 +19,7 @@ under the License.
 
 #pragma once 
 
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/contact_force_parameters.h>
 #include <exaDEM/contact_force_accessor.h>
 #include <exanb/core/particle_type_id.h>
@@ -237,8 +238,7 @@ namespace exaDEM
             {
               if(multimat_cp[this->get_idx_multimat(m1, m2)] == default_cp)
               {
-                lout << "\033[1;31m[WARNING] Contact force parameters for the pair (mat: " 
-                  << m1 << ", mat: " << m2 << ") are not defined.\033[0m" << std::endl;
+                color_log::warning("ContactParamsMultiMat::check_completeness", "Contact force parameters for the pair (mat: " + std::to_string(m1) + ", mat: " + std::to_string(m2) + ") are not defined.");
                 check = false;
               }
             }
@@ -250,8 +250,7 @@ namespace exaDEM
             {
               if(drivers_cp[this->get_idx_drivers(m1, drv)] == default_cp)
               {
-                lout << "\033[1;31m[WARNING] Contact force parameters for the pair (mat: " 
-                  << m1 << ", driver: " << drv << ") are not defined.\033[0m" << std::endl;
+                color_log::warning("ContactParamsMultiMat::check_completeness", "Contact force parameters for the pair (mat: " + std::to_string(m1) + ", driver: " + std::to_string(drv) + ") are not defined.");
                 check = false;
               }
             }

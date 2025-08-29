@@ -29,7 +29,7 @@ namespace YAML
   {
     if (!node[item])
     {
-      exanb::lout << "\033[31m" << item << " is missing\033[0m\n";
+      color_log::error("Driver::check_error", item + " is missing.", false);
       return false;
     }
     return true;

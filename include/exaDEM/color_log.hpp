@@ -5,6 +5,7 @@
 #include <unistd.h>  // for isatty, fileno
 #include <cstdio>    // for stdout
 #include <onika/log.h>
+#include <onika/math/basic_types.h>
 
 namespace ansi {
 
@@ -43,6 +44,17 @@ namespace ansi {
 	inline std::string white(const std::string& text) {
 		return enable_colors() ? "\033[37m" + text + "\033[0m" : text;
 	}
+}
+
+// helper
+namespace std
+{
+  inline std::string to_string(const onika::math::Vec3d& v)
+  { 
+    using std::to_string;
+    return std::string(to_string(v.x) + "," + to_string(v.y) + "," + to_string(v.z));
+  }
+
 }
 
 namespace color_log

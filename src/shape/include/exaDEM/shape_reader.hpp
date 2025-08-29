@@ -18,6 +18,7 @@ under the License.
  */
 #pragma once
 #include <exaDEM/shapes.hpp>
+#include <exaDEM/color_log.hpp>
 #include <exanb/core/particle_type_id.h>
 #include <cassert>
 #include <fstream>
@@ -200,8 +201,9 @@ namespace exaDEM
         return read_shp(input, big_shape);
       }
     }
-    lout << "[read_shape, WARNING] No shape find into the file " << file_name << "." << std::endl;
-    lout << "[read_shape, WARNING] This file is ignored." << file_name << std::endl;
+    std::string msg = "No shape find into the file " + file_name + ".\n";
+    msg += "This file is ignored. " + file_name;
+    color_log::warning("read_shape", msg);
     return shape();
   }
 
@@ -223,7 +225,7 @@ namespace exaDEM
         if( ptm.find(shp.m_name) != ptm.end() )
         {
           shp.m_name = shp.m_name + "X";
-          lout << "[read_shape, WARNING] This polyhedron name is already taken, exaDEM has renamed it to: " << shp.m_name << std::endl;
+          color_log::warning("read_shape", "This polyhedron name is already taken, exaDEM has renamed it to: " + shp.m_name);
         } 
         ptm[shp.m_name] = shps.get_size();
         shps.add_shape(&shp);
@@ -267,8 +269,7 @@ namespace exaDEM
 		std::ofstream outFile(filename);
 		if (!outFile)
 		{
-			std::cerr << "[write_shapes, ERROR] Impossible to create the output file: " << filename << std::endl;
-			std::exit(EXIT_FAILURE);
+      color_log::error("write_shapes", "Impossible to create the output file: " + filename); 
 		}
 		// fill stream with shape data
 		for (size_t i = 0; i < shps.get_size(); i++)
