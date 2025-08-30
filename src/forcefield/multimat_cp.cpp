@@ -76,7 +76,6 @@ namespace exaDEM
       ContactParamsMultiMat<ContactParams>& cp = *multimat_cp;
 
       int n_types = type_map.size();
-      cp.setup_multimat(type_map);
       if( n_types == 1 )
       {
         lout << "\033[1;32mAdvice: You are defining contact parameters while there is only one type of particle. "
@@ -154,6 +153,10 @@ namespace exaDEM
       {
         auto& params = *default_config;
         cp.setup_multimat(type_map, params);
+      }
+      else
+      {
+        cp.setup_multimat(type_map);
       }
 
       for(int p = 0 ; p < number_of_pairs ; p++)

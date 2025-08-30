@@ -37,6 +37,8 @@ namespace exaDEM
     ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"Input filename"});
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
     ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT_OUTPUT );
+    ADD_SLOT(std::vector<double>, scale, INPUT, OPTIONAL, DocString{"This option scales the input shapes. OBB, volume, vertices, and intertia are recomputed. Note that a vector of double should be provided. Example: scale: [1.2,1,5.2]"});
+    ADD_SLOT(std::vector<std::string>, rename, INPUT, OPTIONAL, DocString{"This option renames the input shapes. Note that a vector of string should be provided. Example: scale: [Shape1, Shape2, Shape3]"});
     ADD_SLOT(bool, verbosity, INPUT, true );
 
   public:
@@ -51,7 +53,42 @@ namespace exaDEM
       auto& ptm = *particle_type_map;
       lout << "Read file= " << *filename << std::endl;
       const bool BigShape = false; // do not remove it
-      exaDEM::read_shp(ptm, *shapes_collection, *filename, BigShape);
+      std::vector<shape> list_of_shapes = exaDEM::read_shps(*filename, BigShape);
+lout << "test1" << std::endl;
+      if(rename.has_value())
+      {
+        std::vector<std::string> names = *rename;
+        if(list_of_shapes.size() != names.size()) 
+        {
+          color_log::error("read_shape_file", "The vector size 'rename' should have " + std::to_string(list_of_shapes.size()) + " + elements and not " + std::to_string(names.size()) + "elements"); 
+        }
+
+        for(size_t sid = 0 ; sid < list_of_shapes.size() ; sid++)
+        {
+          list_of_shapes[sid].m_name = names[sid];
+        }
+      }
+
+lout << "test2" << std::endl;
+      if(scale.has_value())
+      {
+        std::vector<double> scales = *scale;
+
+        if(list_of_shapes.size() != scales.size())
+        {
+          color_log::error("read_shape_file", "The vector size 'scale' should have " + std::to_string(list_of_shapes.size()) + " + elements and not " + std::to_string(scales.size()) + "elements"); 
+        }
+
+        for(size_t sid = 0 ; sid < list_of_shapes.size() ; sid++)
+        {
+          list_of_shapes[sid].rescale(scales[sid]);
+        }
+      }
+
+lout << "test3" << std::endl;
+      exaDEM::register_shapes(ptm, *shapes_collection, list_of_shapes);
+lout << "test4" << std::endl;
+
       if( *verbosity )
       {
         for(const auto& [ name, type ] : ptm)

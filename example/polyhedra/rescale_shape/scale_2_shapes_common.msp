@@ -1,0 +1,42 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_polyhedra.msp
+
+particle_regions:
+  - CYLY:
+      quadric:
+        shape: cyly
+        transform:
+          - scale: [ 19.5 , 1, 19.5 ]
+          - translate: [ 20 , 5, 20 ]
+
+setup_drivers:
+  - register_cylinder:
+     id: 0
+     state: {center: [20 , 20, 20], axis: [1,0,1], radius: 20 m, vrot: [0,5,0]}
+     params: { motion_type: STATIONARY }
+
+compute_force:
+  - gravity_force
+  - contact_polyhedron_multimat
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+#  - write_paraview_obb_particles
+#  - write_conf_rockable
+
+domain:
+  cell_size: 2.5
+  periodic: [false,true,false]
+  grid_dims: [16, 4, 16]
+  bounds: [[0 ,0, 0],[40, 10, 40]]
+  expandable: true  
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 1000000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 5000
+  dt: 0.00005 s 
+  rcut_inc: 0.05 m
