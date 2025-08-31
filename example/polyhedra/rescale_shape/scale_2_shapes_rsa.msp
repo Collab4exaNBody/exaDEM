@@ -15,8 +15,8 @@ input_data:
      rename: [PolyR, Octahedron]
   - read_shape_file:
      filename: shapes.shp
-     rename: [ PolyRSize2, OctahedronSize2]
-     scale:  [        2.0,             2.0]
+     rename:       [ PolyRSize2, OctahedronSize2]
+     scale_factor: [        2.0,             2.0]
   - rsa_vol_frac:
      bounds: [ [0 ,0 , 0 ], [40 , 10 , 40 ] ]
      params: [ {vf: 0.055,           type: PolyR},

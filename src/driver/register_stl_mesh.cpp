@@ -98,7 +98,7 @@ namespace exaDEM
         shp = read_shp(output_name, big_shape);
       }
 
-      if( scale.has_value())
+      if(scale.has_value())
       {
         if( *scale != 1.0 && *scale > 0.0 )
         {

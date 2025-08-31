@@ -15,8 +15,8 @@ input_data:
      rename: [PolyR, Octahedron]
   - read_shape_file:
      filename: shapes.shp
-     rename: [ PolyRSize2, OctahedronSize2]
-     scale:  [        2.0,             2.0]
+     rename:       [ PolyRSize2, OctahedronSize2]
+     scale_factor: [        2.0,             2.0]
   - lattice:
       structure: FCC
       types: [ PolyR, Octahedron, PolyRSize2, OctahedronSize2 ]

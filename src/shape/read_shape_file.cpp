@@ -37,8 +37,8 @@ namespace exaDEM
     ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"Input filename"});
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
     ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT_OUTPUT );
-    ADD_SLOT(std::vector<double>, scale, INPUT, OPTIONAL, DocString{"This option scales the input shapes. OBB, volume, vertices, and intertia are recomputed. Note that a vector of double should be provided. Example: scale: [1.2,1,5.2]"});
-    ADD_SLOT(std::vector<std::string>, rename, INPUT, OPTIONAL, DocString{"This option renames the input shapes. Note that a vector of string should be provided. Example: scale: [Shape1, Shape2, Shape3]"});
+    ADD_SLOT(std::vector<double>, scale_factor, INPUT, OPTIONAL, DocString{"This option 'scale_factor' the input shapes. OBB, volume, vertices, and intertia are recomputed. Note that a vector of double should be provided. Example: scale_factor: [1.2,1,5.2]"});
+    ADD_SLOT(std::vector<std::string>, rename, INPUT, OPTIONAL, DocString{"This option renames the input shapes. Note that a vector of string should be provided. Example: rename: [Shape1, Shape2, Shape3]"});
     ADD_SLOT(bool, verbosity, INPUT, true );
 
   public:
@@ -58,8 +58,8 @@ namespace exaDEM
 
 					- read_shape_file:
 						 filename: shapes.shp
-						 rename: [ PolyRSize2, OctahedronSize2]
-						 scale:  [        2.0,             2.0]
+						 rename:       [ PolyRSize2, OctahedronSize2]
+						 scale_facton: [        2.0,             2.0]
     	    			)EOF";
     }
 
@@ -83,13 +83,13 @@ namespace exaDEM
         }
       }
 
-      if(scale.has_value())
+      if(scale_factor.has_value())
       {
-        std::vector<double> scales = *scale;
+        std::vector<double> scales = *scale_factor;
 
         if(list_of_shapes.size() != scales.size())
         {
-          color_log::error("read_shape_file", "The vector size 'scale' should have " + std::to_string(list_of_shapes.size()) + " + elements and not " + std::to_string(scales.size()) + "elements"); 
+          color_log::error("read_shape_file", "The vector size 'scale_factor' should have " + std::to_string(list_of_shapes.size()) + " + elements and not " + std::to_string(scales.size()) + "elements"); 
         }
 
         for(size_t sid = 0 ; sid < list_of_shapes.size() ; sid++)

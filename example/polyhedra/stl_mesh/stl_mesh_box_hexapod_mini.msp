@@ -10,30 +10,23 @@ input_data:
   - lattice:
       structure: SC
       types: [ alpha3 ]
-      size: [ 1.5 m , 1.5 m , 1.5 m ]
-  - radius_from_shape
-  - density_from_shape
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_rand_vrot_arot
-  - set_quaternion
-  - inertia_from_shape
-
-
-input_data:
-  - reader1
+      size: [ 1.5 , 1.5 , 1.5 ]
+  - set_fields:
+     polyhedra: true
+     type:              [  alpha3 ]
+     velocity :         [ [0,0,0] ]
+     sigma_velocity:    [     0.1 ]
+     random_quaternion: [    true ]
 
 setup_drivers:
   - register_stl_mesh:
      id: 0
      filename: box.stl
-     minskowski: 0.01 m
+     minskowski: 0.01
 
 compute_force:
   - gravity_force
   - contact_polyhedron:
-     symetric: true
      config: { kn: 10000, kt: 8000, kr: 0.0, mu: 0.1, damp_rate: 0.999} 
      config_driver: { kn: 10000, kt: 8000, kr: 0.0, mu: 0.1, damp_rate: 0.999} 
 
@@ -41,13 +34,8 @@ domain:
   cell_size: 1.5 m
   periodic: [false,false,false]
   grid_dims: [3, 3, 3]
-  bounds: [[0 m ,0 m, 0 m], [4.5 m, 4.5 m, 4.5 m]]
+  bounds: [ [0,0,0] , [4.5,4.5,4.5] ]
   expandable: true
-
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1

@@ -15,18 +15,12 @@ input_data:
       structure: SC
       types: [ alpha3 ]
       size: [ 1.5 , 1.5 , 1.5 ]
-  - radius_from_shape
-  - density_from_shape
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_rand_vrot_arot
-  - set_quaternion
-  - inertia_from_shape
-
-
-input_data:
-  - reader1
+  - set_fields:
+     polyhedra: true
+     type:              [  alpha3 ]
+     velocity :         [ [0,0,0] ]
+     sigma_velocity:    [     0.1 ]
+     random_quaternion: [    true ]
 
 setup_drivers:
   - register_stl_mesh:
