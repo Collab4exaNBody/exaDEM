@@ -18,7 +18,6 @@ under the License.
  */
 #pragma once
 #include <exaDEM/shapes.hpp>
-#include <exaDEM/color_log.hpp>
 #include <exanb/core/particle_type_id.h>
 #include <cassert>
 #include <fstream>
@@ -46,7 +45,7 @@ namespace exaDEM
 		while (1)
 		{
 			input >> key;
-
+      
 			if (key == "name")
 			{
 				input >> shp.m_name;
@@ -199,7 +198,6 @@ namespace exaDEM
 			shps.add_shape(&s);
 		}
 	}
-
 	/**
 	 * @brief Read multiple shapes from a file.
 	 *
@@ -218,9 +216,8 @@ namespace exaDEM
 				return read_shp(input, big_shape);
 			}
 		}
-		lout << "[read_shape, WARNING] No shape find into the file " << file_name << "." << std::endl;
-		lout << "[read_shape, WARNING] This file is ignored." << file_name << std::endl;
-		return shape();
+    color_log::warning("read_shape", "No shape find into the file " + file_name + ".");
+    color_log::warning("read_shape", "This file is ignored" + file_name + ".");
 	}
 
 	/**

@@ -715,6 +715,96 @@ namespace exaDEM
       obbtree.root = OBBtree<subBox>::recursiveBuild(obbtree.root, obb_bundles, m_radius);
     }
 
+    /**
+     * @brief Compute the surface area of the shape.
+     * @return Total surface area
+     */
+    double compute_surface() const
+    {
+      double surface = 0.0;
+      const size_t n_faces = this->get_number_of_faces();
+
+#pragma omp parallel for reduction(+:surface)
+      for (size_t face_idx = 0; face_idx < n_faces; face_idx++)
+      {
+        auto [vertices_ptr, face_size] = this->get_face(face_idx);
+        const Vec3d& v0 = m_vertices[vertices_ptr[0]];
+
+        if (face_size == 3)
+        {
+          for (int j = 1; j < face_size - 1; j++)
+          {
+            const size_t k = j + 1;
+            const Vec3d v1 = m_vertices[vertices_ptr[j]] - v0;
+            const Vec3d v2 = m_vertices[vertices_ptr[k]] - v0;
+            surface += 0.5 * exanb::norm(exanb::cross(v1, v2));
+          }
+        }
+      }
+
+      return surface;
+    }
+    /// OBBTree Section
+
+    /**
+     * @brief Build an OBB tree for the shape (faces, edges, vertices).
+     *
+     * Each face, edge, and vertex is wrapped in an OBBbundle, and then the tree
+     * is recursively built. The OBBs are enlarged by the particle radius.
+     */
+    void buildOBBtree()
+    {
+      obbtree.reset(obbtree.root);
+      std::vector<OBBbundle<subBox>> obb_bundles;
+
+      // Build OBBs for faces
+      for (int face_idx = 0; face_idx < this->get_number_of_faces(); ++face_idx)
+      {
+        auto [vertex_ids, n_vertices] = this->get_face(face_idx);
+        OBBbundle<subBox> bundle;
+        bundle.data.isub = face_idx;
+        bundle.data.nbPoints = n_vertices;
+
+        for (int vi = 0; vi < n_vertices; vi++)
+          bundle.points.push_back(conv_to_vec3r(m_vertices[vertex_ids[vi]]));
+
+        std::vector<OBBbundle<subBox>> single_bundle{bundle};
+        bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+        obb_bundles.push_back(bundle);
+      }
+
+      // Build OBBs for edges
+      for (int edge_idx = 0; edge_idx < this->get_number_of_edges(); ++edge_idx)
+      {
+        auto [v0, v1] = this->get_edge(edge_idx);
+        OBBbundle<subBox> bundle;
+        bundle.data.isub = edge_idx;
+        bundle.data.nbPoints = 2;
+        bundle.points.push_back(conv_to_vec3r(m_vertices[v0]));
+        bundle.points.push_back(conv_to_vec3r(m_vertices[v1]));
+
+        std::vector<OBBbundle<subBox>> single_bundle{bundle};
+        bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+        obb_bundles.push_back(bundle);
+      }
+
+      // Build OBBs for vertices
+      for (int vert_idx = 0; vert_idx < this->get_number_of_vertices(); ++vert_idx)
+      {
+        OBBbundle<subBox> bundle;
+        bundle.data.isub = vert_idx;
+        bundle.data.nbPoints = 1;
+        bundle.points.push_back(conv_to_vec3r(m_vertices[vert_idx]));
+
+        std::vector<OBBbundle<subBox>> single_bundle{bundle};
+        bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+        obb_bundles.push_back(bundle);
+      }
+
+      // Recursively build the OBB tree
+      obbtree.root = OBBtree<subBox>::recursiveBuild(obbtree.root, obb_bundles, m_radius);
+    }
+
     /// IO Section
     /**
      * @brief Print all vertices of the shape to the logging output.
