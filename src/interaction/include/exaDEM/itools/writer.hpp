@@ -85,7 +85,7 @@ namespace exaDEM
       std::ofstream outFile(name);
       if (!outFile)
       {
-        lerr << "[ERROR] Impossible to create the output file: " << name << std::endl;
+        color_log::error("itools::write_file", "Impossible to create the output file: " + name, false);
         return;
       }
       outFile << stream.rdbuf();

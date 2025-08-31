@@ -310,12 +310,8 @@ namespace rockable
         }
         else if ( key == "dt" ) {
           input >> dt;
-          if(dt > 0.0)
-            lout << "\033[33m[read_conf_rockable, WARNING] 'dt' is being overridden by the value defined in the rockable configuration file.\033[0m" << std::endl;
-          else {
-            lout << "\033[31m[read_conf_rockable, ERROR] 'dt' is <= 0.0. Please define a correct value for 'dt' in your rockable configuration file.\033[0m" << std::endl;
-            std::exit(EXIT_FAILURE);
-          }
+          if(dt > 0.0) color_log::warning("read_conf_rockable", "'dt' is being overridden by the value defined in the rockable configuration file.");
+          else color_log::error("read_conf_rockable", "'dt' is <= 0.0. Please define a correct value for 'dt' in your rockable configuration file.");
         }
         else if ( key == "density" ) {
           int group;
@@ -326,8 +322,7 @@ namespace rockable
         else if ( key == "nDriven" ) {
           input >> nDriven; 
           if(n_particles > 0) {
-            lout << "\033[31m[read_conf_rockable, ERROR] 'nDriven' is defined after 'Particles'.\033[0m" << std::endl;
-            std::exit(EXIT_FAILURE);
+            color_log::error("read_conf_rockable", "'nDriven' is defined after 'Particles'.");
           }
         }
         else if ( key == "precision" ) {
@@ -336,8 +331,7 @@ namespace rockable
         else if ( key == "Particles" ) {
           input >> n_particles;
           if( shapeFile == "undefined" ) {
-            lout << "\033[31m[read_conf_rockable, ERROR] 'shapeFile' is not defined before 'Particles'.\033[0m" << std::endl;
-            std::exit(EXIT_FAILURE);
+            color_log::error("read_conf_rockable", "'shapeFile' is not defined before 'Particles'.");
           }
           n_particles -= nDriven;
           std::getline(input, line);
@@ -345,7 +339,8 @@ namespace rockable
         }
         else if ( key == "shapeFile" ) {
           input >> shapeFile;
-          exaDEM::read_shp(ptm, shps, shapeFile, false);
+          auto s = exaDEM::read_shps(shapeFile, false);
+          exaDEM::register_shapes(ptm, shps, s);
         }
         else if (key ==  "Interactions") {
           input >> n_interactions;
@@ -353,13 +348,16 @@ namespace rockable
         }
         else {
           max_warning_displayed--;
-          if(max_warning_displayed > 0) lout << "\033[33m[read_conf_rockable, WARNING] The key '" << key << "' is skipped.\033[0m" << std::endl;
+          if(max_warning_displayed > 0) color_log::warning("read_conf_rockable", "The key '" + key + "' is skipped.");
         }
       }
-      if(max_warning_displayed < 0) lout << "\033[31m";
-      else lout << "\033[32m";
-      lout << "Rockable reader  = " << nDriven << " drivers - " << n_particles << " particles - " << n_interactions << " interactions - " << -max_warning_displayed * (-max_warning_displayed >= 0) << " warnings not displayed " << std::endl;
-      lout << "\033[0m";
+      std::string msg = "Rockable reader  = ";
+      msg            += std::to_string(nDriven) + " drivers - "; 
+      msg            += std::to_string(n_particles) + " particles - ";
+      msg            += std::to_string(n_interactions) + " interactions - "; 
+      msg            += std::to_string(-max_warning_displayed * (-max_warning_displayed >= 0)) + " warnings not displayed.";
+      if(max_warning_displayed < 0) lout << ansi::yellow(msg) << std::endl;
+      else lout << ansi::green(msg) << std::endl;
     }
   };
 };

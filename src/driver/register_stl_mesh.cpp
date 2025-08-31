@@ -46,7 +46,7 @@ namespace exaDEM
     ADD_SLOT(Driver_params, params, INPUT, default_params, DocString{"List of params, motion type, motion vectors .... Default is { motion_type: STATIONARY}."});
     ADD_SLOT(double, minskowski, INPUT, REQUIRED, DocString{"Minskowski radius value"});
     ADD_SLOT(bool, binary, INPUT, false, DocString{"Binary mode, it only works if the stl mesh is cmposed of triangles. Default is false."});
-    ADD_SLOT(double, scale, INPUT, 1.0, DocString{"Scale your dtl mesh"});
+    ADD_SLOT(double, scale, INPUT, OPTIONAL, DocString{"Rescale your stl mesh"});
     ADD_SLOT(double, rcut_inc, INPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
 
   public:
@@ -57,29 +57,27 @@ namespace exaDEM
         )EOF";
     }
 
+    inline std::string operator_name() { return "register_stl_mesh"; }
+
     inline void execute() override final
     {
-      stl_mesh_reader reader;
-      reader(*filename, *binary);
-      std::string output_name_vtk = *filename;
+      std::string output_name = *filename;
       std::string old_extension_stl = ".stl";
       std::string old_extension_shp = ".shp";
       bool is_stl(false), is_shp(false);
-      std::string::size_type it_stl = output_name_vtk.find(old_extension_stl);
-      std::string::size_type it_shp = output_name_vtk.find(old_extension_shp);
+      std::string::size_type it_stl = output_name.find(old_extension_stl);
+      std::string::size_type it_shp = output_name.find(old_extension_shp);
       if (it_stl != std::string::npos)
         is_stl = true;
       if (it_shp != std::string::npos)
         is_shp = true;
       if ((is_stl == false) && (is_shp == false))
       {
-        lout << "[register_stl_mesh, ERROR] Wrong file extension, available formats: [shp or stl]" << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error(operator_name(), "Wrong file extension, available formats: [shp or stl]");
       }
       if ((is_stl == true) && (is_shp == true))
       {
-        lout << "[register_stl_mesh, ERROR] The file name contains the stings \"shp\" and \"stl\", impossible to deduce the file format." << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error(operator_name(), "The file name contains the stings \"shp\" and \"stl\", impossible to deduce the file format.");
       }
 
       assert(is_stl != is_shp);
@@ -88,20 +86,30 @@ namespace exaDEM
 
       if (is_stl)
       {
-        output_name_vtk.erase(it_stl, old_extension_stl.length());
-        shp = build_shape(reader, output_name_vtk);
+        stl_mesh_reader reader;
+        reader(*filename, *binary);
+        output_name.erase(it_stl, old_extension_stl.length());
+        shp = build_shape(reader, output_name);
       }
       else if (is_shp)
       {
         // not optimized
         bool big_shape = true;
-        shp = read_shp(shp, output_name_vtk, big_shape);
+        shp = read_shp(output_name, big_shape);
       }
 
-      if( *scale != 1.0 )
+      if(scale.has_value())
       {
-        shp.rescale(*scale);
-        shp.write_paraview(); // replace
+        if( *scale != 1.0 && *scale > 0.0 )
+        {
+          shp.rescale(*scale);
+          shp.write_paraview(); // replace
+        }
+        else
+        {
+          if( *scale <= 0.0 ) color_log::error("register_stl_mesh","Impossible to rescale the mesh, scale <= 0.0.");
+          if( *scale == 1.0 ) color_log::warning("register_stl_mesh","rescale mesh option is ignored, scale = 1.0.");
+        }
       }
 
       shp.m_radius = *minskowski;

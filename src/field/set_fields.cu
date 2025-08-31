@@ -24,7 +24,7 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/particle_type_id.h>
-#include <memory>
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/set_fields.h>
 #include <exaDEM/random_quaternion.h>
@@ -134,26 +134,25 @@ namespace exaDEM
         )EOF";
     }
 
+    inline std::string operator_name() { return "set_fields"; }
+
     void check_slots()
     {
       if(grid->number_of_cells() == 0)
       {
-        lout << "\033[1;31m[set_fields, ERROR] the grid is not defined. Please define a grid before calling set_fields.\033[0m" << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error(operator_name(), "The grid is not defined. Please define a grid before calling set_fields.");
       }
 
       if(shapes_collection.has_value())
       {
         if(!(*polyhedra))
         {
-          lout << "[set_fields, ERROR] Shapes are defined in sphere mode" << std::endl;
-          std::exit(EXIT_FAILURE);  
+          color_log::error(operator_name(), "Shapes are defined in sphere mode.");
         }
-        size_t size_shps = shapes_collection->get_size();
+        size_t size_shps = shapes_collection->size();
         if(size_shps == 0 && (*polyhedra))
         {
-          lout << "[set_fields, ERROR] You are defining polyhedra without using shapes" << std::endl;
-          std::exit(EXIT_FAILURE);  
+          color_log::error(operator_name(), "You are defining polyhedra without using shapes.");
         }
       }
     }
@@ -205,11 +204,13 @@ namespace exaDEM
         Quaternion quat = {1,0,0,0};
         Vec3d inertia;
         double sigma_v, sigma_ang_v;
+        bool rnd_q = false;
 
         if(mat.set_d) { auto& dd = *density; d = dd[i]; }
         if(mat.set_v) { auto& vv = *velocity; const Vec3d& v = vv[i]; vx = v.x; vy = v.y; vz = v.z; }
         if(mat.set_ang_v) { auto& ang_vv = *angular_velocity; ang_v = ang_vv[i]; }
         if(mat.set_q) { auto& qq = *quaternion; quat = qq[i]; }
+        if(mat.set_rnd_q) { auto& rq = *random_quaternion; rnd_q = rq[i]; }
 
 
         lout << "[>> "<<type_name<<" <<]" << std::endl;;
@@ -228,7 +229,7 @@ namespace exaDEM
         }
         lout << std::endl; 
         lout << "Density          = " << d << std::endl;;
-        if( !mat.set_rnd_q ) lout << "Quaternion       = [w: " << quat.w << ", v: (" << quat.x << "," << quat.y << "," << quat.z << ")]" ;
+        if( !rnd_q ) lout << "Quaternion       = [w: " << quat.w << ", v: (" << quat.x << "," << quat.y << "," << quat.z << ")]" ;
         else lout << "Quaternion       = random";
         lout << std::endl; 
 
@@ -237,14 +238,15 @@ namespace exaDEM
         {
           const shapes& shps = *shapes_collection;
           const auto& shp = shps[type_id];
-          if( type_id >= shps.get_size() || shp->m_name != type_name ) {
-             
-             lout << "[set_fields, ERROR]  We can't find the shape related to the type "  <<type_name << ". Please verify that you have load all shape files." << std::endl; 
+          if( type_id >= shps.size() || shp->m_name != type_name ) {
+            color_log::error(operator_name(), "We can't find the shape related to the type " + type_name + ". Please verify that you have load all shape files."); 
           }
           m         = d * shp->get_volume();
           inertia   = m * shp->get_Im();
 
-          if( mat.set_r ) { lout << "[set_fields, WARNING] The radius slot is ignored when using polyhedra, it is automaticly deducted from the shape file."<< std::endl; }
+          if( mat.set_r ) { 
+            color_log::warning(operator_name(), "The radius slot is ignored when using polyhedra, it is automaticly deducted from the shape file.");
+          }
           r = shp->compute_max_rcut();
           *rcut_max = std::max(*rcut_max, 2 * r); // r * maxrcut
           lout << "Radius (poly)    = " << r << std::endl;;
@@ -253,7 +255,10 @@ namespace exaDEM
         }
         else // spheres
         {
-          if(!mat.set_r) { lout << "[set_fields, ERROR] You should define a radius: radius: \"[1.0]\"" ; std::exit(EXIT_FAILURE); }
+          if(!mat.set_r) 
+          {
+            color_log::error(operator_name(), "You should define a radius: radius: \"[1.0]\""); 
+          }
           else
           { 
             auto& rr = *radius; 
@@ -304,7 +309,7 @@ namespace exaDEM
             compute_cell_particles(*grid, false, generator, compute_rnd_ang_v, parallel_execution_context());
           }
 
-          if(mat.set_rnd_q) /** Random Quaternion */
+          if(rnd_q) /** Random Quaternion */
           {
             FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_orient> compute_orient;
             RandomQuaternionFunctor RndQuatFunc = {prcsg};
@@ -323,7 +328,7 @@ namespace exaDEM
             compute_cell_particles(*grid, false, generator, compute_rnd_v, parallel_execution_context());
           }
 
-          if(mat.set_rnd_q) /** Random Quaternion */
+          if(rnd_q) /** Random Quaternion */
           {
             FieldSet<field::_orient> compute_orient;
             RandomQuaternionFunctor RndQuatFunc = {};

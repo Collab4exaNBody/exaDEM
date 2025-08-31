@@ -1,7 +1,6 @@
 enable_testing()
 
-
-list(APPEND DLIST generator rotating_drum balls stl_mesh analyses multimat conf_rockable samoyed aggregate)
+list(APPEND DLIST generator rotating_drum balls stl_mesh analyses multimat conf_rockable rescale_shape samoyed aggregate)
 
 foreach(DirExample IN LISTS DLIST)
   add_subdirectory(${DirExample})
