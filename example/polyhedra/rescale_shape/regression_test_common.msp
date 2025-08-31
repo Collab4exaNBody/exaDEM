@@ -1,0 +1,9 @@
+## Just reset global variable
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 5000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: -1
+  dt: 0.00005 s
+  rcut_inc: 0.05 m
+

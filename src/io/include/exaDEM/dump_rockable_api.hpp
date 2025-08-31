@@ -339,7 +339,8 @@ namespace rockable
         }
         else if ( key == "shapeFile" ) {
           input >> shapeFile;
-          exaDEM::read_shp(ptm, shps, shapeFile, false);
+          auto s = exaDEM::read_shps(shapeFile, false);
+          exaDEM::register_shapes(ptm, shps, s);
         }
         else if (key ==  "Interactions") {
           input >> n_interactions;

@@ -46,7 +46,7 @@ namespace exaDEM
     ADD_SLOT(Driver_params, params, INPUT, default_params, DocString{"List of params, motion type, motion vectors .... Default is { motion_type: STATIONARY}."});
     ADD_SLOT(double, minskowski, INPUT, REQUIRED, DocString{"Minskowski radius value"});
     ADD_SLOT(bool, binary, INPUT, false, DocString{"Binary mode, it only works if the stl mesh is cmposed of triangles. Default is false."});
-    ADD_SLOT(double, scale, INPUT, 1.0, DocString{"Scale your dtl mesh"});
+    ADD_SLOT(double, scale, INPUT, OPTIONAL, DocString{"Rescale your stl mesh"});
     ADD_SLOT(double, rcut_inc, INPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
 
   public:
@@ -98,10 +98,18 @@ namespace exaDEM
         shp = read_shp(output_name, big_shape);
       }
 
-      if( *scale != 1.0 )
+      if(scale.has_value())
       {
-        shp.rescale(*scale);
-        shp.write_paraview(); // replace
+        if( *scale != 1.0 && *scale > 0.0 )
+        {
+          shp.rescale(*scale);
+          shp.write_paraview(); // replace
+        }
+        else
+        {
+          if( *scale <= 0.0 ) color_log::error("register_stl_mesh","Impossible to rescale the mesh, scale <= 0.0.");
+          if( *scale == 1.0 ) color_log::warning("register_stl_mesh","rescale mesh option is ignored, scale = 1.0.");
+        }
       }
 
       shp.m_radius = *minskowski;

@@ -45,7 +45,7 @@ namespace exaDEM
 		while (1)
 		{
 			input >> key;
-
+      
 			if (key == "name")
 			{
 				input >> shp.m_name;
@@ -144,24 +144,22 @@ namespace exaDEM
 		}
 	}
 
-	/**
-	 * @brief Read multiple shapes from a file and store them in shapes container.
-	 *
-	 * @param ptm        Mapping from particle type names to indices in `shps`.
-	 * @param shps       Container of shapes where the read shapes will be stored.
-	 * @param file_name  Path to the input file.
-	 * @param big_shape  Optional flag to handle large shapes (default: false).
-	 */
-	inline void read_shp(
-			ParticleTypeMap& ptm, 
-			shapes& shps, 
+/**
+ * @brief Reads multiple shapes from a file and stores them in a container.
+ *
+ * @param file_name  Path to the input file.
+ * @param big_shape  Flag to indicate handling of large shapes (default: false).
+ * @return A vector containing the shapes read from the file.
+ */
+	inline std::vector<shape> read_shps(
 			const std::string file_name, 
 			bool big_shape = false)
 	{
 		std::ifstream input(file_name.c_str());
+    std::vector<shape> res;
 		if (!input.is_open()) 
 		{
-			throw std::runtime_error("Failed to open shape file: " + file_name);
+      color_log::error("write_shapes", "Impossible to create the output file: " + file_name); 
 		}
 
 		for (std::string line; getline(input, line);)
@@ -174,14 +172,30 @@ namespace exaDEM
 					 shp.print();
 				 */
 				shp.write_paraview();
-				if( ptm.find(shp.m_name) != ptm.end() )
-				{
-					shp.m_name = shp.m_name + "X";
-					lout << "[read_shape, WARNING] This polyhedron name is already taken, exaDEM has renamed it to: " << shp.m_name << std::endl;
-				} 
-				ptm[shp.m_name] = shps.size();
-				shps.add_shape(&shp);
+        res.push_back(shp);
 			}
+		}
+    return res;
+	}
+
+	/**
+	 * @brief Registers a collection of shapes into the particle type map and shape container.
+	 *
+	 * @param ptm   Reference to the particle type map.
+	 * @param shps  Reference to the shape container.
+	 * @param shp   Vector of shapes to register.
+	 */
+	inline void register_shapes(ParticleTypeMap& ptm, shapes& shps, std::vector<shape>& shp)
+	{
+		for(auto& s: shp)
+		{
+			if( ptm.find(s.m_name) != ptm.end() )
+			{
+				s.m_name = s.m_name + "X";
+				color_log::warning("read_shape", "[read_shape, WARNING] This polyhedron name is already taken, exaDEM has renamed it to: " + s.m_name);
+			}
+			ptm[s.m_name] = shps.size();
+			shps.add_shape(&s);
 		}
 	}
 	/**
@@ -202,8 +216,8 @@ namespace exaDEM
 				return read_shp(input, big_shape);
 			}
 		}
-    lout << "[read_shape, WARNING] No shape find into the file " << file_name << "." << std::endl;
-    lout << "[read_shape, WARNING] This file is ignored." << file_name << std::endl;
+    color_log::warning("read_shape", "No shape find into the file " + file_name + ".");
+    color_log::warning("read_shape", "This file is ignored" + file_name + ".");
     return shape();
 	}
 

@@ -37,6 +37,7 @@ namespace exaDEM
 {
   using namespace onika;
   struct subBox { size_t isub; int nbPoints;} ;
+  OBB build_OBB(const std::span<vec3r> vec, double radius);
 
   /**
    * @brief Structure representing a polyhedral shape for DEM simulations.
@@ -146,6 +147,18 @@ namespace exaDEM
       }
 
     /**
+     * @brief Get the volume of the shape.
+     * @param h homothety
+     * @return Volume (asserts if not initialized)
+     */
+    ONIKA_HOST_DEVICE_FUNC
+      inline double get_volume(double h) const
+      {
+        assert(m_volume != 0 && "wrong initialisation");
+        return h * h * h * m_volume;
+      }
+
+    /**
      * @brief Get the inertia on mass vector.
      * @return Reference to inertia vector
      */
@@ -153,11 +166,27 @@ namespace exaDEM
       inline const exanb::Vec3d &get_Im() { return m_inertia_on_mass; }
 
     /**
+     * @brief Get the inertia on mass vector.
+     * @param h homothety
+     * @return Reference to inertia vector
+     */
+    ONIKA_HOST_DEVICE_FUNC
+      inline const exanb::Vec3d get_Im(double h) { return h * h * m_inertia_on_mass; }
+
+    /**
      * @brief Get the inertia on mass vector (const version).
      * @return Reference to inertia vector
      */
     ONIKA_HOST_DEVICE_FUNC
       inline const exanb::Vec3d &get_Im() const { return m_inertia_on_mass; }
+
+    /**
+     * @brief Get the inertia on mass vector (const version).
+     * @param h homothety
+     * @return Reference to inertia vector
+     */
+    ONIKA_HOST_DEVICE_FUNC
+      inline const exanb::Vec3d get_Im(double h) const { return h * h * m_inertia_on_mass; }
 
     /**
      * @brief Get number of vertices.
@@ -588,7 +617,12 @@ namespace exaDEM
       auto scale_vertices = [] (exanb::Vec3d& v, double s) { v = s * v; };
       for_all_vertices(scale_vertices, scale);
       m_radius *= scale;
-
+      m_volume = this->get_volume(scale);
+      m_inertia_on_mass = this->get_Im(scale);
+      std::vector<vec3r> vertices;
+      vertices.resize(m_vertices.size());
+      for(size_t vid = 0; vid < m_vertices.size() ; vid++) vertices[vid] = conv_to_vec3r(get_vertex(vid));
+      obb = build_OBB(vertices, m_radius); 
     }
 
     /**
@@ -620,6 +654,8 @@ namespace exaDEM
 
       return surface;
     }
+    /// OBBTree Section
+
     /// OBBTree Section
 
     /**
