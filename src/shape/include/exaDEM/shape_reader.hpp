@@ -218,6 +218,7 @@ namespace exaDEM
 		}
     color_log::warning("read_shape", "No shape find into the file " + file_name + ".");
     color_log::warning("read_shape", "This file is ignored" + file_name + ".");
+    return shape();
 	}
 
 	/**

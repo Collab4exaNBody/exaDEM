@@ -44,7 +44,22 @@ namespace exaDEM
   public:
     inline std::string documentation() const override final
     {
-      return R"EOF( This operator initialize shapes data structure from a shape input file.
+      return R"EOF( 
+        This operator initialize shapes data structure from a shape input file.
+
+        YAML example:
+
+					- read_shape_file:
+						 filename: shapes.shp
+
+					- read_shape_file:
+						 filename: shapes.shp
+						 rename: [PolyR, Octahedron]
+
+					- read_shape_file:
+						 filename: shapes.shp
+						 rename: [ PolyRSize2, OctahedronSize2]
+						 scale:  [        2.0,             2.0]
     	    			)EOF";
     }
 
@@ -54,7 +69,6 @@ namespace exaDEM
       lout << "Read file= " << *filename << std::endl;
       const bool BigShape = false; // do not remove it
       std::vector<shape> list_of_shapes = exaDEM::read_shps(*filename, BigShape);
-lout << "test1" << std::endl;
       if(rename.has_value())
       {
         std::vector<std::string> names = *rename;
@@ -69,7 +83,6 @@ lout << "test1" << std::endl;
         }
       }
 
-lout << "test2" << std::endl;
       if(scale.has_value())
       {
         std::vector<double> scales = *scale;
@@ -85,9 +98,7 @@ lout << "test2" << std::endl;
         }
       }
 
-lout << "test3" << std::endl;
       exaDEM::register_shapes(ptm, *shapes_collection, list_of_shapes);
-lout << "test4" << std::endl;
 
       if( *verbosity )
       {
