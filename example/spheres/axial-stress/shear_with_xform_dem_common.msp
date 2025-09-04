@@ -1,0 +1,24 @@
+includes:
+  - xform_shear.cfg
+  - config_spheres.msp
+
+grid_flavor: grid_flavor_dem
+
+xform_function: xform_time_interpolate_byparts
+
+compute_loop_prolog:
+  - xform_function
+  - nbh_dist
+
+init_prolog:
+  - deformation_xform:
+      defbox: { extension: [ 1.0 , 1.0 , 1.0 ] }
+
+compute_force:
+  - contact_sphere:
+     symetric: true
+     config: { kn: 100000, kt: 80000, kr: 0, mu: 0.3, damp_rate: 0.9}
+
+domain:
+  cell_size: 2.0 m
+  periodic: [false, false, false]
