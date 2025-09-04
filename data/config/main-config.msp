@@ -58,6 +58,7 @@ first_iteration:
   - dt_critical
   - default_thermodynamic_state
   - default_print_thermodynamic_state: { lb_flag: false , move_flag: false , print_header: true }
+  - dump_data_paraview
   - next_time_step
 
 # does nothing, just placeholders
@@ -134,7 +135,6 @@ simulation:
     - print_domain
     - print_drivers
     - save_shapes
-    - dump_data_paraview
     - performance_adviser: { verbose: true }
     - init_epilog
     - first_iteration

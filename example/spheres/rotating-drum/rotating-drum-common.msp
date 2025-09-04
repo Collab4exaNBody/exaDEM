@@ -1,0 +1,28 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+common_define_particles:
+  - particle_type:
+     type: [ Sphere1 ]
+
+common_setup_particles:
+  - set_fields:
+     polyhedra: false
+     type:           [ Sphere1 ]
+     radius:         [     0.5 ]
+     density:        [    0.02 ]
+     velocity:       [ [0,0,0] ]
+     sigma_velocity: [     0.1 ]
+
+particle_regions:
+  - CYL1:
+      quadric:
+        shape: cyly
+        transform:
+          - scale: [ 9.5, 1, 9.5 ]
+          - translate: [ 10 , 0 , 10 ]
+
+compute_force:
+  - gravity_force
