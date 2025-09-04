@@ -1,56 +1,19 @@
 includes:
-  - xform_shear.cfg
-  - config_spheres.msp
-
-xform_function: xform_time_interpolate_byparts
-
-compute_loop_prolog:
-  - xform_function
-  - nbh_dist
-
-init_prolog:
-  - deformation_xform:
-      defbox: { extension: [ 1.0 , 1.0 , 1.0 ] }
-
-grid_flavor: grid_flavor_dem
+  - shear_with_xform_dem_common.msp
 
 input_data:
+  - particle_type: 
+     type: [ Sphere1 ]
   - read_xyz:
-      file: 735.xyz
-      bounds_mode: FILE
-#  - init_rcb_grid
-  - set_radius:
-     rad: 0.5 m
-  - set_quaternion
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_density:
-     density: 0.02
-  - set_rand_vrot_arot
-  - update_inertia
-
-compute_loop:
-  loop: true
-  name: loop
-  condition: compute_loop_continue
-  body:
-    - start_iteration
-    - compute_loop_prolog
-    - numerical_scheme
-    - end_iteration
-    - compute_loop_epilog
-    - next_time_step
-    - compute_loop_stop
-
-compute_force:
-  - contact_sphere:
-     symetric: true
-     config: { kn: 100000, kt: 80000, kr: 0, mu: 0.3, damp_rate: 0.9}
-
-domain:
-  cell_size: 2.0 m
-  periodic: [true, true, true]
+     file: 735.xyz
+     bounds_mode: FILE
+  - set_fields:
+     polyhedra: false
+     type:           [ Sphere1 ]
+     radius:         [     0.5 ]
+     velocity:       [ [0,0,0] ]
+     sigma_velocity: [     0.1 ]
+     density:        [    0.02 ]
 
 global:
   simulation_dump_frequency: -1
