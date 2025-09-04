@@ -1,43 +1,38 @@
-grid_flavor: grid_flavor_dem
-
+## Define:
+# config_spheres.msp
+# common_define_particles
+# common_setup_particles
+# CYL1 area 
+# gravity
 includes:
-  - config_spheres.msp
+  - rotating-drum-common.msp
 
 input_data:
   - init_rcb_grid
+  - common_define_particles
   - lattice:
       structure: SC
-      types: [ 0 ]
-      size: [ 1.0 m , 1.0 m , 1.0 m ]
-  - set_radius:
-     rad: 0.5 m
-  - set_quaternion
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_density:
-     density: 0.02
-  - set_rand_vrot_arot
-  - update_inertia
+      types: [ Sphere1 ]
+      size: [ 1.0 , 1.0 , 1.0 ]
+  - common_setup_particles
 
 setup_drivers:
   - register_cylinder:
      id: 0
-     state: {radius: 9 m, center: [4.5 m, 4.5 m,4.5 m], axis: [1, 0, 1], vrot: [0, 0.5, 0]}
+     state: {radius: 9 m, center: [4.5, 4.5,4.5], axis: [1, 0, 1], vrot: [0, 0.5, 0]}
      params: { motion_type: STATIONARY }
 
-compute_force:
-  - gravity_force
++compute_force:
   - contact_sphere:
      symetric: true
      config: { kn: 100000, kt: 100000, kr: 0.1, mu: 0.5, damp_rate: 0.9} 
      config_driver: { kn: 100000, kt: 80000, kr: 0.1, mu: 0.5, damp_rate: 0.9} 
 
 domain:
-  cell_size: 2.5 m
+  cell_size: 2.5 
   periodic: [false, true, false]
   grid_dims: [2, 4, 2]
-  bounds: [[0 m ,0 m, 0 m],[5 m, 10 m, 5 m]]
+  bounds: [[0 ,0, 0],[5, 10, 5]]
   expandable: true
 
 global:
@@ -46,4 +41,4 @@ global:
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 1000
   dt: 0.0001 s 
-  rcut_inc: 0.4 m
+  rcut_inc: 0.4
