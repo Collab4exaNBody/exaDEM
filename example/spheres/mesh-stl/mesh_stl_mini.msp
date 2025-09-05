@@ -46,8 +46,8 @@ compute_force:
      mu: 0.0000015
   - contact_sphere:
      symetric: true
-     config: { rcut: 0.003 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.0, mu: 0.3, damp_rate: 0.9} 
-     config_driver: { rcut: 0.003 m , dncut: 0.003 m, kn: 100000, kt: 100000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.3} 
+     config: { kn: 100000, kt: 100000, kr: 0.1, mu: 0.3, damp_rate: 0.9} 
+     config_driver: { kn: 100000, kt: 100000, kr: 0.0, mu: 0.3, damp_rate: 0.3} 
 
 domain:
   cell_size: 0.1 m
@@ -60,5 +60,3 @@ global:
   simulation_paraview_frequency: -1
   dt: 0.00001 s 
   rcut_inc: 0.002 m
-  friction_rcut: 0.002 m
-  enable_stl_mesh: true

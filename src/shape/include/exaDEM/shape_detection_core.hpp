@@ -29,8 +29,6 @@ under the License.
 namespace exaDEM
 {
   using namespace exanb;
-  using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
-
   /**
    * @brief Normalizes a 3D vector in-place.
    *
@@ -281,11 +279,12 @@ namespace exaDEM
    *         - The normal vector of the contact.
    *         - The contact position.
    */
+  template<typename VertexType>
   ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(
       const double rVerlet, 
       const Vec3d &vi, 
       const double& ri, 
-      const Vec3d *vaj, 
+      const VertexType& vaj, 
       const int j, 
       const shape *shpj)
   {
@@ -455,18 +454,18 @@ namespace exaDEM
    *         - The normal vector of the contact.
    *         - The contact position.
    */
+  template<typename VertexType>
   ONIKA_HOST_DEVICE_FUNC 
     inline contact detection_vertex_face_core(
         const Vec3d &vi, 
         const int i, 
         const shape *shpi, 
-        const Vec3d* vaj, 
+        const VertexType& vaj, 
         const int j, 
         const shape *shpj)
     {
       double ri = shpi->m_radius;
       double rj = shpj->m_radius;
-
 
       // === compute vertices
       auto [data, nf] = shpj->get_face(j);

@@ -49,15 +49,12 @@ namespace exaDEM
     {
       const double *__restrict__ rb = onika::cuda::vector_data(m_backup_data[cell]);
       Vec3d new_center = {rx, ry, rz};
-#ifdef TRY_SOA
+
       //try another data layout
       const size_t size = onika::cuda::vector_size(m_backup_data[cell]) / 7;
       Quaternion old_orientation = {rb[j + size * 3], rb[j + size * 4], rb[j + size * 5], rb[j + size * 6]};
       Vec3d old_center = {rb[j], rb[j + size * 1], rb[j + size * 2]};
-#else
-      Quaternion old_orientation = {rb[j * 7 + 3], rb[j * 7 + 4], rb[j * 7 + 5], rb[j * 7 + 6]};
-      Vec3d old_center = {rb[j * 7 + 0], rb[j * 7 + 1], rb[j * 7 + 2]};
-#endif
+
       const auto &shp = shps[type];
       const int nv = shp.get_number_of_vertices();
       for (int v = 0; v < nv; v++)

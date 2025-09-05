@@ -1,6 +1,7 @@
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.07484/status.svg)](https://doi.org/10.21105/joss.07484)
 [![CMake](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/cmake.yml/badge.svg)](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/cmake.yml)
 [![Spack](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/spack.yml/badge.svg)](https://github.com/Collab4exaNBody/exaDEM/actions/workflows/spack.yml)
-[![DOI](https://joss.theoj.org/papers/10.21105/joss.07484/status.svg)](https://doi.org/10.21105/joss.07484)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # ExaDEM
 
@@ -12,18 +13,21 @@ Additionally, ExaDEM offers compatibility with MPI+GPUs, using the CUDA programm
 
 ## Documentation
 
+
+<img src="https://github.com/user-attachments/assets/a1891669-f579-4dd3-a109-82f2fe3cd587" width="200">
+
 Documentation is available here: 
 
 - Website: [ExaDEM Website](https://collab4exanbody.github.io/doc_exaDEM/)
 - Github: [ExaDEM Documentation](https://github.com/Collab4exaNBody/doc_exaDEM.git)
 
 - Main Sections:
-  - [Overview](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Introduction.html)
+  - [Overview](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Overview.html#overview-of-exadem)
   - [Installation](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Installation.html)
   - [ExaNBody](https://collab4exanbody.github.io/doc_exaDEM/project_exaNBody/index.html)
-  - [Spheres](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Spheres.html) / [Polyhedra](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Polyhedra.html)
-  - [Force field](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/ForceField.html)
-  - [I/O](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Analysis.html)
+  - [Spheres](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/spheres.html) / [Polyhedra](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/polyhedra.html)
+  - [Force field](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/force_field.html)
+  - [I/O](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/IO.html)
   - [Examples](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Test_cases.html)
   - [Tutorials](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Tutorial.html)
 
@@ -48,6 +52,24 @@ For more details, see `CONTRIBUTING.md`. Main guidelines are:
 - Paul Lafourcade (CEA/DAM)
 - Lhassan Amarsid (CEA/DES)
 - Vincent Richefeu (CNRS)
+
+### Citation
+
+To cite `exaDEM`, please use : [![DOI](https://joss.theoj.org/papers/10.21105/joss.07484/status.svg)](https://doi.org/10.21105/joss.07484) 
+
+```
+@article{prat2025exadem,
+  doi = {10.21105/joss.07484},
+  url = {https://doi.org/10.21105/joss.07484},
+  title={ExaDEM: a HPC application based on exaNBody targeting scalable DEM simulations with complex particle shapes},
+  author={Prat, Rapha{\"e}l and Carrard, Thierry and Amarsid, Lhassan and Richefeu, Vincent and Doncecchi, Carlo and Lafourcade, Paul and Latu, Guillaume and Vanson, Jean-Mathieu},
+  journal={Journal of Open Source Software},
+  volume={10},
+  number={106},
+  pages={7484},
+  year={2025}
+}
+```
 
 ### Acknowledgment
 

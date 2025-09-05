@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
@@ -43,7 +43,19 @@ namespace exaDEM
     PushVec3FirstOrderFunctor push_f_v;
     PushToQuaternionFunctor push_to_quaternion;
 
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(double &rx, double &ry, double &rz, double &vx, double &vy, double &vz, double &fx, double &fy, double &fz, Quaternion &Q, Vec3d &vrot, const Vec3d &arot) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(
+        double &rx, 
+        double &ry, 
+        double &rz, 
+        double &vx, 
+        double &vy, 
+        double &vz, 
+        double &fx, 
+        double &fy, 
+        double &fz, 
+        Quaternion &Q, 
+        Vec3d &vrot, 
+        const Vec3d &arot) const
     {
       push_f_v_r(rx, ry, rz, vx, vy, vz, fx, fy, fz);
       push_f_v(vx, vy, vz, fx, fy, fz);
@@ -57,7 +69,19 @@ namespace exaDEM
     PushVec3FirstOrderXFormFunctor push_f_v;
     PushToQuaternionFunctor push_to_quaternion;
 
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(double &rx, double &ry, double &rz, double &vx, double &vy, double &vz, double &fx, double &fy, double &fz, Quaternion &Q, Vec3d &vrot, const Vec3d &arot) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(
+        double &rx, 
+        double &ry, 
+        double &rz, 
+        double &vx, 
+        double &vy, 
+        double &vz, 
+        double &fx, 
+        double &fy, 
+        double &fz, 
+        Quaternion &Q, 
+        Vec3d &vrot, 
+        const Vec3d &arot) const
     {
       push_f_v_r(rx, ry, rz, vx, vy, vz, fx, fy, fz);
       push_f_v(vx, vy, vz, fx, fy, fz);
@@ -88,7 +112,7 @@ namespace exaDEM
   template <typename GridT, class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_orient, field::_vrot, field::_arot>> class CombinedComputeProlog : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_orient, field::_vrot, field::_arot>;
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_orient, field::_vrot, field::_arot>>;
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
@@ -96,7 +120,7 @@ namespace exaDEM
     ADD_SLOT(double, dt, INPUT);
     ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
 
-  public:
+    public:
     inline void execute() override final
     {
       // compute coefficients
@@ -104,7 +128,7 @@ namespace exaDEM
       const double delta_t = *dt;
       const double delta_t2_2 = delta_t * delta_t * 0.5;
       // get non-empty cells
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
 
       if (domain->xform_is_identity())
       {
@@ -112,7 +136,7 @@ namespace exaDEM
         PushVec3FirstOrderFunctor func2{half_delta_t};
         PushToQuaternionFunctor func3{delta_t, half_delta_t, delta_t2_2};
         CombinedPrologFunctor func{func1, func2, func3};
-        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
       }
       else
       {
@@ -121,7 +145,7 @@ namespace exaDEM
         PushVec3FirstOrderXFormFunctor func2{inv_xform, half_delta_t};
         PushToQuaternionFunctor func3{delta_t, half_delta_t, delta_t2_2};
         CombinedPrologXFormFunctor func{func1, func2, func3};
-        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
       }
     }
   };

@@ -24,6 +24,7 @@ jobs:
         
     - name: Install ExaDEM With Spack
       run: |
-        spack repo add spack_repo
+        git clone https://github.com/Collab4exaNBody/spack-repos.git
+        spack repo add spack-repos
         spack install exadem
 

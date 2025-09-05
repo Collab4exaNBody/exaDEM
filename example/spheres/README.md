@@ -4,10 +4,11 @@ This document provides a brief list of examples to showcase different test cases
 
 ## Rotating Drum
 
-Two test cases demonstrate the use of a rotating drum:
+Three test cases demonstrate the use of a rotating drum:
 
-1. A test case with periodic conditions: `rotating-drum/rotating-drum-full.msp`.
+1. A test case with periodic conditions: `rotating-drum/rotating-drum-periodic.msp`.
 2. A test case with surfaces instead of periodic conditions: `rotating-drum/rotating-drum-no-periodic.msp`.
+3. A test case with periodic condition and a cohesive laws: `rotating-drum/rotating-drum-periodic-cohesion.mspp`.
 
 These examples use a perfect cylinder to model the drum.
 
@@ -50,3 +51,20 @@ Two test cases demonstrate the use of the shaker motion:
 - **shaker_surface:** Simulation of a sphere deposit on a vibrating surface.
 - **shaker_surface_start_stop:** Simulation of a sphere deposit on a vibrating surface, where the surface vibration is triggered and then stopped.
 
+## Mixer Simulation with Falling Spherical Particles
+
+This example simulates a mixer into which spherical particles are dropped. A propeller rotates at **0.25 rad/s**, and the grain size decreases progressively to observe different dynamic behaviors.
+
+The simulation is based on an example from the `chronoDEM::gpu` code and is described in the following paper:  
+**_Chrono::GPU: An open-source simulation package for granular dynamics using the discrete element method_**
+
+To accelerate the simulation, the time step was set to **1×10⁻³**, and the contact law parameters were adapted accordingly.
+
+### Input Files
+
+Available in the directory:  
+`exaDEM/example/spheres/mixer`
+
+- `mixer_57k_sph.msp`  
+- `mixer_3M_sph.msp`  
+- `mixer_29M_sph.msp`

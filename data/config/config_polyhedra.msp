@@ -31,13 +31,18 @@ cost_model: dem_cost_model
 
 move_particles_extra_data: move_particles_interaction
 
-compute_new_vertices: compute_vertices
+compute_new_vertices: 
+  - compute_vertices:
+     resize_vertex: true
+compute_fast_vertices: 
+  - compute_vertices:
+     resize_vertex: false
 
 reorder_extra_data: nop
 
 particle_write_paraview_generic:
-  - write_paraview_generic
 #  - write_paraview_polyhedra
+  - write_paraview_generic_fields
   - write_paraview_obb_particles
 
 contact_network: dump_contact_network

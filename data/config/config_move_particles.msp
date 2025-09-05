@@ -2,6 +2,7 @@
 ## should be define by your particle mode (spheres or polyhedra)
 move_particles_extra_data: nop
 compute_new_vertices: nop # after update ghost
+compute_fast_vertices: nop # after update ghost
 reorder_extra_data: nop
 
 ########### Generic particle update block ################
@@ -64,6 +65,7 @@ compute_all_vertices:
 ghost_full_update:
   - ghost_comm_scheme
   - ghost_update_all
+  - update_traversals
   - compute_all_vertices
 
 
@@ -83,7 +85,6 @@ parallel_update_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - update_traversals
   - grid_stl_mesh:
      force_reset: true
   - update_particle_neighbors
@@ -96,7 +97,6 @@ init_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - update_traversals
   - grid_stl_mesh:
      force_reset: true
   - update_particle_neighbors
@@ -156,7 +156,7 @@ update_particles_fast_body:
        staging_buffer: true
        serialize_pack_send: true
        wait_all: true
-    - compute_new_vertices
+    - compute_fast_vertices
     - driver_vertices:
        force_host: false
 

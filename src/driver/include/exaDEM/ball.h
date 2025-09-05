@@ -170,7 +170,7 @@ namespace exaDEM
     {
       if( is_force_motion() )
       {
-        if( mass >= 1e100 ) lout << "Warning, the mass of the ball is set to " << mass << std::endl;
+        if( mass >= 1e100 ) lout << "[f_to_a, WARNING] The mass of the ball is set to " << mass << std::endl;
         acc = Driver_params::sum_forces() / mass; 
       }
       else

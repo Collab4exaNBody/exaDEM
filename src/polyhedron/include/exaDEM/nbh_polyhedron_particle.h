@@ -1,7 +1,7 @@
 namespace exaDEM
 {
   using namespace exanb;
-  using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
+  //using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
   using NumberOfPolyhedronInteractionPerTypes = ::onika::oarray_t<int, NumberOfPolyhedronInteractionTypes>;
 
 /***************************/
@@ -18,14 +18,14 @@ namespace exaDEM
       OBB& obb_j)
   {
     // default value of the interaction studied (A or i -> B or j)
-    if (p.id >= p_nbh.id)
+    /*if (p.id >= p_nbh.id)
     {
       if (is_not_ghost_b)
         return;
     }
 
     /** some renames */
-    auto& shp = p.shp;
+    /*auto& shp = p.shp;
     auto& vertices_a = p.vertices;
     auto& shp_nbh = p_nbh.shp;
     auto& vertices_b = p_nbh.vertices;
@@ -43,7 +43,7 @@ namespace exaDEM
     obb_i.enlarge(shp_nbh->m_radius);
 */
 
-		for (int i = 0; i < nv; i++)
+		/*for (int i = 0; i < nv; i++)
 		{
 			vec3r vi = conv_to_vec3r(vertices_a[i]);
 			if(obb_j.intersect(vi))
@@ -119,14 +119,14 @@ namespace exaDEM
       OBB& obb_j)
 	{
 		// default value of the interaction studied (A or i -> B or j)
-		if (p.id >= p_nbh.id)
+		/*if (p.id >= p_nbh.id)
 		{
 			if (is_not_ghost_b)
 				return;
 		}
 
 		/** some renames */
-		auto& shp        = p.shp;
+		/*auto& shp        = p.shp;
 		auto& vertices_a = p.vertices;
 		auto& shp_nbh    = p_nbh.shp;
 		auto& vertices_b = p_nbh.vertices;
@@ -143,7 +143,7 @@ namespace exaDEM
 		obb_j.enlarge(shp->m_radius);
 		obb_i.enlarge(shp_nbh->m_radius);
 */
-		for (int i = 0; i < nv; i++)
+		/*for (int i = 0; i < nv; i++)
 		{
 			vec3r vi = conv_to_vec3r(vertices_a[i]);
 			if(obb_j.intersect(vi))
@@ -257,7 +257,7 @@ namespace exaDEM
 				NumberOfPolyhedronInteractionPerTypes * count_data,
 				size_t* cell_idx)
 		{
-			using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING>; // 8*8 blockDimXY>;
+			/*using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING>; // 8*8 blockDimXY>;
 			const size_t cell_a = cell_idx[ONIKA_CU_BLOCK_IDX];
 			IJK loc_a = grid_index_to_ijk( dims, cell_a);
 
@@ -287,17 +287,17 @@ namespace exaDEM
 				unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
 
 				/** load data */
-				particle_info p(cells, shps, cell_a, p_a);
+				/*particle_info p(cells, shps, cell_a, p_a);
 
 				/** compute obb */
-				OBB obb_i = p.shp->obb;
+				/*OBB obb_i = p.shp->obb;
 				quat conv_orient_i = p.get_quat();
 				obb_i.rotate(conv_orient_i);
 				obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
 				obb_i.enlarge(rVerlet);
 
 				/** Count the number of interactions per thread */
-				for(unsigned int cg=0; cg<cell_groups ;cg++)
+				/*for(unsigned int cg=0; cg<cell_groups ;cg++)
 				{
 					header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
 					unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
@@ -324,7 +324,7 @@ namespace exaDEM
 				int aggregate = BlockReduce(temp_storage).Sum(count[i]);
 				ONIKA_CU_BLOCK_SYNC();
 				if(ONIKA_CU_THREAD_IDX == 0) count_data[ONIKA_CU_BLOCK_IDX][i] = aggregate;
-			}
+			}*/
 		}
 
 
@@ -340,7 +340,7 @@ namespace exaDEM
 				NumberOfPolyhedronInteractionPerTypes * shift_data,
 				size_t* cell_idx)
 		{
-			assert(ONIKA_CU_BLOCK_SIZE == BLOCKX);
+			/*assert(ONIKA_CU_BLOCK_SIZE == BLOCKX);
 			using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING>;
 			const size_t cell_a = cell_idx[ONIKA_CU_BLOCK_IDX];
 			IJK loc_a = grid_index_to_ijk( dims, cell_a);
@@ -358,7 +358,7 @@ namespace exaDEM
 			}
 
 			/** Get stream info containing neighbors data */
-			const unsigned int cell_a_particles = cells[cell_a].size();
+			/*const unsigned int cell_a_particles = cells[cell_a].size();
 			const auto stream_info = chunknbh_stream_info( nbh[cell_a] , cell_a_particles );
 			const uint16_t* stream_base = stream_info.stream;
 			const uint16_t* stream = stream_base;
@@ -370,17 +370,17 @@ namespace exaDEM
 				unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
 
 				/** load data */
-				particle_info p(cells, shps, cell_a, p_a);
+				/*particle_info p(cells, shps, cell_a, p_a);
 
 				/** compute obb */
-				OBB obb_i = p.shp->obb;
+				/*OBB obb_i = p.shp->obb;
 				quat conv_orient_i = p.get_quat();
 				obb_i.rotate(conv_orient_i);
 				obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
 				obb_i.enlarge(rVerlet);
 
 				/** Count the number of interactions per thread */
-				for(unsigned int cg=0; cg<cell_groups ;cg++)
+				/*for(unsigned int cg=0; cg<cell_groups ;cg++)
 				{
 					header_nbh nbh_cg = decode_stream_header_nbh(loc_a, dims, stream);
 					unsigned int nbh_cell_particles = cells[nbh_cg.cell_b].size();
@@ -418,10 +418,10 @@ namespace exaDEM
 				unsigned int cell_groups = *(stream++); // number of cell groups for this neighbor list
 
 				/** Get current particle info */
-				particle_info p(cells, shps, cell_a, p_a);
+				/*particle_info p(cells, shps, cell_a, p_a);
 
 				/** compute obb */
-				OBB obb_i = p.shp->obb;
+				/*OBB obb_i = p.shp->obb;
 				quat conv_orient_i = p.get_quat();
 				obb_i.rotate(conv_orient_i);
 				obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
@@ -437,7 +437,7 @@ namespace exaDEM
 						if( p_b<nbh_cell_particles && (nbh_cg.cell_b!=cell_a || p_b!=p_a) )
 						{
 							/** Get nbh particle info */
-							particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
+							/*particle_info p_nbh(cells, shps, nbh_cg.cell_b, p_b);
               OBB obb_j = p_nbh.shp->obb;
               obb_j.rotate(p_nbh.get_quat());
               obb_j.translate(vec3r{p_nbh.r.x, p_nbh.r.y, p_nbh.r.z});
@@ -446,27 +446,27 @@ namespace exaDEM
                 obb_j.enlarge(rVerlet);
 
 								/** Define interaction (section particle i) */
-								item.id_i = p.id;
+								/*item.id_i = p.id;
 								item.cell_i = cell_a;
 								item.p_i = p_a;
 								/** Define interaction (section particle j) */
-								item.cell_j = nbh_cg.cell_b;
+								/*item.cell_j = nbh_cg.cell_b;
 								item.id_j = p_nbh.id;
 								item.p_j = p_b;
 
 								/** some basic checks */
-								assert( cells[cell_a].size() == cell_a_particles);
+								/*assert( cells[cell_a].size() == cell_a_particles);
 								assert( p_a == item.p_i );
 								assert(item.p_j < cells[cell_b].size());
 								assert(item.p_i < cells[cell_a].size());
 
 								/** here, we fill directly the interactionSOA data storage */
-								fill_interactions( data, item, rVerlet, prefix, !nbh_cg.is_ghost_b, p, p_nbh, obb_i, obb_j);
-							} // check
-						} // p_b
-					} // chunk
-				} // cg
-			} // p_a 
+								//fill_interactions( data, item, rVerlet, prefix, !nbh_cg.is_ghost_b, p, p_nbh, obb_i, obb_j);
+							//} // check
+						//} // p_b
+					//} // chunk
+				//} // cg
+			//} // p_a 
 		} // fill 
 } // namespace exaDEM
 

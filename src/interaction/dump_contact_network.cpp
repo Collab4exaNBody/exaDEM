@@ -71,7 +71,7 @@ namespace exaDEM
 			MPI_Comm_size(*mpi, &size);
 
 			Classifier<InteractionSOA>& classifier = (*ic);
-			auto& classifier2 = *ic2;
+			//auto& classifier2 = *ic2;
 			
 			NetworkFunctor<GridT> manager(*grid);
 
@@ -83,13 +83,13 @@ namespace exaDEM
 			MPI_Barrier(*mpi);
 
 			// iterate over interaction types
-			// for (size_t type = 0; type < classifier.number_of_waves(); type++)
-			for (size_t type = 0; type < 4; type++) // skip drivers
+			for (size_t type = 0; type < classifier.number_of_waves(); type++)
+			//for (size_t type = 0; type < 4; type++) // skip drivers
 			{
 				auto& interactions = classifier.waves[type];
 				auto& forces = classifier.buffers[type];
         const size_t n = interactions.size();
-				//manager(n, interactions, forces); 
+				manager(n, interactions, forces); 
 			}
 
 			if (rank == 0)

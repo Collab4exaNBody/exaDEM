@@ -21,6 +21,7 @@ under the License.
 #include <exanb/core/particle_type_id.h>
 #include <cassert>
 #include <fstream>
+#include <filesystem>
 #include <regex>
 
 namespace exaDEM
@@ -35,6 +36,7 @@ namespace exaDEM
     output << std::endl << "<" << std::endl;
     output << "name " << shp.m_name.c_str() << std::endl;
     output << "radius " << shp.m_radius << std::endl;
+    output << "preCompDone y" << std::endl;
     output << "nv " << nv << std::endl;
     for (int i = 0; i < nv; i++)
     {
@@ -134,13 +136,6 @@ namespace exaDEM
       {
         int nv = 0;
         input >> nv;
-        if (nv > EXADEM_MAX_VERTICES && !big_shape)
-        {
-          lout << "=== EXADEM ERROR ===" << std::endl;
-          lout << "=== Please, increase the maximum number of vertices: cmake ${Path_To_ExaDEM} -DEXADEM_MAX_VERTICES=" << nv << std::endl;
-          lout << "=== ABORT ===" << std::endl;
-          std::abort();
-        }
         assert(nv != 0);
         for (int i = 0; i < nv; i++)
         {
@@ -208,8 +203,8 @@ namespace exaDEM
         return read_shp(input, big_shape);
       }
     }
-    lout << "Warning, no shape find into the file " << file_name << "." << std::endl;
-    lout << "Warning, this file is ignored." << file_name << std::endl;
+    lout << "[read_shape, WARNING] No shape find into the file " << file_name << "." << std::endl;
+    lout << "[read_shape, WARNING] This file is ignored." << file_name << std::endl;
     return shape();
   }
 
@@ -231,7 +226,7 @@ namespace exaDEM
         if( ptm.find(shp.m_name) != ptm.end() )
         {
           shp.m_name = shp.m_name + "X";
-          lout << "Warning, this polyhedron name is already taken, exaDEM has renamed it to: " << shp.m_name << std::endl;
+          lout << "[read_shape, WARNING] This polyhedron name is already taken, exaDEM has renamed it to: " << shp.m_name << std::endl;
         } 
         ptm[shp.m_name] = shps.get_size();
         shps.add_shape(&shp);
@@ -255,5 +250,37 @@ namespace exaDEM
         shp.write_paraview();
       }
     }
-  }
+	}
+
+	/**
+	 * @brief Writes shape data from the given shapes container to a file.
+	 *
+	 * @param shps The container of shapes to write.
+	 * @param filename The output file path.
+	 * @param precision The numeric precision for floating-point output (default 16).
+	 */
+	inline void write_shps(shapes& shps, std::string filename, int precision = 16)
+	{
+		std::stringstream stream;
+		stream << std::setprecision(precision);
+		// creating directory if it does not already exist
+		const std::filesystem::path fspath(filename);
+		std::filesystem::create_directories(fspath.parent_path());
+		// open output file
+		std::ofstream outFile(filename);
+		if (!outFile)
+		{
+			std::cerr << "[write_shapes, ERROR] Impossible to create the output file: " << filename << std::endl;
+			std::exit(EXIT_FAILURE);
+		}
+		// fill stream with shape data
+		for (size_t i = 0; i < shps.get_size(); i++)
+		{
+			const shape *shp = shps[i];
+			exaDEM::write_shp(*shp, stream);
+		}
+		// fill output file
+		outFile << std::setprecision(16);
+		outFile << stream.rdbuf();
+	}
 } // namespace exaDEM

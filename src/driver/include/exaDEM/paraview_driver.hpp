@@ -26,7 +26,7 @@ namespace exaDEM
   using namespace exanb;
 
   struct info_ball { int id; Vec3d center; double radius; Vec3d vel; };
-  struct info_surface { int id; Vec3d normal; double offset; double vel; };
+  struct info_surface { int id; Vec3d normal; double offset; Vec3d vel; };
 
   std::tuple<bool, bool, Vec3d> intersect(Vec3d& n, double offset, Vec3d& corner1, Vec3d& corner2)
   {
@@ -122,7 +122,8 @@ namespace exaDEM
       if ( to_swap == -666 ) 
       {
         // It should not append, but ... 
-        lout << "Error when dumping surface drivers" << std::endl;
+        lout << "[ERROR] When dumping surface drivers" << std::endl;
+        std::exit(EXIT_FAILURE);
       }
       else
       {
@@ -139,14 +140,11 @@ namespace exaDEM
 		{
 			std::filesystem::create_directories(path);
 		}
-		int rank;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		if(rank != 0) return;
 		std::ofstream file;
 		file.open(full_path);
 		if (!file)
 		{
-			std::cerr << "Error: impossible to create the output file: " << full_path << std::endl;
+			std::cerr << "[ERROR] Impossible to create the output file: " << full_path << std::endl;
 			return;
 		}
 		std::stringstream stream;
@@ -167,8 +165,14 @@ namespace exaDEM
 
 		ids << "SCALARS Driver_Index int 1" << std::endl;
 		ids << "LOOKUP_TABLE Driver_Index" << std::endl;
+		vels << "VECTORS dataName float" << std::endl;
+
+/*
+		ids << "SCALARS Driver_Index int 1" << std::endl;
+		ids << "LOOKUP_TABLE Driver_Index" << std::endl;
 		vels << "SCALARS Velocity float 1" << std::endl;
 		vels << "LOOKUP_TABLE Velocity" << std::endl;
+*/
 
 		int count = 0;
 		for( auto [id, normal, offset, vel ] : surfaces )
@@ -180,7 +184,7 @@ namespace exaDEM
 				Vec3d& v = list_of_vertices[i];
 				ids      << id << std::endl;
 				vertices << v.x << " " << v.y << " " << v.z << std::endl;
-				vels    << vel << std::endl;
+			  vels    << vel.x << " " << vel.y << " " << vel.z << std::endl;
 				polygons << count << " ";
 				count++;
 			}
@@ -204,15 +208,12 @@ namespace exaDEM
 		{
 			std::filesystem::create_directories(path);
 		}  
-		int rank;
-		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-		if(rank != 0) return;
 
 		std::ofstream file;
 		file.open(full_path);
 		if (!file)
 		{
-			std::cerr << "Error: impossible to create the output file: " << full_path << std::endl;
+			std::cerr << "[ERROR] Impossible to create the output file: " << full_path << std::endl;
 			return;
 		}
     

@@ -32,8 +32,8 @@ input_data:
 compute_force:
   - contact_polyhedron:
      symetric: true
-     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
-     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 1000, kt: 1000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
+     config: { kn: 1000, kt: 1000, kr: 0.0, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { kn: 1000, kt: 1000, kr: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 domain:
   cell_size: 1.0 m

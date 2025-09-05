@@ -97,12 +97,12 @@ namespace exaDEM
       assert(*volume > 0);
 
       // get slot data
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
 
       // reduce
       Mat3d stress = exanb::make_zero_matrix();
       ReduceStressTensorFunctor func;
-      reduce_cell_particles(*grid, false, func, stress, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size); 
+      reduce_cell_particles(*grid, false, func, stress, reduce_field_set, parallel_execution_context(), {}, rcpo); 
 
       // get reduction over mpi processes
       double buff[9] = {stress.m11, stress.m12, stress.m13, stress.m21, stress.m22, stress.m23, stress.m31, stress.m32, stress.m33};

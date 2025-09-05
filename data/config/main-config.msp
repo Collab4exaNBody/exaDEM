@@ -24,6 +24,7 @@ includes:
   - config_stress_tensor.msp
   - config_end_iteration.msp
   - config_input.msp
+  - config_dt_critical.msp 
 
 # usually outputs ParticleSpecies type to a slot named species, in case the data reader doesn't provide species description
 reduce_species_after_read: nop
@@ -39,21 +40,11 @@ compute_loop_stop:
 # won't actually compute anything since grid is empty at this time
 init_rcut_max:
   profiling: false
-  rebind: { grid: null_grid, chunk_neighbors: null_neighbors }
   body:
     - dem_rcut_max
     - nbh_dist:        # compute neighborhood distance in grid space (nbh_dist),
         verbose: false # also computes maximum particle move tolerance in grid space (max_displ)
-                       # and ghost_dist, a constant scaling of of nbh_dist using scale factor nbh_ghost_scale
-
-# executed once (whitout verbosity) first to enable automatic cell_size calculation
-preinit_rcut_max:
-  profiling: false
-  rebind: { grid: null_grid, chunk_neighbors: null_neighbors, domain: empty_domain }
-  body:
-    - domain:
-        cell_size: 0.0
-        grid_dims: [ 0 , 0 , 0 ]
+    - check_rcut
 
 setup_drivers: nop
 init_particle_regions: nop
@@ -64,6 +55,7 @@ first_iteration:
   - reset_force_moment
   - compute_force
 #  - force_to_accel
+  - dt_critical
   - default_thermodynamic_state
   - default_print_thermodynamic_state: { lb_flag: false , move_flag: false , print_header: true }
   - next_time_step
@@ -118,7 +110,6 @@ setup_drivers: nop
 drivers:
   - init_drivers
   - setup_drivers
-  - print_drivers
   - backup_drivers
   - driver_vertices:
      force_host: true
@@ -129,11 +120,9 @@ simulation:
   body:
     - print_logo_banner
     - hw_device_init   # provides MPI_COMM_WORLD as a default communicator
-    - make_empty_grid
     - global
     - io_tree
     - drivers
-#    - preinit_rcut_max
     - domain
     - init_prolog
     - grid_flavor
@@ -143,7 +132,9 @@ simulation:
     - init_prolog
     - grid_post_processing
     - print_domain
+    - print_drivers
     - save_shapes
+    - dump_data_paraview
     - performance_adviser: { verbose: true }
     - init_epilog
     - first_iteration

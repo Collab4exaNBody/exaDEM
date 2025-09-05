@@ -62,25 +62,7 @@ namespace exaDEM
         std::string dir = *dir_name + "/CheckpointFiles/";
         std::string filepath = dir + *filename;
         lout << "Write shapes into: " << filepath << std::endl;
-        // creating directory if it does not already exist
-        const std::filesystem::path fspath(dir);
-        std::filesystem::create_directories(fspath);
-        // open output file
-        std::ofstream outFile(filepath);
-        if (!outFile)
-        {
-          std::cerr << "Error: impossible to create the output file: " << filepath << std::endl;
-          return;
-        }
-        // fill stream with shape data
-        for (size_t i = 0; i < size; i++)
-        {
-          const shape *shp = shps[i];
-          exaDEM::write_shp(*shp, stream);
-        }
-        // fill output file
-        outFile << std::setprecision(16);
-        outFile << stream.rdbuf();
+        exaDEM::write_shps(shps, filepath);
       }
     };
   };

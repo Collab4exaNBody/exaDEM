@@ -35,9 +35,6 @@ input_data:
   - grid_stats
   - timestep_file
 
-update_nbh_friction:
-  rcut: 1.1 m
-
 compute_loop:
   loop: true
   name: loop
@@ -53,7 +50,7 @@ compute_loop:
 compute_force:
   - contact_sphere:
      symetric: true
-     config: {rcut: 1.1 m, dncut: 0.0,  kn: 100000, kt: 80000, kr: 0, fc: 0.00, mu: 0.3, damp_rate: 0.9}
+     config: { kn: 100000, kt: 80000, kr: 0, mu: 0.3, damp_rate: 0.9}
 
 domain:
   cell_size: 2.0 m

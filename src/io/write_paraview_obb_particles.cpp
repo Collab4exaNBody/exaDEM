@@ -35,8 +35,6 @@ under the License.
 #include <onika/memory/allocator.h> // for ONIKA_ASSUME_ALIGNED macro
 #include <exanb/compute/compute_pair_optional_args.h>
 
-#include <exanb/compute/compute_cell_particles.h>
-
 #include <mpi.h>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_printer.hpp>
@@ -85,8 +83,7 @@ namespace exaDEM
       if (rank == 0)
       {
         namespace fs = std::filesystem;
-        fs::create_directory(*dir_name);
-        fs::create_directory(directory);
+        fs::create_directories(directory);
       }
 
       MPI_Barrier(*mpi);

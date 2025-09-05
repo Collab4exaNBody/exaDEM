@@ -12,7 +12,7 @@ setup_drivers:
      state: { quat: [0,0,1,0]}
      params: { motion_type: STATIONARY }
   - register_cylinder:
-     id: 2
+     id: 1
      state: {center: [0.0,0.0, 0.0], axis: [1, 1, 0], radius: 4.97 }
      params: { motion_type: STATIONARY }
 
@@ -21,8 +21,8 @@ compute_force:
      gravity: [0,0,-0.00981]
   - contact_sphere:
      symetric: true
-     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 125700, kt: 107700, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
-     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 125700, kt: 107700, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
+     config: { kn: 125700, kt: 107700, kr: 0.0, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { kn: 125700, kt: 107700, kr: 0.0, mu: 0.1, damp_rate: 0.999} 
 
 particle_regions:
    - AREA:

@@ -176,46 +176,46 @@ namespace exaDEM
       {
         if( amplitude <= 0.0 ) 
         {
-          lout << "\033[31m[Warning] The \"amplitude\" input slot is not defined correctly.\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] The \"amplitude\" input slot is not defined correctly.\033[0m" << std::endl;
           return false;
         }
         if( omega <= 0.0 ) 
         {
-          lout << "\033[31m[Warning] The \"omega\" input slot is not defined correctly.\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] The \"omega\" input slot is not defined correctly.\033[0m" << std::endl;
           return false;
         }
         if( exanb::dot(shaker_dir, shaker_dir) - 1 >= 1e-14 ) 
         {
           Vec3d old = shaker_dir;
           exanb::_normalize(shaker_dir);
-          lout << "\033[31m[Warning] Your shaker_dir vector [" << old <<"} has been normalized to [" << shaker_dir << "]\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] Your shaker_dir vector [" << old <<"} has been normalized to [" << shaker_dir << "]\033[0m" << std::endl;
         }
       }
       if( is_tabulated() )
       {
         if(tab_time.size() == 0)
         {
-          lout << "\033[31m[Warning] The \"time\" input slot is not defined while the tabulated motion is activated.\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] The \"time\" input slot is not defined while the tabulated motion is activated.\033[0m" << std::endl;
           return false;
         }
         else if(tab_time[0] != 0.0)
         {
-          lout << "\033[31m[Warning] Please set the first element of your input time vector to 0.\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] Please set the first element of your input time vector to 0.\033[0m" << std::endl;
           return false;
         }
         if(tab_pos.size() == 0)
         {
-          lout << "\033[31m[Warning] The \"positions\" input slot is not defined while the tabulated motion is activated.\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] The \"positions\" input slot is not defined while the tabulated motion is activated.\033[0m" << std::endl;
           return false;
         }
         if(tab_time.size() != tab_pos.size())
         {
-          lout << "\033[31m[Warning] The \"positions\" and \"time\" input slot are not the same size.\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] The \"positions\" and \"time\" input slot are not the same size.\033[0m" << std::endl;
           return false;
         }
         if(!is_sorted(tab_time.begin(), tab_time.end()))
         {
-          lout << "\033[31m[Warning] The \"time\" array used for a TABULATED motion is not sorted.\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] The \"time\" array used for a TABULATED motion is not sorted.\033[0m" << std::endl;
           return false;
         }
       }
@@ -233,15 +233,15 @@ namespace exaDEM
         {
           Vec3d old = motion_vector;
           exanb::_normalize(motion_vector);
-          lout << "\033[31m[Warning] Your motion vector [" << old <<"} has been normalized to [" << motion_vector << "]\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] Your motion vector [" << old <<"} has been normalized to [" << motion_vector << "]\033[0m" << std::endl;
         }
         if( motion_type == LINEAR_MOTION && const_vel == 0 )
         {
-          lout << "\033[31m[Warning] You have chosen constant linear motion with zero velocity, please use \"const_vel\" or use the motion type \"STATIONARY\"\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] You have chosen constant linear motion with zero velocity, please use \"const_vel\" or use the motion type \"STATIONARY\"\033[0m" << std::endl;
         }
         if( motion_type == LINEAR_FORCE_MOTION && const_force == 0 )
         {
-          lout << "\033[31m[Warning] You have chosen constant linear force motion with zero force, please use \"const_force\" or use the motion type \"STATIONARY\"\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] You have chosen constant linear force motion with zero force, please use \"const_force\" or use the motion type \"STATIONARY\"\033[0m" << std::endl;
         }
       }
 
@@ -249,11 +249,11 @@ namespace exaDEM
       {
         if( sigma == 0 ) 
         {
-          lout << "\033[31m[Warning] Sigma is to 0.0 while the compressive motion type is set to true.\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] Sigma is to 0.0 while the compressive motion type is set to true.\033[0m" << std::endl;
         }
         if( damprate <= 0 )
         {
-          lout << "\033[31m[Warning] Dumprate is to 0.0 while the compressive motion type is set to true.\033[0m" << std::endl;
+          lout << "\033[31m[WARNING] Dumprate is to 0.0 while the compressive motion type is set to true.\033[0m" << std::endl;
         }
       }
 
@@ -432,7 +432,16 @@ namespace exaDEM
 
     double shaker_signal(double time)
     {
+      assert(motion_start_threshold >= 0);
+      time -= motion_start_threshold;
       return amplitude * sin(omega * time);
+    }
+
+    Vec3d shaker_velocity(double time)
+    {
+      assert(motion_start_threshold >= 0);
+      time -= motion_start_threshold;
+      return amplitude * omega * cos(omega * time) * shaker_direction();
     }
   };
 }

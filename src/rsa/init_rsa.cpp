@@ -46,36 +46,11 @@
 namespace exaDEM
 {
   using namespace exanb;
-
-  struct ParticleType
-  {
-    static inline constexpr size_t MAX_STR_LEN = 16;
-
-    double m_mass = 1.0;
-    double m_radius = 1.0;
-    char m_name[MAX_STR_LEN] = {'\0'};
-
-    inline void set_name(const std::string &s)
-    {
-      if (s.length() >= MAX_STR_LEN)
-      {
-        std::cerr << "Particle name too long : length=" << s.length() << ", max=" << (MAX_STR_LEN - 1) << "\n";
-        std::abort();
-      }
-      std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
-      m_name[MAX_STR_LEN - 1] = '\0';
-    }
-    inline std::string name() const { return m_name; }
-  };
-
-  using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;
-
   template <typename GridT> class InitRSA : public OperatorNode
   {
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
-    ADD_SLOT(Domain, domain, INPUT_OUTPUT);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(Domain, domain, INPUT_OUTPUT);
     ADD_SLOT(double, enlarge_bounds, INPUT, 0.0);
     ADD_SLOT(std::vector<bool>, periodicity, INPUT, OPTIONAL, DocString{"if set, overrides domain's periodicity stored in file with this value"});
     ADD_SLOT(bool, expandable, INPUT, OPTIONAL, DocString{"if set, override domain expandability stored in file"});
@@ -84,12 +59,13 @@ namespace exaDEM
     ADD_SLOT(bool, pbc_adjust_xform, INPUT, true);
 
     ADD_SLOT(double, radius, INPUT, REQUIRED); // optional. if no species given, type ids are allocated automatically
+    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
 
   public:
     inline void execute() override final
     {
       //-------------------------------------------------------------------------------------------
-      using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type>;
+      using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
       using ParticleTuple = decltype(grid->cells()[0][0]);
 
       assert(grid->number_of_particles() == 0);
@@ -113,7 +89,8 @@ namespace exaDEM
 
       if (rank == 0)
       {
-        compute_domain_bounds(*domain, *bounds_mode, *enlarge_bounds, b, b, *pbc_adjust_xform);
+        /** FILE_BOUNDS sounds wrong in this context, but it works. */
+        compute_domain_bounds(*domain, exanb::ReadBoundsSelectionMode::FILE_BOUNDS, *enlarge_bounds, b, b, *pbc_adjust_xform);
       }
 
       // compute indexes
@@ -131,12 +108,15 @@ namespace exaDEM
       // add particles
       std::vector<ParticleTupleIO> particle_data;
       ParticleTupleIO pt;
+      int ParticleType = *type;
+      double ParticleRadius = *radius;
+      particle_data.resize(spheres.size());
       for (size_t s = 0; s < spheres.size(); s++)
       {
         auto pos = spheres[s].center;
         auto id = ns + s;
-        pt = ParticleTupleIO(pos[0], pos[1], pos[2], id, *type);
-        particle_data.push_back(pt);
+        pt = ParticleTupleIO(pos[0], pos[1], pos[2], id, ParticleType, ParticleRadius);
+        particle_data[s] = pt;
       }
 
       // Fill grid, particles will migrate accross mpi processed via the operator migrate_cell_particles
@@ -169,6 +149,7 @@ namespace exaDEM
       lout << "=================================" << std::endl;
 
       grid->rebuild_particle_offsets();
+      *rcut_max = std::max(*rcut_max, *radius);
     }
   };
 

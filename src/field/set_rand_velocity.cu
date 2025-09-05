@@ -35,14 +35,14 @@ namespace exaDEM
   {
 
     // Define some fieldsets used in compute_cell_particles
-    using ComputeFieldsVx = FieldSet<field::_vx>;
-    using ComputeFieldsVy = FieldSet<field::_vy>;
-    using ComputeFieldsVz = FieldSet<field::_vz>;
-    using ComputeFields = FieldSet<field::_vx, field::_vy, field::_vz>;
-    using ComputeRegionFieldsVx = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vx>;
-    using ComputeRegionFieldsVy = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vy>;
-    using ComputeRegionFieldsVz = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vz>;
-    using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vx, field::_vy, field::_vz>;
+    using ComputeFieldsVx = field_accessor_tuple_from_field_set_t<FieldSet<field::_vx>>;
+    using ComputeFieldsVy = field_accessor_tuple_from_field_set_t<FieldSet<field::_vy>>;
+    using ComputeFieldsVz = field_accessor_tuple_from_field_set_t<FieldSet<field::_vz>>;
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_vx, field::_vy, field::_vz>>;
+    using ComputeRegionFieldsVx = field_accessor_tuple_from_field_set_t<FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vx>>;
+    using ComputeRegionFieldsVy = field_accessor_tuple_from_field_set_t<FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vy>>;
+    using ComputeRegionFieldsVz = field_accessor_tuple_from_field_set_t<FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vz>>;
+    using ComputeRegionFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_vx, field::_vy, field::_vz>>;
     static constexpr ComputeFieldsVx compute_field_vx{};
     static constexpr ComputeFieldsVy compute_field_vy{};
     static constexpr ComputeFieldsVz compute_field_vz{};

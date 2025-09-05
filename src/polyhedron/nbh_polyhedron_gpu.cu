@@ -30,6 +30,8 @@ under the License.
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
+#include <exaDEM/vertices.hpp>
+
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
@@ -51,7 +53,7 @@ under the License.
 namespace exaDEM
 {
 	using namespace exanb;
-	using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
+	//using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
 	
 	struct Interaction_history
 	{
@@ -72,6 +74,7 @@ namespace exaDEM
 		//onika::memory::CudaMMVector<double> mom_z;
 		double* mom_z;
 		
+		//onika::memory::CudaMMVector<int> indices;
 		int* indices;
 		
 		int size;
@@ -82,28 +85,70 @@ namespace exaDEM
 		onika::memory::CudaMMVector<Interaction_history> waves;
 	};
 	
-	__device__ int encode (int a, int b, int c, int d,
-				int max_b, int max_c, int max_d)
+	/*__device__*/ONIKA_HOST_DEVICE_FUNC int encode (int a, int b, int c, int d,
+				int max_b, int max_c, int max_d, /*particle_info p_a, particle_info p_b,*/ int type )
 	{
+		//int max_c;
+		//int max_d;
+		
+		/*if(type == 0)
+		{
+			max_c = p_a.shp->get_number_of_vertices();
+			max_d = p_b.shp->get_number_of_vertices();
+		}
+		else if(type == 1)
+		{
+			max_c = p_a.shp->get_number_of_vertices();
+			max_d = p_b.shp->get_number_of_edges();
+		}
+		else if(type == 2)
+		{
+			max_c = p_a.shp->get_number_of_vertices();
+			max_d = p_b.shp->get_number_of_faces();
+		}
+		else
+		{
+			max_c = p_a.shp->get_number_of_edges();
+			max_d = p_b.shp->get_number_of_edges();
+		}*/
+		
 		return ((a * max_b + b) * max_c + c) * max_d + d;
 	}
 	
-	__global__ void encodeClassifier(
+	template < class GridT > __global__ void encodeClassifier( GridT* cells,
+				uint32_t* cell_i,
+				uint32_t* cell_j,
+				uint16_t* p_i,
+				uint16_t* p_j,
 				uint64_t* id_i,
 				uint64_t* id_j,
 				uint16_t* sub_i,
 				uint16_t* sub_j,
+				shapes shps,
 				int max_b,
 				int max_c,
 				int max_d,
 				int* res,
 				int* indices,
+				int type,
 				int size)
 	{
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		if(idx < size)
 		{
-			res[idx] = encode(id_i[idx], id_j[idx], sub_i[idx], sub_j[idx], max_b, max_c, max_d);
+			/*int cell_a = cell_i[idx];
+			cell_accessors cellA(cells[cell_a]);
+			
+			int cell_b = cell_j[idx];
+			cell_accessors cellB(cells[cell_b]);
+			
+			int p_a = p_i[idx];
+			particle_info p(shps, p_a, cellA);
+			
+			int p_b = p_j[idx];
+			particle_info p_nbh(shps, p_b, cellB);*/
+			
+			res[idx] = encode(id_i[idx], id_j[idx], sub_i[idx], sub_j[idx], max_b, max_c, max_d, /*p, p_nbh,*/ type);
 			indices[idx] = idx;
 		}
 	}
@@ -128,7 +173,11 @@ namespace exaDEM
 		}
 	}
 	
-	__global__ void fill_active_interactions(
+	template< class GridT > __global__ void fill_active_interactions( GridT* cells,
+	                uint32_t* cell_i,
+	                uint32_t* cell_j,
+	                uint16_t* p_i,
+	                uint16_t* p_j,
 			double* ft_x,
 			double* ft_y,
 			double* ft_z,
@@ -139,6 +188,7 @@ namespace exaDEM
 			uint64_t* id_j,
 			uint16_t* sub_i,
 			uint16_t* sub_j,
+			shapes shps,
 			int max_b,
 			int max_c,
 			int max_d,
@@ -151,6 +201,7 @@ namespace exaDEM
 			double* momy,
 			double* momz,
 			int* indices,
+			int type,
 			int size)
 	{
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -176,9 +227,21 @@ namespace exaDEM
 			}
 			prefix+= nb_incr[blockIdx.x];
 			
+			/*int cell_a = cell_i[idx];
+			cell_accessors cellA(cells[cell_a]);
+			
+			int cell_b = cell_j[idx];
+			cell_accessors cellB(cells[cell_b]);
+			
+			int p_a = p_i[idx];
+			particle_info p(shps, p_a, cellA);
+			
+			int p_b = p_j[idx];
+			particle_info p_nbh(shps, p_b, cellB);*/
+			
 			if(active)
 			{
-				interaction_id[prefix] = encode(id_i[idx], id_j[idx], sub_i[idx], sub_j[idx], max_b, max_c, max_d);
+				interaction_id[prefix] = encode(id_i[idx], id_j[idx], sub_i[idx], sub_j[idx], max_b, max_c, max_d, /*p, p_nbh,*/ type);
 				ftx[prefix] = ft_x[idx];
 				fty[prefix] = ft_y[idx];
 				ftz[prefix] = ft_z[idx];
@@ -251,6 +314,7 @@ namespace exaDEM
 		static constexpr ComputeFields compute_field_set{};
 
 		ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+		ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
 		ADD_SLOT(Domain , domain, INPUT , REQUIRED );
 		ADD_SLOT(exanb::GridChunkNeighbors, chunk_neighbors, INPUT, OPTIONAL, DocString{"Neighbor list"});
 		ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
@@ -271,7 +335,8 @@ namespace exaDEM
     ADD_SLOT(VectorTypes, nbOfInteractionsCell, PRIVATE);
     ADD_SLOT(VectorTypes, prefixInteractionsCell, PRIVATE);
     
-	ADD_SLOT(Interactions_intermediaire, interactions_inter, INPUT_OUTPUT);	
+	ADD_SLOT(Interactions_intermediaire, interactions_inter, INPUT_OUTPUT);
+	//ADD_SLOT(InteractionSOA, interactions_inter, INPUT_OUTPUT);	
 	
 	ADD_SLOT(InteractionSOA2, interactions_type0, INPUT_OUTPUT);
 	ADD_SLOT(InteractionSOA2, interactions_type1, INPUT_OUTPUT);
@@ -288,188 +353,189 @@ namespace exaDEM
                 )EOF";
 		}
 
-		template <typename Func> 
-			void add_driver_interaction(
-					Stl_mesh &mesh, 
-					size_t cell_a, 
-					Func &add_contact, 
-					Interaction &item, 
-					const size_t n_particles, 
-					const double rVerlet, 
-					const ParticleTypeInt *__restrict__ type, 
-					const uint64_t *__restrict__ id, 
-					const double *__restrict__ rx, 
-					const double *__restrict__ ry, 
-					const double *__restrict__ rz, 
-					const VertexArray *__restrict__ vertices, 
-					const exanb::Quaternion *__restrict__ orient, 
-					shapes &shps)
-			{
+    template <typename Func> 
+      void add_driver_interaction(
+          Stl_mesh &mesh, 
+          size_t cell_a, 
+          Func &add_contact, 
+          Interaction &item, 
+          const size_t n_particles, 
+          const double rVerlet, 
+          const ParticleTypeInt *__restrict__ type, 
+          const uint64_t *__restrict__ id, 
+          const double *__restrict__ rx, 
+          const double *__restrict__ ry, 
+          const double *__restrict__ rz, 
+          VertexField& vertices,
+          const exanb::Quaternion *__restrict__ orient, 
+          shapes &shps)
+      {
 #define __particle__ vertices_i, i, shpi
 #define __driver__ mesh.vertices.data(), idx, &mesh.shp
-				assert(cell_a < mesh.grid_indexes.size());
-				auto &list = mesh.grid_indexes[cell_a];
-				const size_t stl_nv = list.vertices.size();
-				const size_t stl_ne = list.edges.size();
-				const size_t stl_nf = list.faces.size();
+        assert(cell_a < mesh.grid_indexes.size());
+        auto &list = mesh.grid_indexes[cell_a];
+        const size_t stl_nv = list.vertices.size();
+        const size_t stl_ne = list.edges.size();
+        const size_t stl_nf = list.faces.size();
 
-				if (stl_nv == 0 && stl_ne == 0 && stl_nf == 0)
-					return;
+        if (stl_nv == 0 && stl_ne == 0 && stl_nf == 0)
+          return;
 
-				for (size_t p = 0; p < n_particles; p++)
-				{
-					Vec3d r = {rx[p], ry[p], rz[p]}; // position
-					auto& vertices_i = vertices[p];
-					const Quaternion& orient_i = orient[p];
-					item.p_i = p;
-					item.id_i = id[p];
-					auto ti = type[p];
-					const shape *shpi = shps[ti];
-					const size_t nv = shpi->get_number_of_vertices();
-					const size_t ne = shpi->get_number_of_edges();
-					const size_t nf = shpi->get_number_of_faces();
+        for (size_t p = 0; p < n_particles; p++)
+        {
+          Vec3d r = {rx[p], ry[p], rz[p]}; // position
+          ParticleVertexView vertices_i = {p, vertices};
+          const Quaternion& orient_i = orient[p];
+          item.p_i = p;
+          item.id_i = id[p];
+          auto ti = type[p];
+          const shape *shpi = shps[ti];
+          const size_t nv = shpi->get_number_of_vertices();
+          const size_t ne = shpi->get_number_of_edges();
+          const size_t nf = shpi->get_number_of_faces();
 
-					// Get OBB from stl mesh
-					auto &stl_shp = mesh.shp;
-					OBB *__restrict__ stl_obb_vertices = onika::cuda::vector_data(stl_shp.m_obb_vertices);
-					[[maybe_unused]] OBB *__restrict__ stl_obb_edges = onika::cuda::vector_data(stl_shp.m_obb_edges);
-					[[maybe_unused]] OBB *__restrict__ stl_obb_faces = onika::cuda::vector_data(stl_shp.m_obb_faces);
+          // Get OBB from stl mesh
+          auto &stl_shp = mesh.shp;
+          OBB *__restrict__ stl_obb_vertices = onika::cuda::vector_data(stl_shp.m_obb_vertices);
+          [[maybe_unused]] OBB *__restrict__ stl_obb_edges = onika::cuda::vector_data(stl_shp.m_obb_edges);
+          [[maybe_unused]] OBB *__restrict__ stl_obb_faces = onika::cuda::vector_data(stl_shp.m_obb_faces);
 
-					// compute OBB from particle p
-					OBB obb_i = shpi->obb;
-					quat conv_orient_i = quat{vec3r{orient_i.x, orient_i.y, orient_i.z}, orient_i.w};
-					obb_i.rotate(conv_orient_i);
-					obb_i.translate(vec3r{r.x, r.y, r.z});
-					obb_i.enlarge(rVerlet);
+          // compute OBB from particle p
+          OBB obb_i = shpi->obb;
+          quat conv_orient_i = quat{vec3r{orient_i.x, orient_i.y, orient_i.z}, orient_i.w};
+          obb_i.rotate(conv_orient_i);
+          obb_i.translate(vec3r{r.x, r.y, r.z});
+          obb_i.enlarge(rVerlet);
 
-					// Note:
-					// loop i = particle p
-					// loop j = stl mesh
-					for (size_t i = 0; i < nv; i++)
-					{
-						vec3r v = conv_to_vec3r(vertices[p][i]);
-						OBB obb_v_i;
-						obb_v_i.center = v; 
-						obb_v_i.enlarge(rVerlet + shpi->m_radius);
+          // Note:
+          // loop i = particle p
+          // loop j = stl mesh
+          for (size_t i = 0; i < nv; i++)
+          {
+            vec3r v = conv_to_vec3r(vertices_i[i]);
+            OBB obb_v_i;
+            obb_v_i.center = v; 
+            obb_v_i.enlarge(rVerlet + shpi->m_radius);
 
-						// vertex - vertex
-						item.type = 7;
-						item.sub_i = i;
-						for (size_t j = 0; j < stl_nv; j++)
-						{
-							size_t idx = list.vertices[j];
-							if(filter_vertex_vertex_v2(rVerlet, __particle__, __driver__))
-								//if(filter_vertex_vertex(rVerlet, __particle__, __driver__))
-							{
-								add_contact(p, item, i, idx);
-							} 
-						}
-						// vertex - edge
-						item.type = 8;
-						for (size_t j = 0; j < stl_ne; j++)
-						{
-							size_t idx = list.edges[j];
-							if(filter_vertex_edge(rVerlet, __particle__, __driver__))
-							{
-								add_contact(p, item, i, idx);
-							}
-						}
-						// vertex - face
-						item.type = 9;
-						for (size_t j = 0; j < stl_nf; j++)
-						{
-							size_t idx = list.faces[j];
-							const OBB& obb_f_stl_j = stl_obb_faces[idx];
-							if( obb_f_stl_j.intersect(obb_v_i) )
-							{
-								if(filter_vertex_face(rVerlet, __particle__, __driver__))
-								{
-									add_contact(p, item, i, idx);
-								}
-							}
-						}
-					}
+            // vertex - vertex
+            item.type = 7;
+            item.sub_i = i;
+            for (size_t j = 0; j < stl_nv; j++)
+            {
+              size_t idx = list.vertices[j];
+              if(filter_vertex_vertex_v2(rVerlet, __particle__, __driver__))
+                //if(filter_vertex_vertex(rVerlet, __particle__, __driver__))
+              {
+                add_contact(p, item, i, idx);
+              } 
+            }
+            // vertex - edge
+            item.type = 8;
+            for (size_t j = 0; j < stl_ne; j++)
+            {
+              size_t idx = list.edges[j];
+              if(filter_vertex_edge(rVerlet, __particle__, __driver__))
+              {
+                add_contact(p, item, i, idx);
+              }
+            }
+            // vertex - face
+            item.type = 9;
+            for (size_t j = 0; j < stl_nf; j++)
+            {
+              size_t idx = list.faces[j];
+              const OBB& obb_f_stl_j = stl_obb_faces[idx];
+              if( obb_f_stl_j.intersect(obb_v_i) )
+              {
+                if(filter_vertex_face(rVerlet, __particle__, __driver__))
+                {
+                  add_contact(p, item, i, idx);
+                }
+              }
+            }
+          }
 
-					for (size_t i = 0; i < ne; i++)
-					{
-						item.type = 10;
-						item.sub_i = i;
-						// edge - edge
-						for (size_t j = 0; j < stl_ne; j++)
-						{
-							const size_t idx = list.edges[j];
-							if(filter_edge_edge(rVerlet, __particle__, __driver__))
-							{
-								add_contact(p, item, i, idx);
-							}
-						}
-					}
+          for (size_t i = 0; i < ne; i++)
+          {
+            item.type = 10;
+            item.sub_i = i;
+            // edge - edge
+            for (size_t j = 0; j < stl_ne; j++)
+            {
+              const size_t idx = list.edges[j];
+              if(filter_edge_edge(rVerlet, __particle__, __driver__))
+              {
+                add_contact(p, item, i, idx);
+              }
+            }
+          }
 
-					for (size_t j = 0; j < stl_nv; j++)
-					{
-						const size_t idx = list.vertices[j];
+          for (size_t j = 0; j < stl_nv; j++)
+          {
+            const size_t idx = list.vertices[j];
 
-						// rejects vertices that are too far from the stl mesh.
-						const OBB& obb_v_stl_j = stl_obb_vertices[idx];
-						if( !obb_v_stl_j.intersect(obb_i)) continue;
+            // rejects vertices that are too far from the stl mesh.
+            const OBB& obb_v_stl_j = stl_obb_vertices[idx];
+            if( !obb_v_stl_j.intersect(obb_i)) continue;
 
-						item.type = 11;
-						// edge - vertex
-						for (size_t i = 0; i < ne; i++)
-						{
-							if(filter_vertex_edge(rVerlet, __driver__, __particle__)) 
-							{
-								add_contact(p, item, i, idx);
-							}
-						}
-						// face vertex
-						item.type = 12;
-						for (size_t i = 0; i < nf; i++)
-						{
-							if(filter_vertex_face(rVerlet, __driver__, __particle__))
-							{
-								add_contact(p, item, i, idx);
-							}
-						}
-					}
-				} // end loop p
+            item.type = 11;
+            // edge - vertex
+            for (size_t i = 0; i < ne; i++)
+            {
+              if(filter_vertex_edge(rVerlet, __driver__, __particle__)) 
+              {
+                add_contact(p, item, i, idx);
+              }
+            }
+            // face vertex
+            item.type = 12;
+            for (size_t i = 0; i < nf; i++)
+            {
+              if(filter_vertex_face(rVerlet, __driver__, __particle__))
+              {
+                add_contact(p, item, i, idx);
+              }
+            }
+          }
+        } // end loop p
 #undef __particle__
 #undef __driver__
-			} // end funcion
+      } // end funcion
 
-		template <typename D, typename Func> 
-			void add_driver_interaction(
-					D &driver, 
-					Func &add_contact, 
-					Interaction &item, 
-					const size_t n_particles, 
-					const double rVerlet, 
-					const ParticleTypeInt *__restrict__ type, 
-					const uint64_t *__restrict__ id, 
-					const VertexArray *__restrict__ vertices, 
-					shapes &shps)
-			{
-				for (size_t p = 0; p < n_particles; p++)
-				{
-					const auto va = vertices[p];
-					const shape *shp = shps[type[p]];			
-					int nv = shp->get_number_of_vertices();
-					for (int sub = 0; sub < nv; sub++)
-					{
-						bool contact = exaDEM::filter_vertex_driver(driver, rVerlet, va, sub, shp);
-						if (contact)
-						{
-							item.p_i = p;
-							item.id_i = id[p];
-							add_contact(p, item, sub, -1);
-						}
-					}
-				}
-			}
+    template <typename D, typename Func> 
+      void add_driver_interaction(
+          D &driver, 
+          Func &add_contact, 
+          Interaction &item, 
+          const size_t n_particles, 
+          const double rVerlet, 
+          const ParticleTypeInt *__restrict__ type, 
+          const uint64_t *__restrict__ id, 
+          VertexField& vertices, 
+          shapes &shps)
+      {
+        for (size_t p = 0; p < n_particles; p++)
+        {
+          ParticleVertexView va = {p, vertices};
+          const shape *shp = shps[type[p]];
+          int nv = shp->get_number_of_vertices();
+          for (int sub = 0; sub < nv; sub++)
+          {
+            bool contact = exaDEM::filter_vertex_driver(driver, rVerlet, va, sub, shp);
+            if (contact)
+            {
+              item.p_i = p;
+              item.id_i = id[p];
+              add_contact(p, item, sub, -1);
+            }
+          }
+        }
+      }
 
 		inline void execute() override final
 		{
 			GridT& g = *grid;
+			auto* vertex_fields = cvf->data();
 			const auto cells = g.cells();
 			const size_t n_cells = g.number_of_cells(); // nbh.size();
 			const IJK dims = g.dimension();
@@ -511,6 +577,7 @@ namespace exaDEM
 			auto [cell_ptr, cell_size] = traversal_real->info();
 			
 	auto& interactions2 = *interactions_inter;
+	//auto size_interactions = interactions2.size();
 	auto size_interactions = interactions2.size;
 	
 	
@@ -554,6 +621,8 @@ namespace exaDEM
 				
 				for(int i = 0; i < 4; i++)
 				{
+					//if( i != 2)
+					//{
 					onika::memory::CudaMMVector<int> nb_history;
 					
 					auto& data = classifier2.waves[i];
@@ -598,6 +667,7 @@ namespace exaDEM
 					cudaMalloc(&interaction_history.mom_y, total * sizeof(double) );
 					//interaction_history.mom_z.resize(total);
 					cudaMalloc(&interaction_history.mom_z, total * sizeof(double) );
+					//interaction_history.indices.resize(total);
 					cudaMalloc(&interaction_history.indices, total * sizeof(int));
 					interaction_history.size = total;
 					
@@ -610,7 +680,7 @@ namespace exaDEM
 					//indices.resize(total);
 					cudaMalloc(&indices, total * sizeof(int));
 					
-					printf("MALLOC\n");
+					//printf("MALLOC\n");
 					
 					int max_b = g.number_of_particles();
 					int max_c;
@@ -618,27 +688,122 @@ namespace exaDEM
 					
 					if(i == 0)
 					{
-						max_c = 8;
-						max_d = 8;
-						fill_active_interactions<<<nbBlocks, 256>>>( data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id, interaction_history.ft_x, interaction_history.ft_y, interaction_history.ft_z, interaction_history.mom_x, interaction_history.mom_y, interaction_history.mom_z, indices, data.size());
+						max_c = 20;
+						max_d = 20;
+						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
+						
+					/*uint32_t* cell_i_cpu = (uint32_t*)malloc(data.size() * sizeof(uint32_t));
+					uint32_t* cell_j_cpu = (uint32_t*)malloc(data.size() * sizeof(uint32_t));
+				
+					uint16_t* p_i_cpu = (uint16_t*)malloc(data.size() * sizeof(uint16_t));
+					uint16_t* p_j_cpu = (uint16_t*)malloc(data.size() * sizeof(uint16_t));
+					
+					double* ftx_cpu = (double*)malloc(data.size() * sizeof(double));
+					double* fty_cpu = (double*)malloc(data.size() * sizeof(double));
+					double* ftz_cpu = (double*)malloc(data.size() * sizeof(double));
+					
+					double* momx_cpu = (double*)malloc(data.size() * sizeof(double));
+					double* momy_cpu = (double*)malloc(data.size() * sizeof(double));
+					double* momz_cpu = (double*)malloc(data.size() * sizeof(double));
+					
+					uint64_t* id_i_cpu = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
+					uint64_t* id_j_cpu = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
+					
+					uint16_t* sub_i_cpu = (uint16_t*)malloc(data.size() * sizeof(uint16_t));
+					uint16_t* sub_j_cpu = (uint16_t*)malloc(data.size() * sizeof(uint16_t));
+				
+					cudaMemcpy(cell_i_cpu, data.cell_i, data.size() * sizeof(uint32_t)  , cudaMemcpyDeviceToHost);
+					cudaMemcpy(cell_j_cpu, data.cell_j, data.size() * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+				
+					cudaMemcpy(p_i_cpu, data.p_i, data.size()  * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+					cudaMemcpy(p_j_cpu, data.p_j, data.size()  * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+					
+					cudaMemcpy(ftx_cpu, data.ft_x, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
+					cudaMemcpy(fty_cpu, data.ft_y, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
+					cudaMemcpy(ftz_cpu, data.ft_z, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
+					
+					cudaMemcpy(momx_cpu, data.mom_x, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
+					cudaMemcpy(momy_cpu, data.mom_y, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
+					cudaMemcpy(momz_cpu, data.mom_z, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
+					
+					cudaMemcpy(id_i_cpu, data.id_i, data.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+					cudaMemcpy(id_j_cpu, data.id_j, data.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+					
+					cudaMemcpy(sub_i_cpu, data.sub_i, data.size() * sizeof(uint16_t), cudaMemcpyHostToDevice);
+					cudaMemcpy(sub_j_cpu, data.sub_j, data.size() * sizeof(uint16_t), cudaMemcpyHostToDevice);
+					
+					int num = 0;
+					
+					for(int j = 0; j < data.size(); j++)
+					{
+						//if(i==2) printf("POUR TYPE%d : INTERACTION_ID %d\n", i, j);
+						if(j==9482) printf("LE TYPE C'EST: %d \n", i);
+						if(ftx_cpu[j]!=0 || fty_cpu[j]!=0 || ftz_cpu[j]!=0 || momx_cpu[j]!=0 || momy_cpu[j]!=0 || momz_cpu[j]!=0)
+						{
+							if(i==2 && j==9481 ) printf("TOTAL: %d NUM: %d\n", total, num);
+							int cell_a = cell_i_cpu[j];
+							cell_accessors cellA(cells[cell_a]);
+							
+							int cell_b = cell_j_cpu[j];
+							cell_accessors cellB(cells[cell_b]);
+							
+							int p_a = p_i_cpu[j];
+							particle_info p(shps, p_a, cellA);
+							
+							int p_b = p_j_cpu[j];
+							particle_info p_nbh(shps, p_b, cellB);
+							
+							//if(i==2 && j==9481 ) printf("ICI2?\n");
+							
+							///*interaction_history.*//*nteraction_id[num] = encode(id_i_cpu[j], id_j_cpu[j], sub_i_cpu[j], sub_j_cpu[j], max_b, p, p_nbh, i);
+							if(i==2 && j==9481)
+							{
+								printf("A NV : %d\n", p.shp->get_number_of_vertices());
+								printf("B NV : %d\n", p_nbh.shp->get_number_of_vertices());  
+								
+								printf("A NF : %d\n", p.shp->get_number_of_faces());
+								printf("B NF : %d\n", p_nbh.shp->get_number_of_faces());
+								
+								printf("A NE : %d\n", p.shp->get_number_of_edges());
+								printf("B NE : %d\n", p_nbh.shp->get_number_of_edges());    
+								
+								interaction_id[num] = num;
+							}
+							interaction_history.ft_x[num] = ftx_cpu[j];
+							interaction_history.ft_y[num] = fty_cpu[j];
+							interaction_history.ft_z[num] = ftz_cpu[j];
+							interaction_history.mom_x[num] = momx_cpu[j];
+							interaction_history.mom_y[num] = momy_cpu[j];
+							interaction_history.mom_z[num] = momz_cpu[j];
+							indices[num] = num;
+							num++;
+							
+							//if(i==2 && j==9481 ) printf("ICI3?\n");
+						}
+						//if(i==2 && j==9481) printf("E POI?\n");
+					}
+						
+					cudaDeviceSynchronize();*/
+					
+					//printf("FILL\n");
 					}
 					else if(i == 1)
 					{
-						max_c = 8;
-						max_d = 15;
-						fill_active_interactions<<<nbBlocks, 256>>>( data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id, interaction_history.ft_x, interaction_history.ft_y, interaction_history.ft_z, interaction_history.mom_x, interaction_history.mom_y, interaction_history.mom_z, indices, data.size());
+						max_c = 20;
+						max_d = 30;
+						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
 					}
 					else if(i == 2)
 					{
-						max_c = 8;
-						max_d = 9;
-						fill_active_interactions<<<nbBlocks, 256>>>( data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id, interaction_history.ft_x, interaction_history.ft_y, interaction_history.ft_z, interaction_history.mom_x, interaction_history.mom_y, interaction_history.mom_z, indices, data.size());
+						max_c = 20;
+						max_d = 12;
+						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
 					}
 					else
 					{
-						max_c = 15;
-						max_d = 15;
-						fill_active_interactions<<<nbBlocks, 256>>>( data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id, interaction_history.ft_x, interaction_history.ft_y, interaction_history.ft_z, interaction_history.mom_x, interaction_history.mom_y, interaction_history.mom_z, indices, data.size());
+						max_c = 30;
+						max_d = 30;
+						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
 					}
 					
 					d_temp_storage = nullptr;
@@ -646,36 +811,190 @@ namespace exaDEM
 					
 					cub::DeviceRadixSort::SortPairs(
 						d_temp_storage, temp_storage_bytes,
-						interaction_id, interaction_history.interaction_id,
-						indices, interaction_history.indices,
+						interaction_id/*.data()*/, interaction_history.interaction_id/*.data()*/,
+						indices/*.data()*/, interaction_history.indices/*.data()*/,
 						total);
 						
 					cudaMalloc(&d_temp_storage, temp_storage_bytes);
 					
 					cub::DeviceRadixSort::SortPairs(
 						d_temp_storage, temp_storage_bytes,
-						interaction_id, interaction_history.interaction_id,
-						indices, interaction_history.indices,
+						interaction_id/*.data()*/, interaction_history.interaction_id/*.data()*/,
+						indices/*.data()*/, interaction_history.indices/*.data()*/,
 						total);
+						
+					cudaFree(d_temp_storage);
 					
 					cudaFree(interaction_id);
 					cudaFree(indices);
 					
+					printf("NEXT: %d\n", i);
+					//}
 				}
+				   }
+	/*uint32_t* cell_i_cpu = (uint32_t*)malloc(size_interactions * sizeof(uint32_t));
+	uint32_t* cell_j_cpu = (uint32_t*)malloc(size_interactions * sizeof(uint32_t));
+				
+	uint16_t* p_i_cpu = (uint16_t*)malloc(size_interactions * sizeof(uint16_t));
+	uint16_t* p_j_cpu = (uint16_t*)malloc(size_interactions * sizeof(uint16_t));
+				
+	cudaMemcpy(cell_i_cpu, interactions2.cell_i, size_interactions * sizeof(uint32_t)  , cudaMemcpyDeviceToHost);
+	cudaMemcpy(cell_j_cpu, interactions2.cell_j, size_interactions * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+				
+	cudaMemcpy(p_i_cpu, interactions2.p_i, size_interactions  * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+	cudaMemcpy(p_j_cpu, interactions2.p_j, size_interactions  * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+				
+	/*for(int i = 0; i < size_interactions; i++)
+	{
+		printf("INDEX_OBB: %d CELL_I: %d P_I: %d CELL_J: %d P_J: %d\n", i, cell_i_cpu[i], p_i_cpu[i], cell_j_cpu[i], p_j_cpu[i]);
+	}*/
+	
+	/*int count[4];
+	
+	for(int i = 0; i < 4; i++)
+	{
+		count[i] = 0;
+	}
+	
+	for(int i = /*230000*///0; i < size_interactions; i++)
+	//{
+		
+		//printf("INDEX_INTERACTION: %d CELL_I: %d P_I: %d CELL_J: %d P_J: %d\n", i, interactions2.cell_i[i], interactions2.p_i[i], interactions2.cell_j[i], interactions2.p_j[i]);
+		//printf("INDEX_INTERACTION: %d CELL_I: %d P_I: %d CELL_J: %d P_J: %d\n", i, cell_i_cpu[i], p_i_cpu[i], cell_j_cpu[i], p_j_cpu[i]);
+		
+		//auto cell_a = /*interactions2.*/cell_i_cpu[i];
+		//cell_accessors cellA(cells[cell_a]);
+		
+		//printf("CELL_A: %d\n", cell_a);
+		
+		//auto p_a = /*interactions2.*/p_i_cpu[i];
+		//printf("PA FIRST\n");
+		//particle_info p(shps, p_a, cellA);
+		
+		//printf("P_A\n");
+		
+		//auto cell_b = /*interactions2.*/cell_j_cpu[i];
+		//cell_accessors cellB(cells[cell_b]);
+		
+		//printf("CELL_B\n");
+		
+		//auto p_b = /*interactions2.*/p_j_cpu[i];
+		//particle_info p_nbh(shps, p_b, cellB);
+		
+		//printf("P_B\n");
+		
+		//printf("CELLA: %d PA: %d CELLB: %d PB: %d\n", cell_a, p_a, cell_b, p_b);
+		
+		/*const ParticleVertexView vertices_a = { p_a, vertex_fields[cell_a] };
+		const ParticleVertexView vertices_b = { p_b, vertex_fields[cell_b] };
+		
+		//printf("VERTEX\n");
+		
+		//count_interaction_block_pair( rVerlet, count, p, vertices_a, p_nbh, vertices_b );
+		
+		auto& shp = p.shp;
+		auto& shp_nbh = p_nbh.shp;
+		
+		const int nv = shp->get_number_of_vertices();
+		const int ne = shp->get_number_of_edges();
+		const int nf = shp->get_number_of_faces();
+		const int nv_nbh = shp_nbh->get_number_of_vertices();
+		const int ne_nbh = shp_nbh->get_number_of_edges();
+		const int nf_nbh = shp_nbh->get_number_of_faces();
+		
+		for(int a = 0; a < nv; a++)
+		{
+			vec3r vi = conv_to_vec3r(vertices_a[a]);
+			
+			for(int b = 0; b < nv_nbh; b++)
+			{
+				if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, a, shp, vertices_b, b, shp_nbh))
+				{
+					count[0]++;
 				}
+			}
+			
+			for(int b = 0; b < ne_nbh; b++)
+			{
+				if(exaDEM::filter_vertex_edge(rVerlet, vertices_a, a, shp, vertices_b, b, shp_nbh))
+				{
+					count[1]++;
+				}
+			}
+			
+			for(int b = 0; b < nf_nbh; b++)
+			{
+				if(exaDEM::filter_vertex_face(rVerlet, vertices_a, a, shp, vertices_b, b, shp_nbh))
+				{
+					count[2]++;
+				}
+			}
+		}
+		
+		//printf("NV\n");
+		
+		for(int a = 0; a < ne; a++)
+		{
+			for(int b = 0; b < ne_nbh; b++)
+			{
+				if(exaDEM::filter_edge_edge(rVerlet, vertices_a, a, shp, vertices_b, b, shp_nbh))
+				{
+					count[3]++;
+				}
+			}
+		}
+		
+		//printf("NE\n");
+		
+		for(int a = 0; a < nv_nbh; a++)
+		{
+			vec3r vj = conv_to_vec3r(vertices_b[a]);
+			
+			for(int b = 0; b < ne; b++)
+			{
+				if(exaDEM::filter_vertex_edge(rVerlet, vertices_b, a, shp_nbh, vertices_a, b, shp))
+				{
+					count[1]++;
+				}
+			}
+			
+			for(int b = 0; b < nf; b++)
+			{
+				if(exaDEM::filter_vertex_face(rVerlet, vertices_b, a, shp_nbh, vertices_a, b, shp))
+				{
+					count[2]++;
+				}
+			}
+		}
+		
+		//printf("COUNT_UN: %d COUNT_DEUX: %d COUNT_TROIS: %d COUNT_QUATRE: %d\n", count[0], count[1], count[2], count[3]);
+		printf("END_INTERACTION\n");
+	}
+	
+	
+	for(int i = 0; i < 4; i++)
+	{
+		printf("TYPE: %d COUNT: %d\n", i, count[i]);
+	}
+	
+	free(cell_i_cpu);
+	free(cell_j_cpu);
+	free(p_i_cpu);
+	free(p_j_cpu);			
 				
 
 	/** first count the number of interactions per cell */
 				get_number_of_interactions_block_pair<block_x, block_y><<<GridSize, BlockSize>>>(
 						grid->cells(),
+						vertex_fields,
 						grid->dimension(),
 						shps,
 						rVerlet,
 						onika::cuda::vector_data(number_of_interactions_cell),
-						interactions2.cell_i,
-						interactions2.cell_j,
-						interactions2.p_i,
-						interactions2.p_j);
+						interactions2.cell_i/*.data()*/,
+						interactions2.cell_j/*.data()*/,
+						interactions2.p_i/*.data()*/,
+						interactions2.p_j/*.data()*/);
 				cudaDeviceSynchronize();
 				lout << "End get_number_of_interactions_block_pair" << std::endl;
 				
@@ -863,20 +1182,25 @@ namespace exaDEM
 				type1.size2 = total_nb_int[1];
 				type2.size2 = total_nb_int[2];
 				type3.size2 = total_nb_int[3];
+				
+				//classifier.resize(total_nb_int, ResizeClassifier::POLYHEDRON);
+				//cudaDeviceSynchronize();
 	
 				/** Now, we fill the classifier */
   			lout << "Run fill_classifier_gpu ... " << std::endl;
 				fill_classifier_block_pair<block_x, block_y><<<GridSize, BlockSize>>>(
-						onika::cuda::vector_data(classifier2.waves), 
+						onika::cuda::vector_data(classifier2.waves),
+						//onika::cuda::vector_data(classifier.waves), 
 						grid->cells(),
+						vertex_fields,
 						grid->dimension(),
 						shps,
 						rVerlet,
 						onika::cuda::vector_data(prefix_interactions_cell),
-						interactions2.cell_i,
-						interactions2.cell_j,
-						interactions2.p_i,
-						interactions2.p_j);
+						interactions2.cell_i/*.data()*/,
+						interactions2.cell_j/*.data()*/,
+						interactions2.p_i/*.data()*/,
+						interactions2.p_j/*.data()*/);
 				lout << "End fill_classifier_gpu" << std::endl;
 				
 				if(!classifier2.use) 
@@ -887,6 +1211,8 @@ namespace exaDEM
 				{
 					for(int i = 0; i < 4; i++)
 					{
+						//if( i != 2 )
+						//{
 						auto& interaction_classifier = classifier2.waves[i];
 						
 						int nbBlocks = ( interaction_classifier.size() + 256 - 1) / 256;
@@ -902,23 +1228,23 @@ namespace exaDEM
 						
 						if(i == 0)
 						{
-							max_c = 8;
-							max_d = 8;
+							max_c = 20;
+							max_d = 20;
 						}
 						else if(i == 1)
 						{
-							max_c = 8;
-							max_d = 15;
+							max_c = 20;
+							max_d = 30;
 						}
 						else if(i == 2)
 						{
-							max_c = 8;
-							max_d = 9;
+							max_c = 20;
+							max_d = 12;
 						}
 						else
 						{
-							max_c = 15;
-							max_d = 15;
+							max_c = 30;
+							max_d = 30;
 						}
 						
 						//onika::memory::CudaMMVector<int> indices_in;
@@ -926,7 +1252,25 @@ namespace exaDEM
 						//indices_in.resize(interaction_classifier.size());
 						cudaMalloc(&indices_in, interaction_classifier.size() * sizeof(int));
 						
-						encodeClassifier<<<nbBlocks, 256>>>( interaction_classifier.id_i, interaction_classifier.id_j, interaction_classifier.sub_i, interaction_classifier.sub_j, max_b, max_c, max_d, interaction_ids_in, indices_in, interaction_classifier.size() );
+						encodeClassifier<<<nbBlocks, 256>>>( grid->cells(), interaction_classifier.cell_i, interaction_classifier.cell_j, interaction_classifier.p_i, interaction_classifier.p_j, interaction_classifier.id_i, interaction_classifier.id_j, interaction_classifier.sub_i, interaction_classifier.sub_j, shps, max_b, max_c, max_d, interaction_ids_in/*.data()*/, indices_in/*.data()*/, i, interaction_classifier.size() );
+						
+						/*( GridT* cells,
+				uint32_t* cell_i,
+				uint32_t* cell_j,
+				uint16_t* p_i,
+				uint16_t* p_j,
+				uint64_t* id_i,
+				uint64_t* id_j,
+				uint16_t* sub_i,
+				uint16_t* sub_j,
+				shapes shps,
+				int max_b,
+				int max_c,
+				int max_d,
+				int* res,
+				int* indices,
+				int type,
+				int size)*/
 						
 						cudaDeviceSynchronize();
 						
@@ -945,23 +1289,23 @@ namespace exaDEM
 						
 						cub::DeviceRadixSort::SortPairs(
 							d_temp_storage, temp_storage_bytes,
-							interaction_ids_in, interaction_ids_out,
-							indices_in, indices_out,
+							interaction_ids_in/*.data()*/, interaction_ids_out/*.data()*/,
+							indices_in/*.data()*/, indices_out/*.data()*/,
 							interaction_classifier.size());
 						
 						cudaMalloc(&d_temp_storage, temp_storage_bytes);
 					
 						cub::DeviceRadixSort::SortPairs(
 							d_temp_storage, temp_storage_bytes,
-							interaction_ids_in, interaction_ids_out,
-							indices_in, indices_out,
+							interaction_ids_in/*.data()*/, interaction_ids_out/*.data()*/,
+							indices_in/*.data()*/, indices_out/*.data()*/,
 							interaction_classifier.size());
 							
 						cudaFree(d_temp_storage);
 						
 						auto& interaction_history = update.waves[i];
 						
-						find_common_elements<<<nbBlocks, 256>>>( interaction_ids_out, interaction_history.interaction_id, indices_out, interaction_history.indices, interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, interaction_history.ft_x, interaction_history.ft_y, interaction_history.ft_z, interaction_history.mom_x, interaction_history.mom_y, interaction_history.mom_z, interaction_classifier.size(), interaction_history.size);
+						find_common_elements<<<nbBlocks, 256>>>( interaction_ids_out/*.data()*/, interaction_history.interaction_id/*.data()*/, indices_out/*.data()*/, interaction_history.indices/*.data()*/, interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, interaction_classifier.size(), interaction_history.size);
 
 						cudaFree(interaction_history.interaction_id);
 						cudaFree(interaction_history.ft_x);
@@ -976,6 +1320,7 @@ namespace exaDEM
 						cudaFree(interaction_ids_out);
 						cudaFree(indices_in);
 						cudaFree(indices_out);
+						//}
 					}
 				}
 			}
@@ -998,6 +1343,7 @@ namespace exaDEM
         /** first count the number of interactions per cell */
 				get_number_of_interations_block<block_x, block_y><<<GridSize, BlockSize>>>(
 						grid->cells(),
+						vertex_fields,
 						grid->dimension(), 
 						chunk_neighbors->data(), 
 						shps, 
@@ -1033,6 +1379,7 @@ namespace exaDEM
 				fill_classifier_block<block_x, block_y><<<GridSize, BlockSize>>>(
 						onika::cuda::vector_data(classifier.waves), 
 						grid->cells(),
+						vertex_fields,
 						grid->dimension(),
 						chunk_neighbors->data(),
 						shps,
@@ -1044,17 +1391,18 @@ namespace exaDEM
 
 			if( *pair_version )
 			{
-        lout << "NBH polyhedron Pair version" << std::endl;
+        /*lout << "NBH polyhedron Pair version" << std::endl;
 				lout << "Start get_number_of_interations_pair ..." << std::endl;
         /** Define cuda block and grid size */
-				constexpr int block_x = 8;
+				/*constexpr int block_x = 8;
 				constexpr int block_y = 8;
 				dim3 BlockSize(block_x, block_y, 8);
 				dim3 GridSize(cell_size,1,1);
 
         /** first count the number of interactions per cell */
-				get_number_of_interations_pair<block_x, block_y><<<GridSize, BlockSize>>>(
+				/*get_number_of_interations_pair<block_x, block_y><<<GridSize, BlockSize>>>(
 						grid->cells(),
+						vetex_fields,
 						grid->dimension(), 
 						chunk_neighbors->data(), 
 						shps, 
@@ -1072,7 +1420,7 @@ namespace exaDEM
 						); 
 
         /** Get the total number of interaction per type */
-				NumberOfPolyhedronInteractionPerTypes total_nb_int;
+				/*NumberOfPolyhedronInteractionPerTypes total_nb_int;
 				cudaDeviceSynchronize();
 				for(int type = 0 ; type < NumberOfPolyhedronInteractionTypes ; type++)
 				{
@@ -1085,30 +1433,31 @@ namespace exaDEM
 				cudaDeviceSynchronize();
 
 				/** Now, we fill the classifier */
-  			lout << "Run fill_classifier_gpu ... " << std::endl;
+  			/*lout << "Run fill_classifier_gpu ... " << std::endl;
 				fill_classifier_pair<block_x, block_y><<<GridSize, BlockSize>>>(
 						onika::cuda::vector_data(classifier.waves),
 						grid->cells(),
+						vertex_fields,
 						grid->dimension(),
 						chunk_neighbors->data(),
 						shps,
 						rVerlet,
 						onika::cuda::vector_data(prefix_interactions_cell),
 						cell_ptr);
-				lout << "End fill_classifier_gpu" << std::endl;
+				lout << "End fill_classifier_gpu" << std::endl;*/
 			}
 
       if( *particle_version ) //particle version
       {  
-        lout << "NBH polyhedron Particle version" << std::endl;
+        /*lout << "NBH polyhedron Particle version" << std::endl;
 				lout << "Start get_number_of_interations_gpu ..." << std::endl;
         /** Define cuda block and grid size */
-				constexpr int block_x = 128;
+				/*constexpr int block_x = 128;
 				dim3 BlockSize(block_x, 1, 1);
 				dim3 GridSize(cell_size,1,1);
 
         /** first count the number of interactions per cell */
-				get_number_of_interations<block_x><<<GridSize, BlockSize>>>(
+				/*get_number_of_interations<block_x><<<GridSize, BlockSize>>>(
 						grid->cells(),
 						grid->dimension(), 
 						chunk_neighbors->data(), 
@@ -1127,7 +1476,7 @@ namespace exaDEM
 						); 
 
         /** Get the total number of interaction per type */
-				NumberOfPolyhedronInteractionPerTypes total_nb_int;
+				/*NumberOfPolyhedronInteractionPerTypes total_nb_int;
 				cudaDeviceSynchronize();
 				for(int type = 0 ; type < NumberOfPolyhedronInteractionTypes ; type++)
 				{
@@ -1140,7 +1489,7 @@ namespace exaDEM
 				cudaDeviceSynchronize();
 
 				/** Now, we fill the classifier */
-  			lout << "Run fill_classifier ... " << std::endl;
+  			/*lout << "Run fill_classifier ... " << std::endl;
 				fill_classifier<block_x><<<GridSize, BlockSize>>>(
 						onika::cuda::vector_data(classifier.waves),
 						grid->cells(),
@@ -1155,110 +1504,110 @@ namespace exaDEM
 				//classifier.waves[0].clear();
 				//classifier.waves[1].clear();
 				//classifier.waves[2].clear();
-				//classifier.waves[3].clear();
+				//classifier.waves[3].clear();*/
       }
 
 #     pragma omp parallel
 			{
-				// local storage per thread
-				Interaction item;
-				interaction_manager manager;
+        // local storage per thread
+        Interaction item;
+        interaction_manager manager;
 #       pragma omp for schedule(dynamic)
-				for (size_t ci = 0; ci < cell_size; ci++)
-				{
-					size_t cell_a = cell_ptr[ci];
+        for (size_t ci = 0; ci < cell_size; ci++)
+        {
+          size_t cell_a = cell_ptr[ci];
+          auto& vertex_cell_a = vertex_fields[cell_a];
+          IJK loc_a = grid_index_to_ijk(dims, cell_a);
 
-					const unsigned int n_particles = cells[cell_a].size();
-					CellExtraDynamicDataStorageT<Interaction> &storage = interactions[cell_a];
+          const unsigned int n_particles = cells[cell_a].size();
+          CellExtraDynamicDataStorageT<Interaction> &storage = interactions[cell_a];
 
-					assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
+          assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
 
-					if (n_particles == 0)
-						continue;
+          if (n_particles == 0)
+            continue;
 
-					// Extract history before reset it
-					const size_t data_size = storage.m_data.size();
-					Interaction *__restrict__ data_ptr = storage.m_data.data();
-					extract_history(manager.hist, data_ptr, data_size);
-					std::sort(manager.hist.begin(), manager.hist.end());
-					manager.reset(n_particles);
+          // Extract history before reset it
+          const size_t data_size = storage.m_data.size();
+          Interaction *__restrict__ data_ptr = storage.m_data.data();
+          extract_history(manager.hist, data_ptr, data_size);
+          std::sort(manager.hist.begin(), manager.hist.end());
+          manager.reset(n_particles);
 
-					// Reset storage, interaction history was stored in the manager
-					storage.initialize(n_particles);
-					auto &info_particles = storage.m_info;
+          // Reset storage, interaction history was stored in the manager
+          storage.initialize(n_particles);
+          auto &info_particles = storage.m_info;
 
-					// Get data pointers
-					const uint64_t *__restrict__ id_a = cells[cell_a][field::id];
-					ONIKA_ASSUME_ALIGNED(id_a);
-					const auto *__restrict__ rx_a = cells[cell_a][field::rx];
-					ONIKA_ASSUME_ALIGNED(rx_a);
-					const auto *__restrict__ ry_a = cells[cell_a][field::ry];
-					ONIKA_ASSUME_ALIGNED(ry_a);
-					const auto *__restrict__ rz_a = cells[cell_a][field::rz];
-					ONIKA_ASSUME_ALIGNED(rz_a);
-					const auto *__restrict__ t_a = cells[cell_a][field::type];
-					ONIKA_ASSUME_ALIGNED(t_a);
-					const auto *__restrict__ orient_a = cells[cell_a][field::orient];
-					ONIKA_ASSUME_ALIGNED(orient_a);
-					const auto *__restrict__ vertices_a = cells[cell_a][field::vertices];
-					ONIKA_ASSUME_ALIGNED(vertices_a);
+          // Get data pointers
+          const uint64_t *__restrict__ id_a = cells[cell_a][field::id];
+          ONIKA_ASSUME_ALIGNED(id_a);
+          const auto *__restrict__ rx_a = cells[cell_a][field::rx];
+          ONIKA_ASSUME_ALIGNED(rx_a);
+          const auto *__restrict__ ry_a = cells[cell_a][field::ry];
+          ONIKA_ASSUME_ALIGNED(ry_a);
+          const auto *__restrict__ rz_a = cells[cell_a][field::rz];
+          ONIKA_ASSUME_ALIGNED(rz_a);
+          const auto *__restrict__ t_a = cells[cell_a][field::type];
+          ONIKA_ASSUME_ALIGNED(t_a);
+          const auto *__restrict__ orient_a = cells[cell_a][field::orient];
+          ONIKA_ASSUME_ALIGNED(orient_a);
 
-					// Define a function to add a new interaction if a contact is possible.
-					auto add_contact = [&manager](size_t p, Interaction &item, int sub_i, int sub_j) -> void
-					{
-						item.sub_i = sub_i;
-						item.sub_j = sub_j;
-						manager.add_item(p, item);
-					};
+          // Define a function to add a new interaction if a contact is possible.
+          auto add_contact = [&manager](size_t p, Interaction &item, int sub_i, int sub_j) -> void
+          {
+            item.sub_i = sub_i;
+            item.sub_j = sub_j;
+            manager.add_item(p, item);
+          };
 
-					// Fill particle ids in the interaction storage
-					for (size_t it = 0; it < n_particles; it++)
-					{
-						info_particles[it].pid = id_a[it];
-					}
+          // Fill particle ids in the interaction storage
+          for (size_t it = 0; it < n_particles; it++)
+          {
+            info_particles[it].pid = id_a[it];
+          }
 
-					// First, interaction between a polyhedron and a driver
-					if (drivers.has_value())
-					{
-						auto &drvs = *drivers;
-						item.cell_i = cell_a;
-						// By default, if the interaction is between a particle and a driver
-						// Data about the particle j is set to -1
-						// Except for id_j that contains the driver id
-						item.id_j = size_t(-1);
-						item.cell_j = size_t(-1);
-						item.p_j = size_t(-1);
-						item.moment = Vec3d{0, 0, 0};
-						item.friction = Vec3d{0, 0, 0};
-						for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++)
-						{
-							item.id_j = drvs_idx; // we store the driver idx
-							if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER)
-							{
-								item.type = 4;
-								Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx)) ;
-								add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
-							}
-							else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
-							{
-								item.type = 5;
-								Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
-								add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
-							}
-							else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
-							{
-								item.type = 6;
-								Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
-								add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertices_a, shps);
-							}
-							else if (drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
-							{
-								Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); //std::get<STL_MESH>(drvs.data(drvs_idx));
-																																							// driver.grid_indexes_summary();
-								add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a, rz_a, vertices_a, orient_a, shps);
-							}
-						}
-					}
+          // First, interaction between a polyhedron and a driver
+          if (drivers.has_value())
+          {
+            auto &drvs = *drivers;
+            item.cell_i = cell_a;
+            // By default, if the interaction is between a particle and a driver
+            // Data about the particle j is set to -1
+            // Except for id_j that contains the driver id
+            item.id_j = -1;
+            item.cell_j = -1;
+            item.p_j = -1;
+            item.moment = Vec3d{0, 0, 0};
+            item.friction = Vec3d{0, 0, 0};
+            for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++)
+            {
+              item.id_j = drvs_idx; // we store the driver idx
+              if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER)
+              {
+                item.type = 4;
+                Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx)) ;
+                add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
+              }
+              else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
+              {
+                item.type = 5;
+                Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
+                add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
+              }
+              else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
+              {
+                item.type = 6;
+                Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
+                add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
+              }
+              else if (drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
+              {
+                Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); //std::get<STL_MESH>(drvs.data(drvs_idx));
+                // driver.grid_indexes_summary();
+                add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a, rz_a, vertex_cell_a, orient_a, shps);
+              }
+            }
+          }
 
 					manager.update_extra_storage<true>(storage);
 					assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));

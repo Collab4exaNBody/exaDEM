@@ -37,7 +37,7 @@ namespace exaDEM
   template <typename GridT, class = AssertGridHasFields<GridT, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>> class PushToAngularAcceleration : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet<field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>;
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>>;
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
@@ -53,9 +53,9 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
       PushToAngularAccelerationFunctor func{};
-      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }
   };
 

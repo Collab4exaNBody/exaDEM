@@ -164,10 +164,10 @@ namespace exaDEM
       double mass = 0.;
       uint64_t total_particles = 0;
 
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
       exaDEM::simulation_state_variables sim{}; // kinetic_energy, rotation_energy, mass, potential_energy, total_particles};
       ReduceSimulationStateFunctor func = {};
-      reduce_cell_particles(*grid, false, func, sim, reduce_field_set, parallel_execution_context(), {}, cell_ptr, cell_size);
+      reduce_cell_particles(*grid, false, func, sim, reduce_field_set, parallel_execution_context(), {}, rcpo);
 
       // get interaction informations
       Classifier<InteractionSOA> &classifier = *ic;

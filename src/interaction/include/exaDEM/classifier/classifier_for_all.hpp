@@ -374,6 +374,7 @@ namespace exaDEM
    */
   template <typename Kernel, typename T, typename... Args> static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext *exec_ctx, int type, Classifier<T> &ic, Kernel &kernel, Args &&...args)
   {
+    //printf("TYPE: %d\n", type);
     ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_STATIC;
     auto [data, size] = ic.get_info(type);
@@ -386,12 +387,13 @@ namespace exaDEM
   
   template <typename Kernel, typename... Args> static inline ParallelExecutionWrapper run_contact_law2(ParallelExecutionContext *exec_ctx, int type, Classifier2 &ic, Kernel &kernel, Args &&...args)
   {
-    //printf("CONTACT LAW2\n");
+    //printf("CONTACT LAW2 : %d\n", );
     ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_STATIC;
     //auto [data, size] = ic.get_info(type);
     auto& data = ic.waves[type];
     auto size = data.size();
+    //printf("CONTACT2: TYPE: %d SIZE: %d\n", type, size);
     //lout << "Number of interaction (type=" << type << ") = " << size << std::endl;
     //InteractionWrapper<T> interactions(data);
     AnalysisDataPacker2 packer(ic, type);

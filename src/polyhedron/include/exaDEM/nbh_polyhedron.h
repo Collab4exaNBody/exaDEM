@@ -20,7 +20,7 @@
 namespace exaDEM
 {
   using namespace exanb;
-  using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
+  //using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
   using NumberOfPolyhedronInteractionPerTypes = ::onika::oarray_t<int, NumberOfPolyhedronInteractionTypes>;
 
 
@@ -32,7 +32,7 @@ namespace exaDEM
     double* __restrict__ prz;
     uint64_t* __restrict__ pid;
     Quaternion* __restrict__ pq;
-    VerticesType* __restrict__ pvtx;
+    //VerticesType* __restrict__ pvtx;
 
 
 		template<typename Cells>
@@ -44,7 +44,7 @@ namespace exaDEM
 				prz   =  cell[field::rz];
 				pid   =  cell[field::id];
 				pq    =  cell[field::orient];
-				pvtx  =  cell[field::vertices];
+				//pvtx  =  cell[field::vertices];
 			}
 	};
 
@@ -53,13 +53,13 @@ namespace exaDEM
 		uint64_t id;
 		Vec3d r;
 		Quaternion& quaternion;
-		VerticesType& vertices; 
+		//VerticesType& vertices; 
 		const shape *shp;
 
 		template<typename Cells>
 			ONIKA_HOST_DEVICE_FUNC particle_info(Cells& cells, shapes& shps, int cell_id, int p_id) : 
-				quaternion(cells[cell_id][field::orient][p_id]),
-				vertices(cells[cell_id][field::vertices][p_id])
+				quaternion(cells[cell_id][field::orient][p_id])//,
+				//vertices(cells[cell_id][field::vertices][p_id])
 		{
 			auto& cell = cells[cell_id];
 			const uint32_t type = cell[field::type][p_id];
@@ -72,16 +72,24 @@ namespace exaDEM
 		}
 
 		ONIKA_HOST_DEVICE_FUNC inline particle_info(shapes& shps, int p_id, cell_accessors& cell) : 
-			quaternion(std::ref(cell.pq[p_id])),
-			vertices(std::ref(cell.pvtx[p_id]))
+			quaternion(std::ref(cell.pq[p_id]))//,
+			//vertices(std::ref(cell.pvtx[p_id]))
 		{
+			//printf("PARTICL_INFO\n");
 			const uint32_t type = cell.ptype[p_id];
+			//printf("TYPE\n");
 			double rx =  cell.prx[p_id];
+			//printf("RX\n");
 			double ry =  cell.pry[p_id];
+			//printf("RY\n");
 			double rz =  cell.prz[p_id];
+			//printf("RZ\n");
 			id =  cell.pid[p_id];
+			//printf("ID\n");
 			r = {rx, ry, rz};
+			//printf("R\n");
 			shp = shps[type];
+			//printf("SHP\n");
 		}
 
 		ONIKA_HOST_DEVICE_FUNC quat get_quat()

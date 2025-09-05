@@ -2,7 +2,7 @@
 namespace exaDEM
 {
 	using namespace exanb;
-	using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
+	//using VertexArray = ::onika::oarray_t<::exanb::Vec3d, EXADEM_MAX_VERTICES>;
 	using NumberOfPolyhedronInteractionPerTypes = ::onika::oarray_t<int, NumberOfPolyhedronInteractionTypes>;
 
 
@@ -12,12 +12,18 @@ namespace exaDEM
 	/***************************/
 
 
-	ONIKA_HOST_DEVICE_FUNC void count_interaction_block(
+	template<typename VecI, typename VecJ> ONIKA_HOST_DEVICE_FUNC void count_interaction_block(
 			double rVerlet,
 			int count[],
 			bool is_not_ghost_b,
+			int cell_a,
+			int p_a,
 			particle_info& p,
+			const VecI& vertices_a,
+			int cell_b,
+			int p_b,
 			particle_info& p_nbh,
+			const VecJ& vertices_b,
 			OBB& obb_i,
 			OBB& obb_j
 			)
@@ -31,9 +37,9 @@ namespace exaDEM
 
 		/** some renames */
 		auto& shp = p.shp;
-		auto& vertices_a = p.vertices;
+		//auto& vertices_a = p.vertices;
 		auto& shp_nbh = p_nbh.shp;
-		auto& vertices_b = p_nbh.vertices;
+		//auto& vertices_b = p_nbh.vertices;
 
 		// get particle j data.
 		const int nv = shp->get_number_of_vertices();
@@ -45,25 +51,46 @@ namespace exaDEM
 
 		//obb_j.enlarge(shp->m_radius);
 		//obb_i.enlarge(shp_nbh->m_radius);
+		
+						/*if(cell_a==822 && p_a==0 && cell_b==850 && p_b==14)
+						{
+						printf("CELL_A: %d PA: %d VX_A(%f,%f,%f) CELL_B: %d PB: %d VX_B(%f,%f,%f) \n", cell_a, p_a, vertices_a[4].x, vertices_a[4].y, vertices_a[4].z, cell_b, p_b, vertices_b[0].x, vertices_b[0].y, vertices_b[0].z);
+						
+						bool contact = exaDEM::filter_vertex_vertex(rVerlet, vertices_a, 4, shp, vertices_b, 0, shp_nbh);
+						printf("CONTACT: %d NV: %d NV_NBH: %d\n", contact, nv, nv_nbh);
+						}*/
 
-		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, nv)
+		//ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, nv)
+		for(int i = threadIdx.y; i < nv; i+= blockDim.y)
 		{
 			vec3r vi = conv_to_vec3r(vertices_a[i]);
 			//if(obb_j.intersect(vi))
 			//{
-				ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nv_nbh)
+				//ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nv_nbh)
+				for(int j = threadIdx.x; j < nv_nbh; j+= blockDim.x)
 				{
+					/*if(cell_a==822 && p_a==0 && cell_b==850 && p_b==14 && i==4 && j==0)
+					{
+						printf("ALLO?\n");
+					}*/
 					if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
 					{
+					//CELL_A: 822 PA: 0 VX_A(-6.382799,-24.023103,-17.371769) INDEX_I: 4 CELL_B: 850 PB: 14 VX_B(-6.387719,-24.084342,-17.384954) INDEX_J: 0 
+						/*if(cell_a==822 && p_a==0 && cell_b==850 && p_b==14 && i==4 && j==0)
+						{
+						printf("contacto\n");
+						}*/
 						count[VERTEX_VERTEX]++; // vertex-vertex
 					}
 				}
-				ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
+				//ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
+				for(int j = threadIdx.x; j < ne_nbh; j+= blockDim.x)
 				{
 					bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
 					count[VERTEX_EDGE] += contact * 1; // vertex - edge
 				}
-				ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nf_nbh)
+				//ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nf_nbh)
+				for(int j = threadIdx.x; j < nf_nbh; j+= blockDim.x)
 				{
 					bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
 					count[VERTEX_FACE] += contact * 1; // vertex - face
@@ -71,9 +98,11 @@ namespace exaDEM
 			//}
 		}
 
-		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, ne)
+		//ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, ne)
+		for(int i = threadIdx.y; i < ne; i+= blockDim.y)
 		{
-			ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
+			//ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
+			for(int j = threadIdx.x; j < ne_nbh; j+= blockDim.x)
 			{
 				bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
 				count[EDGE_EDGE] += contact * 1; // edge - edge
@@ -81,18 +110,21 @@ namespace exaDEM
 		}
 
 		// interaction of from particle j to particle i
-		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nv_nbh)
+		//ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nv_nbh)
+		for(int j = threadIdx.y; j < nv_nbh; j+= blockDim.y)
 		{
 			vec3r vj = conv_to_vec3r(vertices_b[j]);
 			//if( obb_i.intersect(vj))
 			//{
-				ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, ne)
+				//ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, ne)
+				for(int i = threadIdx.x; i < ne; i+= blockDim.x)
 				{
 					bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
 					count[VERTEX_EDGE] += contact * 1; // edge - vertex
 				}
 
-				ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, nf)
+				//ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, nf)
+				for(int i = threadIdx.x; i < nf; i+= blockDim.x)
 				{
 					bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
 					count[VERTEX_FACE] += contact * 1; // face - vertex
@@ -105,14 +137,16 @@ namespace exaDEM
 
 
 
-	ONIKA_HOST_DEVICE_FUNC void fill_interaction_block(
+	template<typename VecI, typename VecJ> ONIKA_HOST_DEVICE_FUNC void fill_interaction_block(
 			InteractionSOA* data,
 			exaDEM::Interaction& item,
 			double rVerlet,
 			int prefix[],
 			bool is_not_ghost_b,
 			particle_info& p,
+			const VecI& vertices_a,
 			particle_info& p_nbh,
+			const VecJ& vertices_b,
 			OBB& obb_i,
 			OBB& obb_j)
 	{
@@ -125,9 +159,9 @@ namespace exaDEM
 
 		/** some renames */
 		auto& shp        = p.shp;
-		auto& vertices_a = p.vertices;
+		//auto& vertices_a = p.vertices;
 		auto& shp_nbh    = p_nbh.shp;
-		auto& vertices_b = p_nbh.vertices;
+		//auto& vertices_b = p_nbh.vertices;
 
 		// get particle j data.
 		const int nv = shp->get_number_of_vertices();
@@ -140,14 +174,16 @@ namespace exaDEM
 		//obb_j.enlarge(shp->m_radius);
 		//obb_i.enlarge(shp_nbh->m_radius);
 
-		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, nv)
+		//ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, nv)
+		for(int i = threadIdx.y; i < nv; i+= blockDim.y)
 		{
 			vec3r vi = conv_to_vec3r(vertices_a[i]);
 			//if(obb_j.intersect(vi))
 			//{
 				item.sub_i = i;
 				item.type = 0;
-				ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nv_nbh)
+				//ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nv_nbh)
+				for(int j = threadIdx.x; j < nv_nbh; j+= blockDim.x)
 				{
 					if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
 					{
@@ -158,7 +194,8 @@ namespace exaDEM
 
 				item.type = 1;
 				// vertex - edge
-				ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
+				//ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
+				for(int j = threadIdx.x; j < ne_nbh; j+= blockDim.x)
 				{
 					bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
 					if (contact)
@@ -169,7 +206,8 @@ namespace exaDEM
 				}
 				item.type = 2;
 				// vertex - face
-				ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nf_nbh)
+				//ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, nf_nbh)
+				for(int j = threadIdx.x; j < nf_nbh; j+= blockDim.x)
 				{
 					bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
 					if (contact)
@@ -181,11 +219,13 @@ namespace exaDEM
 			//}
 		}
 		item.type = 3;
-		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, ne)
+		//ONIKA_CU_BLOCK_Y_SIMD_FOR(int, i, 0, ne)
+		for(int i = threadIdx.y; i < ne; i+= blockDim.y)
 		{
 			item.sub_i = i;
 			// edge - edge
-			ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
+			//ONIKA_CU_BLOCK_SIMD_FOR(int, j, 0, ne_nbh)
+			for(int j = threadIdx.x; j < ne_nbh; j+= blockDim.x)
 			{
 				bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
 				if (contact)
@@ -201,7 +241,8 @@ namespace exaDEM
 		std::swap(item.p_j, item.p_i);
 
 		// interaction of from particle j to particle i
-		ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nv_nbh)
+		//ONIKA_CU_BLOCK_Y_SIMD_FOR(int, j, 0, nv_nbh)
+		for(int j = threadIdx.y; j < nv_nbh; j+= blockDim.y)
 		{
 			vec3r vj = conv_to_vec3r(vertices_b[j]);
 			//if( obb_i.intersect(vj))
@@ -209,7 +250,8 @@ namespace exaDEM
 				item.type = 1;
 				item.sub_i = j;
 				// edge - vertex
-				ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, ne)
+				//ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, ne)
+				for(int i = threadIdx.x; i < ne; i+= blockDim.x)
 				{
 					bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
 					if (contact)
@@ -221,7 +263,8 @@ namespace exaDEM
 
 				item.type = 2;
 				// face - vertex
-				ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, nf)
+				//ONIKA_CU_BLOCK_SIMD_FOR(int, i, 0, nf)
+				for(int i = threadIdx.x; i < nf; i+= blockDim.x)
 				{
 					bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
 					if (contact)
@@ -240,9 +283,10 @@ namespace exaDEM
 	/*  Global Block functions */
 	/***************************/
 
-	template<int BLOCKX, int BLOCKY, typename TMPLC>
+	template<int BLOCKX, int BLOCKY, typename TMPLC, typename TMPLV>
 		ONIKA_DEVICE_KERNEL_FUNC void get_number_of_interations_block(
 				TMPLC cells,
+				TMPLV* const __restrict__ gv,
 				IJK dims,
 				GridChunkNeighborsData nbh,
 				shapes shps,
@@ -290,6 +334,8 @@ namespace exaDEM
 				obb_i.rotate(conv_orient_i);
 				obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
 				obb_i.enlarge(rVerlet);
+				
+				const ParticleVertexView vertices_a = { p_a, gv[cell_a] };
 
 				/** Count the number of interactions per thread */
 				for(unsigned int cg=0; cg<cell_groups ;cg++)
@@ -309,7 +355,8 @@ namespace exaDEM
 							if(obb_i.intersect(obb_j))
 							{
 								obb_j.enlarge(rVerlet);
-								count_interaction_block( rVerlet, count, nbh_cg.is_ghost_b, p, p_nbh, obb_i, obb_j);
+								const ParticleVertexView vertices_b = { p_b, gv[nbh_cg.cell_b] };
+								count_interaction_block( rVerlet, count, nbh_cg.is_ghost_b, cell_a, p_a, p, vertices_a, nbh_cg.cell_b, p_b, p_nbh, vertices_b, obb_i, obb_j);
 							}
 						}
 					}
@@ -324,10 +371,11 @@ namespace exaDEM
 		}
 
 
-	template<int BLOCKX, int BLOCKY, typename TMPLC>
+	template<int BLOCKX, int BLOCKY, typename TMPLC, typename TMPLV>
 		ONIKA_DEVICE_KERNEL_FUNC void fill_classifier_block(
 				InteractionSOA* data,
 				TMPLC cells,
+				TMPLV* const __restrict__ gv,
 				IJK dims,
 				GridChunkNeighborsData nbh,
 				shapes shps,
@@ -375,6 +423,8 @@ namespace exaDEM
 				obb_i.rotate(p.get_quat());
 				obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
 				obb_i.enlarge(rVerlet);
+				
+				const ParticleVertexView vertices_a = { p_a, gv[cell_a] };
 
 				/** Count the number of interactions per thread */
 				for(unsigned int cg=0; cg<cell_groups ;cg++)
@@ -398,7 +448,8 @@ namespace exaDEM
 							if( obb_i.intersect(obb_j) )
 							{
 								obb_j.enlarge(rVerlet);
-								count_interaction_block( rVerlet, count, nbh_cg.is_ghost_b, p, p_nbh, obb_i, obb_j);
+								const ParticleVertexView vertices_b = { p_b, gv[nbh_cg.cell_b] };
+								count_interaction_block( rVerlet, count, nbh_cg.is_ghost_b, cell_a, p_a, p, vertices_a, nbh_cg.cell_b, p_b, p_nbh, vertices_b, obb_i, obb_j);
 							}
 						}
 					}
@@ -429,6 +480,8 @@ namespace exaDEM
 				obb_i.rotate(conv_orient_i);
 				obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
 				obb_i.enlarge(rVerlet);
+				
+				const ParticleVertexView vertices_a = { p_a, gv[cell_a] };
 
 				for(unsigned int cg=0; cg<cell_groups ;cg++)
 				{
@@ -469,7 +522,8 @@ namespace exaDEM
 								assert(item.p_i < cells[cell_a].size());
 
 								/** here, we fill directly the interactionSOA data storage */
-								fill_interaction_block( data, item, rVerlet, prefix, nbh_cg.is_ghost_b, p, p_nbh, obb_i, obb_j);
+								const ParticleVertexView vertices_b = { p_b, gv[nbh_cg.cell_b] };
+								fill_interaction_block( data, item, rVerlet, prefix, nbh_cg.is_ghost_b, p, vertices_a, p_nbh, vertices_b, obb_i, obb_j);
 							} // check
 						} // p_b
 					} // chunk

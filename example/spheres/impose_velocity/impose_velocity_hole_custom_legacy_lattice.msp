@@ -51,7 +51,7 @@ compute_force:
   - gravity_force  
   - contact_sphere:
      symetric: true
-     config: {rcut: 1.0 m, dncut: 0.0,  kn: 100000, kt: 80000, kr: 0, fc: 0.00, mu: 0.3, damp_rate: 0.9}
+     config: { kn: 100000, kt: 80000, kr: 0, mu: 0.3, damp_rate: 0.9}
   - transverse_velocity_slab
 
 domain:
@@ -60,7 +60,7 @@ domain:
 
 dump_data_xyz:
   - timestep_file: "xyz_datas/dembis_%09d"
-  - write_xyz_generic:
+  - write_xyz:
       fields: [ velocity, radius ]
       units: { velocity: "m/s", radius: "m" }
 

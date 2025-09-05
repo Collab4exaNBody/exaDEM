@@ -58,10 +58,14 @@ namespace exaDEM
           const double pi = 4 * std::atan(1);
           const double coeff = ((4.0) / (3.0)) * pi * d;
           const size_t n = cells[i].size();
-#         pragma omp simd
           for (size_t j = 0; j < n; j++)
           {
             m[j] = coeff * r[j] * r[j] * r[j]; // 4/3 * pi * r^3 * d
+            if(m[j] <= 0.0)
+            { 
+              std::cout << "[set_density, WARNING] Wrong definition of a mass for the particle " << cells[i][field::id] << "." << std::endl;
+              std::exit(EXIT_FAILURE);
+            }
           }
         }
         GRID_OMP_FOR_END

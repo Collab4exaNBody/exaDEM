@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
@@ -42,7 +42,18 @@ namespace exaDEM
     PushToAngularAccelerationFunctor angular_accel;
     PushToAngularVelocityFunctor angular_vel;
     PushVec3FirstOrderFunctor push_f_v;
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(const Quaternion &Q, const Vec3d &mom, Vec3d &vrot, Vec3d &arot, const Vec3d &inertia, double &vx, double &vy, double &vz, double fx, double fy, double fz) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(
+        const Quaternion &Q, 
+        const Vec3d &mom, 
+        Vec3d &vrot, 
+        Vec3d &arot, 
+        const Vec3d &inertia, 
+        double &vx, 
+        double &vy, 
+        double &vz, 
+        double fx, 
+        double fy, 
+        double fz) const
     {
       angular_accel(Q, mom, vrot, arot, inertia);
       angular_vel(vrot, arot);
@@ -55,7 +66,18 @@ namespace exaDEM
     PushToAngularAccelerationFunctor angular_accel;
     PushToAngularVelocityFunctor angular_vel;
     PushVec3FirstOrderXFormFunctor push_f_v;
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(const Quaternion &Q, const Vec3d &mom, Vec3d &vrot, Vec3d &arot, const Vec3d &inertia, double &vx, double &vy, double &vz, double fx, double fy, double fz) const
+    ONIKA_HOST_DEVICE_FUNC inline void operator()(
+        const Quaternion &Q, 
+        const Vec3d &mom, 
+        Vec3d &vrot, 
+        Vec3d &arot, 
+        const Vec3d &inertia, 
+        double &vx, 
+        double &vy, 
+        double &vz, 
+        double fx, 
+        double fy, 
+        double fz) const
     {
       angular_accel(Q, mom, vrot, arot, inertia);
       angular_vel(vrot, arot);
@@ -87,7 +109,7 @@ namespace exaDEM
   template <typename GridT, class = AssertGridHasFields<GridT, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz>> class CombinedComputeEpilog : public OperatorNode
   {
     // attributes processed during computation
-    using ComputeFields = FieldSet<field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz>;
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz>>;
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
@@ -95,12 +117,12 @@ namespace exaDEM
     ADD_SLOT(double, dt, INPUT);
     ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
 
-  public:
+    public:
     inline void execute() override final
     {
       const double delta_t = *dt;
       const double half_delta_t = delta_t * 0.5;
-      auto [cell_ptr, cell_size] = traversal_real->info();
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
 
       if (domain->xform_is_identity())
       {
@@ -108,7 +130,7 @@ namespace exaDEM
         PushToAngularVelocityFunctor func2{half_delta_t};
         PushVec3FirstOrderFunctor func3{half_delta_t};
         CombinedEpilogFunctor func{func1, func2, func3};
-        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
       }
       else
       {
@@ -117,7 +139,7 @@ namespace exaDEM
         PushToAngularVelocityFunctor func2{half_delta_t};
         PushVec3FirstOrderXFormFunctor func3{inv_xform, half_delta_t};
         CombinedEpilogXFormFunctor func{func1, func2, func3};
-        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), cell_ptr, cell_size);
+        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
       }
     }
   };

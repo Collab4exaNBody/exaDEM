@@ -40,8 +40,8 @@ compute_force:
      gravity: [0,0,-0.00981]
   - contact_polyhedron:
      symetric: true
-     config: { rcut: 1.0 m , dncut: 1.0 m, kn: 1.257, kt: 1.077, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
-     config_driver: { rcut: 1.0 m , dncut: 1.0 m, kn: 12.57, kt: 10.77, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 0.999} 
+     config: { kn: 1.257, kt: 1.077, kr: 0.0, mu: 0.0, damp_rate: 0.999} 
+     config_driver: { kn: 12.57, kt: 10.77, kr: 0.0, mu: 0.0, damp_rate: 0.999} 
 
 particle_write_paraview_generic:
   - write_paraview_polyhedra

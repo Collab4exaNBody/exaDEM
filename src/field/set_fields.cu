@@ -82,6 +82,7 @@ namespace exaDEM
     using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_vx, field::_vy, field::_vz, field::_mass, field::_radius, field::_vrot, field::_inertia, field::_orient>;
     static constexpr ComputeFields compute_fields{};
     static constexpr ComputeRegionFields compute_region_fields{};
+
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     // vector version
     ADD_SLOT(std::vector<double>, density, INPUT, OPTIONAL, DocString{"List of density values. If not defined, density is 1"});
@@ -113,30 +114,40 @@ namespace exaDEM
         )EOF";
     }
 
-    public:
-    inline void execute() override final
+    void check_slots()
     {
-
-      const auto& type_map = *particle_type_map; 
-      const auto& types = *type;
-
-      bool is_region  = region.has_value();
-
+      if(grid->number_of_cells() == 0)
+      {
+        lout << "\033[1;31m[set_fields, ERROR] the grid is not defined. Please define a grid before calling set_fields.\033[0m" << std::endl;
+        std::exit(EXIT_FAILURE);
+      }
 
       if(shapes_collection.has_value())
       {
         if(!(*polyhedra))
         {
-          lout << "[ERROR], shapes are defined in sphere mode" << std::endl;
+          lout << "[set_fields, ERROR] Shapes are defined in sphere mode" << std::endl;
           std::exit(EXIT_FAILURE);  
         }
         size_t size_shps = shapes_collection->get_size();
         if(size_shps == 0 && (*polyhedra))
         {
-          lout << "[ERROR], you are defining polyhedra without using shapes" << std::endl;
+          lout << "[set_fields, ERROR] You are defining polyhedra without using shapes" << std::endl;
           std::exit(EXIT_FAILURE);  
         }
       }
+    }
+
+    public:
+    inline void execute() override final
+    {
+
+      check_slots();
+
+      const auto& type_map = *particle_type_map; 
+      const auto& types = *type;
+
+      bool is_region  = region.has_value();
 
       field_manager mat; // multi-materials
       mat.set_t         = type.has_value();
@@ -151,8 +162,9 @@ namespace exaDEM
 
 
       lout << "======= Particle Fields =========" << std::endl;
-      for(auto& type_name : types)
+      for(size_t i = 0 ; i < types.size(); i++)
       {
+        std::string type_name = types[i];
         if( type_map.find(type_name) == type_map.end())
         {
           lout << "The type [" << type_name << "] is not defined" << std::endl;
@@ -161,7 +173,7 @@ namespace exaDEM
           lout << std::endl;
           std::exit(EXIT_FAILURE);  
         }
-        int64_t type_id = type_map.at(type_name); 
+        size_t type_id = type_map.at(type_name);
         // default values;
         double vx = 0;
         double vy = 0;
@@ -174,24 +186,24 @@ namespace exaDEM
         Vec3d inertia;
         double sigma_v, sigma_ang_v;
 
-        if(mat.set_d) { auto& dd = *density; d = dd[type_id]; }
-        if(mat.set_v) { auto& vv = *velocity; const Vec3d& v = vv[type_id]; vx = v.x; vy = v.y; vz = v.z; }
-        if(mat.set_ang_v) { auto& ang_vv = *angular_velocity; ang_v = ang_vv[type_id]; }
-        if(mat.set_q) { auto& qq = *quaternion; quat = qq[type_id]; }
+        if(mat.set_d) { auto& dd = *density; d = dd[i]; }
+        if(mat.set_v) { auto& vv = *velocity; const Vec3d& v = vv[i]; vx = v.x; vy = v.y; vz = v.z; }
+        if(mat.set_ang_v) { auto& ang_vv = *angular_velocity; ang_v = ang_vv[i]; }
+        if(mat.set_q) { auto& qq = *quaternion; quat = qq[i]; }
 
 
-        lout << "[>>"<<type_name<<"<<]" << std::endl;;
+        lout << "[>> "<<type_name<<" <<]" << std::endl;;
         lout << "Velocity         = (" << vx << "," << vy << "," << vz << ") ";
         if(mat.set_rnd_v)
         {
-          sigma_v = (*sigma_velocity)[type_id];
+          sigma_v = (*sigma_velocity)[i];
           lout << ", standart deviation (sigma): " << sigma_v;
         }
         lout << std::endl; 
         lout << "Angular velocity = " << ang_v;
         if(mat.set_rnd_ang_v)
         {
-          sigma_ang_v = (*sigma_angular_velocity)[type_id];
+          sigma_ang_v = (*sigma_angular_velocity)[i];
           lout << ", standart deviation (sigma): " << sigma_ang_v;
         }
         lout << std::endl; 
@@ -205,10 +217,14 @@ namespace exaDEM
         {
           const shapes& shps = *shapes_collection;
           const auto& shp = shps[type_id];
+          if( type_id >= shps.get_size() || shp->m_name != type_name ) {
+             
+             lout << "[set_fields, ERROR]  We can't find the shape related to the type "  <<type_name << ". Please verify that you have load all shape files." << std::endl; 
+          }
           m         = d * shp->get_volume();
           inertia   = m * shp->get_Im();
 
-          if( mat.set_r ) { lout << "[WARNING] The radius slot is ignored when using polyhedra, it is automaticly deducted from the shape file."<< std::endl; }
+          if( mat.set_r ) { lout << "[set_fields, WARNING] The radius slot is ignored when using polyhedra, it is automaticly deducted from the shape file."<< std::endl; }
           r = shp->compute_max_rcut();
           *rcut_max = std::max(*rcut_max, 2 * r); // r * maxrcut
           lout << "Radius (poly)    = " << r << std::endl;;
@@ -217,11 +233,11 @@ namespace exaDEM
         }
         else // spheres
         {
-          if(!mat.set_r) { lout << "You should define a radius: radius: \"[1.0]\"" ; std::exit(0); }
+          if(!mat.set_r) { lout << "[set_fields, ERROR] You should define a radius: radius: \"[1.0]\"" ; std::exit(EXIT_FAILURE); }
           else
           { 
             auto& rr = *radius; 
-            r = rr[type_id]; 
+            r = rr[i]; 
           }
           *rcut_max = std::max(*rcut_max, 2 * r); // r * maxrcut
           const double pi = 4 * std::atan(1);
@@ -229,9 +245,9 @@ namespace exaDEM
           m = V  * d ;
           const double inertia_value = 0.4 * m * r * r;
           inertia = {inertia_value, inertia_value, inertia_value};
-          lout << "Radius           =" << r << std::endl;
+          lout << "Radius           = " << r << std::endl;
           lout << "Mass             = " << m << std::endl;
-          lout << "Inertia          =" << inertia << std::endl;
+          lout << "Inertia          = " << inertia << std::endl;
         }
 
         if (is_region)
@@ -279,7 +295,6 @@ namespace exaDEM
         {
           FilteredSetFunctor<double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {uint32_t(type_id), {vx, vy, vz, m, r, ang_v, inertia, quat}};
           compute_cell_particles(*grid, false, func, compute_fields, parallel_execution_context());
-
           if(mat.set_rnd_v)
           {
             jammy gen(sigma_v);

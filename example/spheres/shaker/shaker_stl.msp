@@ -1,0 +1,57 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "STLShakerDir"
+
+input_data:
+  - init_rcb_grid
+  - particle_type:
+     type: [  Sphere1,  Sphere2, Sphere3, Sphere4 ]
+  - lattice:
+     structure: FCC
+     types: [ Sphere1,  Sphere2, Sphere3, Sphere4 ]
+#     size: [ 6 , 6 , 6 ]
+     size: [ 3.0 , 3.0 , 3.0 ]
+  - set_fields:
+     polyhedra: false
+     type:           [ Sphere1, Sphere2, Sphere3, Sphere4 ]
+     radius:         [     1.0,     0.5,     0.8,     0.6 ]
+     density:        [    0.02,    0.04,    0.03,    0.35 ]
+     velocity:       [ [0,0,0], [0,0,0], [0,0,0], [0,0,0] ]
+     sigma_velocity: [     0.1,     0.1,     0.1,     0.1 ]
+
+setup_drivers:
+  - register_stl_mesh:
+     id: 0
+     minskowski: 0.1
+     filename: shaker.stl
+     binary: true
+     state: {center: [0,0,0] }
+     params: { motion_type: SHAKER, amplitude: 5, omega: 2 , shaker_dir: [0,1,0] , motion_start_threshold: 10 }
+
+compute_force:
+  - gravity_force
+  - contact_sphere:
+     symetric: true
+     config: { kn: 10000, kt: 10000, kr: 0.1, mu: 0.1, damp_rate: 0.9} 
+     config_driver: { kn: 10000, kt: 9000, kr: 0.1, mu: 0.3, damp_rate: 0.9} 
+
+domain:
+  cell_size: 3 m
+  grid_dims: [ 10, 10, 110]
+  periodic: [false,false,false]
+  bounds: [[45 , 95.0, 10.0],[75, 125, 340]]
+  expandable: true
+
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 500000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 2000
+  dt: 0.0001 s 
+  rcut_inc: 0.4 m

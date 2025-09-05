@@ -18,7 +18,7 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/shape.hpp>
+# include <exaDEM/shape.hpp>
 
 namespace exaDEM
 {
@@ -27,12 +27,12 @@ namespace exaDEM
   {
     template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
     VectorT<shape> m_data;
+    int m_max_nv = 0; // Store the maximum number of vertices.
 
     inline const shape *data() const { return onika::cuda::vector_data(m_data); }
-
     inline size_t get_size() { return onika::cuda::vector_size(m_data); }
-
     inline size_t get_size() const { return onika::cuda::vector_size(m_data); }
+    inline size_t max_number_of_vertices() { return m_max_nv; }
 
     ONIKA_HOST_DEVICE_FUNC
     inline const shape *operator[](const uint32_t idx) const
@@ -51,13 +51,25 @@ namespace exaDEM
           return &shp;
         }
       }
-      // std::cout << "Warning, the shape: " << name << " is not included in this collection of shapes. We return a nullptr." << std::endl;
       return nullptr;
     }
 
-    inline void add_shape(shape *shp)
+    inline void add_shape(shape& shp)
     {
-      this->m_data.push_back(*shp); // copy
+      this->m_data.push_back(shp); // copy
+      m_max_nv = std::max(m_max_nv, shp.get_number_of_vertices());
+    }
+
+    inline void add_shape(shape *shp) { add_shape(*shp); }
+    
+    inline bool contains(shape& shp)
+    {
+      for(auto& s : m_data) {
+        if(shp.m_name == s.m_name) {
+          return true;
+        }
+      }
+      return false;
     }
   };
 } // namespace exaDEM

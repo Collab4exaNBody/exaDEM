@@ -40,7 +40,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 # ==============================
 # === Application version    ===
 # ==============================
-set(EXADEM_VERSION "exaDEM-1.1.0") 
+set(EXADEM_VERSION "exaDEM-1.1.2") 
 message(STATUS "Project version : ${EXADEM_VERSION}")
 
 
@@ -49,11 +49,8 @@ message(STATUS "Project version : ${EXADEM_VERSION}")
 # ======================================
 
 # These values have to be set by exaNBody
-set(EXADEM_MAX_VERTICES "9" CACHE STRING "Maximum number of vertices per polyhedron")
-message(STATUS "Maximum number of vertices per polyhedron: ${EXADEM_MAX_VERTICES}, default is 9 vertices.")
-
 set(XNB_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/include)
-set(XNB_COMPILE_DEFINITIONS XNB_DOMAIN_SPECIFIC_FIELDS_INCLUDE=\<exaDEM/fields.h\> EXADEM_MAX_VERTICES=${EXADEM_MAX_VERTICES} EXADEM_VERSION=${EXADEM_VERSION})
+set(XNB_COMPILE_DEFINITIONS XNB_DOMAIN_SPECIFIC_FIELDS_INCLUDE=\<exaDEM/fields.h\> EXADEM_VERSION=${EXADEM_VERSION})
 set(XNB_APP_HAS_GRID_SPECIALIZATIONS ON)
 
 # ======================================
@@ -85,7 +82,11 @@ endif()
 # === build application plugins and libs ===
 # ==========================================
 add_subdirectory(src)
+
+## Installation
+
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/exaDEM DESTINATION include)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/data/config DESTINATION data)
 
 # =============================
 # === check exaDEM examples ===
@@ -99,15 +100,6 @@ option(EXADEM_BUILD_CONTRIBS "Build contrib tools" ON)
 if(EXADEM_BUILD_CONTRIBS)
   add_subdirectory(contribs)
 endif()
-
-# ===================================
-# === Documentation               ===
-# ===================================
-option(EXADEM_BUILD_DOC "Build documentation" OFF)
-if(EXADEM_BUILD_DOC)
-  add_subdirectory(doc)
-endif()
-
 
 # ===========================================================
 # === generate execution wrappers and environment scripts ===
