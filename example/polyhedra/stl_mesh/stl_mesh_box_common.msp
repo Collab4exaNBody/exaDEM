@@ -1,0 +1,59 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_polyhedra.msp
+
+define_octahedra:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: octahedron.shp
+  - lattice:
+     structure: SC
+     types: [ Octahedron ]
+     size: [ 1.0 , 1.0 , 1.0 ]
+  - set_fields:
+     polyhedra: true
+     type:              [ Octahedron ]
+     random_quaternion: [       true ]
+     velocity:          [    [0,0,0] ]
+     sigma_velocity:    [        0.1 ]
+
+define_hexapods:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: alpha3.shp
+  - lattice:
+     structure: SC
+     types: [ alpha3 ]
+     size: [ 1.5 , 1.5 , 1.5 ]
+  - set_fields:
+     polyhedra: true
+     type:              [  alpha3 ]
+     random_quaternion: [    true ]
+     velocity:          [ [0,0,0] ]
+     sigma_velocity:    [     0.1 ]
+
+define_mixte:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: alpha3.shp
+  - read_shape_file:
+     filename: octahedron.shp
+  - lattice:
+      structure: BCC
+      types: [alpha3, Octahedron]
+      size: [ 1.5 , 1.5 , 1.5 ]
+      enlarge_bounds: 0.0 m
+  - set_fields:
+     polyhedra: true
+     type:              [ Octahedron ,  alpha3 ]
+     random_quaternion: [       true ,    true ]
+     velocity:          [    [0,0,0] , [0,0,0] ]
+     sigma_velocity:    [        0.1 ,     0.1 ]
+
+compute_force:
+  - gravity_force
+  - contact_polyhedron:
+     symetric: true
+     config: { kn: 10000, kt: 8000, kr: 0.0, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { kn: 10000, kt: 8000, kr: 0.0, mu: 0.1, damp_rate: 0.999} 
