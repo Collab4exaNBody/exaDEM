@@ -1,0 +1,27 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_polyhedra.msp
+
+set_mono_mat:
+  - set_fields:
+     polyhedra: true
+     type:             [ Octahedron ]
+     random_quaterion: [       true ]
+     sigma_velocity:   [       0.01 ]
+     velocity:         [    [0,0,0] ]     
+
+set_duo_mat:
+  - set_fields:
+     polyhedra: true
+     type:              [ alpha3, Octahedron]
+     velocity:          [[0,0,0],    [0,0,0]]
+     sigma_velocity:    [    0.1,        0.1]
+     random_quaternion: [   true,       true]
+
+compute_force:
+  - gravity_force
+  - contact_polyhedron:
+     symetric: true
+     config: { kn: 10000, kt: 10000, kr: 0.0, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { kn: 10000, kt: 10000, kr: 0.0, mu: 0.3, damp_rate: 0.999} 
