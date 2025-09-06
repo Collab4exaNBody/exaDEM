@@ -43,19 +43,6 @@ input_data:
      velocity:       [ [0,0,0] ]
      sigma_velocity: [     0.1 ]
 
-compute_loop:
-  loop: true
-  name: loop
-  condition: compute_loop_continue
-  body:
-    - start_iteration
-    - compute_loop_prolog
-    - numerical_scheme
-    - end_iteration
-    - compute_loop_epilog
-    - next_time_step
-    - compute_loop_stop
-
 transverse_velocity_slab:
   body:  [ set_velocity: { value: [ -13. m/s ,   0 , 0 ], region: not PLANE1 } ]
 

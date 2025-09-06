@@ -4,44 +4,25 @@ includes:
   - config_spheres.msp
 
 input_data:
+  - particle_type:
+     type: [ Sphere1 ]
   - read_xyz:
       file: input_file_impose_velocity.xyz
       bounds_mode: FILE
   - replicate_domain: [5, 1, 15]
-  - set_radius:
-     rad: 0.5
-  - set_quaternion
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_density:
-     density: 0.02
-  - update_inertia:
-  - set_rand_vrot_arot
+  - set_fields:
+     polyhedra: false
+     type:           [ Sphere1 ]
+     radius:         [     0.5 ]
+     density:        [    0.02 ]
+     velocity:       [ [0,0,0] ]
+     sigma_velocity: [     0.1 ]
   - particle_regions:
         - PLANE1:
             quadric:
               shape: { plane: [ 0 , 0 , -1 , 0 ] }
               transform:
                 - translate: [ 0 , 0 , 10 m ]
-
-+simulation_epilog:
-  - memory_stats
-  - grid_stats
-  - timestep_file
-
-compute_loop:
-  loop: true
-  name: loop
-  condition: compute_loop_continue
-  body:
-    - start_iteration
-    - compute_loop_prolog
-    - numerical_scheme
-    - end_iteration
-    - compute_loop_epilog
-    - next_time_step
-    - compute_loop_stop
 
 transverse_velocity_slab:
   body:  [ set_velocity: { value: [ -10. m/s ,   0 , 0 ], region: not PLANE1 } ]

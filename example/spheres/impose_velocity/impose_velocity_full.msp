@@ -29,18 +29,6 @@ input_data:
               transform:
                 - translate: [ 0 , 0 , 10 m ]
 
-compute_loop:
-  loop: true
-  name: loop
-  condition: compute_loop_continue
-  body:
-    - compute_loop_prolog
-    - numerical_scheme
-    - end_iteration
-    - compute_loop_epilog
-    - next_time_step
-    - compute_loop_stop
-
 transverse_velocity_slab:
   body:  [ set_velocity: { value: [ -10. m/s ,   0 , 0 ], region: not PLANE1 } ]
 
@@ -54,10 +42,6 @@ compute_force:
 domain:
   cell_size: 2.0 m
   periodic: [true, true, false]
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1
