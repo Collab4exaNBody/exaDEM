@@ -1,6 +1,6 @@
 enable_testing()
 
-list(APPEND DLIST rotating-drum impose_velocity rigid-surface axial-stress quadratic-force-test mesh-stl movable-wall multimat mixer)
+list(APPEND DLIST rotating-drum ball impose_velocity rigid-surface axial-stress quadratic-force-test mesh-stl movable-wall multimat mixer)
 
 foreach(DirExample IN LISTS DLIST)
   add_subdirectory(${DirExample})

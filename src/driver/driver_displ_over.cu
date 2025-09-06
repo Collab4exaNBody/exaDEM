@@ -74,10 +74,28 @@ namespace exaDEM
     {
       exaDEM::Ball &b = bcpd.get_typed_driver<exaDEM::Ball>(bd_idx);
       Vec3d d = a.center - b.center;
+      if( b.is_compressive() )
+      {
+        if( exanb::dot(d, d) >= 1e-12 )
+        {
+          color_log::error("driver_displ_over", "Ball with compressive motion type should not move");
+        }
+        double r_diff = a.radius - b.radius;
+        if( r_diff * r_diff >= r2 )
+        {
+          return 1;
+        } 
+        else
+        {
+          return 0;
+        }
+      }
+
       if (exanb::dot(d, d) >= r2)
         return 1;
       else
         return 0;
+      
     }
 
     inline int operator()(exaDEM::Stl_mesh &a)
