@@ -17,17 +17,13 @@ input_data:
       structure: SC
       types: [ Octahedron ]
       size: [ 0.9 , 0.9 , 0.9 ]
-  - radius_from_shape
-  - density_from_shape
-  - set_quaternion:
-     random: true
-  - set_rand_velocity:
-     var: 0.0001
-     mean: [0.0,0.0,0.0]
-  - set_density:
-     density: 0.02
-  - set_rand_vrot_arot
-  - inertia_from_shape
+  - set_fields:
+      polyhedra: true
+      type:              [ Octahedron ]
+      velocity:          [    [0,0,0] ]
+      sigma_velocity:    [     0.0001 ]
+      random_quaternion: [       true ]
+      density:           [       0.02 ]
 
 compute_force:
   - contact_polyhedron:
@@ -36,12 +32,11 @@ compute_force:
      config_driver: { kn: 1000, kt: 1000, kr: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 domain:
-  cell_size: 1.0 m
+  cell_size: 1.0 
   periodic: [true, true, true]
   grid_dims: [18, 9, 18]
   bounds: [[-9, -4.5, -9], [9, 4.5, 9]]
   expandable: false
-
 
 global:
   simulation_dump_frequency: -1
@@ -50,5 +45,4 @@ global:
   simulation_log_frequency: 1000
   remove_velocity_bias_frequency: 1000
   dt: 0.00001 s 
-  rcut_inc: 0.1 m
-#  enable_contact_network: true
+  rcut_inc: 0.1
