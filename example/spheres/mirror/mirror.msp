@@ -8,28 +8,27 @@ io_tree:
      dir_name: "SpheresMirroDir"
 
 input_data:
+  - particle_type:
+     type: [ Sphere1 ]
   - read_xyz:
-      file: input_file_mirror.xyz
-      bounds_mode: FILE
-      enlarge_bounds: 1.0 m
+     file: input_file_mirror.xyz
+     bounds_mode: FILE
+     enlarge_bounds: 1.0 m
   - replicate_domain:
      repeat: [ 3 , 3 , 5 ]
-  - set_radius:
-     rad: 0.5
-  - set_quaternion
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_density:
-     density: 0.02
-  - set_rand_vrot_arot
-  - update_inertia
+  - set_fields:
+     polyhedra: false
+     type:           [ Sphere1 ]
+     radius:         [     0.5 ]
+     density:        [    0.02 ]
+     velocity:       [ [0,0,0] ]
+     sigma_velocity: [    0.01 ]
 
 compute_force:
   - gravity_force
   - contact_sphere:
      symetric: true
-     config: { kn: 1000, kt: 1000, kr: 0.1,mu: 0.2, damp_rate: 0.9} 
+     config: { kn: 1000, kt: 1000, kr: 0.0, mu: 0.2, damp_rate: 0.999 } 
 
 domain:
   cell_size: 4 m
@@ -48,5 +47,4 @@ global:
   simulation_log_frequency: 100
   simulation_paraview_frequency: 1000
   dt: 0.001 s 
-  rcut_inc: 0.4 m
-
+  rcut_inc: 0.4
