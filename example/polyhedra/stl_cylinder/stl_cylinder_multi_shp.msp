@@ -25,7 +25,7 @@ init_fields:
 
 input_data:
   - read_shape_file:
-     filename: shape.shp
+     filename: shapes.shp
   - init_rcb_grid
   - lattice:
       structure: FCC

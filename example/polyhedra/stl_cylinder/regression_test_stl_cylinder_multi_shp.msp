@@ -1,0 +1,22 @@
+particle_regions:
+  - BOX:
+     bounds: [[-30,0,-15],[30,2,30]]
+
+input_data:
+  - read_shape_file:
+     filename: shapes.shp
+  - init_rcb_grid
+  - lattice:
+      structure: FCC
+      types: [ PolyType1, Hexahedron, Octahedron, PolyType2 ]
+      size: [ 2.0 m , 2.0 m , 2.0 m ]
+      region: BOX 
+  - init_fields
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 10000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: -1
+  dt: 0.0001 s # x100 for testing 
+  rcut_inc: 0.05 m
