@@ -13,10 +13,9 @@ io_tree:
      id: 2
      filename: piston_haut.stl
      scale: 0.5002
-     minskowski: 0.001
+     minskowski: 0.01
      state: { center: [0.0, 0.0, 9.], vel: [0,0,-0.025], quat: [1,0,0,0], mass: 1}
      params: { motion_type: LINEAR_FORCE_MOTION, motion_vector: [0,0,-1], const_force: 100 }
-
 
 input_data:
   - init_rcb_grid
@@ -29,6 +28,4 @@ global:
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 10000
   dt: 0.0000025 s
-  rcut_max: 1.0 # 2x rmax
   rcut_inc: 0.4 m # rayon plus petite sphere
-  enable_contact_network: true

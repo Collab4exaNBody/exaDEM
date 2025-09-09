@@ -34,6 +34,4 @@ global:
   simulation_log_frequency: 10000
   simulation_paraview_frequency: 100000
   dt: 0.00001 s
-  rcut_max: 1.0 # 2x rmax
-  rcut_inc: 0.4 m # rayon plus petite sphere
-  enable_contact_network: true
+  rcut_inc: 0.2 m # rayon plus petite sphere

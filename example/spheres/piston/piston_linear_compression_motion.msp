@@ -17,7 +17,6 @@ io_tree:
      state: { center: [0.0, 0.0, 9.], vel: [0,0,-0.025], quat: [1,0,0,0], mass: 1, surface: 1.6146970415e+02}
      params: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [0,0,-1], sigma: 0.5, damprate: 0.5 }
 
-
 input_data:
   - init_rcb_grid
   - read_dump_particle_interaction:
@@ -29,6 +28,4 @@ global:
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 10000
   dt: 0.0000025 s
-  rcut_max: 1.0 # 2x rmax
   rcut_inc: 0.4 m # rayon plus petite sphere
-  enable_contact_network: true
