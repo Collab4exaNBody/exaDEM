@@ -3,26 +3,25 @@ grid_flavor: grid_flavor_dem
 includes:
   - config_polyhedra.msp
 
+lattice_op:
+  - lattice:
+     structure: SC
+     types: [ alpha3 ]
+     size: [ 1.5 , 1.5 , 1.5 ]
+     enlarge_bounds: 0.0 m
+     region: FUNNEL and BZ
+
 input_data:
   - init_rcb_grid
   - read_shape_file:
      filename: alpha3.shp
-  - lattice:
-      structure: SC
-      types: [ alpha3 ]
-      size: [ 1.5 , 1.5 , 1.5 ]
-      repeats: [ 200 , 200 , 150 ]
-      enlarge_bounds: 0.0 m
-      region: FUNNEL and BZ
-  - radius_from_shape
-  - density_from_shape
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_rand_vrot_arot
-  - set_quaternion
-  - inertia_from_shape
-
+  - lattice_op
+  - set_fields:
+     polyhedra: true
+     type:              [  alpha3 ]
+     velocity:          [ [0,0,0] ]
+     sigma_velocity:    [     0.1 ]
+     random_quaternion: [    true ]
 
 setup_drivers:
   - register_stl_mesh:
@@ -65,4 +64,3 @@ global:
   simulation_paraview_frequency: 1000
   dt: 0.0001 s 
   rcut_inc: 0.2 m
-  enable_stl_mesh: true
