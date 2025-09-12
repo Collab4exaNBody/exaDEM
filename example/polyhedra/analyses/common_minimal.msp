@@ -2,37 +2,35 @@ grid_flavor: grid_flavor_dem
 
 particle_regions:
   - BOX:
-      bounds: [ [ 0 , 0 , 0 m ] , [ 5 m , 5 m, 5 m] ]
+      bounds: [ [ 0 , 0 , 0 ] , [ 5 , 5 , 5 ] ]
   - CYL:
       quadric:
         shape: cyly
         transform:
           - scale: [ 4.0, 2.0 , 4.0 ]
-          - translate: [ 5 m , 2.5 , 5 m ]
+          - translate: [ 5 , 2.5 , 5 ]
 
 input_data:
   - init_rcb_grid
   - read_shape_file:
      filename: shapes.shp
   - lattice:
-      structure: BCC
-      types: [Poly,Octahedron ]
-      size: [ 1.0 m , 1.0 m , 1.0 m ]
-      region: CYL
-  - radius_from_shape
-  - density_from_shape:
-     density: 0.0026
-  - set_rand_velocity:
-     var: 0.001
-     mean: [0.0,0.0,0.0]
-  - set_rand_vrot_arot
-  - set_quaternion: {random: true}
-  - inertia_from_shape
+     structure: BCC
+     types: [Poly, Octahedron ]
+     size: [1.0,1.0,1.0]
+     region: CYL
+  - set_fields:
+     polyhedra: true
+     type:              [    Poly , Octahedron ]
+     velocity:          [ [0,0,0] ,    [0,0,0] ]
+     sigma_velocity:    [   0.001 ,      0.001 ]
+     density:           [  0.0026 ,     0.0026 ]
+     random_quaternion: [    true ,       true ]
 
 setup_drivers:
   - register_cylinder:
      id: 0
-     state: {center: [5 m,5 m,5 m], axis: [1,0, 1], radius: 5 m, vrot: [0,5,0]}
+     state: {center: [5,5,5], axis: [1,0, 1], radius: 5 m, vrot: [0,5,0]}
      params: { motion_type: STATIONARY }
 
 compute_force:
@@ -48,8 +46,8 @@ particle_write_paraview_generic:
   - write_paraview_obb_particles
 
 domain:
-  cell_size: 2.5 m
+  cell_size: 2.5
   periodic: [false,true,false]
   grid_dims: [4, 2, 4]
-  bounds: [[0 m ,0 m, 0 m],[10 m, 5 m, 10 m]]
+  bounds: [[0 , 0 , 0 ],[10 , 5 , 10 ]]
   expandable: true
