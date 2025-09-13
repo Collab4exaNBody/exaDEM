@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the license.
 set(exadem_sphere_LINK_LIBRARIES exanbGridCellParticles exadem_shape exadem_driver exadem_force_field exadem_grid exadem_interaction)
-onika_add_plugin(exadem_sphere ${CMAKE_CURRENT_SOURCE_DIR})
+xnb_add_plugin(exadem_sphere ${CMAKE_CURRENT_SOURCE_DIR})

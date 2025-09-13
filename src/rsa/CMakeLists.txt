@@ -19,4 +19,4 @@ message( STATUS "rsa_mpi is used, rsa_mpi_DIR: ${rsa_mpi_DIR}")
 include_directories(${rsa_mpi_INCLUDE_DIRS})
 
 set(exadem_rsa_LINK_LIBRARIES exanbIO exanbDefBox exanbParticleNeighbors exadem_numerical_scheme exadem_shape)
-onika_add_plugin(exadem_rsa ${CMAKE_CURRENT_SOURCE_DIR})
+xnb_add_plugin(exadem_rsa ${CMAKE_CURRENT_SOURCE_DIR})
