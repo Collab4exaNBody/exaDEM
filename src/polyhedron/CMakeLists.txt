@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the license.
 set(exadem_polyhedron_LINK_LIBRARIES exanbCompute exanbGridCellParticles exanbExtraStorage exadem_driver exadem_shape exadem_force_field exadem_grid exadem_interaction)
-onika_add_plugin(exadem_polyhedron ${CMAKE_CURRENT_SOURCE_DIR})
+xnb_add_plugin(exadem_polyhedron ${CMAKE_CURRENT_SOURCE_DIR})

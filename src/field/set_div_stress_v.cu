@@ -26,7 +26,7 @@ under the License.
 #include <exanb/compute/compute_cell_particles.h>
 
 #include <exaDEM/shapes.hpp>
-#include <include/exaDEM/div_field_volume.hpp>
+#include <exaDEM/div_field_volume.hpp>
 
 namespace exaDEM
 {

@@ -44,7 +44,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED, DocString{"Interaction list"});
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
 
     public:
     inline std::string documentation() const override final

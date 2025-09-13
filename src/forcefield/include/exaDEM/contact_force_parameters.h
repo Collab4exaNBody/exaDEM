@@ -25,6 +25,7 @@ under the License.
 
 namespace exaDEM
 {
+  using onika::lout;
   /**
    * @struct ContactParams
    * @brief Encapsulates contact mechanics parameters for a contact interaction model.
