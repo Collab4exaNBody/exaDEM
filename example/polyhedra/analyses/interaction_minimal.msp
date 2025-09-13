@@ -11,16 +11,12 @@ input_data:
       structure: SC
       types: [ Octahedron ]
       size: [ 1.0 , 1.0 , 1.0 ]
-      enlarge_bounds: 0.0 m
-  - radius_from_shape
-  - density_from_shape
-  - set_rand_velocity:
-     var: 0.01
-     mean: [0.0,0.0,0.0]
-  - set_rand_vrot_arot
-  - set_quaternion:
-     random: true
-  - inertia_from_shape
+  - set_fields:
+     polyhedra: true
+     type:              [ Octahedron ]
+     velocity:          [    [0,0,0] ]
+     sigma_velocity:    [        0.1 ]
+     random_quaternion: [       true ]
 
 setup_drivers:
   - register_cylinder:
@@ -36,10 +32,10 @@ compute_force:
      config_driver: { kn: 10000, kt: 10000, kr: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 domain:
-  cell_size: 2.5 m
+  cell_size: 2.5
   periodic: [false,true,false]
   grid_dims: [2, 2, 2]
-  bounds: [[0 m ,0 m, 0 m], [5 m, 5 m, 5 m]]
+  bounds: [[0 , 0 , 0 ], [5 , 5 , 5 ]]
   expandable: true
 
 global:
