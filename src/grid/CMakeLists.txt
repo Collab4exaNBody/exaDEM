@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the license.
 set(exadem_grid_LINK_LIBRARIES exanbCore exanbParticleNeighbors)
-onika_add_plugin(exadem_grid ${CMAKE_CURRENT_SOURCE_DIR})
+xnb_add_plugin(exadem_grid ${CMAKE_CURRENT_SOURCE_DIR})

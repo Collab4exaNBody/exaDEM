@@ -15,4 +15,4 @@
 # specific language governing permissions and limitations
 # under the license.
 set(exadem_io_LINK_LIBRARIES exanbIO exadem_shape exadem_grid exadem_driver exadem_interaction)
-onika_add_plugin(exadem_io ${CMAKE_CURRENT_SOURCE_DIR})
+xnb_add_plugin(exadem_io ${CMAKE_CURRENT_SOURCE_DIR})

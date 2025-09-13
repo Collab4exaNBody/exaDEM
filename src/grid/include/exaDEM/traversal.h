@@ -79,12 +79,12 @@ namespace exaDEM
       else if(reorder_type == MORTON)
       {
         /** Not implemented */
-        lout << "reoder with MORTON indexes is not implemented" << std::endl;
+        onika::lout << "reoder with MORTON indexes is not implemented" << std::endl;
       }
       else if(reorder_type == HILBERT)
       {
         /** Not implemented */
-        lout << "reoder with HILBER indexes is not implemented" << std::endl;
+        onika::lout << "reoder with HILBER indexes is not implemented" << std::endl;
       }
     }
   };
