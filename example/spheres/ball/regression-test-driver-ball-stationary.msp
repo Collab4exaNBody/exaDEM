@@ -5,3 +5,4 @@ global:
   simulation_paraview_frequency: -1
   dt: 0.0005 s 
   rcut_inc: 0.4
+  active_interaction_checker: true

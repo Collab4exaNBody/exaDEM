@@ -13,7 +13,6 @@ chunk_neighbors_impl:
   - chunk_neighbors_contact
   - nbh_polyhedron
   - classify_interactions
-  - resize_particle_locks
 
 migrate_particles:
   - migrate_cell_particles_interaction

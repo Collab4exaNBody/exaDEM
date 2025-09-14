@@ -125,7 +125,10 @@ namespace exaDEM
           assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
 
           if (n_particles == 0)
+          {
+            storage.initialize(0);
             continue;
+          }
 
           // Extract history before reset it
           const size_t data_size = storage.m_data.size();
