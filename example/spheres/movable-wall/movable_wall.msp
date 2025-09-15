@@ -8,20 +8,19 @@ io_tree:
      dir_name: "SpheresMovableWallDir"
 
 input_data:
+  - particle_type:
+     type: [ Sphere1 ]
   - read_xyz:
       file: input_file_movable_wall.xyz
       bounds_mode: FILE
       enlarge_bounds: 1.0 m
-  - set_radius:
-     rad: 0.5
-  - set_quaternion
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_density:
-     density: 0.02
-  - set_rand_vrot_arot
-  - update_inertia
+  - set_fields:
+     polyhedra: false
+     type:            [ Sphere1 ]
+     radius:          [     0.5 ]
+     densitiy:        [    0.02 ]
+     velocity:        [ [0,0,0] ]
+     sigma_velocity : [     0.1 ]
 
 setup_drivers:
   - register_surface:
