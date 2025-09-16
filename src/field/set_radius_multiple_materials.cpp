@@ -30,9 +30,9 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_type>> class SetMultipleRadius : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(std::vector<double>, radius, INPUT, REQUIRED, DocString{"Array of radius values"});
-    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, DocString{"rcut_max"});
+    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0, DocString{"rcut_max"});
 
   public:
     // -----------------------------------------------
@@ -40,6 +40,7 @@ namespace exaDEM
     inline std::string documentation() const override final
     {
       return R"EOF(
+        DEPRECIATED, please use set_fields.
         This operator applies various radius according to their material properties.
         )EOF";
     }

@@ -78,7 +78,6 @@ namespace exaDEM
     ADD_SLOT(ParticleTypeMap, particle_type_map, OUTPUT );
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
 
-
     // overloaded slots
     ADD_SLOT(double, physical_time, INPUT_OUTPUT);
     ADD_SLOT(double, dt, INPUT_OUTPUT);
@@ -137,8 +136,7 @@ namespace exaDEM
       file.open(file_name, std::ifstream::in);
       if (!file.is_open())
       {
-        lout << "\033[31m[read_conf_rockable, ERROR] File " << file_name << " not found !\033[0m" << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error("read_conf_rockable", "File " + file_name + " not found !");
       }
       manager.read_stream(file);       
       shapes shps = manager.shps;

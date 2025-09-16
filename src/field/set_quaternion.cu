@@ -42,7 +42,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
     static constexpr ComputeRegionFields compute_region_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(bool, random, INPUT, false, DocString{"This option generates random orientations for each particle"});
     ADD_SLOT(Quaternion, quat, INPUT, default_quaternion, DocString{"Quaternion value for all particles"});
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
@@ -53,6 +53,13 @@ namespace exaDEM
     {
       return R"EOF(
         This operator sets the orientation value for every particles. Random option is available.
+
+        YAML example:
+
+          - set_quaternion:
+             quat: [1,0,0,0]
+             random: true
+
         )EOF";
     }
 

@@ -51,7 +51,7 @@ namespace exaDEM
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
-    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(SimulationState, simulation_state, OUTPUT);
     ADD_SLOT(double, system_mass, OUTPUT);
 

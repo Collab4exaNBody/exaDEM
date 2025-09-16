@@ -13,20 +13,17 @@ input_data:
       size: [ 1.0 m , 1.0 m , 1.0 m ]
       enlarge_bounds: 0.0 m
       region: CYLINDER
-  - radius_from_shape
-  - density_from_shape
-  - set_rand_velocity:
-     var: 0.01
-     mean: [0.0,0.0,0.0]
-  - set_rand_vrot_arot
-  - set_quaternion:
-     random: true
-  - inertia_from_shape
+  - set_fields:
+     polyhedra: true
+     type:              [ Octahedron ]
+     velocity:          [    [0,0,0] ]
+     sigma_velocity:    [        0.1 ]
+     random_quaternion: [       true ]
 
 setup_drivers:
   - register_cylinder:
      id: 0
-     state: {center: [64 m,4 m,64 m], axis: [1,0,1], radius: 64 m}
+     state: {center: [64,4,64], axis: [1,0,1], radius: 64}
      params: { motion_type: STATIONARY }
 
 compute_force:
@@ -45,18 +42,12 @@ particle_regions:
           - scale: [63.5,4,63.5] 
           - translate: [64, 1, 64]
 
-
 domain:
   cell_size: 2.0 m
   periodic: [false, true, false]
   grid_dims: [64, 4, 64]
-  bounds: [[0 m ,0 m, 0 m], [128 m, 8 m, 128 m]]
+  bounds: [[0 ,0 , 0 ], [128 , 8 , 128 ]]
   expandable: true
-
-
-write_vtklegacy:
-  ascii: true
-  ghost: false
 
 global:
   simulation_dump_frequency: -1
@@ -65,4 +56,4 @@ global:
   simulation_paraview_frequency: 10000
   analysis_interaction_dump_frequency: 5000
   dt: 0.00005 s 
-  rcut_inc: 0.1 m
+  rcut_inc: 0.1

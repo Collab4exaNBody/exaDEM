@@ -44,6 +44,7 @@ namespace exaDEM
     ADD_SLOT(std::vector<double>,        mu, INPUT, REQUIRED, DocString{"List of mu values."});
     ADD_SLOT(std::vector<double>,        fc, INPUT, OPTIONAL, DocString{"List of fc values."});
     ADD_SLOT(std::vector<double>,  damprate, INPUT, REQUIRED, DocString{"List of damprate values."});
+    ADD_SLOT(ContactParams, default_config, INPUT, OPTIONAL, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -51,8 +52,22 @@ namespace exaDEM
     {
       return R"EOF(
         This operator fills type id to all particles. 
+
+        YAML example:
+
+          - multimat_contact_params:
+             mat1:      [  Type1, Type1, Type2 ]
+             mat2:      [  Type1, Type2, Type2 ]
+             kn:        [   5000, 10000, 15000 ]
+             kt:        [   4000,  8000, 12000 ]
+             kr:        [    0.0,   0.0,   0.0 ]
+             mu:        [    0.1,   0.2,   0.3 ]
+             damprate:  [  0.999, 0.999, 0.999 ]
+
         )EOF";
     }
+
+    inline std::string operator_name() { return "multimat_contact_params"; }
 
     public:
     inline void execute() override final
@@ -61,7 +76,6 @@ namespace exaDEM
       ContactParamsMultiMat<ContactParams>& cp = *multimat_cp;
 
       int n_types = type_map.size();
-      cp.setup_multimat(type_map);
       if( n_types == 1 )
       {
         lout << "\033[1;32mAdvice: You are defining contact parameters while there is only one type of particle. "
@@ -83,16 +97,11 @@ namespace exaDEM
 
       int number_of_pairs = material_types_1.size();
 
-      auto check_lengths_match = [number_of_pairs]<typename Vec> (Vec& list, std::string cp_field_name) -> bool 
+      auto check_lengths_match = [number_of_pairs, this]<typename Vec> (Vec& list, std::string cp_field_name) -> bool 
       {
         if( number_of_pairs != int(list.size()) ) 
         {
-          lout << "\033[1;31mThe length of the field \"" << cp_field_name 
-            << "\" does not match the size of the other fields. "
-            << "mat1.size() = " << number_of_pairs 
-            << ", while " << cp_field_name << ".size() = " << list.size() 
-            << ".\033[0m" << std::endl;
-          std::exit(0);
+          color_log::error(this->operator_name(), "The length of the field \"" + cp_field_name + "\" does not match the size of the other fields. mat1.size() = " + std::to_string(number_of_pairs) + ", while " + cp_field_name + ".size() = " + std::to_string(list.size()) + ".");
         }
         return true;
       };
@@ -120,11 +129,11 @@ namespace exaDEM
       {
         if( type_map.find(type_name) == type_map.end())
         {
-          lout << "\033[1;31mThe type [" << type_name << "] is not defined" << std::endl;
-          lout << "Available types are = ";
-          for(auto& it : type_map) lout << it.first << " ";
-          lout << ".\033[0m" << std::endl;
-          std::exit(EXIT_FAILURE);
+          color_log::error(operator_name(), "The type [" + type_name + "] is not defined", false);
+          std::string msg = "Available types are = ";
+          for(auto& it : type_map) msg += it.first + " ";
+          msg += ".";
+          color_log::error(operator_name(), msg);
         }
       }
 
@@ -132,14 +141,23 @@ namespace exaDEM
       {
         if( type_map.find(type_name) == type_map.end())
         {
-          lout << "\033[1;31mThe type [" << type_name << "] is not defined" << std::endl;
-          lout << "Available types are = ";
-          for(auto& it : type_map) lout << it.first << " ";
-          lout << ".\033[0m" << std::endl;
-          std::exit(EXIT_FAILURE);
+          color_log::error(operator_name(), "The type [" + type_name + "] is not defined", false);
+          std::string msg = "Available types are = ";
+          for(auto& it : type_map) msg += it.first + " ";
+          msg += ".";
+          color_log::error(operator_name(), msg);
         }
       }
 
+      if(default_config.has_value()) 
+      {
+        auto& params = *default_config;
+        cp.setup_multimat(type_map, params);
+      }
+      else
+      {
+        cp.setup_multimat(type_map);
+      }
 
       for(int p = 0 ; p < number_of_pairs ; p++)
       {

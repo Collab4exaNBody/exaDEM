@@ -72,10 +72,10 @@ namespace exaDEM
   {
     using ReduceField = FieldSet<FieldSetT>;
     static constexpr ReduceField reduce_field{};
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(T, result, OUTPUT);
     ADD_SLOT(bool, print_value, INPUT, false, DocString({"Enable to print the reduced value"}));
-    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
     // -----------------------------------------------
@@ -84,6 +84,15 @@ namespace exaDEM
     {
       return R"EOF(
         This operator compute the minimal value of a field. It does not work for quaternion or vec3d. 
+
+        YAML example:
+
+          opex:
+            rebind:
+              result: min_name_value
+            body:
+              - min_mass # or min_rx ...
+
         )EOF";
     }
 

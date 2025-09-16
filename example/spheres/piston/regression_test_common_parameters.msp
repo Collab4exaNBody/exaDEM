@@ -1,0 +1,12 @@
+input_data:
+  - init_rcb_grid
+  - read_dump_particle_interaction:
+     filename: regression_test_restart_file.dump
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 2010000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: -1
+  dt: 0.0000025 s
+  rcut_inc: 0.4 m # rayon plus petite sphere

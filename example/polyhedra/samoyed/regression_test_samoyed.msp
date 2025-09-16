@@ -1,0 +1,9 @@
+# Modify global parameters
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 2000
+  simulation_log_frequency: 200
+  simulation_paraview_frequency: -1
+  simulation_generator_frequency: -1 
+  dt: 0.00005 s 
+  rcut_inc: 0.03 m

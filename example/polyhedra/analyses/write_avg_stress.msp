@@ -11,15 +11,12 @@ input_data:
       structure: SC
       types: [ Octahedron ]
       size: [ 1.0 , 1.0 , 1.0 ]
-  - radius_from_shape
-  - density_from_shape
-  - set_rand_velocity:
-     var: 0.1
-     mean: [0.0,0.0,0.0]
-  - set_rand_vrot_arot
-  - set_quaternion:
-     random: true
-  - inertia_from_shape
+  - set_fields:
+     polyhedra: true
+     type:              [ Octahedron ]
+     velocity:          [    [0,0,0] ]
+     sigma_velocity:    [        0.1 ]
+     random_quaternion: [       true ]
 
 setup_drivers:
   - register_stl_mesh:
@@ -35,10 +32,10 @@ compute_force:
      config_driver: { kn: 100000, kt: 100000, kr: 0.0, mu: 0.0, damp_rate: 0.999} 
 
 domain:
-  cell_size: 1.0 m
+  cell_size: 1.0
   periodic: [false,false,false]
   grid_dims: [27, 27, 27]
-  bounds: [[0 m ,0 m, 0 m], [27 m, 27 m, 27 m]]
+  bounds: [[0 , 0 , 0], [27 , 27 , 27 ]]
   expandable: true
 
 compute_volume: nop
@@ -47,13 +44,11 @@ global_stress_tensor:
   - avg_stress_tensor:
      volume: 21952
 
-
 global:
   simulation_dump_frequency: -1
   simulation_end_iteration: 150000
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 10000
   analysis_dump_stress_tensor_frequency: 1000
-  enable_stl_mesh: true
   dt: 0.00005 s 
   rcut_inc: 0.1 m

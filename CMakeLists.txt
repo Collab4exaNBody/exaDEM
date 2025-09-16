@@ -35,12 +35,16 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+message(STATUS "module " ${CMAKE_MODULE_PATH})
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/exadem-config-step1.cmake")
+include(${CMAKE_MODULE_PATH}/xnb_add_plugins.cmake)
 
 # ==============================
 # === Application version    ===
 # ==============================
-set(EXADEM_VERSION "exaDEM-1.1.2") 
+set(EXADEM_VERSION "exaDEM-1.1.3") 
 message(STATUS "Project version : ${EXADEM_VERSION}")
 
 
@@ -100,6 +104,8 @@ option(EXADEM_BUILD_CONTRIBS "Build contrib tools" ON)
 if(EXADEM_BUILD_CONTRIBS)
   add_subdirectory(contribs)
 endif()
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/exadem-config-step2.cmake")
 
 # ===========================================================
 # === generate execution wrappers and environment scripts ===

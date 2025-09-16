@@ -34,6 +34,7 @@ under the License.
 #include <onika/file_utils.h>
 #include <exanb/core/domain.h>
 #include <exanb/core/check_particles_inside_cell.h>
+#include <exaDEM/color_log.hpp>
 
 namespace exaDEM
 {
@@ -51,8 +52,7 @@ namespace exaDEM
     {
       if (s.length() >= MAX_STR_LEN)
       {
-        std::cerr << "Particle name too long : length=" << s.length() << ", max=" << (MAX_STR_LEN - 1) << "\n";
-        std::abort();
+        color_log::error("ParticleType::set_name", "Particle name too long : length=" + std::to_string(s.length()) + ", max=" + std::to_string(MAX_STR_LEN - 1));
       }
       std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
       m_name[MAX_STR_LEN - 1] = '\0';
@@ -139,8 +139,7 @@ namespace exaDEM
         file.open(file_name, std::ifstream::in);
         if (!file.is_open())
         {
-          lerr << "[read_xyz, ERROR] File " << file_name << " not found !" << std::endl;
-          std::abort();
+          color_log::error("read_xyz", "File " + file_name + " not found !"); 
         }
 
         // Read number of atoms
@@ -207,8 +206,7 @@ namespace exaDEM
         if (*adjust_bounds_to_particles)
         {
           assert(*enlarge_bounds >= 0);
-          if ((*enlarge_bounds) == 0)
-            lout << "[read_xyz, WARNING] Enlarge_bounds is equal to 0" << std::endl;
+          if ((*enlarge_bounds) == 0) color_log::warning("read_xyz", "Enlarge_bounds is equal to 0");
           file_bounds = {{min_x - (*enlarge_bounds), min_y - (*enlarge_bounds), min_z - (*enlarge_bounds)}, {max_x + (*enlarge_bounds), max_y + (*enlarge_bounds), max_z + (*enlarge_bounds)}};
           lout << "File bounds (fit)= " << file_bounds << std::endl;
         }

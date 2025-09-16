@@ -32,8 +32,8 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_inertia, field::_radius, field::_mass>> class PolyhedraUpdateInertia : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-    ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
 
   public:
     // -----------------------------------------------
@@ -42,6 +42,10 @@ namespace exaDEM
     {
       return R"EOF(
         This operator updates the inertia field.
+
+        YAML example [no option]:
+
+          - inertia_from_shape
         )EOF";
     }
 

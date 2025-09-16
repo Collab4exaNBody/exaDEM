@@ -29,37 +29,26 @@ namespace exaDEM
   {
     const double dt;
 
-    inline void operator()(Ball& arg) const
-    { 
-      arg.push_f_v(dt);
-    }
-
-    inline void operator()(Surface& arg) const
-    {
-      arg.push_f_v(dt);
-    }
-
-    inline void operator()(Stl_mesh& arg) const
-    {
-      arg.push_f_v(dt);
-    }
-    
-    inline void operator()(Cylinder&) const
-    {
-      /** nothing */
-    }
+    inline void operator()(Ball& arg) const { arg.push_f_v(dt); }
+    inline void operator()(Surface& arg) const { arg.push_f_v(dt); }
+    inline void operator()(Stl_mesh& arg) const { arg.push_f_v(dt); }
+    inline void operator()(Cylinder&) const { /** nothing */ }
   };
 
   class PushAccelToVelocityDriver : public OperatorNode
   {
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(double, dt, INPUT, DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
 
   public:
     inline std::string documentation() const override final
     {
       return R"EOF(
           This operator updates driver centers using their velocities. Not that accelerations are not used.
+
+          YAML example [no option]:
+
+            - push_f_v_driver
         )EOF";
     }
 

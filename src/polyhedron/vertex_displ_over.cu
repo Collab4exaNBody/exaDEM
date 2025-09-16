@@ -45,13 +45,13 @@ namespace exaDEM
     // -----------------------------------------------
     // -----------------------------------------------
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(GridT, grid, INPUT);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(double, threshold, INPUT, 0.0);
     ADD_SLOT(bool, async, INPUT, false);
-    ADD_SLOT(shapes, shapes_collection, INPUT, DocString{"Collection of shapes"});
+    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
     ADD_SLOT(bool, result, OUTPUT);
-    ADD_SLOT(DEMBackupData, backup_dem, INPUT);
-    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(DEMBackupData, backup_dem, INPUT, REQUIRED);
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
     ADD_SLOT(ParticleDisplOverAsyncRequest, particle_displ_comm, INPUT_OUTPUT);
 
     public:
@@ -60,9 +60,13 @@ namespace exaDEM
     inline std::string documentation() const override final
     {
       return R"EOF(
-compute the distance between each particle in grid input and it's backup position in backup_dem input.
-sets result output to true if at least one particle has moved further than threshold.
-)EOF";
+        This operator computes the distance between each particle in grid input and it's backup position in backup_dem input.
+        sets result output to true if at least one particle has moved further than threshold.
+
+        YAML example:
+
+          - vertex_displ_over
+  )EOF";
     }
 
     // -----------------------------------------------

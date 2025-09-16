@@ -26,51 +26,143 @@ under the License.
 
 namespace exaDEM
 {
-  // this function
-  inline void write_shp(const shape &shp, std::stringstream &output)
-  {
-    int nv = shp.get_number_of_vertices();
-    int ne = shp.get_number_of_edges();
-    int nf = shp.get_number_of_faces();
+	/**
+	 * @brief Read a single shape from an input stream.
+	 *
+	 * @param input       Input file stream (should be open and valid).
+	 * @param big_shape   Optional flag to handle very large shapes (default: false).
+	 *
+	 * @return shape      Fully populated shape object.
+	 */
+	inline shape read_shp(
+			std::ifstream &input, 
+			bool big_shape = false)
+	{
+		shape shp;
+		std::string key, line;
+		std::vector<int> face_indices_buffer;
+		exanb::Vec3d position = {0, 0, 0};
+		while (1)
+		{
+			input >> key;
+      
+			if (key == "name")
+			{
+				input >> shp.m_name;
+			}
+			else if (key == "obb.center") // === keys relative to the OBB
+			{
+				input >> shp.obb.center.x >> shp.obb.center.y >> shp.obb.center.z;
+			}
+			else if (key == "obb.extent")
+			{
+				input >> shp.obb.extent.x >> shp.obb.extent.y >> shp.obb.extent.z;
+			}
+			else if (key == "obb.e1")
+			{
+				input >> shp.obb.e1.x >> shp.obb.e1.y >> shp.obb.e1.z;
+			}
+			else if (key == "obb.e2")
+			{
+				input >> shp.obb.e2.x >> shp.obb.e2.y >> shp.obb.e2.z;
+			}
+			else if (key == "obb.e3")
+			{
+				input >> shp.obb.e3.x >> shp.obb.e3.y >> shp.obb.e3.z;
+			}
+			else if (key == "radius")
+			{
+				input >> shp.m_radius;
+			}
+			else if (key == "volume")
+			{
+				input >> shp.m_volume;
+			}
+			else if (key == "I/m")
+			{
+				exanb::Vec3d Im;
+				input >> Im.x >> Im.y >> Im.z;
+				shp.m_inertia_on_mass = Im;
+			}
+			else if(key == "position")
+			{
+				input >> position.x >> position.y >> position.z;
+			}
+			else if (key == "nv")
+			{
+				int num_vertices = 0;
+				input >> num_vertices;
+				assert(num_vertices != 0);
+				for (int i = 0; i < num_vertices; i++)
+				{
+					getline(input, line);
+					exanb::Vec3d vertex;
+					input >> vertex.x  >> vertex.y >> vertex.z;
+					vertex = {vertex.x, vertex.y, vertex.z};
+					shp.add_vertex(vertex);
+				}
+			}
+			else if (key == "ne")
+			{
+				int num_edges = 0;
+				input >> num_edges;
+				// assert(ne!=0);
+				for (int i = 0; i < num_edges; i++)
+				{
+					getline(input, line);
+					int e1, e2;
+					input >> e1 >> e2;
+					shp.add_edge(e1, e2);
+				}
+			}
+			else if (key == "nf")
+			{
+				int num_faces = 0;
+				input >> num_faces;
+				for (int i = 0; i < num_faces; i++)
+				{
+					getline(input, line);
+					int n = 0;
+					input >> n;
+					assert(n != 0);
+					face_indices_buffer.resize(n);
+					for (int j = 0; j < n; j++)
+					{
+						input >> face_indices_buffer[j];
+					}
+					shp.add_face(face_indices_buffer.size(), face_indices_buffer.data());
+				}
+				shp.compute_offset_faces();
+			}
+			else if (key == ">")
+			{
+				shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
+				shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
+				shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
+				return shp;
+			}
+		}
+	}
 
-    output << std::endl << "<" << std::endl;
-    output << "name " << shp.m_name.c_str() << std::endl;
-    output << "radius " << shp.m_radius << std::endl;
-    output << "preCompDone y" << std::endl;
-    output << "nv " << nv << std::endl;
-    for (int i = 0; i < nv; i++)
-    {
-      auto &v = shp.m_vertices[i];
-      output << v.x << " " << v.y << " " << v.z << std::endl;
-    }
-    output << "ne " << ne << std::endl;
-    for (int i = 0; i < ne; i++)
-    {
-      output << shp.m_edges[2 * i] << " " << shp.m_edges[2 * i + 1] << std::endl;
-    }
-    output << "nf " << nf << std::endl;
-    for (int i = 0; i < nf; i++)
-    {
-      auto [ptr, size] = shp.get_face(i);
-      output << size;
-      for (int j = 0; j < size; j++)
-      {
-        output << " " << ptr[j];
-      }
-      output << std::endl;
-    }
-    output << "obb.extent " << shp.obb.extent << std::endl;
-    output << "obb.e1 " << shp.obb.e1 << std::endl;
-    output << "obb.e2 " << shp.obb.e2 << std::endl;
-    output << "obb.e3 " << shp.obb.e3 << std::endl;
-    output << "obb.center " << shp.obb.center << std::endl;
-    output << "orientation 1.0 0.0 0.0 0.0" << std::endl;
-    output << "volume " << shp.m_volume << std::endl;
-    auto &Im = shp.m_inertia_on_mass;
-    output << "I/m " << Im.x << " " << Im.y << " " << Im.z << std::endl;
-    output << ">" << std::endl;
-  }
+/**
+ * @brief Reads multiple shapes from a file and stores them in a container.
+ *
+ * @param file_name  Path to the input file.
+ * @param big_shape  Flag to indicate handling of large shapes (default: false).
+ * @return A vector containing the shapes read from the file.
+ */
+	inline std::vector<shape> read_shps(
+			const std::string file_name, 
+			bool big_shape = false)
+	{
+		std::ifstream input(file_name.c_str());
+    std::vector<shape> res;
+		if (!input.is_open()) 
+		{
+      color_log::error("write_shapes", "Impossible to create the output file: " + file_name); 
+		}
 
+/*<<<<<<< HEAD
   inline void write_shp(const shape &shp, std::string filename)
   {
     std::stringstream stream;
@@ -222,7 +314,7 @@ namespace exaDEM
         if (!big_shape)
           shp.print();
 */
-        shp.write_paraview();
+/*        shp.write_paraview();
         if( ptm.find(shp.m_name) != ptm.end() )
         {
           shp.m_name = shp.m_name + "X";
@@ -250,37 +342,90 @@ namespace exaDEM
         shp.write_paraview();
       }
     }
+=======*/
+		for (std::string line; getline(input, line);)
+		{
+			if (line == "<")
+			{
+				shape shp = read_shp(input, big_shape);
+				/* too much verbosity        
+					 if (!big_shape)
+					 shp.print();
+				 */
+				shp.write_paraview();
+        res.push_back(shp);
+			}
+		}
+    return res;
+//>>>>>>> origin/main
 	}
 
 	/**
-	 * @brief Writes shape data from the given shapes container to a file.
+	 * @brief Registers a collection of shapes into the particle type map and shape container.
 	 *
-	 * @param shps The container of shapes to write.
-	 * @param filename The output file path.
-	 * @param precision The numeric precision for floating-point output (default 16).
+	 * @param ptm   Reference to the particle type map.
+	 * @param shps  Reference to the shape container.
+	 * @param shp   Vector of shapes to register.
 	 */
-	inline void write_shps(shapes& shps, std::string filename, int precision = 16)
+	inline void register_shapes(ParticleTypeMap& ptm, shapes& shps, std::vector<shape>& shp)
 	{
-		std::stringstream stream;
-		stream << std::setprecision(precision);
-		// creating directory if it does not already exist
-		const std::filesystem::path fspath(filename);
-		std::filesystem::create_directories(fspath.parent_path());
-		// open output file
-		std::ofstream outFile(filename);
-		if (!outFile)
+		for(auto& s: shp)
 		{
-			std::cerr << "[write_shapes, ERROR] Impossible to create the output file: " << filename << std::endl;
-			std::exit(EXIT_FAILURE);
+			if( ptm.find(s.m_name) != ptm.end() )
+			{
+				s.m_name = s.m_name + "X";
+				color_log::warning("read_shape", "[read_shape, WARNING] This polyhedron name is already taken, exaDEM has renamed it to: " + s.m_name);
+			}
+			ptm[s.m_name] = shps.size();
+			shps.add_shape(&s);
 		}
-		// fill stream with shape data
-		for (size_t i = 0; i < shps.get_size(); i++)
+	}
+	/**
+	 * @brief Read multiple shapes from a file.
+	 *
+	 * @param file_name  Path to the input shape file.
+	 * @param big_shape  Optional flag for large shapes (default: false).
+	 */
+	inline shape read_shp(
+			const std::string file_name, 
+			bool big_shape = false)
+	{
+		std::ifstream input(file_name.c_str());
+		for (std::string line; getline(input, line);)
 		{
-			const shape *shp = shps[i];
-			exaDEM::write_shp(*shp, stream);
+			if (line == "<")
+			{
+				return read_shp(input, big_shape);
+			}
 		}
-		// fill output file
-		outFile << std::setprecision(16);
-		outFile << stream.rdbuf();
+    color_log::warning("read_shape", "No shape find into the file " + file_name + ".");
+    color_log::warning("read_shape", "This file is ignored" + file_name + ".");
+    return shape();
+	}
+
+	/**
+	 * @brief Read multiple shapes from a file and store them in a shapes container.
+	 *
+	 * @param shps       Container to store the parsed shapes.
+	 * @param file_name  Path to the input shape file.
+	 * @param big_shape  Optional flag for large shapes (default: false).
+	 */
+	inline void read_shp(
+			shapes &shps, 
+			const std::string file_name, 
+			bool big_shape = false)
+	{
+		std::ifstream input(file_name.c_str());
+		for (std::string line; getline(input, line);)
+		{
+			if (line == "<")
+			{
+				shape shp = read_shp(input, big_shape);
+				shps.add_shape(&shp);
+				if (!big_shape)
+					shp.print();
+				shp.write_paraview();
+			}
+		}
 	}
 } // namespace exaDEM

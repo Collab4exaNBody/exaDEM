@@ -175,7 +175,15 @@ namespace exaDEM
     ADD_SLOT(Classifier2, ic2, INPUT_OUTPUT);
 
     public:
-    inline std::string documentation() const override final { return R"EOF( This operator computes the total stress tensor and the stress tensor for each particles. )EOF"; }
+    inline std::string documentation() const override final { 
+      return R"EOF( 
+        This operator computes the total stress tensor and the stress tensor for each particles. 
+ 
+        YAML example [no option]:
+
+          - stress_tensor
+      )EOF"; 
+    }
 
     inline void execute() override final
     {

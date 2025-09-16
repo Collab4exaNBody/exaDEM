@@ -132,7 +132,7 @@ namespace exaDEM
     return res;
   }
 
-  inline OBB build_obb_edge(const int index, const shape *shp, const Vec3d * v)
+  inline OBB build_obb_edge(const int index, const shape *shp, const Vec3d* v)
   {
     const double ext = shp->m_radius;
     auto [first, second] = shp->get_edge(index);
@@ -156,7 +156,7 @@ namespace exaDEM
     return res;
   }
 
-  inline OBB build_obb_face(const int index, const shape *shp, const Vec3d* v, std::vector<vec3r>& vbuf)
+  inline OBB build_obb_face(const int index, const shape *shp, const Vec3d * const v, std::vector<vec3r>& vbuf)
   {
 
     const double ext = shp->m_radius;
@@ -170,7 +170,7 @@ namespace exaDEM
     return res;
   }
 
-  inline void shape::pre_compute_obb_vertices(const Vec3d * v)
+  inline void shape::pre_compute_obb_vertices(const Vec3d * const v)
   {
     // This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_face`
     const size_t size = this->get_number_of_vertices();

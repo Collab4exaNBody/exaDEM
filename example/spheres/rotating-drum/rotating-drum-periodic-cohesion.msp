@@ -1,40 +1,25 @@
-grid_flavor: grid_flavor_dem
-
+## Define:
+# config_spheres.msp
+# common_define_particles
+# common_setup_particles
+# CYL1 area 
+# gravity
 includes:
-  - config_spheres.msp
+  - rotating-drum-common.msp
 
 io_tree:
   - io_config:
      dir_name: "RotatingDrumPeriodicWithCohesionDir"
 
-particle_regions:
-  - CYL1:
-      quadric:
-        shape: cyly
-        transform:
-          - scale: [ 4.5, 1, 4.5 ]
-          - translate: [ 10 m , 0 , 10 m ]
-
 input_data:
   - init_rcb_grid
-  - particle_type:
-     type: [ Sphere1 ]
+  - common_define_particles
   - lattice:
       structure: SC
       types: [ Sphere1 ]
       size: [ 1.0 , 1.0 , 1.0 ]
       region: CYL1
-  - set_fields:
-     polyhedra: false
-     type:           [ Sphere1 ]
-     radius:         [     0.5 ]
-     density:        [    0.02 ]
-     velocity:       [ [0,0,0] ]
-     sigma_velocity: [     0.1 ]
-
-chunk_neighbors_contact:
-  config:
-    chunk_size: 1
+  - common_setup_particles
 
 setup_drivers:
   - register_cylinder:
@@ -42,18 +27,17 @@ setup_drivers:
      state: {radius: 10, center: [10,10,10], axis: [1,0,1], vrot: [0,0.5,0]}
      params: { motion_type: STATIONARY }
 
-compute_force:
-  - gravity_force
++compute_force:
   - contact_sphere_with_cohesion:
      symetric: true
      config: { dncut: 0.1, kn: 1000, kt: 1000, kr: 0.0, fc: 10, mu: 0.1, damp_rate: 0.999} 
      config_driver: { dncut: 0.1, kn: 1000, kt: 800, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
 
 domain:
-  cell_size: 4 m
+  cell_size: 4
   periodic: [false,true,false]
   grid_dims: [5, 5, 5]
-  bounds: [[0 m ,0 m, 0 m],[20 m, 20 m, 20 m]]
+  bounds: [[0,0,0],[20,20,20]]
   expandable: true
 
 global:
@@ -62,5 +46,5 @@ global:
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 500
   dt: 0.0005 s 
-  rcut_inc: 0.4 m
+  rcut_inc: 0.4
   enable_contact_network: true

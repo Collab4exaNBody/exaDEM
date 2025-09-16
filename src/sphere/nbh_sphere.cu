@@ -45,19 +45,24 @@ namespace exaDEM
 
   template <typename GridT> class UpdateContactInteractionSphere : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(exanb::GridChunkNeighbors, chunk_neighbors, INPUT, OPTIONAL, DocString{"Neighbor list"});
-    ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, DocString{"List of Drivers"});
-    ADD_SLOT(double, rcut_inc, INPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
+    ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+    ADD_SLOT(double, rcut_inc, INPUT, REQUIRED, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
     ADD_SLOT(bool, symetric, INPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
-    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
     public:
     inline std::string documentation() const override final
     {
       return R"EOF(
         This operator add a stl mesh to the drivers list.
+
+        YAML example:
+      
+          - nbh_sphere:
+             symetric: true
         )EOF";
     }
 

@@ -36,7 +36,8 @@ namespace exaDEM
     using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type>;
     static constexpr ComputeFields compute_field_set{};
     static constexpr ComputeRegionFields compute_region_field_set{};
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(uint32_t, type, INPUT, REQUIRED, DocString{"type value applied to all particles"});
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
     ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
@@ -46,7 +47,14 @@ namespace exaDEM
     inline std::string documentation() const override final
     {
       return R"EOF(
+        DEPRECIATED [1.1.3], please use set_fields 
         This operator fills type id to all particles. 
+
+        YAML example:
+
+          - set_type:
+             type: 0
+             region: BOX
         )EOF";
     }
 

@@ -31,3 +31,13 @@ An additional example of a particle falling into a funnel can be found at: funne
 ## Cylinder (STL)
 
 - **Cylinder with barriers:** Instead of a perfect cylinder, this example uses an STL file representing a cylinder with small barriers: `stl_cylinder/input.msp`.
+
+## Complex shapes
+
+### Aggregate
+
+For more details, see the [README.md](aggregate/README.md)
+
+### Samoyed
+
+For more details, see the [README.md](samoyed/README.md)

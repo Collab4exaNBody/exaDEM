@@ -19,6 +19,7 @@ under the License.
 
 #pragma once
 
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_base.h>
 #include <onika/physics/units.h>
 

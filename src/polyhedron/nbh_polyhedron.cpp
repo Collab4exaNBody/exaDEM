@@ -33,10 +33,8 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
-#include <exaDEM/drivers.h>
 #include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_detection.hpp>
-#include <exaDEM/shape_detection_driver.hpp>
+#include <exaDEM/nbh_polyhedron_driver.hpp>
 #include <exaDEM/traversal.h>
 
 #include <cassert>
@@ -52,229 +50,50 @@ namespace exaDEM
 
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
-    ADD_SLOT(Domain , domain, INPUT , REQUIRED );
+    ADD_SLOT(Domain, domain, INPUT, REQUIRED);
     ADD_SLOT(exanb::GridChunkNeighbors, chunk_neighbors, INPUT, OPTIONAL, DocString{"Neighbor list"});
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
-    ADD_SLOT(shapes, shapes_collection, INPUT, DocString{"Collection of shapes"});
-    ADD_SLOT(double, rcut_inc, INPUT_OUTPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
-    ADD_SLOT(Drivers, drivers, INPUT, DocString{"List of Drivers"});
-    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
+    ADD_SLOT(double, rcut_inc, INPUT, REQUIRED, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
+    ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
     public:
     inline std::string documentation() const override final
     {
       return R"EOF(
-                      This function builds the list of interactions per particle (polyhedron). Interactions are between two particles or a particle and a driver. In this function, frictions and moments are updated if the interactions are still actived. Note that, a list of non-empty cells is built during this function.
-                )EOF";
+        This function builds the list of interactions per particle (polyhedron). Interactions are between two particles or a particle and a driver. In this function, frictions and moments are updated if the interactions are still actived. Note that, a list of non-empty cells is built during this function.
+
+        YAML example [no option]:
+
+          - nbh_polyhedron
+       )EOF";
     }
 
-    template <typename Func> 
-      void add_driver_interaction(
-          Stl_mesh &mesh, 
-          size_t cell_a, 
-          Func &add_contact, 
-          Interaction &item, 
-          const size_t n_particles, 
-          const double rVerlet, 
-          const ParticleTypeInt *__restrict__ type, 
-          const uint64_t *__restrict__ id, 
-          const double *__restrict__ rx, 
-          const double *__restrict__ ry, 
-          const double *__restrict__ rz, 
-          VertexField& vertices,
-          const exanb::Quaternion *__restrict__ orient, 
-          shapes &shps)
+    inline void check_slots()
+    {
+      if (drivers.has_value() && !domain->xform_is_identity())
       {
-#define __particle__ vertices_i, i, shpi
-#define __driver__ mesh.vertices.data(), idx, &mesh.shp
-        assert(cell_a < mesh.grid_indexes.size());
-        auto &list = mesh.grid_indexes[cell_a];
-        const size_t stl_nv = list.vertices.size();
-        const size_t stl_ne = list.edges.size();
-        const size_t stl_nf = list.faces.size();
-
-        if (stl_nv == 0 && stl_ne == 0 && stl_nf == 0)
-          return;
-
-        for (size_t p = 0; p < n_particles; p++)
+        if(drivers->get_size() > 0)
         {
-          Vec3d r = {rx[p], ry[p], rz[p]}; // position
-          ParticleVertexView vertices_i = {p, vertices};
-          const Quaternion& orient_i = orient[p];
-          item.p_i = p;
-          item.id_i = id[p];
-          auto ti = type[p];
-          const shape *shpi = shps[ti];
-          const size_t nv = shpi->get_number_of_vertices();
-          const size_t ne = shpi->get_number_of_edges();
-          const size_t nf = shpi->get_number_of_faces();
-
-          // Get OBB from stl mesh
-          auto &stl_shp = mesh.shp;
-          OBB *__restrict__ stl_obb_vertices = onika::cuda::vector_data(stl_shp.m_obb_vertices);
-          [[maybe_unused]] OBB *__restrict__ stl_obb_edges = onika::cuda::vector_data(stl_shp.m_obb_edges);
-          [[maybe_unused]] OBB *__restrict__ stl_obb_faces = onika::cuda::vector_data(stl_shp.m_obb_faces);
-
-          // compute OBB from particle p
-          OBB obb_i = shpi->obb;
-          quat conv_orient_i = quat{vec3r{orient_i.x, orient_i.y, orient_i.z}, orient_i.w};
-          obb_i.rotate(conv_orient_i);
-          obb_i.translate(vec3r{r.x, r.y, r.z});
-          obb_i.enlarge(rVerlet);
-
-          // Note:
-          // loop i = particle p
-          // loop j = stl mesh
-          for (size_t i = 0; i < nv; i++)
-          {
-            vec3r v = conv_to_vec3r(vertices_i[i]);
-            OBB obb_v_i;
-            obb_v_i.center = v; 
-            obb_v_i.enlarge(rVerlet + shpi->m_radius);
-
-            // vertex - vertex
-            item.type = 7;
-            item.sub_i = i;
-            for (size_t j = 0; j < stl_nv; j++)
-            {
-              size_t idx = list.vertices[j];
-              if(filter_vertex_vertex_v2(rVerlet, __particle__, __driver__))
-                //if(filter_vertex_vertex(rVerlet, __particle__, __driver__))
-              {
-                add_contact(p, item, i, idx);
-              } 
-            }
-            // vertex - edge
-            item.type = 8;
-            for (size_t j = 0; j < stl_ne; j++)
-            {
-              size_t idx = list.edges[j];
-              if(filter_vertex_edge(rVerlet, __particle__, __driver__))
-              {
-                add_contact(p, item, i, idx);
-              }
-            }
-            // vertex - face
-            item.type = 9;
-            for (size_t j = 0; j < stl_nf; j++)
-            {
-              size_t idx = list.faces[j];
-              const OBB& obb_f_stl_j = stl_obb_faces[idx];
-              if( obb_f_stl_j.intersect(obb_v_i) )
-              {
-                if(filter_vertex_face(rVerlet, __particle__, __driver__))
-                {
-                  add_contact(p, item, i, idx);
-                }
-              }
-            }
-          }
-
-          for (size_t i = 0; i < ne; i++)
-          {
-            item.type = 10;
-            item.sub_i = i;
-            // edge - edge
-            for (size_t j = 0; j < stl_ne; j++)
-            {
-              const size_t idx = list.edges[j];
-              if(filter_edge_edge(rVerlet, __particle__, __driver__))
-              {
-                add_contact(p, item, i, idx);
-              }
-            }
-          }
-
-          for (size_t j = 0; j < stl_nv; j++)
-          {
-            const size_t idx = list.vertices[j];
-
-            // rejects vertices that are too far from the stl mesh.
-            const OBB& obb_v_stl_j = stl_obb_vertices[idx];
-            if( !obb_v_stl_j.intersect(obb_i)) continue;
-
-            item.type = 11;
-            // edge - vertex
-            for (size_t i = 0; i < ne; i++)
-            {
-              if(filter_vertex_edge(rVerlet, __driver__, __particle__)) 
-              {
-                add_contact(p, item, i, idx);
-              }
-            }
-            // face vertex
-            item.type = 12;
-            for (size_t i = 0; i < nf; i++)
-            {
-              if(filter_vertex_face(rVerlet, __driver__, __particle__))
-              {
-                add_contact(p, item, i, idx);
-              }
-            }
-          }
-        } // end loop p
-#undef __particle__
-#undef __driver__
-      } // end funcion
-
-    template <typename D, typename Func> 
-      void add_driver_interaction(
-          D &driver, 
-          Func &add_contact, 
-          Interaction &item, 
-          const size_t n_particles, 
-          const double rVerlet, 
-          const ParticleTypeInt *__restrict__ type, 
-          const uint64_t *__restrict__ id, 
-          VertexField& vertices, 
-          shapes &shps)
-      {
-        for (size_t p = 0; p < n_particles; p++)
-        {
-          ParticleVertexView va = {p, vertices};
-          const shape *shp = shps[type[p]];
-          int nv = shp->get_number_of_vertices();
-          for (int sub = 0; sub < nv; sub++)
-          {
-            bool contact = exaDEM::filter_vertex_driver(driver, rVerlet, va, sub, shp);
-            if (contact)
-            {
-              item.p_i = p;
-              item.id_i = id[p];
-              add_contact(p, item, sub, -1);
-            }
-          }
+          color_log::error("nbh_polyhedron", "Contact detection with drivers is deactivated when the simulation box is deformed.");
         }
       }
+    }
 
     inline void execute() override final
     {
+      check_slots();
       auto& g = *grid;
       auto& vertex_fields = *cvf;
       const auto cells = g.cells();
       const size_t n_cells = g.number_of_cells(); // nbh.size();
       const IJK dims = g.dimension();
       auto &interactions = ges->m_data;
-      auto &shps = *shapes_collection;
+      shapes &shps = *shapes_collection;
       double rVerlet = *rcut_inc;
       Mat3d xform = domain->xform();
       bool is_xform = !domain->xform_is_identity();
-      if (drivers.has_value() && is_xform)
-      {
-        if(drivers->get_size() > 0)
-        {
-          lout<< "[nbh_polyhedron, ERROR] Contact detection with drivers is deactivated when the simulation box is deformed." << std::endl;
-          std::exit(0);
-        }
-      }
-
-      // if grid structure (dimensions) changed, we invalidate thie whole data
-      if (interactions.size() != n_cells)
-      {
-        ldbg << "[nbh_polyhedron, WARNING] Number of cells has changed, reset friction data" << std::endl;
-        interactions.clear();
-        interactions.resize(n_cells);
-      }
 
       assert(interactions.size() == n_cells);
 
@@ -566,9 +385,7 @@ namespace exaDEM
               });
 
           manager.update_extra_storage<true>(storage);
-
           assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
-
           assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
         }
         //    GRID_OMP_FOR_END

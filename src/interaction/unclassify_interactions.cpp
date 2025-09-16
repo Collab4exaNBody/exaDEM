@@ -32,48 +32,40 @@ under the License.
 #include <exaDEM/classifier/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/shape_detection.hpp>
-#include <exaDEM/shape_detection_driver.hpp>
-#include <exaDEM/mutexes.h>
-#include <exaDEM/drivers.h>
 
 namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename GridT, class = AssertGridHasFields<GridT>> class UnclassifyInteractions : public OperatorNode
+  class UnclassifyInteractions : public OperatorNode
   {
     // attributes processed during computation
     using ComputeFields = FieldSet<field::_vrot, field::_arot>;
     static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED, DocString{"Interaction list"});
+    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
 
-  public:
+    public:
     inline std::string documentation() const override final
     {
       return R"EOF(
-                )EOF";
+        This operator copies data from the Interaction Classifier to the GridCellParticleInteraction.
+
+        YAML example [no option]:
+
+          - unclassify_interactions
+        )EOF";
     }
 
     inline void execute() override final
     {
-      // using data_t = std::variant<exaDEM::Cylinder, exaDEM::Surface, exaDEM::UndefinedDriver>;
-      if (grid->number_of_cells() == 0)
-      {
-        return;
-      }
       if (!ic.has_value())
         return;
       ic->unclassify(*ges);
     }
   };
 
-  template <class GridT> using UnclassifyInteractionsTmpl = UnclassifyInteractions<GridT>;
-
   // === register factories ===
-  ONIKA_AUTORUN_INIT(unclassify_interactions) { OperatorNodeFactory::instance()->register_factory("unclassify_interactions", make_grid_variant_operator<UnclassifyInteractionsTmpl>); }
+  ONIKA_AUTORUN_INIT(unclassify_interactions) { OperatorNodeFactory::instance()->register_factory("unclassify_interactions", make_simple_operator<UnclassifyInteractions>); }
 } // namespace exaDEM

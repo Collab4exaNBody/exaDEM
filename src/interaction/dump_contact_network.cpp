@@ -51,15 +51,17 @@ namespace exaDEM
 		ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
 		ADD_SLOT( std::string , filename , INPUT , "output");
 		ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
-		
 		ADD_SLOT(Classifier2, ic2, INPUT_OUTPUT);
-
 		public:
 		inline std::string documentation() const override final
 		{
 			return R"EOF(
-                  This operator creates paraview files containing the contact network.
-				        )EOF";
+        This operator creates paraview files containing the contact network.
+
+        YAML example [no option]:
+ 
+          - dump_contact_network
+		  )EOF";
 		}
 
 		inline void execute() override final

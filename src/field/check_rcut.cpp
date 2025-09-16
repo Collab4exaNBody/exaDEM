@@ -25,6 +25,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/compute/reduce_cell_particles.h>
 #include <mpi.h>
+#include <exaDEM/color_log.hpp>
 
 
 namespace exaDEM
@@ -36,13 +37,23 @@ namespace exaDEM
     //      using ReduceFields = FieldSet<field::_radius>;
     //      static constexpr ReduceFields reduce_field_set {};
 
-    ADD_SLOT(GridT, grid, INPUT);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
-    inline std::string documentation() const override final { return R"EOF(Check if the rcut_max is different of 0 or if the rcut_max is < particle rcut. )EOF"; }
+    inline std::string documentation() const override final { 
+      return R"EOF(
+        Check if the rcut_max is different of 0 or if the rcut_max is < particle rcut. 
+
+        YAML example [no option]:
+
+          - check_rcut
+      )EOF"; 
+    }
+
+    inline std::string operator_name() { return "check_rcut"; }
 
     public:
 
@@ -50,8 +61,7 @@ namespace exaDEM
     {
       if(*rcut_max <= 0.0) 
       {
-        lout << "\033[1;31m[check_rcut, ERROR] rmax is not correctly defined (rcut max <= 0.0)\033[0m" << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error(operator_name(), "rmax is not correctly defined (rcut max <= 0.0)");
       }
     }
 
@@ -83,8 +93,7 @@ namespace exaDEM
 
       if ( rcm > rmax )
       {
-        lout << "\033[1;31m[check_rcut, ERROR] At least one particle has a radius larger than the maximum radius cutoff\033[0m" << std::endl;       
-        std::exit(0);
+        color_log::error(operator_name(), "At least one particle has a radius larger than the maximum radius cutoff.");
       }
     } // namespace exaDEM
   }

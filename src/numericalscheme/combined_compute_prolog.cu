@@ -115,10 +115,10 @@ namespace exaDEM
     using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_orient, field::_vrot, field::_arot>>;
     static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
-    ADD_SLOT(double, dt, INPUT);
-    ADD_SLOT(Traversal, traversal_real, INPUT, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(double, dt, INPUT, REQUIRED);
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
     public:
     inline void execute() override final

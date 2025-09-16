@@ -93,7 +93,34 @@ namespace exaDEM
     ADD_SLOT(double, max_kn, INPUT_OUTPUT, 0, DocString{"Get the highest value of the input contact force parameters kn (used for dt_critical)"});
 
     public:
-    inline std::string documentation() const override final { return R"EOF(This operator computes forces between particles and particles/drivers using the contact law.)EOF"; }
+
+    inline std::string operator_name() { return "contact_polyhedron"; }
+
+    inline std::string documentation() const override final { 
+      return R"EOF(
+        This operator computes forces between particles and particles/drivers using the contact law.
+ 
+        Note that to use multmaterials version, you need to predefine the parameters with multimat_contact_params and drivers_contact_params.  
+
+        YAML example:
+
+					one_parameter_no_cohesion:
+						- contact_polyhedron:
+							 config: { kn: 10000, kt: 10000, kr: 0.1, mu: 0.1, damp_rate: 0.9}
+							 config_driver: { kn: 10000, kt: 10000, kr: 0.1, mu: 0.3, damp_rate: 0.9}
+
+					one_parameter_with_cohesion:
+						- contact_polyhedron_with_cohesion:
+							 config: { dncut: 0.1 m, kn: 10000, kt: 10000, kr: 0.1, fc: 0.05, mu: 0.1, damp_rate: 0.9}
+							 config_driver: { dncut: 0.1 m, kn: 10000, kt: 10000, kr: 0.1, fc: 0.05, mu: 0.3, damp_rate: 0.9}
+
+					multi_parameters_no_cohesion:
+						- contact_polyhedron_multimat
+
+					multi_parameters_with_cohesion:
+						- contact_polyhedron_multimat_cohesion
+      )EOF"; 
+    }
 
     template<int start, int end, template<int, bool, typename> typename FuncT, typename XFormT,  typename T, typename... Args>
       void loop_contact_force(Classifier<T>& classifier, XFormT& cp_xform, Args &&... args)
@@ -269,8 +296,7 @@ namespace exaDEM
 
       if (*symetric == false)
       {
-        lout << "[contact_polyhedron, ERROR] The parameter symetric in contact classifier polyhedron has to be set to true." << std::endl;
-        std::exit(EXIT_FAILURE);
+        color_log::error("contact_polyhedron", "The parameter symetric in contact classifier polyhedron has to be set to true.");
       }
 
       /** Some check mutlimat versus singlemat */
@@ -278,21 +304,18 @@ namespace exaDEM
       {
         if( !multimat_cp.has_value() )
         {
-          lout << "\033[1;31m[contact_polyhedron, ERROR] You are using the multi-material contact force model, but the contact law parameters have not been defined. "
-            << "Please specify the parameter values for each material pair using the operator \"multimat_contact_params\".\033[0m"
-            << std::endl;
-          std::exit(EXIT_FAILURE);
+          std::string msg = "You are using the multi-material contact force model, but the contact law parameters have not been defined.\n";
+          msg +=            "Please specify the parameter values for each material pair using the operator \"multimat_contact_params\".";
+          color_log::error(operator_name(), msg);
         }
         if( (*print_warning) && config.has_value() )
         {
-          lout << "\033[1;33m[contact_polyhedron, WARNING] You are using the multi-material contact force operator, but you have also defined the input slot \"config\" which is intended for the single-material version. This slot will be ignored.\033[0m"
-            << std::endl;
+          color_log::warning(operator_name(), "You are using the multi-material contact force operator, but you have also defined the input slot \"config\" which is intended for the single-material version. This slot will be ignored.");
           pw = false;
         }
         if( (*print_warning) && config_driver.has_value() )
         {
-          lout << "\033[1;33m[contact_polyhedron, WARNING] You are using the multi-material contact force operator, but you have also defined the input slot \"config_driver\" which is intended for the single-material version. This slot will be ignored.\033[0m"
-            << std::endl;
+          color_log::warning(operator_name(), "You are using the multi-material contact force operator, but you have also defined the input slot \"config_driver\" which is intended for the single-material version. This slot will be ignored.");
           pw = false;
         }
       }
@@ -300,18 +323,17 @@ namespace exaDEM
       {
         if( !config.has_value() )
         {
-          lout << "\033[1;31m[contact_polyhedron, ERROR] The input slot \"config\" is not defined, yet the single-material version of the contact operator is being used. "
-            << "Please specify the \"config\" input slot, and use the \"config_driver\" slot if you want to define a contact law between a particle and a driver.\033[0m"
-            << std::endl;
-          std::exit(EXIT_FAILURE);
+          std::string msg = "The input slot \"config\" is not defined, yet the single-material version of the contact operator is being used.\n";
+          msg            += "Please specify the \"config\" input slot, and use the \"config_driver\" slot if you want to define a contact law between a particle and a driver."; 
+          color_log::error(operator_name(), msg);
         }
         if( (*print_warning) && multimat_cp.has_value() )
         {
-          lout << "\033[1;33m[contact_polyhedron, WARNING] You have defined a list of contact law parameters for different material types, "
-            << "but you are using the version that only considers the parameter defined in the \"config\" input slot. "
-            << "The parameter list will be ignored. If you want to use it, please use the operator "
-            << "\"contact_sphere_multimat\" or \"contact_sphere_multimat_with_cohesion\".\033[0m"
-            << std::endl;
+          std::string msg = "You have defined a list of contact law parameters for different material types,\n";
+          msg            += "but you are using the version that only considers the parameter defined in the \"config\" input slot. \n";
+          msg            += "The parameter list will be ignored. If you want to use it, please use the operator \n";
+          msg            += "\"contact_sphere_multimat\" or \"contact_sphere_multimat_with_cohesion\".";
+          color_log::warning(operator_name(), msg);
           pw = false;
         }
         /** Some global checks */
@@ -320,15 +342,15 @@ namespace exaDEM
         {
           if(config->dncut > 0)
           {
-            lout << "[contact_polyhedron, ERROR] dncut is != 0 while the cohesive force is not used." << std::endl;
-            lout << "                            Please, use contact_sphere_with_cohesion operator." << std::endl;
-            std::exit(EXIT_FAILURE);
+            std::string msg = "dncut is != 0 while the cohesive force is not used.\n";
+            msg            += "Please, use contact_sphere_with_cohesion operator.";
+            color_log::error(operator_name(), msg);
           }
           if(drivers->get_size() > 0 && config_driver->dncut > 0)
           {
-            lout << "[contact_polyhedron, ERROR] dncut is != 0 while the cohesive force is not used." << std::endl;
-            lout << "                            Please, use contact_sphere_with_cohesion operator." << std::endl;
-            std::exit(EXIT_FAILURE);
+            std::string msg = "dncut is != 0 while the cohesive force is not used.\n";
+            msg            += "Please, use contact_sphere_with_cohesion operator.";
+            color_log::error(operator_name(), msg);
           }
         }
       }

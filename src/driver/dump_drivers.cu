@@ -51,39 +51,47 @@ namespace exaDEM
     static constexpr Vec3d null = {0.0, 0.0, 0.0};
 
     ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(long, timestep, INPUT, DocString{"Iteration number"});
+    ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
     ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
-  public:
-    inline std::string documentation() const override final { return R"EOF( This operator outputs driver information. )EOF"; }
+    public:
+    inline std::string documentation() const override final { 
+      return R"EOF( 
+      This operator outputs driver information. 
 
-    inline void execute() override final
-    {
-      auto &drvs = *drivers;
-      size_t n_drivers = drivers->get_size();
+      YAML example [no option]:
 
-      if (n_drivers == 0)
-        return;
+        - dump_driver
 
-      std::string path = *dir_name + "/CheckpointFiles/";
-      std::stringstream data_stream;
-      std::string filename = path + "driver_%010d.msp";
-      filename = onika::format_string(filename, *timestep);
-      data_stream << "setup_drivers:" << std::endl;
-      data_stream << std::setprecision(16);
+     )EOF"; }
 
-      int id_count = 0;
-      DumpDriverFunc func = {&id_count, path, &data_stream};
-      for (size_t i = 0; i < n_drivers; i++)
+      inline void execute() override final
       {
-        drvs.apply( i , func );
+        auto &drvs = *drivers;
+        size_t n_drivers = drivers->get_size();
+
+        if (n_drivers == 0)
+          return;
+
+        std::string path = *dir_name + "/CheckpointFiles/";
+        std::stringstream data_stream;
+        std::string filename = path + "driver_%010d.msp";
+        filename = onika::format_string(filename, *timestep);
+        data_stream << "setup_drivers:" << std::endl;
+        data_stream << std::setprecision(16);
+
+        int id_count = 0;
+        DumpDriverFunc func = {&id_count, path, &data_stream};
+        for (size_t i = 0; i < n_drivers; i++)
+        {
+          drvs.apply( i , func );
+        }
+        ldbg << id_count << " drivers have been dumped" << std::endl;
+
+        std::ofstream file(filename.c_str());
+        file << std::setprecision(16);
+        file << data_stream.rdbuf();
       }
-      ldbg << id_count << " drivers have been dumped" << std::endl;
-      
-      std::ofstream file(filename.c_str());
-      file << std::setprecision(16);
-      file << data_stream.rdbuf();
-    }
   };
 
   // === register factories ===

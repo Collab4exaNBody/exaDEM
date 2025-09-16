@@ -32,10 +32,10 @@ particle_regions:
           shape: cylz
           transform:
             - scale: [4.45 , 4.45 ,2]
+
 domain:
   cell_size: 10 m
   periodic: [false,false,false]
   grid_dims: [1, 1, 10]
-  bounds: [[-5 m , -5 m, 0 m],[5 m, 5 m, 100 m]]
+  bounds: [[-5,-5,0],[5,5,100]]
   expandable: true
-  periodic: [false,false,false]

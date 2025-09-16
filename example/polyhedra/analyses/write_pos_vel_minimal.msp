@@ -12,15 +12,12 @@ input_data:
       types: [ Octahedron ]
       size: [ 1.0 , 1.0 , 1.0 ]
       enlarge_bounds: 0.0 m
-  - radius_from_shape
-  - density_from_shape
-  - set_rand_velocity:
-     var: 0.01
-     mean: [0.0,0.0,0.0]
-  - set_rand_vrot_arot
-  - set_quaternion:
-     random: true
-  - inertia_from_shape
+  - set_fields:
+     polyhedra: true
+     type:              [ Octahedron ]
+     velocity:          [    [0,0,0] ]
+     sigma_velocity:    [        0.1 ]
+     random_quaternion: [       true ]
 
 setup_drivers:
   - register_cylinder:
@@ -39,7 +36,7 @@ domain:
   cell_size: 2.5 m
   periodic: [false,true,false]
   grid_dims: [2, 2, 2]
-  bounds: [[0 m ,0 m, 0 m], [5 m, 5 m, 5 m]]
+  bounds: [[0 , 0 , 0 ], [5 , 5 , 5 ]]
   expandable: true
 
 dump_data_xyz:
@@ -58,4 +55,4 @@ global:
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 20000
   dt: 0.00005 s 
-  rcut_inc: 0.1 m
+  rcut_inc: 0.1

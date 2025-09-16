@@ -52,7 +52,7 @@ namespace exaDEM
     static constexpr ComputeRegionFieldsVz compute_region_field_vz{};
     static constexpr ComputeRegionFields compute_region_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(double, var, INPUT, 0, DocString{"Variance (same for all dimensions)"});
     ADD_SLOT(Vec3d, mean, INPUT, Vec3d{0, 0, 0}, DocString{"Average vector value."});
     ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
@@ -63,6 +63,12 @@ namespace exaDEM
     {
       return R"EOF(
         This operator generates random velocities using a normal distribution law (var[double], mean[vec3d]).
+
+        YAML example:
+
+          - set_rand_velocity:
+             var: 0.001
+             mean: [0,0,-1.5]
         )EOF";
     }
 
