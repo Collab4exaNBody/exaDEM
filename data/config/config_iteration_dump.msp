@@ -67,6 +67,7 @@ interaction_consistency_checker:
 
 compress_data: 
   - unclassify_interactions
+  - stats_interactions
   - compress_interaction
   - interaction_consistency_checker
 

@@ -649,7 +649,7 @@ namespace exaDEM
 					
 					int total = nb_history[nbBlocks - 1] + nb_history_incr[nbBlocks - 1];
 					
-					printf("TOTAL POUR L'INTERACTION %d : %d\n", i, total);
+					printf("TOTAL POUR LE TYPE %d : %d / %d\n", i, total, data.size());
 					
 					auto& interaction_history = update.waves[i];
 					
@@ -1370,7 +1370,7 @@ namespace exaDEM
 				}
 
 				//resize classifier
-				classifier.resize(total_nb_int, ResizeClassifier::POLYHEDRON);
+				//classifier.resize(total_nb_int, ResizeClassifier::POLYHEDRON);
 				cudaDeviceSynchronize();
 
 				
@@ -1507,8 +1507,8 @@ namespace exaDEM
 				//classifier.waves[3].clear();*/
       }
 
-#     pragma omp parallel
-			{
+/*#     pragma omp parallel
+      {
         // local storage per thread
         Interaction item;
         interaction_manager manager;
@@ -1525,7 +1525,10 @@ namespace exaDEM
           assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
 
           if (n_particles == 0)
+          {
+            storage.initialize(0);
             continue;
+          }
 
           // Extract history before reset it
           const size_t data_size = storage.m_data.size();
@@ -1609,12 +1612,12 @@ namespace exaDEM
             }
           }
 
-					manager.update_extra_storage<true>(storage);
-					assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
-					assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
-				}
-				//    GRID_OMP_FOR_END
-			}
+          manager.update_extra_storage<true>(storage);
+          assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
+          assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
+        }
+        //    GRID_OMP_FOR_END
+      }*/
 			lout << "end of nbh_polyhedron gpu" << std::endl;
 		}
 	};
