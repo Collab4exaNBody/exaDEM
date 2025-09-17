@@ -59,9 +59,16 @@ dump_stress_tensor_if_triggered:
     - global_stress_tensor
     - write_stress_tensor
 
+interaction_consistency_checker:
+  condition: active_interaction_checker
+  body:
+    - check_consistency_grid_classifier:
+        verbosity: true
+
 compress_data: 
   - unclassify_interactions
   - compress_interaction
+  - interaction_consistency_checker
 
 dump_data_particles:
   - timestep_paraview_file: "CheckpointFiles/exadem_%010d.dump"
