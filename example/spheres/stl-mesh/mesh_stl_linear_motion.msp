@@ -1,0 +1,29 @@
+includes:
+  - mesh_stl_common.msp
+
+io_tree:
+  - io_config:
+     dir_name: "SpheresMeshStlLinearMotionDir"
+
+setup_drivers:
+  - register_stl_mesh:
+     id: 0
+     state: {center: [0.4,0,0]}
+     params: { motion_type: LINEAR_MOTION, motion_vector: [-1,0,0], const_vel: 0.5 }
+     filename: mesh.stl
+     minskowski: 0.001 m
+  - register_stl_mesh:
+     id: 1
+     filename: cube.stl
+     minskowski: 0.001 m
+
+input_data:
+  - reader1
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 20000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 200
+  dt: 0.0001 s
+  rcut_inc: 0.0025 m
