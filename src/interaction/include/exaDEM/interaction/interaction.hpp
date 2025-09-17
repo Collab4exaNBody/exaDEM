@@ -95,152 +95,160 @@ namespace exaDEM
      * @brief return true if particles id and particles sub id are equals.
      */
     ONIKA_HOST_DEVICE_FUNC bool operator==(Interaction &I)
-    {
-      if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i == I.sub_i && this->sub_j == I.sub_j && this->type == I.type)
-      {
-        return true;
-      }
-      else
-      {
-        return false;
-      }
-    }
+		{
+			if (this->id_i == I.id_i && 
+					this->id_j == I.id_j && 
+					this->sub_i == I.sub_i && 
+					this->sub_j == I.sub_j && 
+					this->type == I.type)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
 
-    /**
-     * @brief return true if particles id and particles sub id are equals.
-     */
-    ONIKA_HOST_DEVICE_FUNC bool operator==(const Interaction &I) const
-    {
-      if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i == I.sub_i && this->sub_j == I.sub_j && this->type == I.type)
-      {
-        return true;
-      }
-      else
-      {
-        return false;
-      }
-    }
+		/**
+		 * @brief return true if particles id and particles sub id are equals.
+		 */
+		ONIKA_HOST_DEVICE_FUNC bool operator==(const Interaction &I) const
+		{
+			if (this->id_i == I.id_i && 
+					this->id_j == I.id_j && 
+					this->sub_i == I.sub_i && 
+					this->sub_j == I.sub_j && 
+					this->type == I.type)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
 
-    ONIKA_HOST_DEVICE_FUNC bool operator<(const Interaction &I) const
-    {
-      if (this->id_i < I.id_i)
-      {
-        return true;
-      }
-      else if (this->id_i == I.id_i && this->id_j < I.id_j)
-      {
-        return true;
-      }
-      else if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i < I.sub_i)
-      {
-        return true;
-      }
-      else if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i == I.sub_i && this->sub_j < I.sub_j)
-      {
-        return true;
-      }
-      else if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i == I.sub_i && this->sub_j == I.sub_j && this->type < I.type)
-      {
-        return true;
-      }
-      else
-        return false;
-    }
+		ONIKA_HOST_DEVICE_FUNC bool operator<(const Interaction &I) const
+		{
+			if (this->id_i < I.id_i)
+			{
+				return true;
+			}
+			else if (this->id_i == I.id_i && this->id_j < I.id_j)
+			{
+				return true;
+			}
+			else if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i < I.sub_i)
+			{
+				return true;
+			}
+			else if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i == I.sub_i && this->sub_j < I.sub_j)
+			{
+				return true;
+			}
+			else if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i == I.sub_i && this->sub_j == I.sub_j && this->type < I.type)
+			{
+				return true;
+			}
+			else
+				return false;
+		}
 
-    ONIKA_HOST_DEVICE_FUNC void update(Interaction &I)
-    {
-      this->cell_i = I.cell_i;
-      this->cell_j = I.cell_j;
-      this->p_i = I.p_i;
-      this->p_j = I.p_j;
-    }
+		ONIKA_HOST_DEVICE_FUNC void update(Interaction &I)
+		{
+			this->cell_i = I.cell_i;
+			this->cell_j = I.cell_j;
+			this->p_i = I.p_i;
+			this->p_j = I.p_j;
+		}
 
-    ONIKA_HOST_DEVICE_FUNC void update_friction_and_moment(Interaction &I)
-    {
-      this->friction = I.friction;
-      this->moment = I.moment;
-    }
-  };
+		ONIKA_HOST_DEVICE_FUNC void update_friction_and_moment(Interaction &I)
+		{
+			this->friction = I.friction;
+			this->moment = I.moment;
+		}
+	};
 
-  inline std::pair<bool, Interaction &> get_interaction(std::vector<Interaction> &list, Interaction &I)
-  {
-    auto iterator = std::find(list.begin(), list.end(), I);
-    // assert(iterator == std::end(list) && "This interaction is NOT in the list");
-    bool exist = iterator == std::end(list);
-    return {exist, *iterator};
-  }
+	inline std::pair<bool, Interaction &> get_interaction(std::vector<Interaction> &list, Interaction &I)
+	{
+		auto iterator = std::find(list.begin(), list.end(), I);
+		// assert(iterator == std::end(list) && "This interaction is NOT in the list");
+		bool exist = iterator == std::end(list);
+		return {exist, *iterator};
+	}
 
-  inline std::vector<Interaction> extract_history_omp(std::vector<Interaction> &interactions)
-  {
-    std::vector<Interaction> ret;
+	inline std::vector<Interaction> extract_history_omp(std::vector<Interaction> &interactions)
+	{
+		std::vector<Interaction> ret;
 #   pragma omp parallel
-    {
-      std::vector<Interaction> tmp;
+		{
+			std::vector<Interaction> tmp;
 #     pragma omp for
-      for (size_t i = 0; i < interactions.size(); i++)
-      {
-        if (interactions[i].is_active())
-        {
-          tmp.push_back(interactions[i]);
-        }
-      }
+			for (size_t i = 0; i < interactions.size(); i++)
+			{
+				if (interactions[i].is_active())
+				{
+					tmp.push_back(interactions[i]);
+				}
+			}
 
-      if (tmp.size() > 0)
-      {
+			if (tmp.size() > 0)
+			{
 #       pragma omp critical
-        {
-          ret.insert(ret.end(), tmp.begin(), tmp.end());
-        }
-      }
-    }
+				{
+					ret.insert(ret.end(), tmp.begin(), tmp.end());
+				}
+			}
+		}
 
-    return ret;
-  }
+		return ret;
+	}
 
-  inline void update_friction_moment_omp(std::vector<Interaction> &interactions, std::vector<Interaction> &history)
-  {
+	inline void update_friction_moment_omp(std::vector<Interaction> &interactions, std::vector<Interaction> &history)
+	{
 #   pragma omp parallel for
-    for (size_t it = 0; it < interactions.size(); it++)
-    {
-      auto &item = interactions[it];
-      auto lower = std::lower_bound(history.begin(), history.end(), item);
-      if (lower != history.end())
-      {
-        if (item == *lower)
-        {
-          item.update_friction_and_moment(*lower);
-        }
-      }
-    }
-  }
+		for (size_t it = 0; it < interactions.size(); it++)
+		{
+			auto &item = interactions[it];
+			auto lower = std::lower_bound(history.begin(), history.end(), item);
+			if (lower != history.end())
+			{
+				if (item == *lower)
+				{
+					item.update_friction_and_moment(*lower);
+				}
+			}
+		}
+	}
 
-  inline void update_friction_moment(std::vector<Interaction> &interactions, std::vector<Interaction> &history)
-  {
-    for (size_t it = 0; it < interactions.size(); it++)
-    {
-      auto &item = interactions[it];
-      auto lower = std::lower_bound(history.begin(), history.end(), item);
-      if (lower != history.end())
-      {
-        if (item == *lower)
-        {
-          item.update_friction_and_moment(*lower);
-        }
-      }
-    }
-  }
+	inline void update_friction_moment(std::vector<Interaction> &interactions, std::vector<Interaction> &history)
+	{
+		for (size_t it = 0; it < interactions.size(); it++)
+		{
+			auto &item = interactions[it];
+			auto lower = std::lower_bound(history.begin(), history.end(), item);
+			if (lower != history.end())
+			{
+				if (item == *lower)
+				{
+					item.update_friction_and_moment(*lower);
+				}
+			}
+		}
+	}
 
-  // sequential
-  inline void extract_history(std::vector<Interaction> &local, const Interaction *data, const unsigned int size)
-  {
-    local.clear();
-    for (size_t i = 0; i < size; i++)
-    {
-      const auto &item = data[i];
-      if (item.is_active())
-      {
-        local.push_back(item);
-      }
-    }
-  }
+	// sequential
+	inline void extract_history(std::vector<Interaction> &local, const Interaction *data, const unsigned int size)
+	{
+		local.clear();
+		for (size_t i = 0; i < size; i++)
+		{
+			const auto &item = data[i];
+			if (item.is_active())
+			{
+				local.push_back(item);
+			}
+		}
+	}
 } // namespace exaDEM

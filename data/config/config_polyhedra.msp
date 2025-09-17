@@ -19,8 +19,8 @@ chunk_neighbors_impl:
 #     particle_version: true
 #     pair_version: true
   - classify_interactions
-  - stats_interactions
-  - resize_particle_locks
+#  - stats_interactions
+#  - resize_particle_locks
 
 migrate_particles:
   - migrate_cell_particles_interaction

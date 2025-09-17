@@ -318,6 +318,7 @@ namespace exaDEM
 			buffers.resize(types);
 		}
 
+<<<<<<< HEAD
 		/**
 		 * @brief Initializes the waves vector to hold interactions for each type.
 		 */
@@ -326,6 +327,10 @@ namespace exaDEM
 			waves.resize(types);
 			buffers.resize(types);
 		}
+=======
+      reset_waves();          // Clear existing waves
+      auto &ces = ges.m_data; // Reference to cells containing interactions
+>>>>>>> origin/main
 
 		/**
 		 * @brief Clears all stored interactions in the waves vector.
@@ -446,19 +451,20 @@ namespace exaDEM
 
 																																 // Partial
 #       pragma omp for schedule(static) nowait
-				for (size_t c = 0; c < size; c++)
-				{
-					auto &interactions = ces[idxs[c]];
-					const unsigned int n_interactions_in_cell = interactions.m_data.size();
-					exaDEM::Interaction *const __restrict__ data_ptr = interactions.m_data.data();
-					// Place interactions into their respective waves
-					for (size_t it = 0; it < n_interactions_in_cell; it++)
-					{
-						Interaction &item = data_ptr[it];
-						const int t = item.type;
-						tmp[t].push_back(item);
-					}
-				}
+        for (size_t c = 0; c < size; c++)
+        {
+          auto &interactions = ces[idxs[c]];
+          const unsigned int n_interactions_in_cell = interactions.m_data.size();
+          exaDEM::Interaction *const __restrict__ data_ptr = interactions.m_data.data();
+          // Place interactions into their respective waves
+          for (size_t it = 0; it < n_interactions_in_cell; it++)
+          {
+            Interaction &item = data_ptr[it];
+            const int t = item.type;
+            tmp[t].push_back(item);
+            item.reset();
+          }
+        }
 
 				for (int w = 0; w < types; w++) bounds[threads][w].second = tmp[w].size();
 
@@ -498,11 +504,19 @@ namespace exaDEM
 			}
 		}
 
+<<<<<<< HEAD
 		/**
 		 * @brief Restores friction and moment data for interactions from categorized waves to cell interactions.
 		 *
 		 * This function restores friction and moment data from categorized waves back to their corresponding
 		 * interactions in cell data (`ges.m_data`). It iterates through each wave, retrieves interactions
+=======
+    /**
+     * @brief Restores friction and moment data for interactions from categorized waves to cell interactions.
+     *
+     * This function restores friction and moment data from categorized waves back to their corresponding
+     * interactions in cell data (`ges.m_data`). It iterates through each wave, retrieves interactions
+>>>>>>> origin/main
 		 * with non-zero friction and moment from the wave, and updates the corresponding interaction in the
 		 * cell data.
 		 *
@@ -510,7 +524,10 @@ namespace exaDEM
 		 */
 		void unclassify(GridCellParticleInteraction &ges)
 		{
+<<<<<<< HEAD
 			Vec3d null = {0, 0, 0};
+=======
+>>>>>>> origin/main
 			auto &ces = ges.m_data; // Reference to cells containing interactions
 															// Iterate through each wave
 			/*
@@ -537,6 +554,7 @@ namespace exaDEM
 					{
 						exaDEM::Interaction item1 = wave[it];
 						// Check if interaction in wave has non-zero friction and moment
+<<<<<<< HEAD
 						if (item1.friction != null || item1.moment != null)
 						{
 							auto &cell = ces[item1.cell_i];
@@ -552,39 +570,54 @@ namespace exaDEM
 									break;
 								}
 							}
+=======
+						if (item1.is_active()) // alway true if unclassify is called after compress
+						{
+							auto &celli = ces[item1.cell_i];
+							const unsigned int ni = onika::cuda::vector_size(celli.m_data);
+							exaDEM::Interaction * __restrict__ data_i_ptr = onika::cuda::vector_data(celli.m_data);
+							// Iterate through interactions in cell to find matching interaction
+							bool find = false;
+							for (size_t it2 = 0; it2 < ni ; it2++)
+							{
+								exaDEM::Interaction &item2 = data_i_ptr[it2];
+								if (item1 == item2)
+								{
+									item2.update_friction_and_moment(item1);
+									find = true;
+									break;
+								}
+							}
+
+							if( find || (item1.type >= 4 /** drivers */)) continue;
+
+							// check if this interaction is included into the other cell
+							auto& cellj = ces[item1.cell_j];
+							const unsigned int nj = onika::cuda::vector_size(cellj.m_data);
+							exaDEM::Interaction * __restrict__ data_j_ptr = onika::cuda::vector_data(cellj.m_data);
+
+							for (size_t it2 = 0; it2 < nj; it2++)
+							{
+								exaDEM::Interaction &item2 = data_j_ptr[it2];
+								if (item1 == item2)
+								{
+									item2.update_friction_and_moment(item1);
+									find = true;
+									break;
+								}
+							}
+
+							if(!find)
+              {
+                item1.print();
+                color_log::error("unclassify", "One active interaction has not been updated");
+              }
+>>>>>>> origin/main
 						}
 					}
 				}
 			}
 			//reset_waves(); keep the memory alive
-		}
-
-    template<typename NbOfIntPerTypes>
-		void resize(int start_t, int end_t, const NbOfIntPerTypes& sizes)
-		{
-			assert(start_t < NumberOfInteractionTypes);
-			assert(end_t < NumberOfInteractionTypes);
-			for(int type = start_t; type <= end_t; type++)
-			{
-				waves[type].resize(sizes[type]); 
-			}
-		}
-
-    template<typename NbOfIntPerTypes>
-		void resize(const NbOfIntPerTypes& types, ResizeClassifier resize_type)
-		{
-			switch (resize_type)
-			{
-				case SPHERE:
-					resize(0, 0, types);
-					break;
-				case POLYHEDRON:
-					resize(0, 3, types);
-					break;
-				case DRIVER: 
-					resize(4, 12, types);
-					break;
-			}
 		}
 	};
 } // namespace exaDEM
