@@ -1,27 +1,9 @@
-grid_flavor: grid_flavor_dem
-
 includes:
-  - config_spheres.msp
+  - mesh_stl_common.msp
 
 io_tree:
   - io_config:
      dir_name: "SpheresMeshStlDir"
-
-reader1:
-  - read_xyz:
-      file: particles.xyz
-      bounds_mode: FILE
-  - set_radius:
-     rad: 0.0015 m
-  - set_quaternion
-  - set_rand_velocity:
-     var: 0.001
-     mean: [0.0,0.0,0.0]
-  - set_density:
-     density: 2500
-  - set_rand_vrot_arot
-  - update_inertia
-  - replicate_domain
 
 setup_drivers:
   - register_stl_mesh:
@@ -36,20 +18,6 @@ setup_drivers:
 input_data:
   - reader1
 
-compute_force:
-  - gravity_force
-  - quadratic_force:
-     cx: 0.38
-     mu: 0.0000015
-  - contact_sphere:
-     symetric: true
-     config: { kn: 1000, kt: 1000, kr: 0.1, mu: 0.3, damp_rate: 0.9} 
-     config_driver: { kn: 1000, kt: 1000, kr: 0.0, mu: 0.3, damp_rate: 0.3} 
-
-domain:
-  cell_size: 0.1 m
-  periodic: [false,false,false]
-
 global:
   simulation_dump_frequency: -1
   simulation_end_iteration: 20000
@@ -57,4 +25,3 @@ global:
   simulation_paraview_frequency: 1000
   dt: 0.0001 s
   rcut_inc: 0.0025 m
-  enable_stl_mesh: true

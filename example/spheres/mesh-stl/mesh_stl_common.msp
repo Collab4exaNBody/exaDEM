@@ -1,0 +1,35 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+reader1:
+  - particle_type:
+     type: [ SphereType1 ]
+  - read_xyz:
+     file: particles.xyz
+     bounds_mode: FILE
+  - set_fields:
+     polyhedra: false
+     type:           [ SphereType1 ]
+     radius:         [      0.0015 ]
+     velocity:       [     [0,0,0] ]
+     sigma_velocity: [       0.001 ]
+     density:        [        2500 ]
+
+input_data:
+  - reader1
+
+compute_force:
+  - gravity_force
+  - quadratic_force:
+     cx: 0.38
+     mu: 0.0000015
+  - contact_sphere:
+     symetric: true
+     config: { kn: 1000, kt: 1000, kr: 0.1, mu: 0.3, damp_rate: 0.9} 
+     config_driver: { kn: 1000, kt: 1000, kr: 0.0, mu: 0.3, damp_rate: 0.3} 
+
+domain:
+  cell_size: 0.1 m
+  periodic: [false,false,false]
