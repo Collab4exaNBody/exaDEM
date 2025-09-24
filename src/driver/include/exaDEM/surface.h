@@ -91,7 +91,7 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  const std::vector<MotionType> surface_valid_motion_types = { STATIONARY, LINEAR_MOTION, LINEAR_COMPRESSIVE_MOTION, SHAKER};
+  const std::vector<MotionType> surface_valid_motion_types = { STATIONARY, LINEAR_MOTION, LINEAR_COMPRESSIVE_MOTION, SHAKER, PENDULUM_MOTION};
 
   /**
    * @brief Struct representing a surface in the exaDEM simulation.
@@ -152,18 +152,31 @@ namespace exaDEM
      */
     inline void initialize()
     {
-      center_proj = normal * offset;
-      // checks
-      if (exanb::dot(center, normal) != exanb::dot(center_proj, normal))
+      center_proj = offset * normal;
+
+      if( motion_type == PENDULUM_MOTION )
       {
-        color_log::warning("register_surface", "The Center point (surface) is not correctly defined");
+        if( center != pendulum_anchor_point )
+        {
+          color_log::warning("register_surface", "Surface center should be equal to pendulum_anchor_point");
+          color_log::warning("register_surface", "Surface center is update to [" + std::to_string(pendulum_anchor_point) + "]");
+          center = pendulum_anchor_point;
+        }
+        Vec3d axis = pendulum_anchor_point - pendulum_initial_position;
+        if( exanb::dot(axis,pendulum_swing_dir) >= 1e-14)
+        {
+          color_log::error("register_surface", "The vector from pendulum_anchor_point to pendulum_initial_position must be orthogonal to pendulum_swing_dir.");
+        }
       }
 
-      if (exanb::dot(center, normal) != exanb::dot(center_proj, normal))
+      // checks
+      if (exanb::dot(center - center_proj, normal) >= 1e-14)
       {
-        center += (offset - exanb::dot(center, normal)) * normal;
-        lout << "center is re-computed because it doesn't fit with offset, new center is: " << center << " and center_proj is: " << center_proj << std::endl;
+        color_log::warning("register_surface", "The Center point (surface) is not correctly defined");
+        center = exanb::dot(center_proj - center, normal) * normal +center_proj;
+        color_log::warning("register_surface", "center is re-computed because it doesn't fit with offset, new center is: [" + std::to_string(center) + "] and center_proj is: [" + std::to_string(center_proj) + "]" );
       }
+      
       if( !Driver_params::is_valid_motion_type(surface_valid_motion_types)) std::exit(EXIT_FAILURE);
       if( !Driver_params::check_motion_coherence()) std::exit(EXIT_FAILURE);
       if( mass <= 0.0 )
@@ -187,7 +200,7 @@ namespace exaDEM
       }
     }
 
-    inline void force_to_accel() 
+    void force_to_accel() 
     {
       if( is_compressive() )
       { 
@@ -245,6 +258,16 @@ namespace exaDEM
           assert( vel == this->const_vel * this->motion_vector );  
         }
 
+        if( motion_type == PENDULUM_MOTION )
+        {
+          auto [O, N] = compute_offset_normal_pendulum_motion(time+dt);
+          normal = N;
+          offset = O;
+          vel = pendulum_velocity(time + dt);
+          center_proj = normal * offset;
+          return;
+        }
+
         double displ = dt * exanb::norm(vel) + 0.5 * dt * dt * acc;
 
         /** The shaker motion changes the displacement behavior */
@@ -257,9 +280,11 @@ namespace exaDEM
           displ = (signal_next - signal_current) * angle_factor;           
           vel = shaker_velocity(time + dt);
         }
+
         center += displ * normal;
         offset += displ; 
         center_proj +=  displ * normal;
+
       }
     }
 
