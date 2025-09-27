@@ -214,7 +214,7 @@ namespace exaDEM
 
           // Second, we add interactions between two polyhedra.
 
-          /*apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric *///,
+          //apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
               /*[&g, &vertex_fields, &cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &vertex_cell_a, &add_contact, xform, is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
               {
               // default value of the interaction studied (A or i -> B or j)

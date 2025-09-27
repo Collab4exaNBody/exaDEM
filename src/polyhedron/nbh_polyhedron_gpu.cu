@@ -166,9 +166,29 @@ namespace exaDEM
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		if(idx < size)
 		{
-			if( ft_x[idx] != 0 || ft_y[idx] != 0 | ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0)
+			if( ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0)
 			{
 				atomicAdd(&nb[blockIdx.x], 1);
+			}
+		}
+	}
+	
+	__global__ void search_active_interactions2(
+			double* ft_x,
+			double* ft_y,
+			double* ft_z,
+			double* mom_x,
+			double* mom_y,
+			double* mom_z,
+			int* nb,
+			int size)
+	{
+		int idx = threadIdx.x + blockIdx.x * blockDim.x;
+		if(idx < size)
+		{
+			if( ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0)
+			{
+				atomicAdd(&nb[0], 1);
 			}
 		}
 	}
@@ -213,7 +233,7 @@ namespace exaDEM
 			
 			bool active = false;
 			
-			if( ft_x[idx] != 0 || ft_y[idx] != 0 | ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0)
+			if( ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0)
 			{
 				s[threadIdx.x] = 1;
 				active = true;
@@ -554,7 +574,7 @@ namespace exaDEM
 				}
 			}
 
-			lout << "start nbh_polyhedron_gpu" << std::endl;
+			//lout << "start nbh_polyhedron_gpu" << std::endl;
 
 			// if grid structure (dimensions) changed, we invalidate thie whole data
 			if (interactions.size() != n_cells)
@@ -598,8 +618,8 @@ namespace exaDEM
 			
 			if( *block_pair_version )
 			{
-	lout << "NBH polyhedron Block pair version" << std::endl;
-				lout << "Start get_number_of_interactions_block_pair ..." << std::endl;
+	//lout << "NBH polyhedron Block pair version" << std::endl;
+				//lout << "Start get_number_of_interactions_block_pair ..." << std::endl;
 	/** Define cuda block and grid size*/
 				constexpr int block_x = 8;
 				constexpr int block_y = 8;
@@ -649,7 +669,7 @@ namespace exaDEM
 					
 					int total = nb_history[nbBlocks - 1] + nb_history_incr[nbBlocks - 1];
 					
-					printf("TOTAL POUR LE TYPE %d : %d / %d\n", i, total, data.size());
+					//printf("TOTAL POUR LE TYPE %d : %d / %d\n", i, total, data.size());
 					
 					auto& interaction_history = update.waves[i];
 					
@@ -828,7 +848,7 @@ namespace exaDEM
 					cudaFree(interaction_id);
 					cudaFree(indices);
 					
-					printf("NEXT: %d\n", i);
+					//printf("NEXT: %d\n", i);
 					//}
 				}
 				   }
@@ -996,7 +1016,7 @@ namespace exaDEM
 						interactions2.p_i/*.data()*/,
 						interactions2.p_j/*.data()*/);
 				cudaDeviceSynchronize();
-				lout << "End get_number_of_interactions_block_pair" << std::endl;
+				//lout << "End get_number_of_interactions_block_pair" << std::endl;
 				
 				void* d_temp_storage = nullptr;
 				size_t temp_storage_bytes = 0;
@@ -1025,7 +1045,7 @@ namespace exaDEM
 				for(int type = 0 ; type < NumberOfPolyhedronInteractionTypes ; type++)
 				{
 					total_nb_int[type] = prefix_interactions_cell[size_interactions-1][type] + number_of_interactions_cell[size_interactions-1][type];
-					lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
+					//lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
 				}
 				
 				auto& type0 = classifier2.waves[0];
@@ -1187,7 +1207,7 @@ namespace exaDEM
 				//cudaDeviceSynchronize();
 	
 				/** Now, we fill the classifier */
-  			lout << "Run fill_classifier_gpu ... " << std::endl;
+  			//lout << "Run fill_classifier_gpu ... " << std::endl;
 				fill_classifier_block_pair<block_x, block_y><<<GridSize, BlockSize>>>(
 						onika::cuda::vector_data(classifier2.waves),
 						//onika::cuda::vector_data(classifier.waves), 
@@ -1201,7 +1221,10 @@ namespace exaDEM
 						interactions2.cell_j/*.data()*/,
 						interactions2.p_i/*.data()*/,
 						interactions2.p_j/*.data()*/);
-				lout << "End fill_classifier_gpu" << std::endl;
+				//lout << "End fill_classifier_gpu" << std::endl;
+				
+				onika::memory::CudaMMVector<int> actives;
+				actives.resize(4);
 				
 				if(!classifier2.use) 
 				{
@@ -1321,8 +1344,24 @@ namespace exaDEM
 						cudaFree(indices_in);
 						cudaFree(indices_out);
 						//}
+						
+						onika::memory::CudaMMVector<int> nb_active;
+						nb_active.resize(1);
+						
+						search_active_interactions2<<<nbBlocks, 256>>>( interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, nb_active.data(), interaction_classifier.size() );
+						cudaDeviceSynchronize();
+						
+						//printf("TYPE%d  %d/%d\n", i, nb_active[0], interaction_classifier.size());
+						
+						actives[i] = nb_active[0];
 					}
 				}
+				
+				printf("GPU Version :\n");
+				printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
+				printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
+				printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
+				printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
 			}
 
 			if( *block_version )
@@ -1618,7 +1657,7 @@ namespace exaDEM
         }
         //    GRID_OMP_FOR_END
       }*/
-			lout << "end of nbh_polyhedron gpu" << std::endl;
+			//lout << "end of nbh_polyhedron gpu" << std::endl;
 		}
 	};
 

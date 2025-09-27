@@ -63,8 +63,8 @@ namespace exaDEM
     ONIKA_HOST_DEVICE_FUNC bool is_active() const
     {
       constexpr exanb::Vec3d null = {0, 0, 0};
-	  bool is_ghost = (id_i >= id_j && type <= 3);
-      bool res = ((moment != null) || (friction != null)) && (!is_ghost);
+	  //bool is_ghost = (id_i >= id_j && type <= 3);
+      bool res = ((moment != null) || (friction != null)) /*&& (!is_ghost)*/;
       return res;
     }
 

@@ -425,7 +425,7 @@ namespace exaDEM
       reset_waves();          // Clear existing waves
       auto &ces = ges.m_data; // Reference to cells containing interactions
       
-      int s = 4;
+      int s = 0;
 
       size_t n_threads;
 #     pragma omp parallel

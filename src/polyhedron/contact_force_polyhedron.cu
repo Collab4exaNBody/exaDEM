@@ -259,7 +259,6 @@ namespace exaDEM
 
         if(is_def_xform)
         {
-          printf("CONTACT\n");
           LinearXForm cp_xform = {xform};
           loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
           //loop_contact_force2<poly_type_start, poly_type_end, contact_law>(classifier2, cp_xform, __params__);
@@ -267,7 +266,6 @@ namespace exaDEM
         }
         else
         {
-          printf("CONTACT\n");
           NullXForm cp_xform;
           loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
           //loop_contact_force2<poly_type_start, poly_type_end, contact_law>(classifier2, cp_xform, __params__);
@@ -287,7 +285,6 @@ namespace exaDEM
         std::string ts = std::to_string(*timestep);
         itools::write_file(stream, (*dir_name), (*interaction_basename) + ts);
       }
-      //printf("CONTACT END\n");
     }
 
     void check_slots()

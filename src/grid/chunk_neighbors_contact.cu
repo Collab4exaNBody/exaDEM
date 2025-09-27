@@ -183,7 +183,10 @@ template< class GridT > __global__ void kernelUN(GridT* cells,
                               const double dist_lab, 
                               Mat3d xform, 
                               double rcut_inc,
-                              int* nb_nbh)
+                              int* nb_nbh,
+                              Vec3d origin,
+                              IJK offset,
+                              double cell_size)
 {	
 	
 	using BlockReduce = cub::BlockReduce<int, 32, cub::BLOCK_REDUCE_RAKING, 32>;
@@ -206,6 +209,9 @@ template< class GridT > __global__ void kernelUN(GridT* cells,
 	auto* __restrict__ rz_b = cells[cell_b][field::rz];
 	auto* __restrict__ id_b = cells[cell_b][field::id];
 	auto* __restrict__ rad_b = cells[cell_b][field::radius];
+	IJK loc_b = grid_index_to_ijk( dims, cell_b );
+	AABB cellb_AABB_pre = AABB{ (origin+((offset+loc_b)*cell_size)), (origin+((offset+loc_b+1)*cell_size))};
+	AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * rad_b[0] );
 	
 	cell_accessors cellB(cells[cell_b]);
 	
@@ -222,6 +228,8 @@ template< class GridT > __global__ void kernelUN(GridT* cells,
 		int ida = id_a[p_a];
 		
 		//if(threadIdx.x < num_particles_b)
+		//if( is_inside( cellb_AABB, pos_a))
+		//{
 		for(int p_b = threadIdx.x; p_b < num_particles_b; p_b+= blockDim.x)
 		{
 			const Vec3d pos_b = { rx_b[p_b], ry_b[p_b], rz_b[p_b] };
@@ -239,7 +247,8 @@ template< class GridT > __global__ void kernelUN(GridT* cells,
 				}
 			}
 
-		}	
+		}
+		//}	
 	}
 	
 	int aggregate = BlockReduce(temp_storage).Sum(nb_interactions);
@@ -453,7 +462,10 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
                               uint32_t* cell_i,
                               uint32_t* cell_j,
                               uint16_t* p_i,
-                              uint16_t* p_j)
+                              uint16_t* p_j,
+                              Vec3d origin,
+                              IJK offset,
+                              double cell_size)
 {
 	using BlockScan = cub::BlockScan<int, 32, cub::BLOCK_SCAN_RAKING, 32>;
 	 __shared__ typename BlockScan::TempStorage temp_storage;
@@ -475,6 +487,9 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	auto* __restrict__ rz_b = cells[cell_b][field::rz];
 	auto* __restrict__ id_b = cells[cell_b][field::id];
 	auto* __restrict__ rad_b = cells[cell_b][field::radius];
+	IJK loc_b = grid_index_to_ijk( dims, cell_b );
+	AABB cellb_AABB_pre = AABB{ (origin+((offset+loc_b)*cell_size)), (origin+((offset+loc_b+1)*cell_size))};
+	AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * rad_b[0] );
 	
 	cell_accessors cellB(cells[cell_b]);
 	
@@ -494,6 +509,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 		int ida = id_a[p_a];
 
 		//if(threadIdx.x < num_particles_b)
+		//if( is_inside( cellb_AABB, pos_a ))
+		//{
 		for(int p_b = threadIdx.x; p_b < num_particles_b; p_b+= blockDim.x)
 		{
 			const Vec3d pos_b = { rx_b[p_b], ry_b[p_b], rz_b[p_b] };
@@ -509,7 +526,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 					count++;
 				}
 			}
-		}	
+		}
+		//}	
 	}
 
         BlockScan(temp_storage).ExclusiveSum( nb_interactions , prefix );
@@ -527,6 +545,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 		int ida = id_a[p_a];
 
 		//if(threadIdx.x < num_particles_b)
+		//if( is_inside(cellb_AABB, pos_a))
+		//{
 		for(int p_b = threadIdx.x; p_b < num_particles_b; p_b+= blockDim.x)
 		{
 			const Vec3d pos_b = { rx_b[p_b], ry_b[p_b], rz_b[p_b] };
@@ -546,7 +566,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 					nb2++;
 				}
 			}
-		}	
+		}
+		//}	
 	}
 }
 
@@ -700,9 +721,9 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 		} 
 	}
 	
-	printf("NOMBRE DE CELLULES: %d\n", cells_a.size());
+	//printf("NOMBRE DE CELLULES: %d\n", cells_a.size());
 	
-	printf("MOYENNE PARTICULES: %d\n", (int)(particles_average/cells_a.size()));
+	//printf("MOYENNE PARTICULES: %d\n", (int)(particles_average/cells_a.size()));
 
 	onika::memory::CudaMMVector<int> cellsa;
 	cellsa.resize(incr_cell);
@@ -734,31 +755,26 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	
 	dim3 BlockSize(	block_x, block_y, 1);
 	
+	auto m_origin = g.origin();
 	auto m_offset = g.offset();
 	auto m_cell_size = g.cell_size();
 	
 	onika::memory::CudaMMVector<int> nb_nbh;
-	//int* nb_nbh;
+
 	nb_nbh.resize( incr_cell );
-	//cudaMalloc(&nb_nbh, incr_cell * sizeof(int));
-	
-	//printf("NB_CELLS: %d\n", incr_cell);
-	
+
 	int nb_interactions=0;
 	
-	kernelUN<<<incr_cell, BlockSize>>>( cells, dims, cellsa.data(), cellsb.data(), ghost_cells.data(), shps, *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh.data() );
+	kernelUN<<<incr_cell, BlockSize>>>( cells, dims, cellsa.data(), cellsb.data(), ghost_cells.data(), shps, *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh.data(), m_origin, m_offset, m_cell_size );
 	
 	cudaDeviceSynchronize();
-	
-	printf("KERNELUN\n");
-	
+
 	void* d_temp_storage = nullptr;
 	size_t temp_storage_bytes = 0;
 	
 	onika::memory::CudaMMVector<int> nb_nbh_incr;
-	//int* nb_nbh_incr;
+
 	nb_nbh_incr.resize( incr_cell );
-	//cudaMalloc(&nb_nbh_incr, incr_cell * sizeof(int));
 	
 	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_incr.data(), incr_cell );
 	
@@ -767,244 +783,35 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	cub::DeviceScan::ExclusiveSum(d_temp_storage, temp_storage_bytes, nb_nbh.data(), nb_nbh_incr.data(), incr_cell );
 	
 	cudaFree(d_temp_storage);
-	
-	//int nb_nbh_final;
-	//int nb_nbh_incr_final;
-	
-	//cudaMemcpy(&nb_nbh_final, nb_nbh + (incr_cell-1), sizeof(int), cudaMemcpyDeviceToHost);
-	//cudaMemcpy(&nb_nbh_incr_final, nb_nbh_incr + (incr_cell-1), sizeof(int), cudaMemcpyDeviceToHost);
-	
+
 	int total_interactions = nb_nbh[incr_cell - 1] + nb_nbh_incr[incr_cell - 1];
-	//int total_interactions = nb_nbh_final + nb_nbh_incr_final;
-	
-	//cudaFree(nb_nbh);
-	
-	//printf("TOTAL: %d\n", total_interactions);
-	
+
 	uint16_t* p_i;
 	uint16_t* p_j;
 	uint32_t* cell_i;
 	uint32_t* cell_j;
-	
-	/*onika::memory::CudaMMVector<uint32_t> cell_i;
-	cell_i.resize(total_interactions);
-	onika::memory::CudaMMVector<uint32_t> cell_j;
-	cell_j.resize(total_interactions);
-	onika::memory::CudaMMVector<uint16_t> p_i;
-	p_i.resize(total_interactions);
-	onika::memory::CudaMMVector<uint16_t> p_j;
-	p_j.resize(total_interactions);*/
-	
+
 	cudaMalloc(&p_i, total_interactions * sizeof(uint16_t));
 	cudaMalloc(&p_j, total_interactions * sizeof(uint16_t));
 	cudaMalloc(&cell_i, total_interactions * sizeof(uint32_t));
 	cudaMalloc(&cell_j, total_interactions * sizeof(uint32_t));
-	
-       	//auto& ints2 = *interactions_inter;
-       	
-       	//cudaFree(ints2.p_i);
-       	//cudaFree(ints2.p_j);
-       	//cudaFree(ints2.cell_i);
-       	//cudaFree(ints2.cell_j);
-       	
-       	//ints2.p_i = nullptr;
-       	//ints2.p_j = nullptr;
-       	//ints2.cell_i = nullptr;
-       	//ints2.cell_j = nullptr;
-       	
-       	//ints2.clear();
-       	
-       	//cudaMalloc(&ints2.p_i, total_interactions * sizeof(uint16_t));
-       	//cudaMalloc(&ints2.p_j, total_interactions * sizeof(uint16_t));
-       	//cudaMalloc(&ints2.cell_i, total_interactions * sizeof(uint32_t));
-       	//cudaMalloc(&ints2.cell_j, total_interactions * sizeof(uint32_t));
-       	
-       	//ints2.resize(total_interactions2);
-       	    
-       	//auto& size = ints2.size;
-       	//size = total_interactions;
-	
-	/*for(int i = 0; i < incr_cell; i++)
-	{
-		printf("CELL_A: %d SIZE_A : %d CELL_B: %d SIZE_B : %d\n", cellsa[i], cells[cellsa[i]].size(), cellsb[i], cells[cellsb[i]].size());
-	}
-	
-	int nb_interactions2 = 0;
-	
-	std::vector<uint32_t> cell_i_cpu;
-	std::vector<uint32_t> cell_j_cpu;
-	std::vector<uint16_t> p_i_cpu;
-	std::vector<uint16_t> p_j_cpu;
-	
-	for(int i = 0; i < incr_cell; i++)
-	{
-	int cell_a = cellsa[i];
-	int num_particles_a = cells[cell_a].size();
-	auto* __restrict__ rx_a = cells[cell_a][field::rx];
-	auto* __restrict__ ry_a = cells[cell_a][field::ry];
-	auto* __restrict__ rz_a = cells[cell_a][field::rz];
-	auto* __restrict__ id_a = cells[cell_a][field::id];
-	auto* __restrict__ rad_a = cells[cell_a][field::radius];
-	
-	cell_accessors cellA(cells[cell_a]);
-	
-	int cell_b = cellsb[i];
-	int num_particles_b = cells[cell_b].size();
-	auto* __restrict__ rx_b = cells[cell_b][field::rx];
-	auto* __restrict__ ry_b = cells[cell_b][field::ry];
-	auto* __restrict__ rz_b = cells[cell_b][field::rz];
-	auto* __restrict__ id_b = cells[cell_b][field::id];
-	auto* __restrict__ rad_b = cells[cell_b][field::radius];
-	
-	cell_accessors cellB(cells[cell_b]);
-	
-	double rcut2 = *nbh_dist_lab * *nbh_dist_lab;
-	int nb_interactions = 0;
-	
-	bool is_ghost = ghost_cells[i];
-	
-	for(int p_a = 0; p_a < num_particles_a; p_a++)
-	{
-		const Vec3d pos_a = { rx_a[p_a] , ry_a[p_a] , rz_a[p_a] };
-		
-		int ida = id_a[p_a];
 
-		for(int p_b = 0; p_b < num_particles_b; p_b++)
-		{
-			const Vec3d pos_b = { rx_b[p_b], ry_b[p_b], rz_b[p_b] };
-			const Vec3d dr = pos_a - pos_b;
-				
-			double d2 = norm2( domain->xform() * dr );
-				
-			if( nbh_filter_GPU(cells, *rcut_inc, d2, rcut2, cell_a, p_a, cell_b, p_b) )
-			{
-				if(ida < id_b[p_b] || is_ghost)
-				{
-					nb_interactions2++;
-					/*cell_i_cpu.push_back(cell_a);
-					cell_j_cpu.push_back(cell_b);
-					p_i_cpu.push_back(p_a);
-					p_j_cpu.push_back(p_b);*/
-					//printf("CELL_I: %d P_I: %d CELL_J: %d P_J: %d\n", cell_a, p_a, cell_b, p_b);
-				//}
-			//}
-
-		//}	
-	//}
-	//}
-	
-	//printf("NOMBRE: %d\n", nb_interactions2);
-
-	kernelDEUX<<<incr_cell, BlockSize>>>( cells, dims, cellsa.data(), cellsb.data(), ghost_cells.data(), shps, *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh_incr.data(), cell_i/*.data()*/, cell_j/*.data()*/, p_i/*.data()*/, p_j/*.data()*/ );
+	kernelDEUX<<<incr_cell, BlockSize>>>( cells, dims, cellsa.data(), cellsb.data(), ghost_cells.data(), shps, *nbh_dist_lab, domain->xform(), *rcut_inc, nb_nbh_incr.data(), cell_i/*.data()*/, cell_j/*.data()*/, p_i/*.data()*/, p_j/*.data()*/, m_origin, m_offset, m_cell_size );
 
 	cudaDeviceSynchronize();
-	
-	//printf("KERNELDEUX\n");
-	
-	//cudaFree(nb_nbh_incr);
-	
-	//uint32_t* cell_i_cpu = (uint32_t*)malloc(total_interactions * sizeof(uint32_t));
-	//uint32_t* cell_j_cpu = (uint32_t*)malloc(total_interactions * sizeof(uint32_t));
-				
-	//uint16_t* p_i_cpu = (uint16_t*)malloc(total_interactions * sizeof(uint16_t));
-	//uint16_t* p_j_cpu = (uint16_t*)malloc(total_interactions * sizeof(uint16_t));
-				
-	//cudaMemcpy(cell_i_cpu, cell_i, total_interactions * sizeof(uint32_t)  , cudaMemcpyDeviceToHost);
-	//cudaMemcpy(cell_j_cpu, cell_j, total_interactions * sizeof(uint32_t)  , cudaMemcpyDeviceToHost);
-				
-	//cudaMemcpy(p_i_cpu, p_i, total_interactions * sizeof(uint16_t)  , cudaMemcpyDeviceToHost);
-	//cudaMemcpy(p_j_cpu, p_j, total_interactions * sizeof(uint16_t)  , cudaMemcpyDeviceToHost);
-				
-	/*for(int i = 0; i < total_interactions; i++)
-	{
-		printf("INDEX: %d CELL_I: %d P_I: %d CELL_J: %d P_J: %d\n", i, cell_i[i], p_i[i], cell_j[i], p_j[i]);
-	}*/
-	
+
         int numBlocks = ( total_interactions + 256 - 1) / 256;
         onika::memory::CudaMMVector<int> res;
-        //int* res;
         res.resize(numBlocks);
-	//cudaMalloc(&res, numBlocks * sizeof(int));
-        
-        //printf("NUMBLOCKS OBB: %d\n", numBlocks);
-        
-        //printf("NUMBLOCKS: %d\n", numBlocks);
-        
-        /*std::vector<uint32_t> celli_res;
-        std::vector<uint32_t> cellj_res;
-        
-        std::vector<uint16_t> pi_res;
-        std::vector<uint16_t> pj_res;
-        
-        int final = 0;
-        
-        for(int i = 0; i < total_interactions; i++)
-        {
-		int cell_a = cell_i_cpu[i];
-		cell_accessors cellA(cells[cell_a]);
-	
-		int cell_b = cell_j_cpu[i];
-		cell_accessors cellB(cells[cell_b]);
 
-		int p_a = p_i_cpu[i];
-		particle_info p(shps, p_a, cellA);
-		OBB obb_i = p.shp->obb;
-		quat conv_orient_i = p.get_quat();
-		obb_i.rotate(conv_orient_i);
-		obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
-		obb_i.enlarge(*rcut_inc);
-
-		int p_b = p_j_cpu[i];
-		particle_info p_nbh(shps, p_b, cellB);
-		OBB obb_j = p_nbh.shp->obb;
-		obb_j.rotate(p_nbh.get_quat());
-		obb_j.translate(vec3r{p_nbh.r.x, p_nbh.r.y, p_nbh.r.z});
-	
-		if(obb_i.intersect(obb_j))
-		{
-			celli_res.push_back(cell_a);
-			cellj_res.push_back(cell_b);
-			pi_res.push_back(p_a);
-			pj_res.push_back(p_b);
-			final++;
-		} 
-        }
-        
-        printf("FINAL: %d\n", final);*/
-        
-	//free(cell_i_cpu);
-	//free(cell_j_cpu);
-	//free(p_i_cpu);
-	//free(p_j_cpu);
-        
-       // printf("KERNELOBB\n");*/
-        
         kernelOBB<<<numBlocks, 256>>>( cells, cell_i/*.data()*/, cell_j/*.data()*/, p_i/*.data()*/, p_j/*.data()*/, shps, res.data(), *rcut_inc, total_interactions);
         
         cudaDeviceSynchronize();
-        
-        //printf("KERNELOBB\n");
-        
-        //printf("KERNELOBB AFTER\n");
-        
-        /*std::vector<int> res_final;
-        res_final.resize(numBlocks);
-        
-        int res_follow = 0;
-        
-        for(int i = 0; i < numBlocks; i++)
-        {
-        	res_final[i] = res_follow;
-        	res_follow+= res[i];
-        }
-        
-        int total_test = res_final[numBlocks - 1] + res[numBlocks - 1];*/
-        
+
         onika::memory::CudaMMVector<int> res_incr;
-        //int* res_incr;
+
         res_incr.resize(numBlocks);
-        //cudaMalloc(&res_incr, numBlocks * sizeof(int));
-        
+
         d_temp_storage = nullptr;
         temp_storage_bytes = 0;
         
@@ -1017,168 +824,28 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	cudaFree(d_temp_storage);
 	
 	d_temp_storage = nullptr;
-	
-	//int res_final;
-	//int res_incr_final;
-	
-	//cudaMemcpy(&res_final, res + (numBlocks-1), sizeof(int), cudaMemcpyDeviceToHost);
-	//cudaMemcpy(&res_incr_final, res_incr + (numBlocks-1), sizeof(int), cudaMemcpyDeviceToHost);
-	
+
 	int total_interactions2 = res[numBlocks - 1] + res_incr[numBlocks - 1];
-	//int total_interactions2 = res_final + res_incr_final;
-	
-	//int* res_print = (int*)malloc(numBlocks * sizeof(int));
-	//cudaMemcpy(res_print, res, total_numBlocks * sizeof(int)  , cudaMemcpyDeviceToHost);
-	
-	//cudaFree(res);
-	
+
        	auto& ints2 = *interactions_inter;
        	
        	cudaFree(ints2.p_i);
        	cudaFree(ints2.p_j);
        	cudaFree(ints2.cell_i);
        	cudaFree(ints2.cell_j);
-       	
-       	//ints2.clear();
-       	
+
        	cudaMalloc(&ints2.p_i, total_interactions2 * sizeof(uint16_t));
        	cudaMalloc(&ints2.p_j, total_interactions2 * sizeof(uint16_t));
        	cudaMalloc(&ints2.cell_i, total_interactions2 * sizeof(uint32_t));
        	cudaMalloc(&ints2.cell_j, total_interactions2 * sizeof(uint32_t));
-       	
-       	//ints2.resize(total_interactions2);
-       	    
+
        	auto& size = ints2.size;
        	size = total_interactions2;
-       	
-       	//printf("TENSION\n");
-       	
-       //	kernelOBB<<<numBlocks, 256>>>( cells, cell_i/*.data()*///, cell_j/*.data()*/, p_i/*.data()*/, p_j/*.data()*/, shps, res.data(), *rcut_inc, total_interactions);
-       	//kernelOBB<<<numBlocks, 256>>>( cells, cell_i.data(), cell_j.data(), p_i.data(), p_j.data(), shps, res.data(), *rcut_inc, total_interactions);
        	
        	kernelOBB2<<<numBlocks, 256>>>( cells, cell_i/*.data()*/, cell_j/*.data()*/, p_i/*.data()*/, p_j/*.data()*/, shps, res_incr.data(), *rcut_inc, ints2.cell_i/*.data()*/, ints2.cell_j/*.data()*/, ints2.p_i/*.data()*/, ints2.p_j/*.data()*/, total_interactions);
        	
         cudaDeviceSynchronize();
-        
-        //printf("KERNELOBB2\n");
-       
-       //cudaFree(res_incr);
-       	
-	//printf("TOTAL2: %d\n", total_interactions2);
-	
-        //onika::memory::CudaMMVector<uint32_t> celli_res;
-        //onika::memory::CudaMMVector<uint32_t> cellj_res;
-        
-        //onika::memory::CudaMMVector<uint16_t> pi_res;
-        //onika::memory::CudaMMVector<uint16_t> pj_res;
-        
-        //celli_res.resize(total_interactions2);
-        //cellj_res.resize(total_interactions2);
-        //pi_res.resize(total_interactions2);
-        //pj_res.resize(total_interactions2);
-        
-        /*std::vector<int> test_res;
-        test_res.resize(numBlocks);
-        
-        int nb2 = 0;
-        
-        for(int i = 0; i < total_interactions; i++)
-        {
-		//int cell_a = cell_i[i];
-		int cell_a = cell_i_cpu[i];
-		cell_accessors cellA(cells[cell_a]);
-	
-		//int cell_b = cell_j[i];
-		int cell_b = cell_j_cpu[i];
-		cell_accessors cellB(cells[cell_b]);
-
-		//int p_a = p_i[i];
-		int p_a = p_i_cpu[i];
-		particle_info p(shps, p_a, cellA);
-		OBB obb_i = p.shp->obb;
-		quat conv_orient_i = p.get_quat();
-		obb_i.rotate(conv_orient_i);
-		obb_i.translate(vec3r{p.r.x, p.r.y, p.r.z});
-		obb_i.enlarge(*rcut_inc);
-
-		//int p_b = p_j[i];
-		int p_b = p_j_cpu[i];
-		particle_info p_nbh(shps, p_b, cellB);
-		OBB obb_j = p_nbh.shp->obb;
-		obb_j.rotate(p_nbh.get_quat());
-		obb_j.translate(vec3r{p_nbh.r.x, p_nbh.r.y, p_nbh.r.z});
-	
-		if(obb_i.intersect(obb_j))
-		{
-			//celli_res[nb2] = cell_a;
-			//cellj_res[nb2] = cell_b;
-			//pi_res[nb2] = p_a;
-			//pj_res[nb2] = p_b;
-			//if(nb2>230000) printf("INDEX: %d TEST(CELLA:%d PA:%d CELLB:%d PB:%d)  BASE(CELLI:%d PI: %d CELLJ: %d PJ: %d)  OBB(CELL:%d P: %d CELL2: %d P2: %d)\n", nb2, celli_res[nb2], pi_res[nb2], cellj_res[nb2], pj_res[nb2], cell_i[i], p_i[i], cell_j[i], p_j[i], ints2.cell_i[nb2], ints2.p_i[nb2], ints2.cell_j[nb2], ints2.p_j[nb2]);
-			nb2++;
-			
-			int index = int(i/256);
-			test_res[index]++;
-		} 
-        }
-        
-	free(cell_i_cpu);
-	free(cell_j_cpu);
-	free(p_i_cpu);
-	free(p_j_cpu);
-       	
-       	//printf("ICI\n");*/
-       	
-       	//printf("TOTAL: %d\n", total_interactions);
-       	//printf("TOTAL2: %d\n", total_interactions2);
-       	//printf("NB2: %d\n", nb2);
-       	//for(int i = 0; i < numBlocks; i++)
-       	//{
-       	//	if(res_print[i]!=tes_res[i]) printf("BLOCK: %d RES: %d TEST: %d\n", i, res_print[i], test_res[i]);
-       	//}
-       	//for(int i = 0; i < numBlocks; i++)
-       	//{
-       	//	printf("RES[%d] = %d\n", i, res_incr[i]);
-       	//}
-       	
-       	//free(res_print);
-       	
-       /*	printf("NUMBLOCKS: %d TOTAL: %d TOTAL2: %d NB2: %d TOTAL_TEST: %d RES_LAST: %d TEST_RES_LAST: %d\n", numBlocks, total_interactions, total_interactions2, nb2, total_test, res[numBlocks-1], test_res[numBlocks - 1]);
-       	//printf("NUMBLOCKS: %d RES: %d RES_FINAL: %d\n", numBlocks, res[numBlocks-1], res_final[numBlocks-1]);
-       	
-       	for(int i = 0; i < numBlocks; i++)
-       	{
-       		if(res[i] != test_res[i]) printf("ERREUR: INDEX:%d RES: %d TEST: %d\n", i, res[i], test_res[i]);
-       		//printf("RES: %d\n", res[i]);	
-       	}*/
-       	
-	/*uint32_t* cell_i_obb = (uint32_t*)malloc(total_interactions * sizeof(uint32_t));
-	uint32_t* cell_j_obb = (uint32_t*)malloc(total_interactions * sizeof(uint32_t));
-				
-	uint16_t* p_i_obb = (uint16_t*)malloc(total_interactions * sizeof(uint16_t));
-	uint16_t* p_j_obb = (uint16_t*)malloc(total_interactions * sizeof(uint16_t));
-				
-	cudaMemcpy(cell_i_obb, ints2.cell_i, total_interactions * sizeof(uint32_t)  , cudaMemcpyDeviceToHost);
-	cudaMemcpy(cell_j_obb, ints2.cell_j, total_interactions * sizeof(uint32_t), cudaMemcpyDeviceToHost);
-				
-	cudaMemcpy(p_i_obb, ints2.p_i, total_interactions  * sizeof(uint16_t), cudaMemcpyDeviceToHost);
-	cudaMemcpy(p_j_obb, ints2.p_j, total_interactions  * sizeof(uint16_t), cudaMemcpyDeviceToHost);
-				
-	for(int i = 0; i < total_interactions; i++)
-	{
-		printf("INDEX_OBB: %d (CELL_I:%d P_I:%d CELL_J:%d P_J:%d) \n", i, cell_i_obb[i], p_i_obb[i], cell_j_obb[i], p_j_obb[i]);
-		//printf("INDEX_OBB: %d (CELL_I:%d P_I:%d CELL_J:%d P_J:%d) TEST(CELL_I:%d P_I:%d CELL_J:%d P_J:%d)\n", i, cell_i_obb[i], p_i_obb[i], cell_j_obb[i], p_j_obb[i], celli_res[i], pi_res[i], cellj_res[i], pj_res[i]);
-		//printf("INDEX: %d CELL_I: %d P_I: %d CELL_J: %d P_J: %d\n", i, cell_i[i], p_i[i], cell_j[i], p_j[i]);
-	//	printf(" 
-	}
-	
-	free(cell_i_obb);
-	free(cell_j_obb);
-	free(p_i_obb);
-	free(p_j_obb);*/
-       	
-       	
-       	
+       	       	
        	cudaFree(cell_i);
        	cudaFree(cell_j);
        	cudaFree(p_i);
