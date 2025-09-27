@@ -1,0 +1,6 @@
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/particles.xyz DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/cube.stl DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/mesh.stl DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+add_omp_mpi_test_regression_file("STLMeshStationnaryMotion" "mesh_stl.msp" "regression_test_mesh_stl.msp")
+add_omp_mpi_test_regression_file("STLMeshLinearMotion" "mesh_stl_linear_motion.msp" "regression_test_mesh_stl.msp")
+add_omp_mpi_test_regression_file("STLMeshTabulatedMotion" "mesh_stl_tabulated_motion.msp" "regression_test_mesh_stl.msp")

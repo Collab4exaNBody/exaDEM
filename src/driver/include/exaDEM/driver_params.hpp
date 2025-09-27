@@ -42,6 +42,7 @@ namespace exaDEM
     LINEAR_COMPRESSIVE_MOTION, /**< Linear movement combined with compressive forces. */
     TABULATED,                 /**< Motion defined by precomputed or tabulated data. */
     SHAKER,                    /**< Oscillatory or vibratory motion, typically mimicking a shaking mechanism. */
+    PENDULUM_MOTION,           /**< Oscillatory swinging around a suspension point (pendulum-like). */
     UNKNOWN
   };
 
@@ -58,6 +59,7 @@ namespace exaDEM
       case LINEAR_COMPRESSIVE_MOTION: return "LINEAR_COMPRESSIVE_MOTION";
       case TABULATED: return "TABULATED";
       case SHAKER: return "SHAKER";
+      case PENDULUM_MOTION: return "PENDULUM_MOTION";
       default: return "UNKNOWN";
     }
   }
@@ -72,6 +74,7 @@ namespace exaDEM
     if (str == "LINEAR_COMPRESSIVE_MOTION") return LINEAR_COMPRESSIVE_MOTION;
     if (str == "TABULATED") return TABULATED;
     if (str == "SHAKER") return SHAKER;
+    if (str == "PENDULUM_MOTION") return PENDULUM_MOTION;
 
     // If the string doesn't match any valid MotionType, return a default value
     return UNKNOWN;  // Or some other default action like throwing an exception or logging
@@ -104,9 +107,15 @@ namespace exaDEM
     double amplitude = 0;
     Vec3d shaker_dir = Vec3d(0,0,1);
 
+    // Motion: Pendulum (re-use both shaker motion members omega and amplitude)
+    Vec3d pendulum_anchor_point;     /**< Fixed suspension point. */
+    Vec3d pendulum_initial_position; /**< Starting position of the pendulum mass. */
+    Vec3d pendulum_swing_dir;        /**< Direction defining the pendulum's oscillation plane. */
+
     inline bool is_stationary() const { return motion_type == STATIONARY; }
     inline bool is_tabulated() const { return motion_type == TABULATED; }
     inline bool is_shaker() const { return motion_type == SHAKER; }
+    inline bool is_pendulum() const { return motion_type == PENDULUM_MOTION; }
 
     void set_params(Driver_params& in)
     { 
@@ -173,7 +182,7 @@ namespace exaDEM
 
     bool check_motion_coherence()
     {
-      if( is_shaker() )
+      if( is_shaker() || is_pendulum() )
       {
         if( amplitude <= 0.0 ) 
         {
@@ -185,11 +194,28 @@ namespace exaDEM
           color_log::warning("Driver_params::check_motion_coherence", "The \"omega\" input slot is not defined correctly."); 
           return false;
         }
-        if( exanb::dot(shaker_dir, shaker_dir) - 1 >= 1e-14 ) 
+
+        if( is_shaker())
         {
-          Vec3d old = shaker_dir;
-          exanb::_normalize(shaker_dir);
-          color_log::warning("Driver_params::check_motion_coherence", "Your shaker_dir vector [" + std::to_string(old) + "} has been normalized to ["  + std::to_string(shaker_dir) + "]"); 
+          if( exanb::dot(shaker_dir, shaker_dir) - 1 >= 1e-14 ) 
+          {
+            Vec3d old = shaker_dir;
+            exanb::_normalize(shaker_dir);
+            color_log::warning("Driver_params::check_motion_coherence", "Your shaker_dir vector [" + std::to_string(old) + "} has been normalized to ["  + std::to_string(shaker_dir) + "]"); 
+          }
+        }
+        else if( is_pendulum())
+        {
+          if( pendulum_anchor_point == pendulum_initial_position )
+          {
+            color_log::error("Driver_params::check_motion_coherence", "The point defined in pendulum_anchor_point and the one in pendulum_initial_position are the same. It is impossible to define a motion type PENDULUM_MOTION. Point: [" + std::to_string(pendulum_anchor_point) + "]"); 
+          }
+          if( exanb::dot(pendulum_swing_dir, pendulum_swing_dir) - 1 >= 1e-14 ) 
+          {
+            Vec3d old = pendulum_swing_dir;
+            exanb::_normalize(pendulum_swing_dir);
+            color_log::warning("Driver_params::check_motion_coherence", "Your pendulum_swing_dir vector [" + std::to_string(old) + "} has been normalized to ["  + std::to_string(pendulum_swing_dir) + "]"); 
+          }
         }
       }
       if( is_tabulated() )
@@ -380,6 +406,14 @@ namespace exaDEM
         stream << ", amplitude: " << amplitude;
         stream << ", shaker_dir: [" << shaker_dir << "]";
       }
+      if(motion_type == PENDULUM_MOTION)
+      {
+        stream << ", omega: " << omega;
+        stream << ", amplitude: " << amplitude;
+        stream << ", pendulum_anchor_point: [" << pendulum_anchor_point << "]";
+        stream << ", pendulum_initial_position: [" << pendulum_initial_position << "]";
+        stream << ", pendulum_swing_dir: [" << pendulum_swing_dir << "]";
+      }
       stream  <<" }" << std::endl;
     }
 
@@ -443,6 +477,43 @@ namespace exaDEM
       assert(motion_start_threshold >= 0);
       time -= motion_start_threshold;
       return amplitude * omega * cos(omega * time) * shaker_direction();
+    }
+
+    /* Pendulum routines */
+    Vec3d pendulum_direction()
+    {
+      return pendulum_swing_dir;
+    }
+
+    Vec3d pendulum_velocity(double time)
+    {
+      return {0,0,0};
+    }
+
+    std::pair<double,  Vec3d> compute_offset_normal_pendulum_motion(double time)
+    {
+      if( time <  motion_start_threshold ) color_log::error("compute_normal_pendulum_motion", "This call is ill-formed, please verify that time is superior to motion_start_threshold.");
+      Vec3d v1 = pendulum_anchor_point;
+      Vec3d v2 = pendulum_initial_position;
+      Vec3d v3 = pendulum_initial_position + pendulum_direction() * pendulum_signal(time);
+
+      // warning, if v2 = v3, we return an offset of  0 and the pendulum direction
+      if( exanb::dot(v3,v2) < 1e-16) return {0.0, pendulum_direction()};
+
+      Vec3d v1v3 = v3 - v1;
+      v1v3 = v1v3 / exanb::norm(v1v3);
+      Vec3d project_v2_v1v3 = exanb::dot(v1v3, v2-v1) * v1v3 + v1;
+      Vec3d dir_proj_v2_v2 = project_v2_v1v3 - v2;
+      Vec3d normal = dir_proj_v2_v2 / exanb::norm(dir_proj_v2_v2);
+      double offset = exanb::dot(v1, normal);
+      return {offset, normal};
+    }
+
+    double pendulum_signal(double time)
+    {
+      assert(motion_start_threshold >= 0);
+      time -= motion_start_threshold;
+      return amplitude * sin(omega * time);
     }
   };
 }
@@ -531,8 +602,8 @@ namespace YAML
         v.tab_pos = node["positions"].as<std::vector<Vec3d>>(); 
       }
 
-      // Shaker
-      if( v.is_shaker() )
+      // Shaker && Pendulum
+      if( v.is_shaker() || v.is_pendulum() )
       {
         if (!node["omega"])
         {
@@ -546,14 +617,39 @@ namespace YAML
           return false;
         }
         v.amplitude = node["amplitude"].as<double>();
-        if (!node["shaker_dir"])
+
+        if( v.is_shaker() )
         {
-          color_log::warning("Driver_params::decode", "shaker_dir is missing, default is [0,0,1].");
-          v.shaker_dir = Vec3d{0,0,1};
+          if (!node["shaker_dir"])
+          {
+            color_log::warning("Driver_params::decode", "shaker_dir is missing, default is [0,0,1].");
+            v.shaker_dir = Vec3d{0,0,1};
+          }
+          else
+          {
+            v.shaker_dir = node["shaker_dir"].as<Vec3d>();
+          }
         }
-        else
+        else if( v.is_pendulum() )
         {
-          v.shaker_dir = node["shaker_dir"].as<Vec3d>();
+          if (!node["pendulum_anchor_point"])
+          {
+            color_log::error(function_name, "pendulum_anchor_point is missing.", false);
+            return false;
+          }
+          v.pendulum_anchor_point = node["pendulum_anchor_point"].as<Vec3d>();
+          if (!node["pendulum_initial_position"])
+          {
+            color_log::error(function_name, "pendulum_initial_position is missing.", false);
+            return false;
+          }
+          v.pendulum_initial_position = node["pendulum_initial_position"].as<Vec3d>();
+          if (!node["pendulum_swing_dir"])
+          {
+            color_log::error(function_name, "pendulum_swing_dir is missing.", false);
+            return false;
+          }
+          v.pendulum_swing_dir = node["pendulum_swing_dir"].as<Vec3d>();
         }
       }
 

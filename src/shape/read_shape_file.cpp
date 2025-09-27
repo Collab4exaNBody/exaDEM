@@ -39,6 +39,7 @@ namespace exaDEM
     ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT_OUTPUT );
     ADD_SLOT(std::vector<double>, scale_factor, INPUT, OPTIONAL, DocString{"This option 'scale_factor' the input shapes. OBB, volume, vertices, and intertia are recomputed. Note that a vector of double should be provided. Example: scale_factor: [1.2,1,5.2]"});
     ADD_SLOT(std::vector<std::string>, rename, INPUT, OPTIONAL, DocString{"This option renames the input shapes. Note that a vector of string should be provided. Example: rename: [Shape1, Shape2, Shape3]"});
+    ADD_SLOT(bool, rescale_minskowski, INPUT, true, DocString{"This option disable the rescaling of the minskowski radius."});
     ADD_SLOT(bool, verbosity, INPUT, true );
 
   public:
@@ -85,6 +86,11 @@ namespace exaDEM
 
       if(scale_factor.has_value())
       {
+        if( !(*rescale_minskowski) ) 
+        { 
+          color_log::warning("read_shape_file", "You are disabling the minskowski radius rescaling, note that the volume and other properties could be wrong.");
+        }
+
         std::vector<double> scales = *scale_factor;
 
         if(list_of_shapes.size() != scales.size())
@@ -92,9 +98,10 @@ namespace exaDEM
           color_log::error("read_shape_file", "The vector size 'scale_factor' should have " + std::to_string(list_of_shapes.size()) + " + elements and not " + std::to_string(scales.size()) + "elements"); 
         }
 
+        const bool rescale_minskowki_radius = *rescale_minskowski;
         for(size_t sid = 0 ; sid < list_of_shapes.size() ; sid++)
         {
-          list_of_shapes[sid].rescale(scales[sid]);
+          list_of_shapes[sid].rescale(scales[sid], rescale_minskowki_radius);
         }
       }
 

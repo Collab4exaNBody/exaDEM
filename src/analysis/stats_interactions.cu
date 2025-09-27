@@ -59,14 +59,14 @@ namespace exaDEM
       auto incr_interaction_counters = [null](const Interaction &I, int &count, int &active_count, int &active_global_count) -> void
       {
         count++;
-        if (I.friction != null)
+        if (I.is_active())
         {
           active_count++;
           active_global_count++;
         }
       };
 
-#     pragma omp parallel for reduction(+:nvv, nve, nvf, nee, an, anvv, anve, anvf, anee)
+#     pragma omp parallel for reduction(+:nvv, nve, nvf, nee, an, anvv, anve, anvf, anee, nvc, nvs, nvb, nSvv, nSve, nSvf, nSee, nSev, nSfv, anvc, anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv)
       for (size_t i = 0; i < cells.size(); i++)
       {
         for (auto &item : cells[i].m_data)

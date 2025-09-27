@@ -1,0 +1,27 @@
+includes:
+  - mesh_stl_common.msp
+
+io_tree:
+  - io_config:
+     dir_name: "SpheresMeshStlDir"
+
+setup_drivers:
+  - register_stl_mesh:
+     id: 0
+     filename: mesh.stl
+     minskowski: 0.001 m
+  - register_stl_mesh:
+     id: 1
+     filename: cube.stl
+     minskowski: 0.001 m
+
+input_data:
+  - reader1
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 20000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 1000
+  dt: 0.0001 s
+  rcut_inc: 0.0025 m

@@ -102,7 +102,7 @@ namespace exaDEM
       {
         if( *scale != 1.0 && *scale > 0.0 )
         {
-          shp.rescale(*scale);
+          shp.rescale(*scale, false);
           shp.write_paraview(); // replace
         }
         else

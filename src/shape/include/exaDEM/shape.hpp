@@ -611,12 +611,17 @@ namespace exaDEM
     /**
      * @brief Rescale the shape by a given factor.
      * @param scale Scaling factor
+     * @param enable_minskowski_rescaling Enable to rescale the minskowski radius
      */
-    void rescale(const double scale)
+    void rescale(const double scale, const bool enable_minskowski_rescaling)
     {
+      if(enable_minskowski_rescaling) 
+      {
+        m_radius *= scale;
+      }
+
       auto scale_vertices = [] (exanb::Vec3d& v, double s) { v = s * v; };
       for_all_vertices(scale_vertices, scale);
-      m_radius *= scale;
       m_volume = this->get_volume(scale);
       m_inertia_on_mass = this->get_Im(scale);
       std::vector<vec3r> vertices;
