@@ -47,9 +47,10 @@ For more details, see `CONTRIBUTING.md`. Main guidelines are:
 - Thierry Carrard (CEA/DAM)
 - Carlo Elia Doncecchi (CEA/DES)
 
-### Other Developers
+### Contributors
 
 - Paul Lafourcade (CEA/DAM)
+- Vincent Topin (CEA/DES)
 - Lhassan Amarsid (CEA/DES)
 - Vincent Richefeu (CNRS)
 
