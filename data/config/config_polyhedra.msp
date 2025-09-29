@@ -11,7 +11,6 @@ evaluate_particle_displ:
 
 chunk_neighbors_impl:
   - chunk_neighbors_contact
-#  - stats_interactions
 #  - nbh_polyhedron
   - stats_interactions
   - nbh_polyhedron_gpu:
