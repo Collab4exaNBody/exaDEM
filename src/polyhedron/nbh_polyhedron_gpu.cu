@@ -1546,7 +1546,7 @@ namespace exaDEM
 				//classifier.waves[3].clear();*/
       }
 
-/*#     pragma omp parallel
+#     pragma omp parallel
       {
         // local storage per thread
         Interaction item;
@@ -1656,7 +1656,7 @@ namespace exaDEM
           assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
         }
         //    GRID_OMP_FOR_END
-      }*/
+      }
 			//lout << "end of nbh_polyhedron gpu" << std::endl;
 		}
 	};
