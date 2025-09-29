@@ -101,7 +101,7 @@ namespace exaDEM
               ) -> bool
           {
             double projected_value = exanb::dot(point, plane_normal);
-            return std::abs(projected_value - plane_offset) < 1e-14;
+            return std::abs(projected_value - plane_offset) < 1e-12;
           };
 
           // Project the initial pendulum positions onto their respective planes
