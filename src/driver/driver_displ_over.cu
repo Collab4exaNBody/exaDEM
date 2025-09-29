@@ -84,7 +84,7 @@ namespace exaDEM
               ) -> Vec3d
           {
             // Ensure the line is not parallel to the plane
-            assert(std::abs(exanb::dot(plane_normal, line_dir)) >= 1e-14);
+            assert(std::abs(exanb::dot(plane_normal, line_dir)) >= 1e-12);
             // Vector from line_point to plane_point
             Vec3d delta = plane_point - line_point;
             // Scalar parameter t of the intersection
