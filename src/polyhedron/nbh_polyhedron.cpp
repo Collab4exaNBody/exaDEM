@@ -106,12 +106,16 @@ namespace exaDEM
       }
 
       auto [cell_ptr, cell_size] = traversal_real->info();
+      
+      //onika::memory::CudaMMVector<int> counting;
+      //counting.resize(cell_size);
 
 #     pragma omp parallel
       {
         // local storage per thread
         Interaction item;
         interaction_manager manager;
+        
 #       pragma omp for schedule(dynamic)
         for (size_t ci = 0; ci < cell_size; ci++)
         {
@@ -211,6 +215,21 @@ namespace exaDEM
               }
             }
           }
+          
+            /*auto& count = counting[ci];
+            
+            //apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric *///,
+                /*[&g, &count, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+                {
+                // default value of the interaction studied (A or i -> B or j)
+                const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+                if (id_a[p_a] >= id_nbh)
+                {
+                if (!g.is_ghost_cell(cell_b))
+                return;
+                }
+		count++;
+                });*/
 
           // Second, we add interactions between two polyhedra.
 
@@ -393,6 +412,16 @@ namespace exaDEM
         }
         //    GRID_OMP_FOR_END
       }
+      
+      /*int add = 0;
+      
+      for(int i = 0; i < cell_size; i++)
+      {
+      	add+= counting[i];
+      }
+      
+      printf("RECHERCHE DE VOISINS: %d\n", add);*/
+      
     }
   };
 

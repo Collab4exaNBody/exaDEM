@@ -635,7 +635,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
       ContactNeighborFilterFunc<decltype(cells)> nbh_filter{cells, *rcut_inc};
       static constexpr std::false_type no_z_order = {};
 
-     /*if (!domain->xform_is_identity())
+     if (!domain->xform_is_identity())
       {
         LinearXForm xform = {domain->xform()};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
@@ -644,7 +644,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
       {
         NullXForm xform = {};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
-      }*/
+      }
       
         auto& g = *grid;
         IJK dims = g.dimension();
@@ -785,6 +785,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	cudaFree(d_temp_storage);
 
 	int total_interactions = nb_nbh[incr_cell - 1] + nb_nbh_incr[incr_cell - 1];
+	
+	//printf("TOTAL: %d\n", total_interactions);
 
 	uint16_t* p_i;
 	uint16_t* p_j;

@@ -641,8 +641,8 @@ namespace exaDEM
 				
 				for(int i = 0; i < 4; i++)
 				{
-					//if( i != 2)
-					//{
+					if( i != 2)
+					{
 					onika::memory::CudaMMVector<int> nb_history;
 					
 					auto& data = classifier2.waves[i];
@@ -708,26 +708,26 @@ namespace exaDEM
 					
 					if(i == 0)
 					{
-						max_c = 20;
-						max_d = 20;
+						max_c = 6;
+						max_d = 6;
 						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
 					}
 					else if(i == 1)
 					{
-						max_c = 20;
-						max_d = 30;
+						max_c = 6;
+						max_d = 3;
 						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
 					}
-					else if(i == 2)
-					{
-						max_c = 20;
-						max_d = 12;
-						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
-					}
+					//else if(i == 2)
+					//{
+						//max_c = 6;
+						//max_d = 8;
+						//fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
+					//}
 					else
 					{
-						max_c = 30;
-						max_d = 30;
+						max_c = 3;
+						max_d = 3;
 						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
 					}
 					
@@ -754,7 +754,7 @@ namespace exaDEM
 					cudaFree(indices);
 					
 					//printf("NEXT: %d\n", i);
-					//}
+					}
 				}
 				   }	
 				
@@ -990,8 +990,8 @@ namespace exaDEM
 				{
 					for(int i = 0; i < 4; i++)
 					{
-						//if( i != 2 )
-						//{
+						if( i != 2 )
+						{
 						auto& interaction_classifier = classifier2.waves[i];
 						
 						int nbBlocks = ( interaction_classifier.size() + 256 - 1) / 256;
@@ -1007,23 +1007,23 @@ namespace exaDEM
 						
 						if(i == 0)
 						{
-							max_c = 20;
-							max_d = 20;
+							max_c = 6;
+							max_d = 6;
 						}
 						else if(i == 1)
 						{
-							max_c = 20;
-							max_d = 30;
+							max_c = 6;
+							max_d = 3;
 						}
-						else if(i == 2)
-						{
-							max_c = 20;
-							max_d = 12;
-						}
+						//else if(i == 2)
+						//{
+						//	max_c = 6;
+						//	max_d = 8;
+						//}
 						else
 						{
-							max_c = 30;
-							max_d = 30;
+							max_c = 3;
+							max_d = 3;
 						}
 						
 						//onika::memory::CudaMMVector<int> indices_in;
@@ -1092,6 +1092,7 @@ namespace exaDEM
 						//printf("TYPE%d  %d/%d\n", i, nb_active[0], interaction_classifier.size());
 						
 						actives[i] = nb_active[0];
+						}
 					}
 				}
 				
@@ -1284,7 +1285,7 @@ namespace exaDEM
 				//classifier.waves[3].clear();*/
       }
 
-#     pragma omp parallel
+/*#     pragma omp parallel
       {
         // local storage per thread
         Interaction item;
@@ -1394,7 +1395,7 @@ namespace exaDEM
           assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
         }
         //    GRID_OMP_FOR_END
-      }
+      }*/
 			//lout << "end of nbh_polyhedron gpu" << std::endl;
 		}
 	};
