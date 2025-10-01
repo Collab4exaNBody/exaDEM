@@ -50,7 +50,7 @@ namespace exaDEM
       /// Get raw pointer to data
       int* __restrict__ get_ptr() { return data.data(); }
       /// Get current value
-      const int get() { return data[0]; }
+      int get() { return data[0]; }
   };
 
   /**
@@ -109,11 +109,11 @@ namespace exaDEM
           Vec3d proj_b = intersect_line_plane(b.pendulum_anchor_point, b.normal, b.pendulum_initial_position, b.pendulum_direction());
 
           // Sanity check
-          if (!is_point_on_plane(proj_a, a.normal, a.offset) ||
-              !is_point_on_plane(proj_b, b.normal, b.offset))
-          {
-            color_log::error("driver_displ_over::surface", "proj_a or proj_b are invalid");
-          }
+          //if (!is_point_on_plane(proj_a, a.normal, a.offset) ||
+          //    !is_point_on_plane(proj_b, b.normal, b.offset))
+          //{
+          //  color_log::error("driver_displ_over::surface", "proj_a or proj_b are invalid");
+          //}
 
           d = proj_b - proj_a; 
         }
