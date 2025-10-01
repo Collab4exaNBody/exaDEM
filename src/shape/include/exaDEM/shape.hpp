@@ -659,7 +659,19 @@ namespace exaDEM
 
       return surface;
     }
-    /// OBBTree Section
+
+    /**
+     * @brief Shifts all mesh vertices by a given vector.
+     *
+     * @param shift The shift vector applied to each vertex.
+     */
+    void shift_vertices(const Vec3d& shift)
+    {
+      auto shift_vertex = [] (Vec3d& vertex, const Vec3d& shift) {
+        vertex -= shift;
+      };
+      for_all_vertices(shift_vertex, shift);
+    }
 
     /// OBBTree Section
 

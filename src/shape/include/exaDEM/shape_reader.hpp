@@ -137,6 +137,7 @@ namespace exaDEM
 			else if (key == ">")
 			{
 				shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
+        shp.shift_vertices(position);
 				shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
 				shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
 				return shp;
