@@ -170,7 +170,7 @@ namespace exaDEM
         params.kt = tangential_coeffs[p];
         params.kr = rotational_coeffs[p];
         params.mu = frictional_coeffs[p];
-        params.damp_rate = rotational_coeffs[p];
+        params.damp_rate = damping_coeffs[p];
 
         if(fill_cohesion_part)
         {
