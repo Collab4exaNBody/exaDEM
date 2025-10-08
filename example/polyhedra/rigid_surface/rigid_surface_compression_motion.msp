@@ -1,11 +1,9 @@
-grid_flavor: grid_flavor_dem
-
 includes:
-  - config_spheres.msp
+  - rigid_surface_common.msp
 
 io_tree:
   - io_config:
-     dir_name: "SpheresCompressionWallDir"
+     dir_name: "PolyhedraCompressionWallDir"
 
 particle_regions:
   - BOX:
@@ -13,20 +11,14 @@ particle_regions:
 
 input_data:
   - init_rcb_grid
-  - particle_type:
-     type: [ Sphere1 ]
+  - read_shape_file:
+     filename: octahedron.shp
   - lattice:
       structure: SC
-      types: [ Sphere1 ]
+      types: [ Octahedron ]
       size: [ 1.0 , 1.0 , 1.0 ]
       region: BOX 
-  - set_fields:
-     polyhedra: false
-     type:           [ Sphere1 ]
-     radius:         [     0.5 ]
-     density:        [    0.02 ]
-     velocity:       [ [0,0,0] ]
-     sigma_velocity: [     0.1 ]
+  - set_mono_mat
 
 setup_drivers:
   - register_surface:
@@ -48,14 +40,12 @@ setup_drivers:
   - register_surface:
      id: 4
      state: { normal: [1,0,0], offset: 11, surface: 144}
-     params: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [1,0,0], sigma: 0.5, damprate: 0.999 }
+     params: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [1,0,0], sigma: 5, damprate: 0.999 }
 
-compute_force:
-  - gravity_force
-  - contact_sphere:
-     symetric: true
-     config: { kn: 100000, kt: 100000, kr: 0.1,mu: 0.1, damp_rate: 0.9} 
-     config_driver: { kn: 100000, kt: 90000, kr: 0.1,mu: 0.5, damp_rate: 0.9} 
+# compute_force is defined into rigid_surface_common.msp
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
 
 domain:
   cell_size: 2 m
@@ -68,5 +58,5 @@ global:
   simulation_end_iteration: 50000
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 1000
-  dt: 0.00005 s 
-  rcut_inc: 0.4 m
+  dt: 0.0001 s 
+  rcut_inc: 0.1 m

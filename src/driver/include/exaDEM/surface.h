@@ -185,7 +185,8 @@ namespace exaDEM
       }
       if( is_linear() )
       {
-        if( normal != motion_vector )
+        // We do not accept that motion_vector is not equal to -normal for compression mode
+        if( normal != motion_vector && (normal != -motion_vector && !is_compressive()) )
         {
           color_log::warning("register_surface", "The motion vector of the surface has been adjusted to align with the normal vector, i.e. the motion vecor[" + std::to_string(motion_vector)  + "] is now equal to [" + std::to_string(normal) + "].");
           motion_vector = normal;
