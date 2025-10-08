@@ -185,7 +185,8 @@ namespace exaDEM
       }
       if( is_linear() )
       {
-        if( normal != motion_vector )
+        // We do not accept that motion_vector is not equal to -normal for compression mode
+        if( normal != motion_vector && (normal != -motion_vector && !is_compressive()) )
         {
           color_log::warning("register_surface", "The motion vector of the surface has been adjusted to align with the normal vector, i.e. the motion vecor[" + std::to_string(motion_vector)  + "] is now equal to [" + std::to_string(normal) + "].");
           motion_vector = normal;
@@ -208,7 +209,10 @@ namespace exaDEM
         if( weigth != 0 )
         {
           const double s = surface;
-          acc = (exanb::norm(forces) - sigma * s - (damprate * exanb::norm(vel)) ) / (weigth * C);
+          //acc = (exanb::norm(forces) - sigma * s - (damprate * exanb::norm(vel)) ) / (weigth * C);
+          Vec3d tmp = (forces - sigma * s * this->motion_vector) / (weigth * C);
+          // get acc into the motion vector axis
+          acc = exanb::dot(tmp, this->motion_vector); 
         }
         else
         {
@@ -227,7 +231,7 @@ namespace exaDEM
       {
         if( is_compressive() )
         {
-          if( this->sigma != 0 ) vel += 0.5 * dt * acc * normal; 
+          if( this->sigma != 0 ) vel += 0.5 * dt * acc * this->motion_vector; 
         }
         if( motion_type == LINEAR_MOTION )
         {
@@ -268,7 +272,7 @@ namespace exaDEM
           return;
         }
 
-        double displ = dt * exanb::norm(vel) + 0.5 * dt * dt * acc;
+        double displ = dt * exanb::dot(vel, normal) + 0.5 * dt * dt * acc;
 
         /** The shaker motion changes the displacement behavior */
         /** the shaker direction vector is ignored, the normal vector is used */

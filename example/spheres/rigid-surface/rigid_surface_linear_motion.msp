@@ -5,7 +5,7 @@ includes:
 
 io_tree:
   - io_config:
-     dir_name: "SpheresCompressionWallDir"
+     dir_name: "SpheresLinearMotionDir"
 
 particle_regions:
   - BOX:
@@ -47,8 +47,8 @@ setup_drivers:
      params: { motion_type: STATIONARY }
   - register_surface:
      id: 4
-     state: { normal: [1,0,0], offset: 11, surface: 144}
-     params: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [1,0,0], sigma: 0.5, damprate: 0.999 }
+     state: { normal: [1,0,0], offset: 11}
+     params: { motion_type: LINEAR_MOTION, motion_vector: [-1,0,0], const_vel: 2.5, damprate: 0.999 }
 
 compute_force:
   - gravity_force
