@@ -319,7 +319,7 @@ namespace exaDEM
        */
       ONIKA_HOST_DEVICE_FUNC inline ContactParamsT& get_drivers_cp(int mat, int driver) const
       {
-        return drivers_cp[this->get_idx_driver(mat, driver)];
+        return drivers_cp[this->get_idx_drivers(mat, driver)];
       }
     };
 } // namespace exaDEM
