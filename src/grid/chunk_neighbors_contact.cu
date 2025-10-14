@@ -228,8 +228,8 @@ template< class GridT > __global__ void kernelUN(GridT* cells,
 		int ida = id_a[p_a];
 		
 		//if(threadIdx.x < num_particles_b)
-		//if( is_inside( cellb_AABB, pos_a))
-		//{
+		if( is_inside( cellb_AABB, pos_a))
+		{
 		for(int p_b = threadIdx.x; p_b < num_particles_b; p_b+= blockDim.x)
 		{
 			const Vec3d pos_b = { rx_b[p_b], ry_b[p_b], rz_b[p_b] };
@@ -248,7 +248,7 @@ template< class GridT > __global__ void kernelUN(GridT* cells,
 			}
 
 		}
-		//}	
+		}	
 	}
 	
 	int aggregate = BlockReduce(temp_storage).Sum(nb_interactions);
@@ -509,8 +509,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 		int ida = id_a[p_a];
 
 		//if(threadIdx.x < num_particles_b)
-		//if( is_inside( cellb_AABB, pos_a ))
-		//{
+		if( is_inside( cellb_AABB, pos_a ))
+		{
 		for(int p_b = threadIdx.x; p_b < num_particles_b; p_b+= blockDim.x)
 		{
 			const Vec3d pos_b = { rx_b[p_b], ry_b[p_b], rz_b[p_b] };
@@ -527,7 +527,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 				}
 			}
 		}
-		//}	
+		}	
 	}
 
         BlockScan(temp_storage).ExclusiveSum( nb_interactions , prefix );
@@ -545,8 +545,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 		int ida = id_a[p_a];
 
 		//if(threadIdx.x < num_particles_b)
-		//if( is_inside(cellb_AABB, pos_a))
-		//{
+		if( is_inside(cellb_AABB, pos_a))
+		{
 		for(int p_b = threadIdx.x; p_b < num_particles_b; p_b+= blockDim.x)
 		{
 			const Vec3d pos_b = { rx_b[p_b], ry_b[p_b], rz_b[p_b] };
@@ -567,7 +567,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 				}
 			}
 		}
-		//}	
+		}	
 	}
 }
 
@@ -635,7 +635,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
       ContactNeighborFilterFunc<decltype(cells)> nbh_filter{cells, *rcut_inc};
       static constexpr std::false_type no_z_order = {};
 
-     if (!domain->xform_is_identity())
+     /*if (!domain->xform_is_identity())
       {
         LinearXForm xform = {domain->xform()};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
@@ -644,7 +644,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
       {
         NullXForm xform = {};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
-      }
+      }*/
       
         auto& g = *grid;
         IJK dims = g.dimension();

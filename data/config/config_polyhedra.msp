@@ -11,10 +11,11 @@ evaluate_particle_displ:
 
 chunk_neighbors_impl:
   - chunk_neighbors_contact
-  - nbh_polyhedron
+#  - nbh_polyhedron
   - stats_interactions
   - nbh_polyhedron_gpu:
      block_pair_version: true
+#  - stats_interactions
 #     block_version: true
 #     particle_version: true
 #     pair_version: true
