@@ -94,6 +94,7 @@ namespace exaDEM
           };
 
           // Utility function: check if a point lies on a given plane
+          /*
           auto is_point_on_plane = [] (
               const Vec3d& point,          // Point to check
               const Vec3d& plane_normal,   // Plane normal
@@ -103,6 +104,7 @@ namespace exaDEM
             double projected_value = exanb::dot(point, plane_normal);
             return std::abs(projected_value - plane_offset) < 1e-14;
           };
+          */
 
           // Project the initial pendulum positions onto their respective planes
           Vec3d proj_a = intersect_line_plane(a.pendulum_anchor_point, a.normal, a.pendulum_initial_position, a.pendulum_direction());
@@ -223,9 +225,9 @@ namespace exaDEM
     inline std::string documentation() const override final
     {
       return R"EOF(
-compute the distance between each particle in grid input and it's backup position in backup_dem input.
-sets result output to true if at least one particle has moved further than threshold.
-)EOF";
+         Compute the distance between each particle in grid input and it's backup position in backup_dem input.
+         sets result output to true if at least one particle has moved further than threshold.
+      )EOF";
     }
 
     // -----------------------------------------------

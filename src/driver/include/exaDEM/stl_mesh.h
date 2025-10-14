@@ -87,7 +87,7 @@ namespace YAML
 
 namespace exaDEM
 {
-  const std::vector<MotionType> stl_valid_motion_types = {STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION, TABULATED, SHAKER};
+  const std::vector<MotionType> stl_valid_motion_types = {STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION, TABULATED, SHAKER, EXPRESSION};
 
   using namespace exanb;
   /**
@@ -225,7 +225,6 @@ namespace exaDEM
 				{
 					if( this->sigma != 0 ) vel += 0.5 * dt * acc;
 				}
-
 			}
 		}
 
@@ -247,6 +246,12 @@ namespace exaDEM
         {
           vel = shaker_velocity(time + dt) * this->shaker_direction();
           acc = Vec3d{0,0,0}; // reset acc
+        }
+
+        if( this->is_expr() ) 
+        {
+          vel = this->expr.expr_v(time);
+          vrot = this->expr.expr_vrot(time);
         }
 
 				center += dt * vel + 0.5 * dt * dt * acc;

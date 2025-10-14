@@ -115,6 +115,7 @@ namespace exaDEM
       shp.m_radius = *minskowski;
       //shp.increase_obb(*rcut_inc);
       shp.increase_obb(shp.m_radius);
+
       exaDEM::Stl_mesh driver = {*state, *params};
       driver.set_shape(shp);
       driver.initialize();
