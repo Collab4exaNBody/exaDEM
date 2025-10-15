@@ -637,7 +637,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
       ContactNeighborFilterFunc<decltype(cells)> nbh_filter{cells, *rcut_inc};
       static constexpr std::false_type no_z_order = {};
 
-     if (!domain->xform_is_identity())
+     /*if (!domain->xform_is_identity())
       {
         LinearXForm xform = {domain->xform()};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
@@ -646,7 +646,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
       {
         NullXForm xform = {};
         chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch, cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
-      }
+      }*/
       
         auto& g = *grid;
         IJK dims = g.dimension();
@@ -723,9 +723,9 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 		} 
 	}
 	
-	printf("NOMBRE DE CELLULES: %d\n", cells_a.size());
+	//printf("NOMBRE DE CELLULES: %d\n", cells_a.size());
 	
-	printf("MOYENNE PARTICULES: %d\n", (int)(particles_average/cells_a.size()));
+	//printf("MOYENNE PARTICULES: %d\n", (int)(particles_average/cells_a.size()));
 
 	onika::memory::CudaMMVector<int> cellsa;
 	cellsa.resize(incr_cell);
@@ -855,7 +855,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
        	cudaFree(p_i);
        	cudaFree(p_j);
 
-	printf("END CHUNK\n");
+	//printf("END CHUNK\n");
     }
   };
 

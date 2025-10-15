@@ -979,8 +979,8 @@ namespace exaDEM
 						interactions2.p_j/*.data()*/);
 				//lout << "End fill_classifier_gpu" << std::endl;
 				
-				onika::memory::CudaMMVector<int> actives;
-				actives.resize(4);
+				//onika::memory::CudaMMVector<int> actives;
+				//actives.resize(4);
 				
 				if(!classifier2.use) 
 				{
@@ -1091,16 +1091,16 @@ namespace exaDEM
 						
 						//printf("TYPE%d  %d/%d\n", i, nb_active[0], interaction_classifier.size());
 						
-						actives[i] = nb_active[0];
+						//actives[i] = nb_active[0];
 						//}
 					}
 				}
 				
-				printf("GPU Version :\n");
+				/*printf("GPU Version :\n");
 				printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
 				printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
 				printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
-				printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
+				printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);*/
 			}
 
 			if( *block_version )
@@ -1285,7 +1285,7 @@ namespace exaDEM
 				//classifier.waves[3].clear();*/
       }
 
-/*#     pragma omp parallel
+#     pragma omp parallel
       {
         // local storage per thread
         Interaction item;
@@ -1395,7 +1395,7 @@ namespace exaDEM
           assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
         }
         //    GRID_OMP_FOR_END
-      }*/
+      }
 			//lout << "end of nbh_polyhedron gpu" << std::endl;
 		}
 	};

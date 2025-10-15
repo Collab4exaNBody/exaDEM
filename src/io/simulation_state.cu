@@ -172,8 +172,8 @@ namespace exaDEM
       // get interaction informations
       Classifier<InteractionSOA> &classifier = *ic;
       auto& classifier2 = *ic2;
-      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
-      //exaDEM::itools::IOSimInteractionResult red = reduce_sim_io2(classifier, classifier2, *symetric);	
+      //exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
+      exaDEM::itools::IOSimInteractionResult red = reduce_sim_io2(classifier, classifier2, *symetric);	
 
       // reduce partial sums and share the result
       uint64_t active_interactions, total_interactions;
