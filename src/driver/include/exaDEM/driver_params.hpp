@@ -26,11 +26,12 @@ under the License.
 #include <thread>
 #include <onika/physics/units.h>
 
+#include <exaDEM/expr.h>
+
 
 namespace exaDEM
 {
   using namespace exanb;
-
 
   enum MotionType
   {
@@ -43,6 +44,7 @@ namespace exaDEM
     TABULATED,                 /**< Motion defined by precomputed or tabulated data. */
     SHAKER,                    /**< Oscillatory or vibratory motion, typically mimicking a shaking mechanism. */
     PENDULUM_MOTION,           /**< Oscillatory swinging around a suspension point (pendulum-like). */
+    EXPRESSION,
     UNKNOWN
   };
 
@@ -60,6 +62,7 @@ namespace exaDEM
       case TABULATED: return "TABULATED";
       case SHAKER: return "SHAKER";
       case PENDULUM_MOTION: return "PENDULUM_MOTION";
+      case EXPRESSION: return "EXPRESSION";
       default: return "UNKNOWN";
     }
   }
@@ -75,12 +78,13 @@ namespace exaDEM
     if (str == "TABULATED") return TABULATED;
     if (str == "SHAKER") return SHAKER;
     if (str == "PENDULUM_MOTION") return PENDULUM_MOTION;
+    if (str == "EXPRESSION") return EXPRESSION;
 
     // If the string doesn't match any valid MotionType, return a default value
     return UNKNOWN;  // Or some other default action like throwing an exception or logging
   }
 
-  struct Driver_params
+  struct Driver_params //: public Driver_expr
   {
     // Common motion stuff
     MotionType motion_type = STATIONARY;
@@ -112,10 +116,14 @@ namespace exaDEM
     Vec3d pendulum_initial_position; /**< Starting position of the pendulum mass. */
     Vec3d pendulum_swing_dir;        /**< Direction defining the pendulum's oscillation plane. */
 
+    // Motion: Expression
+    Driver_expr expr;
+
     inline bool is_stationary() const { return motion_type == STATIONARY; }
     inline bool is_tabulated() const { return motion_type == TABULATED; }
     inline bool is_shaker() const { return motion_type == SHAKER; }
     inline bool is_pendulum() const { return motion_type == PENDULUM_MOTION; }
+    inline bool is_expr() const { return motion_type == EXPRESSION; }
 
     void set_params(Driver_params& in)
     { 
@@ -319,7 +327,7 @@ namespace exaDEM
 
     void print_driver_params() const
     {
-      lout << "Motion type: " << motion_type_to_string(motion_type) << std::endl;
+      lout << "Motion type        : " << motion_type_to_string(motion_type) << std::endl;
 
       if( is_tabulated() )
       {
@@ -336,37 +344,42 @@ namespace exaDEM
         {
           if( motion_end_threshold != std::numeric_limits<double>::max() )
           {
-            lout << "Motion duration: [ " << motion_start_threshold << "s , " <<motion_end_threshold << "s ]" << std::endl;
+            lout << "Motion duration    : [ " << motion_start_threshold << "s , " <<motion_end_threshold << "s ]" << std::endl;
           }
           else
           {
-            lout << "Motion duration: [ " << motion_start_threshold << "s ,  inf s )" << std::endl;
+            lout << "Motion duration    : [ " << motion_start_threshold << "s ,  inf s )" << std::endl;
           }
         }
         if( is_linear() )
         {
-          lout << "Motion vector: " << motion_vector << std::endl;
+          lout << "Motion vector      : " << motion_vector << std::endl;
           if( motion_type == LINEAR_MOTION)
           { 
             lout << "Velocity (constant): " << const_vel << std::endl;
           }
           if(motion_type == LINEAR_FORCE_MOTION)
           {
-            lout << "Force (constant): " << const_force << std::endl;
+            lout << "Force (constant)   : " << const_force << std::endl;
           }
         }
         if (is_compressive() )
         {
-          lout << "Sigma: " << sigma << std::endl;
-          lout << "Damprate: " << damprate << std::endl;
+          lout << "Sigma              : " << sigma << std::endl;
+          lout << "Damprate           : " << damprate << std::endl;
         }
       }
 
       if( is_shaker() )
       {
-        lout << "Shaker.Omega: "     << omega << std::endl;
-        lout << "Shaker.Amplitude: " << amplitude << std::endl;
-        lout << "Shaker.Direction: [" << shaker_dir << "]" << std::endl;
+        lout << "Shaker.Omega       : "     << omega << std::endl;
+        lout << "Shaker.Amplitude   : " << amplitude << std::endl;
+        lout << "Shaker.Direction   : [" << shaker_dir << "]" << std::endl;
+      }
+
+      if ( is_expr() )
+      {
+        expr.expr_display(lout);
       }
     };
 
@@ -414,6 +427,9 @@ namespace exaDEM
         stream << ", pendulum_initial_position: [" << pendulum_initial_position << "]";
         stream << ", pendulum_swing_dir: [" << pendulum_swing_dir << "]";
       }
+
+      if( is_expr() ) expr.expr_dump(stream);
+
       stream  <<" }" << std::endl;
     }
 
@@ -651,6 +667,14 @@ namespace YAML
           }
           v.pendulum_swing_dir = node["pendulum_swing_dir"].as<Vec3d>();
         }
+      }
+      else if( v.is_expr() )
+      {
+        if (!node["expr"])
+        {
+          color_log::error(function_name, "expr is missing while the motion type is set to EXPRESSION");
+        }
+        v.expr = node["expr"].as<Driver_expr>();
       }
 
       if( node["motion_start_threshold"] ) v.motion_start_threshold = node["motion_start_threshold"].as<double>();
