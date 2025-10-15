@@ -235,16 +235,16 @@ namespace exaDEM
         {
           //printf("CONTACT\n");
           LinearXForm cp_xform = {xform};
-          //loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
-          loop_contact_force2<poly_type_start, poly_type_end, contact_law>(classifier2, cp_xform, __params__);
+          loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
+          //loop_contact_force2<poly_type_start, poly_type_end, contact_law>(classifier2, cp_xform, __params__);
           loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
         }
         else
         {
           //printf("CONTACT\n");
           NullXForm cp_xform;
-          //loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
-          loop_contact_force2<poly_type_start, poly_type_end, contact_law>(classifier2, cp_xform, __params__);
+          loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
+          //loop_contact_force2<poly_type_start, poly_type_end, contact_law>(classifier2, cp_xform, __params__);
           loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
         }
         run_contact_law(parallel_execution_context(), 4, classifier, cyli, __params_driver__);
