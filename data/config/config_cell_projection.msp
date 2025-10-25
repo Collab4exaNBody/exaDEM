@@ -1,0 +1,47 @@
+## This file contains default outputs for projecting quantities onto a Cartesian grid.
+
+paraview_start_cell_proj:
+  - grid_flavor
+  - message: { mesg: "Write " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - resize_grid_cell_values
+
+paraview_end_cell_proj:
+  - write_grid_vtklegacy
+
+quantities_cell_proj:
+  - timestep_paraview_file: "ParaviewOutputFiles/quantities_%010d.vtk"
+  - paraview_start_cell_proj
+  - quantities_cell_projection
+  - paraview_end_cell_proj
+
+vnorm_cell_proj:
+  - timestep_paraview_file: "ParaviewOutputFiles/vnorm_%010d.vtk"
+  - paraview_start_cell_proj
+  - quantities_cell_projection:
+     fields: [count, vnorm]
+  - paraview_end_cell_proj
+
+velocity_cell_proj:
+  - timestep_paraview_file: "ParaviewOutputFiles/velocity_proj_%010d.vtk"
+  - paraview_start_cell_proj
+  - quantities_cell_projection:
+     fields: [count, vnorm, vx, vy, vz]
+  - paraview_end_cell_proj
+
+stress_cell_proj:
+  - paraview_start_cell_proj
+  - timestep_paraview_file: "ParaviewOutputFiles/stress_proj_%010d.vtk"
+  - quantities_cell_projection:
+     fields: [count,stress]
+  - paraview_end_cell_proj
+
+count_cell_proj:
+  - timestep_paraview_file: "ParaviewOutputFiles/count_proj_%010d.vtk"
+  - paraview_start_cell_proj
+  - quantities_cell_projection:
+     fields: [count]
+  - paraview_end_cell_proj

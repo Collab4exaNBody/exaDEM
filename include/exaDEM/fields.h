@@ -41,3 +41,9 @@ namespace exaDEM
 
 #define XNB_AVAILABLE_FIELD_SETS ::exaDEM::available_field_sets_v
 
+#include <exanb/compute/math_functors.h>
+#include <onika/soatl/field_combiner.h>
+
+ONIKA_DECLARE_FIELD_COMBINER( exaDEM, VelocityNorm2Combiner , vnorm2 , exanb::Vec3Norm2Functor , exanb::field::_vx , exanb::field::_vy , exanb::field::_vz )
+ONIKA_DECLARE_FIELD_COMBINER( exaDEM, VelocityNormCombiner  , vnorm  , exanb::Vec3NormFunctor  , exanb::field::_vx , exanb::field::_vy , exanb::field::_vz )
+
