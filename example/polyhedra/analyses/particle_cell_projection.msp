@@ -63,7 +63,7 @@ analyses:
   - quantities_cell_projection:
      splat_size: 0.99
      grid_subdiv: 2
-     fields: [vnorm, vx, vy, vz]
+     fields: [count, vnorm, vx, vy, vz, stress]
   - write_grid_vtklegacy
 
 particle_write_paraview_generic:

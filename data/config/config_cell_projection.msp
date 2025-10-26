@@ -12,7 +12,7 @@ paraview_start_cell_proj:
 paraview_end_cell_proj:
   - write_grid_vtklegacy
 
-quantities_cell_proj:
+all_cell_proj:
   - timestep_paraview_file: "ParaviewOutputFiles/quantities_%010d.vtk"
   - paraview_start_cell_proj
   - quantities_cell_projection
