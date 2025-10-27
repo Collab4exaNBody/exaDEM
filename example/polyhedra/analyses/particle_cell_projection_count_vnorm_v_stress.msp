@@ -1,0 +1,71 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_polyhedra.msp
+
+io_tree:
+  - io_config:
+     dir_name: "ParticleCellProjectionCountVnormVelocityStressDir"
+
+particle_regions:
+  - CYL1:
+      quadric:
+        shape: cyly
+        transform:
+          - scale: [ 19.5, 1, 19.5 ]
+          - translate: [ 20 m , 0 , 20 m ]
+
+input_data:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: shapes.shp
+  - lattice:
+      structure: SC
+      types: [ Octahedron ]
+      size: [ 1.0 , 1.0 , 1.0 ]
+      region: CYL1
+  - set_fields:
+     polyhedra: true
+     velocity: [ [0,0,0 ] ]
+     sigma_velocity: [0.1]
+     random_quaternion: [true]
+     type: [Octahedron]
+     region: CYL1 
+ 
+setup_drivers:
+  - register_cylinder:
+     id: 0
+     state: {radius: 20 m, center: [20 m,2 m,20 m], axis: [1,0,1], vrot: [0,0.5,0]}
+     params: { motion_type: STATIONARY }
+
+compute_force:
+  - gravity_force
+  - contact_polyhedron:
+     symetric: true
+     config: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.1, damp_rate: 0.999} 
+     config_driver: { rcut: 0.0 m , dncut: 0.0 m, kn: 10000, kt: 10000, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.999} 
+
+domain:
+  cell_size: 2 m
+  periodic: [false,true,false]
+  grid_dims: [20, 4, 20]
+  bounds: [[0 m ,0 m, 0 m],[40 m, 8 m, 40 m]]
+  expandable: true
+
+analyses:
+  - vnorm_cell_proj
+  - count_cell_proj
+  - stress_cell_proj
+  - velocity_cell_proj
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 100000
+  simulation_log_frequency: 10000
+  simulation_paraview_frequency: 1000
+  simulation_analyses_frequency: 1000
+  dt: 0.0001 s 
+  rcut_inc: 0.1 m

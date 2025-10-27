@@ -25,6 +25,7 @@ includes:
   - config_end_iteration.msp
   - config_input.msp
   - config_dt_critical.msp 
+  - config_cell_projection.msp
 
 # usually outputs ParticleSpecies type to a slot named species, in case the data reader doesn't provide species description
 reduce_species_after_read: nop

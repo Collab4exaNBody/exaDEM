@@ -41,3 +41,15 @@ For more details, see the [README.md](aggregate/README.md)
 ### Samoyed
 
 For more details, see the [README.md](samoyed/README.md)
+
+
+## Analyses
+
+This folder contains examples that generate some postprocessings
+
+### Particle Cell Projection
+
+These examples show how to project particle field quantities onto a cartesian grid.
+
+`particle_cell_projection.msp`: Show how to tune the `quantities_cell_projection` operator, such as the selected fields and the use of a subgrid.
+`particle_cell_projection_count_vnorm_v_stress.msp`: Show how to use predefine block operators using the operator `quantities_cell_projection`.
