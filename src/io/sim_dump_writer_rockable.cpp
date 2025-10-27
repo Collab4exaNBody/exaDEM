@@ -230,7 +230,9 @@ namespace exaDEM
         spart.precision(prec);
         spart << "precision " << prec << std::endl;
         spart << "Particles " << all_particles + n_drivers << std::endl;
-        spart << sdriver.rdbuf();
+        if( n_drivers > 0 ) spart << sdriver.rdbuf();
+
+        // write data each 100,000 particles
         for(int p = 0 ; p < all_particles ; p++)
         {
           rockable::stream(spart, mpi_particles[p], shps);
