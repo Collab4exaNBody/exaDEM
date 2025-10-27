@@ -26,6 +26,7 @@ under the License.
 #include <exanb/core/grid_particle_field_accessor.h>
 #include <exanb/compute/field_combiners.h>
 
+#include <exaDEM/color_log.hpp>
 #include <mpi.h>
 #include <regex>
 
@@ -39,7 +40,7 @@ namespace exaDEM
     using StringList = std::vector<std::string>;
     ADD_SLOT( MPI_Comm    , mpi             , INPUT );
     ADD_SLOT( GridT          , grid              , INPUT , REQUIRED );
-    ADD_SLOT( double         , splat_size        , INPUT , 1.0 );
+    ADD_SLOT( double         , splat_size        , INPUT , -1.0, DocString{"Overlap width centered on the particle to calculate its contribution to neighboring cells"} );
     ADD_SLOT( StringList     , fields            , INPUT , StringList({".*"}) , DocString{"List of regular expressions to select fields to project"} );
     ADD_SLOT( long           , grid_subdiv       , INPUT_OUTPUT , 1 );
     ADD_SLOT( GridCellValues , grid_cell_values  , INPUT_OUTPUT );
@@ -53,6 +54,17 @@ namespace exaDEM
 
       if( grid->number_of_cells() == 0 ) return;
 
+
+      if( *splat_size == -1 ) 
+      {
+        // default value ... 
+        *splat_size = 0.5 * grid->cell_size() / (*grid_subdiv);
+      }
+
+      if( *splat_size <= 0 )
+      {
+        color_log::error("quantities_cell_projection", "splat_size sould be superior to 0");
+      }
       int rank=0;
       MPI_Comm_rank(*mpi, &rank);
 
