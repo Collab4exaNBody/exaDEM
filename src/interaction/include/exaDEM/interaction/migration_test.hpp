@@ -37,9 +37,9 @@ namespace exaDEM
         for (size_t i = offset; i < offset + size; i++)
         {
           auto &item = data_ptr[i];
-          if (item.id_i != id && item.id_j != id)
+          if (item.pair.pi.id != id && item.pair.pj.id != id)
           {
-            std::cout << "info says particle id = " << id << " and the interaction is between the particle id " << item.id_i << " and the particle id " << item.id_j << std::endl;
+            std::cout << "info says particle id = " << id << " and the interaction is between the particle id " << item.pair.pi.id << " and the particle id " << item.pair.pj.id << std::endl;
             return false;
           }
         }

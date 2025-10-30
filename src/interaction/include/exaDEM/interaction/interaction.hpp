@@ -22,6 +22,7 @@ under the License.
 //#include <ostream>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_stream.h>
+#include <exaDEM/interaction/interaction_pair.hpp>
 
 namespace exaDEM
 {
@@ -30,139 +31,90 @@ namespace exaDEM
    */
   struct Interaction
   {
+    InteractionPair pair;
     exanb::Vec3d friction = {0, 0, 0}; /**< Friction vector associated with the interaction. */
     exanb::Vec3d moment = {0, 0, 0};   /**< Moment vector associated with the interaction. */
-    uint64_t id_i;                     /**< Id of the first particle */
-    uint64_t id_j;                     /**< Id of the second particle */
-    uint32_t cell_i;                   /**< Index of the cell of the first particle involved in the interaction. */
-    uint32_t cell_j;                   /**< Index of the cell of the second particle involved in the interaction. */
-    uint16_t p_i;                      /**< Index of the particle within its cell for the first particle involved in the interaction. */
-    uint16_t p_j;                      /**< Index of the particle within its cell for the second particle involved in the interaction. */
-    uint16_t sub_i;                    /**< Sub-particle index for the first particle involved in the interaction. */
-    uint16_t sub_j;                    /**< Sub-particle index for the second particle involved in the interaction. */
-    uint16_t type;                     /**< Type of the interaction (e.g., contact type). */
 
-    /**
-     * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
-     */
-    ONIKA_HOST_DEVICE_FUNC void reset()
-    {
-      constexpr exanb::Vec3d null = {0, 0, 0};
-      friction = null;
-      moment = null;
-    }
+    ParticleSubLocation& i() { return pair.pi; }
+    ParticleSubLocation& j() { return pair.pj; }
+    ParticleSubLocation& driver() { return j(); }
+    uint16_t type() { return pair.type; } 
+    uint16_t type() const { return pair.type; } 
+    uint16_t cell() { return pair.pi.cell; } // associate cell -> cell_i
+    uint16_t partner_cell() { return pair.pj.cell; } // associate cell -> cell_i
+    uint64_t driver_id() { return pair.pj.id; }
 
-    /**
-     * @brief Checks if the interaction is active.
-     *
-     * This function checks if the interaction is active by examining the moment and friction vectors.
-     * An interaction is considered active if either the moment vector or the friction vector is non-zero.
-     *
-     * @return True if the interaction is active (moment vector or friction vector is non-zero), false otherwise.
-     */
-    ONIKA_HOST_DEVICE_FUNC bool is_active() const
-    {
-      constexpr exanb::Vec3d null = {0, 0, 0};
-	  bool is_ghost = (id_i >= id_j && type <= 3);
-      bool res = ((moment != null) || (friction != null)) && (!is_ghost);
-      return res;
-    }
-
-    /**
-     * @brief Displays the Interaction data.
-     */
-    void print()
-    {
-      std::cout << "Interaction(type = " << int(type) << " [cell: " << cell_i << ", idx " << p_i << ", particle id: " << id_i << "] and"
-                << " [cell: " << cell_j << ", idx " << p_j << ", particle id: " << id_j << "] : (friction: " << friction << ", moment: " << moment << ")" << std::endl;
-    }
-
-    /**
-     * @brief Displays the Interaction data.
-     */
-    void print() const
-    {
-      std::cout << "Interaction(type = " << int(type) << " [cell: " << cell_i << ", idx " << id_i << ", particle id: " << p_i << "] and"
-                << " [cell: " << cell_j << ", idx " << id_j << ", particle id: " << p_j << "] : (friction: " << friction << ", moment: " << moment << ")" << std::endl;
-    }
-
-    /**
-     * @brief return true if particles id and particles sub id are equals.
-     */
-    ONIKA_HOST_DEVICE_FUNC bool operator==(Interaction &I)
+		/**
+		 * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
+		 */
+		ONIKA_HOST_DEVICE_FUNC void reset()
 		{
-			if (this->id_i == I.id_i && 
-					this->id_j == I.id_j && 
-					this->sub_i == I.sub_i && 
-					this->sub_j == I.sub_j && 
-					this->type == I.type)
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
+			constexpr exanb::Vec3d null = {0, 0, 0};
+			friction = null;
+			moment = null;
 		}
 
 		/**
-		 * @brief return true if particles id and particles sub id are equals.
+		 * @brief Checks if the interaction is active.
+		 *
+		 * This function checks if the interaction is active by examining the moment and friction vectors.
+		 * An interaction is considered active if either the moment vector or the friction vector is non-zero.
+		 *
+		 * @return True if the interaction is active (moment vector or friction vector is non-zero), false otherwise.
 		 */
-		ONIKA_HOST_DEVICE_FUNC bool operator==(const Interaction &I) const
+		ONIKA_HOST_DEVICE_FUNC bool is_active() const
 		{
-			if (this->id_i == I.id_i && 
-					this->id_j == I.id_j && 
-					this->sub_i == I.sub_i && 
-					this->sub_j == I.sub_j && 
-					this->type == I.type)
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
+			constexpr exanb::Vec3d null = {0, 0, 0};
+			bool is_ghost = (pair.pi.id >= pair.pj.id && pair.type <= 3);
+			bool res = ((moment != null) || (friction != null)) && (!is_ghost);
+			return res;
 		}
 
-		ONIKA_HOST_DEVICE_FUNC bool operator<(const Interaction &I) const
+		/**
+		 * @brief Displays the Interaction data.
+		 */
+		void print()
 		{
-			if (this->id_i < I.id_i)
-			{
-				return true;
-			}
-			else if (this->id_i == I.id_i && this->id_j < I.id_j)
-			{
-				return true;
-			}
-			else if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i < I.sub_i)
-			{
-				return true;
-			}
-			else if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i == I.sub_i && this->sub_j < I.sub_j)
-			{
-				return true;
-			}
-			else if (this->id_i == I.id_i && this->id_j == I.id_j && this->sub_i == I.sub_i && this->sub_j == I.sub_j && this->type < I.type)
-			{
-				return true;
-			}
-			else
-				return false;
+			pair.print();
+			std::cout << "Friction: " << friction << ", Moment: " << moment << ")" << std::endl;
 		}
 
-		ONIKA_HOST_DEVICE_FUNC void update(Interaction &I)
+		/**
+		 * @brief Displays the Interaction data.
+		 */
+		void print() const
 		{
-			this->cell_i = I.cell_i;
-			this->cell_j = I.cell_j;
-			this->p_i = I.p_i;
-			this->p_j = I.p_j;
+			pair.print();
+			std::cout << "Friction: " << friction << ", Moment: " << moment << ")" << std::endl;
 		}
+
 
 		ONIKA_HOST_DEVICE_FUNC void update_friction_and_moment(Interaction &I)
 		{
 			this->friction = I.friction;
 			this->moment = I.moment;
 		}
+
+
+		ONIKA_HOST_DEVICE_FUNC bool operator==(Interaction& I)
+    {
+      return (pair == I.pair);
+    }
+
+		ONIKA_HOST_DEVICE_FUNC bool operator==(const Interaction& I) const
+    {
+      return (pair == I.pair);
+    }
+
+		ONIKA_HOST_DEVICE_FUNC bool operator<(Interaction& I)
+    {
+      return (pair < I.pair);
+    }
+
+		ONIKA_HOST_DEVICE_FUNC bool operator<(const Interaction& I) const
+    {
+      return (pair < I.pair);
+    }
 	};
 
 	inline std::pair<bool, Interaction &> get_interaction(std::vector<Interaction> &list, Interaction &I)
@@ -229,20 +181,6 @@ namespace exaDEM
 				{
 					item.update_friction_and_moment(*lower);
 				}
-			}
-		}
-	}
-
-	// sequential
-	inline void extract_history(std::vector<Interaction> &local, const Interaction *data, const unsigned int size)
-	{
-		local.clear();
-		for (size_t i = 0; i < size; i++)
-		{
-			const auto &item = data[i];
-			if (item.is_active())
-			{
-				local.push_back(item);
 			}
 		}
 	}

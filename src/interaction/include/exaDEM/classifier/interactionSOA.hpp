@@ -127,94 +127,108 @@ namespace exaDEM
       for_all(func);
     }
 
-    /**
-     *@briefs Fills the lists.
-     */
-    void insert(std::vector<exaDEM::Interaction> &tmp, int w)
-    {
-      const size_t new_elements = tmp.size();
-      const size_t old_size = this->size();
-      this->resize(old_size + new_elements);
+		void set(size_t idx, exaDEM::Interaction& interaction)
+		{
+			ft_x[idx] = interaction.friction.x;
+			ft_y[idx] = interaction.friction.y;
+			ft_z[idx] = interaction.friction.z;
 
-      type = w;
+			mom_x[idx] = interaction.moment.x;
+			mom_y[idx] = interaction.moment.y;
+			mom_z[idx] = interaction.moment.z;
 
-      for (size_t i = 0 ; i < new_elements ; i++)
-      {
-        const size_t idx = old_size + i;
-        auto& interaction = tmp[i];
-        ft_x[idx] = interaction.friction.x;
-        ft_y[idx] = interaction.friction.y;
-        ft_z[idx] = interaction.friction.z;
+			auto& [pi, pj, type] = interaction.pair;
 
-        mom_x[idx] = interaction.moment.x;
-        mom_y[idx] = interaction.moment.y;
-        mom_z[idx] = interaction.moment.z;
+			id_i[idx] = pi.id;
+			id_j[idx] = pj.id;
 
-        id_i[idx] = interaction.id_i;
-        id_j[idx] = interaction.id_j;
+			cell_i[idx] = pi.cell;
+			cell_j[idx] = pj.cell;
 
-        cell_i[idx] = interaction.cell_i;
-        cell_j[idx] = interaction.cell_j;
+			p_i[idx] = pi.p;
+			p_j[idx] = pj.p;
 
-        p_i[idx] = interaction.p_i;
-        p_j[idx] = interaction.p_j;
+			sub_i[idx] = pi.sub;
+			sub_j[idx] = pj.sub;
+		}
 
-        sub_i[idx] = interaction.sub_i;
-        sub_j[idx] = interaction.sub_j;
-      }
-    }
+		/**
+		 *@briefs Fills the lists.
+		 */
+		void insert(std::vector<exaDEM::Interaction> &tmp, int w)
+		{
+			const size_t new_elements = tmp.size();
+			const size_t old_size = this->size();
+			this->resize(old_size + new_elements);
 
-    void copy(size_t start, size_t size, std::vector<exaDEM::Interaction> &tmp, int w)
-    {
-      if( tmp.size() != size ) 
-      {
-        color_log::error("Classifier::copy", "When resizing wave: " +std::to_string(w));
-      }
-      type = w;
+			type = w;
 
-      for (size_t i = 0 ; i < size ; i++)
-      {
-        const size_t idx = start + i;
-        auto& interaction = tmp[i];
-        ft_x[idx]   = interaction.friction.x;
-        ft_y[idx]   = interaction.friction.y;
-        ft_z[idx]   = interaction.friction.z;
+			for (size_t i = 0 ; i < new_elements ; i++)
+			{
+				const size_t idx = old_size + i;
+				auto& interaction = tmp[i];
+        set(idx, interaction);
+			}
+		}
 
-        mom_x[idx]  = interaction.moment.x;
-        mom_y[idx]  = interaction.moment.y;
-        mom_z[idx]  = interaction.moment.z;
+		void copy(size_t start, size_t size, std::vector<exaDEM::Interaction> &tmp, int w)
+		{
+			if( tmp.size() != size ) 
+			{
+				color_log::error("Classifier::copy", "When resizing wave: " +std::to_string(w));
+			}
+			type = w;
 
-        id_i[idx]   = interaction.id_i;
-        id_j[idx]   = interaction.id_j;
+			for (size_t i = 0 ; i < size ; i++)
+			{
+				const size_t idx = start + i;
+				auto& interaction = tmp[i];
+				set(idx, interaction);
+			}
+		}
 
-        cell_i[idx] = interaction.cell_i;
-        cell_j[idx] = interaction.cell_j;
+		/**
+		 *@briefs Return the interaction for a given list.
+		 */
+		ONIKA_HOST_DEVICE_FUNC exaDEM::Interaction operator[](uint64_t id) 
+		{
+			using namespace onika::cuda;
+			InteractionPair ip = {
+				// pi
+				{	vector_data(id_i)[id],
+					vector_data(cell_i)[id],
+					vector_data(p_i)[id],
+					vector_data(sub_i)[id]},
+				// pj
+				{ vector_data(id_j)[id],
+					vector_data(cell_j)[id],
+					vector_data(p_j)[id],
+					vector_data(sub_j)[id]},
+				// type
+				type};
 
-        p_i[idx]    = interaction.p_i;
-        p_j[idx]    = interaction.p_j;
+			exaDEM::Interaction res{ ip,
+				{vector_data(ft_x)[id],
+					vector_data(ft_y)[id], 
+					vector_data(ft_z)[id]},
+				{vector_data(mom_x)[id],
+					vector_data(mom_y)[id],
+					vector_data(mom_z)[id]}};
+				return res;
+		}
 
-        sub_i[idx]  = interaction.sub_i;
-        sub_j[idx]  = interaction.sub_j;
-      }
-    }
+		/**
+		 *@briefs Updates the friction and moment of a given interaction.
+		 */
+		ONIKA_HOST_DEVICE_FUNC void update(size_t id, exaDEM::Interaction &item)
+		{
+			onika::cuda::vector_data(ft_x)[id] = item.friction.x;
+			onika::cuda::vector_data(ft_y)[id] = item.friction.y;
+			onika::cuda::vector_data(ft_z)[id] = item.friction.z;
 
-    /**
-     *@briefs Return the interaction for a given list.
-     */
-    ONIKA_HOST_DEVICE_FUNC exaDEM::Interaction operator[](uint64_t id) { return {{onika::cuda::vector_data(ft_x)[id], onika::cuda::vector_data(ft_y)[id], onika::cuda::vector_data(ft_z)[id]}, {onika::cuda::vector_data(mom_x)[id], onika::cuda::vector_data(mom_y)[id], onika::cuda::vector_data(mom_z)[id]}, onika::cuda::vector_data(id_i)[id], onika::cuda::vector_data(id_j)[id], onika::cuda::vector_data(cell_i)[id], onika::cuda::vector_data(cell_j)[id], onika::cuda::vector_data(p_i)[id], onika::cuda::vector_data(p_j)[id], onika::cuda::vector_data(sub_i)[id], onika::cuda::vector_data(sub_j)[id], type}; }
-
-    /**
-     *@briefs Updates the friction and moment of a given interaction.
-     */
-    ONIKA_HOST_DEVICE_FUNC void update(size_t id, exaDEM::Interaction &item)
-    {
-      onika::cuda::vector_data(ft_x)[id] = item.friction.x;
-      onika::cuda::vector_data(ft_y)[id] = item.friction.y;
-      onika::cuda::vector_data(ft_z)[id] = item.friction.z;
-
-      onika::cuda::vector_data(mom_x)[id] = item.moment.x;
-      onika::cuda::vector_data(mom_y)[id] = item.moment.y;
-      onika::cuda::vector_data(mom_z)[id] = item.moment.z;
-    }
-  };
+			onika::cuda::vector_data(mom_x)[id] = item.moment.x;
+			onika::cuda::vector_data(mom_y)[id] = item.moment.y;
+			onika::cuda::vector_data(mom_z)[id] = item.moment.z;
+		}
+	};
 } // namespace exaDEM

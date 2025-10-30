@@ -158,8 +158,8 @@ namespace exaDEM
           // Define a function to add a new interaction if a contact is possible.
           auto add_contact = [&manager](size_t p, Interaction &item, int sub_i, int sub_j) -> void
           {
-            item.sub_i = sub_i;
-            item.sub_j = sub_j;
+            item.pair.pi.sub = sub_i;
+            item.pair.pj.sub = sub_j;
             manager.add_item(p, item);
           };
 
@@ -172,34 +172,36 @@ namespace exaDEM
           // First, interaction between a polyhedron and a driver
           if (drivers.has_value())
           {
+            auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
+            auto& pd = item.driver(); // particle driver (id, cell id, particle position, sub vertex)
             auto &drvs = *drivers;
-            item.cell_i = cell_a;
+            pi.cell = cell_a;
             // By default, if the interaction is between a particle and a driver
             // Data about the particle j is set to -1
             // Except for id_j that contains the driver id
-            item.id_j = -1;
-            item.cell_j = -1;
-            item.p_j = -1;
+            pd.id = -1;
+            pd.cell = -1;
+            pd.p = -1;
             item.moment = Vec3d{0, 0, 0};
             item.friction = Vec3d{0, 0, 0};
             for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++)
             {
-              item.id_j = drvs_idx; // we store the driver idx
+              pd.id = drvs_idx; // we store the driver idx
               if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER)
               {
-                item.type = 4;
+                item.pair.type = 4;
                 Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx)) ;
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
               {
-                item.type = 5;
+                item.pair.type = 5;
                 Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
               {
-                item.type = 6;
+                item.pair.type = 6;
                 Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
@@ -275,12 +277,15 @@ namespace exaDEM
                 return;
 
               // Add interactions
-              item.id_i = id_a[p_a];
-              item.p_i = p_a;
+              auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
+              auto& pj = item.j(); // particle j (id, cell id, particle position, sub vertex)
 
-              item.cell_i = cell_a;
-              item.p_j = p_b;
-              item.cell_j = cell_b;
+              pi.id = id_a[p_a];
+              pi.p = p_a;
+
+              pi.cell = cell_a;
+              pj.p = p_b;
+              pj.cell = cell_b;
 
               const Vec3d r = {rx, ry, rz};
 
@@ -292,7 +297,7 @@ namespace exaDEM
               const int ne_nbh = shp_nbh->get_number_of_edges();
               const int nf_nbh = shp_nbh->get_number_of_faces();
 
-              item.id_j = id_nbh;
+              pj.id = id_nbh;
               // exclude possibilities with obb
               for (int i = 0; i < nv; i++)
               {
@@ -302,7 +307,7 @@ namespace exaDEM
                 obbvi.enlarge(shp->m_radius);
                 if (obb_j.intersect(obbvi))
                 {
-                  item.type = 0; // === Vertex - Vertex
+                  item.pair.type = 0; // === Vertex - Vertex
                   for (int j = 0; j < nv_nbh; j++)
                   {
                     if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
@@ -311,7 +316,7 @@ namespace exaDEM
                     }
                   }
 
-                  item.type = 1; // === vertex edge
+                  item.pair.type = 1; // === vertex edge
                   for (int j = 0; j < ne_nbh; j++)
                   {
                     bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
@@ -321,7 +326,7 @@ namespace exaDEM
                     }
                   }
 
-                  item.type = 2; // === vertex face
+                  item.pair.type = 2; // === vertex face
                   for (int j = 0; j < nf_nbh; j++)
                   {
                     bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
@@ -333,7 +338,7 @@ namespace exaDEM
                 }
               }
 
-              item.type = 3; // === edge edge
+              item.pair.type = 3; // === edge edge
               for (int i = 0; i < ne; i++)
               {
                 for (int j = 0; j < ne_nbh; j++)
@@ -347,13 +352,13 @@ namespace exaDEM
               }
 
               // interaction of from particle j to particle i
-              item.cell_j = cell_a;
-              item.id_j = id_a[p_a];
-              item.p_j = p_a;
+              pj.cell = cell_a;
+              pj.id = id_a[p_a];
+              pj.p = p_a;
 
-              item.cell_i = cell_b;
-              item.p_i = p_b;
-              item.id_i = id_nbh;
+              pi.cell = cell_b;
+              pi.p = p_b;
+              pi.id = id_nbh;
 
               for (int j = 0; j < nv_nbh; j++)
               {
@@ -364,7 +369,7 @@ namespace exaDEM
 
                 if (obb_i.intersect(obbvj))
                 {
-                  item.type = 1; // === vertex edge
+                  item.pair.type = 1; // === vertex edge
                   for (int i = 0; i < ne; i++)
                   {
                     bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
@@ -374,7 +379,7 @@ namespace exaDEM
                     }
                   }
 
-                  item.type = 2; // === vertex face
+                  item.pair.type = 2; // === vertex face
                   for (int i = 0; i < nf; i++)
                   {
                     bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);

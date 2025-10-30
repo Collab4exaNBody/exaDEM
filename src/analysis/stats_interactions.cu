@@ -71,37 +71,38 @@ namespace exaDEM
       {
         for (auto &item : cells[i].m_data)
         {
+          auto type = item.type();
           // particles
-          if (item.type == 0)
+          if (type == 0)
             incr_interaction_counters(item, nvv, anvv, an);
-          if (item.type == 1)
+          if (type == 1)
             incr_interaction_counters(item, nve, anve, an);
-          if (item.type == 2)
+          if (type == 2)
             incr_interaction_counters(item, nvf, anvf, an);
-          if (item.type == 3)
+          if (type == 3)
             incr_interaction_counters(item, nee, anee, an);
           // drivers
           // cylinder
-          if (item.type == 4)
+          if (type == 4)
             incr_interaction_counters(item, nvc, anvc, an);
           // surface
-          if (item.type == 5)
+          if (type == 5)
             incr_interaction_counters(item, nvs, anvs, an);
           // ball
-          if (item.type == 6)
+          if (type == 6)
             incr_interaction_counters(item, nvb, anvb, an);
           // stl
-          if (item.type == 7)
+          if (type == 7)
             incr_interaction_counters(item, nSvv, anSvv, an);
-          if (item.type == 8)
+          if (type == 8)
             incr_interaction_counters(item, nSve, anSve, an);
-          if (item.type == 9)
+          if (type == 9)
             incr_interaction_counters(item, nSvf, anSvf, an);
-          if (item.type == 10)
+          if (type == 10)
             incr_interaction_counters(item, nSee, anSee, an);
-          if (item.type == 11)
+          if (type == 11)
             incr_interaction_counters(item, nSev, anSev, an);
-          if (item.type == 12)
+          if (type == 12)
             incr_interaction_counters(item, nSfv, anSfv, an);
         }
       }

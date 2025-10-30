@@ -55,23 +55,25 @@ namespace exaDEM
             const Vec3d *const __restrict__ ftp, 
             const Vec3d *const __restrict__ cpp) const
         {
-          assert( type == I.type );
+          assert( type == I.type() );
           if( dnp[idx] < 0.0)
           {
             // get fij and cij
-            auto &cell = cells[I.cell_i];
+            auto& i = I.i(); // id for particle id, cell for cell id, p for position, sub for vertex id
+            auto &cell = cells[i.cell];
             Vec3d fij = fnp[idx] + ftp[idx];
-            Vec3d pos_i = {cell[field::rx][I.p_i], cell[field::ry][I.p_i], cell[field::rz][I.p_i]};
+            Vec3d pos_i = {cell[field::rx][i.p], cell[field::ry][i.p], cell[field::rz][i.p]};
             Vec3d cij = cpp[idx] - pos_i;
-            exanb::mat3d_atomic_add_contribution(cell[field::stress][I.p_i], exanb::tensor(fij, cij));
+            exanb::mat3d_atomic_add_contribution(cell[field::stress][i.p], exanb::tensor(fij, cij));
 
             if constexpr ( type <= 3 && sym == true) // polyhedron - polyhedron || sphere - sphere
             {
-              auto &cellj = cells[I.cell_j];
+              auto& j = I.j(); // id for particle id, cell for cell id, p for position, sub for vertex id
+              auto &cellj = cells[j.cell];
               Vec3d fji = -fij;
-              Vec3d pos_j = {cellj[field::rx][I.p_j], cellj[field::ry][I.p_j], cellj[field::rz][I.p_j]};
+              Vec3d pos_j = {cellj[field::rx][j.p], cellj[field::ry][j.p], cellj[field::rz][j.p]};
               Vec3d cji = cpp[idx] - pos_j;
-              exanb::mat3d_atomic_add_contribution(cellj[field::stress][I.p_j], exanb::tensor(fji, cji));
+              exanb::mat3d_atomic_add_contribution(cellj[field::stress][j.p], exanb::tensor(fji, cji));
             }
           }
         }

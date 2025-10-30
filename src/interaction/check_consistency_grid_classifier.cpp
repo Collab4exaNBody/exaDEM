@@ -79,7 +79,7 @@ namespace exaDEM
 			{
 				if(I.is_active())
 				{
-					input_counter.counts_by_type[I.type] += 1;
+					input_counter.counts_by_type[I.type()] += 1;
 				}
 			};
 

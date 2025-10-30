@@ -70,7 +70,7 @@ namespace exaDEM
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT);
     ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{" Dump file name to read."});
-    ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
+    ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::COMPUTED_BOUNDS);
     ADD_SLOT(shapes, shapes_collection, OUTPUT, DocString{"Collection of shapes"});
     ADD_SLOT(Domain, domain, INPUT_OUTPUT);
     ADD_SLOT(AABB, bounds, INPUT, OPTIONAL, DocString{"This option overide the domain bounds."});
@@ -139,9 +139,12 @@ namespace exaDEM
         color_log::error("read_conf_rockable", "File " + file_name + " not found !");
       }
       manager.read_stream(file);       
+      auto map_shift = scan_shape_position(manager.shapeFile); // get "position" stored in shapes and shift particle positions.
+
       shapes shps = manager.shps;
       *particle_type_map = manager.ptm;
       *shapes_collection = shps;
+
       if( manager.t > 0.0 ) *physical_time = manager.t;
       if( manager.dt > 0.0 ) *dt = manager.dt;
 
@@ -160,22 +163,37 @@ namespace exaDEM
         for(size_t p = 0 ; p < rockable_particles.size() ; p++ )
         {
           const rockable::Particle& rp = rockable_particles[p];
-          Vec3d& pos = rockable_particles[p].pos;
-          min_x = std::min(min_x, pos.x);
-          max_x = std::max(max_x, pos.x);
-
-          min_y = std::min(min_y, pos.y);
-          max_y = std::max(max_y, pos.y);
-
-          min_z = std::min(min_z, pos.z);
-          max_z = std::max(max_z, pos.z);
           ParticleTupleIO& ptio = particle_data[p];
+
+          // We shift the particle positions using the values from the "position" field,
+          // which is not used by exaDEM.
+          Vec3d shape_position_shift = map_shift[shps[rp.type]->m_name];
+          Vec3d pos = rockable_particles[p].pos; // - shape_position_shift;
+
+          // shapes 
+          ptio[field::type] = rp.type;
+          const auto& shp = shps[ptio[field::type]];
+          double d = manager.densities[ptio[field::type]];
+          ptio[field::mass] = d * shp->get_volume();
+          ptio[field::inertia] = ptio[field::mass] * shp->get_Im();
+          ptio[field::radius] = shp->compute_max_rcut();
+
+          // boundaries
+          min_x = std::min(min_x, pos.x - ptio[field::radius]);
+          max_x = std::max(max_x, pos.x + ptio[field::radius]);
+
+          min_y = std::min(min_y, pos.y - ptio[field::radius]);
+          max_y = std::max(max_y, pos.y + ptio[field::radius]);
+
+          min_z = std::min(min_z, pos.z - ptio[field::radius]);
+          max_z = std::max(max_z, pos.z + ptio[field::radius]);
+
           // ID
           ptio[field::id] = p;
           // positions
-          ptio[field::rx] = rp.pos.x;
-          ptio[field::ry] = rp.pos.y;
-          ptio[field::rz] = rp.pos.z;
+          ptio[field::rx] = pos.x;
+          ptio[field::ry] = pos.y;
+          ptio[field::rz] = pos.z;
           // velocities
           ptio[field::vx] = rp.vel.x;
           ptio[field::vy] = rp.vel.y;
@@ -189,14 +207,6 @@ namespace exaDEM
           ptio[field::vrot] = rp.vrot;
           ptio[field::arot] = rp.arot;
           ptio[field::homothety] = rp.homothety;
-
-          // shapes 
-          ptio[field::type] = rp.type;
-          const auto& shp = shps[ptio[field::type]];
-          double d = manager.densities[ptio[field::type]];
-          ptio[field::mass] = d * shp->get_volume();
-          ptio[field::inertia] = ptio[field::mass] * shp->get_Im();
-          ptio[field::radius] = shp->compute_max_rcut();
         }
 
         AABB particle_bounds = {{min_x, min_y, min_z},{ max_x, max_y, max_z}};

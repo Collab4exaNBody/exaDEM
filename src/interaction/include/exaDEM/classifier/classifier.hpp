@@ -28,9 +28,9 @@ namespace exaDEM
 
   template <typename GridT> inline bool filter_duplicates(const GridT &G, const exaDEM::Interaction &I)
   {
-    if (I.type < 4) // polyhedron - polyhedron or sphere - sphere
+    if (I.pair.type < 4) // polyhedron - polyhedron or sphere - sphere
     {
-      if (G.is_ghost_cell(I.cell_j) && I.id_i > I.id_j)
+      if (G.is_ghost_cell(I.pair.pj.cell) && I.pair.pi.id > I.pair.pj.id)
       {
         return false;
       }
@@ -90,250 +90,251 @@ namespace exaDEM
         m_type = data.type;
       }
 
-      ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
-      {
-        exaDEM::Interaction res = {
-          {ft_x[idx], ft_y[idx], ft_z[idx]}, 
-          {mom_x[idx], mom_y[idx], mom_z[idx]}, 
-          id_i[idx], id_j[idx], 
-          cell_i[idx], cell_j[idx], 
-          p_i[idx], p_j[idx], 
-          sub_i[idx], sub_j[idx], m_type};
-        return res;
-      }
+			ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const
+			{
+         InteractionPair ip = { 
+					{id_i[idx], cell_i[idx], p_i[idx], sub_i[idx]}, 
+					{id_j[idx], cell_j[idx], p_j[idx], sub_j[idx],}, 
+					m_type};
 
-      ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
-      {
-        ft_x[idx] = item.friction.x;
-        ft_y[idx] = item.friction.y;
-        ft_z[idx] = item.friction.z;
+				Interaction res{ip,
+					{ft_x[idx], ft_y[idx], ft_z[idx]}, 
+					{mom_x[idx], mom_y[idx], mom_z[idx]}}; 
+				return res;
+			}
 
-        mom_x[idx] = item.moment.x;
-        mom_y[idx] = item.moment.y;
-        mom_z[idx] = item.moment.z;
-      }
-    };
+			ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
+			{
+				ft_x[idx] = item.friction.x;
+				ft_y[idx] = item.friction.y;
+				ft_z[idx] = item.friction.z;
 
-  template <> 
-    struct InteractionWrapper<InteractionAOS>
-    {
-      exaDEM::Interaction * __restrict__ interactions;
+				mom_x[idx] = item.moment.x;
+				mom_y[idx] = item.moment.y;
+				mom_z[idx] = item.moment.z;
+			}
+		};
 
-      InteractionWrapper(InteractionAOS &data) { interactions = onika::cuda::vector_data(data.m_data); }
+	template <> 
+		struct InteractionWrapper<InteractionAOS>
+		{
+			exaDEM::Interaction * __restrict__ interactions;
 
-      ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const { return interactions[idx]; }
+			InteractionWrapper(InteractionAOS &data) { interactions = onika::cuda::vector_data(data.m_data); }
 
-      ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
-      {
-        auto &item2 = interactions[idx];
-        item2.update_friction_and_moment(item);
-      }
-    };
+			ONIKA_HOST_DEVICE_FUNC inline exaDEM::Interaction operator()(const uint64_t idx) const { return interactions[idx]; }
 
-  /**
-   * @brief Classifier for managing interactions categorized into different types.
-   *
-   * The Classifier struct manages interactions categorized into different types (up to 13 types).
-   * It provides functionalities to store interactions in CUDA memory-managed vectors (`VectorT`).
-   */
-  template <typename T> struct Classifier
-  {
-    static constexpr int types = 13;
-    std::vector<T> waves;                             ///< Storage for interactions categorized by type.
-    std::vector<itools::interaction_buffers> buffers; ///< Storage for analysis. Empty if there is no analysis
+			ONIKA_HOST_DEVICE_FUNC inline void update(const uint64_t idx, exaDEM::Interaction& item) const
+			{
+				auto &item2 = interactions[idx];
+				item2.update_friction_and_moment(item);
+			}
+		};
 
-    /**
-     * @brief Default constructor.
-     *
-     * Initializes the waves vector to hold interactions for each type.
-     */
-    Classifier()
-    {
-      waves.resize(types);
-      buffers.resize(types);
-    }
+	/**
+	 * @brief Classifier for managing interactions categorized into different types.
+	 *
+	 * The Classifier struct manages interactions categorized into different types (up to 13 types).
+	 * It provides functionalities to store interactions in CUDA memory-managed vectors (`VectorT`).
+	 */
+	template <typename T> struct Classifier
+	{
+		static constexpr int types = 14;
+		std::vector<T> waves;                             ///< Storage for interactions categorized by type.
+		std::vector<itools::interaction_buffers> buffers; ///< Storage for analysis. Empty if there is no analysis
 
-    /**
-     * @brief Initializes the waves vector to hold interactions for each type.
-     */
-    void initialize()
-    {
-      waves.resize(types);
-      buffers.resize(types);
-    }
+		/**
+		 * @brief Default constructor.
+		 *
+		 * Initializes the waves vector to hold interactions for each type.
+		 */
+		Classifier()
+		{
+			waves.resize(types);
+			buffers.resize(types);
+		}
 
-    /**
-     * @brief Clears all stored interactions in the waves vector.
-     */
-    void reset_waves()
-    {
-      for (auto &wave : waves)
-      {
-        wave.clear();
-      }
-    }
+		/**
+		 * @brief Initializes the waves vector to hold interactions for each type.
+		 */
+		void initialize()
+		{
+			waves.resize(types);
+			buffers.resize(types);
+		}
 
-    /**
-     * @brief Retrieves the CUDA memory-managed vector of interactions for a specific type.
-     *
-     * @param id Type identifier for the interaction wave.
-     * @return Reference to the CUDA memory-managed vector storing interactions of the specified type.
-     */
-    T &get_wave(size_t id) { return waves[id]; }
-    const T get_wave(size_t id) const { return waves[id]; }
+		/**
+		 * @brief Clears all stored interactions in the waves vector.
+		 */
+		void reset_waves()
+		{
+			for (auto &wave : waves)
+			{
+				wave.clear();
+			}
+		}
 
-    /**
-     * @brief Retrieves the pointer and size of the data stored in the CUDA memory-managed vector for a specific type.
-     *
-     * @param id Type identifier for the interaction wave.
-     * @return Pair containing the pointer to the interaction data and the size of the data.
-     */
+		/**
+		 * @brief Retrieves the CUDA memory-managed vector of interactions for a specific type.
+		 *
+		 * @param id Type identifier for the interaction wave.
+		 * @return Reference to the CUDA memory-managed vector storing interactions of the specified type.
+		 */
+		T &get_wave(size_t id) { return waves[id]; }
+		const T get_wave(size_t id) const { return waves[id]; }
 
-    std::pair<T &, size_t> get_info(size_t id)
-    {
-      const unsigned int data_size = waves[id].size();
-      T &data = waves[id];
-      return {data, data_size};
-    }
+		/**
+		 * @brief Retrieves the pointer and size of the data stored in the CUDA memory-managed vector for a specific type.
+		 *
+		 * @param id Type identifier for the interaction wave.
+		 * @return Pair containing the pointer to the interaction data and the size of the data.
+		 */
 
-    const std::pair<const T &, const size_t> get_info(size_t id) const
-    {
-      const unsigned int data_size = waves[id].size();
-      const T &data = waves[id];
-      return {data, data_size};
-    }
+		std::pair<T &, size_t> get_info(size_t id)
+		{
+			const unsigned int data_size = waves[id].size();
+			T &data = waves[id];
+			return {data, data_size};
+		}
 
-    std::tuple<double *, Vec3d *, Vec3d *, Vec3d *> buffer_p(int id)
-    {
-      auto &analysis = buffers[id];
-      // fit size if needed
-      const size_t size = waves[id].size();
-      analysis.resize(size);
-      double *const __restrict__ dnp = onika::cuda::vector_data(analysis.dn);
-      Vec3d *const __restrict__ cpp = onika::cuda::vector_data(analysis.cp);
-      Vec3d *const __restrict__ fnp = onika::cuda::vector_data(analysis.fn);
-      Vec3d *const __restrict__ ftp = onika::cuda::vector_data(analysis.ft);
-      return {dnp, cpp, fnp, ftp};
-    }
+		const std::pair<const T &, const size_t> get_info(size_t id) const
+		{
+			const unsigned int data_size = waves[id].size();
+			const T &data = waves[id];
+			return {data, data_size};
+		}
 
-    /**
-     * @brief Returns the number of interaction types managed by the classifier.
-     *
-     * @return Number of interaction types.
-     */
-    size_t number_of_waves()
-    {
-      assert(types == waves.size());
-      return types;
-    }
-    size_t number_of_waves() const
-    {
-      assert(types == waves.size());
-      return types;
-    }
+		std::tuple<double *, Vec3d *, Vec3d *, Vec3d *> buffer_p(int id)
+		{
+			auto &analysis = buffers[id];
+			// fit size if needed
+			const size_t size = waves[id].size();
+			analysis.resize(size);
+			double *const __restrict__ dnp = onika::cuda::vector_data(analysis.dn);
+			Vec3d *const __restrict__ cpp = onika::cuda::vector_data(analysis.cp);
+			Vec3d *const __restrict__ fnp = onika::cuda::vector_data(analysis.fn);
+			Vec3d *const __restrict__ ftp = onika::cuda::vector_data(analysis.ft);
+			return {dnp, cpp, fnp, ftp};
+		}
 
-    void prefetch_memory_on_gpu()
-    {
-      const int device_id = 0;
-      onikaStream_t s;
-      cudaStreamCreate(&s);
-      for(int w = 0 ; w < types ; w++)
-      {
-        waves[w].prefetch_memory_on_gpu(device_id, s);
-      }
-    }
+		/**
+		 * @brief Returns the number of interaction types managed by the classifier.
+		 *
+		 * @return Number of interaction types.
+		 */
+		size_t number_of_waves()
+		{
+			assert(types == waves.size());
+			return types;
+		}
+		size_t number_of_waves() const
+		{
+			assert(types == waves.size());
+			return types;
+		}
 
-    /**
-     * @brief Classifies interactions into categorized waves based on their types.
-     *
-     * This function categorizes interactions into different waves based on their types,
-     * utilizing the `waves` vector in the `Classifier` struct. It resets existing waves,
-     * calculates the number of interactions per wave, and then stores interactions
-     * accordingly.
-     *
-     * @param ges Reference to the GridCellParticleInteraction object containing interactions to classify.
-     */
-    void classify(GridCellParticleInteraction &ges, size_t *idxs, size_t size)
-    {
-      //std::array<size_t, types> previous_sizes;
-      //for (int w = 0; w < types; w++) previous_sizes[w] = waves[w].size();
+		void prefetch_memory_on_gpu()
+		{
+			const int device_id = 0;
+			onikaStream_t s;
+			cudaStreamCreate(&s);
+			for(int w = 0 ; w < types ; w++)
+			{
+				waves[w].prefetch_memory_on_gpu(device_id, s);
+			}
+		}
 
-      reset_waves();          // Clear existing waves
-      auto &ces = ges.m_data; // Reference to cells containing interactions
+		/**
+		 * @brief Classifies interactions into categorized waves based on their types.
+		 *
+		 * This function categorizes interactions into different waves based on their types,
+		 * utilizing the `waves` vector in the `Classifier` struct. It resets existing waves,
+		 * calculates the number of interactions per wave, and then stores interactions
+		 * accordingly.
+		 *
+		 * @param ges Reference to the GridCellParticleInteraction object containing interactions to classify.
+		 */
+		void classify(GridCellParticleInteraction &ges, size_t *idxs, size_t size)
+		{
+			//std::array<size_t, types> previous_sizes;
+			//for (int w = 0; w < types; w++) previous_sizes[w] = waves[w].size();
 
-      size_t n_threads;
+			reset_waves();          // Clear existing waves
+			auto &ces = ges.m_data; // Reference to cells containing interactions
+
+			size_t n_threads;
 #     pragma omp parallel
-      {
-        n_threads = omp_get_num_threads();
-      }
+			{
+				n_threads = omp_get_num_threads();
+			}
 
-      std::vector< std::array<std::pair<size_t,size_t>, types> > bounds;
-      bounds.resize(n_threads);
+			std::vector< std::array<std::pair<size_t,size_t>, types> > bounds;
+			bounds.resize(n_threads);
 
 #     pragma omp parallel
-      {
-        size_t threads = omp_get_thread_num();
-        std::array<std::vector<exaDEM::Interaction>, types> tmp; ///< Storage for interactions categorized by type.
-                                                                 //for (int w = 0; w < types; w++) tmp[w].reserve( (2*previous_sizes[w]) / n_threads);
+			{
+				size_t threads = omp_get_thread_num();
+				std::array<std::vector<exaDEM::Interaction>, types> tmp; ///< Storage for interactions categorized by type.
+																																 //for (int w = 0; w < types; w++) tmp[w].reserve( (2*previous_sizes[w]) / n_threads);
 
-                                                                 // Partial
+																																 // Partial
 #       pragma omp for schedule(static) nowait
-        for (size_t c = 0; c < size; c++)
-        {
-          auto &interactions = ces[idxs[c]];
-          const unsigned int n_interactions_in_cell = interactions.m_data.size();
-          exaDEM::Interaction *const __restrict__ data_ptr = interactions.m_data.data();
-          // Place interactions into their respective waves
-          for (size_t it = 0; it < n_interactions_in_cell; it++)
-          {
-            Interaction &item = data_ptr[it];
-            const int t = item.type;
-            tmp[t].push_back(item);
-            item.reset();
-          }
-        }
+				for (size_t c = 0; c < size; c++)
+				{
+					auto &interactions = ces[idxs[c]];
+					const unsigned int n_interactions_in_cell = interactions.m_data.size();
+					exaDEM::Interaction *const __restrict__ data_ptr = interactions.m_data.data();
+					// Place interactions into their respective waves
+					for (size_t it = 0; it < n_interactions_in_cell; it++)
+					{
+						Interaction &item = data_ptr[it];
+						const int t = item.type();
+						tmp[t].push_back(item);
+						item.reset();
+					}
+				}
 
-        for (int w = 0; w < types; w++) bounds[threads][w].second = tmp[w].size();
+				for (int w = 0; w < types; w++) bounds[threads][w].second = tmp[w].size();
 
 #pragma omp barrier   
 
-        // All
-        auto& bound = bounds[threads];
-        for (int w = 0; w < types; w++) 
-        {
-          size_t start = 0;
-          for ( size_t i = 0 ; i < threads ; i++)
-          {
-            start += bounds[i][w].second;
-          }
-          bound[w].first = start;
-        }
+				// All
+				auto& bound = bounds[threads];
+				for (int w = 0; w < types; w++) 
+				{
+					size_t start = 0;
+					for ( size_t i = 0 ; i < threads ; i++)
+					{
+						start += bounds[i][w].second;
+					}
+					bound[w].first = start;
+				}
 
 #pragma omp barrier
 
-        // Partial
+				// Partial
 #pragma omp for
-        for (int w = 0; w < types; w++)
-        {
-          size_t size = bounds[n_threads-1][w].first + bounds[n_threads-1][w].second;
-          waves[w].resize(size);
-        }
+				for (int w = 0; w < types; w++)
+				{
+					size_t size = bounds[n_threads-1][w].first + bounds[n_threads-1][w].second;
+					waves[w].resize(size);
+				}
 
 #pragma omp barrier
 
-        // All
-        for (int w = 0; w < types; w++)
-        {
-          waves[w].copy(bound[w].first, bound[w].second, tmp[w], w);
-        }
-      }
-    }
+				// All
+				for (int w = 0; w < types; w++)
+				{
+					waves[w].copy(bound[w].first, bound[w].second, tmp[w], w);
+				}
+			}
+		}
 
-    /**
-     * @brief Restores friction and moment data for interactions from categorized waves to cell interactions.
-     *
-     * This function restores friction and moment data from categorized waves back to their corresponding
-     * interactions in cell data (`ges.m_data`). It iterates through each wave, retrieves interactions
+		/**
+		 * @brief Restores friction and moment data for interactions from categorized waves to cell interactions.
+		 *
+		 * This function restores friction and moment data from categorized waves back to their corresponding
+		 * interactions in cell data (`ges.m_data`). It iterates through each wave, retrieves interactions
 		 * with non-zero friction and moment from the wave, and updates the corresponding interaction in the
 		 * cell data.
 		 *
@@ -369,7 +370,7 @@ namespace exaDEM
 						// Check if interaction in wave has non-zero friction and moment
 						if (item1.is_active()) // alway true if unclassify is called after compress
 						{
-							auto &celli = ces[item1.cell_i];
+							auto &celli = ces[item1.cell()];
 							const unsigned int ni = onika::cuda::vector_size(celli.m_data);
 							exaDEM::Interaction * __restrict__ data_i_ptr = onika::cuda::vector_data(celli.m_data);
 							// Iterate through interactions in cell to find matching interaction
@@ -385,10 +386,10 @@ namespace exaDEM
 								}
 							}
 
-							if( find || (item1.type >= 4 /** drivers */)) continue;
+							if( find || (item1.type()	 >= 4 /** drivers */)) continue;
 
 							// check if this interaction is included into the other cell
-							auto& cellj = ces[item1.cell_j];
+							auto& cellj = ces[item1.partner_cell()];
 							const unsigned int nj = onika::cuda::vector_size(cellj.m_data);
 							exaDEM::Interaction * __restrict__ data_j_ptr = onika::cuda::vector_data(cellj.m_data);
 
@@ -404,10 +405,10 @@ namespace exaDEM
 							}
 
 							if(!find)
-              {
-                item1.print();
-                color_log::error("unclassify", "One active interaction has not been updated");
-              }
+							{
+								item1.print();
+								color_log::error("unclassify", "One active interaction has not been updated");
+							}
 						}
 					}
 				}

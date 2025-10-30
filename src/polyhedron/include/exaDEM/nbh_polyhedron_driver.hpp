@@ -73,13 +73,16 @@ namespace exaDEM
 			[[maybe_unused]] OBB *__restrict__ stl_obb_edges = onika::cuda::vector_data(stl_shp.m_obb_edges);
 			[[maybe_unused]] OBB *__restrict__ stl_obb_faces = onika::cuda::vector_data(stl_shp.m_obb_faces);
 
+      auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
+      //auto& pd = item.driver(); // particle driver (id, cell id, particle position, sub vertex)
+
 			for (size_t p = 0; p < n_particles; p++)
 			{
 				Vec3d r = {rx[p], ry[p], rz[p]}; // position
 				ParticleVertexView vertices_i = {p, vertices};
 				const Quaternion& orient_i = orient[p];
-				item.p_i = p;
-				item.id_i = id[p];
+				pi.p = p;
+				pi.id = id[p];
 				auto ti = type[p];
 				const shape *shpi = shps[ti];
 				const size_t nv = shpi->get_number_of_vertices();
@@ -104,8 +107,8 @@ namespace exaDEM
 					obb_v_i.enlarge(rVerlet + shpi->m_radius);
 
 					// vertex - vertex
-					item.type = 7;
-					item.sub_i = i;
+					item.pair.type = 7;
+					pi.sub = i;
 					for (size_t j = 0; j < stl_nv; j++)
 					{
 						size_t idx = list.vertices[j];
@@ -116,7 +119,7 @@ namespace exaDEM
 						} 
 					}
 					// vertex - edge
-					item.type = 8;
+					item.pair.type = 8;
 					for (size_t j = 0; j < stl_ne; j++)
 					{
 						size_t idx = list.edges[j];
@@ -126,7 +129,7 @@ namespace exaDEM
 						}
 					}
 					// vertex - face
-					item.type = 9;
+					item.pair.type = 9;
 					for (size_t j = 0; j < stl_nf; j++)
 					{
 						size_t idx = list.faces[j];
@@ -143,8 +146,8 @@ namespace exaDEM
 
 				for (size_t i = 0; i < ne; i++)
 				{
-					item.type = 10;
-					item.sub_i = i;
+					item.pair.type = 10;
+					pi.sub = i;
 					// edge - edge
 					for (size_t j = 0; j < stl_ne; j++)
 					{
@@ -164,7 +167,7 @@ namespace exaDEM
 					const OBB& obb_v_stl_j = stl_obb_vertices[idx];
 					if( !obb_v_stl_j.intersect(obb_i)) continue;
 
-					item.type = 11;
+					item.pair.type = 11;
 					// edge - vertex
 					for (size_t i = 0; i < ne; i++)
 					{
@@ -174,7 +177,7 @@ namespace exaDEM
 						}
 					}
 					// face vertex
-					item.type = 12;
+					item.pair.type = 12;
 					for (size_t i = 0; i < nf; i++)
 					{
 						if(filter_vertex_face(rVerlet, __driver__, __particle__))
@@ -222,12 +225,16 @@ namespace exaDEM
 				shapes &shps)
 		{
 			constexpr int DRIVER_VERTEX_SUB_IDX = -1; // Convention
+
+      auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
+      //auto& pd = item.driver(); // particle driver (id, cell id, particle position, sub vertex)
+
 			for (size_t pid = 0; pid < n_particles; pid++)
 			{
 				assert(type[pid]] < shps.size());
 
-				item.p_i = pid;
-				item.id_i = id[pid];
+				pi.p = pid;
+				pi.id = id[pid];
 				ParticleVertexView vertex_view = {pid, vertices};
 
 				const shape *shp = shps[type[pid]];

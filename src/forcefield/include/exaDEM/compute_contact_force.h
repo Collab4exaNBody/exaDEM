@@ -195,4 +195,44 @@ namespace exaDEM
     const auto Pimoment = exanb::cross(Ci, f) + m;
     return Pimoment;
   }
+
+
+  template<typename ContactParamsT>
+  ONIKA_HOST_DEVICE_FUNC inline void contact_sticked_force(const double dn,
+        const Vec3d &n, // -normal
+        const double dt,
+        const ContactParamsT &innerBond,
+        const double meff,
+        Vec3d &ft, // tangential force between particle i and j
+        const Vec3d &contact_position,
+        const Vec3d &pos_i,  // positions i
+        const Vec3d &vel_i,  // positions i
+        Vec3d &f_i,          // forces i
+        Vec3d &mom_i,        // moments i
+        const Vec3d &vrot_i, // angular velocities i
+        const Vec3d &pos_j,  // positions j
+        const Vec3d &vel_j,  // positions j
+        const Vec3d &vrot_j  // angular velocities j
+        )
+    {
+/*
+      const double damp = compute_damp(hkp.damp_rate, hkp.kn, meff);
+
+      // === Relative velocity (j relative to i)
+      auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
+
+      // compute relative velocity
+      const double vn = exanb::dot(vel, n);
+
+      // === Normal force (elatic contact + viscous damping)
+      const Vec3d fn = compute_normal_force(hkp.kn, damp, dn, vn, n); // fc ==> cohesive force
+
+      // === Tangential force (friction)
+      ft += exaDEM::compute_tangential_force(hkp.kt, dt, vn, n, vel);
+
+      // === sum forces
+      f_i = fn + ft;
+*/
+    }
+
 } // namespace exaDEM

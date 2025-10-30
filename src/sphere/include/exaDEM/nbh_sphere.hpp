@@ -38,14 +38,17 @@ namespace exaDEM
       const double radius,
       const double rVerletMax)
   {
+    using namespace onika::cuda;
     std::vector<exaDEM::Interaction> res;
     exaDEM::Interaction item;
-    item.cell_i = cell;
-    item.p_i = p;
-    item.id_i = id;
-    item.id_j = drv_id;
-    item.sub_i = 0; // not used
-    const Vec3d* dvertices = onika::cuda::vector_data(mesh.vertices);
+    auto& pi = item.i(); // particle i (id, cell, pos, sub)
+    auto& pd = item.driver(); // driver (id, cell, pos, sub)
+    pi.cell = cell;
+    pi.p = p;
+    pi.id = id;
+    pd.id = drv_id;
+    pi.sub = 0; // not used
+    const Vec3d* dvertices = vector_data(mesh.vertices);
 
     auto &list = mesh.grid_indexes[cell];
     auto &shp  = mesh.shp;
@@ -55,35 +58,35 @@ namespace exaDEM
 
     exanb::Vec3d v = {rx, ry, rz};
     // vertex - vertex
-    item.type = 7;
+    item.pair.type = 7;
     for (size_t j = 0; j < stl_nv; j++)
     {
       size_t idx = list.vertices[j];
       if(filter_vertex_vertex_v2(rVerletMax, v, radius, dvertices, idx, &shp))
       {
-        item.sub_j = idx;
+        pd.sub = idx;
         res.push_back(item);
       }
     }
     // vertex - edge
-    item.type = 8;
+    item.pair.type = 8;
     for (size_t j = 0; j < stl_ne; j++)
     {
       size_t idx = list.edges[j];
       if(filter_vertex_edge(rVerletMax, v, radius, dvertices, idx, &shp))
       {
-        item.sub_j = idx;
+        pd.sub = idx;
         res.push_back(item);
       }
     }
     // vertex - face
-    item.type = 9;
+    item.pair.type = 9;
     for (size_t j = 0; j < stl_nf; j++)
     {
       size_t idx = list.faces[j];
       if(filter_vertex_face(rVerletMax, v, radius, dvertices, idx, &shp))
       {
-        item.sub_j = idx;
+        pd.sub = idx;
         res.push_back(item);
       }
     }

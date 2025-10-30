@@ -147,7 +147,9 @@ namespace exaDEM
 
           item.moment = Vec3d{0, 0, 0};
           item.friction = Vec3d{0, 0, 0};
-          item.cell_i = cell_a;
+          auto& pi = item.i(); // particle i (id, cell, pos, sub)
+          auto& pd = item.driver(); // particle driver (id, cell, pos, sub)
+          pi.cell = cell_a;
 
           // First, interaction between a sphere and a driver
           if (drivers.has_value())
@@ -156,13 +158,13 @@ namespace exaDEM
             // By default, if the interaction is between a particle and a driver
             // Data about the particle j is set to -1
             // Except for id_j that contains the driver id
-            item.id_j = decltype(item.p_j)(-1);
-            item.cell_j = decltype(item.p_j)(-1);
-            item.p_j = decltype(item.p_j)(-1);
+            pd.id = decltype(pd.id)(-1);
+            pd.cell = decltype(pd.cell)(-1);
+            pd.p = decltype(pd.p)(-1);
 
             for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++)
             {
-              item.id_j = drvs_idx; // we store the driver idx
+              pd.id = drvs_idx; // we store the driver idx
               DRIVER_TYPE type = drvs.type(drvs_idx);
 
               if (type == DRIVER_TYPE::UNDEFINED)
@@ -172,8 +174,8 @@ namespace exaDEM
 
               if (type == DRIVER_TYPE::CYLINDER)
               {
-                item.type = 4;
-                item.id_j = drvs_idx;
+                item.pair.type = 4;
+                pd.id = drvs_idx;
                 Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx));
                 for (size_t p = 0; p < n_particles; p++)
                 {
@@ -181,16 +183,16 @@ namespace exaDEM
                   const double rVerletMax = rad[p] + rVerlet;
                   if (driver.filter(rVerletMax, r))
                   {
-                    item.p_i = p;
-                    item.id_i = id_a[p];
+                    pi.p = p;
+                    pi.id = id_a[p];
                     manager.add_item(p, item);
                   }
                 }
               }
               else if (type == DRIVER_TYPE::SURFACE)
               {
-                item.type = 5;
-                item.id_j = drvs_idx;
+                item.pair.type = 5;
+                pd.id = drvs_idx;
                 Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
                 for (size_t p = 0; p < n_particles; p++)
                 {
@@ -198,16 +200,16 @@ namespace exaDEM
                   const double rVerletMax = rad[p] + rVerlet;
                   if (driver.filter(rVerletMax, r))
                   {
-                    item.p_i = p;
-                    item.id_i = id_a[p];
+                    pi.p = p;
+                    pi.id = id_a[p];
                     manager.add_item(p, item);
                   }
                 }
               }
               else if (type == DRIVER_TYPE::BALL)
               {
-                item.type = 6;
-                item.id_j = drvs_idx;
+                item.pair.type = 6;
+                pd.id = drvs_idx;
                 Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
                 for (size_t p = 0; p < n_particles; p++)
                 {
@@ -215,8 +217,8 @@ namespace exaDEM
                   const double rVerletMax = rad[p] + rVerlet;
                   if (driver.filter(rVerletMax, r))
                   {
-                    item.p_i = p;
-                    item.id_i = id_a[p];
+                    pi.p = p;
+                    pi.id = id_a[p];
                     manager.add_item(p, item);
                   }
                 }
@@ -235,7 +237,7 @@ namespace exaDEM
             }
           }
 
-          item.type = 0; // === Vertex - Vertex
+          item.pair.type = 0; // === Vertex - Vertex
 
           if (sym)
           {
@@ -251,12 +253,15 @@ namespace exaDEM
                 return;
                 }
 
+                auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
+                auto& pj = item.j(); // particle i (id, cell id, particle position, sub vertex)
+ 
                 // Add interactions
-                item.id_i = id_a[p_a];
-                item.p_i = p_a;
-                item.id_j = id_nbh;
-                item.p_j = p_b;
-                item.cell_j = cell_b;
+                pi.id = id_a[p_a];
+                pi.p = p_a;
+                pj.id = id_nbh;
+                pj.p = p_b;
+                pj.cell = cell_b;
                 manager.add_item(p_a, item);
                 });
           }
@@ -268,12 +273,16 @@ namespace exaDEM
                 {
                 // default value of the interaction studied (A or i -> B or j)
                 const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+
+                auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
+                auto& pj = item.j(); // particle i (id, cell id, particle position, sub vertex)
+ 
                 // Add interactions
-                item.id_i = id_a[p_a];
-                item.p_i = p_a;
-                item.id_j = id_nbh;
-                item.p_j = p_b;
-                item.cell_j = cell_b;
+                pi.id = id_a[p_a];
+                pi.p = p_a;
+                pj.id = id_nbh;
+                pj.p = p_b;
+                pj.cell = cell_b;
                 manager.add_item(p_a, item);
                 });
           }

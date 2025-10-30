@@ -58,9 +58,11 @@ namespace exaDEM
 
     void add(exaDEM::Interaction& I, double value)
     {
+      auto& pi = I.i();
+      auto& pj = I.j();
       // === build contact network key
-      IdType i = {I.cell_i, I.p_i};
-      IdType j = {I.cell_j, I.p_j};
+      IdType i = {pi.cell, pi.p};
+      IdType j = {pj.cell, pj.p};
       KeyType key = {i, j};
       auto it = network.find(key);
       if (it != network.end())

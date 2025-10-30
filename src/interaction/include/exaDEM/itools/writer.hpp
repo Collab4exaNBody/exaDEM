@@ -51,9 +51,11 @@ namespace exaDEM
             /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
             if (filter_duplicates(grid, I))
             {
-              stream << I.id_i << "," << I.id_j << ",";
-              stream << I.sub_i << "," << I.sub_j << ",";
-              stream << I.type << ",";
+              auto& i = I.i();
+              auto& j = I.j();
+              stream << i.id << "," << j.id << ",";
+              stream << i.sub << "," << j.sub << ",";
+              stream << I.type() << ",";
               stream << dn << ",";
               stream << cp_ptr[idx] << ",";
               stream << fn_ptr[idx] << ",";

@@ -133,27 +133,29 @@ namespace exaDEM
           {
             using ContactParamsT = ContactParams; // template later
                                                   // === cell
-            auto &cell_i = cells[item.cell_i];
-            auto &cell_j = cells[item.cell_j];
+            auto& i = item.i(); // id for particle id, cell for cell id, p for position, sub for vertex id
+            auto& j = item.j(); // id for particle id, cell for cell id, p for position, sub for vertex id
+            auto &cell_i = cells[i.cell];
+            auto &cell_j = cells[j.cell];
 
             // === positions
-            const Vec3d ri = get_r(cell_i, item.p_i);
-            const Vec3d rj = get_r(cell_j, item.p_j);
+            const Vec3d ri = get_r(cell_i, i.p);
+            const Vec3d rj = get_r(cell_j, i.p);
 
             // === positions
-            const double rad_i = cell_i[field::radius][item.p_i];
-            const double rad_j = cell_j[field::radius][item.p_j];
+            const double rad_i = cell_i[field::radius][i.p];
+            const double rad_j = cell_j[field::radius][j.p];
 
             // === vrot
-            const Vec3d &vrot_i = cell_i[field::vrot][item.p_i];
-            const Vec3d &vrot_j = cell_j[field::vrot][item.p_j];
+            const Vec3d &vrot_i = cell_i[field::vrot][i.p];
+            const Vec3d &vrot_j = cell_j[field::vrot][j.p];
 
             auto [contact, dn, n, contact_position] = detection_vertex_vertex_core(ri, rad_i, rj, rad_j);
             Vec3d fn = {0, 0, 0};
 
             // === types
-            const int &t_i = cell_i[field::type][item.p_i];
-            const int &t_j = cell_j[field::type][item.p_j];
+            const int &t_i = cell_i[field::type][i.p];
+            const int &t_j = cell_j[field::type][j.p];
 
             // === Conctact Parameters 
             const ContactParamsT& cp = cpa(t_i, t_j); 
@@ -164,12 +166,12 @@ namespace exaDEM
             if (contact)
             {
               // === velocities
-              const Vec3d vi = get_v(cell_i, item.p_i);
-              const Vec3d vj = get_v(cell_j, item.p_j);
+              const Vec3d vi = get_v(cell_i, i.p);
+              const Vec3d vj = get_v(cell_j, j.p);
 
               // === mass
-              const auto &m_i = cell_i[field::mass][item.p_i];
-              const auto &m_j = cell_j[field::mass][item.p_j];
+              const auto &m_i = cell_i[field::mass][i.p];
+              const auto &m_j = cell_j[field::mass][j.p];
 
               // temporary vec3d to store forces.
               Vec3d f = {0, 0, 0};
@@ -187,20 +189,20 @@ namespace exaDEM
 
               // === update particle informations
               // ==== Particle i
-              auto &mom_i = cell_i[field::mom][item.p_i];
+              auto &mom_i = cell_i[field::mom][i.p];
               lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment));
-              lockAndAdd(cell_i[field::fx][item.p_i], f.x);
-              lockAndAdd(cell_i[field::fy][item.p_i], f.y);
-              lockAndAdd(cell_i[field::fz][item.p_i], f.z);
+              lockAndAdd(cell_i[field::fx][i.p], f.x);
+              lockAndAdd(cell_i[field::fy][i.p], f.y);
+              lockAndAdd(cell_i[field::fz][i.p], f.z);
 
               if constexpr (sym)
               {
                 // ==== Particle j
-                auto &mom_j = cell_j[field::mom][item.p_j];
+                auto &mom_j = cell_j[field::mom][j.p];
                 lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment));
-                lockAndAdd(cell_j[field::fx][item.p_j], -f.x);
-                lockAndAdd(cell_j[field::fy][item.p_j], -f.y);
-                lockAndAdd(cell_j[field::fz][item.p_j], -f.z);
+                lockAndAdd(cell_j[field::fx][j.p], -f.x);
+                lockAndAdd(cell_j[field::fy][j.p], -f.y);
+                lockAndAdd(cell_j[field::fz][j.p], -f.z);
               }
             }
             else
@@ -246,12 +248,13 @@ namespace exaDEM
               const TCFPA& cpa, 
               const double time) const
           {
+            auto& i = item.i(); // id for particle id, cell for cell id, p for position, sub for vertex id
             using ContactParamsT = ContactParams; // template later
-            const int driver_idx = item.id_j; //
+            const int driver_idx = item.driver_id(); //
                                               // TMPLD& driver = std::get<TMPLD>(drvs[driver_idx]); // issue on GPU
             TMPLD &driver = drvs.get_typed_driver<TMPLD>(driver_idx); // (TMPLD &)(drvs[driver_idx]);
-            auto &cell = cells[item.cell_i];
-            const size_t p = item.p_i;
+            auto &cell = cells[i.cell];
+            const size_t p = i.p;
 
             // === positions
             Vec3d r = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
@@ -264,7 +267,7 @@ namespace exaDEM
             Vec3d fn = null;
 
             // === types
-            const auto& type = cell[field::type][item.p_i];
+            const auto& type = cell[field::type][i.p];
 
             // === Conctact Parameters 
             const ContactParamsT& cp = cpa(type, driver_idx); 
@@ -338,13 +341,15 @@ namespace exaDEM
               const TPCFA& cpa, 
               const double time) const
           {
+            auto& i = item.i(); // id for particle id, cell for cell id, p for position, sub for vertex id
+            auto& d = item.driver();
             using ContactParamsT = ContactParams; // template later
-            const int driver_idx = item.id_j; //
+            const int driver_idx = item.driver_id(); //
             Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(driver_idx); // (Stl_mesh &)(drvs[driver_idx]);
-            auto &cell = cells[item.cell_i];
+            auto &cell = cells[item.cell()];
 
-            const size_t p_i = item.p_i;
-            const size_t sub_j = item.sub_j;
+            const size_t p_i = i.p;
+            const size_t sub_d = d.sub;
 
             // === particle i
             Vec3d r_i = {cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i]};
@@ -352,13 +357,13 @@ namespace exaDEM
             const Vec3d &vrot_i = cell[field::vrot][p_i];
             const double radius_i = cell[field::radius][p_i];
             // === driver j
-            const auto &shp_j = driver.shp;
-            const Quaternion orient_j = driver.quat;
-            auto [contact, dn, n, contact_position] = detection(r_i, radius_i, driver.center, sub_j, &shp_j, orient_j);
+            const auto &shp_d = driver.shp;
+            const Quaternion orient_d = driver.quat;
+            auto [contact, dn, n, contact_position] = detection(r_i, radius_i, driver.center, sub_d, &shp_d, orient_d);
             Vec3d fn = {0, 0, 0};
 
             // === types
-            const auto& type = cell[field::type][item.p_i];
+            const auto& type = cell[field::type][i.p];
 
             // === Conctact Parameters 
             const ContactParamsT& cp = cpa(type, driver_idx); 
@@ -376,7 +381,7 @@ namespace exaDEM
               contact_force_core<cohesive>(dn, n, time, cp, 
                   meff, item.friction, contact_position, r_i, 
                   v_i, f, item.moment, vrot_i, // particle i
-                  driver.center, driver.get_vel(), driver.vrot // particle j
+                  driver.center, driver.get_vel(), driver.vrot // driver
                   );
 
               // === For analysis

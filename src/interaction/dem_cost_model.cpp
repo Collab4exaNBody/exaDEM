@@ -82,7 +82,7 @@ namespace exaDEM
             size_t size = storage.m_data.size();
             for (size_t i = 0; i < size; i++)
             {
-              auto &type = data[i].type;
+              auto type = data[i].type();
               if (type == 0)
                 cost += 1; // vertex - vertex
               if (type == 1)
