@@ -58,7 +58,7 @@ namespace exaDEM
 	struct Interaction_history
 	{
 		//onika::memory::CudaMMVector<int> interaction_id;
-		int* interaction_id;
+		__int128* interaction_id;
 		
 		//onika::memory::CudaMMVector<double> ft_x;
 		double* ft_x;
@@ -85,7 +85,7 @@ namespace exaDEM
 		onika::memory::CudaMMVector<Interaction_history> waves;
 	};
 	
-	/*__device__*/ONIKA_HOST_DEVICE_FUNC int encode (int a, int b, int c, int d,
+	/*__device__*/ONIKA_HOST_DEVICE_FUNC __int128 encode (int a, int b, int c, int d,
 				int max_b, int max_c, int max_d, /*particle_info p_a, particle_info p_b,*/ int type )
 	{
 		//int max_c;
@@ -112,7 +112,7 @@ namespace exaDEM
 			max_d = p_b.shp->get_number_of_edges();
 		}*/
 		
-		return ((a * max_b + b) * max_c + c) * max_d + d;
+		return (((__int128)a * max_b + b) * max_c + c) * max_d + d;
 	}
 	
 	template < class GridT > __global__ void encodeClassifier( GridT* cells,
@@ -128,7 +128,7 @@ namespace exaDEM
 				int max_b,
 				int max_c,
 				int max_d,
-				int* res,
+				__int128* res,
 				int* indices,
 				int type,
 				int size)
@@ -213,7 +213,7 @@ namespace exaDEM
 			int max_c,
 			int max_d,
 			int* nb_incr,
-			int* interaction_id,
+			__int128* interaction_id,
 			double* ftx,
 			double* fty,
 			double* ftz,
@@ -274,8 +274,8 @@ namespace exaDEM
 	}
 	
 	__global__ void find_common_elements(
-			int* keys_new,
-			int* keys_old,
+			__int128* keys_new,
+			__int128* keys_old,
 			int* indices_new,
 			int* indices_old,
 			double* ftx,
@@ -674,7 +674,7 @@ namespace exaDEM
 					auto& interaction_history = update.waves[i];
 					
 					//interaction_history.interaction_id.resize(total);
-					cudaMalloc(&interaction_history.interaction_id, total * sizeof(int) );
+					cudaMalloc(&interaction_history.interaction_id, total * sizeof(__int128) );
 					//interaction_history.ft_x.resize(total);
 					cudaMalloc(&interaction_history.ft_x, total * sizeof(double) );
 					//interaction_history.ft_y.resize(total);
@@ -692,9 +692,9 @@ namespace exaDEM
 					interaction_history.size = total;
 					
 					//onika::memory::CudaMMVector<int> interaction_id;
-					int* interaction_id;
+					__int128* interaction_id;
 					//interaction_id.resize(total);
-					cudaMalloc(&interaction_id, total * sizeof(int));
+					cudaMalloc(&interaction_id, total * sizeof(__int128));
 					//onika::memory::CudaMMVector<int> indices;
 					int* indices;
 					//indices.resize(total);
@@ -997,9 +997,9 @@ namespace exaDEM
 						int nbBlocks = ( interaction_classifier.size() + 256 - 1) / 256;
 						
 						//onika::memory::CudaMMVector<int> interaction_ids_in;
-						int* interaction_ids_in;
+						__int128* interaction_ids_in;
 						//interaction_ids_in.resize(interaction_classifier.size());
-						cudaMalloc(&interaction_ids_in, interaction_classifier.size() * sizeof(int));
+						cudaMalloc(&interaction_ids_in, interaction_classifier.size() * sizeof(__int128));
 						
 						int max_b = g.number_of_particles();
 						int max_c;
@@ -1036,12 +1036,12 @@ namespace exaDEM
 						cudaDeviceSynchronize();
 						
 						//onika::memory::CudaMMVector<int> interaction_ids_out;
-						int* interaction_ids_out;
+						__int128* interaction_ids_out;
 						//onika::memory::CudaMMVector<int> indices_out;
 						int* indices_out;
 						
 						//interaction_ids_out.resize(interaction_classifier.size());
-						cudaMalloc(&interaction_ids_out, interaction_classifier.size() * sizeof(int) );
+						cudaMalloc(&interaction_ids_out, interaction_classifier.size() * sizeof(__int128) );
 						//indices_out.resize(interaction_classifier.size());
 						cudaMalloc(&indices_out, interaction_classifier.size() * sizeof(int) );
 						
@@ -1083,11 +1083,11 @@ namespace exaDEM
 						cudaFree(indices_out);
 						//}
 						
-						onika::memory::CudaMMVector<int> nb_active;
-						nb_active.resize(1);
+						//onika::memory::CudaMMVector<int> nb_active;
+						//nb_active.resize(1);
 						
-						search_active_interactions2<<<nbBlocks, 256>>>( interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, nb_active.data(), interaction_classifier.size() );
-						cudaDeviceSynchronize();
+						//search_active_interactions2<<<nbBlocks, 256>>>( interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, nb_active.data(), interaction_classifier.size() );
+						//cudaDeviceSynchronize();
 						
 						//printf("TYPE%d  %d/%d\n", i, nb_active[0], interaction_classifier.size());
 						
