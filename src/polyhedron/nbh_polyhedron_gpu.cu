@@ -58,7 +58,11 @@ namespace exaDEM
 	struct Interaction_history
 	{
 		//onika::memory::CudaMMVector<int> interaction_id;
-		int* interaction_id;
+		//int* interaction_id;
+		uint64_t* id_i;
+		uint64_t* id_j;
+		uint16_t* sub_i;
+		uint16_t* sub_j;
 		
 		//onika::memory::CudaMMVector<double> ft_x;
 		double* ft_x;
@@ -84,74 +88,6 @@ namespace exaDEM
 	{
 		onika::memory::CudaMMVector<Interaction_history> waves;
 	};
-	
-	/*__device__*/ONIKA_HOST_DEVICE_FUNC int encode (int a, int b, int c, int d,
-				int max_b, int max_c, int max_d, /*particle_info p_a, particle_info p_b,*/ int type )
-	{
-		//int max_c;
-		//int max_d;
-		
-		/*if(type == 0)
-		{
-			max_c = p_a.shp->get_number_of_vertices();
-			max_d = p_b.shp->get_number_of_vertices();
-		}
-		else if(type == 1)
-		{
-			max_c = p_a.shp->get_number_of_vertices();
-			max_d = p_b.shp->get_number_of_edges();
-		}
-		else if(type == 2)
-		{
-			max_c = p_a.shp->get_number_of_vertices();
-			max_d = p_b.shp->get_number_of_faces();
-		}
-		else
-		{
-			max_c = p_a.shp->get_number_of_edges();
-			max_d = p_b.shp->get_number_of_edges();
-		}*/
-		
-		return (((int)a * max_b + b) * max_c + c) * max_d + d;
-	}
-	
-	template < class GridT > __global__ void encodeClassifier( GridT* cells,
-				uint32_t* cell_i,
-				uint32_t* cell_j,
-				uint16_t* p_i,
-				uint16_t* p_j,
-				uint64_t* id_i,
-				uint64_t* id_j,
-				uint16_t* sub_i,
-				uint16_t* sub_j,
-				shapes shps,
-				int max_b,
-				int max_c,
-				int max_d,
-				int* res,
-				int* indices,
-				int type,
-				int size)
-	{
-		int idx = threadIdx.x + blockIdx.x * blockDim.x;
-		if(idx < size)
-		{
-			/*int cell_a = cell_i[idx];
-			cell_accessors cellA(cells[cell_a]);
-			
-			int cell_b = cell_j[idx];
-			cell_accessors cellB(cells[cell_b]);
-			
-			int p_a = p_i[idx];
-			particle_info p(shps, p_a, cellA);
-			
-			int p_b = p_j[idx];
-			particle_info p_nbh(shps, p_b, cellB);*/
-			
-			res[idx] = encode(id_i[idx], id_j[idx], sub_i[idx], sub_j[idx], max_b, max_c, max_d, /*p, p_nbh,*/ type);
-			indices[idx] = idx;
-		}
-	}
 	
 	__global__ void search_active_interactions(
 			double* ft_x,
@@ -193,11 +129,7 @@ namespace exaDEM
 		}
 	}
 	
-	template< class GridT > __global__ void fill_active_interactions( GridT* cells,
-	                uint32_t* cell_i,
-	                uint32_t* cell_j,
-	                uint16_t* p_i,
-	                uint16_t* p_j,
+	__global__ void fill_active_interactions(
 			double* ft_x,
 			double* ft_y,
 			double* ft_z,
@@ -208,12 +140,11 @@ namespace exaDEM
 			uint64_t* id_j,
 			uint16_t* sub_i,
 			uint16_t* sub_j,
-			shapes shps,
-			int max_b,
-			int max_c,
-			int max_d,
 			int* nb_incr,
-			int* interaction_id,
+			uint64_t* idi,
+			uint64_t* idj,
+			uint16_t* subi,
+			uint16_t* subj,
 			double* ftx,
 			double* fty,
 			double* ftz,
@@ -221,7 +152,6 @@ namespace exaDEM
 			double* momy,
 			double* momz,
 			int* indices,
-			int type,
 			int size)
 	{
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -247,21 +177,13 @@ namespace exaDEM
 			}
 			prefix+= nb_incr[blockIdx.x];
 			
-			/*int cell_a = cell_i[idx];
-			cell_accessors cellA(cells[cell_a]);
-			
-			int cell_b = cell_j[idx];
-			cell_accessors cellB(cells[cell_b]);
-			
-			int p_a = p_i[idx];
-			particle_info p(shps, p_a, cellA);
-			
-			int p_b = p_j[idx];
-			particle_info p_nbh(shps, p_b, cellB);*/
-			
 			if(active)
 			{
-				interaction_id[prefix] = encode(id_i[idx], id_j[idx], sub_i[idx], sub_j[idx], max_b, max_c, max_d, /*p, p_nbh,*/ type);
+				//interaction_id[prefix] = encode(id_i[idx], id_j[idx], sub_i[idx], sub_j[idx], max_b, max_c, max_d, /*p, p_nbh,*/ type);
+				idi[prefix] = id_i[idx];
+				idj[prefix] = id_j[idx];
+				subi[prefix] = sub_i[idx];
+				subj[prefix] = sub_j[idx];
 				ftx[prefix] = ft_x[idx];
 				fty[prefix] = ft_y[idx];
 				ftz[prefix] = ft_z[idx];
@@ -273,60 +195,79 @@ namespace exaDEM
 		}
 	}
 	
-	__global__ void find_common_elements(
-			int* keys_new,
-			int* keys_old,
-			int* indices_new,
-			int* indices_old,
-			double* ftx,
-			double* fty,
-			double* ftz,
-			double* momx,
-			double* momy,
-			double* momz,
-			double* ftx_old,
-			double* fty_old,
-			double* ftz_old,
-			double* momx_old,
-			double* momy_old,
-			double* momz_old,
-			int size_new,
-			int size_old)
-	{
-		int idx = threadIdx.x + blockIdx.x * blockDim.x;
-		if(idx < size_new)
-		{
-			int key = keys_new[idx];
-			int low = 0, high = size_old - 1;
-			while(low<=high)
-			{
-				int mid = low + (high - low) / 2;
-				if( keys_old[mid] == key )
-				{
-					int index = indices_new[idx];
-					int index_old = indices_old[mid];
-					
-					ftx[index] = ftx_old[index_old];
-					fty[index] = fty_old[index_old];
-					ftz[index] = ftz_old[index_old];
-					
-					momx[index] = momx_old[index_old];
-					momy[index] = momy_old[index_old];
-					momz[index] = momz_old[index_old];
-					
-					return;
-				}
-				else if( keys_old[mid] < key )
-				{
-					low = mid + 1;
-				}
-				else
-				{
-					high = mid - 1;
-				}
-			}
-		}
-	}
+__device__ __forceinline__
+int lower_bound_idi(const uint64_t* __restrict__ arr, int n, uint64_t key)
+{
+    int low = 0, high = n; // [low, high)
+    while (low < high) {
+        int mid = low + ((high - low) >> 1);
+        uint64_t v = arr[mid];
+        if (v < key) low = mid + 1;
+        else          high = mid;
+    }
+    return low; // première position où arr[pos] >= key
+}
+
+// Parcours des OLD ; recherche binaire dans NEW ; copie OLD -> NEW
+__global__ void find_common_elements(
+    const uint64_t* __restrict__ idi_new,
+    const uint64_t* __restrict__ idj_new,
+    const uint16_t* __restrict__ subi_new,
+    const uint16_t* __restrict__ subj_new,
+    const uint64_t* __restrict__ idi_old,
+    const uint64_t* __restrict__ idj_old,
+    const uint16_t* __restrict__ subi_old,
+    const uint16_t* __restrict__ subj_old,
+    const int*      __restrict__ indices_new,   // indexation des sorties NEW
+    const int*      __restrict__ indices_old,   // peut être nullptr (voir ci-dessous)
+    double* __restrict__ ftx,   // sorties NEW
+    double* __restrict__ fty,
+    double* __restrict__ ftz,
+    double* __restrict__ momx,
+    double* __restrict__ momy,
+    double* __restrict__ momz,
+    const double* __restrict__ ftx_old, // sources OLD
+    const double* __restrict__ fty_old,
+    const double* __restrict__ ftz_old,
+    const double* __restrict__ momx_old,
+    const double* __restrict__ momy_old,
+    const double* __restrict__ momz_old,
+    int size_new,
+    int size_old)
+{
+    int old_idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (old_idx >= size_old) return;
+
+    const uint64_t key_idi  = idi_old[old_idx];
+    const uint64_t key_idj  = idj_old[old_idx];
+    const uint16_t key_subi = subi_old[old_idx];
+    const uint16_t key_subj = subj_old[old_idx];
+
+    // Recherche binaire sur NEW (trié par idi)
+    int pos = lower_bound_idi(idi_new, size_new, key_idi);
+    if (pos == size_new) return;
+    if (idi_new[pos] != key_idi) return;
+
+    // Balayage de la "run" idi_new == key_idi pour trouver (idj,subi,subj)
+    for (int i = pos; i < size_new && idi_new[i] == key_idi; ++i) {
+        if (idj_new[i] == key_idj &&
+            subi_new[i] == key_subi &&
+            subj_new[i] == key_subj)
+        {
+            const int index_new = indices_new[i];
+            const int index_old = (indices_old ? indices_old[old_idx] : old_idx);
+
+            ftx [index_new] = ftx_old [index_old];
+            fty [index_new] = fty_old [index_old];
+            ftz [index_new] = ftz_old [index_old];
+            momx[index_new] = momx_old[index_old];
+            momy[index_new] = momy_old[index_old];
+            momz[index_new] = momz_old[index_old];
+            return;
+        }
+    }
+    // pas de match -> rien à faire
+}
 
 	template <typename GridT, class = AssertGridHasFields<GridT>> class UpdateGridCellInteractionGPU : public OperatorNode
 	{
@@ -674,7 +615,11 @@ namespace exaDEM
 					auto& interaction_history = update.waves[i];
 					
 					//interaction_history.interaction_id.resize(total);
-					cudaMalloc(&interaction_history.interaction_id, total * sizeof(int) );
+					//cudaMalloc(&interaction_history.interaction_id, total * sizeof(int) );
+					cudaMalloc(&interaction_history.id_i, total * sizeof(uint64_t) );
+					cudaMalloc(&interaction_history.id_j, total * sizeof(uint64_t) );
+					cudaMalloc(&interaction_history.sub_i, total * sizeof(uint16_t) );
+					cudaMalloc(&interaction_history.sub_j, total * sizeof(uint16_t) );
 					//interaction_history.ft_x.resize(total);
 					cudaMalloc(&interaction_history.ft_x, total * sizeof(double) );
 					//interaction_history.ft_y.resize(total);
@@ -692,51 +637,48 @@ namespace exaDEM
 					interaction_history.size = total;
 					
 					//onika::memory::CudaMMVector<int> interaction_id;
-					int* interaction_id;
+					uint64_t* id_i;
 					//interaction_id.resize(total);
-					cudaMalloc(&interaction_id, total * sizeof(int));
+					cudaMalloc(&id_i, total * sizeof(uint64_t));
 					//onika::memory::CudaMMVector<int> indices;
 					int* indices;
 					//indices.resize(total);
 					cudaMalloc(&indices, total * sizeof(int));
 					
 					//printf("MALLOC\n");
-					
-					int max_b = 1979818;
-					int max_c;
-					int max_d;
-					
-					if(i == 0)
-					{
-						max_c = 20;
-						max_d = 20;
-						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
-					}
-					else if(i == 1)
-					{
-						max_c = 20;
-						max_d = 30;
-						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
-					}
-					else if(i == 2)
-					{
-						max_c = 20;
-						max_d = 12;
-						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
-					}
-					else
-					{
-						max_c = 30;
-						max_d = 30;
-						fill_active_interactions<<<nbBlocks, 256>>>( grid->cells(), data.cell_i, data.cell_j, data.p_i, data.p_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, data.id_i, data.id_j, data.sub_i, data.sub_j, shps, max_b, max_c, max_d, nb_history_incr.data(), /*interaction_history.interaction_id*/interaction_id/*.data()*/, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, indices/*.data()*/, i, data.size());
-					}
+
+					fill_active_interactions<<<nbBlocks, 256>>>(
+					data.ft_x, 
+					data.ft_y, 
+					data.ft_z, 
+					data.mom_x, 
+					data.mom_y, 
+					data.mom_z, 
+					data.id_i, 
+					data.id_j, 
+					data.sub_i, 
+					data.sub_j, 
+					nb_history_incr.data(), 
+					id_i, 
+					interaction_history.id_j, 
+					interaction_history.sub_i, 
+					interaction_history.sub_j, 
+					interaction_history.ft_x, 
+					interaction_history.ft_y, 
+					interaction_history.ft_z, 
+					interaction_history.mom_x, 
+					interaction_history.mom_y, 
+					interaction_history.mom_z, 
+					indices, 
+					data.size());
+
 					
 					d_temp_storage = nullptr;
 					temp_storage_bytes = 0;
 					
 					cub::DeviceRadixSort::SortPairs(
 						d_temp_storage, temp_storage_bytes,
-						interaction_id/*.data()*/, interaction_history.interaction_id/*.data()*/,
+						id_i/*.data()*/, interaction_history.id_i/*.data()*/,
 						indices/*.data()*/, interaction_history.indices/*.data()*/,
 						total);
 						
@@ -744,33 +686,13 @@ namespace exaDEM
 					
 					cub::DeviceRadixSort::SortPairs(
 						d_temp_storage, temp_storage_bytes,
-						interaction_id/*.data()*/, interaction_history.interaction_id/*.data()*/,
+						id_i/*.data()*/, interaction_history.id_i/*.data()*/,
 						indices/*.data()*/, interaction_history.indices/*.data()*/,
 						total);
 						
-					uint64_t* id_i = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
-					uint64_t* id_j = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
-					
-					cudaMemcpy(id_i, data.id_i, data.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-					cudaMemcpy(id_j, data.id_j, data.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-					
-					uint64_t max_idi = 0;
-					uint64_t max_idj = 0;
-					
-					for(int j = 0; j < data.size(); j++)
-					{
-						if(id_i[j] > max_idi) max_idi = id_i[j];
-						if(id_j[j] > max_idj) max_idj = id_j[j];
-					}
-					
-					printf("TYPE%d :\nMAX_IDI: %d MAX_IDJ: %d\n", i, max_idi, max_idj);
-					
-					free(id_i);
-					free(id_j);
-						
 					cudaFree(d_temp_storage);
 					
-					cudaFree(interaction_id);
+					cudaFree(id_i);
 					cudaFree(indices);
 					
 					//printf("NEXT: %d\n", i);
@@ -1017,51 +939,23 @@ namespace exaDEM
 						int nbBlocks = ( interaction_classifier.size() + 256 - 1) / 256;
 						
 						//onika::memory::CudaMMVector<int> interaction_ids_in;
-						int* interaction_ids_in;
+						uint64_t* id_i;
 						//interaction_ids_in.resize(interaction_classifier.size());
-						cudaMalloc(&interaction_ids_in, interaction_classifier.size() * sizeof(int));
+						cudaMalloc(&id_i, interaction_classifier.size() * sizeof(uint64_t));
 						
-						int max_b = 1979818;
-						int max_c;
-						int max_d;
-						
-						if(i == 0)
+						onika::memory::CudaMMVector<int> indices_in;
+						//int* indices_in;
+						indices_in.resize(interaction_classifier.size());
+						//cudaMalloc(&indices_in, interaction_classifier.size() * sizeof(int));
+						#pragma omp parallel for
+						for(int j = 0; j < interaction_classifier.size(); j++)
 						{
-							max_c = 20;
-							max_d = 20;
+							indices_in[j] = j;
 						}
-						else if(i == 1)
-						{
-							max_c = 20;
-							max_d = 30;
-						}
-						else if(i == 2)
-						{
-							max_c = 20;
-							max_d = 12;
-						}
-						else
-						{
-							max_c = 30;
-							max_d = 30;
-						}
-						
-						//onika::memory::CudaMMVector<int> indices_in;
-						int* indices_in;
-						//indices_in.resize(interaction_classifier.size());
-						cudaMalloc(&indices_in, interaction_classifier.size() * sizeof(int));
-						
-						encodeClassifier<<<nbBlocks, 256>>>( grid->cells(), interaction_classifier.cell_i, interaction_classifier.cell_j, interaction_classifier.p_i, interaction_classifier.p_j, interaction_classifier.id_i, interaction_classifier.id_j, interaction_classifier.sub_i, interaction_classifier.sub_j, shps, max_b, max_c, max_d, interaction_ids_in/*.data()*/, indices_in/*.data()*/, i, interaction_classifier.size() );
-						
-						cudaDeviceSynchronize();
-						
-						//onika::memory::CudaMMVector<int> interaction_ids_out;
-						int* interaction_ids_out;
+
 						//onika::memory::CudaMMVector<int> indices_out;
 						int* indices_out;
-						
-						//interaction_ids_out.resize(interaction_classifier.size());
-						cudaMalloc(&interaction_ids_out, interaction_classifier.size() * sizeof(int) );
+
 						//indices_out.resize(interaction_classifier.size());
 						cudaMalloc(&indices_out, interaction_classifier.size() * sizeof(int) );
 						
@@ -1070,25 +964,54 @@ namespace exaDEM
 						
 						cub::DeviceRadixSort::SortPairs(
 							d_temp_storage, temp_storage_bytes,
-							interaction_ids_in/*.data()*/, interaction_ids_out/*.data()*/,
-							indices_in/*.data()*/, indices_out/*.data()*/,
+							interaction_classifier.id_i/*.data()*/, id_i/*.data()*/,
+							indices_in.data()/*.data()*/, indices_out/*.data()*/,
 							interaction_classifier.size());
 						
 						cudaMalloc(&d_temp_storage, temp_storage_bytes);
 					
 						cub::DeviceRadixSort::SortPairs(
 							d_temp_storage, temp_storage_bytes,
-							interaction_ids_in/*.data()*/, interaction_ids_out/*.data()*/,
-							indices_in/*.data()*/, indices_out/*.data()*/,
+							interaction_classifier.id_i/*.data()*/, id_i/*.data()*/,
+							indices_in.data()/*.data()*/, indices_out/*.data()*/,
 							interaction_classifier.size());
 							
 						cudaFree(d_temp_storage);
 						
 						auto& interaction_history = update.waves[i];
 						
-						find_common_elements<<<nbBlocks, 256>>>( interaction_ids_out/*.data()*/, interaction_history.interaction_id/*.data()*/, indices_out/*.data()*/, interaction_history.indices/*.data()*/, interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, interaction_history.ft_x/*.data()*/, interaction_history.ft_y/*.data()*/, interaction_history.ft_z/*.data()*/, interaction_history.mom_x/*.data()*/, interaction_history.mom_y/*.data()*/, interaction_history.mom_z/*.data()*/, interaction_classifier.size(), interaction_history.size);
+						find_common_elements<<<nbBlocks, 256>>>( id_i, 
+						interaction_classifier.id_j, 
+						interaction_classifier.sub_i, 
+						interaction_classifier.sub_j,
+						interaction_history.id_i, 
+						interaction_history.id_j, 
+						interaction_history.sub_i, 
+						interaction_history.sub_j,
+						indices_out, 
+						interaction_history.indices, 
+						interaction_classifier.ft_x, 
+						interaction_classifier.ft_y, 
+						interaction_classifier.ft_z, 
+						interaction_classifier.mom_x, 
+						interaction_classifier.mom_y, 
+						interaction_classifier.mom_z, 
+						interaction_history.ft_x, 
+						interaction_history.ft_y, 
+						interaction_history.ft_z, 
+						interaction_history.mom_x, 
+						interaction_history.mom_y, 
+						interaction_history.mom_z, 
+						interaction_classifier.size(), 
+						interaction_history.size);
+						
+						cudaDeviceSynchronize();
 
-						cudaFree(interaction_history.interaction_id);
+						//cudaFree(interaction_history.interaction_id);
+						cudaFree(interaction_history.id_i);
+						cudaFree(interaction_history.id_j);
+						cudaFree(interaction_history.sub_i);
+						cudaFree(interaction_history.sub_j);
 						cudaFree(interaction_history.ft_x);
 						cudaFree(interaction_history.ft_y);
 						cudaFree(interaction_history.ft_z);
@@ -1097,30 +1020,30 @@ namespace exaDEM
 						cudaFree(interaction_history.mom_z);
 						cudaFree(interaction_history.indices);
 						
-						cudaFree(interaction_ids_in);
-						cudaFree(interaction_ids_out);
-						cudaFree(indices_in);
+						cudaFree(id_i);
+						//cudaFree(interaction_ids_out);
+						//cudaFree(indices_in);
 						cudaFree(indices_out);
 						//}
 						
-						onika::memory::CudaMMVector<int> nb_active;
-						nb_active.resize(1);
+						//onika::memory::CudaMMVector<int> nb_active;
+						//nb_active.resize(1);
 						
-						search_active_interactions2<<<nbBlocks, 256>>>( interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, nb_active.data(), interaction_classifier.size() );
-						cudaDeviceSynchronize();
+						//search_active_interactions2<<<nbBlocks, 256>>>( interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, nb_active.data(), interaction_classifier.size() );
+						//cudaDeviceSynchronize();
 						
 						//printf("TYPE%d  %d/%d\n", i, nb_active[0], interaction_classifier.size());
 						
-						actives[i] = nb_active[0];
+						//actives[i] = nb_active[0];
 						//}
 					}
 				}
 				
-				printf("GPU Version :\n");
-				printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
-				printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
-				printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
-				printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
+				//printf("GPU Version :\n");
+				//printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
+				//printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
+				//printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
+				//printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
 			}
 
 			if( *block_version )
