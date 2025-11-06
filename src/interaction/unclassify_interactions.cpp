@@ -60,7 +60,7 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto& classi = *ic;
+      /*auto& classi = *ic;
       double ftx = 0;
       double fty = 0;
       double ftz = 0;
@@ -75,7 +75,7 @@ namespace exaDEM
       		
       	}
       }
-      printf("FTX: %f FTY: %f FTZ: %f\n", ftx, fty, ftz);
+      printf("FTX: %f FTY: %f FTZ: %f\n", ftx, fty, ftz);*/
       if (!ic.has_value())
         return;
       ic->unclassify(*ges);

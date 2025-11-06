@@ -90,6 +90,8 @@ namespace exaDEM
 	};
 	
 	__global__ void search_active_interactions(
+			uint64_t* id_i,
+			uint64_t* id_j,
 			double* ft_x,
 			double* ft_y,
 			double* ft_z,
@@ -97,14 +99,21 @@ namespace exaDEM
 			double* mom_y,
 			double* mom_z,
 			int* nb,
-			int size)
+			int size,
+			double* forces)
 	{
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		if(idx < size)
 		{
-			if( ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0)
+			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) )
 			{
 				atomicAdd(&nb[blockIdx.x], 1);
+				atomicAdd(&forces[0], ft_x[idx]);
+				atomicAdd(&forces[1], ft_y[idx]);
+				atomicAdd(&forces[2], ft_z[idx]);
+				atomicAdd(&forces[3], mom_x[idx]);
+				atomicAdd(&forces[4], mom_y[idx]);
+				atomicAdd(&forces[5], mom_z[idx]); 
 			}
 		}
 	}
@@ -163,7 +172,7 @@ namespace exaDEM
 			
 			bool active = false;
 			
-			if( ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0)
+			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) )
 			{
 				s[threadIdx.x] = 1;
 				active = true;
@@ -235,27 +244,30 @@ __global__ void find_common_elements(
     int size_new,
     int size_old)
 {
-    int old_idx = threadIdx.x + blockIdx.x * blockDim.x;
-    if (old_idx >= size_old) return;
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx >= size_new) return;
+    
+    const int index_new = indices_new[idx];
 
-    const uint64_t key_idi  = idi_old[old_idx];
-    const uint64_t key_idj  = idj_old[old_idx];
-    const uint16_t key_subi = subi_old[old_idx];
-    const uint16_t key_subj = subj_old[old_idx];
+    const uint64_t key_idi  = idi_new[idx];
+    const uint64_t key_idj  = idj_new[index_new];
+    const uint16_t key_subi = subi_new[index_new];
+    const uint16_t key_subj = subj_new[index_new];
 
     // Recherche binaire sur NEW (trié par idi)
-    int pos = lower_bound_idi(idi_new, size_new, key_idi);
-    if (pos == size_new) return;
-    if (idi_new[pos] != key_idi) return;
+    int pos = lower_bound_idi(idi_old, size_old, key_idi);
+    if (pos == size_old) return;
+    if (idi_old[pos] != key_idi) return;
 
     // Balayage de la "run" idi_new == key_idi pour trouver (idj,subi,subj)
-    for (int i = pos; i < size_new && idi_new[i] == key_idi; ++i) {
-        if (idj_new[i] == key_idj &&
-            subi_new[i] == key_subi &&
-            subj_new[i] == key_subj)
+    for (int i = pos; i < size_old && idi_old[i] == key_idi; ++i) {
+        const int index_old = indices_old[i];
+        if (idj_old[index_old] == key_idj &&
+            subi_old[index_old] == key_subi &&
+            subj_old[index_old] == key_subj)
         {
-            const int index_new = indices_new[i];
-            const int index_old = (indices_old ? indices_old[old_idx] : old_idx);
+            //const int index_new = indices_new[i];
+            //const int index_old = (indices_old ? indices_old[old_idx] : old_idx);
 
             ftx [index_new] = ftx_old [index_old];
             fty [index_new] = fty_old [index_old];
@@ -267,6 +279,31 @@ __global__ void find_common_elements(
         }
     }
     // pas de match -> rien à faire
+}
+
+__global__ void CountDuplicates( uint64_t* id_i,
+					uint64_t* id_j,
+					uint16_t* sub_i,
+					uint16_t* sub_j,
+					int* res,
+					size_t size)
+{
+	int idx = threadIdx.x + blockIdx.x * blockDim.x;
+	if(idx < size)
+	{
+		uint64_t idi = id_i[idx];
+		uint64_t idj = id_j[idx];
+		uint16_t subi = sub_i[idx];
+		uint16_t subj = sub_j[idx];
+	
+		for(int i = 0; i < size ; i++)
+		{
+			if(idi == id_i[i] && idj == id_j[i] && subi == sub_i[i] && subj == sub_j[i] && i!=idx)
+			{
+				atomicAdd(&res[0], 1);
+			}
+		} 
+	}
 }
 
 	template <typename GridT, class = AssertGridHasFields<GridT>> class UpdateGridCellInteractionGPU : public OperatorNode
@@ -592,7 +629,10 @@ __global__ void find_common_elements(
 					
 					nb_history.resize(nbBlocks);
 					
-					search_active_interactions<<<nbBlocks, 256>>>( data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, nb_history.data(), data.size() );
+					onika::memory::CudaMMVector<double> forces;
+					forces.resize(6);
+					
+					search_active_interactions<<<nbBlocks, 256>>>( data.id_i, data.id_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, nb_history.data(), data.size(), forces.data() );
 					
 					void* d_temp_storage = nullptr;
 					size_t temp_storage_bytes = 0;
@@ -671,7 +711,20 @@ __global__ void find_common_elements(
 					interaction_history.mom_z, 
 					indices, 
 					data.size());
+					
+					//onika::memory::CudaMMVector<int> duplicates;
+					//duplicates.resize(1);
+					
+					//nbBlocks = ( interaction_history.size + 256 - 1 ) / 256;
 
+					/*CountDuplicates<<<nbBlocks, 256>>>( id_i,
+					interaction_history.id_j,
+					interaction_history.sub_i,
+					interaction_history.sub_j,
+					duplicates.data(),
+					interaction_history.size);
+					
+					cudaDeviceSynchronize();*/
 					
 					d_temp_storage = nullptr;
 					temp_storage_bytes = 0;
@@ -695,8 +748,12 @@ __global__ void find_common_elements(
 					cudaFree(id_i);
 					cudaFree(indices);
 					
+					//printf("TYPE: %d TOTAL: %d DUPLICATS: %d\n", i, total, duplicates[0]);
+					
 					//printf("NEXT: %d\n", i);
 					//}
+					
+					printf("TYPE:%d FX:%f FY:%f FZ:%f MOMX:%f MOMY:%f MOMZ:%f\n", i, forces[0], forces[1], forces[2], forces[3], forces[4], forces[5]);
 				}
 				   }	
 				

@@ -790,7 +790,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 
 	int total_interactions = nb_nbh[incr_cell - 1] + nb_nbh_incr[incr_cell - 1];
 	
-	printf("TOTAL: %d\n", total_interactions);
+	//printf("TOTAL: %d\n", total_interactions);
 
 	uint16_t* p_i;
 	uint16_t* p_j;
