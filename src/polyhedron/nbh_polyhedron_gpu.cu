@@ -105,7 +105,7 @@ namespace exaDEM
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		if(idx < size)
 		{
-			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) )
+			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) && id_i[idx] < id_j[idx] )
 			{
 				atomicAdd(&nb[blockIdx.x], 1);
 				atomicAdd(&forces[0], ft_x[idx]);
@@ -172,7 +172,7 @@ namespace exaDEM
 			
 			bool active = false;
 			
-			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) )
+			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) && id_i[idx] < id_j[idx] )
 			{
 				s[threadIdx.x] = 1;
 				active = true;
@@ -753,7 +753,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					//printf("NEXT: %d\n", i);
 					//}
 					
-					printf("TYPE:%d FX:%f FY:%f FZ:%f MOMX:%f MOMY:%f MOMZ:%f\n", i, forces[0], forces[1], forces[2], forces[3], forces[4], forces[5]);
+					//printf("TYPE:%d FX:%f FY:%f FZ:%f MOMX:%f MOMY:%f MOMZ:%f\n", i, forces[0], forces[1], forces[2], forces[3], forces[4], forces[5]);
 				}
 				   }	
 				
@@ -1083,24 +1083,24 @@ __global__ void CountDuplicates( uint64_t* id_i,
 						cudaFree(indices_out);
 						//}
 						
-						//onika::memory::CudaMMVector<int> nb_active;
-						//nb_active.resize(1);
+						onika::memory::CudaMMVector<int> nb_active;
+						nb_active.resize(1);
 						
-						//search_active_interactions2<<<nbBlocks, 256>>>( interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, nb_active.data(), interaction_classifier.size() );
-						//cudaDeviceSynchronize();
+						search_active_interactions2<<<nbBlocks, 256>>>( interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, nb_active.data(), interaction_classifier.size() );
+						cudaDeviceSynchronize();
 						
 						//printf("TYPE%d  %d/%d\n", i, nb_active[0], interaction_classifier.size());
 						
-						//actives[i] = nb_active[0];
+						actives[i] = nb_active[0];
 						//}
 					}
 				}
 				
-				//printf("GPU Version :\n");
-				//printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
-				//printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
-				//printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
-				//printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
+				printf("GPU Version :\n");
+				printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
+				printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
+				printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
+				printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
 			}
 
 			if( *block_version )

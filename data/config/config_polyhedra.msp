@@ -15,7 +15,7 @@ chunk_neighbors_impl:
 #  - stats_interactions
   - nbh_polyhedron_gpu:
      block_pair_version: true
-#  - stats_interactions
+  - stats_interactions
 #     block_version: true
 #     particle_version: true
 #     pair_version: true
