@@ -36,6 +36,8 @@ namespace exaDEM
     {
       std::stringstream stream;
       const int ntypes = ic.number_of_waves();
+
+      const auto& cells = grid.cells();
       for (int i = 0; i < ntypes; i++)
       {
         auto [i_data, size] = ic.get_info(i);
@@ -57,7 +59,23 @@ namespace exaDEM
               stream << dn << ",";
               stream << cp_ptr[idx] << ",";
               stream << fn_ptr[idx] << ",";
-              stream << ft_ptr[idx] << std::endl;
+              stream << ft_ptr[idx] << ",";
+              stream << cells[I.cell_i][field::rx][I.p_i] << ",";
+              stream << cells[I.cell_i][field::ry][I.p_i] << ",";
+              stream << cells[I.cell_i][field::rz][I.p_i] << ",";
+              if( I.type >= 4 && I.type < 13) // drivers
+              {
+                stream << 0 << ",";
+                stream << 0 << ",";
+                stream << 0;
+              }
+              else
+              {
+                stream << cells[I.cell_j][field::rx][I.p_j] << ",";
+                stream << cells[I.cell_j][field::ry][I.p_j] << ",";
+                stream << cells[I.cell_j][field::rz][I.p_j];
+              }
+              stream << std::endl;
             }
           }
         }
