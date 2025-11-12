@@ -612,7 +612,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 
     inline void execute() override final
     {
-      printf("CHUNK\n");
+      //printf("CHUNK\n");
       unsigned int cs = config->chunk_size;
       unsigned int cs_log2 = 0;
       while (cs > 1)
@@ -790,7 +790,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 
 	int total_interactions = nb_nbh[incr_cell - 1] + nb_nbh_incr[incr_cell - 1];
 	
-	printf("TOTAL: %d\n", total_interactions);
+	//printf("TOTAL: %d\n", total_interactions);
 
 	if(total_interactions > 0)
 	{
@@ -879,7 +879,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
        	size  = 0;	
        	}
 
-	printf("END CHUNK\n");
+	//printf("END CHUNK\n");
     }
   };
 

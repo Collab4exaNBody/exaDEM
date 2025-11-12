@@ -601,7 +601,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 	//lout << "NBH polyhedron Block pair version" << std::endl;
 				//lout << "Start get_number_of_interactions_block_pair ..." << std::endl;
 	/** Define cuda block and grid size*/
-				printf("BLOCK PAIR\n");
+				//printf("BLOCK PAIR\n");
 				constexpr int block_x = 8;
 				constexpr int block_y = 8;
 				dim3 BlockSize(block_x, block_y, 1);
@@ -619,7 +619,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				if(classifier2.use)
 				{
 				update.waves.resize(4);			
-				printf("start update up\n");
+				//printf("start update up\n");
 				for(int i = 0; i < 4; i++)
 				{
 					//if( i != 2)
@@ -762,7 +762,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					//printf("TYPE:%d FX:%f FY:%f FZ:%f MOMX:%f MOMY:%f MOMZ:%f\n", i, forces[0], forces[1], forces[2], forces[3], forces[4], forces[5]);
 					}
 				}
-				printf("end update up\n");
+				//printf("end update up\n");
 				   }	
 				
 
@@ -819,7 +819,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				}	
 				
 			
-				printf("ICI2\n");
+				//printf("ICI2\n");
 				auto& type0 = classifier2.waves[0];
 				auto& type1 = classifier2.waves[1];
 				auto& type2 = classifier2.waves[2];
@@ -974,7 +974,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				type1.size2 = total_nb_int[1];
 				type2.size2 = total_nb_int[2];
 				type3.size2 = total_nb_int[3];
-				printf("ICI3\n");
+				//printf("ICI3\n");
 				//classifier.resize(total_nb_int, ResizeClassifier::POLYHEDRON);
 				//cudaDeviceSynchronize();
 	
@@ -1128,7 +1128,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
 				printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
 				printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
-				printf("BLOCK PAIR END\n");
+				//printf("BLOCK PAIR END\n");
 				//}
 			}
 
