@@ -33,7 +33,7 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_mass, field::_fx, field::_fy, field::_fz>> class GravityForce : public OperatorNode
   {
-    static constexpr Vec3d default_gravity = {0.0, 0.0, -9.807};
+    static constexpr Vec3d default_gravity = {-4.145, 0.0, -9.807};
     // attributes processed during computation
     using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_mass, field::_fx, field::_fy, field::_fz>>;
     static constexpr ComputeFields compute_field_set{};
@@ -51,7 +51,7 @@ namespace exaDEM
         YAML example:
 
           - gravity_force:
-             gravity: [0,0,-0.009807]
+             gravity: [−0.004145,0,-0.009807]
         )EOF";
     }
 

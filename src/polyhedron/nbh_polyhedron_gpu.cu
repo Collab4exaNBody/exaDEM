@@ -596,9 +596,12 @@ __global__ void CountDuplicates( uint64_t* id_i,
 			
 			if( *block_pair_version )
 			{
+				//if(interactions2.size > 0)
+				//{
 	//lout << "NBH polyhedron Block pair version" << std::endl;
 				//lout << "Start get_number_of_interactions_block_pair ..." << std::endl;
 	/** Define cuda block and grid size*/
+				printf("BLOCK PAIR\n");
 				constexpr int block_x = 8;
 				constexpr int block_y = 8;
 				dim3 BlockSize(block_x, block_y, 1);
@@ -616,16 +619,19 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				if(classifier2.use)
 				{
 				update.waves.resize(4);			
-				
+				printf("start update up\n");
 				for(int i = 0; i < 4; i++)
 				{
 					//if( i != 2)
 					//{
+					//printf("TYPE: %d\n", i);
 					onika::memory::CudaMMVector<int> nb_history;
 					
 					auto& data = classifier2.waves[i];
-					
+					if(data.size() > 0)
+					{
 					int nbBlocks = ( data.size() + 256 - 1) / 256;
+					//printf("NB BLOCKS: %d\n", nbBlocks);
 					
 					nb_history.resize(nbBlocks);
 					
@@ -754,7 +760,9 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					//}
 					
 					//printf("TYPE:%d FX:%f FY:%f FZ:%f MOMX:%f MOMY:%f MOMZ:%f\n", i, forces[0], forces[1], forces[2], forces[3], forces[4], forces[5]);
+					}
 				}
+				printf("end update up\n");
 				   }	
 				
 
@@ -793,16 +801,25 @@ __global__ void CountDuplicates( uint64_t* id_i,
     					temp_storage_bytes);
 
 				cudaFree(d_temp_storage);
-				
        /** Get the total number of interaction per type */
+       				printf("ICI\n");
 				NumberOfPolyhedronInteractionPerTypes total_nb_int;
 				cudaDeviceSynchronize();
 				for(int type = 0 ; type < NumberOfPolyhedronInteractionTypes ; type++)
 				{
+					if(interactions2.size > 0)
+					{
 					total_nb_int[type] = prefix_interactions_cell[size_interactions-1][type] + number_of_interactions_cell[size_interactions-1][type];
 					//lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
-				}
+					}
+					else
+					{
+					total_nb_int[type] = 0;
+					}
+				}	
 				
+			
+				printf("ICI2\n");
 				auto& type0 = classifier2.waves[0];
 				auto& type1 = classifier2.waves[1];
 				auto& type2 = classifier2.waves[2];
@@ -957,7 +974,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				type1.size2 = total_nb_int[1];
 				type2.size2 = total_nb_int[2];
 				type3.size2 = total_nb_int[3];
-				
+				printf("ICI3\n");
 				//classifier.resize(total_nb_int, ResizeClassifier::POLYHEDRON);
 				//cudaDeviceSynchronize();
 	
@@ -992,6 +1009,10 @@ __global__ void CountDuplicates( uint64_t* id_i,
 						//if( i != 2 )
 						//{
 						auto& interaction_classifier = classifier2.waves[i];
+						auto& interaction_history = update.waves[i];
+						
+						if(interaction_classifier.size() > 0)
+						{
 						
 						int nbBlocks = ( interaction_classifier.size() + 256 - 1) / 256;
 						
@@ -1035,7 +1056,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 							
 						cudaFree(d_temp_storage);
 						
-						auto& interaction_history = update.waves[i];
+						//auto& interaction_history = update.waves[i];
 						
 						find_common_elements<<<nbBlocks, 256>>>( id_i, 
 						interaction_classifier.id_j, 
@@ -1062,8 +1083,28 @@ __global__ void CountDuplicates( uint64_t* id_i,
 						interaction_classifier.size(), 
 						interaction_history.size);
 						
+						cudaFree(id_i);
+						//cudaFree(interaction_ids_out);
+						//cudaFree(indices_in);
+						cudaFree(indices_out);
+						
 						cudaDeviceSynchronize();
-
+						
+						onika::memory::CudaMMVector<int> nb_active;
+						nb_active.resize(1);
+						
+						search_active_interactions2<<<nbBlocks, 256>>>( interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, nb_active.data(), interaction_classifier.size() );
+						cudaDeviceSynchronize();
+						
+						//printf("TYPE%d  %d/%d\n", i, nb_active[0], interaction_classifier.size());
+						
+						actives[i] = nb_active[0];
+						//}
+						
+						}
+						
+						if(interaction_history.size > 0)
+						{
 						//cudaFree(interaction_history.interaction_id);
 						cudaFree(interaction_history.id_i);
 						cudaFree(interaction_history.id_j);
@@ -1076,22 +1117,8 @@ __global__ void CountDuplicates( uint64_t* id_i,
 						cudaFree(interaction_history.mom_y);
 						cudaFree(interaction_history.mom_z);
 						cudaFree(interaction_history.indices);
-						
-						cudaFree(id_i);
-						//cudaFree(interaction_ids_out);
-						//cudaFree(indices_in);
-						cudaFree(indices_out);
-						//}
-						
-						onika::memory::CudaMMVector<int> nb_active;
-						nb_active.resize(1);
-						
-						search_active_interactions2<<<nbBlocks, 256>>>( interaction_classifier.ft_x, interaction_classifier.ft_y, interaction_classifier.ft_z, interaction_classifier.mom_x, interaction_classifier.mom_y, interaction_classifier.mom_z, nb_active.data(), interaction_classifier.size() );
-						cudaDeviceSynchronize();
-						
-						//printf("TYPE%d  %d/%d\n", i, nb_active[0], interaction_classifier.size());
-						
-						actives[i] = nb_active[0];
+						}
+
 						//}
 					}
 				}
@@ -1101,6 +1128,8 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
 				printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
 				printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
+				printf("BLOCK PAIR END\n");
+				//}
 			}
 
 			if( *block_version )

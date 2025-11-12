@@ -212,8 +212,8 @@ template< class GridT > __global__ void kernelUN(GridT* cells,
 	auto* __restrict__ rad_b = cells[cell_b][field::radius];
 	IJK loc_b = grid_index_to_ijk( dims, cell_b );
 	AABB cellb_AABB_pre = AABB{ (origin+((offset+loc_b)*cell_size)), (origin+((offset+loc_b+1)*cell_size))};
-	AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * 0.713310 );
-	//AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * rad_b[0] );
+	//AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * 0.713310 );
+	AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * rad_b[0] );
 	
 	cell_accessors cellB(cells[cell_b]);
 	
@@ -492,8 +492,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	auto* __restrict__ rad_b = cells[cell_b][field::radius];
 	IJK loc_b = grid_index_to_ijk( dims, cell_b );
 	AABB cellb_AABB_pre = AABB{ (origin+((offset+loc_b)*cell_size)), (origin+((offset+loc_b+1)*cell_size))};
-	AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * 0.713310 );
-	//AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * rad_b[0] );
+	//AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * 0.713310 );
+	AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * rad_b[0] );
 	
 	cell_accessors cellB(cells[cell_b]);
 	
@@ -612,7 +612,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 
     inline void execute() override final
     {
-      //printf("CHUNK\n");
+      printf("CHUNK\n");
       unsigned int cs = config->chunk_size;
       unsigned int cs_log2 = 0;
       while (cs > 1)
@@ -790,7 +790,10 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 
 	int total_interactions = nb_nbh[incr_cell - 1] + nb_nbh_incr[incr_cell - 1];
 	
-	//printf("TOTAL: %d\n", total_interactions);
+	printf("TOTAL: %d\n", total_interactions);
+
+	if(total_interactions > 0)
+	{
 
 	uint16_t* p_i;
 	uint16_t* p_j;
@@ -856,8 +859,27 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
        	cudaFree(cell_j);
        	cudaFree(p_i);
        	cudaFree(p_j);
+       	
+       	}
+       	else
+       	{
+       	auto& ints2 = *interactions_inter;
+       	
+       	cudaFree(ints2.p_i);
+       	cudaFree(ints2.p_j);
+       	cudaFree(ints2.cell_i);
+       	cudaFree(ints2.cell_j);
 
-	//printf("END CHUNK\n");
+       	/*cudaMalloc(&ints2.p_i, 0 * sizeof(uint16_t));
+       	cudaMalloc(&ints2.p_j, 0 * sizeof(uint16_t));
+       	cudaMalloc(&ints2.cell_i, 0 * sizeof(uint32_t));
+       	cudaMalloc(&ints2.cell_j, 0 * sizeof(uint32_t));*/
+
+       	auto& size = ints2.size;
+       	size  = 0;	
+       	}
+
+	printf("END CHUNK\n");
     }
   };
 
