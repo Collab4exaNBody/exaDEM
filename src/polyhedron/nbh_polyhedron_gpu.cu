@@ -628,8 +628,6 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					onika::memory::CudaMMVector<int> nb_history;
 					
 					auto& data = classifier2.waves[i];
-					if(data.size() > 0)
-					{
 					int nbBlocks = ( data.size() + 256 - 1) / 256;
 					//printf("NB BLOCKS: %d\n", nbBlocks);
 					
@@ -760,7 +758,6 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					//}
 					
 					//printf("TYPE:%d FX:%f FY:%f FZ:%f MOMX:%f MOMY:%f MOMZ:%f\n", i, forces[0], forces[1], forces[2], forces[3], forces[4], forces[5]);
-					}
 				}
 				//printf("end update up\n");
 				   }	
@@ -802,20 +799,13 @@ __global__ void CountDuplicates( uint64_t* id_i,
 
 				cudaFree(d_temp_storage);
        /** Get the total number of interaction per type */
-       				printf("ICI\n");
+
 				NumberOfPolyhedronInteractionPerTypes total_nb_int;
 				cudaDeviceSynchronize();
 				for(int type = 0 ; type < NumberOfPolyhedronInteractionTypes ; type++)
 				{
-					if(interactions2.size > 0)
-					{
 					total_nb_int[type] = prefix_interactions_cell[size_interactions-1][type] + number_of_interactions_cell[size_interactions-1][type];
 					//lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
-					}
-					else
-					{
-					total_nb_int[type] = 0;
-					}
 				}	
 				
 			
@@ -1011,9 +1001,6 @@ __global__ void CountDuplicates( uint64_t* id_i,
 						auto& interaction_classifier = classifier2.waves[i];
 						auto& interaction_history = update.waves[i];
 						
-						if(interaction_classifier.size() > 0)
-						{
-						
 						int nbBlocks = ( interaction_classifier.size() + 256 - 1) / 256;
 						
 						//onika::memory::CudaMMVector<int> interaction_ids_in;
@@ -1100,11 +1087,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 						
 						actives[i] = nb_active[0];
 						//}
-						
-						}
-						
-						if(interaction_history.size > 0)
-						{
+
 						//cudaFree(interaction_history.interaction_id);
 						cudaFree(interaction_history.id_i);
 						cudaFree(interaction_history.id_j);
@@ -1117,17 +1100,16 @@ __global__ void CountDuplicates( uint64_t* id_i,
 						cudaFree(interaction_history.mom_y);
 						cudaFree(interaction_history.mom_z);
 						cudaFree(interaction_history.indices);
-						}
 
 						//}
 					}
 				}
 				
-				printf("GPU Version :\n");
-				printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
-				printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
-				printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
-				printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
+				//printf("GPU Version :\n");
+				//printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
+				//printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
+				//printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
+				//printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
 				//printf("BLOCK PAIR END\n");
 				//}
 			}

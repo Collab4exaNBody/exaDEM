@@ -791,10 +791,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	int total_interactions = nb_nbh[incr_cell - 1] + nb_nbh_incr[incr_cell - 1];
 	
 	//printf("TOTAL: %d\n", total_interactions);
-
-	if(total_interactions > 0)
-	{
-
+	
 	uint16_t* p_i;
 	uint16_t* p_j;
 	uint32_t* cell_i;
@@ -859,25 +856,6 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
        	cudaFree(cell_j);
        	cudaFree(p_i);
        	cudaFree(p_j);
-       	
-       	}
-       	else
-       	{
-       	auto& ints2 = *interactions_inter;
-       	
-       	cudaFree(ints2.p_i);
-       	cudaFree(ints2.p_j);
-       	cudaFree(ints2.cell_i);
-       	cudaFree(ints2.cell_j);
-
-       	/*cudaMalloc(&ints2.p_i, 0 * sizeof(uint16_t));
-       	cudaMalloc(&ints2.p_j, 0 * sizeof(uint16_t));
-       	cudaMalloc(&ints2.cell_i, 0 * sizeof(uint32_t));
-       	cudaMalloc(&ints2.cell_j, 0 * sizeof(uint32_t));*/
-
-       	auto& size = ints2.size;
-       	size  = 0;	
-       	}
 
 	//printf("END CHUNK\n");
     }
