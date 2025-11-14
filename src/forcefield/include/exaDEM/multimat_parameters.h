@@ -35,7 +35,7 @@ namespace exaDEM
    * @tparam ContactParamsT The type used to represent contact parameters (e.g., ContactParams).
    */
   template<typename ContactParamsT>
-    struct ContactParamsMultiMat
+    struct MultiMatParamsT
     {
       vector_t<ContactParamsT> multimat_cp;         //< Contact parameters between material pairs
       vector_t<ContactParamsT> drivers_cp;          //< Contact parameters between drivers and materials
@@ -238,7 +238,7 @@ namespace exaDEM
             {
               if(multimat_cp[this->get_idx_multimat(m1, m2)] == default_cp)
               {
-                color_log::warning("ContactParamsMultiMat::check_completeness", "Contact force parameters for the pair (mat: " + std::to_string(m1) + ", mat: " + std::to_string(m2) + ") are not defined.");
+                color_log::warning("MultiMatParamsT::check_completeness", "Contact force parameters for the pair (mat: " + std::to_string(m1) + ", mat: " + std::to_string(m2) + ") are not defined.");
                 check = false;
               }
             }
@@ -250,7 +250,7 @@ namespace exaDEM
             {
               if(drivers_cp[this->get_idx_drivers(m1, drv)] == default_cp)
               {
-                color_log::warning("ContactParamsMultiMat::check_completeness", "Contact force parameters for the pair (mat: " + std::to_string(m1) + ", driver: " + std::to_string(drv) + ") are not defined.");
+                color_log::warning("MultiMatParamsT::check_completeness", "Contact force parameters for the pair (mat: " + std::to_string(m1) + ", driver: " + std::to_string(drv) + ") are not defined.");
                 check = false;
               }
             }

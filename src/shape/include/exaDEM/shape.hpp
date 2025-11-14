@@ -1,4 +1,5 @@
 /*
+
    Licensed to the Apache Software Foundation (ASF) under one
    or more contributor license agreements.  See the NOTICE file
    distributed with this work for additional information
@@ -461,7 +462,7 @@ namespace exaDEM
      */
     void add_face(size_t num_vertices, int * const vertex_indices)
     {
-      assert(n != 0);
+      assert(num_vertices != 0);
       m_faces[0]++;
       const size_t old_size = m_faces.size();
       m_faces.resize(old_size + num_vertices + 1); // number of vertex + 1 storage to this number
@@ -473,7 +474,14 @@ namespace exaDEM
     }
 
     /**
-     * @brief Set the particle radius used for detection.
+     * @brief retur, the minkowski radius used for detection.
+     * @param radius Minkowsku radius
+     */
+    double minskowski() { return m_radius; }
+    double minskowski() const { return m_radius; }
+
+    /**
+     * @brief Set the minkowski radius used for detection.
      * @param radius Minkowsku radius
      */
     void add_radius(const double radius) { m_radius = radius; }
@@ -495,7 +503,6 @@ namespace exaDEM
       assert(rcut != 0);
       return rcut;
     }
-
     /**
      * @brief Apply a function to all vertices of the shape (non-const version).
      * 
@@ -673,261 +680,295 @@ namespace exaDEM
       for_all_vertices(shift_vertex, shift);
     }
 
-    /// OBBTree Section
 
-    /**
-     * @brief Build an OBB tree for the shape (faces, edges, vertices).
-     *
-     * Each face, edge, and vertex is wrapped in an OBBbundle, and then the tree
-     * is recursively built. The OBBs are enlarged by the particle radius.
-     */
-    void buildOBBtree()
-    {
-      obbtree.reset(obbtree.root);
-      std::vector<OBBbundle<subBox>> obb_bundles;
+    // CPU
+		// could be optimized without sort ...
+		/**
+		 * @brief Finds the face matching a given set of vertex IDs.
+		 * @param vertices Vertex IDs to identify (modified by sort).
+		 * @return Matching face ID.
+		 */
+		uint16_t identify_face(std::span<int> vertices) const
+		{
+			std::vector<int> input(vertices.begin(), vertices.end());
+			std::sort(input.begin(), input.end());
 
-      // Build OBBs for faces
-      for (int face_idx = 0; face_idx < this->get_number_of_faces(); ++face_idx)
-      {
-        auto [vertex_ids, n_vertices] = this->get_face(face_idx);
-        OBBbundle<subBox> bundle;
-        bundle.data.isub = face_idx;
-        bundle.data.nbPoints = n_vertices;
+      int n_vertices = vertices.size();
+			for (uint16_t fid = 0; fid < get_number_of_faces(); ++fid)
+			{
+				auto [data, size] = get_face(fid);
+				if (size != n_vertices)
+					continue;
 
-        for (int vi = 0; vi < n_vertices; vi++)
-          bundle.points.push_back(conv_to_vec3r(m_vertices[vertex_ids[vi]]));
+				std::vector<int> face(data, data + size);
+				std::sort(face.begin(), face.end());
 
-        std::vector<OBBbundle<subBox>> single_bundle{bundle};
-        bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
-        obb_bundles.push_back(bundle);
-      }
+				if (input == face)
+					return fid;
+			}
 
-      // Build OBBs for edges
-      for (int edge_idx = 0; edge_idx < this->get_number_of_edges(); ++edge_idx)
-      {
-        auto [v0, v1] = this->get_edge(edge_idx);
-        OBBbundle<subBox> bundle;
-        bundle.data.isub = edge_idx;
-        bundle.data.nbPoints = 2;
-        bundle.points.push_back(conv_to_vec3r(m_vertices[v0]));
-        bundle.points.push_back(conv_to_vec3r(m_vertices[v1]));
+			std::string msg = "Impossible to identify a face in shape: " + m_name +".\n";
+			msg += "Vertices ID are: [ ";
+			for (size_t i=0 ; i<vertices.size() ; i++) msg += std::to_string(vertices[i]) + " ";
+			msg += "]";
+			color_log::error("shape::identify_face", msg);
+		}
 
-        std::vector<OBBbundle<subBox>> single_bundle{bundle};
-        bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
-        obb_bundles.push_back(bundle);
-      }
+		/// OBBTree Section
 
-      // Build OBBs for vertices
-      for (int vert_idx = 0; vert_idx < this->get_number_of_vertices(); ++vert_idx)
-      {
-        OBBbundle<subBox> bundle;
-        bundle.data.isub = vert_idx;
-        bundle.data.nbPoints = 1;
-        bundle.points.push_back(conv_to_vec3r(m_vertices[vert_idx]));
+		/**
+		 * @brief Build an OBB tree for the shape (faces, edges, vertices).
+		 *
+		 * Each face, edge, and vertex is wrapped in an OBBbundle, and then the tree
+		 * is recursively built. The OBBs are enlarged by the particle radius.
+		 */
+		void buildOBBtree()
+		{
+			obbtree.reset(obbtree.root);
+			std::vector<OBBbundle<subBox>> obb_bundles;
 
-        std::vector<OBBbundle<subBox>> single_bundle{bundle};
-        bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
-        obb_bundles.push_back(bundle);
-      }
+			// Build OBBs for faces
+			for (int face_idx = 0; face_idx < this->get_number_of_faces(); ++face_idx)
+			{
+				auto [vertex_ids, n_vertices] = this->get_face(face_idx);
+				OBBbundle<subBox> bundle;
+				bundle.data.isub = face_idx;
+				bundle.data.nbPoints = n_vertices;
 
-      // Recursively build the OBB tree
-      obbtree.root = OBBtree<subBox>::recursiveBuild(obbtree.root, obb_bundles, m_radius);
-    }
+				for (int vi = 0; vi < n_vertices; vi++)
+					bundle.points.push_back(conv_to_vec3r(m_vertices[vertex_ids[vi]]));
 
-    /// IO Section
-    /**
-     * @brief Print all vertices of the shape to the logging output.
-     */
-    void print_vertices()
-    {
-      int vertex_idx = 0;
-      auto printer = [&vertex_idx](exanb::Vec3d &v)
-      {
-        lout << "Vertex[" << vertex_idx++ << "]: [" << v.x << "," << v.y << "," << v.z << "]" << std::endl;
-      };
+				std::vector<OBBbundle<subBox>> single_bundle{bundle};
+				bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+				obb_bundles.push_back(bundle);
+			}
 
-      lout << "Number of vertices = " << this->get_number_of_vertices() << std::endl;
-      for_all_vertices(printer);
-    }
+			// Build OBBs for edges
+			for (int edge_idx = 0; edge_idx < this->get_number_of_edges(); ++edge_idx)
+			{
+				auto [v0, v1] = this->get_edge(edge_idx);
+				OBBbundle<subBox> bundle;
+				bundle.data.isub = edge_idx;
+				bundle.data.nbPoints = 2;
+				bundle.points.push_back(conv_to_vec3r(m_vertices[v0]));
+				bundle.points.push_back(conv_to_vec3r(m_vertices[v1]));
 
-    /**
-     * @brief Print all edges of the shape to the logging output.
-     */
-    void print_edges()
-    {
-      int edge_idx = 0;
-      auto printer = [&edge_idx](int v0, int v1)
-      {
-        lout << "Edge[" << edge_idx++ << "]: [" << v0 << "," << v1 << "]" << std::endl;
-      };
+				std::vector<OBBbundle<subBox>> single_bundle{bundle};
+				bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+				obb_bundles.push_back(bundle);
+			}
 
-      if (this->get_number_of_edges() == 0)
-      {
-        lout << "No edges" << std::endl;
-      }
-      else
-      {
-        lout << "Number of edges = " << this->get_number_of_edges() << std::endl;
-        for_all_edges(printer);
-      }
-    }
+			// Build OBBs for vertices
+			for (int vert_idx = 0; vert_idx < this->get_number_of_vertices(); ++vert_idx)
+			{
+				OBBbundle<subBox> bundle;
+				bundle.data.isub = vert_idx;
+				bundle.data.nbPoints = 1;
+				bundle.points.push_back(conv_to_vec3r(m_vertices[vert_idx]));
 
-    /**
-     * @brief Print all faces of the shape to the logging output.
-     */
-    void print_faces()
-    {
-      int face_idx = 0;
-      auto printer = [&face_idx](int n_vertices, int *vertex_indices)
-      {
-        lout << "Face[" << face_idx++ << "]: ";
-        for (int i = 0; i < n_vertices; i++)
-        {
-          lout << vertex_indices[i];
-          if (i < n_vertices - 1) lout << ", ";
-        }
-        lout << std::endl;
-      };
+				std::vector<OBBbundle<subBox>> single_bundle{bundle};
+				bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+				obb_bundles.push_back(bundle);
+			}
 
-      if (this->get_number_of_faces() == 0)
-      {
-        lout << "No faces" << std::endl;
-      }
-      else
-      {
-        lout << "Number of faces = " << this->get_number_of_faces() << std::endl;
-        for_all_faces(printer);
-      }
-    }
+			// Recursively build the OBB tree
+			obbtree.root = OBBtree<subBox>::recursiveBuild(obbtree.root, obb_bundles, m_radius);
+		}
 
-    /**
-     * @brief Print full shape information (name, radius, inertia, volume) and all vertices, edges, and faces.
-     */
-    inline void print()
-    {
-      lout << std::endl;
-      lout << "======= Shape Configuration =====" << std::endl;
-      lout << "Shape Name        = " << this->m_name << std::endl;
-      lout << "Shape Radius      = " << this->m_radius << std::endl;
-      lout << "Shape I/m         = [" << this->m_inertia_on_mass << "]" << std::endl;
-      lout << "Shape Volume      = " << this->m_volume << std::endl;
-      print_vertices();
-      print_edges();
-      print_faces();
-      lout << "=================================" << std::endl << std::endl;
-    }
+		/// IO Section
+		/**
+		 * @brief Print all vertices of the shape to the logging output.
+		 */
+		void print_vertices()
+		{
+			int vertex_idx = 0;
+			auto printer = [&vertex_idx](exanb::Vec3d &v)
+			{
+				lout << "Vertex[" << vertex_idx++ << "]: [" << v.x << "," << v.y << "," << v.z << "]" << std::endl;
+			};
 
-    /**
-     * @brief Export the shape to a Paraview-compatible VTK file.
-     */
-    inline void write_paraview()
-    {
-      ldbg << " writting paraview for shape " << this->m_name << std::endl;
-      std::string name = m_name + ".vtk";
-      std::ofstream outFile(name);
-      if (!outFile)
-      {
-        color_log::error("Shape::write_paraview", "Impossible to create an output file!", false);
-        color_log::error("Shape::write_paraview", "Impossible to open the file: " + name, false);
-        return;
-      }
-      outFile << "# vtk DataFile Version 3.0" << std::endl;
-      outFile << "Spheres" << std::endl;
-      outFile << "ASCII" << std::endl;
-      outFile << "DATASET POLYDATA" << std::endl;
-      outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
-      auto writer_v = [](exanb::Vec3d &v, std::ofstream &out) { out << v.x << " " << v.y << " " << v.z << std::endl; };
+			lout << "Number of vertices = " << this->get_number_of_vertices() << std::endl;
+			for_all_vertices(printer);
+		}
 
-      for_all_vertices(writer_v, outFile);
+		/**
+		 * @brief Print all edges of the shape to the logging output.
+		 */
+		void print_edges()
+		{
+			int edge_idx = 0;
+			auto printer = [&edge_idx](int v0, int v1)
+			{
+				lout << "Edge[" << edge_idx++ << "]: [" << v0 << "," << v1 << "]" << std::endl;
+			};
 
-      outFile << std::endl;
+			if (this->get_number_of_edges() == 0)
+			{
+				lout << "No edges" << std::endl;
+			}
+			else
+			{
+				lout << "Number of edges = " << this->get_number_of_edges() << std::endl;
+				for_all_edges(printer);
+			}
+		}
 
-      outFile << "LINES " << this->get_number_of_edges() << " " << 3*this->get_number_of_edges() << std::endl;
+		/**
+		 * @brief Print all faces of the shape to the logging output.
+		 */
+		void print_faces()
+		{
+			int face_idx = 0;
+			auto printer = [&face_idx](int n_vertices, int *vertex_indices)
+			{
+				lout << "Face[" << face_idx++ << "]: ";
+				for (int i = 0; i < n_vertices; i++)
+				{
+					lout << vertex_indices[i];
+					if (i < n_vertices - 1) lout << ", ";
+				}
+				lout << std::endl;
+			};
 
-      auto writer_e = [] (int a, int b, std::ofstream &out)
-      {
-        out << "2 " << a << " " << b << std::endl;
-      };
+			if (this->get_number_of_faces() == 0)
+			{
+				lout << "No faces" << std::endl;
+			}
+			else
+			{
+				lout << "Number of faces = " << this->get_number_of_faces() << std::endl;
+				for_all_faces(printer);
+			}
+		}
 
-      for_all_edges(writer_e, outFile);
+		/**
+		 * @brief Print full shape information (name, radius, inertia, volume) and all vertices, edges, and faces.
+		 */
+		inline void print()
+		{
+			lout << std::endl;
+			lout << "======= Shape Configuration =====" << std::endl;
+			lout << "Shape Name        = " << this->m_name << std::endl;
+			lout << "Shape Radius      = " << this->m_radius << std::endl;
+			lout << "Shape I/m         = [" << this->m_inertia_on_mass << "]" << std::endl;
+			lout << "Shape Volume      = " << this->m_volume << std::endl;
+			print_vertices();
+			print_edges();
+			print_faces();
+			lout << "=================================" << std::endl << std::endl;
+		}
 
-      int count_polygon_size = this->get_number_of_faces();
-      int count_polygon_table_size = 0;
-      int *ptr = this->m_faces.data() + 1;
-      for (int it = 0; it < count_polygon_size; it++)
-      {
-        count_polygon_table_size += ptr[0] + 1; // number of vertices + vertex idexes
-        ptr += ptr[0] + 1;                      // -> next face
-      }
-      outFile << std::endl;
+		/**
+		 * @brief Export the shape to a Paraview-compatible VTK file.
+		 */
+		inline void write_paraview()
+		{
+			ldbg << " writting paraview for shape " << this->m_name << std::endl;
+			std::string name = m_name + ".vtk";
+			std::ofstream outFile(name);
+			if (!outFile)
+			{
+				color_log::error("Shape::write_paraview", "Impossible to create an output file!", false);
+				color_log::error("Shape::write_paraview", "Impossible to open the file: " + name, false);
+				return;
+			}
+			outFile << "# vtk DataFile Version 3.0" << std::endl;
+			outFile << "Spheres" << std::endl;
+			outFile << "ASCII" << std::endl;
+			outFile << "DATASET POLYDATA" << std::endl;
+			outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
+			auto writer_v = [](exanb::Vec3d &v, std::ofstream &out) { out << v.x << " " << v.y << " " << v.z << std::endl; };
 
-      outFile << "POLYGONS " << count_polygon_size << " " << count_polygon_table_size << std::endl;
-      auto writer_f = [](const size_t size, const int *data, std::ofstream &out)
-      {
-        out << size;
-        for (size_t it = 0; it < size; it++)
-          out << " " << data[it];
-        out << std::endl;
-      };
-      for_all_faces(writer_f, outFile);
-    }
+			for_all_vertices(writer_v, outFile);
 
-    /**
-     * @brief Export the shape at a given timestep (position + orientation) to Paraview.
-     * @param path Output directory.
-     * @param timestep Current timestep (used in filename).
-     * @param center Translation vector of the shape.
-     * @param quat Orientation quaternion of the shape.
-     */
-    inline void write_move_paraview(
-        std::string path, 
-        int timestep, 
-        Vec3d &center, 
-        Quaternion &quat)
-    {
-      std::string time = std::to_string(timestep);
-      ldbg << " writting paraview for shape " << this->m_name << " timestep: " << time << std::endl;
-      std::string name = path + m_name + "_" + time + ".vtk";
-      std::ofstream outFile(name);
-      if (!outFile)
-      {
-        color_log::error("Shape::write_move_paraview", "Impossible to create the output file: " + name, false);
-        return;
-      }
-      outFile << "# vtk DataFile Version 3.0" << std::endl;
-      outFile << "Spheres" << std::endl;
-      outFile << "ASCII" << std::endl;
-      outFile << "DATASET POLYDATA" << std::endl;
-      outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
-      auto writer_v = [](const exanb::Vec3d &v, const exanb::Vec3d &center, const exanb::Quaternion &Q, std::ofstream &out)
-      {
-        exanb::Vec3d Vertex = center + Q * v;
-        out << Vertex.x << " " << Vertex.y << " " << Vertex.z << std::endl;
-      };
+			outFile << std::endl;
 
-      for_all_vertices(writer_v, center, quat, outFile);
+			outFile << "LINES " << this->get_number_of_edges() << " " << 3*this->get_number_of_edges() << std::endl;
 
-      outFile << std::endl;
-      int count_polygon_size = this->get_number_of_faces();
-      int count_polygon_table_size = 0;
-      int *ptr = this->m_faces.data() + 1;
-      for (int it = 0; it < count_polygon_size; it++)
-      {
-        count_polygon_table_size += ptr[0] + 1; // number of vertices + vertex idexes
-        ptr += ptr[0] + 1;                      // -> next face
-      }
+			auto writer_e = [] (int a, int b, std::ofstream &out)
+			{
+				out << "2 " << a << " " << b << std::endl;
+			};
 
-      outFile << "POLYGONS " << count_polygon_size << " " << count_polygon_table_size << std::endl;
-      auto writer_f = [](const size_t size, const int *data, std::ofstream &out)
-      {
-        out << size;
-        for (size_t it = 0; it < size; it++)
-          out << " " << data[it];
-        out << std::endl;
-      };
-      for_all_faces(writer_f, outFile);
-    }
-  };
+			for_all_edges(writer_e, outFile);
+
+			int count_polygon_size = this->get_number_of_faces();
+			int count_polygon_table_size = 0;
+			int *ptr = this->m_faces.data() + 1;
+			for (int it = 0; it < count_polygon_size; it++)
+			{
+				count_polygon_table_size += ptr[0] + 1; // number of vertices + vertex idexes
+				ptr += ptr[0] + 1;                      // -> next face
+			}
+			outFile << std::endl;
+
+			outFile << "POLYGONS " << count_polygon_size << " " << count_polygon_table_size << std::endl;
+			auto writer_f = [](const size_t size, const int *data, std::ofstream &out)
+			{
+				out << size;
+				for (size_t it = 0; it < size; it++)
+					out << " " << data[it];
+				out << std::endl;
+			};
+			for_all_faces(writer_f, outFile);
+		}
+
+		/**
+		 * @brief Export the shape at a given timestep (position + orientation) to Paraview.
+		 * @param path Output directory.
+		 * @param timestep Current timestep (used in filename).
+		 * @param center Translation vector of the shape.
+		 * @param quat Orientation quaternion of the shape.
+		 */
+		inline void write_move_paraview(
+				std::string path, 
+				int timestep, 
+				Vec3d &center, 
+				Quaternion &quat)
+		{
+			std::string time = std::to_string(timestep);
+			ldbg << " writting paraview for shape " << this->m_name << " timestep: " << time << std::endl;
+			std::string name = path + m_name + "_" + time + ".vtk";
+			std::ofstream outFile(name);
+			if (!outFile)
+			{
+				color_log::error("Shape::write_move_paraview", "Impossible to create the output file: " + name, false);
+				return;
+			}
+			outFile << "# vtk DataFile Version 3.0" << std::endl;
+			outFile << "Spheres" << std::endl;
+			outFile << "ASCII" << std::endl;
+			outFile << "DATASET POLYDATA" << std::endl;
+			outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
+			auto writer_v = [](const exanb::Vec3d &v, const exanb::Vec3d &center, const exanb::Quaternion &Q, std::ofstream &out)
+			{
+				exanb::Vec3d Vertex = center + Q * v;
+				out << Vertex.x << " " << Vertex.y << " " << Vertex.z << std::endl;
+			};
+
+			for_all_vertices(writer_v, center, quat, outFile);
+
+			outFile << std::endl;
+			int count_polygon_size = this->get_number_of_faces();
+			int count_polygon_table_size = 0;
+			int *ptr = this->m_faces.data() + 1;
+			for (int it = 0; it < count_polygon_size; it++)
+			{
+				count_polygon_table_size += ptr[0] + 1; // number of vertices + vertex idexes
+				ptr += ptr[0] + 1;                      // -> next face
+			}
+
+			outFile << "POLYGONS " << count_polygon_size << " " << count_polygon_table_size << std::endl;
+			auto writer_f = [](const size_t size, const int *data, std::ofstream &out)
+			{
+				out << size;
+				for (size_t it = 0; it < size; it++)
+					out << " " << data[it];
+				out << std::endl;
+			};
+			for_all_faces(writer_f, outFile);
+		}
+	};
 }; // namespace exaDEM
 
 #include <exaDEM/shape_prepro.hpp>

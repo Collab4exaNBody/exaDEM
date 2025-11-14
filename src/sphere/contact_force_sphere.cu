@@ -30,9 +30,6 @@ under the License.
 
 #include <exaDEM/contact_force_parameters.h>
 #include <exaDEM/compute_contact_force.h>
-#include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/classifier/interactionSOA.hpp>
-#include <exaDEM/classifier/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
@@ -43,7 +40,7 @@ under the License.
 #include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/contact_sphere.h>
-#include <exaDEM/multimat_cp.h>
+#include <exaDEM/multimat_parameters.h>
 
 namespace exaDEM
 {
@@ -61,11 +58,11 @@ namespace exaDEM
     ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(ContactParams, config, INPUT, OPTIONAL, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
     ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL, DocString{"Contact parameters for drivers, optional"}); // can be re-used for to dump contact network
-    ADD_SLOT(ContactParamsMultiMat<ContactParams>, multimat_cp, INPUT, DocString{"List of contact parameters for simulations with multiple materials"});
+    ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT, OPTIONAL, DocString{"List of contact parameters for simulations with multiple materials"});
     ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"Time step value"});
     ADD_SLOT(bool, symetric, INPUT_OUTPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
     ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
     // analysis
     ADD_SLOT(long, timestep, INPUT, REQUIRED);
     ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
@@ -75,7 +72,6 @@ namespace exaDEM
     ADD_SLOT(bool, print_warning, PRIVATE, true, DocString{"This variable is used to ensure that warning messages are displayed only once."});
     // output
     ADD_SLOT(double, max_kn, INPUT_OUTPUT, 0, DocString{"Get the highest value of the input contact force parameters kn (used for dt_critical)"});
-
 
     public:
 
@@ -103,12 +99,12 @@ namespace exaDEM
       )EOF"; 
     }
 
-    template<int start, int end, template<int, bool, typename> typename FuncT, typename XFormT, typename T, typename... Args>
-      void loop_contact_force(Classifier<T>& classifier, XFormT& cp_xform, Args &&... args)
+    template<int start, int end, template<int, bool, typename> typename FuncT, typename XFormT, typename... Args>
+      void loop_contact_force(Classifier& classifier, XFormT& cp_xform, Args &&... args)
       {
         FuncT<start, cohesive, XFormT> contact_law;
         contact_law.xform = cp_xform;
-        run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
+        run_contact_law<start>(parallel_execution_context(), classifier, contact_law, args...);
         if constexpr( start + 1 <= end )
         {
           loop_contact_force<start+1, end, FuncT, XFormT>(classifier, cp_xform, std::forward<Args>(args)...);
@@ -142,10 +138,10 @@ namespace exaDEM
           const SingleMatContactParamsTAccessor<ContactParams> cp = {hkp};
           const SingleMatContactParamsTAccessor<ContactParams> cp_drvs = {hkp_drvs};
 
-          run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, cp, time);
-          run_contact_law(parallel_execution_context(), 4, classifier, cyl, cells, drvs, cp_drvs, time);
-          run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs, cp_drvs, time);
-          run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, cp_drvs, time);
+          run_contact_law<InteractionTypeId::VertexVertex>(  parallel_execution_context(), classifier,  sph, cells, cp, time);
+          run_contact_law<InteractionTypeId::VertexCylinder>(parallel_execution_context(), classifier,  cyl, cells, drvs, cp_drvs, time);
+          run_contact_law<InteractionTypeId::VertexSurface>( parallel_execution_context(), classifier, surf, cells, drvs, cp_drvs, time);
+          run_contact_law<InteractionTypeId::VertexBall>(    parallel_execution_context(), classifier, ball, cells, drvs, cp_drvs, time);
 
           constexpr int stl_type_start = 7;
           constexpr int stl_type_end = 9;
@@ -156,10 +152,10 @@ namespace exaDEM
           const auto& contact_parameters = *multimat_cp;
           const MultiMatContactParamsTAccessor<ContactParams> cp = contact_parameters.get_multimat_accessor();
           const MultiMatContactParamsTAccessor<ContactParams> cp_drvs = contact_parameters.get_drivers_accessor();
-          run_contact_law(parallel_execution_context(), 0, classifier, sph, cells, cp, time);
-          run_contact_law(parallel_execution_context(), 4, classifier, cyl, cells, drvs, cp_drvs, time);
-          run_contact_law(parallel_execution_context(), 5, classifier, surf, cells, drvs, cp_drvs, time);
-          run_contact_law(parallel_execution_context(), 6, classifier, ball, cells, drvs, cp_drvs, time);
+          run_contact_law<InteractionTypeId::VertexVertex>(  parallel_execution_context(), classifier,  sph, cells, cp, time);
+          run_contact_law<InteractionTypeId::VertexCylinder>(parallel_execution_context(), classifier,  cyl, cells, drvs, cp_drvs, time);
+          run_contact_law<InteractionTypeId::VertexSurface>( parallel_execution_context(), classifier, surf, cells, drvs, cp_drvs, time);
+          run_contact_law<InteractionTypeId::VertexBall>(    parallel_execution_context(), classifier, ball, cells, drvs, cp_drvs, time);
 
           constexpr int stl_type_start = 7;
           constexpr int stl_type_end = 9;
@@ -190,8 +186,8 @@ namespace exaDEM
         auto &classifier = *ic;
         for(int i = 1 ; i <= 3 ; i++)
         {
-          auto& interactions = classifier.get_wave(i);
-          if(interactions.size() > 0)
+          size_t size = classifier.get_size(i);
+          if(size > 0)
           {
             std::string msg = "The contact operator for spheres is being used, but polyhedron interactions are defined.\n";
             msg += "                        Please, use contact_polyhedron operators."; 

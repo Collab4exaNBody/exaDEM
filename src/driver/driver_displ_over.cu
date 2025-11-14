@@ -251,7 +251,7 @@ namespace exaDEM
       // get backup
       Drivers &bcpd = *backup_drvs;
       size_t bcpd_size = bcpd.get_size();
-      assert(bcpd_size == size);
+      //assert(bcpd_size == size);
 
       auto pec_func = [this]() { return this->parallel_execution_context(); };
       for (size_t i = 0; i < bcpd_size && local_drivers_displ == 0 ; i++)

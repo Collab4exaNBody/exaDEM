@@ -48,7 +48,7 @@ namespace exaDEM
 	{
 		ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
 		ADD_SLOT(GridT, grid, INPUT, REQUIRED);
-		ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
+		ADD_SLOT(Classifier, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
 		ADD_SLOT(std::string , filename , INPUT , "output");
 		ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
 		public:
@@ -70,7 +70,7 @@ namespace exaDEM
 			MPI_Comm_rank(*mpi, &rank);
 			MPI_Comm_size(*mpi, &size);
 
-			Classifier<InteractionSOA>& classifier = (*ic);
+			Classifier& classifier = (*ic);
 			NetworkFunctor<GridT> manager(*grid);
 
 			if (rank == 0)

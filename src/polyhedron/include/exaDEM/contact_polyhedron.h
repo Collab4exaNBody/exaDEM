@@ -22,6 +22,8 @@ under the License.
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/drivers.h>
+#include <exaDEM/shape_detection_driver.hpp>
 
 namespace exaDEM
 {

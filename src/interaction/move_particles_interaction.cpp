@@ -25,7 +25,7 @@ namespace exaDEM
 {
   using namespace exanb;
 
-  template <typename GridT> using MovePaticlesWithInteractionTmpl = exanb::MovePaticlesWithES<GridT, exaDEM::Interaction>;
+  template <typename GridT> using MovePaticlesWithInteractionTmpl = exanb::MovePaticlesWithES<GridT, exaDEM::PlaceholderInteraction>;
   // === register factories ===
   ONIKA_AUTORUN_INIT(move_particles_interaction) { OperatorNodeFactory::instance()->register_factory("move_particles_interaction", make_grid_variant_operator<MovePaticlesWithInteractionTmpl>); }
 } // namespace exaDEM

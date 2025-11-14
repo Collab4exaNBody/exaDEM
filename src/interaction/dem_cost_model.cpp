@@ -77,7 +77,7 @@ namespace exaDEM
           double cost = 3 * N + 1;
           if (!skip_interaction)
           {
-            CellExtraDynamicDataStorageT<Interaction> &storage = interactions[cell_i];
+            CellExtraDynamicDataStorageT<PlaceholderInteraction> &storage = interactions[cell_i];
             auto *__restrict__ data = storage.m_data.data();
             size_t size = storage.m_data.size();
             for (size_t i = 0; i < size; i++)

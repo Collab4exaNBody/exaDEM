@@ -59,21 +59,26 @@ namespace std
 
 namespace color_log
 {
-  using namespace ansi;
+	using namespace ansi;
 
-  inline void highlight(const std::string& operator_name, const std::string& text) {
-    std::string full_text = "[" + operator_name + "] " + text;
-    onika::lout << green(full_text) << std::endl;
-  }
+	inline void highlight(const std::string& operator_name, const std::string& text) {
+		std::string full_text = "[" + operator_name + "] " + text;
+		onika::lout << green(full_text) << std::endl;
+	}
 
-  inline void warning(const std::string& operator_name, const std::string& text) {
-    std::string full_text = "[WARNING, " + operator_name + "] " + text;
-    onika::lout << yellow(full_text) << std::endl;
-  }
+	inline void warning(
+			const std::string& operator_name, 
+			const std::string& text) {
+		std::string full_text = "[WARNING, " + operator_name + "] " + text;
+		onika::lout << yellow(full_text) << std::endl;
+	}
 
-  inline void error(const std::string& operator_name, const std::string& text, bool stop_execution = true) {
-    std::string full_text = "[ERROR, " + operator_name + "] " + text;
-    onika::lout << red(full_text) << std::endl;
-    if(stop_execution) std::exit(EXIT_FAILURE);
-  }
+	[[noreturn]] inline void error(
+			const std::string& operator_name, 
+			const std::string& text, 
+			bool stop_execution = true) {
+		std::string full_text = "[ERROR, " + operator_name + "] " + text;
+		onika::lout << red(full_text) << std::endl;
+		if(stop_execution) std::exit(EXIT_FAILURE);
+	}
 }  // namespace ansi

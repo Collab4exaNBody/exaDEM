@@ -13,7 +13,7 @@
    KIND, either express or implied.  See the License for the
    specific language governing permissions and limitations
    under the License.
-*/
+ */
 
 #pragma once
 
@@ -22,52 +22,217 @@
 
 namespace exaDEM
 {
-  struct interaction_manager
+  struct InteractionManager
   {
-    std::vector<exaDEM::Interaction> hist;              // history
-    std::vector<std::vector<exaDEM::Interaction>> list; //
+    std::vector<exaDEM::PlaceholderInteraction> hist;              // history
+    std::vector<std::vector<exaDEM::PlaceholderInteraction>> list; //
+    std::vector<std::vector<uint64_t>> ignore;
 
     void reset(const size_t size)
     {
       list.resize(size);
+      ignore.resize(size);
       for (size_t p = 0; p < size; p++)
       {
         list[p].clear();
+        ignore[p].clear();
       }
     }
 
-    void add_item(const size_t p, exaDEM::Interaction &I)
+    void add_item(const size_t p, exaDEM::PlaceholderInteraction &I)
     {
       assert(p < list.size());
-      list[p].push_back(I);
-    }
-
-    size_t get_size()
-    {
-      size_t count(0);
-      for (auto &it : list)
-        count += it.size();
-      return count;
-    }
-
-    template <bool use_history> void update_extra_storage(CellExtraDynamicDataStorageT<Interaction> &storage)
-    {
-      const size_t total_size = this->get_size();
-      size_t offset = 0;
-      auto &info = storage.m_info;
-      auto &data = storage.m_data;
-
-      data.resize(total_size);
-
-      for (size_t p = 0; p < list.size(); p++)
+      if(I.type() != InteractionTypeId::VertexVertex 
+|| (I.type() == InteractionTypeId::VertexVertex && !skip_ignored_interactions(p, I)))
       {
-        info[p].offset = offset;
-        if constexpr (use_history)
-          update_friction_moment(list[p], hist);
-        std::copy(list[p].begin(), list[p].end(), data.data() + offset);
-        info[p].size = list[p].size();
-        offset += list[p].size();
+        list[p].push_back(I);
       }
     }
-  };
+ 
+    void add(std::vector<exaDEM::PlaceholderInteraction>& vec)
+		{
+			for(auto& it : vec)
+			{
+				add_item(it.pair.pi.p, it);
+			}
+		}
+
+		size_t get_size()
+		{
+			size_t count(0);
+			for (auto &it : list)
+				count += it.size();
+			return count;
+		}
+
+		template <bool use_history> 
+			void update_extra_storage(CellExtraDynamicDataStorageT<PlaceholderInteraction> &storage)
+			{
+				const size_t total_size = this->get_size();
+				size_t offset = 0;
+				auto &info = storage.m_info;
+				auto &data = storage.m_data;
+
+				data.resize(total_size);
+
+				for (size_t p = 0; p < list.size(); p++)
+				{
+					info[p].offset = offset;
+					if constexpr (use_history)
+						update(list[p], hist);
+					std::copy(list[p].begin(), list[p].end(), data.data() + offset);
+					info[p].size = list[p].size();
+					offset += list[p].size();
+				}
+			}
+
+		double compute_sticked_area(size_t p) //, const shape& shp)
+		{
+			return 0.0;
+		}
+
+		// call it after update persistent interaction
+		void update_ignore_interaction()
+		{
+			size_t n = list.size();
+			ignore.resize(n);
+			for(size_t p=0 ; p<n ; p++)
+			{
+				auto& interactions = list[p];
+				for(size_t i=0 ; i<interactions.size() ; i++) 
+				{
+					if( interactions[i].ignore_other_interactions())
+					{
+						auto& partner = interactions[i].j();
+						auto& ignore_ids = ignore[p];
+						bool add_info = true;
+						for(size_t j=0 ; j < ignore_ids.size() ; j++)
+						{
+							if(partner.id == ignore_ids[j])
+							{
+								add_info = false;
+								break;
+							}
+						}
+						if(add_info) ignore_ids.push_back(partner.id);
+					}           
+				}
+			}
+		}
+
+		bool skip_ignored_interactions(
+				size_t p, 
+				exaDEM::PlaceholderInteraction &I)
+		{
+			auto& partner = I.j();
+			auto& ignore_ids = ignore[p];
+			for(size_t j=0 ; j<ignore_ids.size() ; j++)
+			{
+				if(partner.id == ignore_ids[j]) return true;
+			}
+			return false;
+		}
+	};
+
+	inline void update_persistent_interactions(
+			InteractionManager& manager, 
+			CellExtraDynamicDataStorageT<PlaceholderInteraction> &storage)
+	{
+		size_t n_particles = storage.number_of_particles();
+		for(size_t p = 0; p<n_particles ; p++)
+		{
+			size_t n_interactions = storage.particle_number_of_items(p);
+			for(size_t i = 0; i <n_interactions ; i++)
+			{
+				PlaceholderInteraction& I = storage.get_particle_item(p, i);
+				if( I.persistent() )
+				{
+					manager.list[p].push_back(I);
+				}
+			}
+		}
+	}
+
+	template<typename ParticleVertexViewT>
+		bool check_stiked_face(
+				std::vector<exaDEM::PlaceholderInteraction>& interactions, 
+				size_t p, 
+				ParticleVertexViewT& pvv)
+		{
+			std::vector<int> vertex_id = {};
+			std::vector<Vec3d> vertices;
+			// identify vertices
+			for(size_t i=0 ; i<interactions.size() ; i++)
+			{
+				if(interactions[i].type() == InteractionTypeId::StickedParticles)
+				{
+					vertex_id.push_back(interactions[i].pair.pi.sub);
+				} 
+			}
+
+			if( vertex_id.size() == 0 ) return true; // true cause no stiked face 
+			vertices.resize(vertex_id.size());
+
+			for(size_t i=0 ; i<vertex_id.size() ; i++)
+			{
+				vertices[i] = pvv[vertex_id[i]];
+			}
+
+			if(vertices.size() <= 2)
+			{
+				color_log::warning("interaction_manager::check_stiked_face", "sticked face is illformed (n_vertices should be >= 3) with only " + std::to_string(vertices.size()) + " vertices");
+				return false;
+			}
+
+			Vec3d va = vertices[1] - vertices[0];
+			Vec3d vb = vertices[2] - vertices[0];
+
+			bool res = true;
+
+			Vec3d normal = exanb::cross(va, vb);
+			constexpr double tol = 1.e-10;
+
+			// Check that remaining vertices belong to the same plane
+			for (size_t j=3; j<vertices.size(); j++)
+			{
+				Vec3d vj = vertices[j] - vertices[0];
+				double distance_to_plane = std::abs(exanb::dot(vj, normal));
+
+				if (distance_to_plane > tol)
+				{
+					//color_log::error(
+					color_log::warning(
+							"interaction_manager::check_sticked_face",
+							"Sticked face is not coplanar: vertex " + std::to_string(j) +
+							" is out of the plane defined by the first three vertices. " +
+							"Distance to plane = " + std::to_string(distance_to_plane)
+							);
+					return false;
+				}
+			}
+
+      // compute the surface
+      if (res == true)
+      {
+        // compute surface 
+        double area = 0.0;
+         // maybe wrong TODO later
+			  for (size_t i=1; i<vertices.size()-1 ; i++)
+        {
+          Vec3d e1 = vertices[i] - vertices[0];
+          Vec3d e2 = vertices[i+1] - vertices[0];
+          area += 0.5 * exanb::norm(exanb::cross(e1,e2));
+				}
+
+				for(size_t i=0 ; i<interactions.size() ; i++)
+				{
+					if(interactions[i].type() == InteractionTypeId::StickedParticles)
+					{
+            interactions[i].as<InnerBondInteraction>().S = area;
+					} 
+				}
+			}
+
+			return res;
+		}
 } // namespace exaDEM

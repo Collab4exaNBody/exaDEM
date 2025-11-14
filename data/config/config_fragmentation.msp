@@ -1,0 +1,38 @@
+global: 
+  apply_particle_sticking: false
+  sticking_threshold: 2.e-05
+#  sticking_threshold: 2.e-05
+
+prepro_fragmentation:
+  condition: apply_particle_sticking
+  body:
+    - stick_polyhedra
+    - stats_interactions
+
+do_update_persistent_interactions_if_required: update_persistent_interactions
+
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+  - write_paraview_obb_particles
+  - timestep_paraview_file: "ParaviewOutputFiles/interface_%010d"
+  - message: { mesg: "Write paraview " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - write_paraview_interfaces:
+     mpi_rank: true
+
+init_update_particle_neighbors:
+  - amr_grid_pairs
+  - chunk_neighbors_contact
+  - prepro_fragmentation
+  - nbh_polyhedron
+#  - nbh_polyhedron_obb_tree
+  - classify_interactions
+  - update_interfaces
+  - stats_interactions
+
++chunk_neighbors_impl:
+  - update_interfaces

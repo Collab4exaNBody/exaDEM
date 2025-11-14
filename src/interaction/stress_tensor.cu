@@ -29,9 +29,6 @@ under the License.
 #include <memory>
 #include <mpi.h>
 
-#include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/classifier/interactionSOA.hpp>
-#include <exaDEM/classifier/interactionAOS.hpp>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
 #include <exaDEM/type/add_contribution_mat3d.hpp>
@@ -85,16 +82,16 @@ namespace exaDEM
       Op* oper;
 
       template <int Type, typename TMPLC>
-        void iteration(Classifier<InteractionSOA>& classifier, TMPLC *const __restrict__ cells)
+        void iteration(Classifier& classifier, TMPLC *const __restrict__ cells)
         {
           static_assert(Type >= 0 && Type < NTypes);
-          auto [Ip, size] = classifier.get_info(Type); // get interactions
+          auto [Ip, size] = classifier.get_info<ParticleParticle>(Type); // get interactions
           if (size > 0 )
           {
             ParallelForOptions opts;
             opts.omp_scheduling = OMP_SCHED_STATIC;
             const auto [dnp, cpp, fnp, ftp] = classifier.buffer_p(Type); // get parameters: get forces (fn, ft) and contact positions (cp) computed into the contact force operators.
-            InteractionWrapper<InteractionSOA> interactions(Ip);         // get data: interaction
+            InteractionWrapper interactions(Ip);         // get data: interaction
             compute_stress_tensor<Type, Sym> func;                       // get kernel
             WrapperForAll wrapper(interactions, func , cells, dnp, fnp, ftp, cpp); // pack data, kernel, and interaction in a wrapper
             parallel_for(size, wrapper, oper->parallel_execution_context(), opts); // launch kernel
@@ -120,7 +117,7 @@ namespace exaDEM
     // attributes processed during computation
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
 
     public:
     inline std::string documentation() const override final { 
@@ -140,10 +137,10 @@ namespace exaDEM
 
       // get slot data
       auto cells = grid->cells();
-      Classifier<InteractionSOA>& cf = *ic;
+      Classifier& cf = *ic;
       // get kernel
       constexpr bool sym = true;
-      compute_stress_tensors<13, sym, StressTensor> runner = {this}; // 13 is the number of interaction types
+      compute_stress_tensors<Classifier::typesPP, sym, StressTensor> runner = {this}; // 13 is the number of interaction types
                                                                      // iterate over types
       runner(cf, cells);
     }

@@ -19,19 +19,11 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
 
 #include <memory>
 
-#include <exaDEM/contact_force_parameters.h>
-#include <exaDEM/compute_contact_force.h>
-#include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/classifier/interactionSOA.hpp>
-#include <exaDEM/classifier/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/classifier/classifier_transfert.hpp>
 
 namespace exaDEM
 {
@@ -44,7 +36,7 @@ namespace exaDEM
     static constexpr ComputeFields compute_field_set{};
 
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED, DocString{"Interaction list"});
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
 
     public:
     inline std::string documentation() const override final
@@ -61,8 +53,10 @@ namespace exaDEM
     inline void execute() override final
     {
       if (!ic.has_value())
+      {
         return;
-      ic->unclassify(*ges);
+      }
+      unclassify(*ic, *ges);
     }
   };
 

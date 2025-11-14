@@ -26,7 +26,7 @@ namespace exaDEM
   using namespace exanb;
 
   // rVerletMax = rVerlet + sphere radius
-  std::vector<exaDEM::Interaction> detection_sphere_driver(
+  std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(
       const Stl_mesh& mesh,
       const size_t cell, 
       const size_t p, 
@@ -39,8 +39,8 @@ namespace exaDEM
       const double rVerletMax)
   {
     using namespace onika::cuda;
-    std::vector<exaDEM::Interaction> res;
-    exaDEM::Interaction item;
+    std::vector<exaDEM::PlaceholderInteraction> res;
+    exaDEM::PlaceholderInteraction item;
     auto& pi = item.i(); // particle i (id, cell, pos, sub)
     auto& pd = item.driver(); // driver (id, cell, pos, sub)
     pi.cell = cell;

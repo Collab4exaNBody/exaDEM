@@ -25,7 +25,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/core/particle_type_id.h>
 #include <memory>
-#include <exaDEM/multimat_cp.h>
+#include <exaDEM/multimat_parameters.h>
 #include <exaDEM/drivers.h>
 
 namespace exaDEM
@@ -35,7 +35,7 @@ namespace exaDEM
   class DriversContactParams : public OperatorNode
   {
     ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED );
-    ADD_SLOT(ContactParamsMultiMat<ContactParams>, multimat_cp, INPUT_OUTPUT, REQUIRED, DocString{"List of contact parameters for simulations with multiple materials"});
+    ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT_OUTPUT, REQUIRED, DocString{"List of contact parameters for simulations with multiple materials"});
     ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(std::vector<std::string>,  mat, INPUT, OPTIONAL, DocString{"List of materials."});
     ADD_SLOT(std::vector<int>,    driver_id, INPUT, OPTIONAL, DocString{"List of drivers."});
@@ -76,7 +76,7 @@ namespace exaDEM
     {
       const auto& type_map = *particle_type_map; 
       int n_types = type_map.size();
-      ContactParamsMultiMat<ContactParams>& cp = *multimat_cp;
+      MultiMatParamsT<ContactParams>& cp = *multimat_cp;
 
       // We use the same data map to for drivers
       ParticleTypeMap driver_map;

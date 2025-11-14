@@ -30,7 +30,7 @@ namespace exaDEM
     uint64_t id;                     /**< Id of the first particle */
     uint32_t cell;                   /**< Index of the cell of the first particle involved in the interaction. */
     uint16_t p;                      /**< Index of the particle within its cell for the particle involved in the interaction. */
-    uint16_t sub;                    /**< Sub-particle index for the particle involved in the interaction. */
+    uint32_t sub;                    /**< Sub-particle index for the particle involved in the interaction. */
 
 		ONIKA_HOST_DEVICE_FUNC bool operator==(ParticleSubLocation& P)
     {

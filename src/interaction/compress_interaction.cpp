@@ -51,7 +51,7 @@ namespace exaDEM
     inline void execute() override final
     {
       auto &cell_interactions = ges->m_data;
-      auto save = [](const exaDEM::Interaction &interaction) -> bool { return interaction.is_active(); };
+      auto save = [](const PlaceholderInteraction &interaction) -> bool { return interaction.is_active(); };
 
 #     pragma omp parallel for
       for (size_t current_cell = 0; current_cell < cell_interactions.size(); current_cell++)

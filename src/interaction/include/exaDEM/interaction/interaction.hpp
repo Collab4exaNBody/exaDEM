@@ -40,9 +40,11 @@ namespace exaDEM
     ParticleSubLocation& driver() { return j(); }
     uint16_t type() { return pair.type; } 
     uint16_t type() const { return pair.type; } 
-    uint16_t cell() { return pair.pi.cell; } // associate cell -> cell_i
-    uint16_t partner_cell() { return pair.pj.cell; } // associate cell -> cell_i
+    uint32_t cell() { return pair.pi.cell; } // associate cell -> cell_i
+    uint32_t partner_cell() { return pair.pj.cell; } // associate cell -> cell_i
     uint64_t driver_id() { return pair.pj.id; }
+    InteractionPair& pair_info() { return pair; }
+    const InteractionPair& pair_info() const { return pair; }
 
 		/**
 		 * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
@@ -53,6 +55,11 @@ namespace exaDEM
 			friction = null;
 			moment = null;
 		}
+
+    // Defines whether an interaction will be reconstructed or not.
+    ONIKA_HOST_DEVICE_FUNC bool persistent() { return false; }
+    // Skip other interactions if this interaction is defined
+		ONIKA_HOST_DEVICE_FUNC bool ignore_other_interactions() { return true; } 
 
 		/**
 		 * @brief Checks if the interaction is active.
@@ -89,7 +96,7 @@ namespace exaDEM
 		}
 
 
-		ONIKA_HOST_DEVICE_FUNC void update_friction_and_moment(Interaction &I)
+		ONIKA_HOST_DEVICE_FUNC void update(Interaction &I)
 		{
 			this->friction = I.friction;
 			this->moment = I.moment;
@@ -123,65 +130,5 @@ namespace exaDEM
 		// assert(iterator == std::end(list) && "This interaction is NOT in the list");
 		bool exist = iterator == std::end(list);
 		return {exist, *iterator};
-	}
-
-	inline std::vector<Interaction> extract_history_omp(std::vector<Interaction> &interactions)
-	{
-		std::vector<Interaction> ret;
-#   pragma omp parallel
-		{
-			std::vector<Interaction> tmp;
-#     pragma omp for
-			for (size_t i = 0; i < interactions.size(); i++)
-			{
-				if (interactions[i].is_active())
-				{
-					tmp.push_back(interactions[i]);
-				}
-			}
-
-			if (tmp.size() > 0)
-			{
-#       pragma omp critical
-				{
-					ret.insert(ret.end(), tmp.begin(), tmp.end());
-				}
-			}
-		}
-
-		return ret;
-	}
-
-	inline void update_friction_moment_omp(std::vector<Interaction> &interactions, std::vector<Interaction> &history)
-	{
-#   pragma omp parallel for
-		for (size_t it = 0; it < interactions.size(); it++)
-		{
-			auto &item = interactions[it];
-			auto lower = std::lower_bound(history.begin(), history.end(), item);
-			if (lower != history.end())
-			{
-				if (item == *lower)
-				{
-					item.update_friction_and_moment(*lower);
-				}
-			}
-		}
-	}
-
-	inline void update_friction_moment(std::vector<Interaction> &interactions, std::vector<Interaction> &history)
-	{
-		for (size_t it = 0; it < interactions.size(); it++)
-		{
-			auto &item = interactions[it];
-			auto lower = std::lower_bound(history.begin(), history.end(), item);
-			if (lower != history.end())
-			{
-				if (item == *lower)
-				{
-					item.update_friction_and_moment(*lower);
-				}
-			}
-		}
 	}
 } // namespace exaDEM

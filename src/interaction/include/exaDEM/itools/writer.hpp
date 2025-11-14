@@ -32,13 +32,17 @@ namespace exaDEM
     using namespace exanb;
 
     /** CPU only */
-    template <typename GridT, typename T> std::stringstream create_buffer(GridT &grid, Classifier<T> &ic)
+    template <typename GridT> std::stringstream create_buffer(GridT &grid, Classifier &ic)
     {
       std::stringstream stream;
-      const int ntypes = ic.number_of_waves();
-      for (int i = 0; i < ntypes; i++)
+      for (int i = 0; i < Classifier::types; i++)
       {
-        auto [i_data, size] = ic.get_info(i);
+        size_t size = ic.get_size(i);
+        InterationPairWrapper wrapper; 
+        if( i < Classifier::typesPP ) wrapper.wrap(ic.get_data<ParticleParticle>(i));
+        else if( i == Classifier::StickedParticlesTypeId ) wrapper.wrap(ic.get_data<StickedParticles>(i)); 
+        else { lout << "skip interaction type: " << i << std::endl; continue; }
+
         auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.buffer_p(i);
 
         for (size_t idx = 0; idx < size; idx++)
@@ -47,15 +51,13 @@ namespace exaDEM
           /** filter empty interactions */
           if (dn < 0)
           {
-            auto I = i_data[idx];
+            auto [i, j, type] = wrapper(idx);
             /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
-            if (filter_duplicates(grid, I))
+            if (filter_duplicates(grid, i, j, type))
             {
-              auto& i = I.i();
-              auto& j = I.j();
               stream << i.id << "," << j.id << ",";
               stream << i.sub << "," << j.sub << ",";
-              stream << I.type() << ",";
+              stream << type << ",";
               stream << dn << ",";
               stream << cp_ptr[idx] << ",";
               stream << fn_ptr[idx] << ",";
@@ -67,7 +69,9 @@ namespace exaDEM
       return stream;
     }
 
-    void write_file(std::stringstream &stream, std::string directory, std::string filename)
+    inline void write_file(
+        std::stringstream &stream, 
+        std::string directory, std::string filename)
     {
       int rank, size;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);

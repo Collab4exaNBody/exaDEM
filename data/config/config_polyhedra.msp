@@ -1,8 +1,7 @@
 ######### POLYHEDRA mode ####################
 
-######### Move Particles ###################
-
 save_shapes: write_shape_file
+do_update_persistent_interactions_if_required: nop # overight if config_fragmentation is included
 
 evaluate_particle_displ:
   rebind: { threshold: max_displ , result: particle_displ }
@@ -11,8 +10,10 @@ evaluate_particle_displ:
 
 chunk_neighbors_impl:
   - chunk_neighbors_contact
+  - do_update_persistent_interactions_if_required
   - nbh_polyhedron
   - classify_interactions
+  - stats_interactions
 
 migrate_particles:
   - migrate_cell_particles_interaction

@@ -73,7 +73,7 @@ namespace exaDEM
      * The constructor retrieves the buffers for overlap (dn), contact points, normal forces,
      * and tangential forces from the classifier based on the interaction type.
      */
-    template <typename T> AnalysisDataPacker(Classifier<T> &ic, int type)
+    AnalysisDataPacker(Classifier &ic, int type)
     {
       auto [_dnp, _cpp, _fnp, _ftp] = ic.buffer_p(type);
       dnp = _dnp;
@@ -120,9 +120,9 @@ namespace exaDEM
    * @tparam AnalysisDataPacker Used to pack any kind of data.
    * @tparam Args Types of additional parameters passed to the kernel function.
    */
-  template <typename T, typename K, typename AnalysisDataPacker, typename... Args> struct WrapperContactLawForAll
+  template <InteractionType IT, typename K, typename AnalysisDataPacker, typename... Args> struct WrapperContactLawForAll
   {
-    InteractionWrapper<T> data;
+    InteractionWrapper<IT> data;
     const K kernel;             /**< Kernel function to be applied. */
     AnalysisDataPacker packer;  /**< Kernel function to be applied. */
     std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
@@ -134,7 +134,7 @@ namespace exaDEM
      * @param k Kernel function to be applied.
      * @param args Additional parameters passed to the kernel function.
      */
-    WrapperContactLawForAll(InteractionWrapper<T> &d, K &k, AnalysisDataPacker &p, Args... args) : data(std::move(d)), kernel(k), packer(p), params(std::tuple<Args...>(args...)) {}
+    WrapperContactLawForAll(InteractionWrapper<IT> &d, K &k, AnalysisDataPacker &p, Args... args) : data(std::move(d)), kernel(k), packer(p), params(std::tuple<Args...>(args...)) {}
 
     /**
      * @brief Helper function to apply the kernel function to a single element.
@@ -145,7 +145,7 @@ namespace exaDEM
      */
     template <size_t... Is> ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const
     {
-      exaDEM::Interaction item = data(i);
+      auto item = data(i);
       const auto [dn, pos, fn, ft] = kernel(item, std::get<Is>(params)...);
       data.update(i, item);
       packer(i, dn, pos, fn, ft); // packer is used to store interaction data
@@ -162,9 +162,9 @@ namespace exaDEM
   /*******************************************/
   /*            WrapperFoAll                 */
   /*******************************************/
-  template <typename T, typename K, typename... Args> struct WrapperForAll
+  template <InteractionType IT, typename K, typename... Args> struct WrapperForAll
   {
-    InteractionWrapper<T> data;
+    InteractionWrapper<IT> data;
     K kernel;                   /**< Kernel function to be applied. */
     std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
 
@@ -174,7 +174,7 @@ namespace exaDEM
      * @param k Kernel function to be applied.
      * @param args Additional parameters passed to the kernel function.
      */
-    WrapperForAll(InteractionWrapper<T> &d, K &k, Args... args) : data(std::move(d)), kernel(k), params(std::tuple<Args...>(args...)) {}
+    WrapperForAll(InteractionWrapper<IT> &d, K &k, Args... args) : data(std::move(d)), kernel(k), params(std::tuple<Args...>(args...)) {}
 
     /**
      * @brief Helper function to apply the kernel function to a single element.
@@ -201,13 +201,13 @@ namespace onika
 {
   namespace parallel
   {
-    template <typename T, typename K, typename A, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperContactLawForAll<T, K, A, Args...>>
+    template <exaDEM::InteractionType IT, typename K, typename A, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperContactLawForAll<IT, K, A, Args...>>
     {
       static inline constexpr bool RequiresBlockSynchronousCall = false;
       static inline constexpr bool CudaCompatible = true;
     };
 
-    template <typename T, typename K, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperForAll<T, K, Args...>>
+    template <exaDEM::InteractionType IT, typename K, typename... Args> struct ParallelForFunctorTraits<exaDEM::WrapperForAll<IT, K, Args...>>
     {
       static inline constexpr bool RequiresBlockSynchronousCall = false;
       static inline constexpr bool CudaCompatible = true;
@@ -237,14 +237,31 @@ namespace exaDEM
    * in parallel using the specified execution context. Depending on the `dataPacker` flag, it either
    * applies a null data packer or uses a data packer to process interaction data.
    */
-  template <typename Kernel, typename T, typename... Args> static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext *exec_ctx, int type, Classifier<T> &ic, Kernel &kernel, Args &&...args)
-  {
-    ParallelForOptions opts;
-    opts.omp_scheduling = OMP_SCHED_STATIC;
-    auto [data, size] = ic.get_info(type);
-    InteractionWrapper<T> interactions(data);
-    AnalysisDataPacker packer(ic, type);
-    WrapperContactLawForAll func(interactions, kernel, packer, args...);
-    return parallel_for(size, func, exec_ctx, opts);
-  }
+	template <int type, typename Kernel, typename... Args> 
+		static inline ParallelExecutionWrapper run_contact_law(
+				ParallelExecutionContext *exec_ctx, 
+				Classifier &ic, 
+				Kernel &kernel, 
+				Args &&...args)
+		{
+			ParallelForOptions opts;
+			opts.omp_scheduling = OMP_SCHED_STATIC;
+			AnalysisDataPacker packer(ic, type);
+			if constexpr ( type < Classifier::typesPP )
+			{ 
+				auto [data, size] = ic.get_info<ParticleParticle>(type);
+				InteractionWrapper<ParticleParticle> interactions(data);
+				WrapperContactLawForAll func(interactions, kernel, packer, args...);
+				return parallel_for(size, func, exec_ctx, opts);
+			}
+			if constexpr ( type == Classifier::StickedParticlesTypeId )
+			{
+				auto [data, size] = ic.get_info<StickedParticles>(Classifier::StickedParticlesTypeId);
+				InteractionWrapper<StickedParticles> interactions(data);
+				WrapperContactLawForAll func(interactions, kernel, packer, args...);
+				return parallel_for(size, func, exec_ctx, opts);
+			}
+			color_log::error("run_contact_law", "Interaction type is not defined correctly");
+			std::exit(EXIT_FAILURE);
+		}
 } // namespace exaDEM

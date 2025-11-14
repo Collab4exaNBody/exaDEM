@@ -29,7 +29,7 @@ namespace exaDEM
   {
     using UIntType = uint64_t;
     using InfoType = ExtraStorageInfo;
-    inline bool check_extra_interaction_storage_consistency(int n_particles, InfoType *info_ptr, Interaction *data_ptr)
+    inline bool check_extra_interaction_storage_consistency(int n_particles, InfoType *info_ptr, PlaceholderInteraction *data_ptr)
     {
       for (int p = 0; p < n_particles; p++)
       {

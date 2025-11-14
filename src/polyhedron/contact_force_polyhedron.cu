@@ -32,9 +32,6 @@ under the License.
 #include <exaDEM/contact_force_parameters.h>
 #include <exaDEM/compute_contact_force.h>
 
-#include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/classifier/interactionSOA.hpp>
-#include <exaDEM/classifier/interactionAOS.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
@@ -43,7 +40,7 @@ under the License.
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
 #include <exaDEM/drivers.h>
-#include <exaDEM/multimat_cp.h>
+#include <exaDEM/multimat_parameters.h>
 #include <exaDEM/contact_polyhedron.h>
 
 namespace exaDEM
@@ -60,12 +57,12 @@ namespace exaDEM
     ADD_SLOT(Domain , domain, INPUT , REQUIRED );
     ADD_SLOT(ContactParams, config, INPUT, OPTIONAL);        // can be re-used for to dump contact network
     ADD_SLOT(ContactParams, config_driver, INPUT, OPTIONAL); // can be re-used for to dump contact network
-    ADD_SLOT(ContactParamsMultiMat<ContactParams>, multimat_cp, INPUT, DocString{"List of contact parameters for simulations with multiple materials"});
+    ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT, OPTIONAL, DocString{"List of contact parameters for simulations with multiple materials"});
 
     ADD_SLOT(double, dt, INPUT, REQUIRED);
     ADD_SLOT(bool, symetric, INPUT_OUTPUT, true, DocString{"Activate the use of symetric feature (contact law)"});
     ADD_SLOT(Drivers, drivers, INPUT, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
-    ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
     ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
     // analyses
     ADD_SLOT(long, timestep, INPUT, REQUIRED);
@@ -107,12 +104,12 @@ namespace exaDEM
       )EOF"; 
     }
 
-    template<int start, int end, template<int, bool, typename> typename FuncT, typename XFormT,  typename T, typename... Args>
-      void loop_contact_force(Classifier<T>& classifier, XFormT& cp_xform, Args &&... args)
+    template<int start, int end, template<int, bool, typename> typename FuncT, typename XFormT, typename... Args>
+      void loop_contact_force(Classifier& classifier, XFormT& cp_xform, Args &&... args)
       {
         FuncT<start, cohesive, XFormT> contact_law;
         contact_law.xform = cp_xform;
-        run_contact_law(parallel_execution_context(), start, classifier, contact_law, args...);
+        run_contact_law<start>(parallel_execution_context(), classifier, contact_law, args...);
         if constexpr( start + 1 <= end )
         {
           loop_contact_force<start+1, end, FuncT>(classifier, cp_xform, std::forward<Args>(args)...);
@@ -203,9 +200,9 @@ namespace exaDEM
           loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
           loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
         }
-        run_contact_law(parallel_execution_context(), 4, classifier, cyli, __params_driver__);
-        run_contact_law(parallel_execution_context(), 5, classifier, surf, __params_driver__);
-        run_contact_law(parallel_execution_context(), 6, classifier, ball, __params_driver__);
+        run_contact_law<InteractionTypeId::VertexCylinder>(parallel_execution_context(), classifier, cyli, __params_driver__);
+        run_contact_law<InteractionTypeId::VertexSurface> (parallel_execution_context(), classifier, surf, __params_driver__);
+        run_contact_law<InteractionTypeId::VertexBall>    (parallel_execution_context(), classifier, ball, __params_driver__);
       }
       else /** Multi materials */
       {
@@ -225,9 +222,9 @@ namespace exaDEM
           loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
           loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
         }
-        run_contact_law(parallel_execution_context(), 4, classifier, cyli, __params_driver__);
-        run_contact_law(parallel_execution_context(), 5, classifier, surf, __params_driver__);
-        run_contact_law(parallel_execution_context(), 6, classifier, ball, __params_driver__);
+        run_contact_law<InteractionTypeId::VertexCylinder>(parallel_execution_context(), classifier, cyli, __params_driver__);
+        run_contact_law<InteractionTypeId::VertexSurface> (parallel_execution_context(), classifier, surf, __params_driver__);
+        run_contact_law<InteractionTypeId::VertexBall>    (parallel_execution_context(), classifier, ball, __params_driver__);
       }
 
 #undef __params__

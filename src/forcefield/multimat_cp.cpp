@@ -25,7 +25,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/core/particle_type_id.h>
 #include <memory>
-#include <exaDEM/multimat_cp.h>
+#include <exaDEM/multimat_parameters.h>
 
 namespace exaDEM
 {
@@ -34,7 +34,7 @@ namespace exaDEM
   class MultiMatContactParams : public OperatorNode
   {
     ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED );
-    ADD_SLOT(ContactParamsMultiMat<ContactParams>, multimat_cp, OUTPUT, DocString{"List of contact parameters for simulations with multiple materials"});
+    ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, OUTPUT, DocString{"List of contact parameters for simulations with multiple materials"});
     ADD_SLOT(std::vector<std::string>, mat1, INPUT, REQUIRED, DocString{"List of materials."});
     ADD_SLOT(std::vector<std::string>, mat2, INPUT, REQUIRED, DocString{"List of materials."});
     ADD_SLOT(std::vector<double>,     dncut, INPUT, OPTIONAL, DocString{"List of dncut values."});
@@ -73,7 +73,7 @@ namespace exaDEM
     inline void execute() override final
     {
       const auto& type_map = *particle_type_map; 
-      ContactParamsMultiMat<ContactParams>& cp = *multimat_cp;
+      MultiMatParamsT<ContactParams>& cp = *multimat_cp;
 
       int n_types = type_map.size();
       if( n_types == 1 )
@@ -195,5 +195,4 @@ namespace exaDEM
 
   // === register factories ===
   ONIKA_AUTORUN_INIT(multimat_contact_params) { OperatorNodeFactory::instance()->register_factory("multimat_contact_params", make_simple_operator<MultiMatContactParams>); }
-
 } // namespace exaDEM

@@ -23,7 +23,7 @@ namespace exaDEM
 {
   namespace itools
   {
-    template <typename T> inline double get_min_dn(const Classifier<T> &classifier)
+    inline double get_min_dn(const Classifier &classifier)
     {
       // TODO : Implement a GPU version
       double res = 0;

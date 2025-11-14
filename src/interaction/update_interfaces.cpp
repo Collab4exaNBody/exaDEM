@@ -20,23 +20,23 @@ under the License.
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
 #include <memory>
-#include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/classifier/classifier_transfert.hpp>
-#include <exaDEM/traversal.h>
+#include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/interface/interface.hpp>
 
 namespace exaDEM
 {
   using namespace exanb;
 
-  class ClassifyInteractions : public OperatorNode
+  class UpdateInterfaces : public OperatorNode
   {
     // attributes processed during computation
     using ComputeFields = FieldSet<field::_vrot, field::_arot>;
     static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT(GridCellParticleInteraction, ges, INPUT, REQUIRED, DocString{"Interaction list"});
     ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+    //ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{""});
+    ADD_SLOT(InterfaceBuildManager, ibm, PRIVATE, DocString{""});
 
   public:
     inline std::string documentation() const override final
@@ -46,22 +46,21 @@ namespace exaDEM
 
         YAML example [no option]:
 
-          - classify_interactions
+          - update_interfaces
       )EOF";
     }
 
     inline void execute() override final
     {
-      auto [cell_ptr, cell_size] = traversal_real->info();
-      if (!ic.has_value())
-      {
-        ic->initialize();
-      }
-      classify(*ic, *ges, cell_ptr, cell_size);
-      //ic->prefetch_memory_on_gpu(); // GPU only
+      auto& build_manager = *ibm;
+      rebuild_interface_Manager(build_manager, ic->get_data<InteractionType::StickedParticles>(InteractionTypeId::StickedParticles));
+      lout << "Number of interfaces: " << ibm->data.size() << std::endl;
+      auto& manager = *im;
+      manager.resize(build_manager.data.size());
+      std::memcpy(manager.data.data(), build_manager.data.data(), build_manager.data.size() * sizeof(Interface));
     }
   };
 
   // === register factories ===
-  ONIKA_AUTORUN_INIT(classify_interactions) { OperatorNodeFactory::instance()->register_factory("classify_interactions", make_simple_operator<ClassifyInteractions>); }
+  ONIKA_AUTORUN_INIT(update_interfaces) { OperatorNodeFactory::instance()->register_factory("update_interfaces", make_simple_operator<UpdateInterfaces>); }
 } // namespace exaDEM

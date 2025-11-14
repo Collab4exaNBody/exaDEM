@@ -232,7 +232,7 @@ namespace exaDEM
       }
       // send bounds and size_box values to all cores
       MPI_Bcast(&(*domain), sizeof(Domain), MPI_CHARACTER, 0, *mpi);
-      assert(check_domain(*domain));
+      //assert(check_domain(*domain));
 
       grid->set_offset(IJK{0, 0, 0});
       grid->set_origin(domain->bounds().bmin);

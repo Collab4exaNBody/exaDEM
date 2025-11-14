@@ -44,7 +44,7 @@ namespace exaDEM
 				Stl_mesh &mesh, 
 				size_t cell_a, 
 				Func &add_contact, 
-				Interaction &item, 
+				PlaceholderInteraction &item, 
 				const size_t n_particles, 
 				const double rVerlet, 
 				const ParticleTypeInt *__restrict__ type, 
@@ -216,7 +216,7 @@ namespace exaDEM
 		ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
 				DriverT &driver, 
 				Func &add_contact, 
-				Interaction &item, 
+				PlaceholderInteraction &item, 
 				const size_t n_particles, 
 				const double rVerlet, 
 				const ParticleTypeInt *__restrict__ type, 
@@ -231,7 +231,7 @@ namespace exaDEM
 
 			for (size_t pid = 0; pid < n_particles; pid++)
 			{
-				assert(type[pid]] < shps.size());
+				assert(item.type() < shps.size());
 
 				pi.p = pid;
 				pi.id = id[pid];

@@ -117,8 +117,9 @@ namespace exaDEM
 #     pragma omp parallel
       {
         // local storage per thread
-        Interaction item;
-        interaction_manager manager;
+        PlaceholderInteraction item;
+        item.clear_placeholder();
+        InteractionManager manager;
         std::vector<std::pair<subBox, subBox>> intersections;
 #       pragma omp for schedule(dynamic)
         for (size_t ci = 0; ci < cell_size; ci++)
@@ -128,7 +129,7 @@ namespace exaDEM
           IJK loc_a = grid_index_to_ijk(dims, cell_a);
 
           const unsigned int n_particles = cells[cell_a].size();
-          CellExtraDynamicDataStorageT<Interaction> &storage = interactions[cell_a];
+          CellExtraDynamicDataStorageT<PlaceholderInteraction> &storage = interactions[cell_a];
 
           assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
 
@@ -137,10 +138,14 @@ namespace exaDEM
 
           // Extract history before reset it
           const size_t data_size = storage.m_data.size();
-          Interaction *__restrict__ data_ptr = storage.m_data.data();
+          PlaceholderInteraction *__restrict__ data_ptr = storage.m_data.data();
           extract_history(manager.hist, data_ptr, data_size);
           std::sort(manager.hist.begin(), manager.hist.end());
           manager.reset(n_particles);
+
+          // Move persistent interactions in the InteractionManager
+          update_persistent_interactions(manager, storage);
+          manager.update_ignore_interaction();
 
           // Reset storage, interaction history was stored in the manager
           storage.initialize(n_particles);
@@ -161,7 +166,7 @@ namespace exaDEM
           ONIKA_ASSUME_ALIGNED(orient_a);
 
           // Define a function to add a new interaction if a contact is possible.
-          auto add_contact = [&manager](size_t p, Interaction &item, int sub_i, int sub_j) -> void
+          auto add_contact = [&manager](size_t p, PlaceholderInteraction &item, int sub_i, int sub_j) -> void
           {
             item.pair.pi.sub = sub_i;
             item.pair.pj.sub = sub_j;
@@ -188,8 +193,6 @@ namespace exaDEM
             pd.id = -1;
             pd.cell = -1;
             pd.p = -1;
-            item.moment = Vec3d{0, 0, 0};
-            item.friction = Vec3d{0, 0, 0};
             for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++)
             {
               pd.id = drvs_idx; // we store the driver idx
