@@ -1105,11 +1105,12 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					}
 				}
 				
-				//printf("GPU Version :\n");
-				//printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
-				//printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
-				//printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
-				//printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
+				printf("GPU Version :\n");
+				printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
+				printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
+				printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
+				printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
+				printf("\n\n\n");
 				//printf("BLOCK PAIR END\n");
 				//}
 			}
