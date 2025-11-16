@@ -14,6 +14,7 @@ namespace exaDEM
     std::stringstream ids;
     //  std::stringstream sub_id;
     std::stringstream connectivities;
+    std::stringstream fracturation;
   };
 
 
@@ -31,15 +32,22 @@ namespace exaDEM
     outFile << "  <PolyData>" << std::endl;
     outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices << "\" NumberOfLines=\"" << 0 << "\" NumberOfPolys=\"" << buffers.n_polygons << "\">" << std::endl;
     outFile << "    <PointData>" << std::endl;
+
     outFile << "      <DataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
     outFile << buffers.ids.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
+
     if(buffers.mpi_rank) // MPI  rank - optional
     {
       outFile << "      <DataArray type=\"Int32\" Name=\"MPI rank\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
       outFile << buffers.ranks.rdbuf() << std::endl;
       outFile << "      </DataArray>" << std::endl;
     }
+
+    outFile << "      <DataArray type=\"Float64\" Name=\"Fracturation rate\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+    outFile << buffers.fracturation.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+
     outFile << "    </PointData>" << std::endl;
     outFile << "    <Points>" << std::endl;
     outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
@@ -81,6 +89,7 @@ namespace exaDEM
     {
       outFile << "      <PDataArray type=\"Int32\" Name=\"MPI rank\"  NumberOfComponents=\"1\"/>" << std::endl;
     }
+    outFile << "      <PDataArray type=\"Float64\" Name=\"Fracturation rate\"  NumberOfComponents=\"1\"/>" << std::endl;
     outFile << "    </PPointData>" << std::endl;
     outFile << "    <PPoints>" << std::endl;
     outFile << "      <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;

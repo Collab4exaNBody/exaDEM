@@ -53,7 +53,12 @@ namespace exaDEM
    * @param rj The radius of the second vertex.
    * @return True if the distance between the vertices is less than or equal to the Verlet radius + shape radii, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex(const double rVerlet, const Vec3d &vi, double ri, const Vec3d &vj, double rj)
+  ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex(
+      const double rVerlet, 
+      const Vec3d &vi, 
+      double ri, 
+      const Vec3d &vj, 
+      double rj)
   {
     // sphero-polyhedron
     double R = ri + rj + rVerlet;
@@ -83,20 +88,13 @@ namespace exaDEM
     // === compute overlap in dn
     const double dn = dist_norm - R;
 
-    if (dn > 0)
-    {
-      return contact();
-    }
-    else
-    {
-      // === normal vector
-      const Vec3d n = dist * inv_dist_norm;
+    // === normal vector
+    const Vec3d n = dist * inv_dist_norm;
 
-      // === compute contact position
-      const Vec3d contact_position = pi - n * (ri + 0.5 * dn);
+    // === compute contact position
+    const Vec3d contact_position = pi - n * (ri + 0.5 * dn);
 
-      return {true, dn, n, contact_position};
-    }
+    return {dn < 0, dn, n, contact_position};
   }
 
   ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge_core(const double rVerlet, const Vec3d &vi, const double ri, const Vec3d &vf, const Vec3d &vs, const double rj)
@@ -280,81 +278,81 @@ namespace exaDEM
    *         - The contact position.
    */
   template<typename VertexType>
-  ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(
-      const double rVerlet, 
-      const Vec3d &vi, 
-      const double& ri, 
-      const VertexType& vaj, 
-      const int j, 
-      const shape *shpj)
-  {
-    double rj = shpj->m_radius;
-
-    // === compute vertices
-    auto [data, nf] = shpj->get_face(j);
-    assert(nf >= 3);
-    const Vec3d &va = vaj[data[0]];
-    const Vec3d &vb = vaj[data[1]];
-    const Vec3d &vc = vaj[data[nf - 1]];
-    const Vec3d v = vi - va;
-    Vec3d v1 = vb - va;
-    Vec3d v2 = vc - va;
-    normalize(v1);
-
-    // === compute normal vector
-    Vec3d n = cross(v1, v2);
-    normalize(n);
-
-    // === eliminate possibility
-    double dist = exanb::dot(n, v);
-
-    if (dist < 0)
+    ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(
+        const double rVerlet, 
+        const Vec3d &vi, 
+        const double& ri, 
+        const VertexType& vaj, 
+        const int j, 
+        const shape *shpj)
     {
-      n = n * (-1);
-      dist = -dist;
-    }
+      double rj = shpj->m_radius;
 
-    if (dist > (ri + rj + rVerlet))
-      return false;
+      // === compute vertices
+      auto [data, nf] = shpj->get_face(j);
+      assert(nf >= 3);
+      const Vec3d &va = vaj[data[0]];
+      const Vec3d &vb = vaj[data[1]];
+      const Vec3d &vc = vaj[data[nf - 1]];
+      const Vec3d v = vi - va;
+      Vec3d v1 = vb - va;
+      Vec3d v2 = vc - va;
+      normalize(v1);
 
-    const Vec3d P = vi - n * dist;
+      // === compute normal vector
+      Vec3d n = cross(v1, v2);
+      normalize(n);
 
-    int ODD = 0;
-    v2 = cross(n, v1);
-    double ori1 = exanb::dot(P, v1);
-    double ori2 = exanb::dot(P, v2);
-    double pa1, pa2;
-    double pb1, pb2;
-    int iva, ivb;
-    for (iva = 0; iva < nf; ++iva)
-    {
-      ivb = iva + 1;
-      if (ivb == nf)
-        ivb = 0;
-      const Vec3d &_va = vaj[data[iva]];
-      const Vec3d &_vb = vaj[data[ivb]];
-      pa1 = exanb::dot(_va, v1);
-      pb1 = exanb::dot(_vb, v1);
-      pa2 = exanb::dot(_va, v2);
-      pb2 = exanb::dot(_vb, v2);
+      // === eliminate possibility
+      double dist = exanb::dot(n, v);
 
-      // @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
-      // @see http://alienryderflex.com/polygon/
-      if ((pa2 < ori2 && pb2 >= ori2) || (pb2 < ori2 && pa2 >= ori2))
+      if (dist < 0)
       {
-        if (pa1 + (ori2 - pa2) / (pb2 - pa2) * (pb1 - pa1) < ori1)
+        n = n * (-1);
+        dist = -dist;
+      }
+
+      if (dist > (ri + rj + rVerlet))
+        return false;
+
+      const Vec3d P = vi - n * dist;
+
+      int ODD = 0;
+      v2 = cross(n, v1);
+      double ori1 = exanb::dot(P, v1);
+      double ori2 = exanb::dot(P, v2);
+      double pa1, pa2;
+      double pb1, pb2;
+      int iva, ivb;
+      for (iva = 0; iva < nf; ++iva)
+      {
+        ivb = iva + 1;
+        if (ivb == nf)
+          ivb = 0;
+        const Vec3d &_va = vaj[data[iva]];
+        const Vec3d &_vb = vaj[data[ivb]];
+        pa1 = exanb::dot(_va, v1);
+        pb1 = exanb::dot(_vb, v1);
+        pa2 = exanb::dot(_va, v2);
+        pb2 = exanb::dot(_vb, v2);
+
+        // @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
+        // @see http://alienryderflex.com/polygon/
+        if ((pa2 < ori2 && pb2 >= ori2) || (pb2 < ori2 && pa2 >= ori2))
         {
-          ODD = 1 - ODD;
+          if (pa1 + (ori2 - pa2) / (pb2 - pa2) * (pb1 - pa1) < ori1)
+          {
+            ODD = 1 - ODD;
+          }
         }
       }
-    }
 
-    if(ODD == 1) 
-    {
-      return true;
+      if(ODD == 1) 
+      {
+        return true;
+      }
+      return false;
     }
-    return false;
-  }
 
   ONIKA_HOST_DEVICE_FUNC 
     inline bool filter_vertex_face_core(
@@ -455,7 +453,7 @@ namespace exaDEM
    *         - The contact position.
    */
   template<typename VertexType>
-  ONIKA_HOST_DEVICE_FUNC 
+    ONIKA_HOST_DEVICE_FUNC 
     inline contact detection_vertex_face_core(
         const Vec3d &vi, 
         const int i, 

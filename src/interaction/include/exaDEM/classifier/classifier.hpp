@@ -104,6 +104,11 @@ namespace exaDEM
         std::exit(EXIT_FAILURE);
       }
 
+    InteractionWrapper<InteractionType::StickedParticles> get_sticked_interaction_wrapper()
+    {
+      return get_data<StickedParticles>(StickedParticlesTypeId);
+    }
+
     template<InteractionType IT> 
       const auto& get_data(size_t id) const 
       {

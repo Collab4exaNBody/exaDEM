@@ -167,8 +167,8 @@ namespace exaDEM
 
           // We shift the particle positions using the values from the "position" field,
           // which is not used by exaDEM.
-          Vec3d shape_position_shift = map_shift[shps[rp.type]->m_name];
-          Vec3d pos = rockable_particles[p].pos; // - shape_position_shift;
+          //Vec3d shape_position_shift = map_shift[shps[rp.type]->m_name];
+          Vec3d pos = rockable_particles[p].pos; // + shape_position_shift;
 
           // shapes 
           ptio[field::type] = rp.type;

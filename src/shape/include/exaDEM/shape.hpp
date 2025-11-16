@@ -47,19 +47,20 @@ namespace exaDEM
   {
     template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
 
-    VectorT<exanb::Vec3d> m_vertices; ///< List of vertices of the shape
-    exanb::Vec3d m_inertia_on_mass;    ///< Inertia vector divided by mass
-    VectorT<OBB> m_obb_vertices;       ///< Oriented bounding boxes for each vertex (only for STL meshes)
-    VectorT<OBB> m_obb_edges;          ///< OBBs for edges (only for STL meshes)
-    VectorT<OBB> m_obb_faces;          ///< OBBs for faces (only for STL meshes)
+    VectorT<exanb::Vec3d> m_vertices;   ///< List of vertices of the shape
+    exanb::Vec3d m_inertia_on_mass;     ///< Inertia vector divided by mass
+    VectorT<OBB> m_obb_vertices;        ///< Oriented bounding boxes for each vertex (only for STL meshes)
+    VectorT<OBB> m_obb_edges;           ///< OBBs for edges (only for STL meshes)
+    VectorT<OBB> m_obb_faces;           ///< OBBs for faces (only for STL meshes)
     OBB obb;                            ///< Global OBB of the shape
-    VectorT<int> m_edges;              ///< List of edges, stored as pairs of vertex indices
-    VectorT<int> m_faces;              ///< List of faces, stored as sequences of vertex indices
-    VectorT<int> m_offset_faces;       ///< Offsets for indexing faces in m_faces
+    VectorT<int> m_edges;               ///< List of edges, stored as pairs of vertex indices
+    VectorT<int> m_faces;               ///< List of faces, stored as sequences of vertex indices
+    VectorT<int> m_offset_faces;        ///< Offsets for indexing faces in m_faces
+    VectorT<double> m_face_area;           ///< Face area
     double m_radius;                    ///< Radius used for contact detection
     double m_volume;                    ///< Volume of the shape
-    std::string m_name = "undefined";  ///< Name of the shape
-    OBBtree<subBox> obbtree;           ///< Optional OBB tree for accelerated collision detection
+    std::string m_name = "undefined";   ///< Name of the shape
+    OBBtree<subBox> obbtree;            ///< Optional OBB tree for accelerated collision detection
 
     /**
      * @brief Default constructor.
@@ -391,6 +392,18 @@ namespace exaDEM
         int *ptr = this->get_faces();
         int index = data[i];
         return {ptr + index + 1, ptr[index]};
+      }
+
+    /**
+     * @brief Get a face by index.
+     * @param i Face index
+     * @return Pair {pointer to vertex indices, number of vertices}
+     */
+    ONIKA_HOST_DEVICE_FUNC
+      double get_face_area(int i) const
+      {
+        const auto * ptr =  onika::cuda::vector_data(m_face_area);
+        return ptr[i];
       }
 
     /**

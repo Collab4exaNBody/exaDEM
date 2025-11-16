@@ -23,8 +23,7 @@ namespace exaDEM
   {
     // Important assumption: interactions are stored contiguously
     size_t loc; // Location in the classifier
-    size_t n; // Number of interactions composed this interface
-    double g;
+    size_t size; // Number of interactions composed this interface
   };
 
   // Thread Local Storage
@@ -44,34 +43,9 @@ namespace exaDEM
       break_interface.resize(new_size);
       std::fill(break_interface.begin(), break_interface.end(), false);
     }
+    size_t size() { return data.size(); }
   };
 
-  template<typename T>
-    struct UpdateBreakInterface
-    {
-      Interface* const interface;
-      uint8_t* const break_interface;
-      InteractionWrapper<InteractionType::StickedParticles> interaction;
-      double threshold;
-
-      ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t i) const
-      {
-        auto& [shift, size, g] = interface[i];
-        double En = 0.0; // reset
-        double Et = 0.0;
-        double area = interaction.s(i);
-        for(size_t i = shift; i < shift + size ; i++)
-        {
-          En += interaction.en(i);
-          Et += interaction.et(i);
-        }
-
-        if( (En * Et) > 2 * area * g)
-        {
-          break_interface[i] = true;
-        }
-      }
-    };
 
 	inline bool check_interface_consistency(
 			InterfaceBuildManager& interfaces, 
@@ -83,10 +57,11 @@ namespace exaDEM
     #pragma omp parallel for reduction(+: res)
     for(size_t i=0 ; i<n_interactions ; i++)
     {
-      auto [loc, n, g] = interfaces.data[i];
+      auto [loc, size] = interfaces.data[i];
+
       uint64_t id_i = interactions.particle_id_i(loc);
       uint64_t id_j = interactions.particle_id_j(loc);
-      for(size_t next=loc+1; next<loc+n ; next++)
+      for(size_t next=loc+1; next<loc+size ; next++)
       {
 				if(id_i != interactions.particle_id_i(next) 
 						|| id_j != interactions.particle_id_j(next))
@@ -128,7 +103,7 @@ namespace exaDEM
 			}
       if( loc + n != n_interactions ) n--; // exclude the last element that failed the test 
 			//std::cout << loc << "/" << n_interactions << " n " << n << std::endl;
-			Interface interface = { loc, n, 2.e-4};
+			Interface interface = {loc, n};
       //lout << " loc " << loc << " n " << n << std::endl;
 			interfaces.data.push_back(interface);
 			loc += n;

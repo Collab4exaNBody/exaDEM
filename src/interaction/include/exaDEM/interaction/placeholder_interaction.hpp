@@ -140,7 +140,7 @@ namespace exaDEM
 
 		void update(PlaceholderInteraction& in)
 		{
-			std::memcpy(data, in.data, PlaceholderInteractionSize); 
+			std::memcpy(data, in.data, PlaceholderInteractionSize * sizeof(uint8_t)); 
 		}
 
 		ONIKA_HOST_DEVICE_FUNC void clear_placeholder()

@@ -44,8 +44,8 @@ namespace exaDEM
 				const Vec3d &vrot_j  // angular velocities j
 				)
 		{
-      constexpr double pi = 3.14159265358979323846;
-      constexpr double piSqr   = pi * pi;
+      constexpr double pi    = 3.14159265358979323846;
+      constexpr double piSqr = pi * pi;
       double damp;
 			if(ibp.en > 0.0 && ibp.en < 1.0)
 			{
@@ -69,20 +69,26 @@ namespace exaDEM
 			const double vn = exanb::dot(vel, n);
 
 			// === Normal force (elatic contact + viscous damping)
-			double fn = normal_force(ibp.kn, damp, dn - dn0, vn);
+      double fne = -ibp.kn * (dn - dn0);
+      double fnv = damp * vn;
+			double fn = fne + fnv;
+			//double fn = normal_force(ibp.kn, damp, dn - dn0, vn);
 			const Vec3d vfn = fn * n;
 
 			// === Tangential force (friction)
 
 			const Vec3d ft = compute_tangential_force(dt, vn, n, vel);
 			vft += ibp.kt * ft; 
+		  vft += exaDEM::contribution_stick_tangential_force(damp, vn, n, vel);
 
 			// === sum forces
 			f_i = vfn + vft;
 
-			//vft += exaDEM::contribution_stick_tangential_force(damp, vn, n, vel);
 
-			if(fn > 0) En = 0;
+			if(fne > 0)
+      { 
+        En = 0;
+      }
 			else
 			{
 				En = 0.5 * ibp.kn * (dn - dn0 ) * (dn - dn0);

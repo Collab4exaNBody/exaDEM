@@ -118,19 +118,19 @@ namespace exaDEM
 				 *
 				 * @tparam TMPLC Type of the cells or particles container.
 				 * @tparam TMPLV Vertex Type container.
-				 * @tparam TCFPA Template Contact Force Parameters Accessor.
+				 * @tparam TIBFPA Template Inner Bond Force Parameters Accessor.
 				 * @param item Reference to the Interaction object representing the interaction details.
 				 * @param cells Pointer to the cells or particles container.
 				 * @param cpa Reference to the ContactParams object containing interaction parameters.
 				 * @param shps Pointer to the shapes array providing shape information for interactions.
 				 * @param dt Time increment for the simulation step.
 				 */
-				template <typename TMPLC, typename TCFPA, typename TMPLV> ONIKA_HOST_DEVICE_FUNC 
+				template <typename TMPLC, typename TIBFPA, typename TMPLV> ONIKA_HOST_DEVICE_FUNC 
 					inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
 							InnerBondInteraction &item, 
 							TMPLC* const __restrict__ cells, 
 							TMPLV* const __restrict__ gv, /* grid of vertices */
-							TCFPA& cpa, 
+							TIBFPA& ibpa, 
 							const shape * const shps, 
 							const double dt) const
 					{
@@ -166,16 +166,17 @@ namespace exaDEM
 						Vec3d fn = {0, 0, 0};
 
 						// === Contact Force parameters
-						const InnerBondParams& cp = cpa(type_i, type_j);
+						const InnerBondParams& ibp = ibpa(type_i, type_j);
 
 						const Vec3d vi = get_v(cell_i, pi.p);
 						const Vec3d vj = get_v(cell_j, pj.p);
-						const auto &m_i = cell_i[field::mass][pi.p];
-						const auto &m_j = cell_j[field::mass][pj.p];
+						const auto &mi = cell_i[field::mass][pi.p];
+						const auto &mj = cell_j[field::mass][pj.p];
 
-						const double meff = compute_effective_mass(m_i, m_j);
+						const double meff = compute_effective_mass(mi, mj);
 
-						stick_force_core(dn, n, item.dn0, dt, cp, meff, item.en, item.et, item.friction, contact_position, 
+						stick_force_core(dn, n, item.dn0, dt, ibp, meff, 
+								item.en, item.et, item.friction, contact_position, 
 								ri, vi, f, vrot_i, // particle 1
 								rj, vj, vrot_j // particle nbh
 								);

@@ -86,11 +86,6 @@ namespace exaDEM
 				}
 			}
 
-		double compute_sticked_area(size_t p) //, const shape& shp)
-		{
-			return 0.0;
-		}
-
 		// call it after update persistent interaction
 		void update_ignore_interaction()
 		{
@@ -211,6 +206,7 @@ namespace exaDEM
 				}
 			}
 
+/*
       // compute the surface
       if (res == true)
       {
@@ -232,6 +228,7 @@ namespace exaDEM
 					} 
 				}
 			}
+*/
 
 			return res;
 		}

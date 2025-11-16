@@ -102,9 +102,10 @@ namespace exaDEM
       // fill string buffers
       for (size_t i=0; i<number_of_interfaces ; i++)
       {
-				auto& interface =  interfaces.data[i];
+				auto& interface = interfaces.data[i];
 
-				for(size_t j=interface.loc ; j<interface.loc+interface.n ; j++)
+        double E = 0;
+				for(size_t j=interface.loc ; j<interface.loc+interface.size ; j++)
 				{
 					exaDEM::InnerBondInteraction interaction = interactions[j];
 					auto& loc = interaction.i();
@@ -117,8 +118,10 @@ namespace exaDEM
 					buffers.vertices << v.x << " " << v.y <<  " " << v.z  << " "; 
 					buffers.ids << i << " ";
 					buffers.connectivities << buffers.n_vertices++ << " ";
+          E += (interaction.en + interaction.et) / interaction.criterion;
 				}
 				buffers.offsets << buffers.n_vertices  << " ";
+				for(size_t j=0 ; j<interface.size ; j++) buffers.fracturation << E  << " ";
 			};
 
 			if (rank == 0)

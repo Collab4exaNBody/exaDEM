@@ -36,7 +36,8 @@ namespace exaDEM
     double en;
     double et;
     double dn0;
-    double S; // surface of the interface
+    double criterion; // interface fracture criterion
+    uint8_t unbroken = true;
 
     ParticleSubLocation& i() { return pair.pi; }
     ParticleSubLocation& j() { return pair.pj; }
@@ -47,7 +48,6 @@ namespace exaDEM
     uint32_t partner_cell() { return pair.pj.cell; } // associate cell -> cell_j
     InteractionPair& pair_info() { return pair; }
     const InteractionPair& pair_info() const { return pair; }
-    double surface() { return S; } // associate cell -> cell_j
 
     /**
      * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
@@ -59,6 +59,7 @@ namespace exaDEM
       dn0 = 0;
       en = 0;
       et = 0;
+      unbroken = true;
     }
 
     /**
@@ -75,7 +76,7 @@ namespace exaDEM
     }
 
     // Defines whether an interaction will be reconstructed or not.
-    ONIKA_HOST_DEVICE_FUNC bool persistent() { return true; }
+    ONIKA_HOST_DEVICE_FUNC bool persistent() { return unbroken; }
     // Skip other interactions if this interaction is defined
     ONIKA_HOST_DEVICE_FUNC bool ignore_other_interactions() { return true; } 
 
@@ -89,6 +90,7 @@ namespace exaDEM
         << ", en: " << en 
         << ", et: " << et 
         << ", dn0: " << dn0 
+        << ", criterion: " << criterion
         << ")" << std::endl;
     }
 
@@ -102,6 +104,7 @@ namespace exaDEM
         << ", en: " << en 
         << ", et: " << et 
         << ", dn0: " << dn0 
+        << ", criterion: " << criterion
         << ")" << std::endl;
     }
 
@@ -112,6 +115,8 @@ namespace exaDEM
       this->en = I.en;
       this->et = I.et;
       this->dn0 = I.dn0;
+      this->criterion = I.criterion;
+      this->unbroken = I.unbroken;
     }
 
 

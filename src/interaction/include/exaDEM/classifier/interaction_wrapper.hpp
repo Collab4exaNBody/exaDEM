@@ -83,7 +83,8 @@ namespace exaDEM
 			double * en;
 			double * et;
 			double * dn0;
-			double * s;
+			double * criterion;
+			uint8_t * unbroken;
 
 			// particle id
 			uint64_t * id_i;
@@ -122,7 +123,8 @@ namespace exaDEM
 					en = vector_data(data.en);
 					et = vector_data(data.et);
 					dn0 = vector_data(data.dn0);
-					s = vector_data(data.s);
+					criterion = vector_data(data.criterion);
+					unbroken = vector_data(data.unbroken);
 				}
 
 				id_i = vector_data(data.id_i);
@@ -157,7 +159,7 @@ namespace exaDEM
 				{
 					return InnerBondInteraction{ip,
 						{ft_x[idx], ft_y[idx], ft_z[idx]},
-						en[idx], et[idx], dn0[idx], s[idx]};
+						en[idx], et[idx], dn0[idx], criterion[idx], unbroken[idx]};
 				}
 				else
 				{
@@ -167,17 +169,22 @@ namespace exaDEM
 
 			ONIKA_HOST_DEVICE_FUNC inline double& En(const uint64_t idx) const
       {
-       return en[idx];
+        return en[idx];
       }
 
 			ONIKA_HOST_DEVICE_FUNC inline double& Et(const uint64_t idx) const
       {
-       return et[idx];
+        return et[idx];
       }
 
-			ONIKA_HOST_DEVICE_FUNC inline double& Surface(const uint64_t idx) const
+			ONIKA_HOST_DEVICE_FUNC inline double& Criterion(const uint64_t idx) const
       {
-       return s[idx];
+        return criterion[idx];
+      }
+
+			ONIKA_HOST_DEVICE_FUNC inline void broke(const uint64_t idx) const
+      {
+        unbroken[idx] = false;
       }
 
 			ONIKA_HOST_DEVICE_FUNC 
@@ -205,7 +212,8 @@ namespace exaDEM
 					en[idx]   = item.en;
 					et[idx]   = item.et;
 					dn0[idx]  = item.dn0;
-					s[idx]  = item.S;
+					criterion[idx]  = item.criterion;
+					unbroken[idx]  = item.unbroken;
 				}
 		};
 } // namespace exaDEM

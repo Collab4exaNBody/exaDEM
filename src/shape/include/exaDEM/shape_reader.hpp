@@ -134,11 +134,26 @@ namespace exaDEM
         }
         shp.compute_offset_faces();
       }
+      else if (key == "na")
+      {
+        int n_face_areas;
+        input >> n_face_areas;
+        for (int i = 0; i < n_face_areas; i++)
+        {
+          double n_weights;
+          double area;
+          getline(input, line);
+          input >> n_weights >> area;
+          shp.m_face_area.push_back(area);
+          getline(input, line); // skip weights WARNING
+        }
+      }
       else if (key == ">")
       {
 //        shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
-        shp.obb.center = {0,0,0}; // {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
- //       shp.shift_vertices(position);
+        shp.obb.center = {0,0,0}; 
+        //shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
+        //shp.shift_vertices(position);
         shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
         shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
         return shp;

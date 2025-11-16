@@ -29,12 +29,7 @@ namespace exaDEM
 
   class UpdateInterfaces : public OperatorNode
   {
-    // attributes processed during computation
-    using ComputeFields = FieldSet<field::_vrot, field::_arot>;
-    static constexpr ComputeFields compute_field_set{};
-
-    ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-    //ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
     ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{""});
     ADD_SLOT(InterfaceBuildManager, ibm, PRIVATE, DocString{""});
 

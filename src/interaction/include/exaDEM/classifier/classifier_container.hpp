@@ -49,7 +49,8 @@ namespace exaDEM
       VectorT<double> en; /**< List of the en.  */
       VectorT<double> et; /**< List of the et.  */
       VectorT<double> dn0; /**< List of the dn0.  */
-      VectorT<double> s; /**< List of the surfaces.  */
+      VectorT<double> criterion; /**< List of the criterion.  */
+      VectorT<uint8_t> unbroken; /**< List of the sticked interactions are unbroken.  */
 
       VectorT<uint64_t> id_i; /**< List of the ids of the first particle involved in the interaction.  */
       VectorT<uint64_t> id_j; /**< List of the ids of the second particle involved in the interaction.  */
@@ -92,7 +93,7 @@ namespace exaDEM
           if constexpr (IT == InteractionType::StickedParticles)
           {
             //ldbg << "Func applied on [ft_x, ft_y, ft_z, en, et, dn0, s(surface)]" << std::endl;
-            apply_on_fields(func, ft_x, ft_y, ft_z, en, et, dn0, s);
+            apply_on_fields(func, ft_x, ft_y, ft_z, en, et, dn0, criterion, unbroken);
           }
         }
 
@@ -161,7 +162,8 @@ namespace exaDEM
 					en[idx] = I.en;
 					et[idx] = I.et;
 					dn0[idx] = I.dn0;
-					s[idx] = I.S;
+					criterion[idx] = I.criterion;
+					unbroken[idx] = I.unbroken;
 				}
 
 				auto& [pi, pj, type] = interaction.pair;
@@ -254,7 +256,8 @@ namespace exaDEM
 						vector_data(en)[id],
 						vector_data(et)[id],
 						vector_data(dn0)[id],
-						vector_data(s)[id]
+						vector_data(criterion)[id],
+						vector_data(unbroken)[id]
 					};
 					return res;
 
@@ -290,7 +293,8 @@ namespace exaDEM
 					vector_data(en)[id] = I.en;
 					vector_data(et)[id] = I.et;
 					vector_data(dn0)[id] = I.dn0;
-					vector_data(s)[id] = I.S;
+					vector_data(criterion)[id] = I.criterion;
+					vector_data(unbroken)[id] = I.unbroken;
 				}
 			}
 		};
