@@ -41,6 +41,7 @@ namespace exaDEM
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT, REQUIRED, DocString{"Interaction list"});
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
     ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+    ADD_SLOT(Classifier2, ic2, INPUT_OUTPUT);
 
   public:
     inline std::string documentation() const override final

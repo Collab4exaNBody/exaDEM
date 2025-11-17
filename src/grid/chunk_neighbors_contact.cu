@@ -212,8 +212,8 @@ template< class GridT > __global__ void kernelUN(GridT* cells,
 	auto* __restrict__ rad_b = cells[cell_b][field::radius];
 	IJK loc_b = grid_index_to_ijk( dims, cell_b );
 	AABB cellb_AABB_pre = AABB{ (origin+((offset+loc_b)*cell_size)), (origin+((offset+loc_b+1)*cell_size))};
-	//AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * 0.713310 );
-	AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * rad_b[0] );
+	AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * 0.713310 );
+	//AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * rad_b[0] );
 	
 	cell_accessors cellB(cells[cell_b]);
 	
@@ -492,8 +492,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 	auto* __restrict__ rad_b = cells[cell_b][field::radius];
 	IJK loc_b = grid_index_to_ijk( dims, cell_b );
 	AABB cellb_AABB_pre = AABB{ (origin+((offset+loc_b)*cell_size)), (origin+((offset+loc_b+1)*cell_size))};
-	//AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * 0.713310 );
-	AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * rad_b[0] );
+	AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * 0.713310 );
+	//AABB cellb_AABB = enlarge(  cellb_AABB_pre, rcut_inc + 2 * rad_b[0] );
 	
 	cell_accessors cellB(cells[cell_b]);
 	

@@ -45,6 +45,7 @@ namespace exaDEM
 
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED, DocString{"Interaction list"});
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier2, ic2, INPUT_OUTPUT);
 
     public:
     inline std::string documentation() const override final
@@ -60,7 +61,7 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto& classi = *ic;
+      /*auto& classi = *ic;
       double ftx = 0;
       double fty = 0;
       double ftz = 0;
@@ -75,7 +76,32 @@ namespace exaDEM
       		
       	}
       }
-      printf("FTX: %f FTY: %f FTZ: %f\n", ftx, fty, ftz);
+      printf("FTX: %f FTY: %f FTZ: %f\n", ftx, fty, ftz);*/
+      auto& classifier2 = *ic2;
+      printf("APRÈS CONTACT : \n");
+      for(int i = 0; i < 4; i++)
+      {
+      	auto& data = classifier2.waves[i];
+      	double* ftx = (double*)malloc(data.size() * sizeof(double));
+      	double* fty = (double*)malloc(data.size() * sizeof(double));
+      	double* ftz = (double*)malloc(data.size() * sizeof(double));
+      	cudaMemcpy(ftx, data.ft_x, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
+      	cudaMemcpy(fty, data.ft_y, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
+      	cudaMemcpy(ftz, data.ft_z, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
+      	int active = 0;
+      	for(int j = 0;  j < data.size(); j++)
+      	{
+      		if(ftx[j]!=0 || fty[j]!=0 || ftz[j]!=0)
+      		{
+      			active++;
+      		}
+      	}
+      	printf("TYPE%d : %d/%d\n", i, active, data.size());
+      	free(ftx);
+      	free(fty);
+      	free(ftz);
+      }
+      printf("\n\n\n");
       if (!ic.has_value())
         return;
       ic->unclassify(*ges);

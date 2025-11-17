@@ -105,7 +105,7 @@ namespace exaDEM
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		if(idx < size)
 		{
-			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) && id_i[idx] < id_j[idx] )
+			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) /*&& id_i[idx] < id_j[idx]*/ )
 			{
 				atomicAdd(&nb[blockIdx.x], 1);
 				atomicAdd(&forces[0], ft_x[idx]);
@@ -172,7 +172,7 @@ namespace exaDEM
 			
 			bool active = false;
 			
-			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) && id_i[idx] < id_j[idx] )
+			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) /*&& id_i[idx] < id_j[idx]*/ )
 			{
 				s[threadIdx.x] = 1;
 				active = true;
@@ -1105,12 +1105,12 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					}
 				}
 				
-				printf("GPU Version :\n");
-				printf("    Vertex - Vertex : %d / %d\n", actives[0], total_nb_int[0]);
-				printf("    Vertex - Edge   : %d / %d\n", actives[1], total_nb_int[1]);
-				printf("    Vertex - Face   : %d / %d\n", actives[2], total_nb_int[2]);
-				printf("    Edge - Edge     : %d / %d\n", actives[3], total_nb_int[3]);
-				printf("\n\n\n");
+				printf("AVANT CONTACT :\n");
+				printf("TYPE0 : %d/%d\n", actives[0], total_nb_int[0]);
+				printf("TYPE1 : %d/%d\n", actives[1], total_nb_int[1]);
+				printf("TYPE2 : %d/%d\n", actives[2], total_nb_int[2]);
+				printf("TYPE3 : %d/%d\n", actives[3], total_nb_int[3]);
+				//printf("\n\n\n");
 				//printf("BLOCK PAIR END\n");
 				//}
 			}
