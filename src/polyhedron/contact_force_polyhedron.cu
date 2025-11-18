@@ -26,11 +26,9 @@ under the License.
 #include <exanb/core/domain.h>
 #include <exanb/core/xform.h>
 
-#include <memory>
-
-#include <exaDEM/vertices.hpp>
-#include <exaDEM/contact_force_parameters.h>
-#include <exaDEM/compute_contact_force.h>
+#include <exaDEM/polyhedron/vertices.hpp>
+#include <exaDEM/forcefield/contact_parameters.h>
+#include <exaDEM/forcefield/contact_force.h>
 
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
@@ -40,8 +38,8 @@ under the License.
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
 #include <exaDEM/drivers.h>
-#include <exaDEM/multimat_parameters.h>
-#include <exaDEM/contact_polyhedron.h>
+#include <exaDEM/forcefield/multimat_parameters.h>
+#include <exaDEM/polyhedron/contact.hpp>
 
 namespace exaDEM
 {

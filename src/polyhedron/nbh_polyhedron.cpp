@@ -28,13 +28,13 @@ under the License.
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
-#include <exaDEM/vertices.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/shapes.hpp>
-#include <exaDEM/nbh_polyhedron_driver.hpp>
+#include <exaDEM/polyhedron/vertices.hpp>
+#include <exaDEM/polyhedron/nbh_polyhedron_driver.hpp>
 #include <exaDEM/traversal.h>
 
 #include <cassert>

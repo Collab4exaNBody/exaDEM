@@ -28,14 +28,14 @@ under the License.
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
-#include <exaDEM/vertices.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/traversal.h>
-#include <exaDEM/inner_bond_parameters.h>
-#include <exaDEM/multimat_parameters.h>
+#include <exaDEM/forcefield/inner_bond_parameters.h>
+#include <exaDEM/forcefield/multimat_parameters.h>
+#include <exaDEM/polyhedron/vertices.hpp>
 
 #include <cassert>
 
@@ -242,7 +242,7 @@ namespace exaDEM
                 const InnerBondParams& ibp = ibpa(t_i[p_i], typej); 
 
                 // Add interactions
-                item.pair.type = InteractionTypeId::StickedParticles;
+                item.pair.type = InteractionTypeId::InnerBond;
 
                 auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
                 pi.id = id_i[p_i];
@@ -261,6 +261,7 @@ namespace exaDEM
                 for (int i = 0; i < nfi && !found; i++)
                 {
                   auto [vi, size_i] = shpi->get_face(i);
+                  if( size_i < 3 ) continue;
                   Vec3d vi0 = vertices_i[vi[0]];
                   Vec3d vi1 = vertices_i[vi[1]];
                   Vec3d vi2 = vertices_i[vi[2]];
@@ -275,6 +276,9 @@ namespace exaDEM
                   {
                     auto [vj, size_j] = shpj->get_face(j);
 
+                    double surface_ratio = shpi->get_face_area(i) / shpj->get_face_area(j);
+                    if( surface_ratio > 1.01 || surface_ratio < 0.99 ) continue;
+                    if( size_j < 3 ) continue;
                     if( size_i != size_j ) continue;
 
                     Vec3d vj0 = vertices_j[vj[0]];
@@ -300,7 +304,8 @@ namespace exaDEM
                           vertex_not_found = false;
                           break; 
                         }
-                      }
+                      }                      
+/*
                       if( vertex_not_found ) 
                       {
                         color_log::warning("stick_polyhedra", "It is impossible to glue sides "
@@ -309,8 +314,9 @@ namespace exaDEM
                         found = false;
                         local.clear();
                         break;
-                      }
+                      }*/
                     }
+                    if( local.size() <= 2 ) { local.clear() ; found = false; }
                   }
                 }
 

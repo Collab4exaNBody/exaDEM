@@ -24,14 +24,10 @@ under the License.
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
-
-#include <memory>
-#include <random>
-#include <exaDEM/vertices.hpp>
 #include <exaDEM/shapes.hpp>
-#include <exaDEM/compute_vertices.hpp>
+#include <exaDEM/polyhedron/vertices.hpp>
+#include <exaDEM/polyhedron/compute_vertices.hpp>
 #include <exaDEM/traversal.h>
-#include <iostream>
 
 namespace exaDEM
 {

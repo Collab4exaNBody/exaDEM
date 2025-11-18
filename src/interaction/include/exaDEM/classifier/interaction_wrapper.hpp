@@ -114,7 +114,7 @@ namespace exaDEM
 					mom_z = vector_data(data.mom_z);
 				}
 
-				if constexpr(IT == InteractionType::StickedParticles)
+				if constexpr(IT == InteractionType::InnerBond)
 				{
 					ft_x = vector_data(data.ft_x);
 					ft_y = vector_data(data.ft_y);
@@ -155,7 +155,7 @@ namespace exaDEM
 						{ft_x[idx], ft_y[idx], ft_z[idx]},
 						{mom_x[idx], mom_y[idx], mom_z[idx]}};
 				}
-				else if constexpr (IT == StickedParticles)
+				else if constexpr (IT == InnerBond)
 				{
 					return InnerBondInteraction{ip,
 						{ft_x[idx], ft_y[idx], ft_z[idx]},

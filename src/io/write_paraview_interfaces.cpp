@@ -84,7 +84,7 @@ namespace exaDEM
       auto cells = grid->cells();
       InterfaceManager& interfaces = *im;
       Classifier& classifier = *ic;
-      auto& interactions = classifier.get_data<InteractionType::StickedParticles>(InteractionTypeId::StickedParticles);
+      auto& interactions = classifier.get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
       auto& shps = *shapes_collection;
       paraview_interface_helper buffers = {*mpi_rank}; // it conatins streams 
 

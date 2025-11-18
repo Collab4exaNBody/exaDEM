@@ -34,7 +34,7 @@ namespace exaDEM
   inline void classify(Classifier& classifier, GridCellParticleInteraction &ges, size_t *idxs, size_t size)
   {
     using namespace onika::cuda;
-    constexpr int spti = InteractionTypeId::StickedParticles;
+    constexpr int spti = InteractionTypeId::InnerBond;
     constexpr int ntypes = InteractionTypeId::NTypes;
 
     classifier.reset_waves();          // Clear existing waves
@@ -104,7 +104,7 @@ namespace exaDEM
         else if (interaction_type == spti)
         {
           size_t size = bounds[n_threads-1][spti].first + bounds[n_threads-1][spti].second;
-          classifier.get_data<StickedParticles>(spti).resize(size);
+          classifier.get_data<InnerBond>(spti).resize(size);
         }
       }
 #pragma omp barrier
@@ -119,7 +119,7 @@ namespace exaDEM
             tmp[interaction_type], 
             interaction_type);
       }
-      classifier.get_data<StickedParticles>(spti).copy(
+      classifier.get_data<InnerBond>(spti).copy(
           bound[spti].first, 
           bound[spti].second, 
           tmp[spti], 
@@ -207,9 +207,9 @@ namespace exaDEM
           auto [data, n1] = classifier.get_info<ParticleParticle>(interacion_type);
           unclassify_core(ges, data, n1);
         }
-        else if( interacion_type == InteractionTypeId::StickedParticles )
+        else if( interacion_type == InteractionTypeId::InnerBond )
         {
-          auto [data, n1] = classifier.get_info<StickedParticles>(interacion_type);
+          auto [data, n1] = classifier.get_info<InnerBond>(interacion_type);
           unclassify_core(ges, data, n1);
         }
       }

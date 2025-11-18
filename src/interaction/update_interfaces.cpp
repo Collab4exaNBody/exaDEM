@@ -48,7 +48,7 @@ namespace exaDEM
     inline void execute() override final
     {
       auto& build_manager = *ibm;
-      rebuild_interface_Manager(build_manager, ic->get_data<InteractionType::StickedParticles>(InteractionTypeId::StickedParticles));
+      rebuild_interface_Manager(build_manager, ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond));
       lout << "Number of interfaces: " << ibm->data.size() << std::endl;
       auto& manager = *im;
       manager.resize(build_manager.data.size());

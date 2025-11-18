@@ -94,7 +94,7 @@ namespace exaDEM
 				}
 			}
       // Fragmentation, always active interaction
-      classifier_side.counts_by_type[Classifier::StickedParticlesTypeId] += classifier.get_size(Classifier::StickedParticlesTypeId);
+      classifier_side.counts_by_type[Classifier::InnerBondTypeId] += classifier.get_size(Classifier::InnerBondTypeId);
 
 			// GridCellParticleInteraction
 			auto &ces = grid.m_data;

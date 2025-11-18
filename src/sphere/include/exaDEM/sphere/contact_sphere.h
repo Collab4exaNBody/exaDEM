@@ -21,6 +21,8 @@ under the License.
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/forcefield/contact_parameters.h>
+#include <exaDEM/forcefield/contact_force.h>
 
 namespace exaDEM
 {
@@ -177,7 +179,7 @@ namespace exaDEM
               Vec3d f = {0, 0, 0};
               const double meff = compute_effective_mass(m_i, m_j);
 
-              contact_force_core<cohesive>(dn, n, time, 
+              force_law_core<cohesive>(dn, n, time, 
                   cp, 
                   meff, item.friction, contact_position, 
                   ri, vi, f, item.moment, vrot_i, // particle 1
@@ -283,7 +285,7 @@ namespace exaDEM
               const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
               const double meff = cell[field::mass][p];
               Vec3d f = null;
-              contact_force_core<cohesive>(dn, n, time, cp, meff, item.friction, contact_position, 
+              force_law_core<cohesive>(dn, n, time, cp, meff, item.friction, contact_position, 
                   r, v, f, item.moment, vrot,                   // particle i
                   driver.center, driver.get_vel(), driver.vrot  // particle j
                   );
@@ -378,7 +380,7 @@ namespace exaDEM
               const Vec3d v_i = {cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i]};
               const double meff = cell[field::mass][p_i];
               Vec3d f = {0, 0, 0};
-              contact_force_core<cohesive>(dn, n, time, cp, 
+              force_law_core<cohesive>(dn, n, time, cp, 
                   meff, item.friction, contact_position, r_i, 
                   v_i, f, item.moment, vrot_i, // particle i
                   driver.center, driver.get_vel(), driver.vrot // driver

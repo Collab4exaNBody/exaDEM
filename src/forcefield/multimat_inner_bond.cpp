@@ -25,14 +25,14 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/core/particle_type_id.h>
 #include <memory>
-#include <exaDEM/inner_bond_parameters.h>
-#include <exaDEM/multimat_parameters.h>
+#include <exaDEM/forcefield/inner_bond_parameters.h>
+#include <exaDEM/forcefield/multimat_parameters.h>
 
 namespace exaDEM
 {
   using namespace exanb;
 
-  class MultiMatInnerBondParams : public OperatorNode
+  class InnerBondParamsOp : public OperatorNode
   {
     ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED );
     ADD_SLOT(MultiMatParamsT<InnerBondParams>, multimat_ibp, OUTPUT, DocString{"List of contact parameters for simulations with multiple materials"});
@@ -55,7 +55,7 @@ namespace exaDEM
 
         YAML example:
 
-          - multimat_contact_params:
+          - inner_bond_params:
              mat1:      [  Type1, Type1, Type2 ]
              mat2:      [  Type1, Type2, Type2 ]
              kn:        [   5000, 10000, 15000 ]
@@ -67,7 +67,7 @@ namespace exaDEM
         )EOF";
     }
 
-    inline std::string operator_name() { return "multimat_contact_params"; }
+    inline std::string operator_name() { return "inner_bond_params"; }
 
     public:
     inline void execute() override final
@@ -186,5 +186,5 @@ namespace exaDEM
   };
 
   // === register factories ===
-  ONIKA_AUTORUN_INIT(multimat_inner_bond_params) { OperatorNodeFactory::instance()->register_factory("multimat_inner_bond_params", make_simple_operator<MultiMatInnerBondParams>); }
+  ONIKA_AUTORUN_INIT(inner_bond_params) { OperatorNodeFactory::instance()->register_factory("inner_bond_params", make_simple_operator<InnerBondParamsOp>); }
 } // namespace exaDEM

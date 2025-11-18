@@ -49,8 +49,8 @@ namespace exaDEM
 
       // v vertex, e edge, f face, c cylinder, s surface, b ball, S stl, sp sticked particles
 
-      int nvv(0), nve(0), nvf(0), nee(0), nsp(0);                                                // interaction counters [particles]
-      int an(0), anvv(0), anve(0), anvf(0), anee(0), ansp(0);                                    // active interaction counters
+      int nvv(0), nve(0), nvf(0), nee(0), nvvib(0);                                                // interaction counters [particles]
+      int an(0), anvv(0), anve(0), anvf(0), anee(0), anvvib(0);                                    // active interaction counters
       int nvc(0), nvs(0), nvb(0), nSvv(0), nSve(0), nSvf(0), nSee(0), nSev(0), nSfv(0);          // interaction counters [drivers]
       int anvc(0), anvs(0), anvb(0), anSvv(0), anSve(0), anSvf(0), anSee(0), anSev(0), anSfv(0); // interaction counters [drivers]
 
@@ -66,7 +66,7 @@ namespace exaDEM
         }
       };
 
-#     pragma omp parallel for reduction(+:nvv, nve, nvf, nee, nsp, an, anvv, anve, anvf, anee, ansp, nvc, nvs, nvb, nSvv, nSve, nSvf, nSee, nSev, nSfv, anvc, anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv)
+#     pragma omp parallel for reduction(+:nvv, nve, nvf, nee, nvvib, an, anvv, anve, anvf, anee, anvvib, nvc, nvs, nvb, nSvv, nSve, nSvf, nSee, nSev, nSfv, anvc, anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv)
       for (size_t i = 0; i < cells.size(); i++)
       {
         for (auto &item : cells[i].m_data)
@@ -105,18 +105,18 @@ namespace exaDEM
           if (type == 12)
             incr_interaction_counters(item, nSfv, anSfv, an);
           if (type == 13)
-            incr_interaction_counters(item, nsp, ansp, an);
+            incr_interaction_counters(item, nvvib, anvvib, an);
         }
       }
 
       std::vector<int> val = {// particle
-                              nvv, nve, nvf, nee, nsp,
+                              nvv, nve, nvf, nee, nvvib,
                               // driver
                               nvc, nvs, nvb, nSvv, nSve, nSvf, nSee, nSev, nSfv,
                               // total
                               an,
                               // particle
-                              anvv, anve, anvf, anee, ansp,
+                              anvv, anve, anvf, anee, anvvib,
                               // driver
                               anvc, anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv};
 
@@ -130,29 +130,29 @@ namespace exaDEM
 
       int idx = 0;
       for (auto it : {
-          &nvv, &nve, &nvf, &nee, &nsp, 
+          &nvv, &nve, &nvf, &nee, &nvvib, 
           &nvc, &nvs, &nvb, &nSvv, &nSve, &nSvf, &nSee, &nSev, &nSfv, 
-          &an, &anvv, &anve, &anvf, &anee, &ansp, 
+          &an, &anvv, &anve, &anvf, &anee, &anvvib, 
           &anvc, &anvs, &anvb, &anSvv, &anSve, &anSvf, &anSee, &anSev, &anSfv})
         *it = val[idx++];
 
       lout << "==================================" << std::endl;
-      lout << "* Type of interaction    : active / total " << std::endl;
-      lout << "* Number of interactions : " << an << " / " << nvv + nve + nvf + nee + nsp + nvc + nvs + nvb + nSvv + nSve + nSvf + nSee + nSev + nSfv << std::endl;
-      lout << "* Vertex - Vertex        : " << anvv << " / " << nvv << std::endl;
-      lout << "* Vertex - Edge          : " << anve << " / " << nve << std::endl;
-      lout << "* Vertex - Face          : " << anvf << " / " << nvf << std::endl;
-      lout << "* Edge   - Edge          : " << anee << " / " << nee << std::endl;
-      lout << "* Vertex - Cylinder      : " << anvc << " / " << nvc << std::endl;
-      lout << "* Vertex - Surface       : " << anvs << " / " << nvs << std::endl;
-      lout << "* Vertex - Ball          : " << anvb << " / " << nvb << std::endl;
-      lout << "* Vertex - Vertex (STL)  : " << anSvv << " / " << nSvv << std::endl;
-      lout << "* Vertex - Edge (STL)    : " << anSve << " / " << nSve << std::endl;
-      lout << "* Vertex - Face (STL)    : " << anSvf << " / " << nSvf << std::endl;
-      lout << "* Edge   - Edge (STL)    : " << anSee << " / " << nSee << std::endl;
-      lout << "* Edge (STL) - Vertex    : " << anSev << " / " << nSev << std::endl;
-      lout << "* Face (STL) - Vertex    : " << anSfv << " / " << nSfv << std::endl;
-      lout << "* Sticked Vertices       : " << nsp   << " / " << ansp << std::endl;
+      lout << "* Type of interaction      : active / total " << std::endl;
+      lout << "* Number of interactions   : " << an << " / " << nvv + nve + nvf + nee + nvvib + nvc + nvs + nvb + nSvv + nSve + nSvf + nSee + nSev + nSfv << std::endl;
+      lout << "* Vertex - Vertex          : " << anvv << " / " << nvv << std::endl;
+      lout << "* Vertex - Edge            : " << anve << " / " << nve << std::endl;
+      lout << "* Vertex - Face            : " << anvf << " / " << nvf << std::endl;
+      lout << "* Edge   - Edge            : " << anee << " / " << nee << std::endl;
+      lout << "* Vertex - Cylinder        : " << anvc << " / " << nvc << std::endl;
+      lout << "* Vertex - Surface         : " << anvs << " / " << nvs << std::endl;
+      lout << "* Vertex - Ball            : " << anvb << " / " << nvb << std::endl;
+      lout << "* Vertex - Vertex (STL)    : " << anSvv << " / " << nSvv << std::endl;
+      lout << "* Vertex - Edge (STL)      : " << anSve << " / " << nSve << std::endl;
+      lout << "* Vertex - Face (STL)      : " << anSvf << " / " << nSvf << std::endl;
+      lout << "* Edge   - Edge (STL)      : " << anSee << " / " << nSee << std::endl;
+      lout << "* Edge (STL) - Vertex      : " << anSev << " / " << nSev << std::endl;
+      lout << "* Face (STL) - Vertex      : " << anSfv << " / " << nSfv << std::endl;
+      lout << "* Vertice - Vertex (Stick) : " << nvvib   << " / " << anvvib << std::endl;
       lout << "==================================" << std::endl;
     }
   };

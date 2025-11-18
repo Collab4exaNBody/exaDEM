@@ -40,7 +40,7 @@ namespace exaDEM
         size_t size = ic.get_size(i);
         InterationPairWrapper wrapper; 
         if( i < Classifier::typesPP ) wrapper.wrap(ic.get_data<ParticleParticle>(i));
-        else if( i == Classifier::StickedParticlesTypeId ) wrapper.wrap(ic.get_data<StickedParticles>(i)); 
+        else if( i == Classifier::InnerBondTypeId ) wrapper.wrap(ic.get_data<InnerBond>(i)); 
         else { lout << "skip interaction type: " << i << std::endl; continue; }
 
         auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.buffer_p(i);

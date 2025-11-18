@@ -36,7 +36,7 @@ under the License.
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
 #include <exaDEM/traversal.h>
-#include <exaDEM/nbh_sphere.hpp>
+#include <exaDEM/sphere/nbh_sphere.hpp>
 
 namespace exaDEM
 {

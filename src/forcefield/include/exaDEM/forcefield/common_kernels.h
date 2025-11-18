@@ -176,4 +176,13 @@ namespace exaDEM
         a_ft *= (threshold_ft / sqrt(ft_square));
     }
 
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d compute_moments(const Vec3d &contact_position,
+      const Vec3d &p, // position
+      const Vec3d &f, // forces
+      const Vec3d &m) // I.mom
+  {
+    const auto Ci = (contact_position - p);
+    const auto Pimoment = exanb::cross(Ci, f) + m;
+    return Pimoment;
+  }
 }; // namespace exaDEM

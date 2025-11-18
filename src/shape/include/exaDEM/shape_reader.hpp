@@ -50,6 +50,8 @@ namespace exaDEM
       {
         input >> shp.m_name;
       }
+      // recomputed
+/*
       else if (key == "obb.center") // === keys relative to the OBB
       {
         input >> shp.obb.center.x >> shp.obb.center.y >> shp.obb.center.z;
@@ -70,6 +72,7 @@ namespace exaDEM
       {
         input >> shp.obb.e3.x >> shp.obb.e3.y >> shp.obb.e3.z;
       }
+*/
       else if (key == "radius")
       {
         input >> shp.m_radius;
@@ -151,9 +154,10 @@ namespace exaDEM
       else if (key == ">")
       {
 //        shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
-        shp.obb.center = {0,0,0}; 
+        //shp.obb.center = {0,0,0}; 
         //shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
         //shp.shift_vertices(position);
+        shp.obb = build_obb_from_shape(shp);
         shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
         shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
         return shp;

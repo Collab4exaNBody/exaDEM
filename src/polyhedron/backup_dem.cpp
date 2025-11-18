@@ -25,7 +25,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/grid_fields.h>
 #include <exanb/core/domain.h>
-#include <exaDEM/backup_dem.h>
+#include <exaDEM/polyhedron/backup_dem.h>
 
 namespace exaDEM
 {

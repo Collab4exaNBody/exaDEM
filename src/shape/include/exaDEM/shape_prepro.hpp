@@ -109,6 +109,20 @@ namespace exaDEM
       return obb;
     }
 
+  inline OBB build_obb_from_shape(const shape& shp)
+  {
+    size_t nv = shp.get_number_of_vertices();
+    
+    const double ext = shp.minskowski();
+    std::vector<vec3r> vbuf;
+    vbuf.resize(nv);
+    for (size_t i = 0; i < nv; i++)
+    {
+      vbuf[i] = conv_to_vec3r(shp.get_vertex(i));
+    }
+    OBB res = build_OBB(vbuf, ext);
+    return res;
+  }
   //#define OLD_VERSION;
 
   // general functon;

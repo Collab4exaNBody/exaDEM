@@ -25,7 +25,8 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/core/particle_type_id.h>
 #include <memory>
-#include <exaDEM/multimat_parameters.h>
+#include <exaDEM/forcefield/contact_parameters.h>
+#include <exaDEM/forcefield/multimat_parameters.h>
 #include <exaDEM/drivers.h>
 
 namespace exaDEM

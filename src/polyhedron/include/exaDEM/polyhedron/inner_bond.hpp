@@ -22,7 +22,7 @@ under the License.
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/stick_force.h>
+#include <exaDEM/forcefield/inner_bond_force.h>
 
 namespace exaDEM
 {
@@ -63,17 +63,17 @@ namespace exaDEM
       }
 
     /**
-     * @struct stick_law
+     * @struct inner_bond_law
      * @brief Structure defining contact law interactions for particles (polyhedra).
      */
 		template<typename XFormT>
-			struct stick_law
+			struct inner_bond_law
 			{
 				XFormT xform;
 				/**
-				 * @brief Default constructor for stick_law struct.
+				 * @brief Default constructor for inner_bond_law struct.
 				 */
-				stick_law() {}
+				inner_bond_law() {}
 
 				/**
 				 * @brief Retrieves the position vector of a particle from a cell.
@@ -134,65 +134,77 @@ namespace exaDEM
 							const shape * const shps, 
 							const double dt) const
 					{
-						auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
-						auto& pj = item.j(); // particle j (id, cell id, particle position, sub vertex)
-																 // === cell
-						auto &cell_i = cells[pi.cell];
-						auto &cell_j = cells[pj.cell];
+						const auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
+						const auto& pj = item.j(); // particle j (id, cell id, particle position, sub vertex)
+								      								 // === cell
+						auto &celli = cells[pi.cell];
+						auto &cellj = cells[pj.cell];
 
 						// === positions
-						const Vec3d ri = get_r(cell_i, pi.p);
-						const Vec3d rj = get_r(cell_j, pj.p);
+						const Vec3d ri = get_r(celli, pi.p);
+						const Vec3d rj = get_r(cellj, pj.p);
 
 						// === vrot
-						const Vec3d &vrot_i = cell_i[field::vrot][pi.p];
-						const Vec3d &vrot_j = cell_j[field::vrot][pj.p];
+						const Vec3d &vroti = celli[field::vrot][pi.p];
+						const Vec3d &vrotj = cellj[field::vrot][pj.p];
 
 						// === type
-						const auto &type_i = cell_i[field::type][pi.p];
-						const auto &type_j = cell_j[field::type][pj.p];
+						const auto &typei = celli[field::type][pi.p];
+						const auto &typej = cellj[field::type][pj.p];
 
 						// === vertex array
-						const ParticleVertexView vertices_i = { pi.p, gv[pi.cell] };
-						const ParticleVertexView vertices_j = { pj.p, gv[pj.cell] };
+						const ParticleVertexView verticesi = { pi.p, gv[pi.cell] };
+						const ParticleVertexView verticesj = { pj.p, gv[pj.cell] };
 
 						// === shapes
-						const shape &shp_i = shps[type_i];
-						const shape &shp_j = shps[type_j];
+						const shape &shpi = shps[typei];
+						const shape &shpj = shps[typej];
 
-						auto [contact, dn, n, contact_position] = detection_vertex_vertex(vertices_i, pi.sub, &shp_i, vertices_j, pj.sub, &shp_j);
+						auto [contact, dn, n, contact_position] = detection_vertex_vertex(verticesi, pi.sub, &shpi, verticesj, pj.sub, &shpj);
 						// temporary vec3d to store forces.
-						Vec3d f = {0, 0, 0};
+						Vec3d fi = {0, 0, 0};
 						Vec3d fn = {0, 0, 0};
 
 						// === Contact Force parameters
-						const InnerBondParams& ibp = ibpa(type_i, type_j);
+						const InnerBondParams& ibp = ibpa(typei, typej);
 
-						const Vec3d vi = get_v(cell_i, pi.p);
-						const Vec3d vj = get_v(cell_j, pj.p);
-						const auto &mi = cell_i[field::mass][pi.p];
-						const auto &mj = cell_j[field::mass][pj.p];
+						const Vec3d vi = get_v(celli, pi.p);
+						const Vec3d vj = get_v(cellj, pj.p);
+						const auto &mi = celli[field::mass][pi.p];
+						const auto &mj = cellj[field::mass][pj.p];
 
 						const double meff = compute_effective_mass(mi, mj);
 
-						stick_force_core(dn, n, item.dn0, dt, ibp, meff, 
+						force_law_core(dn, n, item.dn0, dt, ibp, meff, 
 								item.en, item.et, item.friction, contact_position, 
-								ri, vi, f, vrot_i, // particle 1
-								rj, vj, vrot_j // particle nbh
+								ri, vi, fi, vroti, // particle 1
+								rj, vj, vrotj // particle nbh
 								);
 
-						fn = f - item.friction;
+						fn = fi - item.friction;
+
+            //std::cout << "dn: " << dn << " f " << fi  << " dn0 " << item.dn0 << std::endl;
+            //std::cout << "vi: " << verticesi[pi.sub] << " vj: " << verticesj[pj.sub]  << " contact " << contact_position << std::endl;
+
+            Vec3d null = {0, 0, 0};
 
 						// === update particle informations
 						// ==== Particle i
-						lockAndAdd(cell_i[field::fx][pi.p], f.x);
-						lockAndAdd(cell_i[field::fy][pi.p], f.y);
-						lockAndAdd(cell_i[field::fz][pi.p], f.z);
+              auto &momi = celli[field::mom][pi.p];
+              lockAndAdd(momi, compute_moments(contact_position, ri, fi, null));
+
+              // ==== Particle j
+
+						lockAndAdd(celli[field::fx][pi.p], fi.x);
+						lockAndAdd(celli[field::fy][pi.p], fi.y);
+						lockAndAdd(celli[field::fz][pi.p], fi.z);
 
 						// ==== Particle j
-						lockAndAdd(cell_j[field::fx][pj.p], -f.x);
-						lockAndAdd(cell_j[field::fy][pj.p], -f.y);
-						lockAndAdd(cell_j[field::fz][pj.p], -f.z);
+            auto &momj = cellj[field::mom][pj.p];
+            lockAndAdd(momj, compute_moments(contact_position, rj, -fi, null));
+						lockAndAdd(cellj[field::fx][pj.p], -fi.x);
+						lockAndAdd(cellj[field::fy][pj.p], -fi.y);
+						lockAndAdd(cellj[field::fz][pj.p], -fi.z);
 						return {dn, contact_position, fn, item.friction};
 					}
 			};

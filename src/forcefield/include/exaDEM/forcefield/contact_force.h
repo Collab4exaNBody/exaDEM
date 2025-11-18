@@ -19,8 +19,8 @@ under the License.
 #pragma once
 
 #include <onika/math/basic_types.h>
-#include <exaDEM/common_compute_kernels.h>
-#include <exaDEM/contact_force_parameters.h>
+#include <exaDEM/forcefield/common_kernels.h>
+#include <exaDEM/forcefield/contact_parameters.h>
 
 namespace exaDEM
 {
@@ -44,7 +44,7 @@ namespace exaDEM
   }
 
   template<bool cohesive>
-    ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
+    ONIKA_HOST_DEVICE_FUNC inline void force_law_core(const double dn,
         const Vec3d &n, // -normal
         const double dt,
         const ContactParams &hkp,
@@ -62,7 +62,7 @@ namespace exaDEM
         );
 
   template<>
-    ONIKA_HOST_DEVICE_FUNC inline void contact_force_core<false>(const double dn,
+    ONIKA_HOST_DEVICE_FUNC inline void force_law_core<false>(const double dn,
         const Vec3d &n, // -normal
         const double dt,
         const ContactParams &hkp,
@@ -121,7 +121,7 @@ namespace exaDEM
 
 
   template<> // cohesive
-    ONIKA_HOST_DEVICE_FUNC inline void contact_force_core<true>(const double dn,
+    ONIKA_HOST_DEVICE_FUNC inline void force_law_core<true>(const double dn,
         const Vec3d &n, // -normal
         const double dt,
         const ContactParams &hkp,
@@ -184,15 +184,4 @@ namespace exaDEM
         mom_i = mom_i * (threshold_mom / sqrt(mom_square));
       //*/
     }
-
-
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d compute_moments(const Vec3d &contact_position,
-      const Vec3d &p, // position
-      const Vec3d &f, // forces
-      const Vec3d &m) // I.mom
-  {
-    const auto Ci = (contact_position - p);
-    const auto Pimoment = exanb::cross(Ci, f) + m;
-    return Pimoment;
-  }
 } // namespace exaDEM

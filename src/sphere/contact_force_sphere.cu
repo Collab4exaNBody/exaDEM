@@ -28,8 +28,6 @@ under the License.
 
 #include <memory>
 
-#include <exaDEM/contact_force_parameters.h>
-#include <exaDEM/compute_contact_force.h>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
@@ -39,8 +37,10 @@ under the License.
 #include <exaDEM/shape_detection_driver.hpp>
 #include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
-#include <exaDEM/contact_sphere.h>
-#include <exaDEM/multimat_parameters.h>
+#include <exaDEM/sphere/contact_sphere.h>
+#include <exaDEM/forcefield/contact_parameters.h>
+#include <exaDEM/forcefield/contact_force.h>
+#include <exaDEM/forcefield/multimat_parameters.h>
 
 namespace exaDEM
 {

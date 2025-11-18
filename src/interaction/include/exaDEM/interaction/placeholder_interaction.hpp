@@ -33,7 +33,7 @@ namespace exaDEM
   { 
     ParticleParticle,
     ParticleDriver,
-    StickedParticles 
+    InnerBond 
   };
 
   struct InteractionTypeId
@@ -47,7 +47,7 @@ namespace exaDEM
     static constexpr int VertexSurface = 5;
     static constexpr int VertexBall = 6;
     static constexpr int NTypesStickecParticles = 1;
-    static constexpr int StickedParticles = 13;
+    static constexpr int InnerBond = 13;
     static constexpr int NTypes = NTypesParticleParticle + NTypesStickecParticles;
   };
 
@@ -154,7 +154,7 @@ namespace exaDEM
 			{
 				return this->as<Interaction>().is_active();
 			}
-			else if( type() == InteractionTypeId::StickedParticles )
+			else if( type() == InteractionTypeId::InnerBond )
 			{
 				return this->as<InnerBondInteraction>().is_active();
 			}
@@ -170,7 +170,7 @@ namespace exaDEM
 			{
 				return this->as<Interaction>().persistent();
 			}
-			else if( type() == InteractionTypeId::StickedParticles )
+			else if( type() == InteractionTypeId::InnerBond )
 			{
 				return this->as<InnerBondInteraction>().persistent();
 			}
@@ -185,7 +185,7 @@ namespace exaDEM
 			{
 				return this->as<Interaction>().ignore_other_interactions();
 			}
-			else if( type() == InteractionTypeId::StickedParticles )
+			else if( type() == InteractionTypeId::InnerBond )
 			{
 				return this->as<InnerBondInteraction>().ignore_other_interactions();
 			}
@@ -200,7 +200,7 @@ namespace exaDEM
 			{
 				this->as<Interaction>().reset();
 			}
-			else if( type() == InteractionTypeId::StickedParticles )
+			else if( type() == InteractionTypeId::InnerBond )
 			{
 				this->as<InnerBondInteraction>().reset();
 			}
@@ -240,7 +240,7 @@ namespace exaDEM
 			auto& convert()
 			{
 				if constexpr( IT == ParticleParticle ) return as<Interaction>();
-				if constexpr( IT == StickedParticles ) return as<InnerBondInteraction>();
+				if constexpr( IT == InnerBond ) return as<InnerBondInteraction>();
 				color_log::error("PlaceholderInteraction::as<InteractionType>", 
 						"Error, no Interaction type is defined for this value of InteractionType");
 			}

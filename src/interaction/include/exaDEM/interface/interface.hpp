@@ -49,7 +49,7 @@ namespace exaDEM
 
 	inline bool check_interface_consistency(
 			InterfaceBuildManager& interfaces, 
-			ClassifierContainer<InteractionType::StickedParticles>& interactions)
+			ClassifierContainer<InteractionType::InnerBond>& interactions)
 	{
     int res = 0;
     size_t n_interactions = interactions.size();
@@ -80,7 +80,7 @@ namespace exaDEM
 	}
 
 	// CPU only
-	inline void rebuild_interface_Manager(InterfaceBuildManager& interfaces, ClassifierContainer<InteractionType::StickedParticles>& interactions)
+	inline void rebuild_interface_Manager(InterfaceBuildManager& interfaces, ClassifierContainer<InteractionType::InnerBond>& interactions)
 	{
 		interfaces.data.clear();
 		size_t n_interactions = interactions.size();

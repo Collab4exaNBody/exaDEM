@@ -34,16 +34,16 @@ namespace exaDEM
   struct Classifier
   {
     using WavePP = ClassifierContainer<InteractionType::ParticleParticle>;
-    using WaveSP = ClassifierContainer<InteractionType::StickedParticles>;
+    using WaveIB = ClassifierContainer<InteractionType::InnerBond>;
     static constexpr int typesPP = 13; // Particle / Particle + Particle / Driver
-    static constexpr int typesSP = 1;   // Sticked Particles
-    static constexpr int types = typesPP + typesSP;
-    static constexpr int StickedParticlesTypeId = InteractionTypeId::StickedParticles;
+    static constexpr int typesIB = 1;   // Sticked Particles
+    static constexpr int types = typesPP + typesIB;
+    static constexpr int InnerBondTypeId = InteractionTypeId::InnerBond;
 
     // Members
     std::vector<WavePP> waves; ///< Storage for interactions categorized by type.
     std::vector<itools::interaction_buffers> buffers;     ///< Storage for analysis. Empty if there is no analysis
-    WaveSP sticked_interaction; ///< Used for fragmentation
+    WaveIB sticked_interaction; ///< Used for fragmentation
 
     /**
      * @brief Default constructor.
@@ -93,9 +93,9 @@ namespace exaDEM
             return waves[id];
           }
         }
-        if constexpr (IT == StickedParticles)
+        if constexpr (IT == InnerBond)
         {
-          if (id == StickedParticlesTypeId)
+          if (id == InnerBondTypeId)
           {
             return sticked_interaction;
           }
@@ -104,9 +104,9 @@ namespace exaDEM
         std::exit(EXIT_FAILURE);
       }
 
-    InteractionWrapper<InteractionType::StickedParticles> get_sticked_interaction_wrapper()
+    InteractionWrapper<InteractionType::InnerBond> get_sticked_interaction_wrapper()
     {
-      return get_data<StickedParticles>(StickedParticlesTypeId);
+      return get_data<InnerBond>(InnerBondTypeId);
     }
 
     template<InteractionType IT> 
@@ -119,9 +119,9 @@ namespace exaDEM
             return waves[id];
           }
         }
-        if constexpr (IT == StickedParticles)
+        if constexpr (IT == InnerBond)
         {
-          if (id == StickedParticlesTypeId)
+          if (id == InnerBondTypeId)
           {
             return sticked_interaction;
           }
@@ -133,7 +133,7 @@ namespace exaDEM
     size_t get_size(size_t id)
     {
       if( id < typesPP ) return waves[id].size();
-      else if (id == StickedParticlesTypeId) return sticked_interaction.size();
+      else if (id == InnerBondTypeId) return sticked_interaction.size();
       color_log::error("Classifier::get_size", "Invalid id in get_size()");
       std::exit(EXIT_FAILURE);
     }
@@ -158,12 +158,12 @@ namespace exaDEM
             return  std::pair<WavePP&, size_t> {data, data_size};
           }
         }
-        if constexpr (IT == StickedParticles)
+        if constexpr (IT == InnerBond)
         {
-          if (id == StickedParticlesTypeId)
+          if (id == InnerBondTypeId)
           {
             const unsigned int data_size = sticked_interaction.size();
-            return std::pair<WaveSP&, size_t>{sticked_interaction, data_size};
+            return std::pair<WaveIB&, size_t>{sticked_interaction, data_size};
           }
         }
 
@@ -183,12 +183,12 @@ namespace exaDEM
             return  std::pair<const WavePP&, size_t> {data, data_size};
           }
         }
-        if constexpr (IT == StickedParticles)
+        if constexpr (IT == InnerBond)
         {
-          if (id == StickedParticlesTypeId)
+          if (id == InnerBondTypeId)
           {
             const unsigned int data_size = sticked_interaction.size();
-            return std::pair<const WaveSP&, size_t>{sticked_interaction, data_size};
+            return std::pair<const WaveIB&, size_t>{sticked_interaction, data_size};
           }
         }
         color_log::error("Classifier::get_info", "Invalid id in get_info()");
@@ -216,13 +216,13 @@ namespace exaDEM
      */
     size_t number_of_waves()
     {
-      assert(types == typesPP + typesSP);
+      assert(types == typesPP + typesIB);
       return types;
     }
 
     size_t number_of_waves() const
     {
-      assert(types == typesPP + typesSP);
+      assert(types == typesPP + typesIB);
       return types;
     }
   };

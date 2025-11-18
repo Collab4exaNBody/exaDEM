@@ -55,7 +55,7 @@ namespace exaDEM
 
 			long long number_of_broken_interfaces = 0;
 
-      InteractionWrapper<InteractionType::StickedParticles> data_wrapper = ic->get_sticked_interaction_wrapper();
+      InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
 
       ApplyInterfaceFractureCriterionFunc func = {interfaces.data.data(), interfaces.break_interface.data(), data_wrapper};
 

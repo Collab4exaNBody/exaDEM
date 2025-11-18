@@ -28,7 +28,7 @@ under the License.
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 
-#include <exaDEM/vertices.hpp>
+#include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>

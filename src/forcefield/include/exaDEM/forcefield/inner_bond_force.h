@@ -19,15 +19,15 @@ under the License.
 #pragma once
 
 #include <onika/math/basic_types.h>
-#include <exaDEM/common_compute_kernels.h>
-#include <exaDEM/contact_force_parameters.h>
+#include <exaDEM/forcefield/common_kernels.h>
+#include <exaDEM/forcefield/inner_bond_parameters.h>
 
 namespace exaDEM
 {
 	ONIKA_HOST_DEVICE_FUNC 
-		inline void stick_force_core(const double dn,
+		inline void force_law_core(const double dn,
 				const Vec3d &n, // -normal
-				const double& dn0,
+				const double dn0,
 				const double dt,
 				const InnerBondParams &ibp,
 				const double meff,
@@ -76,14 +76,12 @@ namespace exaDEM
 			const Vec3d vfn = fn * n;
 
 			// === Tangential force (friction)
-
 			const Vec3d ft = compute_tangential_force(dt, vn, n, vel);
 			vft += ibp.kt * ft; 
 		  vft += exaDEM::contribution_stick_tangential_force(damp, vn, n, vel);
 
 			// === sum forces
 			f_i = vfn + vft;
-
 
 			if(fne > 0)
       { 

@@ -254,10 +254,10 @@ namespace exaDEM
 				WrapperContactLawForAll func(interactions, kernel, packer, args...);
 				return parallel_for(size, func, exec_ctx, opts);
 			}
-			if constexpr ( type == Classifier::StickedParticlesTypeId )
+			if constexpr ( type == Classifier::InnerBondTypeId )
 			{
-				auto [data, size] = ic.get_info<StickedParticles>(Classifier::StickedParticlesTypeId);
-				InteractionWrapper<StickedParticles> interactions(data);
+				auto [data, size] = ic.get_info<InnerBond>(Classifier::InnerBondTypeId);
+				InteractionWrapper<InnerBond> interactions(data);
 				WrapperContactLawForAll func(interactions, kernel, packer, args...);
 				return parallel_for(size, func, exec_ctx, opts);
 			}

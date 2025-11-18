@@ -169,7 +169,8 @@ namespace exaDEM
             Vec3d fn = {0, 0, 0};
 
             // === Contact Force parameters
-            const ContactParams& cp = cpa(type_i, type_j);
+            //const ContactParams& cp = cpa(type_i, type_j);
+            const auto& cp = cpa(type_i, type_j);
 
             /** if cohesive force */
             if constexpr ( cohesive ) contact = ( contact || dn <= cp.dncut );
@@ -183,7 +184,7 @@ namespace exaDEM
 
               const double meff = compute_effective_mass(m_i, m_j);
 
-              contact_force_core<cohesive>(dn, n, dt, cp, meff, item.friction, contact_position, 
+              force_law_core<cohesive>(dn, n, dt, cp, meff, item.friction, contact_position, 
                   ri, vi, f, item.moment, vrot_i, // particle 1
                   rj, vj, vrot_j // particle nbh
                   );
@@ -270,7 +271,8 @@ namespace exaDEM
           Vec3d fn = null;
 
           // === Contact Force Parameters
-          const ContactParams& cp = cpa(type, driver_idx);
+          //const ContactParams& cp = cpa(type, driver_idx);
+          const auto& cp = cpa(type, driver_idx);
 
           /** if cohesive force */
           if constexpr ( cohesive ) contact = ( contact || dn <= cp.dncut );
@@ -283,7 +285,7 @@ namespace exaDEM
 						auto &mom = cell[field::mom][p];
 						const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
 						const double meff = cell[field::mass][p];
-						contact_force_core<cohesive>(dn, n, dt, cp, meff, item.friction, contact_position, 
+						force_law_core<cohesive>(dn, n, dt, cp, meff, item.friction, contact_position, 
 								r, v, f, item.moment, vrot, // particle i
 								driver.center, driver.get_vel(), driver.vrot // particle j
 								);
@@ -379,7 +381,8 @@ namespace exaDEM
 						Vec3d fn = null;
 
 						// === Contact Force Parameters
-						const ContactParams& cp = cpa(type, driver_idx);
+						//const ContactParams& cp = cpa(type, driver_idx);
+						const auto& cp = cpa(type, driver_idx);
 
 						/** if cohesive force */
 						if constexpr ( cohesive ) contact = ( contact || dn <= cp.dncut );
@@ -394,7 +397,7 @@ namespace exaDEM
 							// i to j
 							if constexpr (interaction_type <= 10 && interaction_type >= 7 )
 							{
-								contact_force_core<cohesive>(dn, n, dt, cp, meff, 
+								force_law_core<cohesive>(dn, n, dt, cp, meff, 
 										item.friction, contact_position, 
 										r_i, v_i, f, item.moment, vrot_i,       // particle i
 										driver.center, driver.vel, driver.vrot  // particle driver
@@ -413,7 +416,7 @@ namespace exaDEM
 							//  j to i 
 							if constexpr (interaction_type <= 12 && interaction_type >= 11 )
 							{
-								contact_force_core<cohesive>(dn, n, dt, cp, meff, 
+								force_law_core<cohesive>(dn, n, dt, cp, meff, 
 										item.friction, contact_position, 
 										driver.center, driver.get_vel(), f, item.moment, driver.vrot,  // particle j
 										r_i, v_i,  vrot_i       // particle i

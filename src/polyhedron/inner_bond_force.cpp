@@ -26,21 +26,18 @@ under the License.
 #include <exanb/core/domain.h>
 #include <exanb/core/xform.h>
 
-#include <memory>
-
-#include <exaDEM/vertices.hpp>
-#include <exaDEM/contact_force_parameters.h>
-#include <exaDEM/compute_contact_force.h>
-
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
 #include <exaDEM/itools/itools.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
-#include <exaDEM/inner_bond_parameters.h>
-#include <exaDEM/stick_polyhedron.hpp>
-#include <exaDEM/multimat_parameters.h>
+#include <exaDEM/forcefield/inner_bond_parameters.h>
+#include <exaDEM/forcefield/inner_bond_force.h>
+#include <exaDEM/forcefield/inner_bond_parameters.h>
+#include <exaDEM/forcefield/multimat_parameters.h>
+#include <exaDEM/polyhedron/vertices.hpp>
+#include <exaDEM/polyhedron/inner_bond.hpp>
 
 namespace exaDEM
 {
@@ -49,7 +46,7 @@ namespace exaDEM
 
 
   template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> 
-    class ComputeStickForce : public OperatorNode
+    class ComputeInnerBondForce : public OperatorNode
   {
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
@@ -70,15 +67,15 @@ namespace exaDEM
 
     public:
 
-    inline std::string operator_name() { return "stick_polyhedron"; }
+    inline std::string operator_name() { return "inner_bond_polyhedron"; }
 
     inline std::string documentation() const override final { 
       return R"EOF(
-        This operator computes forces between sticked particles using the contact law.
+        This operator computes forces between inner_bonded particles using the contact law.
 
         YAML example:
 
-          - stick_polyhedron
+          - inner_bond_polyhedron
       )EOF"; 
     }
 
@@ -132,23 +129,23 @@ namespace exaDEM
 
       if( is_def_xform ) 
       {
-        stick_law<LinearXForm> func;
+        inner_bond_law<LinearXForm> func;
         func.xform = LinearXForm{xform};
-        run_contact_law<InteractionTypeId::StickedParticles>(parallel_execution_context(), classifier, func, __params__);
+        run_contact_law<InteractionTypeId::InnerBond>(parallel_execution_context(), classifier, func, __params__);
       }
       else
       {
-        stick_law<NullXForm> func;
+        inner_bond_law<NullXForm> func;
         func.xform = NullXForm{};
-        run_contact_law<InteractionTypeId::StickedParticles>(parallel_execution_context(), classifier, func, __params__);
+        run_contact_law<InteractionTypeId::InnerBond>(parallel_execution_context(), classifier, func, __params__);
       }
 
 #undef __params__
     }
   };
 
-  template <class GridT> using ComputeStickForceTmpl  = ComputeStickForce<GridT>;
+  template <class GridT> using ComputeInnerBondForceTmpl  = ComputeInnerBondForce<GridT>;
 
   // === register factories ===
-  ONIKA_AUTORUN_INIT(stick_force_polyhedron) { OperatorNodeFactory::instance()->register_factory("stick_polyhedron", make_grid_variant_operator<ComputeStickForceTmpl>); }
+  ONIKA_AUTORUN_INIT(inner_bond_force_polyhedron) { OperatorNodeFactory::instance()->register_factory("inner_bond_polyhedron", make_grid_variant_operator<ComputeInnerBondForceTmpl>); }
 } // namespace exaDEM

@@ -90,7 +90,7 @@ namespace exaDEM
             //ldbg << "Func applied on [ft_x, ft_y, ft_z, mom_x, mom_y, mom_z]" << std::endl;
             apply_on_fields(func, ft_x, ft_y, ft_z, mom_x, mom_y, mom_z);
           }
-          if constexpr (IT == InteractionType::StickedParticles)
+          if constexpr (IT == InteractionType::InnerBond)
           {
             //ldbg << "Func applied on [ft_x, ft_y, ft_z, en, et, dn0, s(surface)]" << std::endl;
             apply_on_fields(func, ft_x, ft_y, ft_z, en, et, dn0, criterion, unbroken);
@@ -152,7 +152,7 @@ namespace exaDEM
 					mom_z[idx] = I.moment.z;
 				}
 
-				if constexpr (IT == InteractionType::StickedParticles) 
+				if constexpr (IT == InteractionType::InnerBond) 
 				{
 					auto& I = (InnerBondInteraction&) (interaction);
 					ft_x[idx] = I.friction.x;
@@ -247,7 +247,7 @@ namespace exaDEM
 							vector_data(mom_z)[id]}};
 					return res;
 				}
-				else if constexpr (IT == InteractionType::StickedParticles)
+				else if constexpr (IT == InteractionType::InnerBond)
 				{
 					exaDEM::InnerBondInteraction res{ ip,
 						{vector_data(ft_x)[id],
@@ -283,7 +283,7 @@ namespace exaDEM
 					vector_data(mom_z)[id] = I.moment.z;
 				}
 
-				if constexpr (IT == InteractionType::StickedParticles) 
+				if constexpr (IT == InteractionType::InnerBond) 
 				{
 					auto& I = (InnerBondInteraction&) (item);
 					vector_data(ft_x)[id] = I.friction.x;

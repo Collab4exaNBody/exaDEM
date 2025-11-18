@@ -10,7 +10,7 @@ namespace exaDEM
   {
     Interface* const interface;
     uint8_t* const break_interface;
-    InteractionWrapper<InteractionType::StickedParticles> interaction;
+    InteractionWrapper<InteractionType::InnerBond> interaction;
 
     ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t i) const
     {

@@ -20,8 +20,7 @@ under the License.
 #pragma once 
 
 #include <exaDEM/color_log.hpp>
-#include <exaDEM/contact_force_parameters.h>
-#include <exaDEM/contact_force_accessor.h>
+#include <exaDEM/forcefield/contact_force_accessor.h>
 #include <exanb/core/particle_type_id.h>
 
 namespace exaDEM
