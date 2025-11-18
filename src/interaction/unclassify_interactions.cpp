@@ -101,6 +101,22 @@ namespace exaDEM
       	free(fty);
       	free(ftz);
       }
+      auto& classi = *ic;
+      double ftx = 0;
+      double fty = 0;
+      double ftz = 0;
+      for(int type = 7; type < 13; type++)
+      {
+      	auto [data, size] = classi.get_info(type);
+      	for(int i = 0; i < size; i++)
+      	{
+      		ftx+= data.ft_x[i];
+      		fty+= data.ft_y[i];
+      		ftz+= data.ft_z[i];
+      		
+      	}
+      }
+      printf("FTX: %f FTY: %f FTZ: %f\n", ftx, fty, ftz);
       printf("\n\n\n");
       if (!ic.has_value())
         return;

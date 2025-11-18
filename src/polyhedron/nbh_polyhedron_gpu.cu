@@ -105,7 +105,7 @@ namespace exaDEM
 		int idx = threadIdx.x + blockIdx.x * blockDim.x;
 		if(idx < size)
 		{
-			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) && id_i[idx] < id_j[idx] )
+			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) )
 			{
 				atomicAdd(&nb[blockIdx.x], 1);
 				atomicAdd(&forces[0], ft_x[idx]);
@@ -172,7 +172,7 @@ namespace exaDEM
 			
 			bool active = false;
 			
-			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) && id_i[idx] < id_j[idx] )
+			if( (ft_x[idx] != 0 || ft_y[idx] != 0 || ft_z[idx] != 0 || mom_x[idx] != 0 || mom_y[idx] != 0 || mom_z[idx] != 0) )
 			{
 				s[threadIdx.x] = 1;
 				active = true;

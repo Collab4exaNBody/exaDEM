@@ -41,6 +41,7 @@ namespace exaDEM
     uint16_t sub_i;                    /**< Sub-particle index for the first particle involved in the interaction. */
     uint16_t sub_j;                    /**< Sub-particle index for the second particle involved in the interaction. */
     uint16_t type;                     /**< Type of the interaction (e.g., contact type). */
+    uint8_t ghost = false;
 
     /**
      * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
@@ -64,7 +65,8 @@ namespace exaDEM
     {
       constexpr exanb::Vec3d null = {0, 0, 0};
 	  //bool is_ghost = (id_i >= id_j && type <= 3);
-      bool res = ((moment != null) || (friction != null)) /*&& (!is_ghost)*/;
+	  if(ghost) return false;
+      bool res = ((moment != null) || (friction != null))/* && (!is_ghost)*/;
       return res;
     }
 
@@ -75,12 +77,6 @@ namespace exaDEM
     {
       std::cout << "Interaction(type = " << int(type) << " [cell: " << cell_i << ", idx " << p_i << ", particle id: " << id_i << "] and"
                 << " [cell: " << cell_j << ", idx " << p_j << ", particle id: " << id_j << "] : (friction: " << friction << ", moment: " << moment << ")" << std::endl;
-    }
-
-    ONIKA_HOST_DEVICE_FUNC void PrintF()
-    {
-      printf("Interaction(type = %d [cell: %d, idx %d, particle id: %d] and [cell: %d , idx %d, particle id: %d]\n", 
-             int(type), int(cell_i), int(p_i), int(id_i), int(cell_j), int(p_j), int(id_j));
     }
 
     /**
