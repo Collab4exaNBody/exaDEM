@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 #include <vector>
 #include <iomanip>
 #include <cstdlib>
@@ -29,6 +29,7 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
+#include <exanb/core/xform.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <onika/math/basic_types_stream.h>
@@ -55,7 +56,7 @@ namespace exaDEM
     // optionnal
     ADD_SLOT(bool, mpi_rank, INPUT, false, DocString{"Add a field containing the mpi rank."});
 
-  public:
+    public:
     inline std::string documentation() const override final
     {
       return R"EOF( 
@@ -66,7 +67,7 @@ namespace exaDEM
         - write_paraview_polyhedra:
            filename: "OptionalFilename_%10d"
            mpi_rank: true
-    	    			)EOF";
+                )EOF";
     }
 
     inline void execute() override final
@@ -88,6 +89,10 @@ namespace exaDEM
       const size_t n_cells = grid->number_of_cells();
       par_poly_helper buffers = {*mpi_rank}; // it conatins streams 
 
+      bool defbox = !domain->xform_is_identity();
+      LinearXForm xform;
+      if(defbox) xform.m_matrix = domain->xform();      
+
       // fill string buffers
       for (size_t cell_a = 0; cell_a < n_cells; cell_a++)
       {
@@ -106,6 +111,7 @@ namespace exaDEM
         for (int j = 0; j < n_particles; j++)
         {
           exanb::Vec3d pos{rx[j], ry[j], rz[j]};
+          if(defbox) pos = xform.transformCoord(pos);
           const shape *shp = shps[type[j]];
           build_buffer_polyhedron(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], buffers);
         }
