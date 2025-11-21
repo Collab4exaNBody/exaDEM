@@ -26,6 +26,7 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/grid_fields.h>
+#include <exanb/core/domain.h>
 
 #include <mpi.h>
 
@@ -47,6 +48,7 @@ namespace exaDEM
     ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
     ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(double, threshold, INPUT, 0.0);
+    ADD_SLOT(Domain, domain, INPUT );
     ADD_SLOT(bool, async, INPUT, false);
     ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
     ADD_SLOT(bool, result, OUTPUT);
@@ -82,6 +84,8 @@ namespace exaDEM
 
       const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
 
+      const bool defbox = !domain->xform_is_identity(); 
+
       particle_displ_comm->m_comm = *mpi;
       particle_displ_comm->m_request = MPI_REQUEST_NULL;
       particle_displ_comm->m_particles_over = 0;
@@ -89,14 +93,22 @@ namespace exaDEM
       particle_displ_comm->m_async_request = false;
       particle_displ_comm->m_request_started = false;
 
-      ReduceMaxVertexDisplacementFunctor func = {backup_dem->m_data.data(), max_dist2, shps.data()};
-
       if (*async)
       {
         ldbg << "Async particle_displ_over => result set to false" << std::endl;
         particle_displ_comm->m_async_request = true;
         auto user_cb = onika::parallel::ParallelExecutionCallback{reduction_end_callback, &(*particle_displ_comm)};
-        reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set, parallel_execution_context(), user_cb, rcpo);
+
+        if (defbox)
+        {
+          ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->m_data.data(), max_dist2, shps.data(), domain->xform()};
+          reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set, parallel_execution_context(), user_cb, rcpo);
+        }
+        else
+        {
+          ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->m_data.data(), max_dist2, shps.data(), domain->xform()};
+          reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set, parallel_execution_context(), user_cb, rcpo);
+        }
         particle_displ_comm->start_mpi_async_request();
         *result = false;
       }
@@ -106,7 +118,16 @@ namespace exaDEM
         if (grid->number_of_cells() > 0)
         {
           auto user_cb = onika::parallel::ParallelExecutionCallback{};
-          reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set, parallel_execution_context(), user_cb, rcpo);
+          if (defbox)
+          {
+            ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->m_data.data(), max_dist2, shps.data(), domain->xform()};
+            reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set, parallel_execution_context(), user_cb, rcpo);
+          }
+          else
+          {
+            ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->m_data.data(), max_dist2, shps.data(), domain->xform()};
+            reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set, parallel_execution_context(), user_cb, rcpo);
+          }
         }
         MPI_Allreduce(&(particle_displ_comm->m_particles_over), &(particle_displ_comm->m_all_particles_over), 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
         ldbg << "Nb part moved over " << max_dist << " (local/all) = " << particle_displ_comm->m_particles_over << " / " << particle_displ_comm->m_all_particles_over << std::endl;

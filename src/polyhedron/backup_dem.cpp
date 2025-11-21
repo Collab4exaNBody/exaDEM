@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
@@ -43,7 +43,8 @@ namespace exaDEM
       auto cells = grid->cells();
       const ssize_t gl = grid->ghost_layers();
 
-      backup_dem->m_xform = domain->xform();
+      const bool defbox = !domain->xform_is_identity();
+      Mat3d m_xform = domain->xform();
       backup_dem->m_data.clear();
       backup_dem->m_data.resize(grid->number_of_cells());
 
@@ -66,9 +67,19 @@ namespace exaDEM
 #         pragma omp simd
           for (size_t j = 0; j < n_particles; j++)
           {
-            rb[                 j] = rx[j];
-            rb[    block_size + j] = ry[j];
-            rb[2 * block_size + j] = rz[j];
+            if (defbox) 
+            { 
+              Vec3d r = m_xform * Vec3d{ rx[j], ry[j], rz[j] }; 
+              rb[                 j] = r.x;
+              rb[    block_size + j] = r.y;
+              rb[2 * block_size + j] = r.z;
+            } 
+            else
+            {
+              rb[                 j] = rx[j];
+              rb[    block_size + j] = ry[j];
+              rb[2 * block_size + j] = rz[j];
+            }
             rb[3 * block_size + j] = orient[j].w;
             rb[4 * block_size + j] = orient[j].x;
             rb[5 * block_size + j] = orient[j].y;
