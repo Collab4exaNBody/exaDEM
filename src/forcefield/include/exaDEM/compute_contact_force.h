@@ -26,6 +26,24 @@ namespace exaDEM
 {
   ONIKA_HOST_DEVICE_FUNC inline void reset(Vec3d &in) { in = Vec3d{0.0, 0.0, 0.0}; }
 
+  ONIKA_HOST_DEVICE_FUNC inline void apply_dmt_force(const ContactParams& hkp, double reff,
+     double dn, 
+     const Vec3d& n, 
+     Vec3d& f_i)
+  {
+    // Désactivée automatiquement si gamma <= 0
+    if(hkp.gamma <= 0.0) return;
+
+    // DMT : force attractive uniquement si contact (dn < 0)
+    if(dn < 0.0)
+    {
+        double F_dmt = 2.0 * M_PI * reff * hkp.gamma;
+
+        // Force attractive : -F_dmt * n
+        f_i -= F_dmt * n;
+    }
+  }
+
   ONIKA_HOST_DEVICE_FUNC inline void cohesive_force_core(const double dn, const Vec3d &n, const double dncut, const double fc, Vec3d &f)
   {
     if (dncut == 0)
@@ -42,53 +60,56 @@ namespace exaDEM
       f.z += fn.z;
     }
   }
-
+  //VT template générique pour les deux versions cohésive et non cohésive
   template<bool cohesive>
     ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
         const Vec3d &n, // -normal
         const double dt,
         const ContactParams &hkp,
         const double meff,
+        const double reff,
         Vec3d &ft, // tangential force between particle i and j
         const Vec3d &contact_position,
         const Vec3d &pos_i,  // positions i
-        const Vec3d &vel_i,  // positions i
+        const Vec3d &vel_i,  // velocities i
         Vec3d &f_i,          // forces i
         Vec3d &mom_i,        // moments i
         const Vec3d &vrot_i, // angular velocities i
         const Vec3d &pos_j,  // positions j
-        const Vec3d &vel_j,  // positions j
+        const Vec3d &vel_j,  // velocities j
         const Vec3d &vrot_j  // angular velocities j
         );
 
-  template<>
+  //VT version sans cohesion
+  template<> 
     ONIKA_HOST_DEVICE_FUNC inline void contact_force_core<false>(const double dn,
         const Vec3d &n, // -normal
         const double dt,
         const ContactParams &hkp,
         const double meff,
+        const double reff,
         Vec3d &ft, // tangential force between particle i and j
         const Vec3d &contact_position,
         const Vec3d &pos_i,  // positions i
-        const Vec3d &vel_i,  // positions i
+        const Vec3d &vel_i,  // velocities i
         Vec3d &f_i,          // forces i
         Vec3d &mom_i,        // moments i
         const Vec3d &vrot_i, // angular velocities i
         const Vec3d &pos_j,  // positions j
-        const Vec3d &vel_j,  // positions j
+        const Vec3d &vel_j,  // velocities j
         const Vec3d &vrot_j  // angular velocities j
         )
     {
-      const double damp = compute_damp(hkp.damp_rate, hkp.kn, meff);
+      const double damp = compute_damp(hkp.damp_rate, hkp.kn, meff); //VT amortissement
 
       // === Relative velocity (j relative to i)
-      auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
+      auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j); //VT vitesse relative
 
       // compute relative velocity
-      const double vn = exanb::dot(vel, n);
+      const double vn = exanb::dot(vel, n); //VT composante normale de la vitesse relative
 
-      // === Normal force (elatic contact + viscous damping)
-      const Vec3d fn = compute_normal_force(hkp.kn, damp, dn, vn, n); // fc ==> cohesive force
+      // === Normal force (elatisc contact + viscous damping)
+      const Vec3d fn = compute_normal_force(hkp.kn, damp, dn, vn, n); // (fc ==> cohesive force)
 
       // === Tangential force (friction)
       ft += exaDEM::compute_tangential_force(hkp.kt, dt, vn, n, vel);
@@ -100,6 +121,9 @@ namespace exaDEM
 
       // === sum forces
       f_i = fn + ft;
+       
+      // === DMT adhesive force
+      apply_dmt_force(hkp, reff, dn, n, f_i);
 
       // === update moments
       mom_i += hkp.kr * (vrot_j - vrot_i) * dt;
@@ -126,15 +150,16 @@ namespace exaDEM
         const double dt,
         const ContactParams &hkp,
         const double meff,
+        const double reff,
         Vec3d &ft, // tangential force between particle i and j
         const Vec3d &contact_position,
         const Vec3d &pos_i,  // positions i
-        const Vec3d &vel_i,  // positions i
+        const Vec3d &vel_i,  // velocities i
         Vec3d &f_i,          // forces i
         Vec3d &mom_i,        // moments i
         const Vec3d &vrot_i, // angular velocities i
         const Vec3d &pos_j,  // positions j
-        const Vec3d &vel_j,  // positions j
+        const Vec3d &vel_j,  // velocities j
         const Vec3d &vrot_j  // angular velocities j
         )
     {
@@ -166,6 +191,9 @@ namespace exaDEM
 
       // === sum forces
       f_i = fn * n + ft;
+
+      // === DMT adhesive force
+      apply_dmt_force(hkp, reff, dn, n, f_i);
 
       // === update moments
       mom_i += hkp.kr * (vrot_j - vrot_i) * dt;

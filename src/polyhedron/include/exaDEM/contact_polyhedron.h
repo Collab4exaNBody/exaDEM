@@ -177,9 +177,18 @@ namespace exaDEM
               const auto &m_i = cell_i[field::mass][item.p_i];
               const auto &m_j = cell_j[field::mass][item.p_j];
 
-              const double meff = compute_effective_mass(m_i, m_j);
+              //double rad_i = shp_i->minskowski();
+              double rad_i = shp_i.m_radius;
+              //double rad_j = shp_j->minskowski();
+              double rad_j = shp_j.m_radius;
 
-              contact_force_core<cohesive>(dn, n, dt, cp, meff, item.friction, contact_position, 
+
+
+              const double meff = compute_effective_mass(m_i, m_j);
+              const double reff = compute_effective_mass(rad_i, rad_j);
+
+
+              contact_force_core<cohesive>(dn, n, dt, cp, meff, reff, item.friction, contact_position, 
                   ri, vi, f, item.moment, vrot_i, // particle 1
                   rj, vj, vrot_j // particle nbh
                   );
@@ -278,7 +287,14 @@ namespace exaDEM
             auto &mom = cell[field::mom][p];
             const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
             const double meff = cell[field::mass][p];
-            contact_force_core<cohesive>(dn, n, dt, cp, meff, item.friction, contact_position, 
+
+            const auto &type = cell[field::type][p];
+            const shape &shp = shps[type];
+            //const double reff = shp->minskowski();
+            const double reff = shp.m_radius;
+
+
+            contact_force_core<cohesive>(dn, n, dt, cp, meff, reff, item.friction, contact_position, 
                 r, v, f, item.moment, vrot, // particle i
                 driver.center, driver.get_vel(), driver.vrot // particle j
                 );
@@ -385,11 +401,16 @@ namespace exaDEM
               auto &mom = cell[field::mom][p_i];
               const Vec3d v_i = {cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i]};
               const double meff = cell[field::mass][p_i];
+              const auto &type_i = cell[field::type][p_i];
+              const shape &shp_i = shps[type_i];
+              //const double reff = shp_i->minskowski();
+              const double reff = shp_i.m_radius;
+
 
               // i to j
               if constexpr (interaction_type <= 10 && interaction_type >= 7 )
               {
-                contact_force_core<cohesive>(dn, n, dt, cp, meff, 
+                contact_force_core<cohesive>(dn, n, dt, cp, meff, reff,
                     item.friction, contact_position, 
                     r_i, v_i, f, item.moment, vrot_i,       // particle i
                     driver.center, driver.vel, driver.vrot  // particle j
@@ -408,7 +429,7 @@ namespace exaDEM
               //  j to i 
               if constexpr (interaction_type <= 12 && interaction_type >= 11 )
               {
-                contact_force_core<cohesive>(dn, n, dt, cp, meff, 
+                contact_force_core<cohesive>(dn, n, dt, cp, meff, reff,
                     item.friction, contact_position, 
                     driver.center, driver.get_vel(), f, item.moment, driver.vrot,  // particle j
                     r_i, v_i,  vrot_i       // particle i

@@ -66,6 +66,13 @@ namespace exaDEM
     return ret;
   }
 
+  //VT === effective radius for DMT. Maybe can be factorized with effective mass (same formula)
+  ONIKA_HOST_DEVICE_FUNC inline double compute_effective_radius(const double a_ri, const double a_rj)
+  {
+    const double ret = (a_ri * a_rj) / (a_ri + a_rj);
+    return ret;
+  }
+
   //
   ONIKA_HOST_DEVICE_FUNC inline double compute_normal_force_value_with_cohesive_force(const double a_kn, const double a_fc, const double a_damp, const double a_dn, const double a_vn)
   {
