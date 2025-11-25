@@ -158,7 +158,7 @@ namespace exaDEM
         auto I = interactions(idx);
 
         // filter duplicate (mpi ghost)
-        if (I.pair.pi.id < I.pair.pj.id)
+        if (I.pair.ghost != InteractionPair::PartnerGhost)
         {
           const double &dn = dnp[idx];
           local.n_tot_interaction += coef;
@@ -236,7 +236,7 @@ namespace exaDEM
 				{
 					exaDEM::Interaction I = data(i);
 					// filter duplicate (mpi ghost)
-					if (I.pair.pi.id < I.pair.pj.id)
+					if (I.pair.ghost != InteractionPair::PartnerGhost)
 					{
 						const double &dn = func.dnp[i];
 						n_tot_interaction += func.coef;

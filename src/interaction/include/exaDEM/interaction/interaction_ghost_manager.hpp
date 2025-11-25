@@ -194,9 +194,9 @@ namespace exaDEM
 											+ " is != of cells[owner.cell][field::id][owner.p]: "  
 											+ std::to_string(cells[owner.cell][field::id][owner.p]));
 								}
-                color_log::highlight("copy_interaction", "owner.id: " + std::to_string(owner.id)
-                      + " is == of cells[owner.cell][field::id][owner.p]: "
-                      + std::to_string(cells[owner.cell][field::id][owner.p]));
+                //color_log::highlight("copy_interaction", "owner.id: " + std::to_string(owner.id)
+                //      + " is == of cells[owner.cell][field::id][owner.p]: "
+                //      + std::to_string(cells[owner.cell][field::id][owner.p]));
 							}
 
 							auto& partner = item.pair.partner();
@@ -251,11 +251,12 @@ namespace exaDEM
 								}
 								storage.push_back(item);
 							}
-							else 
+/*							else 
 							{
 								item.print();
 								color_log::error("copy_interaction", "Partner particle of this interaction has not been found");
 							}
+*/
 						} 
 					}
 				}

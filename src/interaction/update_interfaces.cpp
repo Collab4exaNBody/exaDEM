@@ -32,6 +32,7 @@ namespace exaDEM
     ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
     ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{""});
     ADD_SLOT(InterfaceBuildManager, ibm, PRIVATE, DocString{""});
+    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
 
   public:
     inline std::string documentation() const override final
@@ -49,12 +50,15 @@ namespace exaDEM
     {
       auto& build_manager = *ibm;
       rebuild_interface_Manager(build_manager, ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond));
-      lout << "Number of interfaces: " << ibm->data.size() << std::endl;
+
+      int n_interfaces = build_manager.data.size();
+      int total_interfaces = 0;
+      MPI_Reduce(&n_interfaces, &total_interfaces, 1, MPI_INT, MPI_SUM, 0, *mpi); 
+      lout << "Number of interfaces: " << total_interfaces << std::endl;
       auto& manager = *im;
       manager.resize(build_manager.data.size());
       std::memcpy(manager.data.data(), build_manager.data.data(), build_manager.data.size() * sizeof(Interface));
       assert(check_interface_consistency());
-      lout << "End update_interfaces" << std::endl;
     }
   };
 

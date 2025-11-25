@@ -19,6 +19,7 @@ under the License.
 
 #include <exaDEM/interaction/placeholder_interaction.hpp>
 #include <exaDEM/classifier/interaction_wrapper.hpp>
+#include <mpi.h>
 
 namespace exaDEM
 {
@@ -87,6 +88,7 @@ namespace exaDEM
     return false;
   }
 
+
   // CPU only
   inline void rebuild_interface_Manager(
       InterfaceBuildManager& interfaces, 
@@ -94,6 +96,8 @@ namespace exaDEM
   {
     interfaces.data.clear();
     size_t n_interactions = interactions.size();
+
+    int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); std::cout << "rank[" << rank << "]: " << n_interactions << std::endl;
     size_t loc = 0;
     while( loc<n_interactions )
     {

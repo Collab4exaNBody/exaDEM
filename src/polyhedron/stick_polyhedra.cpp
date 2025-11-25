@@ -196,10 +196,11 @@ namespace exaDEM
                 if( clusterj != cluster_i[p_i] ) { return; }; 
                 const uint64_t id_j = cells[cell_j][field::id][p_j];
 
-								if (id_i[p_i] >= id_j)
-								{
-									return;
-								}
+								item.pair.ghost = InteractionPair::NotGhost;
+								item.pair.swap = false;
+
+								if (id_i[p_i] >= id_j) { return; }
+								if (g.is_ghost_cell(cell_j)) item.pair.ghost = InteractionPair::OwnerGhost;
 
 								// Get particle pointers for the particle j.
 								VertexField& vertex_cell_j = vertex_fields[cell_j];
