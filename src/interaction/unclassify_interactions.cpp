@@ -45,7 +45,6 @@ namespace exaDEM
 
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED, DocString{"Interaction list"});
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
-    ADD_SLOT(Classifier2, ic2, INPUT_OUTPUT);
 
     public:
     inline std::string documentation() const override final
@@ -61,63 +60,30 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      /*auto& classi = *ic;
-      double ftx = 0;
-      double fty = 0;
-      double ftz = 0;
-      for(int type = 7; type < 13; type++)
+      auto& classifier = *ic;
+      for(int i = 7; i < 13; i++)
       {
-      	auto [data, size] = classi.get_info(type);
-      	for(int i = 0; i < size; i++)
-      	{
-      		ftx+= data.ft_x[i];
-      		fty+= data.ft_y[i];
-      		ftz+= data.ft_z[i];
-      		
-      	}
+      	auto& analysis = classifier.buffers[i];
+        double fn_x = 0;
+        double fn_y = 0;
+        double fn_z = 0;
+        double ft_x = 0;
+        double ft_y = 0;
+        double ft_z = 0;
+        for(int j = 0; j < analysis.dn.size(); j++)
+        {
+        	fn_x+= analysis.fn[j].x;
+        	fn_y+= analysis.fn[j].y;
+        	fn_z+= analysis.fn[j].z;
+        	
+        	ft_x+= analysis.ft[j].x;
+        	ft_y+= analysis.ft[j].y;
+        	ft_z+= analysis.ft[j].z;
+        }
+      	printf("TYPE%d :\n", i);
+      	printf("FNX: %f FNY: %f FNZ: %f\n", fn_x, fn_y, fn_z);
+      	printf("FTX: %d FTY: %f FTZ: %f\n", ft_x, ft_y, ft_z);
       }
-      printf("FTX: %f FTY: %f FTZ: %f\n", ftx, fty, ftz);*/
-      auto& classifier2 = *ic2;
-      printf("APRÈS CONTACT : \n");
-      for(int i = 0; i < 4; i++)
-      {
-      	auto& data = classifier2.waves[i];
-      	double* ftx = (double*)malloc(data.size() * sizeof(double));
-      	double* fty = (double*)malloc(data.size() * sizeof(double));
-      	double* ftz = (double*)malloc(data.size() * sizeof(double));
-      	cudaMemcpy(ftx, data.ft_x, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
-      	cudaMemcpy(fty, data.ft_y, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
-      	cudaMemcpy(ftz, data.ft_z, data.size() * sizeof(double), cudaMemcpyDeviceToHost);
-      	int active = 0;
-      	for(int j = 0;  j < data.size(); j++)
-      	{
-      		if(ftx[j]!=0 || fty[j]!=0 || ftz[j]!=0)
-      		{
-      			active++;
-      		}
-      	}
-      	printf("TYPE%d : %d/%d\n", i, active, data.size());
-      	free(ftx);
-      	free(fty);
-      	free(ftz);
-      }
-      auto& classi = *ic;
-      double ftx = 0;
-      double fty = 0;
-      double ftz = 0;
-      for(int type = 7; type < 13; type++)
-      {
-      	auto [data, size] = classi.get_info(type);
-      	for(int i = 0; i < size; i++)
-      	{
-      		ftx+= data.ft_x[i];
-      		fty+= data.ft_y[i];
-      		ftz+= data.ft_z[i];
-      		
-      	}
-      }
-      printf("FTX: %f FTY: %f FTZ: %f\n", ftx, fty, ftz);
-      printf("\n\n\n");
       if (!ic.has_value())
         return;
       ic->unclassify(*ges);

@@ -790,7 +790,10 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
 
 	int total_interactions = nb_nbh[incr_cell - 1] + nb_nbh_incr[incr_cell - 1];
 	
-	//printf("TOTAL: %d\n", total_interactions);
+	printf("TOTAL: %d\n", total_interactions);
+	
+	if(total_interactions > 0)
+	{
 	
 	uint16_t* p_i;
 	uint16_t* p_j;
@@ -813,6 +816,8 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
         kernelOBB<<<numBlocks, 256>>>( cells, cell_i/*.data()*/, cell_j/*.data()*/, p_i/*.data()*/, p_j/*.data()*/, shps, res.data(), *rcut_inc, total_interactions);
         
         cudaDeviceSynchronize();
+        
+        printf("OBB\n");
 
         onika::memory::CudaMMVector<int> res_incr;
 
@@ -851,13 +856,22 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
        	kernelOBB2<<<numBlocks, 256>>>( cells, cell_i/*.data()*/, cell_j/*.data()*/, p_i/*.data()*/, p_j/*.data()*/, shps, res_incr.data(), *rcut_inc, ints2.cell_i/*.data()*/, ints2.cell_j/*.data()*/, ints2.p_i/*.data()*/, ints2.p_j/*.data()*/, total_interactions);
        	
         cudaDeviceSynchronize();
+        
+        printf("OBB2\n");
        	       	
        	cudaFree(cell_i);
        	cudaFree(cell_j);
        	cudaFree(p_i);
        	cudaFree(p_j);
+       	}
+       	else
+       	{
+       		auto& ints2 = *interactions_inter;
+       		auto& size = ints2.size;
+       		size = 0;
+       	}
 
-	//printf("END CHUNK\n");
+	printf("END CHUNK\n");
     }
   };
 
