@@ -118,6 +118,8 @@ namespace exaDEM
 					buffers.vertices << v.x << " " << v.y <<  " " << v.z  << " "; 
 					buffers.ids << i << " ";
 					buffers.connectivities << buffers.n_vertices++ << " ";
+          buffers.et << interaction.et << " ";
+          buffers.en << interaction.en << " ";
           E += (interaction.en + interaction.et) / interaction.criterion;
 				}
 				buffers.offsets << buffers.n_vertices  << " ";

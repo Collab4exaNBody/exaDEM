@@ -55,13 +55,13 @@ namespace exaDEM
 	template <typename GridT> 
 		inline bool filter_duplicates(
 				const GridT &G,
-				ParticleSubLocation& i,
-				ParticleSubLocation& j,
+				const ParticleSubLocation& owner,
+				const ParticleSubLocation& partner,
 				int type)
 		{
 			if (type < 4) // polyhedron - polyhedron or sphere - sphere
 			{
-				if (G.is_ghost_cell(j.cell) && i.id > j.id)
+				if (G.is_ghost_cell(owner.cell))
 				{
 					return false;
 				}
@@ -74,8 +74,7 @@ namespace exaDEM
 				const GridT &G, 
 				const InteractionT &I)
 		{
-      auto [i, j, type] = I.pair_info();
-      return filter_duplicates(G, i, j, type);
+      return filter_duplicates(G, I.pair.owner(), I.pair.partner(), I.type());
 		}
 
 	static constexpr size_t constexpr_max(std::size_t a, std::size_t b) 
@@ -117,8 +116,7 @@ namespace exaDEM
 		ParticleSubLocation& driver() { return j(); }
 		uint16_t type() { return pair.type; } 
 		uint16_t type() const { return pair.type; } 
-		uint32_t cell() { return pair.pi.cell; } // associate cell -> cell_i
-		uint32_t partner_cell() { return pair.pj.cell; } // associate cell -> cell_i
+		uint32_t cell() { return pair.owner().cell; } // associate cell -> cell_i
     InteractionPair& pair_info() { return pair; }
     const InteractionPair& pair_info() const { return pair; }
 
@@ -127,7 +125,14 @@ namespace exaDEM
 		 */
 		void print()
 		{
-			pair.print();
+			if( type() < InteractionTypeId::NTypesParticleParticle ) 
+			{
+				return this->as<Interaction>().print();
+			}
+			else if( type() == InteractionTypeId::InnerBond )
+			{
+				return this->as<InnerBondInteraction>().print();
+			}
 		}
 
 		/**
@@ -135,7 +140,14 @@ namespace exaDEM
 		 */
 		void print() const
 		{
-			pair.print();
+			if( type() < InteractionTypeId::NTypesParticleParticle ) 
+			{
+				return this->as<Interaction>().print();
+			}
+			else if( type() == InteractionTypeId::InnerBond )
+			{
+				return this->as<InnerBondInteraction>().print();
+			}
 		}
 
 		void update(PlaceholderInteraction& in)
@@ -148,17 +160,17 @@ namespace exaDEM
 			memset( data, 0, PlaceholderInteractionSize);
 		}
 
-		ONIKA_HOST_DEVICE_FUNC bool is_active() const 
+		ONIKA_HOST_DEVICE_FUNC bool active() const 
 		{ 
 			if( type() < InteractionTypeId::NTypesParticleParticle ) 
 			{
-				return this->as<Interaction>().is_active();
+				return this->as<Interaction>().active();
 			}
 			else if( type() == InteractionTypeId::InnerBond )
 			{
-				return this->as<InnerBondInteraction>().is_active();
+				return this->as<InnerBondInteraction>().active();
 			}
-			color_log::error("PlaceholderInteraction::is_active", 
+			color_log::error("PlaceholderInteraction::active", 
 					"The type value of this interaction is invalid");
 			std::exit(EXIT_FAILURE);
 		}
@@ -175,7 +187,7 @@ namespace exaDEM
 				return this->as<InnerBondInteraction>().persistent();
 			}
 			color_log::error("PlaceholderInteraction::persistent", 
-					"The type value of this interaction is invalid");
+					"The type value of this interaction is invalid: " + std::to_string(type()));
 			std::exit(EXIT_FAILURE);
 		}
 
@@ -285,7 +297,7 @@ namespace exaDEM
 			for (size_t i = 0; i < interactions.size(); i++)
 			{
 				auto& I = interactions[i];
-				if( I.is_active() ) tmp.push_back(I);
+				if( I.active() ) tmp.push_back(I);
 			}
 
 			if (tmp.size() > 0)

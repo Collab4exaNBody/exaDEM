@@ -27,6 +27,8 @@ namespace exaDEM
     std::vector<exaDEM::PlaceholderInteraction> hist;              // history
     std::vector<std::vector<exaDEM::PlaceholderInteraction>> list; //
     std::vector<std::vector<uint64_t>> ignore;
+    size_t current_cell_id;
+    size_t current_cell_particles;
 
     void reset(const size_t size)
     {
@@ -120,12 +122,11 @@ namespace exaDEM
         size_t p, 
         exaDEM::PlaceholderInteraction &I)
     {
-      auto& owner = I.i();
-      auto& partner = I.j();
+      auto& partner = I.pair.partner();
       auto& ignore_ids = ignore[p];
       for(size_t j=0 ; j<ignore_ids.size() ; j++)
       {
-        if(owner.id == ignore_ids[j]) return true;
+        //if(owner.id == ignore_ids[j]) return true;
         if(partner.id == ignore_ids[j]) return true;
       }
       return false;
@@ -136,103 +137,109 @@ namespace exaDEM
       InteractionManager& manager, 
       CellExtraDynamicDataStorageT<PlaceholderInteraction> &storage)
   {
-    size_t n_particles = storage.number_of_particles();
-    for(size_t p = 0; p<n_particles ; p++)
+    size_t n_interactions = storage.m_data.size();
+    for(size_t i = 0; i <n_interactions ; i++)
     {
-      size_t n_interactions = storage.particle_number_of_items(p);
-      for(size_t i = 0; i <n_interactions ; i++)
-      {
-        PlaceholderInteraction& I = storage.get_particle_item(p, i);
-        if( I.persistent() )
-        {
-          manager.list[p].push_back(I);
-        }
-      }
-    }
-  }
+			PlaceholderInteraction& I = storage.m_data[i];
+			if( I.persistent() )
+			{
+				if( I.pair.owner().cell != manager.current_cell_id ) 
+					color_log::error("update_persistent_interactions", "This interaction is illformed, owner.cell should be: " 
+							+ std::to_string(manager.current_cell_id) 
+							+ " cell: " + std::to_string(I.pair.owner().cell)
+							+ " p; " + std::to_string(I.pair.owner().p) 
+							+ " id: " + std::to_string(I.pair.owner().id)); 
+				if( I.pair.owner().p >= manager.current_cell_particles ) 
+					color_log::error("update_persistent_interactions", "This interaction is illformed, owner.p should be inferior to: " 
+							+ std::to_string(manager.current_cell_particles)
+							+ " cell: " + std::to_string(I.pair.owner().cell)
+							+ " p; " + std::to_string(I.pair.owner().p) 
+							+ " id: " + std::to_string(I.pair.owner().id)); 
+				manager.list[I.pair.owner().p].push_back(I);
+			}
+		}
 
-  template<typename ParticleVertexViewT>
-    bool check_stiked_face(
-        std::vector<exaDEM::PlaceholderInteraction>& interactions, 
-        size_t p, 
-        ParticleVertexViewT& pvv)
+    for(size_t p=0; p<manager.list.size() ; p++)
     {
-      std::vector<int> vertex_id = {};
-      std::vector<Vec3d> vertices;
-      // identify vertices
-      for(size_t i=0 ; i<interactions.size() ; i++)
-      {
-        if(interactions[i].type() == InteractionTypeId::InnerBond)
-        {
-          vertex_id.push_back(interactions[i].pair.pi.sub);
-        } 
-      }
-
-      if( vertex_id.size() == 0 ) return true; // true cause no stiked face 
-      vertices.resize(vertex_id.size());
-
-      for(size_t i=0 ; i<vertex_id.size() ; i++)
-      {
-        vertices[i] = pvv[vertex_id[i]];
-      }
-
-      if(vertices.size() <= 2)
-      {
-        color_log::warning("interaction_manager::check_stiked_face", "sticked face is illformed (n_vertices should be >= 3) with only " + std::to_string(vertices.size()) + " vertices");
-        return false;
-      }
-
-      Vec3d va = vertices[1] - vertices[0];
-      Vec3d vb = vertices[2] - vertices[0];
-
-      bool res = true;
-
-      Vec3d normal = exanb::cross(va, vb);
-      constexpr double tol = 1.e-10;
-
-      // Check that remaining vertices belong to the same plane
-      for (size_t j=3; j<vertices.size(); j++)
-      {
-        Vec3d vj = vertices[j] - vertices[0];
-        double distance_to_plane = std::abs(exanb::dot(vj, normal));
-
-        if (distance_to_plane > tol)
-        {
-          //color_log::error(
-          color_log::warning(
-              "interaction_manager::check_sticked_face",
-              "Sticked face is not coplanar: vertex " + std::to_string(j) +
-              " is out of the plane defined by the first three vertices. " +
-              "Distance to plane = " + std::to_string(distance_to_plane)
-              );
-          return false;
-        }
-      }
-
-      /*
-      // compute the surface
-      if (res == true)
-      {
-      // compute surface 
-      double area = 0.0;
-      // maybe wrong TODO later
-      for (size_t i=1; i<vertices.size()-1 ; i++)
-      {
-      Vec3d e1 = vertices[i] - vertices[0];
-      Vec3d e2 = vertices[i+1] - vertices[0];
-      area += 0.5 * exanb::norm(exanb::cross(e1,e2));
-      }
-
-      for(size_t i=0 ; i<interactions.size() ; i++)
-      {
-      if(interactions[i].type() == InteractionTypeId::InnerBond)
-      {
-      interactions[i].as<InnerBondInteraction>().S = area;
-      } 
-      }
-      }
-       */
-
-      return res;
+       std::stable_sort(manager.list[p].begin(), manager.list[p].end());
     }
+	}
+
+	// sequential
+	template<typename InteractionT>
+		inline void extract_history(
+				std::vector<InteractionT> &local, 
+				const InteractionT *data, 
+				const unsigned int size)
+		{
+			local.clear();
+			for (size_t i = 0; i < size; i++)
+			{
+				const auto &item = data[i];
+				if (item.active())
+				{
+					local.push_back(item);
+				}
+			}
+		}
+
+	template<typename ParticleVertexViewT>
+		bool check_stiked_face(
+				std::vector<exaDEM::PlaceholderInteraction>& interactions, 
+				size_t p, 
+				ParticleVertexViewT& pvv)
+		{
+			std::vector<int> vertex_id = {};
+			std::vector<Vec3d> vertices;
+			// identify vertices
+			for(size_t i=0 ; i<interactions.size() ; i++)
+			{
+				if(interactions[i].type() == InteractionTypeId::InnerBond)
+				{
+					vertex_id.push_back(interactions[i].pair.pi.sub);
+				} 
+			}
+
+			if( vertex_id.size() == 0 ) return true; // true cause no stiked face 
+			vertices.resize(vertex_id.size());
+
+			for(size_t i=0 ; i<vertex_id.size() ; i++)
+			{
+				vertices[i] = pvv[vertex_id[i]];
+			}
+
+			if(vertices.size() <= 2)
+			{
+				color_log::warning("interaction_manager::check_stiked_face", "sticked face is illformed (n_vertices should be >= 3) with only " + std::to_string(vertices.size()) + " vertices");
+				return false;
+			}
+
+			Vec3d va = vertices[1] - vertices[0];
+			Vec3d vb = vertices[2] - vertices[0];
+
+			bool res = true;
+
+			Vec3d normal = exanb::cross(va, vb);
+			constexpr double tol = 1.e-10;
+
+			// Check that remaining vertices belong to the same plane
+			for (size_t j=3; j<vertices.size(); j++)
+			{
+				Vec3d vj = vertices[j] - vertices[0];
+				double distance_to_plane = std::abs(exanb::dot(vj, normal));
+
+				if (distance_to_plane > tol)
+				{
+					//color_log::error(
+					color_log::warning(
+							"interaction_manager::check_sticked_face",
+							"Sticked face is not coplanar: vertex " + std::to_string(j) +
+							" is out of the plane defined by the first three vertices. " +
+							"Distance to plane = " + std::to_string(distance_to_plane)
+							);
+					return false;
+				}
+			}
+			return res;
+		}
 } // namespace exaDEM

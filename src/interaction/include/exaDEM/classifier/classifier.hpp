@@ -35,7 +35,9 @@ namespace exaDEM
   {
     using WavePP = ClassifierContainer<InteractionType::ParticleParticle>;
     using WaveIB = ClassifierContainer<InteractionType::InnerBond>;
-    static constexpr int typesPP = 13; // Particle / Particle + Particle / Driver
+    static constexpr int typesParticles = 4; // Particle / Particle + Particle / Driver
+    static constexpr int typesDirvers = 9; // Particle / Particle + Particle / Driver
+    static constexpr int typesPP = typesParticles + typesDirvers; // 13 -- Particle / Particle + Particle / Driver
     static constexpr int typesIB = 1;   // Sticked Particles
     static constexpr int types = typesPP + typesIB;
     static constexpr int InnerBondTypeId = InteractionTypeId::InnerBond;

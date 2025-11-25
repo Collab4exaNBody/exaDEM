@@ -72,7 +72,7 @@ namespace exaDEM
 
 			auto extract_data = [] (InteractionCounter& input_counter, const auto& I) -> void
 			{
-				if(I.is_active())
+				if(I.active())
 				{
 					input_counter.counts_by_type[I.type()] += 1;
 				}

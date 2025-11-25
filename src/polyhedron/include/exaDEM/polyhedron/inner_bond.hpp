@@ -66,148 +66,146 @@ namespace exaDEM
      * @struct inner_bond_law
      * @brief Structure defining contact law interactions for particles (polyhedra).
      */
-		template<typename XFormT>
-			struct inner_bond_law
-			{
-				XFormT xform;
-				/**
-				 * @brief Default constructor for inner_bond_law struct.
-				 */
-				inner_bond_law() {}
+    template<typename XFormT>
+      struct inner_bond_law
+      {
+        XFormT xform;
+        /**
+         * @brief Default constructor for inner_bond_law struct.
+         */
+        inner_bond_law() {}
 
-				/**
-				 * @brief Retrieves the position vector of a particle from a cell.
-				 *
-				 * This function retrieves the position vector of a particle identified
-				 * by `pi.p` from the given cell using field indices `field::rx`, `field::ry`,
-				 * and `field::rz`.
-				 *
-				 * @tparam TMPLC Type of the cell.
-				 * @param cell Reference to the cell containing particle data.
-				 * @param pi.p Index of the particle.
-				 * @return Vec3d Position vector of the particle.
-				 */
-				template <typename TMPLC> 
-					ONIKA_HOST_DEVICE_FUNC 
-					inline const Vec3d get_r(TMPLC &cell, const int p) const
-					{
-						Vec3d res = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
-						return xform.transformCoord(res);
-					};
+        /**
+         * @brief Retrieves the position vector of a particle from a cell.
+         *
+         * This function retrieves the position vector of a particle identified
+         * by `pi.p` from the given cell using field indices `field::rx`, `field::ry`,
+         * and `field::rz`.
+         *
+         * @tparam TMPLC Type of the cell.
+         * @param cell Reference to the cell containing particle data.
+         * @param pi.p Index of the particle.
+         * @return Vec3d Position vector of the particle.
+         */
+        template <typename TMPLC> 
+          ONIKA_HOST_DEVICE_FUNC 
+          inline const Vec3d get_r(TMPLC &cell, const int p) const
+          {
+            Vec3d res = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
+            return xform.transformCoord(res);
+          };
 
-				/**
-				 * @brief Retrieves the velocity vector of a particle from a cell.
-				 *
-				 * This function retrieves the velocity vector of a particle identified
-				 * by `pi.p` from the given cell using field indices `field::vx`, `field::vy`,
-				 * and `field::vz`.
-				 *
-				 * @tparam TMPLC Type of the cell.
-				 * @param cell Reference to the cell containing particle data.
-				 * @param pi.p Index of the particle.
-				 * @return Vec3d Velocity vector of the particle.
-				 */
-				template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_v(TMPLC &cell, const int p) const
-				{
-					const Vec3d res = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
-					return res;
-				};
+        /**
+         * @brief Retrieves the velocity vector of a particle from a cell.
+         *
+         * This function retrieves the velocity vector of a particle identified
+         * by `pi.p` from the given cell using field indices `field::vx`, `field::vy`,
+         * and `field::vz`.
+         *
+         * @tparam TMPLC Type of the cell.
+         * @param cell Reference to the cell containing particle data.
+         * @param pi.p Index of the particle.
+         * @return Vec3d Velocity vector of the particle.
+         */
+        template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_v(TMPLC &cell, const int p) const
+        {
+          const Vec3d res = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
+          return res;
+        };
 
-				/**
-				 * @brief Operator function for performing interactions between particles (polyhedra).
-				 *
-				 * @tparam TMPLC Type of the cells or particles container.
-				 * @tparam TMPLV Vertex Type container.
-				 * @tparam TIBFPA Template Inner Bond Force Parameters Accessor.
-				 * @param item Reference to the Interaction object representing the interaction details.
-				 * @param cells Pointer to the cells or particles container.
-				 * @param cpa Reference to the ContactParams object containing interaction parameters.
-				 * @param shps Pointer to the shapes array providing shape information for interactions.
-				 * @param dt Time increment for the simulation step.
-				 */
-				template <typename TMPLC, typename TIBFPA, typename TMPLV> ONIKA_HOST_DEVICE_FUNC 
-					inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
-							InnerBondInteraction &item, 
-							TMPLC* const __restrict__ cells, 
-							TMPLV* const __restrict__ gv, /* grid of vertices */
-							TIBFPA& ibpa, 
-							const shape * const shps, 
-							const double dt) const
-					{
-						const auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
-						const auto& pj = item.j(); // particle j (id, cell id, particle position, sub vertex)
-								      								 // === cell
-						auto &celli = cells[pi.cell];
-						auto &cellj = cells[pj.cell];
+        /**
+         * @brief Operator function for performing interactions between particles (polyhedra).
+         *
+         * @tparam TMPLC Type of the cells or particles container.
+         * @tparam TMPLV Vertex Type container.
+         * @tparam TIBFPA Template Inner Bond Force Parameters Accessor.
+         * @param item Reference to the Interaction object representing the interaction details.
+         * @param cells Pointer to the cells or particles container.
+         * @param cpa Reference to the ContactParams object containing interaction parameters.
+         * @param shps Pointer to the shapes array providing shape information for interactions.
+         * @param dt Time increment for the simulation step.
+         */
+        template <typename TMPLC, typename TIBFPA, typename TMPLV> ONIKA_HOST_DEVICE_FUNC 
+          inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
+              InnerBondInteraction &item, 
+              TMPLC* const __restrict__ cells, 
+              TMPLV* const __restrict__ gv, /* grid of vertices */
+              TIBFPA& ibpa, 
+              const shape * const shps, 
+              const double dt) const
+          {
+            const auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
+            const auto& pj = item.j(); // particle j (id, cell id, particle position, sub vertex)
+                                       // === cell
+            auto &celli = cells[pi.cell];
+            auto &cellj = cells[pj.cell];
 
-						// === positions
-						const Vec3d ri = get_r(celli, pi.p);
-						const Vec3d rj = get_r(cellj, pj.p);
+            assert(pi.p < celli.size());
+            assert(pj.p < cellj.size());
 
-						// === vrot
-						const Vec3d &vroti = celli[field::vrot][pi.p];
-						const Vec3d &vrotj = cellj[field::vrot][pj.p];
+            // === positions
+            const Vec3d ri = get_r(celli, pi.p);
+            const Vec3d rj = get_r(cellj, pj.p);
 
-						// === type
-						const auto &typei = celli[field::type][pi.p];
-						const auto &typej = cellj[field::type][pj.p];
+            // === vrot
+            const Vec3d &vroti = celli[field::vrot][pi.p];
+            const Vec3d &vrotj = cellj[field::vrot][pj.p];
 
-						// === vertex array
-						const ParticleVertexView verticesi = { pi.p, gv[pi.cell] };
-						const ParticleVertexView verticesj = { pj.p, gv[pj.cell] };
+            // === type
+            const auto &typei = celli[field::type][pi.p];
+            const auto &typej = cellj[field::type][pj.p];
 
-						// === shapes
-						const shape &shpi = shps[typei];
-						const shape &shpj = shps[typej];
+            // === vertex array
+            const ParticleVertexView verticesi = { pi.p, gv[pi.cell] };
+            const ParticleVertexView verticesj = { pj.p, gv[pj.cell] };
 
-						auto [contact, dn, n, contact_position] = detection_vertex_vertex(verticesi, pi.sub, &shpi, verticesj, pj.sub, &shpj);
-						// temporary vec3d to store forces.
-						Vec3d fi = {0, 0, 0};
-						Vec3d fn = {0, 0, 0};
+            // === shapes
+            const shape &shpi = shps[typei];
+            const shape &shpj = shps[typej];
 
-						// === Contact Force parameters
-						const InnerBondParams& ibp = ibpa(typei, typej);
+            auto [contact, dn, n, contact_position] = detection_vertex_vertex(verticesi, pi.sub, &shpi, verticesj, pj.sub, &shpj);
+            // temporary vec3d to store forces.
+            Vec3d fi = {0, 0, 0};
+            Vec3d fn = {0, 0, 0};
 
-						const Vec3d vi = get_v(celli, pi.p);
-						const Vec3d vj = get_v(cellj, pj.p);
-						const auto &mi = celli[field::mass][pi.p];
-						const auto &mj = cellj[field::mass][pj.p];
+            // === Contact Force parameters
+            const InnerBondParams& ibp = ibpa(typei, typej);
 
-						const double meff = compute_effective_mass(mi, mj);
+            const Vec3d vi = get_v(celli, pi.p);
+            const Vec3d vj = get_v(cellj, pj.p);
+            const auto &mi = celli[field::mass][pi.p];
+            const auto &mj = cellj[field::mass][pj.p];
 
-						force_law_core(dn, n, item.dn0, dt, ibp, meff, 
-								item.en, item.et, item.friction, contact_position, 
-								ri, vi, fi, vroti, // particle 1
-								rj, vj, vrotj // particle nbh
-								);
+            const double meff = compute_effective_mass(mi, mj);
 
-						fn = fi - item.friction;
+            force_law_core(dn, n, item.dn0, dt, ibp, meff, 
+                item.en, item.et, item.friction, contact_position, 
+                ri, vi, fi, vroti, // particle 1
+                rj, vj, vrotj // particle nbh
+                );
 
-            //std::cout << "dn: " << dn << " f " << fi  << " dn0 " << item.dn0 << std::endl;
-            //std::cout << "vi: " << verticesi[pi.sub] << " vj: " << verticesj[pj.sub]  << " contact " << contact_position << std::endl;
-
+            fn = fi - item.friction;
             Vec3d null = {0, 0, 0};
 
-						// === update particle informations
-						// ==== Particle i
-              auto &momi = celli[field::mom][pi.p];
-              lockAndAdd(momi, compute_moments(contact_position, ri, fi, null));
+            // === update particle informations
+            // ==== Particle i
+            auto &momi = celli[field::mom][pi.p];
+            lockAndAdd(momi, compute_moments(contact_position, ri, fi, null));
+            lockAndAdd(celli[field::fx][pi.p], fi.x);
+            lockAndAdd(celli[field::fy][pi.p], fi.y);
+            lockAndAdd(celli[field::fz][pi.p], fi.z);
 
-              // ==== Particle j
 
-						lockAndAdd(celli[field::fx][pi.p], fi.x);
-						lockAndAdd(celli[field::fy][pi.p], fi.y);
-						lockAndAdd(celli[field::fz][pi.p], fi.z);
-
-						// ==== Particle j
+            // ==== Particle j            
             auto &momj = cellj[field::mom][pj.p];
             lockAndAdd(momj, compute_moments(contact_position, rj, -fi, null));
-						lockAndAdd(cellj[field::fx][pj.p], -fi.x);
-						lockAndAdd(cellj[field::fy][pj.p], -fi.y);
-						lockAndAdd(cellj[field::fz][pj.p], -fi.z);
-						return {dn, contact_position, fn, item.friction};
-					}
-			};
+            lockAndAdd(cellj[field::fx][pj.p], -fi.x);
+            lockAndAdd(cellj[field::fy][pj.p], -fi.y);
+            lockAndAdd(cellj[field::fz][pj.p], -fi.z);
 
-	} // namespace polyhedron
+            return {dn, contact_position, fn, item.friction};
+          }
+      };
+
+  } // namespace polyhedron
 } // namespace exaDEM

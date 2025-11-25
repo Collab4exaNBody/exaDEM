@@ -53,6 +53,8 @@ namespace exaDEM
       auto& manager = *im;
       manager.resize(build_manager.data.size());
       std::memcpy(manager.data.data(), build_manager.data.data(), build_manager.data.size() * sizeof(Interface));
+      assert(check_interface_consistency());
+      lout << "End update_interfaces" << std::endl;
     }
   };
 

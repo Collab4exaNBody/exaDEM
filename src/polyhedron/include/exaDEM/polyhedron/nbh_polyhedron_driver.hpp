@@ -231,8 +231,6 @@ namespace exaDEM
 
 			for (size_t pid = 0; pid < n_particles; pid++)
 			{
-				assert(item.type() < shps.size());
-
 				pi.p = pid;
 				pi.id = id[pid];
 				ParticleVertexView vertex_view = {pid, vertices};

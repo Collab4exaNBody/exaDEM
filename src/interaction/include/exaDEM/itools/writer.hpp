@@ -51,7 +51,7 @@ namespace exaDEM
           /** filter empty interactions */
           if (dn < 0)
           {
-            auto [i, j, type] = wrapper(idx);
+            auto [i, j, type, swap, ghost] = wrapper(idx);
             /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
             if (filter_duplicates(grid, i, j, type))
             {

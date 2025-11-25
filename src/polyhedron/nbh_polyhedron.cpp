@@ -132,6 +132,8 @@ namespace exaDEM
           }
 
           // Extract history before reset it
+          manager.current_cell_id = cell_a;
+          manager.current_cell_particles = n_particles;
           const size_t data_size = storage.m_data.size();
           PlaceholderInteraction *__restrict__ data_ptr = storage.m_data.data();
           extract_history(manager.hist, data_ptr, data_size);
@@ -211,7 +213,7 @@ namespace exaDEM
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
               {
                 Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); //std::get<STL_MESH>(drvs.data(drvs_idx));
-                // driver.grid_indexes_summary();
+                                                                              // driver.grid_indexes_summary();
                 add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a, rz_a, vertex_cell_a, orient_a, shps);
               }
             }
@@ -224,188 +226,189 @@ namespace exaDEM
               {
               // default value of the interaction studied (A or i -> B or j)
               const uint64_t id_nbh = cells[cell_b][field::id][p_b];
-              if (id_a[p_a] >= id_nbh)
-              {
-              if (!g.is_ghost_cell(cell_b))
-              return;
-              }
+              item.pair.ghost = InteractionPair::NotGhost;
+              item.pair.swap = false;
 
-              VertexField& vertex_cell_b = vertex_fields[cell_b];
-              ParticleVertexView vertices_b = {p_b, vertex_cell_b};
-              ParticleVertexView vertices_a = {p_a, vertex_cell_a};
+							if (id_a[p_a] >= id_nbh) { return; }
+							if (g.is_ghost_cell(cell_b)) item.pair.ghost = InteractionPair::OwnerGhost;
 
-              // Get particle pointers for the particle b.
-              const uint32_t type_nbh = cells[cell_b][field::type][p_b];
-              const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
-              double rx_nbh = cells[cell_b][field::rx][p_b];
-              double ry_nbh = cells[cell_b][field::ry][p_b];
-              double rz_nbh = cells[cell_b][field::rz][p_b];
-              double rx = rx_a[p_a];
-              double ry = ry_a[p_a];
-              double rz = rz_a[p_a];
+							VertexField& vertex_cell_b = vertex_fields[cell_b];
+							ParticleVertexView vertices_b = {p_b, vertex_cell_b};
+							ParticleVertexView vertices_a = {p_a, vertex_cell_a};
 
-              if( is_xform )
-              {
-                Vec3d tmp = {rx_nbh, ry_nbh, rz_nbh};
-                tmp = xform * tmp;
-                rx_nbh = tmp.x;
-                ry_nbh = tmp.y;
-                rz_nbh = tmp.z;
-                tmp = {rx, ry, rz};
-                tmp = xform * tmp;
-                rx = tmp.x;
-                ry = tmp.y;
-                rz = tmp.z;
-              }
+							// Get particle pointers for the particle b.
+							const uint32_t type_nbh = cells[cell_b][field::type][p_b];
+							const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
+							double rx_nbh = cells[cell_b][field::rx][p_b];
+							double ry_nbh = cells[cell_b][field::ry][p_b];
+							double rz_nbh = cells[cell_b][field::rz][p_b];
+							double rx = rx_a[p_a];
+							double ry = ry_a[p_a];
+							double rz = rz_a[p_a];
 
-              // prev
-              const shape *shp = shps[t_a[p_a]];
-              const shape *shp_nbh = shps[type_nbh];
+							if( is_xform )
+							{
+								Vec3d tmp = {rx_nbh, ry_nbh, rz_nbh};
+								tmp = xform * tmp;
+								rx_nbh = tmp.x;
+								ry_nbh = tmp.y;
+								rz_nbh = tmp.z;
+								tmp = {rx, ry, rz};
+								tmp = xform * tmp;
+								rx = tmp.x;
+								ry = tmp.y;
+								rz = tmp.z;
+							}
 
-              // Eliminate if two polyhedra are two far away if there is not intersection between their OBBs.
-              OBB obb_i = shp->obb;
-              OBB obb_j = shp_nbh->obb;
-              const Quaternion &orient = orient_a[p_a];
-              quat conv_orient_i = quat{vec3r{orient.x, orient.y, orient.z}, orient.w};
-              quat conv_orient_j = quat{vec3r{orient_nbh.x, orient_nbh.y, orient_nbh.z}, orient_nbh.w};
-              obb_i.rotate(conv_orient_i);
-              obb_j.rotate(conv_orient_j);
-              obb_i.translate(vec3r{rx, ry, rz});
-              obb_j.translate(vec3r{rx_nbh, ry_nbh, rz_nbh});
+							// prev
+							const shape *shp = shps[t_a[p_a]];
+							const shape *shp_nbh = shps[type_nbh];
 
-              obb_i.enlarge(rVerlet);
-              obb_j.enlarge(rVerlet);
+							// Eliminate if two polyhedra are two far away if there is not intersection between their OBBs.
+							OBB obb_i = shp->obb;
+							OBB obb_j = shp_nbh->obb;
+							const Quaternion &orient = orient_a[p_a];
+							quat conv_orient_i = quat{vec3r{orient.x, orient.y, orient.z}, orient.w};
+							quat conv_orient_j = quat{vec3r{orient_nbh.x, orient_nbh.y, orient_nbh.z}, orient_nbh.w};
+							obb_i.rotate(conv_orient_i);
+							obb_j.rotate(conv_orient_j);
+							obb_i.translate(vec3r{rx, ry, rz});
+							obb_j.translate(vec3r{rx_nbh, ry_nbh, rz_nbh});
 
-              if (!obb_i.intersect(obb_j))
-                return;
+							obb_i.enlarge(rVerlet);
+							obb_j.enlarge(rVerlet);
 
-              // Add interactions
-              auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
-              auto& pj = item.j(); // particle j (id, cell id, particle position, sub vertex)
+							if (!obb_i.intersect(obb_j))
+								return;
 
-              pi.id = id_a[p_a];
-              pi.p = p_a;
+							// Add interactions
+							auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
+							auto& pj = item.j(); // particle j (id, cell id, particle position, sub vertex)
 
-              pi.cell = cell_a;
-              pj.p = p_b;
-              pj.cell = cell_b;
+							pi.id = id_a[p_a];
+							pi.p = p_a;
+							pi.cell = cell_a;
 
-              const Vec3d r = {rx, ry, rz};
+							pj.id = id_nbh;
+							pj.p = p_b;
+							pj.cell = cell_b;
 
-              // get particle j data.
-              const int nv = shp->get_number_of_vertices();
-              const int ne = shp->get_number_of_edges();
-              const int nf = shp->get_number_of_faces();
-              const int nv_nbh = shp_nbh->get_number_of_vertices();
-              const int ne_nbh = shp_nbh->get_number_of_edges();
-              const int nf_nbh = shp_nbh->get_number_of_faces();
+							const Vec3d r = {rx, ry, rz};
 
-              pj.id = id_nbh;
-              // exclude possibilities with obb
-              for (int i = 0; i < nv; i++)
-              {
-                auto vi = shp->get_vertex(i, r, orient);
-                OBB obbvi;
-                obbvi.center = {vi.x, vi.y, vi.z};
-                obbvi.enlarge(shp->m_radius);
-                if (obb_j.intersect(obbvi))
-                {
-                  item.pair.type = 0; // === Vertex - Vertex
-                  for (int j = 0; j < nv_nbh; j++)
-                  {
-                    if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
-                    {
-                      add_contact(p_a, item, i, j);
-                    }
-                  }
+							// get particle j data.
+							const int nv = shp->get_number_of_vertices();
+							const int ne = shp->get_number_of_edges();
+							const int nf = shp->get_number_of_faces();
+							const int nv_nbh = shp_nbh->get_number_of_vertices();
+							const int ne_nbh = shp_nbh->get_number_of_edges();
+							const int nf_nbh = shp_nbh->get_number_of_faces();
 
-                  item.pair.type = 1; // === vertex edge
-                  for (int j = 0; j < ne_nbh; j++)
-                  {
-                    bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
-                    if (contact)
-                    {
-                      add_contact(p_a, item, i, j);
-                    }
-                  }
+							// exclude possibilities with obb
+							for (int i = 0; i < nv; i++)
+							{
+								auto vi = shp->get_vertex(i, r, orient);
+								OBB obbvi;
+								obbvi.center = {vi.x, vi.y, vi.z};
+								obbvi.enlarge(shp->m_radius);
+								if (obb_j.intersect(obbvi))
+								{
+									item.pair.type = 0; // === Vertex - Vertex
+									for (int j = 0; j < nv_nbh; j++)
+									{
+										if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
+										{
+											add_contact(p_a, item, i, j);
+										}
+									}
 
-                  item.pair.type = 2; // === vertex face
-                  for (int j = 0; j < nf_nbh; j++)
-                  {
-                    bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
-                    if (contact)
-                    {
-                      add_contact(p_a, item, i, j);
-                    }
-                  }
-                }
-              }
+									item.pair.type = 1; // === vertex edge
+									for (int j = 0; j < ne_nbh; j++)
+									{
+										bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
+										if (contact)
+										{
+											add_contact(p_a, item, i, j);
+										}
+									}
 
-              item.pair.type = 3; // === edge edge
-              for (int i = 0; i < ne; i++)
-              {
-                for (int j = 0; j < ne_nbh; j++)
-                {
-                  bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
-                  if (contact)
-                  {
-                    add_contact(p_a, item, i, j);
-                  }
-                }
-              }
+									item.pair.type = 2; // === vertex face
+									for (int j = 0; j < nf_nbh; j++)
+									{
+										bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
+										if (contact)
+										{
+											add_contact(p_a, item, i, j);
+										}
+									}
+								}
+							}
 
-              // interaction of from particle j to particle i
-              pj.cell = cell_a;
-              pj.id = id_a[p_a];
-              pj.p = p_a;
+							item.pair.type = 3; // === edge edge
+							for (int i = 0; i < ne; i++)
+							{
+								for (int j = 0; j < ne_nbh; j++)
+								{
+									bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
+									if (contact)
+									{
+										add_contact(p_a, item, i, j);
+									}
+								}
+							}
 
-              pi.cell = cell_b;
-              pi.p = p_b;
-              pi.id = id_nbh;
+							// interaction of from particle j to particle i
+							item.pair.swap = true;
+							pj.cell = cell_a;
+							pj.id = id_a[p_a];
+							pj.p = p_a;
 
-              for (int j = 0; j < nv_nbh; j++)
-              {
-                auto vj = vertices_b[j];//shp->get_vertex(j, r_nbh, orient_nbh);
-                OBB obbvj;
-                obbvj.center = {vj.x, vj.y, vj.z};
-                obbvj.enlarge(shp_nbh->m_radius);
+							pi.cell = cell_b;
+							pi.p = p_b;
+							pi.id = id_nbh;
 
-                if (obb_i.intersect(obbvj))
-                {
-                  item.pair.type = 1; // === vertex edge
-                  for (int i = 0; i < ne; i++)
-                  {
-                    bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
-                    if (contact)
-                    {
-                      add_contact(p_a, item, j, i);
-                    }
-                  }
+							for (int j = 0; j < nv_nbh; j++)
+							{
+								auto vj = vertices_b[j];//shp->get_vertex(j, r_nbh, orient_nbh);
+								OBB obbvj;
+								obbvj.center = {vj.x, vj.y, vj.z};
+								obbvj.enlarge(shp_nbh->m_radius);
 
-                  item.pair.type = 2; // === vertex face
-                  for (int i = 0; i < nf; i++)
-                  {
-                    bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
-                    if (contact)
-                    {
-                      add_contact(p_a, item, j, i);
-                    }
-                  }
-                }
-              }
-              });
+								if (obb_i.intersect(obbvj))
+								{
+									item.pair.type = 1; // === vertex edge
+									for (int i = 0; i < ne; i++)
+									{
+										bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
+										if (contact)
+										{
+											add_contact(p_a, item, j, i);
+										}
+									}
 
-          manager.update_extra_storage<true>(storage);
-          assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
-          assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
-        }
-        //    GRID_OMP_FOR_END
-      }
-    }
-  };
+									item.pair.type = 2; // === vertex face
+									for (int i = 0; i < nf; i++)
+									{
+										bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
+										if (contact)
+										{
+											add_contact(p_a, item, j, i);
+										}
+									}
+								}
+							}
+							});
 
-  template <class GridT> using UpdateGridCellInteractionTmpl = UpdateGridCellInteraction<GridT>;
+					manager.update_extra_storage<true>(storage);
+					assert(interaction_test::check_extra_interaction_storage_consistency(storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
+					assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
+				}
+				//    GRID_OMP_FOR_END
+			}
+		}
+	};
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(nbh_polyhedron) { OperatorNodeFactory::instance()->register_factory("nbh_polyhedron", make_grid_variant_operator<UpdateGridCellInteraction>); }
+	template <class GridT> using UpdateGridCellInteractionTmpl = UpdateGridCellInteraction<GridT>;
+
+	// === register factories ===
+	ONIKA_AUTORUN_INIT(nbh_polyhedron) { OperatorNodeFactory::instance()->register_factory("nbh_polyhedron", make_grid_variant_operator<UpdateGridCellInteraction>); }
 } // namespace exaDEM

@@ -55,5 +55,6 @@ namespace exaDEM
 
   // === register factories ===
   ONIKA_AUTORUN_INIT(grid_flavor) { OperatorNodeFactory::instance()->register_factory("grid_flavor_dem", make_compatible_operator< InitGridFlavorNode< GridFromFieldSet<DEMFieldSet> > >); }
+  ONIKA_AUTORUN_INIT(grid_flavor_fragmentation) { OperatorNodeFactory::instance()->register_factory("grid_flavor_dem_fragmentation", make_compatible_operator< InitGridFlavorNode< GridFromFieldSet<FragmentationDEMFieldSet> > >); }
 
 } // namespace exaDEM

@@ -118,8 +118,13 @@ namespace exaDEM
       lout << "======== " << basename << " ========" << std::endl;
       //-------------------------------------------------------------------------------------------
 
-      using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_vrot, field::_arot, field::_orient, field::_type,  field::_inertia,  field::_mass,  field::_radius,  field::_homothety >;
+       
+      using ParticleTupleIO = decltype(grid->cells()[0][0]); // onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_vrot, field::_arot, field::_orient, field::_type,  field::_inertia,  field::_mass,  field::_radius,  field::_homothety >;
       using ParticleTuple = decltype(grid->cells()[0][0]);
+
+      static constexpr bool has_field_cluster = ParticleTuple::has_field(field::cluster);
+
+      if constexpr ( !has_field_cluster ) color_log::warning("read_conf_rockable", "\"cluster\" field is ignored as the exaDEM::grid doesn't contain a field named cluster. Please use another grid_flavor.");
 
       assert(grid->number_of_particles() == 0);
 
@@ -207,6 +212,8 @@ namespace exaDEM
           ptio[field::vrot] = rp.vrot;
           ptio[field::arot] = rp.arot;
           ptio[field::homothety] = rp.homothety;
+
+          if constexpr ( has_field_cluster ) ptio[field::cluster] = rp.cluster;
         }
 
         AABB particle_bounds = {{min_x, min_y, min_z},{ max_x, max_y, max_z}};

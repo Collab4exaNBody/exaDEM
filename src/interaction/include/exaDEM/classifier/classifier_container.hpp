@@ -65,6 +65,8 @@ namespace exaDEM
       VectorT<uint32_t> sub_j; /**< List of the sub-particle indexes for the first particle involved in the interaction.  */
 
       uint16_t type; /**< Type of the interaction (e.g., contact type). */
+      VectorT<uint8_t> swap; /**< List of .  */
+      VectorT<uint8_t> ghost; /**< List of .  */
 
       template<typename Func, typename Field>
         void apply_on_field (Func& func, Field& field)
@@ -84,7 +86,7 @@ namespace exaDEM
         void apply_on_fields (Func& func)
         {
           //ldbg << "Func applied on [id_i, id_j, cell_i, cell_j, p_i, p_j, sub_i, sub_j]" << std::endl;
-          apply_on_fields(func, id_i, id_j, cell_i, cell_j, p_i, p_j, sub_i, sub_j);
+          apply_on_fields(func, id_i, id_j, cell_i, cell_j, p_i, p_j, sub_i, sub_j, swap, ghost);
           if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) 
           {
             //ldbg << "Func applied on [ft_x, ft_y, ft_z, mom_x, mom_y, mom_z]" << std::endl;
@@ -166,7 +168,7 @@ namespace exaDEM
 					unbroken[idx] = I.unbroken;
 				}
 
-				auto& [pi, pj, type] = interaction.pair;
+				auto& [pi, pj, type, _swap, _ghost] = interaction.pair;
 
 				id_i[idx] = pi.id;
 				id_j[idx] = pj.id;
@@ -179,6 +181,8 @@ namespace exaDEM
 
 				sub_i[idx] = pi.sub;
 				sub_j[idx] = pj.sub;
+				swap[idx] = _swap;
+				ghost[idx] = _ghost;
 			}
 
 			/**
@@ -233,8 +237,8 @@ namespace exaDEM
 						vector_data(cell_j)[id],
 						vector_data(p_j)[id],
 						vector_data(sub_j)[id]},
-					// type
-					type};
+					// type, swap, ghost
+					type, swap[id], ghost[id]};
 
 				if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) 
 				{

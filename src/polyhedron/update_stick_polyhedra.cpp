@@ -50,9 +50,8 @@ namespace exaDEM
     ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
     ADD_SLOT(Domain, domain, INPUT, REQUIRED);
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
-    ADD_SLOT(double, sticking_threshold, INPUT, REQUIRED, DocString{""});
     ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
-    ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"rcut_max"});
+    ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"."});
 
 
     public:
@@ -81,147 +80,154 @@ namespace exaDEM
     inline void execute() override final
     {
       constexpr uint64_t InvalidId = -1;
-			const double Rmax = 2 * (*rcut_max); 
-			auto& g = *grid;
-			const auto cells = g.cells();
-			const IJK dims = g.dimension();
-			auto &cell_interactions = ges->m_data;
+      const double Rmax = 2 * (*rcut_max); 
+      auto& g = *grid;
+      const auto cells = g.cells();
+      const IJK dims = g.dimension();
+      auto &cell_interactions = ges->m_data;
 
-			auto [cell_ptr, cell_size] = traversal_real->info();
+      auto [cell_ptr, cell_size] = traversal_real->info();
 
 #     pragma omp parallel
-			{
+      {
 #       pragma omp for schedule(dynamic)
-				for (size_t ci = 0; ci < cell_size; ci++)
-				{
-					size_t cell_a = cell_ptr[ci];
+        for (size_t ci = 0; ci < cell_size; ci++)
+        {
+          size_t cell_a = cell_ptr[ci];
 
-					const unsigned int n_particles = cells[cell_a].size();
-					if(n_particles == 0) continue;
-					CellExtraDynamicDataStorageT<PlaceholderInteraction> &storage = cell_interactions[cell_a];
+          CellExtraDynamicDataStorageT<PlaceholderInteraction> &storage = cell_interactions[cell_a];
 
-					if(storage.m_data.size() == 0) continue;
+          if(storage.m_data.size() == 0) continue;
 
-					PlaceholderInteraction* const interactions = storage.m_data.data(); 
+          const unsigned int n_particles = cells[cell_a].size();
+          PlaceholderInteraction* const interactions = storage.m_data.data(); 
 
-					// Get data pointers
-					const uint64_t *__restrict__ id_a = cells[cell_a][field::id];
-					ONIKA_ASSUME_ALIGNED(id_a);
-					const double *__restrict__ rx_a = cells[cell_a][field::rx];
-					ONIKA_ASSUME_ALIGNED(rx_a);
-					const double *__restrict__ ry_a = cells[cell_a][field::ry];
-					ONIKA_ASSUME_ALIGNED(ry_a);
-					const double *__restrict__ rz_a = cells[cell_a][field::rz];
-					ONIKA_ASSUME_ALIGNED(rz_a);
+          // Get data pointers
+          const uint64_t *__restrict__ id_a = cells[cell_a][field::id];
+          ONIKA_ASSUME_ALIGNED(id_a);
+          const double *__restrict__ rx_a = cells[cell_a][field::rx];
+          ONIKA_ASSUME_ALIGNED(rx_a);
+          const double *__restrict__ ry_a = cells[cell_a][field::ry];
+          ONIKA_ASSUME_ALIGNED(ry_a);
+          const double *__restrict__ rz_a = cells[cell_a][field::rz];
+          ONIKA_ASSUME_ALIGNED(rz_a);
 
-					for(size_t p=0 ; p<storage.m_info.size() ; p++)
-					{
-						auto& [offset, size, id] = storage.m_info[p];
+          //          for(size_t p=0 ; p<storage.m_info.size() ; p++)
+          //          {
+          //            auto& [offset, size, id] = storage.m_info[p];
 
-						if( size == 0) continue;
+          //            if( size == 0) continue;
+          if( storage.m_data.size() == 0) continue;
 
-            //lout << "size: " << size << std::endl;
-						// note that size > 0 (otherwise -> continue)
-						uint64_t previous_a_id = InvalidId;
-						uint64_t previous_b_id = InvalidId;
+          //lout << "size: " << size << std::endl;
+          // note that size > 0 (otherwise -> continue)
+          uint64_t previous_a_id = InvalidId;
+          uint64_t previous_b_id = InvalidId;
 
-						for(size_t shift=0 ; shift<size; shift++)
-						{ 
-              // get the current interaction.
-							PlaceholderInteraction& item =  interactions[offset + shift];
-              // verify that this interaction is a persistent interaction.
-							if(!item.persistent()) continue;
-              // get members
-							auto& particle_loc_a = item.i();
-							auto& particle_loc_b = item.j();
-							particle_loc_a.cell  = cell_a;
+          //            for(size_t shift=0 ; shift<size; shift++)
 
-							if( previous_a_id == particle_loc_a.id )
-							{
-								particle_loc_a.cell = interactions[offset + shift - 1].i().cell;
-								particle_loc_a.p    = interactions[offset + shift - 1].i().p;
-							}
-							else
-							{
-								auto [find, p_a] = locate_particle_id(id_a, n_particles, id);
-								particle_loc_a.p = p_a;
+          for(size_t i=0 ; i<storage.m_data.size() ; i++)
+          { 
+            // get the current interaction.
+            PlaceholderInteraction& item =  interactions[i];
+            // verify that this interaction is a persistent interaction.
+            if(!item.persistent()) continue;
+            // get members
+            auto& particle_loc_a = item.pair.owner();
+            auto& particle_loc_b = item.pair.partner();
 
-								// check error
-								if(!find) 
-								{ 
-									color_log::error("update_persistent_interactions", 
-											"The particle with the particle id " 
-											+ std::to_string(id) 
-											+ " is not located in the cell "  
-											+ std::to_string(cell_a));
-								}
-							}
+            uint64_t id = particle_loc_a.id;
 
-							// reuse data
-							if( previous_b_id == particle_loc_b.id )
-							{
-								particle_loc_b.cell = interactions[offset + shift - 1].j().cell;
-								particle_loc_b.p    = interactions[offset + shift - 1].j().p;
-							} 
-							else
-							{
-								// looking for both cell and p values in current and other cells
-								Vec3d r = {rx_a[particle_loc_a.p], ry_a[particle_loc_a.p], rz_a[particle_loc_a.p]};
-								AABB cover_particle = { r - Rmax, r + Rmax};
-								IJK max = g.locate_cell(cover_particle.bmax);
-								IJK min = g.locate_cell(cover_particle.bmin);
-								bool do_continue = true;
-								for (int x = min.i; x <= max.i && do_continue; x++)
-								{
-									for (int y = min.j; y <= max.j && do_continue; y++)
-									{
-										for (int z = min.k; z <= max.k && do_continue; z++)
-										{
-											IJK next = {x, y, z};
-											if (g.contains(next))
-											{
-												size_t cell_b = grid_ijk_to_index(dims, next);
-												const unsigned int nb = cells[cell_b].size();
-												const uint64_t *__restrict__ id_b = cells[cell_b][field::id];
-												ONIKA_ASSUME_ALIGNED(id_b);
-												for(uint16_t p_b=0 ; p_b<nb ; p_b++)
-												{
-													if( id_b[p_b] == particle_loc_b.id)
-													{
-														particle_loc_b.cell = cell_b;
-														particle_loc_b.p    = p_b;
-														do_continue = false;
-														break;
-													}
-												}
-											}
-										}
-									}
-								} 
+            //if( shift > 0 && previous_a_id == particle_loc_a.id )
+            //    if( i > 0 && previous_a_id == particle_loc_a.id )
+            //    {
+            //        particle_loc_a.cell = interactions[i - 1].pair.owner().cell;
+            //        particle_loc_a.p    = interactions[i - 1].pair.owner().p;
+            //      }
+            //      else
+            {
+              auto [find, p_a] = locate_particle_id(id_a, n_particles, id);
+              particle_loc_a.cell  = cell_a;
+              particle_loc_a.p = p_a;
 
-								if(do_continue) 
-								{
-									color_log::error("update_persistent_interactions",
-											"The particle b with the particle id "
-											+ std::to_string(particle_loc_b.id)
-											+ " has not been found");
-								}
-							}
-							// update previous_ab_id
-							previous_a_id = particle_loc_a.id;              
-							previous_b_id = particle_loc_b.id;              
-						}
-					}
-				}  //    GRID_OMP_FOR_END
-			}
-		}
-	};
+              // check error
+              if(!find) 
+              { 
+                color_log::error("update_persistent_interactions", 
+                    "The particle with the particle id " 
+                    + std::to_string(id) 
+                    + " is not located in the cell "  
+                    + std::to_string(cell_a));
+              } 
+            }
 
-	template <class GridT> using UpdatePersistentInteractionsOperatorTmpl = UpdatePersistentInteractionsOperator<GridT>;
+            // reuse data
+            //    if( previous_b_id == particle_loc_b.id )
+            //    {
+            //      assert(i>0);
+            //      particle_loc_b.cell = interactions[i - 1].pair.partner().cell;
+            //    particle_loc_b.p    = interactions[i - 1].pair.partner().p;
+            //      } 
+            //      else
+            {
+              // looking for both cell and p values in current and other cells
+              Vec3d r = {rx_a[particle_loc_a.p], ry_a[particle_loc_a.p], rz_a[particle_loc_a.p]};
+              AABB cover_particle = { r - Rmax, r + Rmax};
+              IJK max = g.locate_cell(cover_particle.bmax);
+              IJK min = g.locate_cell(cover_particle.bmin);
+              bool do_continue = true;
+              for (int x = min.i; x <= max.i && do_continue; x++)
+              {
+                for (int y = min.j; y <= max.j && do_continue; y++)
+                {
+                  for (int z = min.k; z <= max.k && do_continue; z++)
+                  {
+                    IJK next = {x, y, z};
+                    if (g.contains(next))
+                    {
+                      size_t cell_b = grid_ijk_to_index(dims, next);
+                      const unsigned int nb = cells[cell_b].size();
+                      const uint64_t *__restrict__ id_b = cells[cell_b][field::id];
+                      ONIKA_ASSUME_ALIGNED(id_b);
+                      for(uint16_t p_b=0 ; p_b<nb ; p_b++)
+                      {
+                        if( id_b[p_b] == particle_loc_b.id)
+                        {
+                          particle_loc_b.cell = cell_b;
+                          particle_loc_b.p    = p_b;
+                          item.pair.ghost = g.is_ghost_cell(cell_b) ? InteractionPair::OwnerGhost : InteractionPair::NotGhost;
+                          do_continue = false;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }
+              } 
 
-	// === register factories ===
-	ONIKA_AUTORUN_INIT(nbh_polyhedron) 
-	{ 
-		OperatorNodeFactory::instance()->register_factory("update_persistent_interactions", make_grid_variant_operator<UpdatePersistentInteractionsOperator>); 
-	}
+              if(do_continue) 
+              {
+                color_log::error("update_persistent_interactions",
+                    "The particle b with the particle id "
+                    + std::to_string(particle_loc_b.id)
+                    + " has not been found");
+              }
+            }
+            // update previous_ab_id
+            previous_a_id = particle_loc_a.id;              
+            previous_b_id = particle_loc_b.id;              
+          }
+          //          }
+        }  //    GRID_OMP_FOR_END
+      }
+    }
+  };
+
+  template <class GridT> using UpdatePersistentInteractionsOperatorTmpl = UpdatePersistentInteractionsOperator<GridT>;
+
+  // === register factories ===
+  ONIKA_AUTORUN_INIT(nbh_polyhedron) 
+  { 
+    OperatorNodeFactory::instance()->register_factory("update_persistent_interactions", make_grid_variant_operator<UpdatePersistentInteractionsOperator>); 
+  }
 } // namespace exaDEM

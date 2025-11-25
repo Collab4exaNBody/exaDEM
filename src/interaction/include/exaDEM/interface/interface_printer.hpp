@@ -15,6 +15,8 @@ namespace exaDEM
     //  std::stringstream sub_id;
     std::stringstream connectivities;
     std::stringstream fracturation;
+    std::stringstream en;
+    std::stringstream et;
   };
 
 
@@ -46,6 +48,14 @@ namespace exaDEM
 
     outFile << "      <DataArray type=\"Float64\" Name=\"Fracturation rate\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
     outFile << buffers.fracturation.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+
+    outFile << "      <DataArray type=\"Float64\" Name=\"En\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+    outFile << buffers.en.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+
+    outFile << "      <DataArray type=\"Float64\" Name=\"Et\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+    outFile << buffers.et.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
 
     outFile << "    </PointData>" << std::endl;
@@ -90,6 +100,8 @@ namespace exaDEM
       outFile << "      <PDataArray type=\"Int32\" Name=\"MPI rank\"  NumberOfComponents=\"1\"/>" << std::endl;
     }
     outFile << "      <PDataArray type=\"Float64\" Name=\"Fracturation rate\"  NumberOfComponents=\"1\"/>" << std::endl;
+    outFile << "      <PDataArray type=\"Float64\" Name=\"En\"  NumberOfComponents=\"1\"/>" << std::endl;
+    outFile << "      <PDataArray type=\"Float64\" Name=\"Et\"  NumberOfComponents=\"1\"/>" << std::endl;
     outFile << "    </PPointData>" << std::endl;
     outFile << "    <PPoints>" << std::endl;
     outFile << "      <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;

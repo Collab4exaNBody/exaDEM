@@ -44,8 +44,7 @@ namespace exaDEM
 
     uint16_t type() { return pair.type; } 
     uint16_t type() const { return pair.type; } 
-    uint32_t cell() { return pair.pi.cell; } // associate cell -> cell_i
-    uint32_t partner_cell() { return pair.pj.cell; } // associate cell -> cell_j
+    uint32_t cell() { return pair.owner().cell; } // associate cell -> cell_i
     InteractionPair& pair_info() { return pair; }
     const InteractionPair& pair_info() const { return pair; }
 
@@ -64,14 +63,11 @@ namespace exaDEM
 
     /**
      * @brief Checks if the interaction is active.
-     *
-     * This function checks if the interaction is active by examining the moment and friction vectors.
-     * An interaction is considered active if either the moment vector or the friction vector is non-zero.
-     *
      * @return True if the interaction is active (moment vector or friction vector is non-zero), false otherwise.
      */
-    ONIKA_HOST_DEVICE_FUNC bool is_active() const
+    ONIKA_HOST_DEVICE_FUNC bool active() const
     {
+      if( !pair.active() ) return false;
       return true;
     }
 

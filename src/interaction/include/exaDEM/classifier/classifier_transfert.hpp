@@ -37,8 +37,8 @@ namespace exaDEM
     constexpr int spti = InteractionTypeId::InnerBond;
     constexpr int ntypes = InteractionTypeId::NTypes;
 
-    classifier.reset_waves();          // Clear existing waves
-    auto &ces = ges.m_data; // Reference to cells containing interactions
+    classifier.reset_waves(); // Clear existing waves
+    auto &ces = ges.m_data;   // Reference to cells containing interactions
 
     size_t n_threads;
 #     pragma omp parallel
@@ -140,9 +140,9 @@ namespace exaDEM
       {
         auto item1 = data[it];
         // Check if interaction in wave has non-zero friction and moment
-        if (item1.is_active()) // alway true if unclassify is called after compress
+        if (item1.active()) // alway true if unclassify is called after compress
         {
-          auto &celli = ces[item1.cell()];
+          auto &celli = ces[item1.pair.owner().cell];
           const unsigned int ni = vector_size(celli.m_data);
           PlaceholderInteraction * __restrict__ data_i_ptr = vector_data(celli.m_data);
           // Iterate through interactions in cell to find matching interaction
@@ -158,8 +158,9 @@ namespace exaDEM
             }
           }
 
-          if( find || (item1.type() >= 4 /** drivers */)) continue;
+//          if( find || (item1.type() >= 4 /** drivers */)) continue;
 
+/*
           // check if this interaction is included into the other cell
           auto& cellj = ces[item1.partner_cell()];
           const unsigned int nj = vector_size(cellj.m_data);
@@ -175,7 +176,7 @@ namespace exaDEM
               break;
             }
           }
-
+*/
           if(!find)
           {
             item1.print();

@@ -51,22 +51,21 @@ namespace exaDEM
 
       int nvv(0), nve(0), nvf(0), nee(0), nvvib(0);                                                // interaction counters [particles]
       int an(0), anvv(0), anve(0), anvf(0), anee(0), anvvib(0);                                    // active interaction counters
+      int gn(0), gnvv(0), gnve(0), gnvf(0), gnee(0), gnvvib(0);                                    // ghost interaction counters
       int nvc(0), nvs(0), nvb(0), nSvv(0), nSve(0), nSvf(0), nSee(0), nSev(0), nSfv(0);          // interaction counters [drivers]
       int anvc(0), anvs(0), anvb(0), anSvv(0), anSve(0), anSvf(0), anSee(0), anSev(0), anSfv(0); // interaction counters [drivers]
+      int gnvc(0), gnvs(0), gnvb(0), gnSvv(0), gnSve(0), gnSvf(0), gnSee(0), gnSev(0), gnSfv(0); // interaction counters [drivers]
 
       const exanb::Vec3d null = {0., 0., 0.};
 
-      auto incr_interaction_counters = [null](const PlaceholderInteraction &I, int &count, int &active_count, int &active_global_count) -> void
+      auto incr_interaction_counters = [null](const PlaceholderInteraction &I, int &count, int &active_count, int &active_global_count, int &ghost_count, int &ghost_global_count) -> void
       {
-        count++;
-        if (I.is_active())
-        {
-          active_count++;
-          active_global_count++;
-        }
+        if( I.pair.ghost == InteractionPair::PartnerGhost ) { ghost_count++ ; ghost_global_count++ ; }
+        else { count++; }
+        if (I.active()) { active_count++; active_global_count++; }
       };
 
-#     pragma omp parallel for reduction(+:nvv, nve, nvf, nee, nvvib, an, anvv, anve, anvf, anee, anvvib, nvc, nvs, nvb, nSvv, nSve, nSvf, nSee, nSev, nSfv, anvc, anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv)
+#     pragma omp parallel for reduction(+:nvv, nve, nvf, nee, nvvib, an, anvv, anve, anvf, anee, anvvib, gn, gnvv, gnve, gnvf, gnee, gnvvib, nvc, nvs, nvb, nSvv, nSve, nSvf, nSee, nSev, nSfv, anvc, anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv, gnvc, gnvs, gnvb, gnSvv, gnSve, gnSvf, gnSee, gnSev, gnSfv)
       for (size_t i = 0; i < cells.size(); i++)
       {
         for (auto &item : cells[i].m_data)
@@ -74,38 +73,38 @@ namespace exaDEM
           auto type = item.type();
           // particles
           if (type == 0)
-            incr_interaction_counters(item, nvv, anvv, an);
+            incr_interaction_counters(item, nvv, anvv, an, gnvv, gn);
           if (type == 1)
-            incr_interaction_counters(item, nve, anve, an);
+            incr_interaction_counters(item, nve, anve, an, gnve, gn);
           if (type == 2)
-            incr_interaction_counters(item, nvf, anvf, an);
+            incr_interaction_counters(item, nvf, anvf, an, gnvf, gn);
           if (type == 3)
-            incr_interaction_counters(item, nee, anee, an);
+            incr_interaction_counters(item, nee, anee, an, gnee, gn);
           // drivers
           // cylinder
           if (type == 4)
-            incr_interaction_counters(item, nvc, anvc, an);
+            incr_interaction_counters(item, nvc, anvc, an, gnvc, gn);
           // surface
           if (type == 5)
-            incr_interaction_counters(item, nvs, anvs, an);
+            incr_interaction_counters(item, nvs, anvs, an, gnvs, gn);
           // ball
           if (type == 6)
-            incr_interaction_counters(item, nvb, anvb, an);
+            incr_interaction_counters(item, nvb, anvb, an, gnvb, gn);
           // stl
           if (type == 7)
-            incr_interaction_counters(item, nSvv, anSvv, an);
+            incr_interaction_counters(item, nSvv, anSvv, an, gnSvv, gn);
           if (type == 8)
-            incr_interaction_counters(item, nSve, anSve, an);
+            incr_interaction_counters(item, nSve, anSve, an, gnSve, gn);
           if (type == 9)
-            incr_interaction_counters(item, nSvf, anSvf, an);
+            incr_interaction_counters(item, nSvf, anSvf, an, gnSvf, gn);
           if (type == 10)
-            incr_interaction_counters(item, nSee, anSee, an);
+            incr_interaction_counters(item, nSee, anSee, an, gnSee, gn);
           if (type == 11)
-            incr_interaction_counters(item, nSev, anSev, an);
+            incr_interaction_counters(item, nSev, anSev, an, gnSev, gn);
           if (type == 12)
-            incr_interaction_counters(item, nSfv, anSfv, an);
+            incr_interaction_counters(item, nSfv, anSfv, an, gnSfv, gn);
           if (type == 13)
-            incr_interaction_counters(item, nvvib, anvvib, an);
+            incr_interaction_counters(item, nvvib, anvvib, an, gnvvib, gn);
         }
       }
 
@@ -117,8 +116,14 @@ namespace exaDEM
                               an,
                               // particle
                               anvv, anve, anvf, anee, anvvib,
+                              // ghost total
+                              gn,
+                              // ghost particle
+                              gnvv, gnve, gnvf, gnee, gnvvib,
                               // driver
-                              anvc, anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv};
+                              anvc, anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv,
+                              // ghost driver
+                              gnvc, gnvs, gnvb, gnSvv, gnSve, gnSvf, gnSee, gnSev, gnSfv};
 
       int rank;
       MPI_Comm_rank(*mpi, &rank);
@@ -133,26 +138,28 @@ namespace exaDEM
           &nvv, &nve, &nvf, &nee, &nvvib, 
           &nvc, &nvs, &nvb, &nSvv, &nSve, &nSvf, &nSee, &nSev, &nSfv, 
           &an, &anvv, &anve, &anvf, &anee, &anvvib, 
-          &anvc, &anvs, &anvb, &anSvv, &anSve, &anSvf, &anSee, &anSev, &anSfv})
+          &gn, &gnvv, &gnve, &gnvf, &gnee, &gnvvib, 
+          &anvc, &anvs, &anvb, &anSvv, &anSve, &anSvf, &anSee, &anSev, &anSfv,
+          &gnvc, &gnvs, &gnvb, &gnSvv, &gnSve, &gnSvf, &gnSee, &gnSev, &gnSfv})
         *it = val[idx++];
 
       lout << "==================================" << std::endl;
-      lout << "* Type of interaction      : active / total " << std::endl;
-      lout << "* Number of interactions   : " << an << " / " << nvv + nve + nvf + nee + nvvib + nvc + nvs + nvb + nSvv + nSve + nSvf + nSee + nSev + nSfv << std::endl;
-      lout << "* Vertex - Vertex          : " << anvv << " / " << nvv << std::endl;
-      lout << "* Vertex - Edge            : " << anve << " / " << nve << std::endl;
-      lout << "* Vertex - Face            : " << anvf << " / " << nvf << std::endl;
-      lout << "* Edge   - Edge            : " << anee << " / " << nee << std::endl;
-      lout << "* Vertex - Cylinder        : " << anvc << " / " << nvc << std::endl;
-      lout << "* Vertex - Surface         : " << anvs << " / " << nvs << std::endl;
-      lout << "* Vertex - Ball            : " << anvb << " / " << nvb << std::endl;
-      lout << "* Vertex - Vertex (STL)    : " << anSvv << " / " << nSvv << std::endl;
-      lout << "* Vertex - Edge (STL)      : " << anSve << " / " << nSve << std::endl;
-      lout << "* Vertex - Face (STL)      : " << anSvf << " / " << nSvf << std::endl;
-      lout << "* Edge   - Edge (STL)      : " << anSee << " / " << nSee << std::endl;
-      lout << "* Edge (STL) - Vertex      : " << anSev << " / " << nSev << std::endl;
-      lout << "* Face (STL) - Vertex      : " << anSfv << " / " << nSfv << std::endl;
-      lout << "* Vertice - Vertex (Stick) : " << nvvib   << " / " << anvvib << std::endl;
+      lout << "* Type of interaction      : active / total / ghost" << std::endl;
+      lout << "* Number of interactions   : " << an << " / " << nvv + nve + nvf + nee + nvvib + nvc + nvs + nvb + nSvv + nSve + nSvf + nSee + nSev + nSfv << " / " << gn << std::endl;
+      lout << "* Vertex - Vertex          : " << anvv << " / " << nvv << " / " << gnvv << std::endl;
+      lout << "* Vertex - Edge            : " << anve << " / " << nve << " / " << gnve << std::endl;
+      lout << "* Vertex - Face            : " << anvf << " / " << nvf << " / " << gnvf << std::endl;
+      lout << "* Edge   - Edge            : " << anee << " / " << nee << " / " << gnee << std::endl;
+      lout << "* Vertex - Cylinder        : " << anvc << " / " << nvc << " / " << gnvc << std::endl;
+      lout << "* Vertex - Surface         : " << anvs << " / " << nvs << " / " << gnvs << std::endl;
+      lout << "* Vertex - Ball            : " << anvb << " / " << nvb << " / " << gnvb << std::endl;
+      lout << "* Vertex - Vertex (STL)    : " << anSvv << " / " << nSvv << " / " << gnSvv << std::endl;
+      lout << "* Vertex - Edge (STL)      : " << anSve << " / " << nSve << " / " << gnSve << std::endl;
+      lout << "* Vertex - Face (STL)      : " << anSvf << " / " << nSvf << " / " << gnSvf << std::endl;
+      lout << "* Edge   - Edge (STL)      : " << anSee << " / " << nSee << " / " << gnSee << std::endl;
+      lout << "* Edge (STL) - Vertex      : " << anSev << " / " << nSev << " / " << gnSev << std::endl;
+      lout << "* Face (STL) - Vertex      : " << anSfv << " / " << nSfv << " / " << gnSfv << std::endl;
+      lout << "* Vertice - Vertex (Stick) : " << nvvib   << " / " << anvvib << " / " << gnvvib << std::endl;
       lout << "==================================" << std::endl;
     }
   };
