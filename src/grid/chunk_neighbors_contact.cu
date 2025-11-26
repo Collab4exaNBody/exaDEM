@@ -817,7 +817,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
         
         cudaDeviceSynchronize();
         
-        printf("OBB\n");
+        //printf("OBB\n");
 
         onika::memory::CudaMMVector<int> res_incr;
 
@@ -857,7 +857,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
        	
         cudaDeviceSynchronize();
         
-        printf("OBB2\n");
+        //printf("OBB2\n");
        	       	
        	cudaFree(cell_i);
        	cudaFree(cell_j);
@@ -871,7 +871,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
        		size = 0;
        	}
 
-	printf("END CHUNK\n");
+	//printf("END CHUNK\n");
     }
   };
 

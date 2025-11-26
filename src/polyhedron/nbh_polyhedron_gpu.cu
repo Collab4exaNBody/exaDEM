@@ -609,21 +609,6 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				
 				auto& classifier2 = *ic2;
 				
-				//auto& type0 = classifier2.waves[0];
-				//auto& type1 = classifier2.waves[1];
-				//auto& type2 = classifier2.waves[2];
-				//auto& type3 = classifier2.waves[3];
-				
-				//type0.m_type = 0;
-				//type1.m_type = 1;
-				//type2.m_type = 2;
-				//type3.m_type = 3;
-				
-				//type0.size2 = 0;
-				//type1.size2 = 0;
-				//type2.size2 = 0;
-				//type3.size2 = 0;
-				
 				//if(size_interactions > 0)
 				//{
 				
@@ -631,6 +616,21 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				{
 					classifier2.initialize();
 				}
+				
+				auto& type0 = classifier2.waves[0];
+				auto& type1 = classifier2.waves[1];
+				auto& type2 = classifier2.waves[2];
+				auto& type3 = classifier2.waves[3];
+				
+				type0.m_type = 0;
+				type1.m_type = 1;
+				type2.m_type = 2;
+				type3.m_type = 3;
+				
+				type0.size2 = 0;
+				type1.size2 = 0;
+				type2.size2 = 0;
+				type3.size2 = 0;
 				
 				if(size_interactions > 0)
 				{
@@ -646,10 +646,13 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					//if( i != 2)
 					//{
 					//printf("TYPE: %d\n", i);
-					printf("BEFORE\n");
+					//printf("BEFORE\n");
 					onika::memory::CudaMMVector<int> nb_history;
 					
 					auto& data = classifier2.waves[i];
+					if( data.size() > 0)
+					{
+					//printf("BEFORE\n");
 					int nbBlocks = ( data.size() + 256 - 1) / 256;
 					//printf("NB BLOCKS: %d\n", nbBlocks);
 					
@@ -780,7 +783,8 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					//}
 					
 					//printf("TYPE:%d FX:%f FY:%f FZ:%f MOMX:%f MOMY:%f MOMZ:%f\n", i, forces[0], forces[1], forces[2], forces[3], forces[4], forces[5]);
-					printf("BEFORE END\n");
+					}
+					//printf("BEFORE END\n");
 				}
 				//printf("end update up\n");
 				   }	
@@ -801,7 +805,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				cudaDeviceSynchronize();
 				//lout << "End get_number_of_interactions_block_pair" << std::endl;
 				
-				printf("GET\n");
+				//printf("GET\n");
 				
 				void* d_temp_storage = nullptr;
 				size_t temp_storage_bytes = 0;
@@ -825,7 +829,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				cudaFree(d_temp_storage);
        /** Get the total number of interaction per type */
        
-       				printf("SCAN\n");
+       				//printf("SCAN\n");
 
 				NumberOfPolyhedronInteractionPerTypes total_nb_int;
 				cudaDeviceSynchronize();
@@ -835,7 +839,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					//lout << "size " << type << " =  " << total_nb_int[type] << std::endl;
 				}	
 				
-				printf("TOTAL_NB\n");
+				//printf("TOTAL_NB\n");
 			
 				//printf("ICI2\n");
 				auto& type0 = classifier2.waves[0];
@@ -913,9 +917,9 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				cudaFree(type2.sub_j);
 				cudaFree(type3.sub_j);
 				
-				printf("CUDAFREE\n");
+				//printf("CUDAFREE\n");
 				
-				if(total_nb_int[0] > 0)
+				/*if(total_nb_int[0] > 0)
 				{
 					cudaMalloc(&type0.ft_x, total_nb_int[0] * sizeof(double) );
 					cudaMalloc(&type0.ft_y, total_nb_int[0] * sizeof(double) );
@@ -1009,9 +1013,9 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					cudaMalloc(&type3.sub_i, total_nb_int[3] * sizeof(uint16_t) );
 					cudaMalloc(&type3.sub_j, total_nb_int[3] * sizeof(uint16_t) );
 					
-				}
+				}*/
 				
-				/*cudaMalloc(&type0.ft_x, total_nb_int[0] * sizeof(double) );
+				cudaMalloc(&type0.ft_x, total_nb_int[0] * sizeof(double) );
 				cudaMalloc(&type1.ft_x, total_nb_int[1] * sizeof(double) );
 				cudaMalloc(&type2.ft_x, total_nb_int[2] * sizeof(double) );
 				cudaMalloc(&type3.ft_x, total_nb_int[3] * sizeof(double) );
@@ -1079,7 +1083,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				cudaMalloc(&type0.sub_j, total_nb_int[0] * sizeof(uint16_t) );
 				cudaMalloc(&type1.sub_j, total_nb_int[1] * sizeof(uint16_t) );
 				cudaMalloc(&type2.sub_j, total_nb_int[2] * sizeof(uint16_t) );
-				cudaMalloc(&type3.sub_j, total_nb_int[3] * sizeof(uint16_t) );*/
+				cudaMalloc(&type3.sub_j, total_nb_int[3] * sizeof(uint16_t) );
 				
 				type0.m_type = 0;
 				type1.m_type = 1;
@@ -1097,10 +1101,10 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				onika::memory::CudaMMVector<int> actives;
 				actives.resize(4);
 				
-				printf("ICI ON FAIT QUOI\n");
+				//printf("ICI ON FAIT QUOI\n");
 				
-				if(total_nb_int[0] > 0 || total_nb_int[1] > 0 || total_nb_int[2] > 0 || total_nb_int[3] > 0)
-				{
+				//if(total_nb_int[0] > 0 || total_nb_int[1] > 0 || total_nb_int[2] > 0 || total_nb_int[3] > 0)
+				//{
 				
 	
 				/** Now, we fill the classifier */
@@ -1120,7 +1124,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 						interactions2.p_j/*.data()*/);
 				//lout << "End fill_classifier_gpu" << std::endl;
 				cudaDeviceSynchronize();
-				printf("FILL\n");
+				//printf("FILL\n");
 				
 				if(!classifier2.use) 
 				{
@@ -1133,7 +1137,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 						//if( i != 2 )
 						//{
 						
-						printf("AFTER\n");
+						//printf("AFTER\n");
 						
 						auto& interaction_classifier = classifier2.waves[i];
 						auto& interaction_history = update.waves[i];
@@ -1239,21 +1243,21 @@ __global__ void CountDuplicates( uint64_t* id_i,
 						cudaFree(interaction_history.indices);
 
 						//}
-						printf("AFTER END\n");
+						//printf("AFTER END\n");
 					}
 				}
-				}
+				//}
 				
 				printf("AVANT CONTACT :\n");
 				printf("TYPE0 : %d/%d\n", actives[0], total_nb_int[0]);
 				printf("TYPE1 : %d/%d\n", actives[1], total_nb_int[1]);
 				printf("TYPE2 : %d/%d\n", actives[2], total_nb_int[2]);
 				printf("TYPE3 : %d/%d\n", actives[3], total_nb_int[3]);
-				printf("\n\n\n");
+				//printf("\n\n\n");
 				//printf("BLOCK PAIR END\n");
 				//}
 				}
-				printf("ON SORT\n");
+				//printf("ON SORT\n");
 			}
 
 			if( *block_version )

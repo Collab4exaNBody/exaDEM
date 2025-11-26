@@ -51,7 +51,7 @@ namespace exaDEM
         YAML example:
 
           - gravity_force:
-             gravity: [0,0,-0.009807]
+             gravity: [0,0,-0.009807] //[0.004573,0,-0.009807]
         )EOF";
     }
 
