@@ -59,6 +59,7 @@ init_update_particle_neighbors:
   - prepro_fragmentation
   - nbh_polyhedron
 #  - nbh_polyhedron_obb_tree
+  - do_update_persistent_interactions_if_required
   - update_interaction_ghost
   - classify_interactions
   - check_classifier_interaction_pair

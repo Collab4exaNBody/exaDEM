@@ -13,8 +13,9 @@ chunk_neighbors_impl:
   - do_update_persistent_interactions_if_required
   - nbh_polyhedron
   - update_interaction_ghost
-  - classify_interactions
   - stats_interactions
+  - check_owner_partner_ghosts
+  - classify_interactions
 
 migrate_particles:
   - migrate_cell_particles_interaction
