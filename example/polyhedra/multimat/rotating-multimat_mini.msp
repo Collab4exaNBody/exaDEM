@@ -60,8 +60,8 @@ domain:
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 10000
+  simulation_end_iteration: 500000
   simulation_log_frequency: 1000
-  simulation_paraview_frequency: -1
+  simulation_paraview_frequency: 1000
   dt: 0.00025 s 
   rcut_inc: 0.1 m

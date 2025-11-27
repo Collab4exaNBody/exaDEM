@@ -60,7 +60,7 @@ namespace exaDEM
       f.z += fn.z;
     }
   }
-  //VT template générique pour les deux versions cohésive et non cohésive
+
   template<bool cohesive>
     ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
         const Vec3d &n, // -normal
@@ -80,8 +80,7 @@ namespace exaDEM
         const Vec3d &vrot_j  // angular velocities j
         );
 
-  //VT version sans cohesion
-  template<> 
+  template<>
     ONIKA_HOST_DEVICE_FUNC inline void contact_force_core<false>(const double dn,
         const Vec3d &n, // -normal
         const double dt,
@@ -100,13 +99,12 @@ namespace exaDEM
         const Vec3d &vrot_j  // angular velocities j
         )
     {
-      const double damp = compute_damp(hkp.damp_rate, hkp.kn, meff); //VT amortissement
+      const double damp = compute_damp(hkp.damp_rate, hkp.kn, meff); 
 
       // === Relative velocity (j relative to i)
-      auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j); //VT vitesse relative
-
+      auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
       // compute relative velocity
-      const double vn = exanb::dot(vel, n); //VT composante normale de la vitesse relative
+      const double vn = exanb::dot(vel, n);
 
       // === Normal force (elatisc contact + viscous damping)
       const Vec3d fn = compute_normal_force(hkp.kn, damp, dn, vn, n); // (fc ==> cohesive force)
@@ -122,7 +120,7 @@ namespace exaDEM
       // === sum forces
       f_i = fn + ft;
        
-      // === DMT adhesive force
+      //VT === DMT adhesive force
       apply_dmt_force(hkp, reff, dn, n, f_i);
 
       // === update moments
