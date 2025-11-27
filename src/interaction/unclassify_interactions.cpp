@@ -45,6 +45,7 @@ namespace exaDEM
 
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED, DocString{"Interaction list"});
     ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, DocString{"Interaction lists classified according to their types"});
+    ADD_SLOT(Classifier2, ic2, INPUT_OUTPUT);
 
     public:
     inline std::string documentation() const override final
@@ -60,29 +61,33 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      auto& classifier = *ic;
-      for(int i = 7; i < 13; i++)
+      auto& classifier = *ic2;
+      for(int i = 0; i < 4; i++)
       {
-      	auto& analysis = classifier.buffers[i];
-        double fn_x = 0;
-        double fn_y = 0;
-        double fn_z = 0;
-        double ft_x = 0;
-        double ft_y = 0;
-        double ft_z = 0;
-        for(int j = 0; j < analysis.dn.size(); j++)
+        auto& data = classifier.waves[i];
+        auto& buffer = classifier.buffers[i];
+        
+        uint64_t* idi = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
+        uint64_t* idj = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
+        uint16_t* subi = (uint16_t*)malloc(data.size() * sizeof(uint16_t));
+        uint16_t* subj = (uint16_t*)malloc(data.size() * sizeof(uint16_t));
+        
+        cudaMemcpy(idi, data.id_i, data.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+        cudaMemcpy(idj, data.id_j, data.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+        cudaMemcpy(subi, data.sub_i, data.size() * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+        cudaMemcpy(subj, data.sub_j, data.size() * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+        
+        auto& fn = buffer.fn;
+        auto& ft = buffer.ft;
+        
+        for(int j = 0; j < data.size(); j++)
         {
-        	fn_x+= analysis.fn[j].x;
-        	fn_y+= analysis.fn[j].y;
-        	fn_z+= analysis.fn[j].z;
-        	
-        	ft_x+= analysis.ft[j].x;
-        	ft_y+= analysis.ft[j].y;
-        	ft_z+= analysis.ft[j].z;
+        	printf("IDI: %d IDJ: %d SUBI: %d SUBJ: %d TYPE: %d FNX: %f FNY: %f FNZ: %F FTX: %f FTY: %f FTZ: %f\n", idi[j], idj[j], subi[j], subj[j], i, fn[j].x, fn[j].y, fn[j].z, ft[j].x, ft[j].y, ft[j].z);
         }
-      	printf("TYPE%d :\n", i);
-      	printf("FNX: %f FNY: %f FNZ: %f\n", fn_x, fn_y, fn_z);
-      	printf("FTX: %d FTY: %f FTZ: %f\n", ft_x, ft_y, ft_z);
+        free(idi);
+        free(idj);
+        free(subi);
+        free(subj);
       }
       if (!ic.has_value())
         return;

@@ -871,7 +871,7 @@ template< class GridT > __global__ void kernelDEUX(GridT* cells,
        		size = 0;
        	}
 
-	//printf("END CHUNK\n");
+	printf("END CHUNK\n");
     }
   };
 

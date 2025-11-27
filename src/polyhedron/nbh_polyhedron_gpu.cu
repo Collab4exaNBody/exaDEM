@@ -602,6 +602,9 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				//lout << "Start get_number_of_interactions_block_pair ..." << std::endl;
 	/** Define cuda block and grid size*/
 				//printf("BLOCK PAIR\n");
+				
+				//printf("CARLO\n");
+				
 				constexpr int block_x = 8;
 				constexpr int block_y = 8;
 				dim3 BlockSize(block_x, block_y, 1);
@@ -612,13 +615,13 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				//if(size_interactions > 0)
 				//{
 				
-				/*if(!classifier2.use)
+				if(!classifier2.use)
 				{
 					//printf("USE\n");
 					classifier2.initialize();
 				}
 				
-				auto& type0 = classifier2.waves[0];
+				/*auto& type0 = classifier2.waves[0];
 				auto& type1 = classifier2.waves[1];
 				auto& type2 = classifier2.waves[2];
 				auto& type3 = classifier2.waves[3];
@@ -651,10 +654,11 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					onika::memory::CudaMMVector<int> nb_history;
 					
 					auto& data = classifier2.waves[i];
-					printf("TYPE%d SIZE: %d\n", i, data.size());
+					//auto& buffer = classifier2.buffers[i];
+					//printf("TYPE%d SIZE: %d\n", i, data.size());
 					if( data.size() > 0)
 					{
-					printf("TYPE%d\n", i);
+					//printf("TYPE%d\n", i);
 					//printf("BEFORE\n");
 					int nbBlocks = ( data.size() + 256 - 1) / 256;
 					//printf("NB BLOCKS: %d\n", nbBlocks);
@@ -665,6 +669,11 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					forces.resize(6);
 					
 					search_active_interactions<<<nbBlocks, 256>>>( data.id_i, data.id_j, data.ft_x, data.ft_y, data.ft_z, data.mom_x, data.mom_y, data.mom_z, nb_history.data(), data.size(), forces.data() );
+					cudaDeviceSynchronize();
+					
+					//uint64_t* idi = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
+					//uint64_t* idj = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
+					//uint64_t* id
 					
 					void* d_temp_storage = nullptr;
 					size_t temp_storage_bytes = 0;
@@ -684,7 +693,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 					
 					//printf("TOTAL POUR LE TYPE %d : %d / %d\n", i, total, data.size());
 					
-					printf("TYPE%d ACTIF: %d\n", i, total);
+					//printf("TYPE%d ACTIF: %d\n", i, total);
 					
 					auto& interaction_history = update.waves[i];
 					
@@ -794,10 +803,14 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				//printf("end update up\n");
 				   }	
 				   
-				if(!classifier2.use)
-				{
-					classifier2.initialize();
-				}
+				//printf("CICCIO\n");
+				   
+				//if(!classifier2.use)
+				//{
+				//	classifier2.initialize();
+				//}
+				
+				//printf("ICI\n");
 				
 				/*auto& type0 = classifier2.waves[0];
 				auto& type1 = classifier2.waves[1];
@@ -1151,7 +1164,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				cudaDeviceSynchronize();
 				//printf("FILL\n");
 				
-				uint64_t* idi = (uint64_t*)malloc(total_nb_int[3] * sizeof(uint64_t));
+				/*uint64_t* idi = (uint64_t*)malloc(total_nb_int[3] * sizeof(uint64_t));
 				uint64_t* idj = (uint64_t*)malloc(total_nb_int[3] * sizeof(uint64_t)); 
 				uint16_t* subi = (uint16_t*)malloc(total_nb_int[3] * sizeof(uint16_t));
 				uint16_t* subj = (uint16_t*)malloc(total_nb_int[3] * sizeof(uint16_t));
@@ -1170,7 +1183,7 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				free(idi);
 				free(idj);
 				free(subi);
-				free(subj);
+				free(subj);*/
 				
 				if(!classifier2.use) 
 				{
@@ -1294,11 +1307,11 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				}
 				//}
 				
-				printf("AVANT CONTACT :\n");
-				printf("TYPE0 : %d/%d\n", actives[0], total_nb_int[0]);
-				printf("TYPE1 : %d/%d\n", actives[1], total_nb_int[1]);
-				printf("TYPE2 : %d/%d\n", actives[2], total_nb_int[2]);
-				printf("TYPE3 : %d/%d\n", actives[3], total_nb_int[3]);
+				//printf("AVANT CONTACT :\n");
+				//printf("TYPE0 : %d/%d\n", actives[0], total_nb_int[0]);
+				//printf("TYPE1 : %d/%d\n", actives[1], total_nb_int[1]);
+				//printf("TYPE2 : %d/%d\n", actives[2], total_nb_int[2]);
+				//printf("TYPE3 : %d/%d\n", actives[3], total_nb_int[3]);
 				//printf("\n\n\n");
 				//printf("BLOCK PAIR END\n");
 				//}
