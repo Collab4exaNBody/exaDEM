@@ -40,7 +40,7 @@ namespace exaDEM
 
   template <typename GridT, class = AssertGridHasFields<GridT>> class UpdateInteractionGhost : public OperatorNode
   {
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT( MPI_Comm , mpi , INPUT , MPI_COMM_WORLD );
     ADD_SLOT(GhostCommunicationScheme , ghost_comm_scheme , INPUT , REQUIRED );
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
@@ -58,29 +58,29 @@ namespace exaDEM
       // Get slots
       auto& interaction_cells = ges->m_data;
       InteractionGhostManager& manager = *interaction_ghost_manager;
-      GridT& g = *grid;
+      auto& g = *grid;
       auto cells = g.cells();
 
       // Reset Interaction within the grid ghost layer
 #pragma omp parallel for
-      for( size_t i=0 ; i<cells->size() ; i++)
-			{
+      for( size_t i=0 ; i<g.number_of_cells() ; i++)
+      {
         if( !g.is_ghost_cell(i) ) continue;
-				const unsigned int n_particles = cells[i].size();
-				CellExtraDynamicDataStorageT<PlaceholderInteraction> &storage = interaction_cells[i];
+        const unsigned int n_particles = cells[i].size();
+        CellExtraDynamicDataStorageT<PlaceholderInteraction> &storage = interaction_cells[i];
         storage.initialize(n_particles);
-			}           
+      }           
 
-			// MPI comms are done here
-			manager.setup(*ghost_comm_scheme, *mpi, interaction_cells);
+      // MPI comms are done here
+      manager.setup(*ghost_comm_scheme, *mpi, interaction_cells, g);
 
-			// Fill ghost layers with 
-			manager.copy_interaction(g, interaction_cells);
-		}
-	};
+      // Fill ghost layers with 
+      manager.copy_interaction(g, interaction_cells);
+    }
+  };
 
-	template <class GridT> using UpdateInteractionGhostTmpl = UpdateInteractionGhost<GridT>;
+  template <class GridT> using UpdateInteractionGhostTmpl = UpdateInteractionGhost<GridT>;
 
-	// === register factories ===
-	ONIKA_AUTORUN_INIT(update_interaction_ghost) { OperatorNodeFactory::instance()->register_factory("update_interaction_ghost", make_grid_variant_operator<UpdateInteractionGhost>); }
+  // === register factories ===
+  ONIKA_AUTORUN_INIT(update_interaction_ghost) { OperatorNodeFactory::instance()->register_factory("update_interaction_ghost", make_grid_variant_operator<UpdateInteractionGhostTmpl>); }
 } // namespace exaDEM

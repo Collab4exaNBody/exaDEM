@@ -89,16 +89,16 @@ namespace exaDEM
       constexpr DRIVER_TYPE t = get_type<T>();
       static_assert( t != DRIVER_TYPE::UNDEFINED );
       auto & driver_vec = m_data.get_nth<t>();
-      assert( idx>=0 && idx<m_type_index.size() );
+      assert( idx>=0 && idx<static_cast<int>(m_type_index.size()) );
       assert( m_type_index[idx].m_type == t );
-      assert( m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < driver_vec.size() );
+      assert( m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < static_cast<int>(driver_vec.size()) );
       return driver_vec[m_type_index[idx].m_index];
     }
 
     template<class FuncT>
     inline auto apply(int idx , FuncT& func)
     {
-      assert( idx>=0 && idx<m_type_index_cpu.size() && m_type_index_cpu.size() == m_type_index.size() );
+      assert( idx>=0 && idx< static_cast<int>(m_type_index_cpu.size()) && m_type_index_cpu.size() == m_type_index.size() );
       DRIVER_TYPE t = m_type_index_cpu[idx].m_type;
       assert( t != DRIVER_TYPE::UNDEFINED );
       if (t == DRIVER_TYPE::CYLINDER) return func( m_data.get_nth<DRIVER_TYPE::CYLINDER>()[ m_type_index_cpu[idx].m_index ] );
@@ -113,7 +113,7 @@ namespace exaDEM
     template<class FuncT>
     inline auto apply(const int idx , const FuncT& func)
     {
-      assert( idx>=0 && idx<m_type_index_cpu.size() && m_type_index_cpu.size() == m_type_index.size() );
+      assert( idx>=0 && idx<static_cast<int>(m_type_index_cpu.size()) && m_type_index_cpu.size() == m_type_index.size() );
       DRIVER_TYPE t = m_type_index_cpu[idx].m_type;
       assert( t != DRIVER_TYPE::UNDEFINED );
       if (t == DRIVER_TYPE::CYLINDER) return func( m_data.get_nth<DRIVER_TYPE::CYLINDER>()[ m_type_index_cpu[idx].m_index ] );
@@ -272,9 +272,9 @@ namespace exaDEM
       static_assert( t != DRIVER_TYPE::UNDEFINED );
       auto * __restrict__ driver_vec = m_data.get_nth_const<t>();
       [[maybe_unused]]const size_t driver_vec_size = m_data_size.get_nth_const<t>();
-      assert( idx>=0 && idx<m_nb_drivers );
+      assert( idx>=0 && idx<static_cast<int>(m_nb_drivers) );
       assert( m_type_index[idx].m_type == t );
-      assert( m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < driver_vec_size );
+      assert( m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < static_cast<int>(driver_vec_size) );
       return driver_vec[m_type_index[idx].m_index];
     }
     

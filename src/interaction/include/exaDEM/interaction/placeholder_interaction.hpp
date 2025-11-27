@@ -170,8 +170,9 @@ namespace exaDEM
 			{
 				return this->as<InnerBondInteraction>().active();
 			}
-			color_log::error("PlaceholderInteraction::active", 
-					"The type value of this interaction is invalid");
+      pair.print();
+			color_log::mpi_error("PlaceholderInteraction::active", 
+					"The type value of this interaction is invalid: "  + std::to_string(type()));
 			std::exit(EXIT_FAILURE);
 		}
 
@@ -186,7 +187,7 @@ namespace exaDEM
 			{
 				return this->as<InnerBondInteraction>().persistent();
 			}
-			color_log::error("PlaceholderInteraction::persistent", 
+			color_log::mpi_error("PlaceholderInteraction::persistent", 
 					"The type value of this interaction is invalid: " + std::to_string(type()));
 			std::exit(EXIT_FAILURE);
 		}
@@ -201,7 +202,7 @@ namespace exaDEM
 			{
 				return this->as<InnerBondInteraction>().ignore_other_interactions();
 			}
-			color_log::error("PlaceholderInteraction::ignore_other_interactions", 
+			color_log::mpi_error("PlaceholderInteraction::ignore_other_interactions", 
 					"The type value of this interaction is invalid");
 			std::exit(EXIT_FAILURE);
 		}
@@ -218,7 +219,7 @@ namespace exaDEM
 			}
       else  
       {
-			  color_log::error("PlaceholderInteraction::reset", 
+			  color_log::mpi_error("PlaceholderInteraction::reset", 
 					"The type value of this interaction is invalid: " + std::to_string(type()));
       }
 		}
@@ -253,7 +254,7 @@ namespace exaDEM
 			{
 				if constexpr( IT == ParticleParticle ) return as<Interaction>();
 				if constexpr( IT == InnerBond ) return as<InnerBondInteraction>();
-				color_log::error("PlaceholderInteraction::as<InteractionType>", 
+				color_log::mpi_error("PlaceholderInteraction::as<InteractionType>", 
 						"Error, no Interaction type is defined for this value of InteractionType");
 			}
 

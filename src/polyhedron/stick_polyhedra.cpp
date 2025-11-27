@@ -30,6 +30,7 @@ under the License.
 
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/traversal.h>
@@ -177,7 +178,6 @@ namespace exaDEM
               [&g, 
               &vertex_fields, 
               &cells, 
-              &info_particles, 
               cell_i, 
               &item, 
               &shps, 

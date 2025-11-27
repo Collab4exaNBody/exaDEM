@@ -68,7 +68,7 @@ namespace exaDEM
       uint64_t id_i = interactions.particle_id_i(loc);
       uint64_t id_j = interactions.particle_id_j(loc);
 
-      assert(loc+size <  interactions.size());
+      assert(loc+size <= interactions.size());
       for(size_t next=loc+1; next<loc+size ; next++)
       {
         if(id_i != interactions.particle_id_i(next) 
@@ -94,10 +94,11 @@ namespace exaDEM
       InterfaceBuildManager& interfaces, 
       ClassifierContainer<InteractionType::InnerBond>& interactions)
   {
+    int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); std::cout << "rank[" << rank << "]: test" << std::endl;
     interfaces.data.clear();
     size_t n_interactions = interactions.size();
 
-    int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank); std::cout << "rank[" << rank << "]: " << n_interactions << std::endl;
+    MPI_Barrier(MPI_COMM_WORLD);
     size_t loc = 0;
     while( loc<n_interactions )
     {

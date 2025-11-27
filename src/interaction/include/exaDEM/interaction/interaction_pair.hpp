@@ -123,75 +123,79 @@ namespace exaDEM
       auto& me_pj = this->pj;
       auto& you_pj = I.pj;
 
-      if (me_pi == you_pi && me_pj == you_pj && this->type == I.type)
-      {
-        return true;
-      }
-      else
-      {
-        return false;
-      }
-    }
+			if (me_pi.id == you_pi.id 
+					&& me_pi.sub == you_pi.sub
+					&& me_pj.id == you_pj.id  
+					&& me_pj.sub == you_pj.sub  
+					&& this->type == I.type)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
 
-    /**
-     * @brief return true if particles id and particles sub id are equals.
-     */
-    ONIKA_HOST_DEVICE_FUNC bool operator==(const InteractionPair& I) const
-    {
-      auto& me_pi = this->pi;
-      auto& you_pi = I.pi;
-      auto& me_pj = this->pj;
-      auto& you_pj = I.pj;
+		/**
+		 * @brief return true if particles id and particles sub id are equals.
+		 */
+		ONIKA_HOST_DEVICE_FUNC bool operator==(const InteractionPair& I) const
+		{
+			auto& me_pi = this->pi;
+			auto& you_pi = I.pi;
+			auto& me_pj = this->pj;
+			auto& you_pj = I.pj;
 
-      if (me_pi == you_pi && me_pj == you_pj && this->type == I.type)
-      {
-        return true;
-      }
-      else
-      {
-        return false;
-      }
-    }
+			if (me_pi == you_pi && me_pj == you_pj && this->type == I.type)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
 
-    ONIKA_HOST_DEVICE_FUNC bool operator<(const InteractionPair& I) const
-    {
-/*      auto me_id_i = owner().id;
-      auto me_id_j = partner().id;
-      auto me_sub_i = pi.sub;
-      auto me_sub_j = pj.sub;
+		ONIKA_HOST_DEVICE_FUNC bool operator<(const InteractionPair& I) const
+		{
+			/*      auto me_id_i = owner().id;
+							auto me_id_j = partner().id;
+							auto me_sub_i = pi.sub;
+							auto me_sub_j = pj.sub;
 
-      auto you_id_i = I.owner().id;
-      auto you_id_j = I.partner().id;
-      auto you_sub_i = I.pi.sub;
-      auto you_sub_j = I.pj.sub;
-*/
-      auto me_id_i = owner().id;
-      auto you_id_i = I.owner().id;
-      if (me_id_i < you_id_i)  { return true; }
-//      else if (me_id_i == you_id_i && me_id_j < you_id_j) { return true; }
-//      else if (me_id_i == you_id_i && me_id_j == you_id_j && me_sub_i < you_sub_i) { return true; }
-//      else if (me_id_i == you_id_i && me_id_j == you_id_j && me_sub_i == you_sub_i && me_sub_j < you_sub_j) {  return true; }
-//      else if (me_id_i == you_id_i && me_id_j == you_id_j && me_sub_i == you_sub_i && me_sub_j == you_sub_j && type < I.type) {  return true; }
-      else return false;
-/*      auto& me_pi = this->pi;
-      auto& you_pi = I.pi;
-      auto& me_pj = this->pj;
-      auto& you_pj = I.pj;
-      if (me_pi.id < you_pi.id)  { return true; }
-      else if (me_pi.id == you_pi.id && me_pj.id < you_pj.id) { return true; }
-      else if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub < you_pi.sub) { return true; }
-      else if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub == you_pi.sub && me_pj.sub < you_pj.sub) {  return true; }
-      else if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub == you_pi.sub && me_pj.sub == you_pj.sub && type < I.type) {  return true; }
-      else return false;
-*/
-    }
+							auto you_id_i = I.owner().id;
+							auto you_id_j = I.partner().id;
+							auto you_sub_i = I.pi.sub;
+							auto you_sub_j = I.pj.sub;
+			 */
+			auto me_id_i = owner().id;
+			auto you_id_i = I.owner().id;
+			if (me_id_i < you_id_i)  { return true; }
+			//      else if (me_id_i == you_id_i && me_id_j < you_id_j) { return true; }
+			//      else if (me_id_i == you_id_i && me_id_j == you_id_j && me_sub_i < you_sub_i) { return true; }
+			//      else if (me_id_i == you_id_i && me_id_j == you_id_j && me_sub_i == you_sub_i && me_sub_j < you_sub_j) {  return true; }
+			//      else if (me_id_i == you_id_i && me_id_j == you_id_j && me_sub_i == you_sub_i && me_sub_j == you_sub_j && type < I.type) {  return true; }
+			else return false;
+			/*      auto& me_pi = this->pi;
+							auto& you_pi = I.pi;
+							auto& me_pj = this->pj;
+							auto& you_pj = I.pj;
+							if (me_pi.id < you_pi.id)  { return true; }
+							else if (me_pi.id == you_pi.id && me_pj.id < you_pj.id) { return true; }
+							else if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub < you_pi.sub) { return true; }
+							else if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub == you_pi.sub && me_pj.sub < you_pj.sub) {  return true; }
+							else if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub == you_pi.sub && me_pj.sub == you_pj.sub && type < I.type) {  return true; }
+							else return false;
+			 */
+		}
 
-    ONIKA_HOST_DEVICE_FUNC void update(InteractionPair& I)
-    {
-      this->pi.cell = I.pi.cell;
-      this->pj.cell = I.pj.cell;
-      this->pi.p = I.pi.p;
-      this->pj.p = I.pj.p;
-    }
-  };
+		ONIKA_HOST_DEVICE_FUNC void update(InteractionPair& I)
+		{
+			this->pi.cell = I.pi.cell;
+			this->pj.cell = I.pj.cell;
+			this->pi.p = I.pi.p;
+			this->pj.p = I.pj.p;
+		}
+	};
 } // namespace exaDEM

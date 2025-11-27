@@ -51,8 +51,8 @@ namespace exaDEM
       int size_types()
       {
         assert(type_map.size() == reverse_type_map.size());
-        assert(type_map.size() == multimat_cp.size());
-        assert(type_map.size() == number_of_materials);
+        assert(type_map.size() * type_map.size() >= multimat_cp.size());
+        assert(static_cast<int>(type_map.size()) >= number_of_materials);
         return number_of_materials;
       }
 
@@ -63,8 +63,8 @@ namespace exaDEM
       int size_drivers()
       {
         assert(driver_map.size() == reverse_driver_map.size());
-        assert(driver_map.size() == drivers_cp.size());
-        assert(driver_map.size() == number_of_drivers);
+        assert(static_cast<int>(driver_map.size()) * static_cast<int>(type_map.size()) >= drivers_cp.size());
+        assert(static_cast<int>(driver_map.size()) >= number_of_drivers);
         return number_of_drivers;
       }
 

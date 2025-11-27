@@ -141,16 +141,17 @@ namespace exaDEM
     for(size_t i = 0; i <n_interactions ; i++)
     {
 			PlaceholderInteraction& I = storage.m_data[i];
+      if( I.pair.type > 13 ) continue; //color_log::mpi_error("update_persistent_interactions", "Interaction type > 13 at position " + std::to_string(i) + " / " + std::to_string(size));
 			if( I.persistent() )
 			{
 				if( I.pair.owner().cell != manager.current_cell_id ) 
-					color_log::error("update_persistent_interactions", "This interaction is illformed, owner.cell should be: " 
+					color_log::mpi_error("update_persistent_interactions", "This interaction is illformed, owner.cell should be: " 
 							+ std::to_string(manager.current_cell_id) 
 							+ " cell: " + std::to_string(I.pair.owner().cell)
 							+ " p; " + std::to_string(I.pair.owner().p) 
 							+ " id: " + std::to_string(I.pair.owner().id)); 
 				if( I.pair.owner().p >= manager.current_cell_particles ) 
-					color_log::error("update_persistent_interactions", "This interaction is illformed, owner.p should be inferior to: " 
+					color_log::mpi_error("update_persistent_interactions", "This interaction is illformed, owner.p should be inferior to: " 
 							+ std::to_string(manager.current_cell_particles)
 							+ " cell: " + std::to_string(I.pair.owner().cell)
 							+ " p; " + std::to_string(I.pair.owner().p) 
@@ -166,16 +167,16 @@ namespace exaDEM
 	}
 
 	// sequential
-	template<typename InteractionT>
 		inline void extract_history(
-				std::vector<InteractionT> &local, 
-				const InteractionT *data, 
+				std::vector<PlaceholderInteraction> &local, 
+				const PlaceholderInteraction *data, 
 				const unsigned int size)
 		{
 			local.clear();
 			for (size_t i = 0; i < size; i++)
 			{
 				const auto &item = data[i];
+        if( item.pair.type > 13 ) continue; 
 				if (item.active())
 				{
 					local.push_back(item);

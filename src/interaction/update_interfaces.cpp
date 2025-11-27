@@ -58,7 +58,7 @@ namespace exaDEM
       auto& manager = *im;
       manager.resize(build_manager.data.size());
       std::memcpy(manager.data.data(), build_manager.data.data(), build_manager.data.size() * sizeof(Interface));
-      assert(check_interface_consistency());
+      assert(check_interface_consistency(*ibm, ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond)));
     }
   };
 

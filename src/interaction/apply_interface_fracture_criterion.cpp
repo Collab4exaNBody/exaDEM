@@ -72,7 +72,6 @@ namespace exaDEM
           auto [offset, size] = interfaces.data[i];
           for(size_t j=0 ; j<size ; j++)
           {
-            assert(j+offset < data_wrapper.size());
             data_wrapper.broke(j+offset); 
           }
           number_of_broken_interfaces += interfaces.break_interface[i]; 

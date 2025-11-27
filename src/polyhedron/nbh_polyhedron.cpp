@@ -116,6 +116,9 @@ namespace exaDEM
 #       pragma omp for schedule(dynamic)
         for (size_t ci = 0; ci < cell_size; ci++)
         {
+          // reinit item
+          item.pair.ghost = InteractionPair::NotGhost;
+          item.pair.swap = false;
           size_t cell_a = cell_ptr[ci];
           auto& vertex_cell_a = vertex_fields[cell_a];
           IJK loc_a = grid_index_to_ijk(dims, cell_a);
@@ -222,7 +225,7 @@ namespace exaDEM
           // Second, we add interactions between two polyhedra.
 
           apply_cell_particle_neighbors(*grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-              [&g, &vertex_fields, &cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &vertex_cell_a, &add_contact, xform, is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
+              [&g, &vertex_fields, &cells, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &vertex_cell_a, &add_contact, xform, is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
               {
               // default value of the interaction studied (A or i -> B or j)
               const uint64_t id_nbh = cells[cell_b][field::id][p_b];
