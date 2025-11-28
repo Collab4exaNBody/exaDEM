@@ -77,8 +77,8 @@ namespace exaDEM
         //cudaMemcpy(subi, data.sub_i, data.size() * sizeof(uint16_t), cudaMemcpyDeviceToHost);
         //cudaMemcpy(subj, data.sub_j, data.size() * sizeof(uint16_t), cudaMemcpyDeviceToHost);
         
-        auto& fn = buffer.fn;
-        //auto& ft = buffer.ft;
+        //auto& fn = buffer.fn;
+        auto& ft = buffer.ft;
         //auto& dn = buffer.dn;
         
         //for(int j = 0; j < data.size(); j++)
@@ -92,7 +92,7 @@ namespace exaDEM
         int active = 0;
         for(int j = 0; j < data.size(); j++)
         {
-        	if(fn[j].x > 0 || fn[j].y > 0 || fn[j].z > 0) active++;
+        	if(ft[j].x != 0 || ft[j].y != 0 || ft[j].z != 0) active++;
         }
         
         printf("TYPE%d %d / %d\n", i, active, data.size());
