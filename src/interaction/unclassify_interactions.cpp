@@ -67,27 +67,35 @@ namespace exaDEM
         auto& data = classifier.waves[i];
         auto& buffer = classifier.buffers[i];
         
-        uint64_t* idi = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
-        uint64_t* idj = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
-        uint16_t* subi = (uint16_t*)malloc(data.size() * sizeof(uint16_t));
-        uint16_t* subj = (uint16_t*)malloc(data.size() * sizeof(uint16_t));
+        //uint64_t* idi = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
+        //uint64_t* idj = (uint64_t*)malloc(data.size() * sizeof(uint64_t));
+        //uint16_t* subi = (uint16_t*)malloc(data.size() * sizeof(uint16_t));
+        //uint16_t* subj = (uint16_t*)malloc(data.size() * sizeof(uint16_t));
         
-        cudaMemcpy(idi, data.id_i, data.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-        cudaMemcpy(idj, data.id_j, data.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-        cudaMemcpy(subi, data.sub_i, data.size() * sizeof(uint16_t), cudaMemcpyDeviceToHost);
-        cudaMemcpy(subj, data.sub_j, data.size() * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+        //cudaMemcpy(idi, data.id_i, data.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+        //cudaMemcpy(idj, data.id_j, data.size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+        //cudaMemcpy(subi, data.sub_i, data.size() * sizeof(uint16_t), cudaMemcpyDeviceToHost);
+        //cudaMemcpy(subj, data.sub_j, data.size() * sizeof(uint16_t), cudaMemcpyDeviceToHost);
         
         auto& fn = buffer.fn;
-        auto& ft = buffer.ft;
+        //auto& ft = buffer.ft;
+        //auto& dn = buffer.dn;
         
+        //for(int j = 0; j < data.size(); j++)
+        //{
+        //	printf("IDI: %d IDJ: %d SUBI: %d SUBJ: %d TYPE: %d DN: %f FNX: %f FNY: %f FNZ: %F FTX: %f FTY: %f FTZ: %f\n", idi[j], idj[j], subi[j], subj[j], i, dn[j], fn[j].x, fn[j].y, fn[j].z, ft[j].x, ft[j].y, ft[j].z);
+        //}
+        //free(idi);
+        //free(idj);
+        //free(subi);
+        //free(subj);
+        int active = 0;
         for(int j = 0; j < data.size(); j++)
         {
-        	printf("IDI: %d IDJ: %d SUBI: %d SUBJ: %d TYPE: %d FNX: %f FNY: %f FNZ: %F FTX: %f FTY: %f FTZ: %f\n", idi[j], idj[j], subi[j], subj[j], i, fn[j].x, fn[j].y, fn[j].z, ft[j].x, ft[j].y, ft[j].z);
+        	if(fn[j].x > 0 || fn[j].y > 0 || fn[j].z > 0) active++;
         }
-        free(idi);
-        free(idj);
-        free(subi);
-        free(subj);
+        
+        printf("TYPE%d %d / %d\n", i, active, data.size());
       }
       if (!ic.has_value())
         return;
