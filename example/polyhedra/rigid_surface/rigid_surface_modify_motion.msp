@@ -1,0 +1,81 @@
+includes:
+  - rigid_surface_common.msp
+
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraRigidSurfaceMotionPolicyDir"
+
+particle_regions:
+  - BOX:
+     bounds: [[1,1,1],[9,9,9]]
+
+input_data:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: octahedron.shp
+  - lattice:
+      structure: SC
+      types: [ Octahedron ]
+      size: [ 1.0 , 1.0 , 1.0 ]
+      region: BOX 
+  - set_mono_mat
+
+driver_motion_policy:
+  - modify_motion:
+     id: 4
+     time: 0.5
+     motion: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [1,0,0], sigma: 5, damprate: 0.999 } 
+     display: true
+  - modify_motion:
+     id: 4
+     time: 1.5
+     motion: { motion_type: STATIONARY } 
+  - modify_motion:
+     id: 4
+     time: 2.5
+     motion: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [1,0,0], sigma: 5, damprate: 0.999 } 
+  - modify_motion:
+     id: 4
+     time: 4.0
+     motion: { motion_type: LINEAR_MOTION, motion_vector: [1,0,0], const_vel: 3 } 
+
+setup_drivers:
+  - register_surface:
+     id: 0
+     state: {normal: [0,1,0], offset: 11}
+     params: { motion_type: STATIONARY }
+  - register_surface:
+     id: 1
+     state: {normal: [0,1,0], offset: -1}
+     params: { motion_type: STATIONARY }
+  - register_surface:
+     id: 2
+     state: {normal: [0,0,1], offset: -1}
+     params: { motion_type: STATIONARY }
+  - register_surface:
+     id: 3
+     state: { normal: [1,0,0], offset: -1}
+     params: { motion_type: STATIONARY }
+  - register_surface:
+     id: 4
+     state: { normal: [1,0,0], offset: 11, surface: 144}
+     params: { motion_type: STATIONARY }
+
+# compute_force is defined into rigid_surface_common.msp
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+
+domain:
+  cell_size: 2 m
+  periodic: [false,false,false]
+  grid_dims: [6,6,6]
+  bounds: [[-1,-1,-1],[11,11,11]]
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 50000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 1000
+  dt: 0.0001 s 
+  rcut_inc: 0.1 m
