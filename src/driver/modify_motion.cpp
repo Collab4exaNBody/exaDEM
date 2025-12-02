@@ -45,6 +45,28 @@ namespace exaDEM
     {
       return R"EOF(
         This operator modifies the motion type of a driver.
+
+        YAML example:
+
+          driver_motion_policy:
+            - modify_motion:
+               id: 0
+               time: 0.5
+               motion: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [1,0,0], sigma: 5, damprate: 0.999 }
+               display: true
+            - modify_motion:
+               id: 0
+               time: 1.5
+               motion: { motion_type: STATIONARY }
+            - modify_motion:
+               id: 0
+               time: 2.5
+               motion: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [1,0,0], sigma: 5, damprate: 0.999 }
+            - modify_motion:
+               id: 0
+               time: 4.0
+               motion: { motion_type: LINEAR_MOTION, motion_vector: [1,0,0], const_vel: 3 }
+
         )EOF";
     }
 
