@@ -97,10 +97,8 @@ namespace exaDEM
 
 			std::string file = *filename + "/%06d.vtp";
 			file = onika::format_string(file,  rank);
-			auto ids = manager.create_indirection_array();
-			manager.fill_position(ids);
-			manager.fill_connect_and_value(ids);
-			manager.write_vtp(file, ids.size());
+			manager.fill_fn_at_point_data();
+			manager.write_vtp(file);
 		}
 	};
 
