@@ -14,5 +14,5 @@
 # kind, either express or implied.  see the license for the
 # specific language governing permissions and limitations
 # under the license.
-set(exadem_driver_LINK_LIBRARIES exadem_shape exanbCore)
+set(exadem_driver_LINK_LIBRARIES exadem_numerical_scheme exadem_shape exanbCore)
 xnb_add_plugin(exadem_driver ${CMAKE_CURRENT_SOURCE_DIR})
