@@ -74,12 +74,14 @@ namespace exaDEM
   }
 
   //
-  ONIKA_HOST_DEVICE_FUNC inline double compute_normal_force_value_with_cohesive_force(const double a_kn, const double a_fc, const double a_damp, const double a_dn, const double a_vn)
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d compute_normal_force_value_with_cohesive_force(const double a_kn, const double a_fc, const double a_damp, const double a_dn, const double a_vn, const Vec3d &a_n)
   {
     const double fne = -a_kn * a_dn;  // elastic contact
     const double fnv = a_damp * a_vn; // viscous damping
-    const double fn = fnv + fne - a_fc;
-    const double ret = fn < (-a_fc) ? -a_fc : fn;
+    const double fn_norm = fnv + fne - a_fc;
+    const double fn = fn_norm < (-a_fc) ? -a_fc : fn_norm;
+    const auto   ret = fn * a_n;
+
     return ret;
   }
 

@@ -1,0 +1,69 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_polyhedra.msp
+
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraDrum_DMT"
+
+input_data:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: alpha3.shp
+  - read_shape_file:
+     filename: octahedron.shp
+  - lattice:
+      structure: BCC
+      types: [alpha3,Octahedron ]
+      size: [ 1.5 , 1.5 , 1.5 ]
+      enlarge_bounds: 0.0 m
+  - set_fields:
+     polyhedra: true
+     type:              [ alpha3, Octahedron]
+     velocity:          [[0,0,0],    [0,0,0]]
+     sigma_velocity:    [    0.1,        0.1]
+     random_quaternion: [   true,       true]
+  - multimat_contact_params:
+     mat1:      [ alpha3,     alpha3, Octahedron ]
+     mat2:      [ alpha3, Octahedron, Octahedron ]
+     kn:        [   5000,      10000,      15000 ]
+     kt:        [   4000,       8000,      12000 ]
+     kr:        [    0.0,        0.0,        0.0 ]
+     mu:        [    0.3,        0.3,        0.3 ]
+     damprate:  [  0.999,      0.999,      0.999 ]
+     gamma:     [     3.,         3.,         3. ]
+  - drivers_contact_params:
+     mat:       [ alpha3, Octahedron ]
+     driver_id: [      0,          0 ]
+     kn:        [  10000,      15000 ]
+     kt:        [   8000,      12000 ]
+     kr:        [    0.0,        0.1 ]
+     mu:        [    0.5,        0.5 ]
+     damprate:  [  0.999,      0.999 ]
+     gamma:     [     10.,         10. ]
+
+setup_drivers:
+  - register_cylinder:
+     id: 0
+     state: {center: [7.5 m,7.5 m,7.5 m], axis: [1,0,1], radius: 13 m, vrot: [0,0.05,0]}
+     params: { motion_type: STATIONARY }
+
+compute_force:
+  - gravity_force
+  - contact_multimat_polyhedron_hooke_dmt
+
+domain:
+  cell_size: 5 m
+  periodic: [false,true,false]
+  grid_dims: [3, 3, 1]
+  bounds: [[0 m ,0 m, 0 m],[15 m, 15 m, 5 m]]
+  expandable: true  
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 500000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 1000
+  dt: 0.00025 s 
+  rcut_inc: 0.1 m
