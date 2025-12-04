@@ -1,0 +1,5 @@
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/pale.shp DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/pale2.stl DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/pos.txt DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+add_omp_mpi_test("ImposedDriverMoment" "driver_applied_mom.msp")
+add_omp_mpi_test("EquilibriumMoment" "driver_counter_mom.msp")
