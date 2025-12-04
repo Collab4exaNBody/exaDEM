@@ -29,6 +29,7 @@ under the License.
 #include <memory>
 
 #include <exaDEM/contact_force_parameters.h>
+#include <exaDEM/contact_params_checker.h>
 #include <exaDEM/compute_contact_force.h>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/classifier/interactionSOA.hpp>
@@ -218,7 +219,7 @@ namespace exaDEM
         }
       }
 
-      /** Some check mutlimat versus singlemat */
+      /** Some check multimat versus singlemat */
       if constexpr  (multimat) /** Multiple materials */
       {
         if( !multimat_cp.has_value() )
@@ -258,6 +259,8 @@ namespace exaDEM
         }
         /** Some global checks */
         /** Is cohesive force define while it's not used */
+
+
         if constexpr (ContactLaw != ContactLawType::Cohesive)
         {
           if(config->dncut > 0)
@@ -270,6 +273,12 @@ namespace exaDEM
           }
         }
       }
+
+      //const bool lconfig = config.has_value();
+      //const bool lconfig_driver  = (drivers->get_size() > 0);
+      //check_contact_params( lconfig, lconfig_driver, opertor_name(), *config, *config_driver, ContactLaw, AdhesionLaw);
+        
+
       *print_warning = pw;
     }
 

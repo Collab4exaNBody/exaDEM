@@ -152,7 +152,7 @@ namespace YAML
   {
     static bool decode(const Node &node, ContactParams &v)
     {
-      v = ContactParams{}; // initializes defaults values
+      v = ContactParams{}; // initializes defaults values    
       if (!node.IsMap())
       {
         return false;
