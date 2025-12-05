@@ -43,6 +43,7 @@ namespace exaDEM
     ADD_SLOT(std::vector<double>,        kr, INPUT, REQUIRED, DocString{"List of kr values."});
     ADD_SLOT(std::vector<double>,        mu, INPUT, REQUIRED, DocString{"List of mu values."});
     ADD_SLOT(std::vector<double>,        fc, INPUT, OPTIONAL, DocString{"List of fc values."});
+    ADD_SLOT(std::vector<double>,     gamma, INPUT, OPTIONAL, DocString{"List of gamma values."});
     ADD_SLOT(std::vector<double>,  damprate, INPUT, REQUIRED, DocString{"List of damprate values."});
     ADD_SLOT(ContactParams, default_config, INPUT, OPTIONAL, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
 
@@ -94,6 +95,7 @@ namespace exaDEM
 
       std::vector<double> cohesion_coeffs;
       std::vector<double> dncut_coeffs;
+      std::vector<double> gamma_coeffs;
 
       int number_of_pairs = material_types_1.size();
 
@@ -123,6 +125,15 @@ namespace exaDEM
         check_lengths_match(dncut_coeffs, "dncut");
         fill_cohesion_part = true;
       } 
+
+      bool fill_DMT_part = false;
+
+      if(gamma.has_value())
+      {
+        gamma_coeffs = *gamma;
+        check_lengths_match(gamma_coeffs, "gamma");
+        fill_DMT_part = true;
+      }
 
       /** check types / materials */
       for(auto& type_name : material_types_1)
@@ -182,6 +193,16 @@ namespace exaDEM
           params.fc = 0.0;
           params.dncut = 0.0;
         }
+        
+        if(fill_DMT_part)
+        {
+          params.gamma = gamma_coeffs[p];
+        } 
+        else
+        {
+          params.gamma = 0.0;
+        }
+
         cp.register_multimat(type_1, type_2, params);
       } 
 
