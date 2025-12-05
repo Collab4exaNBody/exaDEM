@@ -31,61 +31,91 @@ namespace exaDEM
   {
     const double dt;
     const double mass;
-    
+
     template<class T>
-    inline void operator()(T& arg)
-    {
-      static_assert( get_type<T>() != DRIVER_TYPE::UNDEFINED );
-      if constexpr ( std::is_same_v< std::remove_cv_t<T> , Ball > )
+      inline void operator()(T& arg)
       {
-        arg.weigth = mass;
-        arg.f_ra(dt);
+        static_assert( get_type<T>() != DRIVER_TYPE::UNDEFINED );
+        if constexpr ( std::is_same_v< std::remove_cv_t<T> , Ball > )
+        {
+          arg.weigth = mass;
+          arg.f_ra(dt);
+        }
+        if constexpr ( std::is_same_v< std::remove_cv_t<T> , Surface > )
+        {
+          arg.weigth = mass;
+        }
+        arg.force_to_accel();
       }
-      if constexpr ( std::is_same_v< std::remove_cv_t<T> , Surface > )
-      {
-        arg.weigth = mass;
-      }
-      arg.force_to_accel();
-    }
   };
 
-  struct tmp_reduce
+  struct gather_forces_moment
   {
-    inline std::tuple<bool, Vec3d> operator()(Ball& arg)
+    inline std::tuple<bool, Vec3d, Vec3d> operator()(Ball& arg)
     {
       if( arg.is_compressive() || arg.is_force_motion() )
       {
-        return {true, arg.forces};
+        return {true, arg.forces, {0,0,0}};
       }
       else 
       { 
-        return {false, {0,0,0}};
+        return {false, {0,0,0}, {0,0,0}};
       }
-    }
-    
-    inline std::tuple<bool, Vec3d> operator()(Surface& arg)
-    {
-      if( arg.is_compressive() || arg.is_force_motion() )
-      {
-        return {true, arg.forces};
-      }
-      else 
-      { 
-        return {false, {0,0,0}};
-      }
-    }
-    
-    inline std::tuple<bool, Vec3d> operator()(Cylinder & arg)
-    {
-      return {false, {0,0,0}};
     }
 
-    inline std::tuple<bool, Vec3d> operator()(Stl_mesh & arg) 
+    inline std::tuple<bool, Vec3d, Vec3d> operator()(Surface& arg)
     {
-      return {false, {0,0,0}};
+      if( arg.is_compressive() || arg.is_force_motion() )
+      {
+        return {true, arg.forces, {0,0,0}};
+      }
+      else 
+      { 
+        return {false, {0,0,0}, {0,0,0}};
+      }
+    }
+
+    inline std::tuple<bool, Vec3d, Vec3d> operator()(Cylinder & arg)
+    {
+      return {false, {0,0,0}, {0,0,0}};
+    }
+
+    inline std::tuple<bool, Vec3d, Vec3d> operator()(Stl_mesh & arg) 
+    {
+      if( arg.need_forces() || arg.need_moment() )
+      {
+        return {true, arg.forces, arg.mom};
+      }
+      return {false, {0,0,0}, {0,0,0}};
     }
   };
 
+  struct set_forces_moment
+  {
+    Vec3d forces;
+    Vec3d moment;
+
+    inline void operator()(Ball& arg)
+    {
+      arg.forces = forces;
+    }
+
+    inline void operator()(Surface& arg)
+    {
+      arg.forces = forces;
+    }
+
+    inline void operator()(Cylinder & arg)
+    {
+      arg.forces = forces;
+    }
+
+    inline void operator()(Stl_mesh & arg) 
+    {
+      arg.forces = forces;
+      arg.mom = moment;
+    }
+  };
 
   class ForceToAccelDriverFunctor : public OperatorNode
   {
@@ -107,16 +137,19 @@ namespace exaDEM
       // we need to update forces if required
       std::vector <int> ids; // id, forces
       std::vector <double> pack; // id, forces
-      tmp_reduce reduce;
+      gather_forces_moment reduce;
       for (size_t id = 0; id < drivers->get_size(); id++)
       {
-        auto [update , forces] = drivers->apply( id , reduce );
+        auto [update , forces, moment] = drivers->apply( id , reduce );
         if( update )
         {
           ids.push_back(id);
           pack.push_back(forces.x);
           pack.push_back(forces.y);
           pack.push_back(forces.z);
+          pack.push_back(moment.x);
+          pack.push_back(moment.y);
+          pack.push_back(moment.z);
         }
       }
 
@@ -124,12 +157,13 @@ namespace exaDEM
       {
         std::vector <double> unpack(pack.size());
         MPI_Allreduce(pack.data(), unpack.data(), pack.size(), MPI_DOUBLE, MPI_SUM, *mpi);
-        //for(size_t i = 0 ; i < pack.size() ; i++)
         for(size_t i = 0 ; i < ids.size() ; i++)
         {
-          const Vec3d forces = Vec3d{unpack[i*3], unpack[i*3+1], unpack[i*3+2]};
           int id = ids[i];
-          drivers->apply( id , [forces] (auto& args) {args.forces = forces;} );
+          set_forces_moment func;
+          func.forces = Vec3d{unpack[i*6], unpack[i*6+1], unpack[i*6+2]};;
+          func.moment = Vec3d{unpack[i*6+3], unpack[i*6+4], unpack[i*6+5]};
+          drivers->apply( id , func );
         }
       }
       force_to_accel func = {*dt, *system_mass};
