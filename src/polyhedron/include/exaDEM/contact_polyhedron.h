@@ -423,6 +423,7 @@ namespace exaDEM
                 lockAndAdd(cell[field::fy][p_i], f.y);
                 lockAndAdd(cell[field::fz][p_i], f.z);
                 if( driver.need_forces() ) lockAndAdd( driver.forces, -f);
+                if( driver.need_moment() ) lockAndAdd( driver.mom, compute_moments(contact_position, driver.center, -f, -item.moment) );
               }
 
               //  j to i 
@@ -442,7 +443,8 @@ namespace exaDEM
                 lockAndAdd(cell[field::fy][p_i], -f.y);
                 lockAndAdd(cell[field::fz][p_i], -f.z);
                 item.friction = -item.friction;
-                if( driver.need_forces() ) lockAndAdd( driver.forces, f);
+                if( driver.need_forces() ) lockAndAdd( driver.forces, f); 
+                if( driver.need_moment() ) lockAndAdd( driver.mom, compute_moments(contact_position, driver.center, f, item.moment));
               }
 
             }

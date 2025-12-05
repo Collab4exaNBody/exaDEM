@@ -89,63 +89,21 @@ namespace exaDEM
       } 
     }
     
-    /**
-     * @brief Creates an indirection array for particle indexes (cell_id, pos_id).
+    /** 
+     * @brief new version
      *
-     * This function creates and returns an indirection array as a vector of IdType. Not that id are unique.
-     *
-     * @return A vector of IdType representing the created indirection array.
      */
-    std::vector<IdType> create_indirection_array()
-    {
-      const size_t size = network.size();
-      std::vector<IdType> ids(size * 2); // 2 Id per elem
-      size_t offset = 0;
-
-      // Get all particles
-      for (auto it : network)
-      {
-        KeyType c = it.first;
-        ids[offset++] = c.first;
-        ids[offset++] = c.second;
-      }
-
-      // Remove doublons
-      auto it = unique(ids.begin(), ids.end());
-      ids.resize(distance(ids.begin(), it));
-
-      // Sort them to speed up the future lookup processes.
-      std::sort(ids.begin(), ids.end());
-      return ids;
-    }
-
-    void fill_position(std::vector<IdType> &ids)
+    void fill_fn_at_point_data()
     {
       auto * cells = grid.cells();
-      for (size_t i = 0; i < ids.size(); i++)
-      {
-        auto [cell, id] = ids[i];
-        pos << " " << cells[cell][field::rx][id] << " " << cells[cell][field::ry][id] << " " << cells[cell][field::rz][id];
-      }
-    }
-
-    /**
-     * @brief Fills stringstreams with connectivity and value data.
-     * @param ids The vector of particle IDs for which connectivity and value data is to be retrieved.
-     */
-    void fill_connect_and_value(std::vector<IdType> &ids)
-    {
       for (auto it : network)
       {
-        auto [i, j] = it.first;
-        auto iti = std::lower_bound(ids.begin(), ids.end(), i);
-        auto itj = std::lower_bound(ids.begin(), ids.end(), j);
-        assert(iti != ids.end());
-        assert(itj != ids.end());
-        int ii = std::distance(ids.begin(), iti);
-        int jj = std::distance(ids.begin(), itj);
-        connect << " " << ii << " " << jj;
-        val << " " << it.second;
+        auto& [i, j] = it.first;
+        auto& [cell_i, p_i] = i;
+        auto& [cell_j, p_j] = j;
+        pos << " " << cells[cell_i][field::rx][p_i] << " " << cells[cell_i][field::ry][p_i] << " " << cells[cell_i][field::rz][p_i];
+        pos << " " << cells[cell_j][field::rx][p_j] << " " << cells[cell_j][field::ry][p_j] << " " << cells[cell_j][field::rz][p_j];
+        val << " " << it.second << " " << it.second;
       }
     }
 
@@ -158,7 +116,7 @@ namespace exaDEM
      * @param name The name of the VTP file to write.
      * @param n_particles The number of particles to write data for.
      */
-    void write_vtp(std::string name, size_t n_particles)
+    void write_vtp(std::string name)
     {
       size_t n_interactions = network.size();
       std::ofstream outFile(name);
@@ -171,30 +129,30 @@ namespace exaDEM
       outFile << "<?xml version=\"1.0\"?>" << std::endl;
       outFile << "<VTKFile type=\"PolyData\">" << std::endl;
       outFile << "  <PolyData>" << std::endl;
-      outFile << "    <Piece NumberOfPoints=\"" << n_particles << "\" NumberOfLines=\"" << n_interactions << "\">" << std::endl;
+      outFile << "    <Piece NumberOfPoints=\"" << n_interactions*2 << "\" NumberOfLines=\"" << n_interactions << "\">" << std::endl;
+      outFile << "    <PointData>" << std::endl;
+      outFile << "      <DataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+      if (n_interactions != 0)
+        outFile << val.rdbuf() << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "    </PointData>" << std::endl;
       outFile << "    <Points>" << std::endl;
       outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-      if (n_particles != 0)
+      if (n_interactions != 0)
         outFile << pos.rdbuf() << std::endl;
       outFile << "      </DataArray>" << std::endl;
       outFile << "    </Points>" << std::endl;
       outFile << "    <Lines>" << std::endl;
       outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
-      if (n_interactions != 0)
-        outFile << connect.rdbuf() << std::endl;
+      for (size_t i = 0; i < 2*n_interactions; i++)
+        outFile << " " << i;
       outFile << "      </DataArray>" << std::endl;
       outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
-      for (size_t i = 0; i < n_interactions; i++)
+      for (size_t i = 1; i <= n_interactions; i++)
         outFile << " " << 2 * i;
       outFile << std::endl;
       outFile << "      </DataArray>" << std::endl;
       outFile << "    </Lines>" << std::endl;
-      outFile << "    <CellData>" << std::endl;
-      outFile << "      <DataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
-      if (n_interactions != 0)
-        outFile << val.rdbuf() << std::endl;
-      outFile << "      </DataArray>" << std::endl;
-      outFile << "    </CellData>" << std::endl;
       outFile << "    </Piece>" << std::endl;
       outFile << "  </PolyData>" << std::endl;
       outFile << "</VTKFile>" << std::endl;
@@ -222,12 +180,12 @@ namespace exaDEM
       outFile << "<?xml version=\"1.0\"?>" << std::endl;
       outFile << "<VTKFile type=\"PPolyData\"> " << std::endl;
       outFile << "   <PPolyData GhostLevel=\"0\">" << std::endl;
-      outFile << "     <PPoints>" << std::endl;
+      outFile << "     <PPoints Scalar=\"fn\">" << std::endl;
       outFile << "       <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
       outFile << "     </PPoints> " << std::endl;
-      outFile << "     <PCellData Scalar=\"fn\">" << std::endl;
+      outFile << "     <PPointData>" << std::endl;
       outFile << "       <PDataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"1\"/>" << std::endl;
-      outFile << "     </PCellData> " << std::endl;
+      outFile << "     </PPointData>" << std::endl;
       std::filesystem::path full_path(basename);
       std::string directory = full_path.filename().string();
       std::string subfile = directory + "/%06d.vtp";
