@@ -331,9 +331,9 @@ namespace exaDEM
 
       if (config.has_value()) cfg = *config;
       if (config_driver.has_value()) cfg_driver = *config_driver;
-
-      check_contact_params( operator_name(), cfg, cfg_driver, ContactLaw, AdhesionLaw);
-      
+// singlemat
+      if( !multimat ) { check_contact_params( operator_name(), cfg, cfg_driver, ContactLaw, AdhesionLaw); }
+      else { check_contact_params( operator_name(), *multimat_cp, *multimat_cp /* drivers are included here */, ContactLaw, AdhesionLaw); }
       *print_warning = pw;
     }
   };
