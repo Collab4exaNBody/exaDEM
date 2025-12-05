@@ -30,6 +30,7 @@ under the License.
 
 #include <exaDEM/vertices.hpp>
 #include <exaDEM/contact_force_parameters.h>
+#include <exaDEM/contact_params_checker.h>
 #include <exaDEM/compute_contact_force.h>
 
 #include <exaDEM/interaction/interaction.hpp>
@@ -320,6 +321,19 @@ namespace exaDEM
           }
         }
       }
+      /*
+      const bool lconfig = config.has_value();
+      const bool lconfig_driver  =(config_driver.has_value())&&(drivers->get_size() > 0);
+      std::cout << "lconfig_driver: " << lconfig_driver << std::endl;
+      */
+      std::optional<ContactParams> cfg;
+      std::optional<ContactParams> cfg_driver;
+
+      if (config.has_value()) cfg = *config;
+      if (config_driver.has_value()) cfg_driver = *config_driver;
+
+      check_contact_params( operator_name(), cfg, cfg_driver, ContactLaw, AdhesionLaw);
+      
       *print_warning = pw;
     }
   };

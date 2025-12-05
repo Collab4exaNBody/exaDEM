@@ -32,7 +32,7 @@ input_data:
      kr:        [    0.0,        0.0,        0.0 ]
      mu:        [    0.3,        0.3,        0.3 ]
      damprate:  [  0.999,      0.999,      0.999 ]
-     gamma:     [     3.,         3.,         3. ]
+#     gamma:     [     3.,         3.,         3. ]
   - drivers_contact_params:
      mat:       [ alpha3, Octahedron ]
      driver_id: [      0,          0 ]
@@ -41,7 +41,7 @@ input_data:
      kr:        [    0.0,        0.1 ]
      mu:        [    0.5,        0.5 ]
      damprate:  [  0.999,      0.999 ]
-     gamma:     [     10.,         10. ]
+#     gamma:     [     10.,         10. ]
 
 setup_drivers:
   - register_cylinder:

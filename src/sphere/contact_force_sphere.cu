@@ -274,9 +274,13 @@ namespace exaDEM
         }
       }
 
-      //const bool lconfig = config.has_value();
-      //const bool lconfig_driver  = (drivers->get_size() > 0);
-      //check_contact_params( lconfig, lconfig_driver, opertor_name(), *config, *config_driver, ContactLaw, AdhesionLaw);
+      std::optional<ContactParams> cfg;
+      std::optional<ContactParams> cfg_driver;
+
+      if (config.has_value()) cfg = *config;
+      if (config_driver.has_value()) cfg_driver = *config_driver;
+
+      check_contact_params( opertor_name(), cfg, cfg_driver, ContactLaw, AdhesionLaw);
         
 
       *print_warning = pw;

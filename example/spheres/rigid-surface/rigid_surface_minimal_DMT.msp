@@ -28,13 +28,13 @@ setup_drivers:
 
 compute_force:
   - gravity_force
-  #- contact_singlemat_sphere_cohesive_dmt:
-  - contact_singlemat_sphere_cohesive_none:
+  - contact_singlemat_sphere_cohesive_dmt:
+  #- contact_singlemat_sphere_cohesive_none:
      symetric: true
      config: { dncut: 0.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.2, damp_rate: 0.9, gamma: 10.} 
      #config: { dncut: 0.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.2, damp_rate: 0.9} 
-     config_driver: { dncut: 0.1 m , kn: 100000, kt: 80000, kr: 0.1, fc: 0.05, mu: 0.5, damp_rate: 0.9, gamma: 10.} 
-     #config_driver: { dncut: 0.1 m , kn: 100000, kt: 80000, kr: 0.1, fc: 0.05, mu: 0.5, damp_rate: 0.9} 
+     #config_driver: { dncut: 0.1 m , kn: 100000, kt: 80000, kr: 0.1, fc: 0.05, mu: 0.5, damp_rate: 0.9, gamma: 10.} 
+     config_driver: { dncut: 0.1 m , kn: 100000, kt: 80000, kr: 0.1, fc: 0.05, mu: 0.5, damp_rate: 0.9} 
 
 domain:
   cell_size: 2.5 m
