@@ -177,9 +177,7 @@ namespace exaDEM
               const auto &m_i = cell_i[field::mass][item.p_i];
               const auto &m_j = cell_j[field::mass][item.p_j];
 
-              //double rad_i = shp_i->minskowski();
               double rad_i = shp_i.m_radius;
-              //double rad_j = shp_j->minskowski();
               double rad_j = shp_j.m_radius;
 
 
@@ -402,7 +400,6 @@ namespace exaDEM
               const double meff = cell[field::mass][p_i];
               const auto &type_i = cell[field::type][p_i];
               const shape &shp_i = shps[type_i];
-              //const double reff = shp_i->minskowski();
               const double reff = shp_i.m_radius;
 
 

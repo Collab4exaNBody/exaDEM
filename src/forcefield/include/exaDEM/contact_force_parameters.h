@@ -39,7 +39,7 @@ namespace exaDEM
     double damp_rate = 0;  /**< Damping rate for contact interaction (controls dissipation). */
     double fc = 0;         /**< Cohesive force threshold (e.g., for bonded contacts). */
     double dncut = 0;      /**< Distance cutoff below which contact is considered active for cohesion force. */
-    double gamma = 0.0;     /**< Adhesion energie per unit of surface (default is 0). */
+    double gamma = 0;      /**< Adhesion energie per unit of surface (default is 0). */
   };
 
   /**
