@@ -397,6 +397,7 @@ namespace exaDEM
 
               // only forces now
               if( driver.need_forces() ) lockAndAdd( driver.forces, -f);
+              if( driver.need_moment() ) lockAndAdd( driver.mom, compute_moments(contact_position, driver.center, -f, -item.moment));
             }
             else
             {

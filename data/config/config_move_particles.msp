@@ -181,7 +181,14 @@ trigger_particle_generator:
     - nth_timestep: { first: false }
 
 ######################################################
+############# Driver Policy      #####################
+######################################################
+## Should be defined by the users. Use modify_motion
+driver_motion_policy: nop 
+
+######################################################
 check_and_update_particles:
+  - driver_motion_policy
   - trigger_move_particles
   - combine_particle_generator
   - update_particles_full

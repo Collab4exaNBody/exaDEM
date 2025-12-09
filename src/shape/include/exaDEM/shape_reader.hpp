@@ -45,12 +45,20 @@ namespace exaDEM
     while (1)
     {
       input >> key;
-      
       if (key == "name")
       {
         input >> shp.m_name;
       }
       // recomputed
+      if (key == "preCompDone")
+      {
+        std::string preCompDoneType;
+        input >> preCompDoneType;
+        if(preCompDoneType != "y")
+        {
+          color_log::error("read_shp", "The “preComnDone” key should be set to “y.” Verify that quantities such as I/m and volume have been defined correctly. If so, replace n with y. Otherwise, you can use Rockable's shapeSurvey to define these values (command “c”).");
+        }
+      }
 /*
       else if (key == "obb.center") // === keys relative to the OBB
       {

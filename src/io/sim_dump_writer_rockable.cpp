@@ -24,6 +24,7 @@ under the License.
 # include <exanb/core/grid.h>
 # include <exanb/core/particle_type_id.h>
 # include <exanb/core/domain.h>
+# include <exanb/core/xform.h>
 # include <mpi.h>
 # include <filesystem> // C++17
 # include <exaDEM/interaction/grid_cell_interaction.hpp>
@@ -80,6 +81,10 @@ namespace exaDEM
       int rank, mpi_size;
       MPI_Comm_rank(*mpi, &rank);
       MPI_Comm_size(*mpi, &mpi_size);
+
+      bool defbox = !domain->xform_is_identity();
+      LinearXForm xform;
+      if(defbox) xform.m_matrix = domain->xform();      
 
       shapes all_shapes = shps;
       int n_drivers = 0; // keep only stl mesh drivers
@@ -172,6 +177,7 @@ namespace exaDEM
             p.cluster = 0;
             p.type = type[j];
             p.pos = Vec3d(rx[j], ry[j], rz[j]);
+            if(defbox) p.pos = xform.transformCoord(p.pos);
             p.vel = Vec3d(vx[j], vy[j], vz[j]);
             p.acc = Vec3d(fx[j], fy[j], fz[j]);
             p.Q = quat[j];

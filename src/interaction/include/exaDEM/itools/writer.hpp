@@ -35,6 +35,7 @@ namespace exaDEM
     template <typename GridT> std::stringstream create_buffer(GridT &grid, Classifier &ic)
     {
       std::stringstream stream;
+      auto cells = grid.cells();
       for (int i = 0; i < Classifier::types; i++)
       {
         size_t size = ic.get_size(i);
@@ -61,7 +62,23 @@ namespace exaDEM
               stream << dn << ",";
               stream << cp_ptr[idx] << ",";
               stream << fn_ptr[idx] << ",";
-              stream << ft_ptr[idx] << std::endl;
+              stream << ft_ptr[idx] << ",";
+              stream << cells[i.cell][field::rx][i.p] << ",";
+              stream << cells[i.cell][field::ry][i.p] << ",";
+              stream << cells[i.cell][field::rz][i.p] << ",";
+              if( type >= 4 && type < 13) // drivers
+              {
+                stream << 0 << ",";
+                stream << 0 << ",";
+                stream << 0;
+              }
+              else
+              {
+                stream << cells[j.cell][field::rx][j.p] << ",";
+                stream << cells[j.cell][field::ry][j.p] << ",";
+                stream << cells[j.cell][field::rz][j.p];
+              }
+              stream << std::endl;
             }
           }
         }
