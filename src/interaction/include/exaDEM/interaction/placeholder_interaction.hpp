@@ -52,29 +52,11 @@ namespace exaDEM
   };
 
 
-	template <typename GridT> 
+	template <typename InteractionT> 
 		inline bool filter_duplicates(
-				const GridT &G,
-				const ParticleSubLocation& owner,
-				const ParticleSubLocation& partner,
-				int type)
-		{
-			if (type < 4) // polyhedron - polyhedron or sphere - sphere
-			{
-				if (G.is_ghost_cell(owner.cell))
-				{
-					return false;
-				}
-			}
-			return true;
-		}
-
-	template <typename GridT, typename InteractionT> 
-		inline bool filter_duplicates(
-				const GridT &G, 
 				const InteractionT &I)
 		{
-      return filter_duplicates(G, I.pair.owner(), I.pair.partner(), I.type());
+      return I.pair.ghost != InteractionPair::PartnerGhost;
 		}
 
 	static constexpr size_t constexpr_max(std::size_t a, std::size_t b) 
@@ -111,14 +93,16 @@ namespace exaDEM
 		InteractionPair pair;
 		alignas(MaxAlign) uint8_t data[PlaceholderInteractionSize];
 
-		ParticleSubLocation& i() { return pair.pi; }
-		ParticleSubLocation& j() { return pair.pj; }
-		ParticleSubLocation& driver() { return j(); }
-		uint16_t type() { return pair.type; } 
-		uint16_t type() const { return pair.type; } 
-		uint32_t cell() { return pair.owner().cell; } // associate cell -> cell_i
-    InteractionPair& pair_info() { return pair; }
-    const InteractionPair& pair_info() const { return pair; }
+		inline ParticleSubLocation& i() { return pair.pi; }
+		inline ParticleSubLocation& j() { return pair.pj; }
+		inline ParticleSubLocation& driver() { return j(); }
+		inline uint16_t type() { return pair.type; } 
+		inline uint16_t type() const { return pair.type; } 
+		inline uint32_t cell() { return pair.owner().cell; } // associate cell -> cell_i
+    inline ParticleSubLocation& owner() { return pair.owner(); }
+    inline ParticleSubLocation& partner() { return pair.partner(); }
+    inline InteractionPair& pair_info() { return pair; }
+    inline const InteractionPair& pair_info() const { return pair; }
 
 		/**
 		 * @brief Displays the Interaction data.
@@ -280,58 +264,6 @@ namespace exaDEM
 		}
 	};
 
-	inline std::pair<bool, PlaceholderInteraction&> get_interaction(std::vector<PlaceholderInteraction> &list, PlaceholderInteraction &I)
-	{
-		auto iterator = std::find(list.begin(), list.end(), I);
-		// assert(iterator == std::end(list) && "This interaction is NOT in the list");
-		bool exist = iterator == std::end(list);
-		return {exist, *iterator};
-	}
-
-	inline std::vector<PlaceholderInteraction> extract_history_omp(std::vector<PlaceholderInteraction> &interactions)
-	{
-		std::vector<PlaceholderInteraction> res;
-#   pragma omp parallel
-		{
-			std::vector<PlaceholderInteraction> tmp;
-#     pragma omp for
-			for (size_t i = 0; i < interactions.size(); i++)
-			{
-				auto& I = interactions[i];
-				if( I.active() ) tmp.push_back(I);
-			}
-
-			if (tmp.size() > 0)
-			{
-#       pragma omp critical
-				{
-					res.insert(res.end(), tmp.begin(), tmp.end());
-				}
-			}
-		}
-
-		return res;
-	}
-
-	inline void update_omp(
-			std::vector<PlaceholderInteraction> &interactions, 
-			std::vector<PlaceholderInteraction> &history)
-	{
-#   pragma omp parallel for
-		for (size_t it = 0; it < interactions.size(); it++)
-		{
-			auto &item = interactions[it];
-			auto lower = std::lower_bound(history.begin(), history.end(), item);
-			if (lower != history.end())
-			{
-				if (item == *lower)
-				{
-					item.update(*lower);
-				}
-			}
-		}
-	}
-
 	inline void update(
 			std::vector<PlaceholderInteraction> &interactions, 
 			std::vector<PlaceholderInteraction> &history)
@@ -344,7 +276,7 @@ namespace exaDEM
 			{
 				if (item == *lower)
 				{
-					item.update(*lower);
+				  item.update(*lower);
 				}
 			}
 		}

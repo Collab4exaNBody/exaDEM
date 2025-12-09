@@ -115,7 +115,7 @@ namespace exaDEM
 						if(filter_vertex_vertex_v2(rVerlet, __particle__, __driver__))
 							//if(filter_vertex_vertex(rVerlet, __particle__, __driver__))
 						{
-							add_contact(p, item, i, idx);
+							add_contact(item, i, idx);
 						} 
 					}
 					// vertex - edge
@@ -125,7 +125,7 @@ namespace exaDEM
 						size_t idx = list.edges[j];
 						if(filter_vertex_edge(rVerlet, __particle__, __driver__))
 						{
-							add_contact(p, item, i, idx);
+							add_contact(item, i, idx);
 						}
 					}
 					// vertex - face
@@ -138,7 +138,7 @@ namespace exaDEM
 						{
 							if(filter_vertex_face(rVerlet, __particle__, __driver__))
 							{
-								add_contact(p, item, i, idx);
+								add_contact(item, i, idx);
 							}
 						}
 					}
@@ -154,7 +154,7 @@ namespace exaDEM
 						const size_t idx = list.edges[j];
 						if(filter_edge_edge(rVerlet, __particle__, __driver__))
 						{
-							add_contact(p, item, i, idx);
+							add_contact(item, i, idx);
 						}
 					}
 				}
@@ -173,7 +173,7 @@ namespace exaDEM
 					{
 						if(filter_vertex_edge(rVerlet, __driver__, __particle__)) 
 						{
-							add_contact(p, item, i, idx);
+							add_contact(item, i, idx);
 						}
 					}
 					// face vertex
@@ -182,7 +182,7 @@ namespace exaDEM
 					{
 						if(filter_vertex_face(rVerlet, __driver__, __particle__))
 						{
-							add_contact(p, item, i, idx);
+							add_contact(item, i, idx);
 						}
 					}
 				}
@@ -242,7 +242,7 @@ namespace exaDEM
 				{
 					if (filter_vertex_driver(driver, rVerlet, vertex_view, vertex_index, shp))
 					{
-						add_contact(pid, item, vertex_index, DRIVER_VERTEX_SUB_IDX);
+						add_contact(item, vertex_index, DRIVER_VERTEX_SUB_IDX);
 					}
 				}
 			}

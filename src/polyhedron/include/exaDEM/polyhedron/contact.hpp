@@ -291,7 +291,7 @@ namespace exaDEM
 								);
 
 						// === for analysis
-						fn = f - item.moment;
+						fn = f - item.friction;
 
 						// === update informations
 						lockAndAdd(mom, compute_moments(contact_position, r, f, item.moment));

@@ -106,14 +106,14 @@ namespace exaDEM
           size_t size = bounds[n_threads-1][spti].first + bounds[n_threads-1][spti].second;
           classifier.get_data<InnerBond>(spti).resize(size);
         }
+        else { std::cout << "This type id is not found" << std::endl; }
       }
 #pragma omp barrier
 
       // All
       for (int interaction_type = 0; interaction_type < InteractionTypeId::NTypesParticleParticle; interaction_type++)
       {
-        auto& data = classifier.get_data<ParticleParticle>(interaction_type);
-        data.copy(
+        classifier.get_data<ParticleParticle>(interaction_type).copy(
             bound[interaction_type].first, 
             bound[interaction_type].second, 
             tmp[interaction_type], 
@@ -143,6 +143,7 @@ namespace exaDEM
         if (item1.active()) // alway true if unclassify is called after compress
         {
           auto &celli = ces[item1.pair.owner().cell];
+          //auto &celli = ces[item1.pair.pi.cell];
           const unsigned int ni = vector_size(celli.m_data);
           PlaceholderInteraction * __restrict__ data_i_ptr = vector_data(celli.m_data);
           // Iterate through interactions in cell to find matching interaction
@@ -158,25 +159,6 @@ namespace exaDEM
             }
           }
 
-//          if( find || (item1.type() >= 4 /** drivers */)) continue;
-
-/*
-          // check if this interaction is included into the other cell
-          auto& cellj = ces[item1.partner_cell()];
-          const unsigned int nj = vector_size(cellj.m_data);
-          PlaceholderInteraction * __restrict__ data_j_ptr = vector_data(cellj.m_data);
-
-          for (size_t it2 = 0; it2 < nj; it2++)
-          {
-            auto &item2 = data_j_ptr[it2].convert<IT>();
-            if (item1 == item2)
-            {
-              item2.update(item1);
-              find = true;
-              break;
-            }
-          }
-*/
           if(!find)
           {
             item1.print();

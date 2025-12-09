@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 
 #include <memory>
 #include <mpi.h>
@@ -40,7 +40,7 @@ namespace exaDEM
     ADD_SLOT(GridT, grid, INPUT, REQUIRED);
     ADD_SLOT(GridCellParticleInteraction, ges, INPUT, REQUIRED, DocString{"Interaction list"});
 
-  public:
+    public:
     inline std::string documentation() const override final { return R"EOF( This operator displays DEM simulation data for a given frequency.)EOF"; }
 
     inline void execute() override final
@@ -109,21 +109,21 @@ namespace exaDEM
       }
 
       std::vector<int> val = {// particle
-                              nvv, nve, nvf, nee, nvvib,
-                              // driver
-                              nvc, nvs, nvb, nSvv, nSve, nSvf, nSee, nSev, nSfv,
-                              // total
-                              an,
-                              // particle
-                              anvv, anve, anvf, anee, anvvib,
-                              // ghost total
-                              gn,
-                              // ghost particle
-                              gnvv, gnve, gnvf, gnee, gnvvib,
-                              // driver
-                              anvc, anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv,
-                              // ghost driver
-                              gnvc, gnvs, gnvb, gnSvv, gnSve, gnSvf, gnSee, gnSev, gnSfv};
+        nvv, nve, nvf, nee, nvvib,
+        // driver
+        nvc, nvs, nvb, nSvv, nSve, nSvf, nSee, nSev, nSfv,
+        // total
+        an,
+        // particle
+        anvv, anve, anvf, anee, anvvib,
+        // ghost total
+        gn,
+        // ghost particle
+        gnvv, gnve, gnvf, gnee, gnvvib,
+        // driver
+        anvc, anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv,
+        // ghost driver
+        gnvc, gnvs, gnvb, gnSvv, gnSve, gnSvf, gnSee, gnSev, gnSfv};
 
       int rank;
       MPI_Comm_rank(*mpi, &rank);
@@ -143,24 +143,24 @@ namespace exaDEM
           &gnvc, &gnvs, &gnvb, &gnSvv, &gnSve, &gnSvf, &gnSee, &gnSev, &gnSfv})
         *it = val[idx++];
 
-      lout << "==================================" << std::endl;
-      lout << "* Type of interaction      : active / total / ghost" << std::endl;
-      lout << "* Number of interactions   : " << an << " / " << nvv + nve + nvf + nee + nvvib + nvc + nvs + nvb + nSvv + nSve + nSvf + nSee + nSev + nSfv << " / " << gn << std::endl;
-      lout << "* Vertex - Vertex          : " << anvv << " / " << nvv << " / " << gnvv << std::endl;
-      lout << "* Vertex - Edge            : " << anve << " / " << nve << " / " << gnve << std::endl;
-      lout << "* Vertex - Face            : " << anvf << " / " << nvf << " / " << gnvf << std::endl;
-      lout << "* Edge   - Edge            : " << anee << " / " << nee << " / " << gnee << std::endl;
-      lout << "* Vertex - Cylinder        : " << anvc << " / " << nvc << " / " << gnvc << std::endl;
-      lout << "* Vertex - Surface         : " << anvs << " / " << nvs << " / " << gnvs << std::endl;
-      lout << "* Vertex - Ball            : " << anvb << " / " << nvb << " / " << gnvb << std::endl;
-      lout << "* Vertex - Vertex (STL)    : " << anSvv << " / " << nSvv << " / " << gnSvv << std::endl;
-      lout << "* Vertex - Edge (STL)      : " << anSve << " / " << nSve << " / " << gnSve << std::endl;
-      lout << "* Vertex - Face (STL)      : " << anSvf << " / " << nSvf << " / " << gnSvf << std::endl;
-      lout << "* Edge   - Edge (STL)      : " << anSee << " / " << nSee << " / " << gnSee << std::endl;
-      lout << "* Edge (STL) - Vertex      : " << anSev << " / " << nSev << " / " << gnSev << std::endl;
-      lout << "* Face (STL) - Vertex      : " << anSfv << " / " << nSfv << " / " << gnSfv << std::endl;
-      lout << "* Vertice - Vertex (Stick) : " << nvvib   << " / " << anvvib << " / " << gnvvib << std::endl;
-      lout << "==================================" << std::endl;
+      lout << "=====================================================" << std::endl;
+      lout << "* Type of interaction      = active / total / ghost" << std::endl;
+      lout << "* Number of interactions   = " << an << " / " << nvv + nve + nvf + nee + nvvib + nvc + nvs + nvb + nSvv + nSve + nSvf + nSee + nSev + nSfv << " / " << gn << std::endl;
+      lout << "* Vertex - Vertex          = " << anvv << " / " << nvv << " / " << gnvv << std::endl;
+      lout << "* Vertex - Edge            = " << anve << " / " << nve << " / " << gnve << std::endl;
+      lout << "* Vertex - Face            = " << anvf << " / " << nvf << " / " << gnvf << std::endl;
+      lout << "* Edge   - Edge            = " << anee << " / " << nee << " / " << gnee << std::endl;
+      lout << "* Vertex - Cylinder        = " << anvc << " / " << nvc << " / " << gnvc << std::endl;
+      lout << "* Vertex - Surface         = " << anvs << " / " << nvs << " / " << gnvs << std::endl;
+      lout << "* Vertex - Ball            = " << anvb << " / " << nvb << " / " << gnvb << std::endl;
+      lout << "* Vertex - Vertex (STL)    = " << anSvv << " / " << nSvv << " / " << gnSvv << std::endl;
+      lout << "* Vertex - Edge (STL)      = " << anSve << " / " << nSve << " / " << gnSve << std::endl;
+      lout << "* Vertex - Face (STL)      = " << anSvf << " / " << nSvf << " / " << gnSvf << std::endl;
+      lout << "* Edge   - Edge (STL)      = " << anSee << " / " << nSee << " / " << gnSee << std::endl;
+      lout << "* Edge (STL) - Vertex      = " << anSev << " / " << nSev << " / " << gnSev << std::endl;
+      lout << "* Face (STL) - Vertex      = " << anSfv << " / " << nSfv << " / " << gnSfv << std::endl;
+      lout << "* Vertice - Vertex (Stick) = " << nvvib   << " / " << anvvib << " / " << gnvvib << std::endl;
+      lout << "=====================================================" << std::endl;
     }
   };
 

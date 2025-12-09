@@ -34,7 +34,6 @@ namespace exaDEM
 
     ONIKA_HOST_DEVICE_FUNC bool operator==(ParticleSubLocation& P)
     {
-
       return (id == P.id && cell == P.cell && p == P.p && sub == P.sub);
     }
 
@@ -49,8 +48,7 @@ namespace exaDEM
    */
   struct InteractionPair
   {
-
-    static constexpr uint8_t NotGhost = 0; // this interaction doesn't occurs 
+    static constexpr uint8_t NotGhost = 0; // means that the interaction is linked to two particles that are in the current subdomain
     static constexpr uint8_t OwnerGhost = 1; // means that the interaction is linked to a particle that is in the current subdomain
     static constexpr uint8_t PartnerGhost = 2; // means that the interaction is linked to a particle that is in the current subdomain
 
@@ -95,8 +93,8 @@ namespace exaDEM
       auto [id_i, cell_i, p_i, sub_i] = owner();
       auto [id_j, cell_j, p_j, sub_j] = partner();
       std::cout << "Interaction(type = " << int(type)
-        << " [cell: " << cell_i << ", idx " << p_i << ", particle id: " << id_i << "] and"
-        << " [cell: " << cell_j << ", idx " << p_j << ", particle id: " << id_j << "]" 
+        << " [cell: " << cell_i << ", idx " << p_i << ", particle id: " << id_i << ", sub: "<< sub_i <<"] and"
+        << " [cell: " << cell_j << ", idx " << p_j << ", particle id: " << id_j << ", sub: "<< sub_j <<"]" 
         << " swap: " << int(swap) << " ghost: " << int(ghost) << ")" <<std::endl;
     }
 
@@ -108,8 +106,8 @@ namespace exaDEM
       auto [id_i, cell_i, p_i, sub_i] = owner();
       auto [id_j, cell_j, p_j, sub_j] = partner();
       std::cout << "Interaction(type = " << int(type)
-        << " [cell: " << cell_i << ", idx " << p_i << ", particle id: " << id_i << "] and"
-        << " [cell: " << cell_j << ", idx " << p_j << ", particle id: " << id_j << "]" 
+        << " [cell: " << cell_i << ", idx " << p_i << ", particle id: " << id_i << ", sub: "<< sub_i <<"] and"
+        << " [cell: " << cell_j << ", idx " << p_j << ", particle id: " << id_j << ", sub: "<< sub_j <<"]" 
         << " swap: " << int(swap) << " ghost: " << int(ghost) << ")" <<std::endl;
     }
 
@@ -123,79 +121,54 @@ namespace exaDEM
       auto& me_pj = this->pj;
       auto& you_pj = I.pj;
 
-			if (me_pi.id == you_pi.id 
-					&& me_pi.sub == you_pi.sub
-					&& me_pj.id == you_pj.id  
-					&& me_pj.sub == you_pj.sub  
-					&& this->type == I.type)
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		}
+      //if (me_pi == you_pi 
+      //    && me_pj == you_pj 
+      if (me_pi.id == you_pi.id 
+          && me_pj.id == you_pj.id
+          && me_pi.sub == you_pi.sub
+          && me_pj.sub == you_pj.sub
+          && this->swap == I.swap
+          && this->type == I.type)
+      {
+        return true;
+      }
+      else
+      {
+        return false;
+      }
+    }
 
-		/**
-		 * @brief return true if particles id and particles sub id are equals.
-		 */
-		ONIKA_HOST_DEVICE_FUNC bool operator==(const InteractionPair& I) const
-		{
-			auto& me_pi = this->pi;
-			auto& you_pi = I.pi;
-			auto& me_pj = this->pj;
-			auto& you_pj = I.pj;
+    /**
+     * @brief return true if particles id and particles sub id are equals.
+     */
+    ONIKA_HOST_DEVICE_FUNC bool operator==(const InteractionPair& I) const
+    {
+      auto& me_pi = this->pi;
+      auto& you_pi = I.pi;
+      auto& me_pj = this->pj;
+      auto& you_pj = I.pj;
 
-			if (me_pi == you_pi && me_pj == you_pj && this->type == I.type)
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		}
+//      if (me_pi == you_pi 
+//          && me_pj == you_pj 
+      if (me_pi.id == you_pi.id 
+          && me_pj.id == you_pj.id
+          && me_pi.sub == you_pi.sub
+          && me_pj.sub == you_pj.sub
+          && this->swap == I.swap
+          && this->type == I.type)
+      {
+        return true;
+      }
+      else
+      {
+        return false;
+      }
+    }
 
-		ONIKA_HOST_DEVICE_FUNC bool operator<(const InteractionPair& I) const
-		{
-			/*      auto me_id_i = owner().id;
-							auto me_id_j = partner().id;
-							auto me_sub_i = pi.sub;
-							auto me_sub_j = pj.sub;
-
-							auto you_id_i = I.owner().id;
-							auto you_id_j = I.partner().id;
-							auto you_sub_i = I.pi.sub;
-							auto you_sub_j = I.pj.sub;
-			 */
-			auto me_id_i = owner().id;
-			auto you_id_i = I.owner().id;
-			if (me_id_i < you_id_i)  { return true; }
-			//      else if (me_id_i == you_id_i && me_id_j < you_id_j) { return true; }
-			//      else if (me_id_i == you_id_i && me_id_j == you_id_j && me_sub_i < you_sub_i) { return true; }
-			//      else if (me_id_i == you_id_i && me_id_j == you_id_j && me_sub_i == you_sub_i && me_sub_j < you_sub_j) {  return true; }
-			//      else if (me_id_i == you_id_i && me_id_j == you_id_j && me_sub_i == you_sub_i && me_sub_j == you_sub_j && type < I.type) {  return true; }
-			else return false;
-			/*      auto& me_pi = this->pi;
-							auto& you_pi = I.pi;
-							auto& me_pj = this->pj;
-							auto& you_pj = I.pj;
-							if (me_pi.id < you_pi.id)  { return true; }
-							else if (me_pi.id == you_pi.id && me_pj.id < you_pj.id) { return true; }
-							else if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub < you_pi.sub) { return true; }
-							else if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub == you_pi.sub && me_pj.sub < you_pj.sub) {  return true; }
-							else if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub == you_pi.sub && me_pj.sub == you_pj.sub && type < I.type) {  return true; }
-							else return false;
-			 */
-		}
-
-		ONIKA_HOST_DEVICE_FUNC void update(InteractionPair& I)
-		{
-			this->pi.cell = I.pi.cell;
-			this->pj.cell = I.pj.cell;
-			this->pi.p = I.pi.p;
-			this->pj.p = I.pj.p;
-		}
-	};
+    ONIKA_HOST_DEVICE_FUNC bool operator<(const InteractionPair& I) const
+    {
+      if (owner().id < I.owner().id)  { return true; }
+      else return false;
+    }
+  };
 } // namespace exaDEM

@@ -102,6 +102,8 @@ namespace exaDEM
 #       pragma omp for schedule(dynamic)
         for (size_t ci = 0; ci < cell_size; ci++)
         {
+          item.pair.ghost = InteractionPair::NotGhost;
+          item.pair.swap = false;
           size_t cell_a = cell_ptr[ci];
           IJK loc_a = grid_index_to_ijk(dims, cell_a);
 
@@ -184,7 +186,7 @@ namespace exaDEM
                   {
                     pi.p = p;
                     pi.id = id_a[p];
-                    manager.add_item(p, item);
+                    manager.add_item(item);
                   }
                 }
               }
@@ -201,7 +203,7 @@ namespace exaDEM
                   {
                     pi.p = p;
                     pi.id = id_a[p];
-                    manager.add_item(p, item);
+                    manager.add_item(item);
                   }
                 }
               }
@@ -218,7 +220,7 @@ namespace exaDEM
                   {
                     pi.p = p;
                     pi.id = id_a[p];
-                    manager.add_item(p, item);
+                    manager.add_item(item);
                   }
                 }
               }
@@ -230,7 +232,7 @@ namespace exaDEM
                   // a sphere can have multiple interactions with a stl mesh
                   auto items = detection_sphere_driver(driver, cell_a, p, id_a[p], drvs_idx, rx[p], ry[p], rz[p], rad[p], rVerlet);
                   for (auto &it : items)
-                    manager.add_item(p, it);
+                    manager.add_item(it);
                 }
               }
             }
@@ -261,7 +263,7 @@ namespace exaDEM
                 pj.id = id_nbh;
                 pj.p = p_b;
                 pj.cell = cell_b;
-                manager.add_item(p_a, item);
+                manager.add_item(item);
                 });
           }
           else
@@ -272,6 +274,11 @@ namespace exaDEM
                 {
                 // default value of the interaction studied (A or i -> B or j)
                 const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+                item.pair.ghost = InteractionPair::NotGhost;
+                item.pair.swap = false;
+
+                if (id_a[p_a] >= id_nbh) { return; }
+                if (g.is_ghost_cell(cell_b)) item.pair.ghost = InteractionPair::OwnerGhost;
 
                 auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
                 auto& pj = item.j(); // particle i (id, cell id, particle position, sub vertex)
@@ -282,7 +289,7 @@ namespace exaDEM
                 pj.id = id_nbh;
                 pj.p = p_b;
                 pj.cell = cell_b;
-                manager.add_item(p_a, item);
+                manager.add_item(item);
                 });
           }
 

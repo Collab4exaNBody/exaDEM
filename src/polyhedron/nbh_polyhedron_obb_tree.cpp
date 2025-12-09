@@ -166,11 +166,11 @@ namespace exaDEM
           ONIKA_ASSUME_ALIGNED(orient_a);
 
           // Define a function to add a new interaction if a contact is possible.
-          auto add_contact = [&manager](size_t p, PlaceholderInteraction &item, int sub_i, int sub_j) -> void
+          auto add_contact = [&manager](PlaceholderInteraction &item, int sub_i, int sub_j) -> void
           {
             item.pair.pi.sub = sub_i;
             item.pair.pj.sub = sub_j;
-            manager.add_item(p, item);
+            manager.add_item(item);
           };
 
           // Fill particle ids in the interaction storage
@@ -311,7 +311,7 @@ namespace exaDEM
                     item.pair.type = 0; // === Vertex - Vertex
                     if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
                     {
-                      add_contact(p_a, item, i, j);
+                      add_contact(item, i, j);
                     }
                   } 
                   else if (j_nbPoints == 2) 
@@ -322,7 +322,7 @@ namespace exaDEM
                     bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
                     if (contact)
                     {
-                      add_contact(p_a, item, i, j);
+                      add_contact(item, i, j);
                     }
                   } 
                   else if (j_nbPoints >= 3) 
@@ -333,7 +333,7 @@ namespace exaDEM
                     bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
                     if (contact)
                     {
-                      add_contact(p_a, item, i, j);
+                      add_contact(item, i, j);
                     }
                   }
                 } 
@@ -348,7 +348,7 @@ namespace exaDEM
                     bool contact = exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
                     if (contact)
                     {
-                      add_contact(p_a, item, j, i);
+                      add_contact(item, j, i);
                     }
                   } 
                   else if (j_nbPoints == 2) 
@@ -360,7 +360,7 @@ namespace exaDEM
                     bool contact = exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh);
                     if (contact)
                     {
-                      add_contact(p_a, item, i, j);
+                      add_contact(item, i, j);
                     }
                   }
                 } 
@@ -375,7 +375,7 @@ namespace exaDEM
 										bool contact = exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp);
 										if (contact)
 										{
-											add_contact(p_a, item, j, i);
+											add_contact(item, j, i);
 										}
 									}
 								}

@@ -29,20 +29,22 @@ namespace exaDEM
   /**
    * @brief Structure representing an interaction in a Discrete Element Method (DEM) simulation.
    */
-  struct Interaction
+  struct Interaction 
   {
     InteractionPair pair;
     exanb::Vec3d friction = {0, 0, 0}; /**< Friction vector associated with the interaction. */
     exanb::Vec3d moment = {0, 0, 0};   /**< Moment vector associated with the interaction. */
 
-    ParticleSubLocation& i() { return pair.pi; }
-    ParticleSubLocation& j() { return pair.pj; }
-    ParticleSubLocation& driver() { return j(); }
-    uint16_t type() { return pair.type; } 
-    uint16_t type() const { return pair.type; } 
-    uint32_t cell() { return pair.owner().cell; } // associate cell -> cell_i
-    uint64_t driver_id() { return pair.pj.id; }
-    InteractionPair& pair_info() { return pair; }
+    inline ParticleSubLocation& i() { return pair.pi; }
+    inline ParticleSubLocation& j() { return pair.pj; }
+    inline ParticleSubLocation& owner() { return pair.owner(); }
+    inline ParticleSubLocation& partner() { return pair.partner(); }
+    inline ParticleSubLocation& driver() { return j(); }
+    inline uint16_t type() { return pair.type; } 
+    inline uint16_t type() const { return pair.type; } 
+    inline uint32_t cell() { return pair.owner().cell; } // associate cell -> cell_i
+    inline uint64_t driver_id() { return pair.pj.id; }
+    inline InteractionPair& pair_info() { return pair; }
     const InteractionPair& pair_info() const { return pair; }
 
     /**

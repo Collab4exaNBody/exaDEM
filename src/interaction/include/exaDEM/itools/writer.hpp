@@ -53,7 +53,7 @@ namespace exaDEM
           {
             auto [i, j, type, swap, ghost] = wrapper(idx);
             /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
-            if (filter_duplicates(grid, i, j, type))
+            if (ghost != InteractionPair::PartnerGhost)
             {
               stream << i.id << "," << j.id << ",";
               stream << i.sub << "," << j.sub << ",";

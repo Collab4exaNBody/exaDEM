@@ -130,12 +130,12 @@ namespace exaDEM
       /**
        * briefs Returns the number of interactions.
        */
-      ONIKA_HOST_DEVICE_FUNC size_t size() const { return onika::cuda::vector_size(ft_x); }
-      ONIKA_HOST_DEVICE_FUNC size_t size() { return onika::cuda::vector_size(ft_x); }
+      ONIKA_HOST_DEVICE_FUNC inline size_t size() const { return onika::cuda::vector_size(ft_x); }
+      ONIKA_HOST_DEVICE_FUNC inline size_t size() { return onika::cuda::vector_size(ft_x); }
 
       // Some accessors
-      ONIKA_HOST_DEVICE_FUNC uint64_t particle_id_i(size_t idx) const { return id_i[idx]; }
-      ONIKA_HOST_DEVICE_FUNC uint64_t particle_id_j(size_t idx) const { return id_j[idx]; }
+      ONIKA_HOST_DEVICE_FUNC inline uint64_t particle_id_i(size_t idx) const { return id_i[idx]; }
+      ONIKA_HOST_DEVICE_FUNC inline uint64_t particle_id_j(size_t idx) const { return id_j[idx]; }
 
 
 			ONIKA_HOST_DEVICE_FUNC void set(
@@ -168,7 +168,9 @@ namespace exaDEM
 					unbroken[idx] = I.unbroken;
 				}
 
-				auto& [pi, pj, type, _swap, _ghost] = interaction.pair;
+				auto& [pi, pj, _type, _swap, _ghost] = interaction.pair;
+
+        assert(_type == type);
 
 				id_i[idx] = pi.id;
 				id_j[idx] = pj.id;
@@ -277,7 +279,7 @@ namespace exaDEM
 
 				if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) 
 				{
-					auto& I = (Interaction&) (item);
+					Interaction& I = reinterpret_cast<Interaction&> (item);
 					vector_data(ft_x)[id] = I.friction.x;
 					vector_data(ft_y)[id] = I.friction.y;
 					vector_data(ft_z)[id] = I.friction.z;
@@ -289,7 +291,7 @@ namespace exaDEM
 
 				if constexpr (IT == InteractionType::InnerBond) 
 				{
-					auto& I = (InnerBondInteraction&) (item);
+					InnerBondInteraction& I = reinterpret_cast<InnerBondInteraction&> (item);
 					vector_data(ft_x)[id] = I.friction.x;
 					vector_data(ft_y)[id] = I.friction.y;
 					vector_data(ft_z)[id] = I.friction.z;

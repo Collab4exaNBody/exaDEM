@@ -81,30 +81,30 @@ namespace exaDEM
 				MPI_Reduce(val.data(), val.data(), val.size(), MPI_INT, MPI_SUM, 0, *mpi);
 
 			std::vector<std::string> names = {
-				"* Vertex - Vertex           : ",
-				"* Vertex - Edge             : ",
-				"* Vertex - Face             : ",
-				"* Edge   - Edge             : ",
-				"* Vertex - Cylinder         : ",
-				"* Vertex - Surface          : ",
-				"* Vertex - Ball             : ",
-				"* Vertex - Vertex (STL)     : ",
-				"* Vertex - Edge (STL)       : ",
-				"* Vertex - Face (STL)       : ",
-				"* Edge   - Edge (STL)       : ",
-				"* Edge (STL) - Vertex       : ",
-				"* Face (STL) - Vertex       : ",
-				"* Vertice - Vertex (Stick)  : "
+				"* Vertex - Vertex           = ",
+				"* Vertex - Edge             = ",
+				"* Vertex - Face             = ",
+				"* Edge   - Edge             = ",
+				"* Vertex - Cylinder         = ",
+				"* Vertex - Surface          = ",
+				"* Vertex - Ball             = ",
+				"* Vertex - Vertex (STL)     = ",
+				"* Vertex - Edge (STL)       = ",
+				"* Vertex - Face (STL)       = ",
+				"* Edge   - Edge (STL)       = ",
+				"* Edge (STL) - Vertex       = ",
+				"* Face (STL) - Vertex       = ",
+				"* Vertice - Vertex (Stick)  = "
 			};
 
 
-			lout << "==================================" << std::endl;
-			lout << "* Ghost type of interaction : partner / owner / error" << std::endl;
+      lout << "=====================================================" << std::endl;
+			lout << "* Ghost type of interaction = partner / owner / error" << std::endl;
       for(int i = 0 ; i < 13 ; i++)
       {
         lout << names[i] << val[13+i] << " / " << val[i] << " / " << val[i] - val[13+i] << std::endl;
       }
-			lout << "==================================" << std::endl;
+      lout << "=====================================================" << std::endl;
 		}
 	};
 

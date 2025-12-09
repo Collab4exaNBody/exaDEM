@@ -85,7 +85,7 @@ namespace exaDEM
           if( f != 0)
           {
             auto I = interactions[i];
-            if (filter_duplicates(grid, I)) add(I, f);
+            if (filter_duplicates(I)) add(I, f);
           }
         } 
       }

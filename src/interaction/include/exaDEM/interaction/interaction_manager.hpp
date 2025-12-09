@@ -41,8 +41,9 @@ namespace exaDEM
       }
     }
 
-    void add_item(const size_t p, exaDEM::PlaceholderInteraction &I)
+    void add_item(exaDEM::PlaceholderInteraction &I)
     {
+      size_t p = I.owner().p;
       assert(p < list.size());
       //if(I.type() != InteractionTypeId::VertexVertex 
       //    || (I.type() == InteractionTypeId::VertexVertex && !skip_ignored_interactions(p, I)))
@@ -56,7 +57,7 @@ namespace exaDEM
     {
       for(auto& it : vec)
       {
-        add_item(it.pair.pi.p, it);
+        add_item(it);
       }
     }
 
