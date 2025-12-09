@@ -245,6 +245,7 @@ namespace exaDEM
             const shape *shps, 
             const double dt) const
         {
+          //const int driver_idx = item.sub; //
           const int driver_idx = item.id_j; //
                                             // TMPLD& driver        = std::get<TMPLD>(drvs[driver_idx]) ;
           TMPLD &driver = drvs.get_typed_driver<TMPLD>(driver_idx); // (TMPLD &)(drvs[driver_idx]);
@@ -284,7 +285,7 @@ namespace exaDEM
                 );
 
             // === for analysis
-            fn = f - item.moment;
+            fn = f - item.friction;
 
             // === update informations
             lockAndAdd(mom, compute_moments(contact_position, r, f, item.moment));
