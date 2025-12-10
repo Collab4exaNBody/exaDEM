@@ -1,0 +1,44 @@
+includes:
+  - rigid_surface_common_DMT.msp
+
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraSpread_DMT"
+
+particle_regions:
+  - BOX:
+     bounds: [[1,1,1],[9,9,9]]
+
+input_data:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: octahedron.shp
+  - lattice:
+      structure: SC
+      types: [ Octahedron ]
+      size: [ 1.0 , 1.0 , 1.0 ]
+      region: BOX 
+  - set_mono_mat
+
+setup_drivers:
+  - register_surface:
+     id: 0
+     state: {normal: [0,0,1], offset: -1}
+     params: { motion_type: STATIONARY }
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+
+domain:
+  cell_size: 2 m
+  periodic: [false,false,false]
+  grid_dims: [6,6,6]
+  bounds: [[-1,-1,-1],[11,11,11]]
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 5000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 1000
+  dt: 0.0001 s 
+  rcut_inc: 0.1 m
