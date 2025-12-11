@@ -22,6 +22,7 @@ under the License.
 //#include <ostream>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_stream.h>
+#include <exaDEM/interaction/interaction_enum.hpp>
 
 namespace exaDEM
 {
@@ -54,7 +55,7 @@ namespace exaDEM
 
     ParticleSubLocation pi;
     ParticleSubLocation pj;
-    uint16_t type;                     /**< Type of the interaction (e.g., contact type). */
+    uint16_t type = InteractionTypeId::Undefined; /**< Type of the interaction (e.g., contact type). */
     uint8_t swap = false;
     uint8_t ghost = NotGhost;
 
@@ -121,8 +122,6 @@ namespace exaDEM
       auto& me_pj = this->pj;
       auto& you_pj = I.pj;
 
-      //if (me_pi == you_pi 
-      //    && me_pj == you_pj 
       if (me_pi.id == you_pi.id 
           && me_pj.id == you_pj.id
           && me_pi.sub == you_pi.sub
@@ -148,8 +147,6 @@ namespace exaDEM
       auto& me_pj = this->pj;
       auto& you_pj = I.pj;
 
-//      if (me_pi == you_pi 
-//          && me_pj == you_pj 
       if (me_pi.id == you_pi.id 
           && me_pj.id == you_pj.id
           && me_pi.sub == you_pi.sub
@@ -167,8 +164,22 @@ namespace exaDEM
 
     ONIKA_HOST_DEVICE_FUNC bool operator<(const InteractionPair& I) const
     {
-      if (owner().id < I.owner().id)  { return true; }
-      else return false;
+      const auto &a = owner();
+      const auto &b = partner();
+      const auto &c = I.owner();
+      const auto &d = I.partner();
+
+      if (a.id != c.id) return a.id < c.id;
+      if (b.id != d.id) return b.id < d.id;
+
+      auto t1 = type;
+      auto t2 = I.type;
+      if (t1 != t2) return t1 < t2;
+
+      if(swap != I.swap) return swap < I.swap;
+
+      if (a.sub != c.sub) return a.sub < c.sub;
+      return b.sub < d.sub;
     }
   };
 } // namespace exaDEM

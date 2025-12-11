@@ -227,5 +227,12 @@ namespace exaDEM
       assert(types == typesPP + typesIB);
       return types;
     }
+ 
+    // debug
+    void display()
+    {
+      for(auto& wave : waves) wave.display();
+      sticked_interaction.display();
+    }
   };
 } // namespace exaDEM

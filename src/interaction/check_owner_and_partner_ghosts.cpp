@@ -48,10 +48,10 @@ namespace exaDEM
       auto &cells = ges->m_data;
 
       // v vertex, e edge, f face, c cylinder, s surface, b ball, S stl, sp sticked particles
-      int partners[13];
-      int owners[13];
+      int partners[14];
+      int owners[14];
 
-      for(int i = 0; i<13 ; i++) { partners[i] = 0; owners[i] = 0; }
+      for(int i = 0; i<14 ; i++) { partners[i] = 0; owners[i] = 0; }
 
       for (size_t i = 0; i < cells.size(); i++)
       {
@@ -65,11 +65,11 @@ namespace exaDEM
 
       
       std::vector<int> val;
-      val.resize(13*2);
-      for(int i = 0; i<13 ; i++)
+      val.resize(14*2);
+      for(int i = 0; i<14 ; i++)
       {
         val[i] = owners[i];
-        val[13+i] = partners[i];
+        val[14+i] = partners[i];
       }
 
       int rank;
@@ -100,9 +100,9 @@ namespace exaDEM
 
       lout << "=====================================================" << std::endl;
 			lout << "* Ghost type of interaction = partner / owner / error" << std::endl;
-      for(int i = 0 ; i < 13 ; i++)
+      for(int i = 0 ; i < 14 ; i++)
       {
-        lout << names[i] << val[13+i] << " / " << val[i] << " / " << val[i] - val[13+i] << std::endl;
+        lout << names[i] << val[14+i] << " / " << val[i] << " / " << val[i] - val[14+i] << std::endl;
       }
       lout << "=====================================================" << std::endl;
 		}

@@ -197,19 +197,19 @@ namespace exaDEM
               pd.id = drvs_idx; // we store the driver idx
               if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER)
               {
-                item.pair.type = 4;
+                item.pair.type = InteractionTypeId::VertexCylinder;
                 Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx)) ;
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
               {
-                item.pair.type = 5;
+                item.pair.type = InteractionTypeId::VertexSurface;
                 Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
               {
-                item.pair.type = 6;
+                item.pair.type = InteractionTypeId::VertexBall;
                 Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
@@ -307,6 +307,9 @@ namespace exaDEM
               const int ne_nbh = shp_nbh->get_number_of_edges();
               const int nf_nbh = shp_nbh->get_number_of_faces();
 
+#define PARAMETERS_SWAP_FALSE rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh
+#define PARAMETERS_SWAP_TRUE  rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp
+
               // exclude possibilities with obb
               for (int i = 0; i < nv; i++)
               {
@@ -316,27 +319,27 @@ namespace exaDEM
                 obbvi.enlarge(shp->m_radius);
                 if (obb_j.intersect(obbvi))
                 {
-                  item.pair.type = 0; // === Vertex - Vertex
+                  item.pair.type = InteractionTypeId::VertexVertex;
                   for (int j = 0; j < nv_nbh; j++)
-                    if (exaDEM::filter_vertex_vertex(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
+                    if (exaDEM::filter_vertex_vertex(PARAMETERS_SWAP_FALSE))
                       add_contact(item, i, j);
 
-                  item.pair.type = 1; // === vertex edge
+                  item.pair.type = InteractionTypeId::VertexEdge;
                   for (int j = 0; j < ne_nbh; j++)
-                    if(exaDEM::filter_vertex_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
+                    if(exaDEM::filter_vertex_edge(PARAMETERS_SWAP_FALSE))
                       add_contact(item, i, j);
 
-                  item.pair.type = 2; // === vertex face
+                  item.pair.type = InteractionTypeId::VertexFace;
                   for (int j = 0; j < nf_nbh; j++)
-                    if(exaDEM::filter_vertex_face(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
+                    if(exaDEM::filter_vertex_face(PARAMETERS_SWAP_FALSE))
                       add_contact(item, i, j);
                 }
               }
 
-              item.pair.type = 3; // === edge edge
+              item.pair.type = InteractionTypeId::EdgeEdge;
               for (int i = 0; i < ne; i++)
                 for (int j = 0; j < ne_nbh; j++)
-                  if(exaDEM::filter_edge_edge(rVerlet, vertices_a, i, shp, vertices_b, j, shp_nbh))
+                  if(exaDEM::filter_edge_edge(PARAMETERS_SWAP_FALSE))
                     add_contact(item, i, j);
 
               // interaction of from particle j to particle i
@@ -358,17 +361,19 @@ namespace exaDEM
 
                 if (obb_i.intersect(obbvj))
                 {
-                  item.pair.type = 1; // === vertex edge
+                  item.pair.type = InteractionTypeId::VertexEdge;
                   for (int i = 0; i < ne; i++)
-                    if( exaDEM::filter_vertex_edge(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp)) 
+                    if( exaDEM::filter_vertex_edge(PARAMETERS_SWAP_TRUE)) 
                       add_contact(item, j, i);
 
-                  item.pair.type = 2; // === vertex face
+                  item.pair.type = InteractionTypeId::VertexFace;
                   for (int i = 0; i < nf; i++)
-                    if(exaDEM::filter_vertex_face(rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp))
+                    if(exaDEM::filter_vertex_face(PARAMETERS_SWAP_TRUE))
                       add_contact(item, j, i);
                 }
               }
+#undef PARAMETERS_SWAP_FALSE
+#undef PARAMETERS_SWAP_TRUE
               });
 
           manager.update_extra_storage<true>(storage);

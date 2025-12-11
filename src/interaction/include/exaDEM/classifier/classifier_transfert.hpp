@@ -135,7 +135,7 @@ namespace exaDEM
       using namespace onika::cuda;
       auto &ces = ges.m_data; // Reference to cells containing interactions
                               // Parallel loop to process interactions within a wave
-#         pragma omp for schedule(guided) nowait
+#     pragma omp for schedule(guided) nowait
       for (size_t it = 0; it < n1; it++)
       {
         auto item1 = data[it];

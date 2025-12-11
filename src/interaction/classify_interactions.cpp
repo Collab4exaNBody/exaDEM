@@ -55,6 +55,7 @@ namespace exaDEM
       auto [cell_ptr, cell_size] = traversal_all->info();
       if (!ic.has_value()) { ic->initialize(); }
       classify(*ic, *ges, cell_ptr, cell_size);
+      //ic->display();
     }
   };
 

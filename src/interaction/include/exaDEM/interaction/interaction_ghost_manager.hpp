@@ -25,7 +25,7 @@ namespace exaDEM
     size_t n_procs = 0;
 
     template<typename InteractionT, typename GridT>
-      void setup(exanb::GhostCommunicationScheme& ghost_scheme, MPI_Comm& comm, InteractionT& ges, GridT& grid)
+      void setup(exanb::GhostCommunicationScheme& ghost_scheme, MPI_Comm& comm, const InteractionT& ges, const GridT& grid)
       {
         // tags constants
         const int TAG_SIZE    = 100;
@@ -49,11 +49,11 @@ namespace exaDEM
 
         for( size_t proc = 0 ; proc < n_procs ; proc++)
         {
-          sbuf[proc].clear();
           auto& send_config = send_cell_config[proc];
           const auto& partner = partners[proc];
-
+          sbuf[proc].clear();
           send_config.clear();
+
 
           // build send buffers and send_config correctly
           uint32_t shift = 0;
@@ -66,33 +66,13 @@ namespace exaDEM
 						uint32_t n_sent = 0;
 
 						for (size_t j = 0 ; j < interactions.size() ; j++) {
-							exaDEM::PlaceholderInteraction& I = interactions[j]; //storage.get_particle_item(p, j);
+							const exaDEM::PlaceholderInteraction& I = interactions[j]; //storage.get_particle_item(p, j);
 							if (I.pair.ghost == InteractionPair::OwnerGhost) {
 								sbuf[proc].push_back(I);
 								++n_sent;
 							}
 						} 
 
-						/*
-							 auto& particle_p = it.m_particle_i;
-							 auto& storage = ges[it.m_cell_i];
-							 for (size_t i = 0; i < particle_p.size(); ++i)
-							 {
-							 size_t p = particle_p[i];
-							 size_t n = storage.particle_number_of_items(p);
-
-							 for (size_t j = 0 ; j < n ; j++)
-							 {
-							 exaDEM::PlaceholderInteraction& I = storage.get_particle_item(p, j);
-							 if (I.pair.ghost == InteractionPair::OwnerGhost) {
-							 if(I.pair.type > 13  || I.pair.type < 0) color_log::mpi_error("debug", "ERROOOOOOOOOOOOOOOOOOOOR");
-							 sbuf[proc].push_back(I);
-							 ++n_sent;
-							 }
-
-							 } 
-							 }
-						 */
 						// push the *number actually sent* and the current shift
 						if( n_sent > 0)
 						{
@@ -134,9 +114,9 @@ namespace exaDEM
 
 				for( size_t proc = 0 ; proc < n_procs ; proc++)
 				{
-					rbuf[proc].clear();
 					auto& recv_config = recv_cell_config[proc];
 					const auto& partner = partners[proc];
+					rbuf[proc].clear();
 					recv_config.clear();
 
 					// recv cell configs
@@ -197,13 +177,13 @@ namespace exaDEM
 						auto& storage = ges[config.m_partner_cell_i].m_data;
 						if( !grid.is_ghost_cell(config.m_partner_cell_i) ) color_log::mpi_error("copy_interaction","This cell is not a ghost");
 
-						uint64_t partner_id;
-						uint32_t partner_cell;
-						uint16_t partner_p;
-						bool found = false;
+						uint64_t partner_id = -1;
+						uint32_t partner_cell = -1;
+						uint16_t partner_p = -1;
 
 						for(size_t i=config.m_shift ; i<config.m_shift+config.m_size ; i++)
 						{
+						  bool found = false;
 							assert(i<buffer.size());
 							exaDEM::PlaceholderInteraction& item = buffer[i];
 							// update info
@@ -219,6 +199,7 @@ namespace exaDEM
 								{
 									if(owner.id == cells[owner.cell][field::id][owner.p]) is_idx_exist = true;
 								}
+
 								if(!is_idx_exist)
 								{
 									const uint64_t* const __restrict__ ids = cells[owner.cell][field::id];
@@ -231,24 +212,24 @@ namespace exaDEM
 										}
 									} 
 								}
-								/*
+								
 									 if(!is_idx_exist)
 									 {
 									 const uint64_t* const __restrict__ ids = cells[owner.cell][field::id];
 									 int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-									 std::cout << "Error in Proc: " << rank << " from the mpi process ID: " << proc << std::endl;
+									 std::cout << "Error in Proc: " << rank << " from the mpi process ID: " << proc << " in cell: " << config.m_partner_cell_i << std::endl;
 									 for(size_t p=0 ; p<cells[owner.cell].size() ; p++) std::cout << "ids are[" << int(p) << "]: " << ids[p] << std::endl;
 									 item.print();
 									 color_log::mpi_error("copy_interaction", "owner.id: " + std::to_string(owner.id) 
 									 + " is != of cells[owner.cell][field::id][owner.p]: "  
 									 + std::to_string(cells[owner.cell][field::id][owner.p]));
 									 }
-								 */
+								 
 							}
 
 							auto& partner = item.pair.partner();
 
-							if(found && partner.id == partner_id)
+							if(partner.id == partner_id)
 							{
 								partner.cell = partner_cell;
 								partner.p = partner_p;
@@ -268,7 +249,6 @@ namespace exaDEM
 										{
 											uint32_t neigh = grid_ijk_to_index(dims, loc_neigh);
 
-											//if(neigh >= cells->size()) std::cout << "cell " << neigh << "/" << grid.number_of_cells() << " loc " << loc_neigh << " dims " << grid.dimension() << std::endl;
 											assert(neigh < grid.number_of_cells());
 											if( grid.is_ghost_cell(neigh) ) continue;
 											const uint64_t* const __restrict__ ids = cells[neigh][field::id];
@@ -278,6 +258,7 @@ namespace exaDEM
 												{
 													partner.cell = neigh;
 													partner.p = p;
+                          // Cache values
 													partner_id = partner.id;
 													partner_cell = neigh;
 													partner_p = p;

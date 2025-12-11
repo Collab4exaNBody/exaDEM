@@ -60,7 +60,8 @@ namespace exaDEM
     // Defines whether an interaction will be reconstructed or not.
     ONIKA_HOST_DEVICE_FUNC bool persistent() { return false; }
     // Skip other interactions if this interaction is defined
-    ONIKA_HOST_DEVICE_FUNC bool ignore_other_interactions() { return true; } 
+    //ONIKA_HOST_DEVICE_FUNC bool ignore_other_interactions() { return true; } 
+    ONIKA_HOST_DEVICE_FUNC bool ignore_other_interactions() { return false; } 
 
     /**
      * @brief Checks if the interaction is active.

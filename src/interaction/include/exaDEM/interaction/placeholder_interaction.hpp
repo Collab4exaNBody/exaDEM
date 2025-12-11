@@ -29,27 +29,6 @@ under the License.
 
 namespace exaDEM
 {
-  enum InteractionType
-  { 
-    ParticleParticle,
-    ParticleDriver,
-    InnerBond 
-  };
-
-  struct InteractionTypeId
-  {
-    static constexpr int NTypesParticleParticle = 13;
-    static constexpr int VertexVertex = 0;
-    static constexpr int VertexEdge = 1;
-    static constexpr int VertexFace = 2;
-    static constexpr int EdgeEdge = 3;
-    static constexpr int VertexCylinder = 4;
-    static constexpr int VertexSurface = 5;
-    static constexpr int VertexBall = 6;
-    static constexpr int NTypesStickecParticles = 1;
-    static constexpr int InnerBond = 13;
-    static constexpr int NTypes = NTypesParticleParticle + NTypesStickecParticles;
-  };
 
 
 	template <typename InteractionT> 
@@ -139,7 +118,7 @@ namespace exaDEM
 			std::memcpy(data, in.data, PlaceholderInteractionSize * sizeof(uint8_t)); 
 		}
 
-		ONIKA_HOST_DEVICE_FUNC void clear_placeholder()
+		void clear_placeholder()
 		{
 			memset( data, 0, PlaceholderInteractionSize);
 		}
@@ -154,10 +133,12 @@ namespace exaDEM
 			{
 				return this->as<InnerBondInteraction>().active();
 			}
+#ifndef ONIKA_CUDA_VERSION
       pair.print();
 			color_log::mpi_error("PlaceholderInteraction::active", 
 					"The type value of this interaction is invalid: "  + std::to_string(type()));
 			std::exit(EXIT_FAILURE);
+#endif
 		}
 
     // Defines whether an interaction will be reconstructed or not.
@@ -171,9 +152,11 @@ namespace exaDEM
 			{
 				return this->as<InnerBondInteraction>().persistent();
 			}
+#ifndef ONIKA_CUDA_VERSION
 			color_log::mpi_error("PlaceholderInteraction::persistent", 
 					"The type value of this interaction is invalid: " + std::to_string(type()));
 			std::exit(EXIT_FAILURE);
+#endif
 		}
 
 		ONIKA_HOST_DEVICE_FUNC bool ignore_other_interactions() 
@@ -186,13 +169,17 @@ namespace exaDEM
 			{
 				return this->as<InnerBondInteraction>().ignore_other_interactions();
 			}
+#ifndef ONIKA_CUDA_VERSION
 			color_log::mpi_error("PlaceholderInteraction::ignore_other_interactions", 
 					"The type value of this interaction is invalid");
 			std::exit(EXIT_FAILURE);
+#endif
 		}
 
 		ONIKA_HOST_DEVICE_FUNC void reset()
 		{ 
+
+      // Do not use it via a placeholder_interaction
 			if( type() < InteractionTypeId::NTypesParticleParticle ) 
 			{
 				this->as<Interaction>().reset();
@@ -201,11 +188,14 @@ namespace exaDEM
 			{
 				this->as<InnerBondInteraction>().reset();
 			}
-      else  
+#ifndef ONIKA_CUDA_VERSION
+      else
       {
-			  color_log::mpi_error("PlaceholderInteraction::reset", 
-					"The type value of this interaction is invalid: " + std::to_string(type()));
+        color_log::mpi_error("PlaceholderInteraction::reset", 
+			    "The type value of this interaction is invalid: " + std::to_string(type()));
+        std::exit(EXIT_FAILURE);
       }
+#endif
 		}
 
 		template <typename T>

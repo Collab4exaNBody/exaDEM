@@ -170,14 +170,14 @@ namespace exaDEM
 	// sequential
 		inline void extract_history(
 				std::vector<PlaceholderInteraction> &local, 
-				const PlaceholderInteraction *data, 
+				const PlaceholderInteraction * const data, 
 				const unsigned int size)
 		{
 			local.clear();
 			for (size_t i = 0; i < size; i++)
 			{
 				const auto &item = data[i];
-        if( item.pair.type > 13 ) continue; 
+        if( item.pair.type >= InteractionTypeId::NTypes ) continue; 
 				if (item.active())
 				{
 					local.push_back(item);

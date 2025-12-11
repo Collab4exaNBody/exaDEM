@@ -130,8 +130,8 @@ namespace exaDEM
       /**
        * briefs Returns the number of interactions.
        */
-      ONIKA_HOST_DEVICE_FUNC inline size_t size() const { return onika::cuda::vector_size(ft_x); }
-      ONIKA_HOST_DEVICE_FUNC inline size_t size() { return onika::cuda::vector_size(ft_x); }
+      ONIKA_HOST_DEVICE_FUNC inline size_t size() const { return onika::cuda::vector_size(id_i); }
+      ONIKA_HOST_DEVICE_FUNC inline size_t size() { return onika::cuda::vector_size(id_i); }
 
       // Some accessors
       ONIKA_HOST_DEVICE_FUNC inline uint64_t particle_id_i(size_t idx) const { return id_i[idx]; }
@@ -144,7 +144,7 @@ namespace exaDEM
 			{
 				if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver)
 				{ 
-					auto& I = (Interaction&) (interaction);
+					auto& I = interaction.as<Interaction>();
 					ft_x[idx] = I.friction.x;
 					ft_y[idx] = I.friction.y;
 					ft_z[idx] = I.friction.z;
@@ -156,7 +156,7 @@ namespace exaDEM
 
 				if constexpr (IT == InteractionType::InnerBond) 
 				{
-					auto& I = (InnerBondInteraction&) (interaction);
+					auto& I = interaction.as<InnerBondInteraction>();
 					ft_x[idx] = I.friction.x;
 					ft_y[idx] = I.friction.y;
 					ft_z[idx] = I.friction.z;
@@ -303,5 +303,12 @@ namespace exaDEM
 					vector_data(unbroken)[id] = I.unbroken;
 				}
 			}
+
+      // debug
+      void display()
+      {
+        onika::lout << "ClassifierContainer type is: " << type;
+        onika::lout << " and it contains " << this->size() << " interactions." << std::endl;
+      }
 		};
 } // namespace exaDEM
