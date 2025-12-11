@@ -39,14 +39,14 @@ namespace exaDEM
     double criterion; // interface fracture criterion
     uint8_t unbroken = true;
 
-    ParticleSubLocation& i() { return pair.pi; }
-    ParticleSubLocation& j() { return pair.pj; }
+    ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& i() { return pair.pi; }
+    ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& j() { return pair.pj; }
 
-    uint16_t type() { return pair.type; } 
-    uint16_t type() const { return pair.type; } 
-    uint32_t cell() { return pair.owner().cell; } // associate cell -> cell_i
-    InteractionPair& pair_info() { return pair; }
-    const InteractionPair& pair_info() const { return pair; }
+    ONIKA_HOST_DEVICE_FUNC inline uint16_t type() { return pair.type; } 
+    ONIKA_HOST_DEVICE_FUNC inline uint16_t type() const { return pair.type; } 
+    ONIKA_HOST_DEVICE_FUNC inline uint32_t cell() { return pair.owner().cell; } // associate cell -> cell_i
+    ONIKA_HOST_DEVICE_FUNC inline InteractionPair& pair_info() { return pair; }
+    ONIKA_HOST_DEVICE_FUNC inline const InteractionPair& pair_info() const { return pair; }
 
     /**
      * @brief Resets the Interaction structure by setting friction and moment vectors to zero.

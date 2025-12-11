@@ -181,7 +181,7 @@ namespace exaDEM
           if (id < types)
           {
             const unsigned int data_size = waves[id].size();
-            WavePP& data = waves[id];
+            const WavePP& data = waves[id];
             return  std::pair<const WavePP&, size_t> {data, data_size};
           }
         }

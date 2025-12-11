@@ -59,32 +59,32 @@ namespace exaDEM
     uint8_t swap = false;
     uint8_t ghost = NotGhost;
 
-    ParticleSubLocation& owner()
+    ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& owner()
     {
       if(!swap) return pi;
       return pj; 
     } 
 
-    ParticleSubLocation& partner()
+    ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& partner()
     {
       if(!swap) return pj;
       return pi; 
     } 
 
-    const ParticleSubLocation& owner() const
+    ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& owner() const
     {
       if(!swap) return pi;
       return pj; 
     } 
 
-    const ParticleSubLocation& partner() const
+    ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& partner() const
     {
       if(!swap) return pj;
       return pi; 
     } 
 
-    bool active() { return ghost != PartnerGhost; }
-    bool active() const { return ghost != PartnerGhost; }
+    ONIKA_HOST_DEVICE_FUNC inline bool active() { return ghost != PartnerGhost; }
+    ONIKA_HOST_DEVICE_FUNC inline bool active() const { return ghost != PartnerGhost; }
 
     /**
      * @brief Displays the Interaction data.

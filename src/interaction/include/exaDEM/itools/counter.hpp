@@ -225,7 +225,7 @@ namespace exaDEM
 #ifdef ONIKA_CUDA_VERSION
 				ParallelForOptions opts;
 				opts.omp_scheduling = OMP_SCHED_STATIC;
-				ReduceTFunctor<T, Func, ResultT> kernel = {data, func, &result};
+				ReduceTFunctor<IT, Func, ResultT> kernel = {data, func, &result};
 				return parallel_for(size, kernel, exec_ctx, opts);
 #     else
 				// should be generic, later

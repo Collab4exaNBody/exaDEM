@@ -35,17 +35,17 @@ namespace exaDEM
     exanb::Vec3d friction = {0, 0, 0}; /**< Friction vector associated with the interaction. */
     exanb::Vec3d moment = {0, 0, 0};   /**< Moment vector associated with the interaction. */
 
-    inline ParticleSubLocation& i() { return pair.pi; }
-    inline ParticleSubLocation& j() { return pair.pj; }
-    inline ParticleSubLocation& owner() { return pair.owner(); }
-    inline ParticleSubLocation& partner() { return pair.partner(); }
-    inline ParticleSubLocation& driver() { return j(); }
-    inline uint16_t type() { return pair.type; } 
-    inline uint16_t type() const { return pair.type; } 
-    inline uint32_t cell() { return pair.owner().cell; } // associate cell -> cell_i
-    inline uint64_t driver_id() { return pair.pj.id; }
-    inline InteractionPair& pair_info() { return pair; }
-    const InteractionPair& pair_info() const { return pair; }
+    ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& i() { return pair.pi; }
+    ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& j() { return pair.pj; }
+    ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& owner() { return pair.owner(); }
+    ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& partner() { return pair.partner(); }
+    ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& driver() { return j(); }
+    ONIKA_HOST_DEVICE_FUNC inline uint16_t type() { return pair.type; } 
+    ONIKA_HOST_DEVICE_FUNC inline uint16_t type() const { return pair.type; } 
+    ONIKA_HOST_DEVICE_FUNC inline uint32_t cell() { return pair.owner().cell; } // associate cell -> cell_i
+    ONIKA_HOST_DEVICE_FUNC inline uint64_t driver_id() { return pair.pj.id; }
+    ONIKA_HOST_DEVICE_FUNC inline InteractionPair& pair_info() { return pair; }
+    ONIKA_HOST_DEVICE_FUNC inline const InteractionPair& pair_info() const { return pair; }
 
     /**
      * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
