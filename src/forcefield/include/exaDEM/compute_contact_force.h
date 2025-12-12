@@ -179,6 +179,7 @@ namespace exaDEM
       // === Cohesive law : before contact
       if constexpr (LawComboTraits<LawCombo>::cohesive)
       {
+        // This static assert is already tested in makeLawCombo, right ?
         static_assert(LawComboTraits<LawCombo>::hooke, "Cohesive law must be combined with a contact law."  );//||hertz later
         if( dn >= 0 ) // dn <= hkp.dncut if contact
         {
@@ -202,32 +203,19 @@ namespace exaDEM
       // === Compute Contact forces
 
       // Hooke 
-      if constexpr (LawCombo == LawComboType::Hooke_None || LawCombo == LawComboType::Hooke_DMT)
+      if constexpr (LawComboTraits<LawCombo>::hooke)
       {
          // - Normal force (elastic contact + viscous damping)
-         fn = compute_normal_force(hkp.kn, damp, dn, vn, n); // (fc ==> cohesive force)
+         fn = compute_normal_force<LawComboTraits<LawCombo>::cohesive>(hkp.kn, hkp.fc, damp, dn, vn, n); 
 
          // - Tangential force (friction)
          ft += exaDEM::compute_tangential_force(hkp.kt, dt, vn, n, vel);
       
-         // - Fit tangential force
-         auto threshold_ft = exaDEM::compute_threshold_ft(hkp.mu, hkp.kn, dn);
-         exaDEM::fit_tangential_force(threshold_ft, ft);
-      }
-
-      // Cohesive 
-      if constexpr (LawCombo == LawComboType::Hooke_Cohesive )
-      {
-         // - Normal force (elatic contact + viscous damping)
-         fn = exaDEM::compute_normal_force_value_with_cohesive_force(hkp.kn, hkp.fc, damp, dn, vn, n);
-
-         // - Tangential force (friction)
-         ft += exaDEM::compute_tangential_force(hkp.kt, dt, vn, n, vel);
-
-         const double fn_norm = exanb::dot(fn, n);
+         double threshold_ft;
 
          // - Fit tangential force
-         auto threshold_ft = exaDEM::compute_threshold_ft_with_cohesive_force(hkp.mu, fn_norm, hkp.fc);
+         if constexpr (!LawComboTraits<LawCombo>::cohesive) threshold_ft = exaDEM::compute_threshold_ft(hkp.mu, hkp.kn, dn);
+         else threshold_ft = exaDEM::compute_threshold_ft_with_cohesive_force(hkp.mu, exanb::dot(fn, n), hkp.fc);
          exaDEM::fit_tangential_force(threshold_ft, ft);
       }
 
@@ -251,8 +239,6 @@ namespace exaDEM
       // === update moments
       mom_i += hkp.kr * (vrot_j - vrot_i) * dt;
 
-      ///*
-      // test
       Vec3d branch = contact_position - pos_i;
       double r = (exanb::dot(branch, vrot_i)) / (exanb::dot(vrot_i, vrot_i));
       branch -= r * vrot_i;
@@ -263,8 +249,6 @@ namespace exaDEM
       double mom_square = exanb::dot(mom_i, mom_i);
       if (mom_square > 0.0 && mom_square > threshold_mom * threshold_mom)
         mom_i = mom_i * (threshold_mom / sqrt(mom_square));
-      //*/
-
     }
 
   ONIKA_HOST_DEVICE_FUNC inline Vec3d compute_moments(const Vec3d &contact_position,
