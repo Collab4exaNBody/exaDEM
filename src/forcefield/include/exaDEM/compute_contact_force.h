@@ -179,8 +179,6 @@ namespace exaDEM
       // === Cohesive law : before contact
       if constexpr (LawComboTraits<LawCombo>::cohesive)
       {
-        // This static assert is already tested in makeLawCombo, right ?
-        static_assert(LawComboTraits<LawCombo>::hooke, "Cohesive law must be combined with a contact law."  );//||hertz later
         if( dn >= 0 ) // dn <= hkp.dncut if contact
         {
           const double fn_value = (hkp.fc / hkp.dncut) * dn - hkp.fc;
