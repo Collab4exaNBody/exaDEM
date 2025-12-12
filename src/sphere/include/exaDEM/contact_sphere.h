@@ -73,7 +73,7 @@ namespace exaDEM
      *
      * @tparam sym Boolean indicating whether the calculations should be symmetric.
      */
-    template <bool sym, bool cohesive, typename XFormT> 
+    template <bool sym, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename XFormT> 
       struct contact_law
       {
         XFormT xform;
@@ -140,7 +140,7 @@ namespace exaDEM
             const Vec3d ri = get_r(cell_i, item.p_i);
             const Vec3d rj = get_r(cell_j, item.p_j);
 
-            // === positions
+            // === radii
             const double rad_i = cell_i[field::radius][item.p_i];
             const double rad_j = cell_j[field::radius][item.p_j];
 
@@ -157,9 +157,10 @@ namespace exaDEM
 
             // === Conctact Parameters 
             const ContactParamsT& cp = cpa(t_i, t_j); 
+            constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
             /** if cohesive force */
-            if constexpr ( cohesive ) contact = ( contact || dn <= cp.dncut );
+            if constexpr ( LawComboTraits<LawCombo>::cohesive ) contact = ( contact || dn <= cp.dncut );
 
             if (contact)
             {
@@ -174,10 +175,11 @@ namespace exaDEM
               // temporary vec3d to store forces.
               Vec3d f = {0, 0, 0};
               const double meff = compute_effective_mass(m_i, m_j);
+              const double reff = compute_effective_radius(rad_i, rad_j);
 
-              contact_force_core<cohesive>(dn, n, time, 
-                  cp, 
-                  meff, item.friction, contact_position, 
+
+              contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, 
+                  cp, meff, reff, item.friction, contact_position, 
                   ri, vi, f, item.moment, vrot_i, // particle 1
                   rj, vj, vrot_j                  // particle nbh
                   );
@@ -222,7 +224,7 @@ namespace exaDEM
      *
      * @tparam TMPLD Template parameter for specifying the type of driver.
      */
-    template <bool cohesive, typename TMPLD, typename XFormT> 
+    template < ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename TMPLD, typename XFormT> 
       struct contact_law_driver
       {
         XFormT xform;
@@ -268,9 +270,10 @@ namespace exaDEM
 
             // === Conctact Parameters 
             const ContactParamsT& cp = cpa(type, driver_idx); 
+            constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
             /** if cohesive force */
-            if constexpr ( cohesive ) contact = ( contact || dn <= cp.dncut );
+            if constexpr ( LawComboTraits<LawCombo>::cohesive ) contact = ( contact || dn <= cp.dncut );
 
             if (contact)
             {
@@ -279,8 +282,10 @@ namespace exaDEM
               auto &mom = cell[field::mom][p];
               const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
               const double meff = cell[field::mass][p];
+              const double reff = cell[field::radius][p];
+
               Vec3d f = null;
-              contact_force_core<cohesive>(dn, n, time, cp, meff, item.friction, contact_position, 
+              contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item.friction, contact_position, 
                   r, v, f, item.moment, vrot,                   // particle i
                   driver.center, driver.get_vel(), driver.vrot  // particle j
                   );
@@ -313,7 +318,7 @@ namespace exaDEM
      * This structure provides methods for applying contact law interactions between
      * particles and STL drivers (such as cylinders, spheres, surfaces, or mesh faces).
      */
-    template<int interaction_type, bool cohesive, typename XFormT>
+    template<int interaction_type, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename XFormT>
       struct contact_law_stl
       {
         XFormT xform;
@@ -362,9 +367,10 @@ namespace exaDEM
 
             // === Conctact Parameters 
             const ContactParamsT& cp = cpa(type, driver_idx); 
+            constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
             /** if cohesive force */
-            if constexpr ( cohesive ) contact = ( contact || dn <= cp.dncut );
+            if constexpr ( LawComboTraits<LawCombo>::cohesive ) contact = ( contact || dn <= cp.dncut );
 
             if (contact)
             {
@@ -372,9 +378,11 @@ namespace exaDEM
               auto &mom = cell[field::mom][p_i];
               const Vec3d v_i = {cell[field::vx][p_i], cell[field::vy][p_i], cell[field::vz][p_i]};
               const double meff = cell[field::mass][p_i];
+              const double reff = cell[field::radius][p_i];
+
               Vec3d f = {0, 0, 0};
-              contact_force_core<cohesive>(dn, n, time, cp, 
-                  meff, item.friction, contact_position, r_i, 
+              contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, 
+                  meff,reff, item.friction, contact_position, r_i, 
                   v_i, f, item.moment, vrot_i, // particle i
                   driver.center, driver.get_vel(), driver.vrot // particle j
                   );

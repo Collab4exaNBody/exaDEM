@@ -58,7 +58,7 @@ domain:
 compute_force:
   - set_moment:
      mom: [0,0,-1]
-  - contact_polyhedron_multimat
+  - contact_multimat_polyhedron
 
 particle_write_paraview_generic:
   - write_paraview_polyhedra

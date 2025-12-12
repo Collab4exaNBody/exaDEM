@@ -39,6 +39,7 @@ namespace exaDEM
     double damp_rate = 0;  /**< Damping rate for contact interaction (controls dissipation). */
     double fc = 0;         /**< Cohesive force threshold (e.g., for bonded contacts). */
     double dncut = 0;      /**< Distance cutoff below which contact is considered active for cohesion force. */
+    double gamma = 0;      /**< Adhesion energie per unit of surface (default is 0). */
   };
 
   /**
@@ -56,7 +57,8 @@ namespace exaDEM
       (a.kr == b.kr) &&
       (a.mu == b.mu) &&
       (a.fc == b.fc) &&
-      (a.damp_rate == b.damp_rate);
+      (a.damp_rate == b.damp_rate) &&
+      (a.gamma == b.gamma);
   }
 
   /**
@@ -74,9 +76,9 @@ namespace exaDEM
    */
   template<> inline void display_header<ContactParams>()
   {
-    lout << "===================================================================================================================" << std::endl;
-    lout << "|        typeA |        typeB |        kn |        kt |        kr |        mu |        fc |  damprate |    dncut  |" << std::endl;
-    lout << "-------------------------------------------------------------------------------------------------------------------" << std::endl;
+    lout << "===============================================================================================================================" << std::endl;
+    lout << "|        typeA |        typeB |        kn |        kt |        kr |        mu |        fc |  damprate |    dncut  |    gamma  |" << std::endl;
+    lout << "-------------------------------------------------------------------------------------------------------------------------------" << std::endl;
   }
 
   /**
@@ -92,14 +94,15 @@ namespace exaDEM
    */
   inline std::string display(ContactParams& params)
   {
-    std::string line = onika::format_string(" %.3e | %.3e | %.3e | %.3e | %.3e | %.3e | %.3e |", 
+    std::string line = onika::format_string(" %.3e | %.3e | %.3e | %.3e | %.3e | %.3e | %.3e | %.3e |", 
         params.kn, 
         params.kt, 
         params.kr, 
         params.mu, 
         params.fc, 
         params.damp_rate, 
-        params.dncut); 
+        params.dncut,
+        params.gamma); 
     return line; 
   }
 
@@ -133,6 +136,7 @@ namespace exaDEM
         ", damp_rate: " << params.damp_rate << 
         ", dncut: " << params.dncut << 
         ", fc: " << params.fc << 
+        ", gamma: " << params.gamma <<
         " }";
     }
 } // namespace exaDEM
@@ -196,6 +200,15 @@ namespace YAML
       {
         lerr << "damp_rate is missing\n";
         return false;
+      }
+
+      if(node["gamma"])
+      {
+        v.gamma = node["gamma"].as<Quantity>().convert();
+      }
+      else
+      {
+        v.gamma = 0.0; // valeur par défaut
       }
 
       v.kn = node["kn"].as<Quantity>().convert();
