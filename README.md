@@ -46,11 +46,11 @@ For more details, see `CONTRIBUTING.md`. Main guidelines are:
 - Raphaël Prat (CEA/DES) (raphael.prat@cea.fr)
 - Thierry Carrard (CEA/DAM)
 - Carlo Elia Doncecchi (CEA/DES)
-
+- Vincent Topin (CEA/DES)
+- 
 ### Contributors
 
 - Paul Lafourcade (CEA/DAM)
-- Vincent Topin (CEA/DES)
 - Lhassan Amarsid (CEA/DES)
 - Vincent Richefeu (CNRS)
 
