@@ -237,9 +237,11 @@ namespace exaDEM
               [&g, &vertex_fields, &cells, &info_particles, cell_a, &item, &shps, rVerlet, id_a, rx_a, ry_a, rz_a, t_a, orient_a, &vertex_cell_a, &add_contact, xform, is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index)
               {
               // default value of the interaction studied (A or i -> B or j)
+              bool ghost = false;
               const uint64_t id_nbh = cells[cell_b][field::id][p_b];
               if (id_a[p_a] >= id_nbh)
               {
+              ghost = true;
               if (!g.is_ghost_cell(cell_b))
               return;
               }
@@ -300,6 +302,7 @@ namespace exaDEM
               item.cell_i = cell_a;
               item.p_j = p_b;
               item.cell_j = cell_b;
+              item.ghost = ghost;
 
               const Vec3d r = {rx, ry, rz};
 

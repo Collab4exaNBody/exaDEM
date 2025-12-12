@@ -1307,11 +1307,11 @@ __global__ void CountDuplicates( uint64_t* id_i,
 				}
 				//}
 				
-				//printf("AVANT CONTACT :\n");
-				//printf("TYPE0 : %d/%d\n", actives[0], total_nb_int[0]);
-				//printf("TYPE1 : %d/%d\n", actives[1], total_nb_int[1]);
-				//printf("TYPE2 : %d/%d\n", actives[2], total_nb_int[2]);
-				//printf("TYPE3 : %d/%d\n", actives[3], total_nb_int[3]);
+				printf("AVANT CONTACT :\n");
+				printf("TYPE0 : %d/%d\n", actives[0], total_nb_int[0]);
+				printf("TYPE1 : %d/%d\n", actives[1], total_nb_int[1]);
+				printf("TYPE2 : %d/%d\n", actives[2], total_nb_int[2]);
+				printf("TYPE3 : %d/%d\n", actives[3], total_nb_int[3]);
 				//printf("\n\n\n");
 				//printf("BLOCK PAIR END\n");
 				//}

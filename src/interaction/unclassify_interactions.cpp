@@ -62,6 +62,7 @@ namespace exaDEM
     inline void execute() override final
     {
       auto& classifier = *ic2;
+      printf("APRÈS CONTACT\n");
       for(int i = 0; i < 4; i++)
       {
         auto& data = classifier.waves[i];
@@ -97,6 +98,7 @@ namespace exaDEM
         
         printf("TYPE%d %d / %d\n", i, active, data.size());
       }
+      printf("\n\n\n");
       if (!ic.has_value())
         return;
       ic->unclassify(*ges);
