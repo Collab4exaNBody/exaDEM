@@ -67,7 +67,6 @@ namespace exaDEM
 
       // compute relative velocity
       const double vn = exanb::dot(vel, n);
-
       // === Normal force (elatic contact + viscous damping)
       double fne = -ibp.kn * (dn - dn0);
       double fnv = damp * vn;

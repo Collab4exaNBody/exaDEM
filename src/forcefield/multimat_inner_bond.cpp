@@ -45,6 +45,7 @@ namespace exaDEM
     ADD_SLOT(std::vector<double>,       pow, INPUT, OPTIONAL, DocString{"List of pow values."});
     ADD_SLOT(std::vector<double>,         g, INPUT, OPTIONAL, DocString{"List of g values."});
     ADD_SLOT(InnerBondParams, default_config, INPUT, OPTIONAL, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
+    ADD_SLOT(bool, verbosity, INPUT, false, DocString{"Print force field parameter details"});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -181,7 +182,7 @@ namespace exaDEM
       bool driver_mode = false;
 
       ibp.check_completeness(multimat_mode, driver_mode);
-      ibp.display(multimat_mode, driver_mode);
+      if(*verbosity) ibp.display(multimat_mode, driver_mode);
     }
   };
 

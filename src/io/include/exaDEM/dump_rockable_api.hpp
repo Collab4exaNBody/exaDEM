@@ -225,7 +225,11 @@ namespace rockable
       for(size_t p = 0 ; p < particles.size() ; p++)
       {
         std::getline(input, line); 
-        particles[p] = decrypt_particle(std::stringstream(line), ptm); 
+        if( line[0] != '#' )
+        {
+          particles[p] = decrypt_particle(std::stringstream(line), ptm); 
+        }
+        else p--;
       }
     }
 
@@ -250,7 +254,6 @@ namespace rockable
           it--;
           continue;
         }
-
         rockable::Interaction I = decrypt_interaction(std::stringstream(line));
         bool is_driver = false;
 

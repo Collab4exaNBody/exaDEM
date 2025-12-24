@@ -41,6 +41,7 @@ namespace exaDEM
     ADD_SLOT(std::vector<std::string>, rename, INPUT, OPTIONAL, DocString{"This option renames the input shapes. Note that a vector of string should be provided. Example: rename: [Shape1, Shape2, Shape3]"});
     ADD_SLOT(bool, rescale_minskowski, INPUT, true, DocString{"This option disable the rescaling of the minskowski radius."});
     ADD_SLOT(bool, verbosity, INPUT, true );
+    ADD_SLOT(bool, vtk, INPUT, true, DocString{"Write vtk files."} );
 
   public:
     inline std::string documentation() const override final
@@ -52,6 +53,11 @@ namespace exaDEM
 
 					- read_shape_file:
 						 filename: shapes.shp
+
+					- read_shape_file:
+						 filename: shapes.shp
+             verbosity: false
+             vtk: false
 
 					- read_shape_file:
 						 filename: shapes.shp
@@ -69,7 +75,7 @@ namespace exaDEM
       auto& ptm = *particle_type_map;
       lout << "Read file= " << *filename << std::endl;
       const bool BigShape = false; // do not remove it
-      std::vector<shape> list_of_shapes = exaDEM::read_shps(*filename, BigShape);
+      std::vector<shape> list_of_shapes = exaDEM::read_shps(*filename, BigShape, *vtk);
       if(rename.has_value())
       {
         std::vector<std::string> names = *rename;

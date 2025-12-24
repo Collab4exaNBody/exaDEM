@@ -54,7 +54,6 @@ namespace exaDEM
           sbuf[proc].clear();
           send_config.clear();
 
-
           // build send buffers and send_config correctly
           uint32_t shift = 0;
           for (auto &it : partner.m_sends)
@@ -188,7 +187,7 @@ namespace exaDEM
 							exaDEM::PlaceholderInteraction& item = buffer[i];
 							// update info
 							auto& owner = item.pair.owner(); 
-							owner.cell = config.m_partner_cell_i; // defined by another mpi process (or himself if periodic boundary conditions)
+							owner.cell = config.m_partner_cell_i; // defined by another mpi process (or maybe himself if there are periodic boundary conditions)
 							item.pair.ghost = InteractionPair::PartnerGhost; // identify this kind of interaction
 
 							// check
@@ -212,7 +211,7 @@ namespace exaDEM
 										}
 									} 
 								}
-								
+///*								
 									 if(!is_idx_exist)
 									 {
 									 const uint64_t* const __restrict__ ids = cells[owner.cell][field::id];
@@ -220,11 +219,12 @@ namespace exaDEM
 									 std::cout << "Error in Proc: " << rank << " from the mpi process ID: " << proc << " in cell: " << config.m_partner_cell_i << std::endl;
 									 for(size_t p=0 ; p<cells[owner.cell].size() ; p++) std::cout << "ids are[" << int(p) << "]: " << ids[p] << std::endl;
 									 item.print();
+
 									 color_log::mpi_error("copy_interaction", "owner.id: " + std::to_string(owner.id) 
-									 + " is != of cells[owner.cell][field::id][owner.p]: "  
-									 + std::to_string(cells[owner.cell][field::id][owner.p]));
+											 + " is != of cells[owner.cell][field::id][owner.p]: "  
+											 + std::to_string(cells[owner.cell][field::id][owner.p]));
 									 }
-								 
+//*/
 							}
 
 							auto& partner = item.pair.partner();
@@ -258,7 +258,7 @@ namespace exaDEM
 												{
 													partner.cell = neigh;
 													partner.p = p;
-                          // Cache values
+													// Cache values
 													partner_id = partner.id;
 													partner_cell = neigh;
 													partner_p = p;

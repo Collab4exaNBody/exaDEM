@@ -83,21 +83,14 @@ namespace exaDEM
     // === compute overlap in dn
     const double dn = dist_norm - R;
 
-    if (dn > 0)
-    {
-      return contact();
-    }
-    else
-    {
-      // === normal vector
-      const Vec3d n = dist * inv_dist_norm;
+    // === normal vector
+    const Vec3d n = dist * inv_dist_norm;
 
-      // === compute contact position
-      const Vec3d contact_position = pi - n * (ri + 0.5 * dn);
+    // === compute contact position
+    const Vec3d contact_position = pi - n * (ri + 0.5 * dn);
 
-      return {true, dn, n, contact_position};
-    }
-  }
+    return {dn < 0, dn, n, contact_position};
+}
 
   ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge_core(const double rVerlet, const Vec3d &vi, const double ri, const Vec3d &vf, const Vec3d &vs, const double rj)
   {

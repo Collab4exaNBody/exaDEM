@@ -102,7 +102,7 @@ namespace exaDEM
 			lout << "* Ghost type of interaction = partner / owner / error" << std::endl;
       for(int i = 0 ; i < 14 ; i++)
       {
-        lout << names[i] << val[14+i] << " / " << val[i] << " / " << val[i] - val[14+i] << std::endl;
+        lout << names[i] << val[i] << " / " << val[14+i] << " / " << val[i] - val[14+i] << std::endl;
       }
       lout << "=====================================================" << std::endl;
 		}

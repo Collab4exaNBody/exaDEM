@@ -178,11 +178,13 @@ namespace exaDEM
  *
  * @param file_name  Path to the input file.
  * @param big_shape  Flag to indicate handling of large shapes (default: false).
+ * @param vtk  Flag to indicate if the vtk file is generated.
  * @return A vector containing the shapes read from the file.
  */
   inline std::vector<shape> read_shps(
       const std::string file_name, 
-      bool big_shape = false)
+      bool big_shape = false,
+      bool vtk = false)
   {
     std::ifstream input(file_name.c_str());
     std::vector<shape> res;
@@ -200,7 +202,7 @@ namespace exaDEM
            if (!big_shape)
            shp.print();
          */
-        shp.write_paraview();
+        if(vtk) shp.write_paraview();
         res.push_back(shp);
       }
     }
@@ -256,11 +258,13 @@ namespace exaDEM
    * @param shps       Container to store the parsed shapes.
    * @param file_name  Path to the input shape file.
    * @param big_shape  Optional flag for large shapes (default: false).
+   * @param vtk  Flag to indicate if the vtk file is generated.
    */
   inline void read_shp(
       shapes &shps, 
       const std::string file_name, 
-      bool big_shape = false)
+      bool big_shape = false,
+      bool vtk = false)
   {
     std::ifstream input(file_name.c_str());
     for (std::string line; getline(input, line);)
@@ -269,9 +273,8 @@ namespace exaDEM
       {
         shape shp = read_shp(input, big_shape);
         shps.add_shape(&shp);
-        if (!big_shape)
-          shp.print();
-        shp.write_paraview();
+        if (!big_shape) shp.print();
+        if (vtk) shp.write_paraview();
       }
     }
   }

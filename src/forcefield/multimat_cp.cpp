@@ -46,6 +46,7 @@ namespace exaDEM
     ADD_SLOT(std::vector<double>,        fc, INPUT, OPTIONAL, DocString{"List of fc values."});
     ADD_SLOT(std::vector<double>,  damprate, INPUT, OPTIONAL, DocString{"List of damprate values."});
     ADD_SLOT(ContactParams, default_config, INPUT, OPTIONAL, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
+    ADD_SLOT(bool, verbosity, INPUT, false, DocString{"Print force field parameter details"});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -193,7 +194,7 @@ namespace exaDEM
       bool driver_mode = false;
 
       cp.check_completeness(multimat_mode, driver_mode);
-      cp.display(multimat_mode, driver_mode);
+      if(*verbosity) cp.display(multimat_mode, driver_mode);
     }
   };
 
