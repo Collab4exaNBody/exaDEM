@@ -182,6 +182,7 @@ namespace exaDEM
           // First, interaction between a polyhedron and a driver
           if (drivers.has_value())
           {
+            item.pair.swap = false;
             auto& pi = item.i(); // particle i (id, cell id, particle position, sub vertex)
             auto& pd = item.driver(); // particle driver (id, cell id, particle position, sub vertex)
 
@@ -306,6 +307,7 @@ namespace exaDEM
                 {
                   if (j_nbPoints == 1) 
                   {  
+                    item.pair.swap = false;
                     set_info_i(id_a[p_a], p_a, cell_a);
                     set_info_j(id_nbh,    p_b, cell_b);
                     item.pair.type = 0; // === Vertex - Vertex
@@ -316,6 +318,7 @@ namespace exaDEM
                   } 
                   else if (j_nbPoints == 2) 
                   {
+                    item.pair.swap = false;
                     set_info_i(id_a[p_a], p_a, cell_a);
                     set_info_j(id_nbh,    p_b, cell_b);
                     item.pair.type = 1; // === vertex edge
@@ -327,6 +330,7 @@ namespace exaDEM
                   } 
                   else if (j_nbPoints >= 3) 
                   {
+                    item.pair.swap = false;
                     set_info_i(id_a[p_a], p_a, cell_a);
                     set_info_j(id_nbh,    p_b, cell_b);
                     item.pair.type = 2; // === vertex face
@@ -342,6 +346,7 @@ namespace exaDEM
                   if (j_nbPoints == 1) 
                   {
                     /** warning, a -> j and b -> i */
+                    item.pair.swap = true;
                     set_info_i(id_nbh,    p_b, cell_b);
                     set_info_j(id_a[p_a], p_a, cell_a);
                     item.pair.type = 1; // === vertex edge
@@ -353,6 +358,7 @@ namespace exaDEM
                   } 
                   else if (j_nbPoints == 2) 
                   {
+                    item.pair.swap = false;
                     set_info_i(id_a[p_a], p_a, cell_a);
                     set_info_j(id_nbh,    p_b, cell_b);
                     // === edge edge
@@ -369,6 +375,7 @@ namespace exaDEM
 									if (j_nbPoints == 1)
 									{
 										/** warning, a -> j and b -> i */
+                    item.pair.swap = true;
 										set_info_i(id_nbh,    p_b, cell_b);
 										set_info_j(id_a[p_a], p_a, cell_a);
 										item.pair.type = 2; // === vertex face

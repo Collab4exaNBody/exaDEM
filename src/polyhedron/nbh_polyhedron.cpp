@@ -198,25 +198,25 @@ namespace exaDEM
               if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER)
               {
                 item.pair.type = InteractionTypeId::VertexCylinder;
-                Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); // std::get<Cylinder>(drvs.data(drvs_idx)) ;
+                Cylinder &driver = drvs.get_typed_driver<Cylinder>(drvs_idx); 
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE)
               {
                 item.pair.type = InteractionTypeId::VertexSurface;
-                Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); //std::get<Surface>(drvs.data(drvs_idx));
+                Surface &driver = drvs.get_typed_driver<Surface>(drvs_idx); 
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL)
               {
                 item.pair.type = InteractionTypeId::VertexBall;
-                Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); //std::get<Ball>(drvs.data(drvs_idx));
+                Ball &driver = drvs.get_typed_driver<Ball>(drvs_idx); 
                 add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, shps);
               }
               else if (drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH)
               {
-                Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); //std::get<STL_MESH>(drvs.data(drvs_idx));
-                                                                              // driver.grid_indexes_summary();
+                Stl_mesh &driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx); 
+                // driver.grid_indexes_summary();
                 add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a, rz_a, vertex_cell_a, orient_a, shps);
               }
             }
@@ -311,6 +311,7 @@ namespace exaDEM
 #define PARAMETERS_SWAP_TRUE  rVerlet, vertices_b, j, shp_nbh, vertices_a, i, shp
 
               // exclude possibilities with obb
+              item.pair.swap = false;
               for (int i = 0; i < nv; i++)
               {
                 auto vi = vertices_a[i];
