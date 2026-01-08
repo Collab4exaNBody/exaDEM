@@ -1,0 +1,30 @@
+## In stl_mesh_box_common.msp
+# define_octahedra
+# define_hexapods
+# compute_force
+includes:
+  - stl_mesh_box_common.msp
+
+input_data: define_octahedra
+
+setup_drivers:
+  - register_stl_mesh:
+     id: 0
+     filename: box_for_octa.stl
+     deform: [2,2,1]
+     minskowski: 0.01
+
+domain:
+  cell_size: 1.5 m
+  periodic: [false,false,false]
+  grid_dims: [ 2 , 2 , 2 ]
+  bounds: [[0 m ,0 m, 0 m], [3 m, 3 m, 3 m]]
+  expandable: true
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 20000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: -1
+  dt: 0.0001 s 
+  rcut_inc: 0.1
