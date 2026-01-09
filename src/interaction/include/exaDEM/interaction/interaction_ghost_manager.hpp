@@ -58,7 +58,6 @@ struct InteractionGhostManager {
         }
         uint32_t n_sent = 0;
 
-        lout << "cell #"<< it.m_cell_i<<" partner#"<< it.m_partner_cell_i<<std::endl;
         for (size_t j = 0 ; j < interactions.size() ; j++) {
           const exaDEM::PlaceholderInteraction& I = interactions[j]; //storage.get_particle_item(p, j);
           if (I.pair.ghost == InteractionPair::OwnerGhost) {
