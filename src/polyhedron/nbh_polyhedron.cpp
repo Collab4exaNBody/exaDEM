@@ -229,6 +229,8 @@ namespace exaDEM
               {
               // default value of the interaction studied (A or i -> B or j)
               const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+              item.i().id = 666;
+              item.j().id = 666;
               item.pair.ghost = InteractionPair::NotGhost;
               item.pair.swap = false;
 
@@ -350,8 +352,8 @@ namespace exaDEM
               pj.p = p_a;
 
               pi.cell = cell_b;
-              pi.p = p_b;
               pi.id = id_nbh;
+              pi.p = p_b;
 
               for (int j = 0; j < nv_nbh; j++)
               {
