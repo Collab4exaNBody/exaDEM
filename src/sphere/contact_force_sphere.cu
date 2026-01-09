@@ -35,7 +35,6 @@ under the License.
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
-#include <exaDEM/mutexes.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/sphere/contact_sphere.h>
 #include <exaDEM/forcefield/contact_parameters.h>

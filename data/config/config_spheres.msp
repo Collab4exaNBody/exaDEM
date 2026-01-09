@@ -10,7 +10,6 @@ chunk_neighbors_impl:
      symetric: true
   - update_interaction_ghost
   - classify_interactions
-  - update_mutexes
   - resize_particle_locks
 
 migrate_particles:
