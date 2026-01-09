@@ -55,8 +55,7 @@ struct ReduceStressTensorFunctor {
     exanb::mat3d_atomic_add_contribution(global, local);
   }
 };
-};  // namespace exaDEM
-
+}  // namespace exaDEM
 
 namespace exanb {
 template <>
@@ -65,8 +64,7 @@ struct ReduceCellParticlesTraits<exaDEM::ReduceStressTensorFunctor> {
   static inline constexpr bool RequiresCellParticleIndex = false;
   static inline constexpr bool CudaCompatible = true;
 };
-};  // namespace exanb
-
+}  // namespace exanb
 
 
 namespace exaDEM {
