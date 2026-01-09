@@ -6,3 +6,4 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/box_for_octa.stl DESTINATION ${CMAKE_CURRE
 add_omp_mpi_test("STLMeshHexapods" "stl_mesh_box_hexapod_mini.msp")
 add_omp_mpi_test("STLMeshOctahedra" "stl_mesh_box_octahedron_mini.msp")
 add_omp_mpi_test("STLMeshOctahedraHexapods" "stl_mesh_box_mixte_mini.msp")
+add_omp_mpi_test("STLMeshOctahedraDeform" "stl_mesh_box_octahedron_mini_deform.msp")

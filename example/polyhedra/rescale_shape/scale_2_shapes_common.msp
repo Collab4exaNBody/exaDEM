@@ -19,7 +19,7 @@ setup_drivers:
 
 compute_force:
   - gravity_force
-  - contact_polyhedron_multimat
+  - contact_multimat_polyhedron
 
 particle_write_paraview_generic:
   - write_paraview_polyhedra

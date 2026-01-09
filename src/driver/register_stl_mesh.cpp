@@ -47,6 +47,7 @@ namespace exaDEM
     ADD_SLOT(double, minskowski, INPUT, REQUIRED, DocString{"Minskowski radius value"});
     ADD_SLOT(bool, binary, INPUT, false, DocString{"Binary mode, it only works if the stl mesh is cmposed of triangles. Default is false."});
     ADD_SLOT(double, scale, INPUT, OPTIONAL, DocString{"Rescale your stl mesh"});
+    ADD_SLOT(exanb::Vec3d, deform, INPUT, OPTIONAL, DocString{"Deform your stl mesh. Usage: deform: [x, y, z]"});
     ADD_SLOT(double, rcut_inc, INPUT, DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
 
   public:
@@ -110,6 +111,22 @@ namespace exaDEM
           if( *scale <= 0.0 ) color_log::error("register_stl_mesh","Impossible to rescale the mesh, scale <= 0.0.");
           if( *scale == 1.0 ) color_log::warning("register_stl_mesh","rescale mesh option is ignored, scale = 1.0.");
         }
+      }
+      
+      if(deform.has_value())
+      {
+      	const exanb::Vec3d d = *deform;
+      	
+      	if( d.x <= 0.0 || d.y <= 0.0 || d.z <= 0.0 )
+      	{
+      		color_log::error("register_stl_mesh", "Impossible to deform: factors must be strictly positive (x,y,z > 0).");
+      	}
+      	
+      	if( d.x != 1.0 || d.y != 1.0 || d.z != 1.0 )
+      	{
+      		shp.deform(d);
+      		shp.write_paraview();
+      	}
       }
 
       shp.m_radius = *minskowski;

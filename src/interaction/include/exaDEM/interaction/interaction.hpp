@@ -50,18 +50,21 @@ namespace exaDEM
     /**
      * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
      */
-    ONIKA_HOST_DEVICE_FUNC void reset()
-    {
+    ONIKA_HOST_DEVICE_FUNC void reset() {
       constexpr exanb::Vec3d null = {0, 0, 0};
       friction = null;
       moment = null;
     }
 
     // Defines whether an interaction will be reconstructed or not.
-    ONIKA_HOST_DEVICE_FUNC bool persistent() { return false; }
+    ONIKA_HOST_DEVICE_FUNC bool persistent() { 
+      return false; 
+    }
+
     // Skip other interactions if this interaction is defined
-    //ONIKA_HOST_DEVICE_FUNC bool ignore_other_interactions() { return true; } 
-    ONIKA_HOST_DEVICE_FUNC bool ignore_other_interactions() { return false; } 
+    ONIKA_HOST_DEVICE_FUNC bool ignore_other_interactions() { 
+      return false; 
+    } 
 
     /**
      * @brief Checks if the interaction is active.
@@ -71,8 +74,7 @@ namespace exaDEM
      *
      * @return True if the interaction is active (moment vector or friction vector is non-zero), false otherwise.
      */
-    ONIKA_HOST_DEVICE_FUNC bool active() const
-    {
+    ONIKA_HOST_DEVICE_FUNC bool active() const {
       if( !pair.active() ) return false;
       constexpr exanb::Vec3d null = {0, 0, 0};
       bool res = ((moment != null) || (friction != null));
@@ -82,8 +84,7 @@ namespace exaDEM
     /**
      * @brief Displays the Interaction data.
      */
-    void print()
-    {
+    void print() {
       pair.print();
       std::cout << "Friction: " << friction << ", Moment: " << moment << ")" << std::endl;
     }
@@ -91,36 +92,29 @@ namespace exaDEM
     /**
      * @brief Displays the Interaction data.
      */
-    void print() const
-    {
+    void print() const {
       pair.print();
       std::cout << "Friction: " << friction << ", Moment: " << moment << ")" << std::endl;
     }
 
-
-    ONIKA_HOST_DEVICE_FUNC void update(Interaction &I)
-    {
+    ONIKA_HOST_DEVICE_FUNC void update(Interaction &I) {
       this->friction = I.friction;
       this->moment = I.moment;
     }
 
-    ONIKA_HOST_DEVICE_FUNC bool operator==(Interaction& I)
-    {
+    ONIKA_HOST_DEVICE_FUNC bool operator==(Interaction& I) {
       return (pair == I.pair);
     }
 
-    ONIKA_HOST_DEVICE_FUNC bool operator==(const Interaction& I) const
-    {
+    ONIKA_HOST_DEVICE_FUNC bool operator==(const Interaction& I) const {
       return (pair == I.pair);
     }
 
-    ONIKA_HOST_DEVICE_FUNC bool operator<(Interaction& I)
-    {
+    ONIKA_HOST_DEVICE_FUNC bool operator<(Interaction& I) {
       return (pair < I.pair);
     }
 
-    ONIKA_HOST_DEVICE_FUNC bool operator<(const Interaction& I) const
-    {
+    ONIKA_HOST_DEVICE_FUNC bool operator<(const Interaction& I) const {
       return (pair < I.pair);
     }
   };

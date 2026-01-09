@@ -47,7 +47,7 @@ namespace exaDEM
   using namespace exanb;
   using namespace sphere;
 
-  template <bool multimat, bool cohesive, typename GridT, class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz, field::_mom, field::_orient, field::_vrot, field::_radius>> 
+  template <bool multimat, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename GridT, class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz, field::_mom, field::_orient, field::_vrot, field::_radius>> 
     class ComputeContactClassifierSphere : public OperatorNode
   {
     // attributes processed during computation
@@ -80,58 +80,73 @@ namespace exaDEM
     inline std::string documentation() const override final { return 
       R"EOF(
       This operator computes forces between particles and particles/drivers using the contact law.
+      Note that to use multmaterials version, you need to predefine the parameters with multimat_contact_params and drivers_contact_params.  
+
+      Naming system :
+      contact_[InputType]_[Shape]_[ContactLaw]_[CohesiveLaw]
+      [InputType]   : singlemat or multimat
+      [Shape]       : sphere or polyhedron
+      [ContactLaw]  : Hooke 
+      [CohesiveLaw] : None or Cohesive or DMT
+      For simplicity contact_sphere <=> contact_singlemat_sphere_hooke <=> contact_singlemat_sphere_hooke_none
 
       YAML example:
-
         - contact_sphere:
            symetric: true
            config: { kn: 100000, kt: 100000, kr: 0.1, mu: 0.9, damp_rate: 0.9}
+           
+        - contact_singlemat_sphere_hooke:
+           symetric: true
+           config: { kn: 100000, kt: 100000, kr: 0.1, mu: 0.9, damp_rate: 0.9}
 
-        - contact_sphere_with_cohesion:
+        - contact_singlemat_sphere_hooke_cohesive:
            symetric: true
            config: { dncut: 0.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.9, damp_rate: 0.9}
 
-        - contact_sphere_multimat:
+        - contact_singlemat_sphere_hooke_dmt:
+           symetric: true
+           config: { dncut: 0.1 m, kn: 100000, kt: 100000, kr: 0.1, mu: 0.9, damp_rate: 0.9, gamma: 0.05}
+
+        - contact_multimat_sphere_hooke_none:
            symetric: true
 
-        - contact_sphere_multimat_with_cohesion:
+        - contact_multimat_sphere_hooke_dmt:
+           symetric: true
+
+        - contact_multimat_sphere_hooke_cohesive:
            symetric: true
       )EOF"; 
     }
 
-    template<int start, int end, template<int, bool, typename> typename FuncT, typename XFormT, typename... Args>
-      void loop_contact_force(Classifier& classifier, XFormT& cp_xform, Args &&... args)
-      {
-        FuncT<start, cohesive, XFormT> contact_law;
+    template<int start, int end, template<int, ContactLawType, CohesiveLawType, typename> typename FuncT, typename XFormT, typename... Args>
+      void loop_contact_force(Classifier& classifier, XFormT& cp_xform, Args &&... args) {
+        FuncT<start, ContactLaw, CohesiveLaw, XFormT> contact_law;
         contact_law.xform = cp_xform;
         run_contact_law<start>(parallel_execution_context(), classifier, contact_law, args...);
-        if constexpr( start + 1 <= end )
-        {
+        if constexpr( start + 1 <= end ) {
           loop_contact_force<start+1, end, FuncT, XFormT>(classifier, cp_xform, std::forward<Args>(args)...);
         }
       }
 
     template<bool is_sym, typename XFormT>
-      void core(XFormT& xform)
-      {
+      void core(XFormT& xform) {
         const DriversGPUAccessor drvs = *drivers;
         auto *cells = grid->cells();
 
         const double time = *dt;
         auto &classifier = *ic;
 
-        contact_law<is_sym, cohesive, XFormT> sph = {xform};
-        contact_law_driver<cohesive, Cylinder, XFormT> cyl = {xform};
-        contact_law_driver<cohesive, Surface, XFormT> surf = {xform};
-        contact_law_driver<cohesive, Ball, XFormT> ball = {xform};
+        contact_law<is_sym, ContactLaw, CohesiveLaw, XFormT> sph = {xform};
+        contact_law_driver<ContactLaw, CohesiveLaw, Cylinder, XFormT> cyl = {xform};
+        contact_law_driver<ContactLaw, CohesiveLaw, Surface, XFormT> surf = {xform};
+        contact_law_driver<ContactLaw, CohesiveLaw, Ball, XFormT> ball = {xform};
 
-        if( !multimat ) /** single mat */
+        if(!multimat ) /** single mat */
         {
           const ContactParams hkp = *config;
           ContactParams hkp_drvs{};
 
-          if (drivers->get_size() > 0 )
-          {
+          if(drivers->get_size() > 0) {
             hkp_drvs = *config_driver;
           }
 
@@ -147,8 +162,7 @@ namespace exaDEM
           constexpr int stl_type_end = 9;
           loop_contact_force <stl_type_start,  stl_type_end, contact_law_stl, XFormT>(classifier, xform, cells, drvs, cp_drvs, time);
         }
-        else
-        {
+        else {
           const auto& contact_parameters = *multimat_cp;
           const MultiMatContactParamsTAccessor<ContactParams> cp = contact_parameters.get_multimat_accessor();
           const MultiMatContactParamsTAccessor<ContactParams> cp_drvs = contact_parameters.get_drivers_accessor();
@@ -163,13 +177,11 @@ namespace exaDEM
         }
       }
 
-    void save_results()
-    {
+    void save_results() {
       /** Analysis */
       const long frequency_interaction = *analysis_interaction_dump_frequency;
       bool write_interactions = (frequency_interaction > 0 && (*timestep) % frequency_interaction == 0);
-      if(write_interactions)
-      {
+      if(write_interactions) {
         auto &classifier = *ic;
         auto stream = itools::create_buffer(*grid, classifier);
         std::string ts = std::to_string(*timestep);
@@ -180,15 +192,14 @@ namespace exaDEM
     void check_slots()
     {
       bool pw = true;
+      constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
       /** polyhedron interactions are defined while the contact sphere operator is used */
       {
         auto &classifier = *ic;
-        for(int i = 1 ; i <= 3 ; i++)
-        {
+        for(int i = 1 ; i <= 3 ; i++) {
           size_t size = classifier.get_size(i);
-          if(size > 0)
-          {
+          if(size > 0) {
             std::string msg = "The contact operator for spheres is being used, but polyhedron interactions are defined.\n";
             msg += "                        Please, use contact_polyhedron operators."; 
             color_log::error(opertor_name(), msg);
@@ -199,19 +210,18 @@ namespace exaDEM
       /** Some check mutlimat versus singlemat */
       if constexpr  (multimat) /** Multiple materials */
       {
-        if( !multimat_cp.has_value() )
-        {
+        if(!multimat_cp.has_value()) {
           std::string msg = "You are using the multi-material contact force model, but the contact law parameters have not been defined.\n";
           msg            += "Please specify the parameter values for each material pair using the operator \"multimat_contact_params\".";
           color_log::error(opertor_name(), msg);
         }
-        if( *print_warning && config.has_value() ) 
-        {
+
+				if(*print_warning && config.has_value()) {
           color_log::warning(opertor_name(), "You are using the multi-material contact force operator, but you have also defined the input slot \"config\" which is intended for the single-material version. This slot will be ignored.");
           pw = false;
         }
-        if( *print_warning && config_driver.has_value() ) 
-        {
+
+				if(*print_warning && config_driver.has_value()) {
           color_log::warning(opertor_name(), "You are using the multi-material contact force operator, but you have also defined the input slot \"config_driver\" which is intended for the single-material version. This slot will be ignored.");
           pw = false;
         }
@@ -219,32 +229,29 @@ namespace exaDEM
 
       if constexpr  (!multimat) /** Single material */
       {
-        if( !config.has_value() ) 
-        {
+        if(!config.has_value()) {
           std::string msg = "The input slot \"config\" is not defined, yet the single-material version of the contact operator is being used.\n";
           msg            += "Please specify the \"config\" input slot, and use the \"config_driver\" slot if you want to define a contact law between a particle and a driver.";
           color_log::error(opertor_name(), msg);
         }
-        if( multimat_cp.has_value() )
-        {
+
+        if(multimat_cp.has_value()) {
           std::string msg = " You have defined a list of contact law parameters for different material types, \n";
           msg            += "but you are using the version that only considers the parameter defined in the \"config\" input slot.\n";
-          msg            += "The parameter list will be ignored. If you want to use it, please use the operator \n";
-          msg            += "\"contact_sphere_multimat\" or \"contact_sphere_multimat_with_cohesion\".";
+          msg            += "The parameter list will be ignored. If you want to use it, please use the operators types \n";
+          msg            += "\"contact_multimat_[Shape]_[ContactLaw]_[CohesiveLaw]\".";
           color_log::warning(opertor_name(), msg);
           pw = false;
         }
         /** Some global checks */
         /** Is cohesive force define while it's not used */
-        if constexpr (!cohesive)
-        {
-          if(config->dncut > 0)
-          {
-            color_log::error(opertor_name(), "dncut is != 0 while the cohesive force is not used. Please, use contact_sphere_with_cohesion operator.");
+        if constexpr (!LawComboTraits<LawCombo>::cohesive) {
+          if(config->dncut > 0) {
+            color_log::error(opertor_name(), "dncut is != 0 while the cohesive force is not used. Please, use contact_[InputType]_[Shape]_hooke_cohesive operators.");
           }
-          if(drivers->get_size() > 0 && config_driver->dncut > 0)
-          {
-            color_log::error(opertor_name(), "dncut is != 0 while the cohesive force is not used. Please, use contact_sphere_with_cohesion operator.");
+
+          if(drivers->get_size() > 0 && config_driver->dncut > 0) {
+            color_log::error(opertor_name(), "dncut is != 0 while the cohesive force is not used. Please, use contact_[InputType]_[Shape]_hooke_cohesive operators.");
           }
         }
       }
@@ -252,57 +259,76 @@ namespace exaDEM
     }
 
     /** fill highest kn */
-    void scan_kn()
-    {
-      if(!(*print_warning)) return;
-      double kn = 0.0;
-      if(config.has_value()) kn = std::max(kn, config->kn);
-      if(config_driver.has_value()) kn = std::max(kn, config->kn);
-      if(multimat_cp.has_value())
-      {
-        auto get_max_kn = [&kn] (const ContactParams& cp) -> void { kn = std::max(kn, cp.kn); };
-        multimat_cp->apply(get_max_kn);
-      }
-      *max_kn = kn;
-    }
-
-    inline void execute() override final
-    {
-      check_slots();
-      scan_kn();
-
-      if (grid->number_of_cells() == 0)
-      {
+    void scan_kn() {
+      if(!(*print_warning)) {
         return;
       }
 
-      if(!domain->xform_is_identity())
-      {
-        LinearXForm cp_xform = {domain->xform()};
-        if(*symetric) core<true>(cp_xform);
-        else core<false>(cp_xform);
+      double kn = 0.0;
+      if(config.has_value()) {
+        kn = std::max(kn, config->kn);
       }
-      else     
-      {
-        NullXForm cp_xform;
-        if(*symetric) core<true>(cp_xform);
-        else core<false>(cp_xform);
-      }     
 
-      save_results();
-    }
-  };
+			if(config_driver.has_value()) {
+        kn = std::max(kn, config->kn);
+      }
 
-  template <class GridT> using ComputeContactSphereSingleMatTmpl = ComputeContactClassifierSphere<false, false, GridT>;
-  template <class GridT> using ComputeContactSphereSingleMatCohesiveTmpl = ComputeContactClassifierSphere<false, true, GridT>;
-  template <class GridT> using ComputeContactSphereMultiMatTmpl = ComputeContactClassifierSphere<true, false, GridT>;
-  template <class GridT> using ComputeContactSphereMultiMatCohesiveTmpl = ComputeContactClassifierSphere<true, true, GridT>;
+			if(multimat_cp.has_value()) {
+			  auto get_max_kn = [&kn] (const ContactParams& cp) -> void { kn = std::max(kn, cp.kn); };
+				multimat_cp->apply(get_max_kn);
+			}
+			*max_kn = kn;
+		}
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(contact_force_sphere) { OperatorNodeFactory::instance()->register_factory("contact_sphere", make_grid_variant_operator<ComputeContactSphereSingleMatTmpl>); }
-  ONIKA_AUTORUN_INIT(contact_force_sphere_sm) { OperatorNodeFactory::instance()->register_factory("contact_sphere_singlemat", make_grid_variant_operator<ComputeContactSphereSingleMatTmpl>); }
-  ONIKA_AUTORUN_INIT(contact_force_sphere_with_cohesion) { OperatorNodeFactory::instance()->register_factory("contact_sphere_with_cohesion", make_grid_variant_operator<ComputeContactSphereSingleMatCohesiveTmpl>); }
-  ONIKA_AUTORUN_INIT(contact_force_sphere_sm_with_cohesion) { OperatorNodeFactory::instance()->register_factory("contact_sphere_singlemat_with_cohesion", make_grid_variant_operator<ComputeContactSphereSingleMatCohesiveTmpl>); }
-  ONIKA_AUTORUN_INIT(contact_force_sphere_mm) { OperatorNodeFactory::instance()->register_factory("contact_sphere_multimat", make_grid_variant_operator<ComputeContactSphereMultiMatTmpl>); }
-  ONIKA_AUTORUN_INIT(contact_force_sphere_mm_with_cohesion) { OperatorNodeFactory::instance()->register_factory("contact_sphere_multimat_with_cohesion", make_grid_variant_operator<ComputeContactSphereMultiMatCohesiveTmpl>); }
+		inline void execute() override final {
+			check_slots();
+			scan_kn();
+
+			if(grid->number_of_cells() == 0)	{
+				return;
+			}
+
+			if(!domain->xform_is_identity()) {
+				LinearXForm cp_xform = {domain->xform()};
+				if(*symetric) { 
+          core<true>(cp_xform);
+        }
+				else {
+          core<false>(cp_xform);
+        }
+			}
+			else {
+				NullXForm cp_xform;
+				if(*symetric) {
+          core<true>(cp_xform);
+        }
+				else {
+          core<false>(cp_xform);
+        }
+			}     
+			save_results();
+		}
+	};
+
+	template <class GridT> using  ComputeContactSingleMatSphereHookeNoneTmpl     = ComputeContactClassifierSphere<false, ContactLawType::Hooke,      CohesiveLawType::None, GridT>;  
+	template <class GridT> using  ComputeContactSingleMatSphereHookeDmtTmpl      = ComputeContactClassifierSphere<false, ContactLawType::Hooke,      CohesiveLawType::DMT , GridT>; 
+	template <class GridT> using  ComputeContactSingleMatSphereHookeCohesiveTmpl = ComputeContactClassifierSphere<false, ContactLawType::Hooke,      CohesiveLawType::Cohesive , GridT>; 
+
+	template <class GridT> using  ComputeContactMultiMatSphereHookeNoneTmpl     = ComputeContactClassifierSphere<true , ContactLawType::Hooke,      CohesiveLawType::None, GridT>; 
+	template <class GridT> using  ComputeContactMultiMatSphereHookeCohesiveTmpl = ComputeContactClassifierSphere<true , ContactLawType::Hooke,      CohesiveLawType::Cohesive , GridT>; 
+	template <class GridT> using  ComputeContactMultiMatSphereHookeDmtTmpl      = ComputeContactClassifierSphere<true , ContactLawType::Hooke,      CohesiveLawType::DMT , GridT>; 
+
+	// === register factories ===
+	ONIKA_AUTORUN_INIT(contact_force_sphere) { OperatorNodeFactory::instance()->register_factory("contact_sphere", make_grid_variant_operator<ComputeContactSingleMatSphereHookeNoneTmpl>); }
+	ONIKA_AUTORUN_INIT(contact_force_sphere_sm_hooke) { OperatorNodeFactory::instance()->register_factory("contact_singlemat_sphere_hooke", make_grid_variant_operator<ComputeContactSingleMatSphereHookeNoneTmpl>); }
+	ONIKA_AUTORUN_INIT(contact_force_sphere_sm_hooke_none) { OperatorNodeFactory::instance()->register_factory("contact_singlemat_sphere_hooke_none", make_grid_variant_operator<ComputeContactSingleMatSphereHookeNoneTmpl>); }
+	ONIKA_AUTORUN_INIT(contact_force_sphere_sm_hooke_dmt) { OperatorNodeFactory::instance()->register_factory("contact_singlemat_sphere_hooke_dmt", make_grid_variant_operator<ComputeContactSingleMatSphereHookeDmtTmpl>); }
+	ONIKA_AUTORUN_INIT(contact_force_sphere_sm_hooke_cohesive) { OperatorNodeFactory::instance()->register_factory("contact_singlemat_sphere_hooke_cohesive", make_grid_variant_operator<ComputeContactSingleMatSphereHookeCohesiveTmpl>); }
+
+	ONIKA_AUTORUN_INIT(contact_force_sphere_mm_hooke) { OperatorNodeFactory::instance()->register_factory("contact_multimat_sphere", make_grid_variant_operator<ComputeContactMultiMatSphereHookeNoneTmpl>); }
+	ONIKA_AUTORUN_INIT(contact_force_sphere_mm_hooke) { OperatorNodeFactory::instance()->register_factory("contact_multimat_sphere_hooke", make_grid_variant_operator<ComputeContactMultiMatSphereHookeNoneTmpl>); }
+	ONIKA_AUTORUN_INIT(contact_force_sphere_mm_hooke_none) { OperatorNodeFactory::instance()->register_factory("contact_multimat_sphere_hooke_none", make_grid_variant_operator<ComputeContactMultiMatSphereHookeNoneTmpl>); }
+	ONIKA_AUTORUN_INIT(contact_force_sphere_mm_hooke_cohesive) { OperatorNodeFactory::instance()->register_factory("contact_multimat_sphere_hooke_cohesive", make_grid_variant_operator<ComputeContactMultiMatSphereHookeCohesiveTmpl>); }
+	ONIKA_AUTORUN_INIT(contact_force_sphere_mm_hooke_dmt) { OperatorNodeFactory::instance()->register_factory("contact_multimat_sphere_hooke_dmt", make_grid_variant_operator<ComputeContactMultiMatSphereHookeDmtTmpl>); }
+
 } // namespace exaDEM

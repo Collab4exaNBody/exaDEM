@@ -31,7 +31,7 @@ setup_drivers:
 
 compute_force:
   - gravity_force
-  - contact_sphere_with_cohesion:
+  - contact_singlemat_sphere_hooke_cohesive:
      symetric: true
      config: { dncut: 0.2 m, kn: 100000, kt: 100000, kr: 0.1, fc: 5, mu: 0.3, damp_rate: 0.9} 
      config_driver: { dncut: 0.1 m, kn: 100000, kt: 90000, kr: 0.1, fc: 0.0, mu: 0.9, damp_rate: 0.9} 

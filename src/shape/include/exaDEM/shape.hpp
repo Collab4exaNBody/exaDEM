@@ -649,6 +649,33 @@ namespace exaDEM
       for(size_t vid = 0; vid < m_vertices.size() ; vid++) vertices[vid] = conv_to_vec3r(get_vertex(vid));
       obb = build_OBB(vertices, m_radius); 
     }
+    
+    
+    /**
+     * @brief Deform the shape with non-uniform factors [x, y, z].
+     * @params deformation Vector containing scale factors.
+     */
+    void deform(const exanb::Vec3d& deformation)
+    {
+    	auto deform_vertices = [] (exanb::Vec3d& v, const exanb::Vec3d& d)
+    	{
+    		v.x = v.x * d.x;
+    		v.y = v.y * d.y;
+    		v.z = v.z * d.z;
+    	};
+    	for_all_vertices(deform_vertices, deformation);
+    	if(m_volume != 0)
+    	{
+    		m_volume *= (deformation.x * deformation.y * deformation.z);
+    	}
+    	std::vector<vec3r> vertices;
+    	vertices.resize(m_vertices.size());
+    	for(size_t vid = 0; vid < m_vertices.size() ; vid++)
+    	{
+    		vertices[vid] = conv_to_vec3r(get_vertex(vid));
+    	}
+    	obb = build_OBB(vertices, m_radius);
+    }
 
     /**
      * @brief Compute the surface area of the shape.

@@ -39,7 +39,7 @@ setup_drivers:
 
 compute_force:
   - gravity_force
-  - contact_sphere_multimat:
+  - contact_multimat_sphere:
      symetric: true
 
 domain:
