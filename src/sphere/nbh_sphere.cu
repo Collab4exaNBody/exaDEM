@@ -227,7 +227,7 @@ class UpdateContactInteractionSphere : public OperatorNode {
           }
         }
 
-        item.pair.type = InteractionTypeId::VertexFace;
+        item.pair.type = InteractionTypeId::VertexVertex;
 
         if (sym) {
           // Second, we add interactions between two spheres.

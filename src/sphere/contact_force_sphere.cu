@@ -244,6 +244,7 @@ class ComputeContactClassifierSphere : public OperatorNode {
       for (int i = 1 ; i <= 3 ; i++) {
         size_t size = classifier.get_size(i);
         if (size > 0) {
+          
           std::string msg = "The contact operator for spheres is being used, but polyhedron interactions are defined.\n";
           msg += "                        Please, use contact_polyhedron operators.";
           color_log::error(opertor_name(), msg);
