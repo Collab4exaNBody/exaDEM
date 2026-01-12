@@ -1,3 +1,21 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 #pragma once
 
 #include <exaDEM/drivers.h>
@@ -10,11 +28,11 @@ namespace exaDEM {
  *
  * This function detects contacts between all particles (vertices, edges, faces)
  * and the primitives (vertices, edges, faces) of a driver mesh. It relies on
- * Oriented Bounding Boxes (OBB) for broad-phase filtering and then applies 
+ * Oriented Bounding Boxes (OBB) for broad-phase filtering and then applies
  * fine-grained filters for vertex-vertex, vertex-edge, vertex-face, edge-edge,
  * edge-vertex, and face-vertex interactions.
  *
- * @tparam Func   Functor type used to register contacts 
+ * @tparam Func   Functor type used to register contacts
  *                (signature: void(size_t pid, Interaction&, int sub_i, int sub_j)).
  *
  * @param mesh        STL mesh driver containing geometry and precomputed OBBs.
@@ -38,7 +56,7 @@ namespace exaDEM {
  *       - 11: particle-edge vs driver-vertex
  *       - 12: particle-face vs driver-vertex
  */
-template <typename Func> 
+template <typename Func>
 ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     Stl_mesh &mesh,
     size_t cell_a,
@@ -73,10 +91,11 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
   [[maybe_unused]] OBB *__restrict__ stl_obb_edges = vector_data(stl_shp.m_obb_edges);
   [[maybe_unused]] OBB *__restrict__ stl_obb_faces = vector_data(stl_shp.m_obb_faces);
 
-  auto& pi = item.i();  // particle i (id, cell id, particle position, sub vertex)
+  // particle i (id, cell id, particle position, sub vertex)
+  auto& pi = item.i();
 
   for (size_t p = 0; p < n_particles; p++) {
-    Vec3d r = {rx[p], ry[p], rz[p]}; // position
+    Vec3d r = {rx[p], ry[p], rz[p]};  // position
     ParticleVertexView vertices_i = {p, vertices};
     const Quaternion& orient_i = orient[p];
     pi.p = p;
@@ -100,7 +119,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     for (size_t i = 0; i < nv; i++) {
       vec3r v = conv_to_vec3r(vertices_i[i]);
       OBB obb_v_i;
-      obb_v_i.center = v; 
+      obb_v_i.center = v;
       obb_v_i.enlarge(rVerlet + shpi->m_radius);
 
       // vertex - vertex
@@ -110,7 +129,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
         size_t idx = list.vertices[j];
         if (filter_vertex_vertex_v2(rVerlet, __particle__, __driver__)) {
           add_contact(item, i, idx);
-        } 
+        }
       }
       // vertex - edge
       item.pair.type = 8;
@@ -176,8 +195,8 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
  * @brief Add interactions between particles and a driver (boundary or external object).
  *
  * This function loops over all particles, fetches their associated shape,
- * and tests each vertex against the given driver to determine if a contact 
- * should be created. If a contact is detected, the provided functor 
+ * and tests each vertex against the given driver to determine if a contact
+ * should be created. If a contact is detected, the provided functor
  * `add_contact` is invoked with the corresponding interaction data.
  *
  * @tparam DriverT   Type of the driver (e.g., surface, ball, cylinder).
@@ -193,7 +212,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
  * @param vertices    Vertex field storing particle vertex positions.
  * @param shps        Shape container indexed by particle type.
  */
-template <typename DriverT, typename Func> 
+template <typename DriverT, typename Func>
 ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     DriverT &driver,
     Func &add_contact,
