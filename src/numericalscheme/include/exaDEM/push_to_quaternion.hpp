@@ -22,35 +22,28 @@ under the License.
 #include <exanb/compute/compute_cell_particles.h>
 #include <onika/math/quaternion_operators.h>
 
-namespace exaDEM
-{
-  using namespace exanb;
-  struct PushToQuaternionFunctor
-  {
-    double m_dt;
-    double m_dt_2;
-    double m_dt2_2;
+namespace exaDEM {
+struct PushToQuaternionFunctor {
+  double m_dt;
+  double m_dt_2;
+  double m_dt2_2;
 
-    ONIKA_HOST_DEVICE_FUNC
-      inline void operator()(
-          exanb::Quaternion &Q,
-          exanb::Vec3d &vrot,
-          const exanb::Vec3d arot) const
-      {
-        Q = Q + dot(Q, vrot) * m_dt;
-        Q = normalize(Q);
-        vrot += m_dt_2 * arot;
-      }
-  };
-} // namespace exaDEM
+  ONIKA_HOST_DEVICE_FUNC
+  inline void operator()(exanb::Quaternion& Q, exanb::Vec3d& vrot,
+                         const exanb::Vec3d arot) const {
+    Q = Q + dot(Q, vrot) * m_dt;
+    Q = normalize(Q);
+    vrot += m_dt_2 * arot;
+  }
+};
+}  // namespace exaDEM
 
-namespace exanb
-{
+namespace exanb {
 
-  template <> struct ComputeCellParticlesTraits<exaDEM::PushToQuaternionFunctor>
-  {
-    static inline constexpr bool RequiresBlockSynchronousCall = false;
-    static inline constexpr bool CudaCompatible = true;
-  };
+template <>
+struct ComputeCellParticlesTraits<exaDEM::PushToQuaternionFunctor> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
 
-} // namespace exanb
+}  // namespace exanb
