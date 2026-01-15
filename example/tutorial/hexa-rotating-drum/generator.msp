@@ -57,10 +57,6 @@ domain:
   bounds: [[0 m ,0 m, 0 m], [21 m, 7.5 m, 21 m]]
   expandable: true
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 global:
   simulation_dump_frequency: 100000
   simulation_end_iteration: 1200000
