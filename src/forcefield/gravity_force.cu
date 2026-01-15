@@ -25,7 +25,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <memory>
 #include <exaDEM/traversal.h>
-#include <exaDEM/forcefield/gravity_force.h>
+#include <exaDEM/gravity_force.h>
 
 namespace exaDEM
 {

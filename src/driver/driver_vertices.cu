@@ -27,7 +27,7 @@ under the License.
 #include <onika/math/basic_types.h>
 #include <mpi.h>
 #include <exaDEM/shapes.hpp>
-#include <exaDEM/drivers.hpp>
+#include <exaDEM/drivers.h>
 
 namespace exaDEM
 {

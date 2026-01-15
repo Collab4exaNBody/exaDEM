@@ -7,7 +7,7 @@ to you under the Apache License, Version 2.0 (the
 "License"); you may not use this file except in compliance
 with the License.  You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0
+  http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -24,44 +24,42 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/compute/compute_cell_particles.h>
+#include <memory>
+#include <exaDEM/force_to_accel.h>
 #include <exaDEM/traversal.h>
-#include <exaDEM/force_to_accel.hpp>
 
-namespace exaDEM {
-template <typename GridT,
-					class = AssertGridHasFields<GridT, field::_mass, field::_fx,
-																			field::_fy, field::_fz>>
-class ForceToAccel : public OperatorNode {
-	// attributes processed during computation
-	using ComputeFields = field_accessor_tuple_from_field_set_t<
-			FieldSet<field::_mass, field::_fx, field::_fy, field::_fz>>;
-	static constexpr ComputeFields compute_field_set{};
+namespace exaDEM
+{
+  using namespace exanb;
 
-	ADD_SLOT(GridT, grid,
-					 INPUT_OUTPUT, REQUIRED);
-	ADD_SLOT(Traversal, traversal_real,
-					 INPUT, REQUIRED,
-					 DocString{"list of non empty cells within the current grid"});
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_mass, field::_fx, field::_fy, field::_fz>> class ForceToAccel : public OperatorNode
+  {
+    // attributes processed during computation
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_mass, field::_fx, field::_fy, field::_fz>>;
+    static constexpr ComputeFields compute_field_set{};
 
- public:
-	inline std::string documentation() const final {
-		return R"EOF(
-				This operator computes particle accelerations from forces and mass.
-				)EOF";
-	}
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
-	inline void execute() override final {
-		const ComputeCellParticlesOptions ccpo =
-				traversal_real->get_compute_cell_particles_options();
-		ForceToAccelFunctor func{};
-		compute_cell_particles(*grid, false, func, compute_field_set,
-													 parallel_execution_context(), ccpo);
-	}
-};
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
+        This operator computes particle accelerations from forces and mass.
+        )EOF";
+    }
 
-// === register factories ===
-ONIKA_AUTORUN_INIT(force_to_accel) {
-	OperatorNodeFactory::instance()->register_factory(
-			"force_to_accel", make_grid_variant_operator<ForceToAccel>);
-}
-}  // namespace exaDEM
+    inline void execute() override final
+    {
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
+      ForceToAccelFunctor func{};
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
+    }
+  };
+
+  template <class GridT> using ForceToAccelTmpl = ForceToAccel<GridT>;
+
+  // === register factories ===
+  ONIKA_AUTORUN_INIT(force_to_accel) { OperatorNodeFactory::instance()->register_factory("force_to_accel", make_grid_variant_operator<ForceToAccelTmpl>); }
+
+} // namespace exaDEM

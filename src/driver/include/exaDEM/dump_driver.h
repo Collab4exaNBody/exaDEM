@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <drivers.hpp>
+#include <drivers.h>
 
 namespace exaDEM
 {

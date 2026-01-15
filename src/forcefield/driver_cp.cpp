@@ -25,9 +25,8 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/core/particle_type_id.h>
 #include <memory>
-#include <exaDEM/drivers.hpp>
-#include <exaDEM/forcefield/contact_parameters.h>
-#include <exaDEM/forcefield/multimat_parameters.h>
+#include <exaDEM/multimat_cp.h>
+#include <exaDEM/drivers.h>
 
 namespace exaDEM
 {
@@ -36,7 +35,7 @@ namespace exaDEM
   class DriversContactParams : public OperatorNode
   {
     ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED );
-    ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT_OUTPUT, REQUIRED, DocString{"List of contact parameters for simulations with multiple materials"});
+    ADD_SLOT(ContactParamsMultiMat<ContactParams>, multimat_cp, INPUT_OUTPUT, REQUIRED, DocString{"List of contact parameters for simulations with multiple materials"});
     ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT(std::vector<std::string>,  mat, INPUT, OPTIONAL, DocString{"List of materials."});
     ADD_SLOT(std::vector<int>,    driver_id, INPUT, OPTIONAL, DocString{"List of drivers."});
@@ -49,7 +48,6 @@ namespace exaDEM
     ADD_SLOT(std::vector<double>,     gamma, INPUT, OPTIONAL, DocString{"List of gamma values."});
     ADD_SLOT(std::vector<double>,  damprate, INPUT, OPTIONAL, DocString{"List of damprate values."});
     ADD_SLOT(ContactParams, default_config, INPUT, OPTIONAL, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
-    ADD_SLOT(bool, verbosity, INPUT, false, DocString{"Print force field parameter details"});
 
     // -----------------------------------------------
     // ----------- Operator documentation ------------
@@ -79,7 +77,7 @@ namespace exaDEM
     {
       const auto& type_map = *particle_type_map; 
       int n_types = type_map.size();
-      MultiMatParamsT<ContactParams>& cp = *multimat_cp;
+      ContactParamsMultiMat<ContactParams>& cp = *multimat_cp;
 
       // We use the same data map to for drivers
       ParticleTypeMap driver_map;
@@ -238,7 +236,7 @@ namespace exaDEM
       bool driver_mode = true;
 
       cp.check_completeness(multimat_mode, driver_mode);
-      if(*verbosity) cp.display(multimat_mode, driver_mode);
+      cp.display(multimat_mode, driver_mode);
     }
   };
 

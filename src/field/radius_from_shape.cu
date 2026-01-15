@@ -97,13 +97,11 @@ namespace exaDEM
       onika::memory::CudaMMVector<double> r;
       r.resize(size);
       double rmax = *rcut_max;
-      lout << "start rmax " << rmax << std::endl;
       for (size_t i = 0; i < size; i++)
       {
         double rad_max = shps[i]->compute_max_rcut();
         r[i] = rad_max;
         rmax = std::max(rmax, 2 * rad_max); // r * maxrcut
-        lout << "shape " << i << " rmax " << rmax << std::endl;
       }
       *rcut_max = rmax;
 
