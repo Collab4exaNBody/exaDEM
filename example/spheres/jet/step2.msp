@@ -67,10 +67,6 @@ domain:
   cell_size: 10.0 m
   periodic: [false,false,false]
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 global:
   simulation_dump_frequency: 500000
   simulation_end_iteration: 5000000
