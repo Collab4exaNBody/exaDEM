@@ -109,6 +109,20 @@ namespace exaDEM
       return obb;
     }
 
+  inline OBB build_obb_from_shape(const shape& shp)
+  {
+    size_t nv = shp.get_number_of_vertices();
+    
+    const double ext = shp.minskowski(1.0);
+    std::vector<vec3r> vbuf;
+    vbuf.resize(nv);
+    for (size_t i = 0; i < nv; i++)
+    {
+      vbuf[i] = conv_to_vec3r(shp.get_vertex(i));
+    }
+    OBB res = build_OBB(vbuf, ext);
+    return res;
+  }
   //#define OLD_VERSION;
 
   // general functon;
@@ -125,8 +139,8 @@ namespace exaDEM
   {
     const double ext = shp->m_radius;
     auto [first, second] = shp->get_edge(index);
-    const Vec3d vf = shp->get_vertex(first, position, orientation);
-    const Vec3d vs = shp->get_vertex(second, position, orientation);
+    const Vec3d vf = shp->get_vertex(first, position, 1.0, orientation);
+    const Vec3d vs = shp->get_vertex(second, position, 1.0, orientation);
     std::array<vec3r, 2> v = {conv_to_vec3r(vf), conv_to_vec3r(vs)};
     OBB res = build_OBB(v, ext);
     return res;
@@ -150,7 +164,7 @@ namespace exaDEM
     std::vector<vec3r> v(nf);
     for (int i = 0; i < nf; i++)
     {
-      v[i] = conv_to_vec3r(shp->get_vertex(data[i], position, orientation));
+      v[i] = conv_to_vec3r(shp->get_vertex(data[i], position, 1.0, orientation));
     }
     OBB res = build_OBB(v, ext);
     return res;
@@ -419,7 +433,7 @@ inline void shape::compute_prepro_obb(Vec3d* scratch, const Vec3d &particle_cent
 #   pragma omp parallel for schedule (static)
   for (size_t i = 0; i < nv; i++)
   {
-    scratch[i] = this->get_vertex(i, particle_center, particle_quat);
+    scratch[i] = this->get_vertex(i, particle_center, 1.0, particle_quat);
   }
 
   this->pre_compute_obb_vertices(scratch);

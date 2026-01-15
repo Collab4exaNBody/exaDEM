@@ -75,9 +75,9 @@ namespace exaDEM
      * @tparam FuncT The function type to perform the reduction.
      * @tparam ResultT The result type that stores the reduction result.
      */
-    template <typename T, class FuncT, class ResultT> struct ReduceTFunctor
+    template <InteractionType IT, class FuncT, class ResultT> struct ReduceTFunctor
     {
-      InteractionWrapper<T> m_data; /**< Pointer to the data to be reduced. */
+      InteractionWrapper<IT> m_data; /**< Pointer to the data to be reduced. */
       const FuncT m_func;           /**< Functor that defines how reduction is performed. */
       ResultT *m_reduced_val;       /**< Pointer to the result of the reduction. */
 
@@ -150,15 +150,15 @@ namespace exaDEM
        * This operator processes individual particle interactions, filtering out duplicates
        * and counting active interactions where particles are overlapping (dn < 0).
        */
-      template <typename T>
+      template <InteractionType IT>
       ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult &local, const uint64_t idx,
                                                     // const exaDEM::Interaction* const interactions,
-                                                    InteractionWrapper<T> interactions, reduce_thread_local_t = {}) const
+                                                    InteractionWrapper<IT> interactions, reduce_thread_local_t = {}) const
       {
-        exaDEM::Interaction I = interactions(idx);
+        auto I = interactions(idx);
 
         // filter duplicate (mpi ghost)
-        if (I.id_i < I.id_j)
+        if (I.pair.ghost != InteractionPair::PartnerGhost)
         {
           const double &dn = dnp[idx];
           local.n_tot_interaction += coef;
@@ -212,56 +212,62 @@ namespace exaDEM
      * @param size The size of the data array.
      * @param result The result of the reduction.
      * @return A wrapper for the parallel execution.
-     */
-    template <typename T, typename Func, typename ResultT> static inline ParallelExecutionWrapper reduce_data(ParallelExecutionContext *exec_ctx, InteractionWrapper<T> &data, Func &func, uint64_t size, ResultT &result)
-    {
-//#     if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+		 */
+		template <InteractionType IT, typename Func, typename ResultT> 
+			static inline ParallelExecutionWrapper reduce_data(
+					ParallelExecutionContext *exec_ctx, 
+					InteractionWrapper<IT> &data, 
+					Func &func, 
+					uint64_t size, 
+					ResultT &result)
+			{
+				//#     if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef ONIKA_CUDA_VERSION
-        ParallelForOptions opts;
-        opts.omp_scheduling = OMP_SCHED_STATIC;
-        ReduceTFunctor<T, Func, ResultT> kernel = {data, func, &result};
-        return parallel_for(size, kernel, exec_ctx, opts);
+				ParallelForOptions opts;
+				opts.omp_scheduling = OMP_SCHED_STATIC;
+				ReduceTFunctor<IT, Func, ResultT> kernel = {data, func, &result};
+				return parallel_for(size, kernel, exec_ctx, opts);
 #     else
-        // should be generic, later
-        int n_act_interaction(0), n_tot_interaction(0);
-        double min_dn = 0;
+				// should be generic, later
+				int n_act_interaction(0), n_tot_interaction(0);
+				double min_dn = 0;
 #       pragma omp parallel for reduction(+: n_act_interaction, n_tot_interaction) reduction(min: min_dn)
-        for (uint64_t i = 0; i < size; i++)
-        {
-          exaDEM::Interaction I = data(i);
-          // filter duplicate (mpi ghost)
-          if (I.id_i < I.id_j)
-          {
-            const double &dn = func.dnp[i];
-            n_tot_interaction += func.coef;
-            if (dn < 0.0)
-            {
-              n_act_interaction += func.coef;
-              min_dn = std::min(min_dn, dn);
-            }
-          }
-        }
-        result.n_act_interaction = n_act_interaction;
-        result.n_tot_interaction = n_tot_interaction;
-        result.min_dn = min_dn;
+				for (uint64_t i = 0; i < size; i++)
+				{
+					exaDEM::Interaction I = data(i);
+					// filter duplicate (mpi ghost)
+					if (I.pair.ghost != InteractionPair::PartnerGhost)
+					{
+						const double &dn = func.dnp[i];
+						n_tot_interaction += func.coef;
+						if (dn < 0.0)
+						{
+							n_act_interaction += func.coef;
+							min_dn = std::min(min_dn, dn);
+						}
+					}
+				}
+				result.n_act_interaction = n_act_interaction;
+				result.n_tot_interaction = n_tot_interaction;
+				result.min_dn = min_dn;
 
-        // useless but it avoid bugs, TODO LATER
-        ParallelForOptions opts;
-        opts.omp_scheduling = OMP_SCHED_STATIC;
-        ReduceTFunctor<T, Func, ResultT> kernel = {data, func, &result};
-        return parallel_for(0, kernel, exec_ctx, opts);
+				// useless but it avoid bugs, TODO LATER
+				ParallelForOptions opts;
+				opts.omp_scheduling = OMP_SCHED_STATIC;
+				ReduceTFunctor<IT, Func, ResultT> kernel = {data, func, &result};
+				return parallel_for(0, kernel, exec_ctx, opts);
 #     endif
-    }
-  } // namespace itools
+			}
+	} // namespace itools
 } // namespace exaDEM
 
 namespace onika
 {
-  namespace parallel
-  {
-    template <typename T, class FuncT, class ResultT> struct ParallelForFunctorTraits<exaDEM::itools::ReduceTFunctor<T, FuncT, ResultT>>
-    {
-      static inline constexpr bool CudaCompatible = true;
-    };
-  } // namespace parallel
+	namespace parallel
+	{
+		template <exaDEM::InteractionType IT, class FuncT, class ResultT> struct ParallelForFunctorTraits<exaDEM::itools::ReduceTFunctor<IT, FuncT, ResultT>>
+		{
+			static inline constexpr bool CudaCompatible = true;
+		};
+	} // namespace parallel
 } // namespace onika

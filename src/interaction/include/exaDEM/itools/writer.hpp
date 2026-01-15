@@ -32,15 +32,18 @@ namespace exaDEM
     using namespace exanb;
 
     /** CPU only */
-    template <typename GridT, typename T> std::stringstream create_buffer(GridT &grid, Classifier<T> &ic)
+    template <typename GridT> std::stringstream create_buffer(GridT &grid, Classifier &ic)
     {
       std::stringstream stream;
-      const int ntypes = ic.number_of_waves();
-
-      const auto& cells = grid.cells();
-      for (int i = 0; i < ntypes; i++)
+      auto cells = grid.cells();
+      for (int i = 0; i < Classifier::types; i++)
       {
-        auto [i_data, size] = ic.get_info(i);
+        size_t size = ic.get_size(i);
+        InterationPairWrapper wrapper; 
+        if( i < Classifier::typesPP ) wrapper.wrap(ic.get_data<ParticleParticle>(i));
+        else if( i == Classifier::InnerBondTypeId ) wrapper.wrap(ic.get_data<InnerBond>(i)); 
+        else { lout << "skip interaction type: " << i << std::endl; continue; }
+
         auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.buffer_p(i);
 
         for (size_t idx = 0; idx < size; idx++)
@@ -49,21 +52,21 @@ namespace exaDEM
           /** filter empty interactions */
           if (dn < 0)
           {
-            auto I = i_data[idx];
+            auto [i, j, type, swap, ghost] = wrapper(idx);
             /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
-            if (filter_duplicates(grid, I))
+            if (ghost != InteractionPair::PartnerGhost)
             {
-              stream << I.id_i << "," << I.id_j << ",";
-              stream << I.sub_i << "," << I.sub_j << ",";
-              stream << I.type << ",";
+              stream << i.id << "," << j.id << ",";
+              stream << i.sub << "," << j.sub << ",";
+              stream << type << ",";
               stream << dn << ",";
               stream << cp_ptr[idx] << ",";
               stream << fn_ptr[idx] << ",";
               stream << ft_ptr[idx] << ",";
-              stream << cells[I.cell_i][field::rx][I.p_i] << ",";
-              stream << cells[I.cell_i][field::ry][I.p_i] << ",";
-              stream << cells[I.cell_i][field::rz][I.p_i] << ",";
-              if( I.type >= 4 && I.type < 13) // drivers
+              stream << cells[i.cell][field::rx][i.p] << ",";
+              stream << cells[i.cell][field::ry][i.p] << ",";
+              stream << cells[i.cell][field::rz][i.p] << ",";
+              if( type >= 4 && type < 13) // drivers
               {
                 stream << 0 << ",";
                 stream << 0 << ",";
@@ -71,9 +74,9 @@ namespace exaDEM
               }
               else
               {
-                stream << cells[I.cell_j][field::rx][I.p_j] << ",";
-                stream << cells[I.cell_j][field::ry][I.p_j] << ",";
-                stream << cells[I.cell_j][field::rz][I.p_j];
+                stream << cells[j.cell][field::rx][j.p] << ",";
+                stream << cells[j.cell][field::ry][j.p] << ",";
+                stream << cells[j.cell][field::rz][j.p];
               }
               stream << std::endl;
             }
@@ -83,7 +86,9 @@ namespace exaDEM
       return stream;
     }
 
-    void write_file(std::stringstream &stream, std::string directory, std::string filename)
+    inline void write_file(
+        std::stringstream &stream, 
+        std::string directory, std::string filename)
     {
       int rank, size;
       MPI_Comm_rank(MPI_COMM_WORLD, &rank);

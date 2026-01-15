@@ -8,8 +8,8 @@ chunk_neighbors_impl:
   - chunk_neighbors_contact
   - nbh_sphere:
      symetric: true
+  - update_interaction_ghost
   - classify_interactions
-  - update_mutexes
   - resize_particle_locks
 
 migrate_particles:
@@ -23,6 +23,7 @@ move_particles_extra_data: move_particles_interaction
 
 reorder_extra_data: nop
 
+### IO
+write_dump_particle_op: write_dump_particle_interaction
 particle_write_paraview_generic: write_paraview_generic_fields
-
 contact_network: dump_contact_network

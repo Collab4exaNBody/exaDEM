@@ -45,11 +45,11 @@ namespace exaDEM
     while (1)
     {
       input >> key;
-
       if (key == "name")
       {
         input >> shp.m_name;
       }
+      // recomputed
       if (key == "preCompDone")
       {
         std::string preCompDoneType;
@@ -59,6 +59,7 @@ namespace exaDEM
           color_log::error("read_shp", "The “preComnDone” key should be set to “y.” Verify that quantities such as I/m and volume have been defined correctly. If so, replace n with y. Otherwise, you can use Rockable's shapeSurvey to define these values (command “c”).");
         }
       }
+/*
       else if (key == "obb.center") // === keys relative to the OBB
       {
         input >> shp.obb.center.x >> shp.obb.center.y >> shp.obb.center.z;
@@ -79,6 +80,7 @@ namespace exaDEM
       {
         input >> shp.obb.e3.x >> shp.obb.e3.y >> shp.obb.e3.z;
       }
+*/
       else if (key == "radius")
       {
         input >> shp.m_radius;
@@ -143,10 +145,27 @@ namespace exaDEM
         }
         shp.compute_offset_faces();
       }
+      else if (key == "na")
+      {
+        int n_face_areas;
+        input >> n_face_areas;
+        for (int i = 0; i < n_face_areas; i++)
+        {
+          double n_weights;
+          double area;
+          getline(input, line);
+          input >> n_weights >> area;
+          shp.m_face_area.push_back(area);
+          getline(input, line); // skip weights WARNING
+        }
+      }
       else if (key == ">")
       {
-        shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
-        shp.shift_vertices(position);
+//        shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
+        //shp.obb.center = {0,0,0}; 
+        //shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
+        //shp.shift_vertices(position);
+        shp.obb = build_obb_from_shape(shp);
         shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
         shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
         return shp;
@@ -154,16 +173,18 @@ namespace exaDEM
     }
   }
 
-  /**
-   * @brief Reads multiple shapes from a file and stores them in a container.
-   *
-   * @param file_name  Path to the input file.
-   * @param big_shape  Flag to indicate handling of large shapes (default: false).
-   * @return A vector containing the shapes read from the file.
-   */
+/**
+ * @brief Reads multiple shapes from a file and stores them in a container.
+ *
+ * @param file_name  Path to the input file.
+ * @param big_shape  Flag to indicate handling of large shapes (default: false).
+ * @param vtk  Flag to indicate if the vtk file is generated.
+ * @return A vector containing the shapes read from the file.
+ */
   inline std::vector<shape> read_shps(
       const std::string file_name, 
-      bool big_shape = false)
+      bool big_shape = false,
+      bool vtk = false)
   {
     std::ifstream input(file_name.c_str());
     std::vector<shape> res;
@@ -181,7 +202,7 @@ namespace exaDEM
            if (!big_shape)
            shp.print();
          */
-        shp.write_paraview();
+        if(vtk) shp.write_paraview();
         res.push_back(shp);
       }
     }
@@ -237,11 +258,13 @@ namespace exaDEM
    * @param shps       Container to store the parsed shapes.
    * @param file_name  Path to the input shape file.
    * @param big_shape  Optional flag for large shapes (default: false).
+   * @param vtk  Flag to indicate if the vtk file is generated.
    */
   inline void read_shp(
       shapes &shps, 
       const std::string file_name, 
-      bool big_shape = false)
+      bool big_shape = false,
+      bool vtk = false)
   {
     std::ifstream input(file_name.c_str());
     for (std::string line; getline(input, line);)
@@ -250,10 +273,57 @@ namespace exaDEM
       {
         shape shp = read_shp(input, big_shape);
         shps.add_shape(&shp);
-        if (!big_shape)
-          shp.print();
-        shp.write_paraview();
+        if (!big_shape) shp.print();
+        if (vtk) shp.write_paraview();
       }
     }
+  }
+
+  /**
+   * @brief Reads shape definitions from a "rockable"-style input file.
+   *
+   * @param file_name Path to the file (std::string_view for efficiency).
+   * @return Map associating each shape name with its Vec3d position.
+   */
+  inline std::map<std::string, Vec3d> scan_shape_position(std::string_view file_name)
+  {
+    std::map<std::string, Vec3d> res;
+    std::ifstream input(file_name.data());
+    for (std::string line; getline(input, line);)
+    {
+      if (line == "<")
+      {
+        Vec3d position = {0,0,0}; // default value
+        std::string type_name = "error";
+        std::string key;
+        // Read until closing '>'
+        while(std::getline(input, line) &&  line != ">" )
+        {
+          std::istringstream iss(line);
+          iss >> key;
+
+          if( key == "name" ) 
+          {
+            iss >> type_name;
+          }
+
+          if( key == "position")
+          {
+            iss >> position.x >> position.y >> position.z;
+            std::cout << position << std::endl;
+          }
+        }
+
+        if( type_name == "error" ) 
+        {
+          color_log::error("read_shape::scan_shape_position", "A shape is defined without name");
+        }
+        else
+        {
+          res[type_name] = position;
+        }
+      }
+    }
+    return res;
   }
 } // namespace exaDEM

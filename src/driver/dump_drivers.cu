@@ -23,8 +23,7 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <mpi.h>
 #include <memory>
-#include <exaDEM/stl_mesh.h>
-#include <exaDEM/drivers.h>
+#include <exaDEM/drivers.hpp>
 #include <onika/string_utils.h>
 
 namespace exaDEM
