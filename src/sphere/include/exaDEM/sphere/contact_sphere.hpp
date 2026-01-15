@@ -352,7 +352,10 @@ struct contact_law_stl {
     // === driver j
     const auto &shp_d = driver.shp;
     const Quaternion orient_d = driver.quat;
-    auto [contact, dn, n, contact_position] = detection(r_i, radius_i, driver.center, sub_d, &shp_d, orient_d);
+    constexpr double homothety_d = 1.0;
+    auto [contact, dn, n, contact_position] =
+        detection(r_i, radius_i,
+                  driver.center, homothety_d, sub_d, &shp_d, orient_d);
     Vec3d fn = {0, 0, 0};
 
     // === types

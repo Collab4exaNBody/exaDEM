@@ -158,6 +158,8 @@ class StickPolyhedraOperator : public OperatorNode {
         ONIKA_ASSUME_ALIGNED(rz_i);
         const auto *__restrict__ t_i = cells[cell_i][field::type];
         ONIKA_ASSUME_ALIGNED(t_i);
+        const auto *__restrict__ h_i = cells[cell_i][field::homothety];
+        ONIKA_ASSUME_ALIGNED(t_i);
         const auto *__restrict__ cluster_i = cells[cell_i][field::cluster];
         ONIKA_ASSUME_ALIGNED(cluster_i);
 
@@ -180,7 +182,6 @@ class StickPolyhedraOperator : public OperatorNode {
         }
 
         // Second, we add interactions between two polyhedra.
-
         apply_cell_particle_neighbors(
             *grid,
             *chunk_neighbors,
@@ -195,11 +196,10 @@ class StickPolyhedraOperator : public OperatorNode {
             &item,
             &shps,
             dn_crit,
-            id_i, rx_i, ry_i, rz_i, t_i, cluster_i, &vertex_cell_i,
+            id_i, rx_i, ry_i, rz_i, t_i, h_i, cluster_i, &vertex_cell_i,
             &add_contact,
             xform, is_xform,
-            &manager, &local, &ibpa
-            ](
+            &manager, &local, &ibpa](
                 size_t p_i,
                 size_t cell_j,
                 unsigned int p_j,
@@ -228,12 +228,14 @@ class StickPolyhedraOperator : public OperatorNode {
               double rxj = cellj[field::rx][p_j];
               double ryj = cellj[field::ry][p_j];
               double rzj = cellj[field::rz][p_j];
+              const double hj = cellj[field::homothety][p_j];
 
               // Get particle pointers for the particle i.
               ParticleVertexView vertices_i = {p_i, vertex_cell_i};
               double rxi = rx_i[p_i];
               double ryi = ry_i[p_i];
               double rzi = rz_i[p_i];
+              const double hi = h_i[p_i];
 
               if (is_xform) {
                 Vec3d tmp = {rxj, ryj, rzj};
@@ -314,8 +316,8 @@ class StickPolyhedraOperator : public OperatorNode {
                   // define the interface fracture criterion
                   // Et + En > 2.0 * area * g
                   item.as<InnerBondInteraction>().criterion = pi.id < pj.id ?
-                      2 * shpi->get_face_area(i) * ibp.g:
-                      2 * shpj->get_face_area(j) * ibp.g;
+                      2 * hi * shpi->get_face_area(i) * ibp.g:
+                      2 * hj * shpj->get_face_area(j) * ibp.g;
 
                   found = true;
 
@@ -324,7 +326,7 @@ class StickPolyhedraOperator : public OperatorNode {
                     for (int jvf=0 ; jvf < size_j ; jvf++) {
                       assert(vi[ivf] < shpi->get_number_of_vertices());
                       assert(vj[jvf] < shpj->get_number_of_vertices());
-                      auto contact = detection_vertex_vertex(vertices_i, vi[ivf], shpi, vertices_j, vj[jvf], shpj);
+                      auto contact = detection_vertex_vertex(vertices_i, hi, vi[ivf], shpi, vertices_j, hj, vj[jvf], shpj);
                       if (contact.dn <= dn_crit) {
                         add_contact(local, item, vi[ivf], vj[jvf], contact.dn);
                         vertex_not_found = false;
@@ -343,7 +345,7 @@ class StickPolyhedraOperator : public OperatorNode {
                        }*/
                   }
                   if (local.size() <= 2) {
-                   local.clear() ; found = false;
+                    local.clear() ; found = false;
                   }
                 }
               }

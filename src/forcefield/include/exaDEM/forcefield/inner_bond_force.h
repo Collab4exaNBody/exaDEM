@@ -42,25 +42,9 @@ namespace exaDEM
         const Vec3d &pos_j,  // positions j
         const Vec3d &vel_j,  // positions j
         const Vec3d &vrot_j  // angular velocities j
-        )
-    {
-      constexpr double pi    = 3.14159265358979323846;
-      constexpr double piSqr = pi * pi;
-      double damp;
-      if(ibp.en > 0.0 && ibp.en < 1.0)
-      {
-        double logen = 0.5 * log(ibp.en);
-        double dampRate = -logen / sqrt(logen * logen + piSqr);
-        damp = dampRate * 2.0 * sqrt(ibp.kn * meff);
-      } 
-      else if (ibp.en <= 0.0)
-      {
-        damp = 2.0 * sqrt(ibp.kn * meff);
-      }
-      else
-      {
-        damp = 0.0;
-      }
+        ) {
+      // === Compute damping coefficient
+      const double damp = compute_damp(ibp.damp_rate, ibp.kn, meff); 
 
       // === Relative velocity (j relative to i)
       auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);

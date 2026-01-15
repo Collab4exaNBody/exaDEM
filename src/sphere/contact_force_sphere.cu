@@ -27,11 +27,11 @@ under the License.
 #include <exanb/core/xform.h>
 
 #include <exaDEM/drivers.h>
-#include <exaDEM/sphere/contact_sphere.h>
 #include <exaDEM/forcefield/contact_parameters.h>
 #include <exaDEM/forcefield/contact_force.h>
 #include <exaDEM/forcefield/multimat_parameters.h>
 
+#include <exaDEM/sphere/contact_sphere.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>

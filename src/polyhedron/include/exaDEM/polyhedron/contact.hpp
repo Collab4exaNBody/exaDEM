@@ -152,11 +152,17 @@ struct contact_law {
     const ParticleVertexView vertices_i = { pi.p, gv[pi.cell] };
     const ParticleVertexView vertices_j = { pj.p, gv[pj.cell] };
 
+    // == homothety
+    const auto &h_i = cell_i[field::homothety][pi.p];
+    const auto &h_j = cell_j[field::homothety][pj.p];
+
     // === shapes
     const shape &shp_i = shps[type_i];
     const shape &shp_j = shps[type_j];
 
-    auto [contact, dn, n, contact_position] = detection(vertices_i, pi.sub, &shp_i, vertices_j, pj.sub, &shp_j);
+    auto [contact, dn, n, contact_position] = detection(
+        vertices_i, h_i, pi.sub, &shp_i,
+        vertices_j, h_j, pj.sub, &shp_j);
     // temporary vec3d to store forces.
     Vec3d f = {0, 0, 0};
     Vec3d fn = {0, 0, 0};
@@ -175,8 +181,8 @@ struct contact_law {
       const Vec3d vj = get_v(cell_j, pj.p);
       const auto &m_i = cell_i[field::mass][pi.p];
       const auto &m_j = cell_j[field::mass][pj.p];
-      double rad_i = shp_i.m_radius;
-      double rad_j = shp_j.m_radius;
+      double rad_i = shp_i.minskowski(h_i);
+      double rad_j = shp_j.minskowski(h_j);
 
       const double meff = compute_effective_mass(m_i, m_j);
       const double reff = compute_effective_mass(rad_i, rad_j);
@@ -260,8 +266,11 @@ struct contact_law_driver {
     const Vec3d r = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
     // === vertex array
     ParticleVertexView vertices = { p, gv[pi.cell] };
+    // == homothety
+    const auto &h = cell[field::homothety][pi.p];
 
-    auto [contact, dn, n, contact_position] = exaDEM::detector_vertex_driver(driver, vertices, sub, &shp);
+    auto [contact, dn, n, contact_position] =
+        exaDEM::detector_vertex_driver(driver, vertices, h, sub, &shp);
     constexpr Vec3d null = {0, 0, 0};
     Vec3d f = null;
     Vec3d fn = null;
@@ -281,7 +290,7 @@ struct contact_law_driver {
       auto &mom = cell[field::mom][p];
       const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
       const double meff = cell[field::mass][p];
-      const double reff = shp.m_radius;
+      const double reff = shp.minskowski(h);
       contact_force_core<ContactLaw, CohesiveLaw>(
           dn, n, dt, cp, meff, reff,
           item.friction, contact_position,
@@ -366,11 +375,16 @@ struct contact_law_stl {
     const ParticleVertexView vertices_i = { pi.p, gv[pi.cell] };
     // === vrot
     const Vec3d &vrot_i = cell[field::vrot][pi.p];
+    // == homothety
+    const auto &h_i = cell[field::homothety][pi.p];
 
     // STL Vertices
     const Vec3d* const stl_vertices = onika::cuda::vector_data(driver.vertices);
+    constexpr double stl_homothety = 1.0;
     // === detection
-    auto [contact, dn, n, contact_position] = detection(vertices_i, sub_i, &shp_i, stl_vertices, sub_d, &shp_d);
+    auto [contact, dn, n, contact_position] = detection(
+        vertices_i, h_i, sub_i, &shp_i,
+        stl_vertices, stl_homothety, sub_d, &shp_d);
     constexpr Vec3d null = {0, 0, 0};
     Vec3d fn = null;
 
@@ -378,7 +392,7 @@ struct contact_law_stl {
     const auto& cp = cpa(type, driver_idx);
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
-    /** if cohesive force */
+    // === if cohesive force */
     if constexpr (LawComboTraits<LawCombo>::cohesive) {
       contact = (contact || dn <= cp.dncut);
     }
@@ -388,7 +402,8 @@ struct contact_law_stl {
       auto &mom = cell[field::mom][pi.p];
       const Vec3d v_i = {cell[field::vx][pi.p], cell[field::vy][pi.p], cell[field::vz][pi.p]};
       const double meff = cell[field::mass][pi.p];
-      const double reff = compute_effective_mass(shp_i.m_radius, driver.shp.m_radius);
+      const double reff = compute_effective_radius(shp_i.minskowski(h_i),
+                                                   driver.shp.minskowski(stl_homothety));
 
       // i to j
       if constexpr (interaction_type <= 10 && interaction_type >= 7 ) {

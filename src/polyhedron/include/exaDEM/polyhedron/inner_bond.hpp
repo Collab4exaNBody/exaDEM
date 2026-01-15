@@ -155,13 +155,17 @@ struct inner_bond_law {
     const ParticleVertexView verticesi = { pi.p, gv[pi.cell] };
     const ParticleVertexView verticesj = { pj.p, gv[pj.cell] };
 
+    // === homothety
+    const double hi = celli[field::homothety][pi.p];
+    const double hj = cellj[field::homothety][pj.p];
+
     // === shapes
     const shape &shpi = shps[typei];
     const shape &shpj = shps[typej];
 
     auto [contact, dn, n, contact_position] = detection_vertex_vertex(
-        verticesi, pi.sub, &shpi,
-        verticesj, pj.sub, &shpj);
+        verticesi, hi, pi.sub, &shpi,
+        verticesj, hj, pj.sub, &shpj);
 
     // temporary vec3d to store forces.
     Vec3d fi = {0, 0, 0};

@@ -17,78 +17,83 @@ specific language governing permissions and limitations
 under the License.
  */
 #include <mpi.h>
-#include <memory>
 #include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exaDEM/classifier/classifier.hpp>
+#include <onika/scg/operator_slot.h>
+
 #include <exaDEM/interface/interface.hpp>
+#include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/interface/apply_interface_fracture_criterion.hpp>
 
-namespace exaDEM
-{
-  using namespace exanb;
-  using namespace onika::parallel;
+namespace exaDEM {
+class ApplyInterfaceFractureCriterion : public OperatorNode {
+  // attributes processed during computation
+  ADD_SLOT(MPI_Comm, mpi,
+           INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(Classifier, ic, INPUT_OUTPUT,
+           DocString{"Interaction lists classified according to their types"});
+  ADD_SLOT(InterfaceManager, im,
+           INPUT_OUTPUT,
+           DocString{""});
+  ADD_SLOT(bool, result,
+           OUTPUT);
+  ADD_SLOT(bool, display,
+           INPUT, false,
+           DocString{"Display interface broken."});
 
-  class ApplyInterfaceFractureCriterion : public OperatorNode
-  {
-    // attributes processed during computation
-    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-    ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{""});
-    ADD_SLOT(bool, result, OUTPUT);
-
-    public:
-    inline std::string documentation() const override final
-    {
-      return R"EOF(
+ public:
+  inline std::string documentation() const final {
+    return R"EOF(
 
         YAML example [no option]:
 
           - apply_interface_fracture_criterion
       )EOF";
-    }
+  }
 
-    inline void execute() override final
-    {
-      auto& interfaces = *im;
+  inline void execute() final {
+    auto& interfaces = *im;
+    uint64_t number_of_broken_interfaces = 0;
+    InteractionWrapper<InteractionType::InnerBond> data_wrapper =
+        ic->get_sticked_interaction_wrapper();
+    ApplyInterfaceFractureCriterionFunc func = {
+        interfaces.data.data(), interfaces.break_interface.data(),
+        data_wrapper};
 
-      long long number_of_broken_interfaces = 0;
+    onika::parallel::ParallelForOptions opts;
+    opts.omp_scheduling = onika::parallel::OMP_SCHED_STATIC;
+    parallel_for(interfaces.size(), func, parallel_execution_context(), opts);
 
-      InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
-      ApplyInterfaceFractureCriterionFunc func = {interfaces.data.data(), interfaces.break_interface.data(), data_wrapper};
-
-      ParallelForOptions opts;
-      opts.omp_scheduling = OMP_SCHED_STATIC;
-      parallel_for(interfaces.size(), func, parallel_execution_context(), opts);
-
-//      std::vector<std::pair<uint64_t, uint64_t>> pair_ids;
-      // No copy from GPU if the data has not been touuch by the GPU
-# pragma omp parallel for reduction(+:number_of_broken_interfaces)
-      for(size_t i=0 ; i<interfaces.size() ; i++)
-      {
-        if( interfaces.break_interface[i] == true )
-        {
-          auto [offset, size] = interfaces.data[i];
-          for(size_t j=0 ; j<size ; j++)
-          {
-            data_wrapper.broke(j+offset); 
-          }
-          number_of_broken_interfaces += interfaces.break_interface[i]; 
-          auto& idi = data_wrapper.id_i[offset];
-          auto& idj = data_wrapper.id_j[offset];
-          std::cout << "Break the interface between the particle " << idi << " and the particle " << idj << std::endl;
-//#pragma omp critical
-//          pair_ids.push_back(std::make_pair(idi, idj));
+    // No copy from GPU if the data has not been touuch by the GPU
+#pragma omp parallel for reduction(+ : number_of_broken_interfaces)
+    for (size_t i = 0; i < interfaces.size(); i++) {
+      if (interfaces.break_interface[i] == true) {
+        auto [offset, size] = interfaces.data[i];
+        for (size_t j = 0; j < size; j++) {
+          data_wrapper.broke(j + offset);
         }
+        number_of_broken_interfaces += interfaces.break_interface[i];
+        auto& idi = data_wrapper.id_i[offset];
+        auto& idj = data_wrapper.id_j[offset];
+        std::cout << "Break the interface between the particle " << idi
+                  << " and the particle " << idj << std::endl;
       }
-
-      MPI_Allreduce(MPI_IN_PLACE, &number_of_broken_interfaces, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, *mpi);
-      if( number_of_broken_interfaces>0 ) lout << number_of_broken_interfaces << " interfaces have been broken." << std::endl;
-      *result = number_of_broken_interfaces>0;
     }
-  };
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(apply_interface_fracture_criterion) { OperatorNodeFactory::instance()->register_factory("apply_interface_fracture_criterion", make_simple_operator<ApplyInterfaceFractureCriterion>); }
-} // namespace exaDEM
+    MPI_Allreduce(MPI_IN_PLACE, &number_of_broken_interfaces, 1,
+                  MPI_UINT64_T, MPI_SUM, *mpi);
+    if (*display && number_of_broken_interfaces > 0) {
+      lout << number_of_broken_interfaces << " interfaces have been broken."
+           << std::endl;
+    }
+    *result = number_of_broken_interfaces > 0;
+  }
+};
+
+// === register factories ===
+ONIKA_AUTORUN_INIT(apply_interface_fracture_criterion) {
+  OperatorNodeFactory::instance()->register_factory(
+      "apply_interface_fracture_criterion",
+      make_simple_operator<ApplyInterfaceFractureCriterion>);
+}
+}  // namespace exaDEM

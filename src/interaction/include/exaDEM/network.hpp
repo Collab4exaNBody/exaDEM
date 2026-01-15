@@ -21,10 +21,11 @@ under the License.
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
-#include <vector>
-#include <tuple>
-#include <algorithm>
 #include <exaDEM/type/contact.hpp>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 
 namespace exaDEM
 {

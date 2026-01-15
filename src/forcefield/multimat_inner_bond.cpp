@@ -40,9 +40,7 @@ namespace exaDEM
     ADD_SLOT(std::vector<std::string>, mat2, INPUT, OPTIONAL, DocString{"List of materials."});
     ADD_SLOT(std::vector<double>,        kn, INPUT, OPTIONAL, DocString{"List of ln values."});
     ADD_SLOT(std::vector<double>,        kt, INPUT, OPTIONAL, DocString{"List of kt values."});
-    ADD_SLOT(std::vector<double>,        mu, INPUT, OPTIONAL, DocString{"List of mu values."});
-    ADD_SLOT(std::vector<double>,        en, INPUT, OPTIONAL, DocString{"List of en2 values."});
-    ADD_SLOT(std::vector<double>,       pow, INPUT, OPTIONAL, DocString{"List of pow values."});
+    ADD_SLOT(std::vector<double>, damp_rate, INPUT, OPTIONAL, DocString{"List of en2 values."});
     ADD_SLOT(std::vector<double>,         g, INPUT, OPTIONAL, DocString{"List of g values."});
     ADD_SLOT(InnerBondParams, default_config, INPUT, OPTIONAL, DocString{"Contact parameters for sphere interactions"});      // can be re-used for to dump contact network
     ADD_SLOT(bool, verbosity, INPUT, false, DocString{"Print force field parameter details"});
@@ -62,8 +60,8 @@ namespace exaDEM
              kn:        [   5000, 10000, 15000 ]
              kt:        [   4000,  8000, 12000 ]
              kr:        [    0.0,   0.0,   0.0 ]
-             mu:        [    0.1,   0.2,   0.3 ]
-             damprate:  [  0.999, 0.999, 0.999 ]
+             damp_rate: [  0.999, 0.999, 0.999 ]
+             g:         [   1e-5,  1e-5,  1e-5 ]
 
         )EOF";
     }
@@ -110,9 +108,7 @@ namespace exaDEM
         auto& material_types_2 = *mat2;
         auto& normal_coeffs = *kn;
         auto& tangential_coeffs = *kt;
-        auto& frictional_coeffs = *mu;
-        auto& en2_coeffs = *en;
-        auto& pow_coeffs = *pow;
+        auto& damprate_coeffs = *damp_rate;
         auto& g_coeffs = *g;
 
         int number_of_pairs = material_types_1.size();
@@ -129,9 +125,7 @@ namespace exaDEM
         check_lengths_match(material_types_2, "type2");
         check_lengths_match(normal_coeffs, "kn");
         check_lengths_match(tangential_coeffs, "kt");
-        check_lengths_match(frictional_coeffs, "mu");
-        check_lengths_match(en2_coeffs, "en");
-        check_lengths_match(pow_coeffs, "pow");
+        check_lengths_match(damprate_coeffs, "damp_rate");
         check_lengths_match(g_coeffs, "g");
 
         /** check types / materials */
@@ -168,9 +162,7 @@ namespace exaDEM
           InnerBondParams params;
           params.kn = normal_coeffs[p];
           params.kt = tangential_coeffs[p];
-          params.mu = frictional_coeffs[p];
-          params.en = en2_coeffs[p];
-          params.pow = pow_coeffs[p];
+          params.damp_rate = damprate_coeffs[p];
           params.g = g_coeffs[p];
 
           ibp.register_multimat(type_1, type_2, params);

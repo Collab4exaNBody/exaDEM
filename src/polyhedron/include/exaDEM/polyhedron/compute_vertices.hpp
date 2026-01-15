@@ -44,7 +44,7 @@ struct PolyhedraComputeVerticesFunctor {
     exanb::Vec3d position = {rx, ry, rz};
     if constexpr(def_box) position = xform * position;
     for (size_t i = 0; i < nv; i++) {
-      Vec3d vertex = shp.get_vertex(i, position, orient);
+      Vec3d vertex = shp.get_vertex(i, position, h, orient);
       vertices.set(vertex, i);
     }
   }

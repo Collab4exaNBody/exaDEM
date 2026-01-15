@@ -22,7 +22,6 @@ under the License.
 #include <exanb/core/domain.h>
 #include <mpi.h>
 #include <memory>
-#include <exaDEM/stl_mesh.h>
 #include <exaDEM/drivers.h>
 #include <exaDEM/paraview_driver.hpp>
 #include <onika/string_utils.h>

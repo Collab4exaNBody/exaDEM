@@ -45,6 +45,7 @@ namespace exaDEM {
  * @param id          Array of unique particle identifiers.
  * @param rx, ry, rz  Arrays of particle positions.
  * @param vertices    Vertex field storing per-particle vertex positions.
+ * @param type        Array of particle homoethety.
  * @param orient      Array of particle orientations (as quaternions).
  * @param shps        Shape container indexed by particle type.
  *
@@ -70,11 +71,13 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     const double *__restrict__ ry,
     const double *__restrict__ rz,
     VertexField& vertices,
+    const double *__restrict__ homothety,
     const exanb::Quaternion *__restrict__ orient,
     shapes &shps) {
   using onika::cuda::vector_data;
-#define __particle__ vertices_i, i, shpi
-#define __driver__ mesh.vertices.data(), idx, &mesh.shp
+  constexpr double dhomothety = 1.0;
+#define __particle__ vertices_i, hi, i, shpi
+#define __driver__ mesh.vertices.data(), dhomothety, idx, &mesh.shp
   assert(cell_a < mesh.grid_indexes.size());
   auto &list = mesh.grid_indexes[cell_a];
   const size_t stl_nv = list.vertices.size();
@@ -96,6 +99,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
 
   for (size_t p = 0; p < n_particles; p++) {
     Vec3d r = {rx[p], ry[p], rz[p]};  // position
+    double hi = homothety[p];
     ParticleVertexView vertices_i = {p, vertices};
     const Quaternion& orient_i = orient[p];
     pi.p = p;
@@ -120,7 +124,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
       vec3r v = conv_to_vec3r(vertices_i[i]);
       OBB obb_v_i;
       obb_v_i.center = v;
-      obb_v_i.enlarge(rVerlet + shpi->m_radius);
+      obb_v_i.enlarge(rVerlet + shpi->minskowski(hi));
 
       // vertex - vertex
       item.pair.type = 7;
@@ -222,6 +226,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     const ParticleTypeInt *__restrict__ type,
     const uint64_t *__restrict__ id,
     VertexField& vertices,
+    const double *__restrict__ homothety,
     shapes &shps) {
   constexpr int DRIVER_VERTEX_SUB_IDX = -1;  // Convention
   auto& pi = item.i();  // particle i (id, cell id, particle position, sub vertex)
@@ -229,13 +234,14 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
   for (size_t pid = 0; pid < n_particles; pid++) {
     pi.p = pid;
     pi.id = id[pid];
+    const double h = homothety[pid];
     ParticleVertexView vertex_view = {pid, vertices};
 
     const shape *shp = shps[type[pid]];
     assert(shp != nullptr);
     int num_vertices = shp->get_number_of_vertices();
     for (int vertex_index = 0; vertex_index < num_vertices; vertex_index++) {
-      if (filter_vertex_driver(driver, rVerlet, vertex_view, vertex_index, shp)) {
+      if (filter_vertex_driver(driver, rVerlet, vertex_view, h, vertex_index, shp)) {
         add_contact(item, vertex_index, DRIVER_VERTEX_SUB_IDX);
       }
     }

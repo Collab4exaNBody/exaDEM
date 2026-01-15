@@ -53,30 +53,32 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(
   const size_t stl_nf = list.faces.size();
 
   exanb::Vec3d v = {rx, ry, rz};
+  constexpr double dhomothety = 1.0;
+  double dradius = shp.minskowski(dhomothety);
   // vertex - vertex
   item.pair.type = 7;
   for (size_t j = 0; j < stl_nv; j++) {
-    size_t idx = list.vertices[j];
-    if (filter_vertex_vertex_v2(rVerletMax, v, radius, dvertices, idx, &shp)) {
-      pd.sub = idx;
+    size_t didx = list.vertices[j];
+    if (filter_vertex_vertex_v2(rVerletMax, v, radius, dvertices, dradius, didx)) {
+      pd.sub = didx;
       res.push_back(item);
     }
   }
   // vertex - edge
   item.pair.type = 8;
   for (size_t j = 0; j < stl_ne; j++) {
-    size_t idx = list.edges[j];
-    if (filter_vertex_edge(rVerletMax, v, radius, dvertices, idx, &shp)) {
-      pd.sub = idx;
+    size_t didx = list.edges[j];
+    if (filter_vertex_edge(rVerletMax, v, radius, dvertices, dhomothety, didx, &shp)) {
+      pd.sub = didx;
       res.push_back(item);
     }
   }
   // vertex - face
   item.pair.type = 9;
   for (size_t j = 0; j < stl_nf; j++) {
-    size_t idx = list.faces[j];
-    if (filter_vertex_face(rVerletMax, v, radius, dvertices, idx, &shp)) {
-      pd.sub = idx;
+    size_t didx = list.faces[j];
+    if (filter_vertex_face(rVerletMax, v, radius, dvertices, dhomothety, didx, &shp)) {
+      pd.sub = didx;
       res.push_back(item);
     }
   }

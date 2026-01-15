@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filesystem>
+
 namespace exaDEM
 {
   struct paraview_interface_helper

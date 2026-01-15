@@ -36,7 +36,7 @@ under the License.
 namespace exaDEM {
 template <typename GridT>
 class VertexDisplacementOver : public OperatorNode {
-  static constexpr FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_orient> reduce_field_set{};
+  static constexpr FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_homothety, field::_orient> reduce_field_set{};
   ADD_SLOT(MPI_Comm, mpi,
            INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid,
