@@ -3,8 +3,6 @@
 #pragma once
 
 namespace exaDEM {
-using namespace exanb;
-
 struct CellGhostDetails {
   uint32_t m_partner_cell_i = 0;
   uint32_t m_size = 0;

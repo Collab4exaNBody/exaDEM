@@ -23,6 +23,7 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
+#include <mpi.h>
 
 // exaNBody
 #include <exanb/mpi/ghosts_comm_scheme.h>
