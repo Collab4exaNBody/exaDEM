@@ -18,11 +18,11 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/drivers.h>
 #include <math.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 
+#include <exaDEM/drivers.hpp>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_prepro.hpp>

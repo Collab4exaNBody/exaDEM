@@ -18,7 +18,7 @@ struct InteractionGhostManager {
 
   template<typename InteractionT, typename GridT>
   void setup(exanb::GhostCommunicationScheme& ghost_scheme, 
-             MPI_Comm& comm, 
+             const MPI_Comm& comm, 
              const InteractionT& ges, 
              const GridT& grid) {
     // tags constants

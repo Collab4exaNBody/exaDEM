@@ -18,8 +18,8 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/drivers.h>
 #include <tuple>
+#include <exaDEM/drivers.hpp>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/interaction/interaction.hpp>
@@ -27,8 +27,6 @@ under the License.
 
 namespace exaDEM {
 namespace polyhedron {
-using namespace exanb;
-
 /**
  * @brief Atomically adds a value to a double variable.
  *

@@ -20,7 +20,7 @@ under the License.
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
 #include <exaDEM/driver_base.h>
-#include <exaDEM/drivers.h>
+#include <exaDEM/drivers.hpp>
 #include <exaDEM/ball.h>
 
 namespace exaDEM

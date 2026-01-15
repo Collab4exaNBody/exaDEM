@@ -23,7 +23,7 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
-#include <exaDEM/drivers.h>
+#include <exaDEM/drivers.hpp>
 #include <exaDEM/reduce_stl_mesh.hpp>
 
 namespace exaDEM {

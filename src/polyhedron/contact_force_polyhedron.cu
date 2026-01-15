@@ -29,8 +29,8 @@ under the License.
 #include <exaDEM/forcefield/contact_parameters.h>
 #include <exaDEM/forcefield/contact_force.h>
 
-#include <exaDEM/drivers.h>
 #include <exaDEM/forcefield/multimat_parameters.h>
+#include <exaDEM/drivers.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>

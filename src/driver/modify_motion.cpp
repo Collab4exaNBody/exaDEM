@@ -24,7 +24,7 @@ under the License.
 #include <mpi.h>
 #include <memory>
 #include <exaDEM/driver_base.h>
-#include <exaDEM/drivers.h>
+#include <exaDEM/drivers.hpp>
 
 namespace exaDEM
 {

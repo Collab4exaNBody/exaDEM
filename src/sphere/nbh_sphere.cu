@@ -26,8 +26,8 @@ under the License.
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
 #include <mpi.h>
-#include <exaDEM/drivers.h>
 #include <exaDEM/traversal.h>
+#include <exaDEM/drivers.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>

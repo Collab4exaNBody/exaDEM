@@ -27,7 +27,7 @@ under the License.
 #include <exanb/core/particle_type_id.h>
 #include <exanb/core/xform.h>
 
-#include <exaDEM/drivers.h>
+#include <exaDEM/drivers.hpp>
 #include <exaDEM/dump_rockable_api.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/shape_reader.hpp>

@@ -18,7 +18,7 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/drivers.h>
+#include <exaDEM/drivers.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
 

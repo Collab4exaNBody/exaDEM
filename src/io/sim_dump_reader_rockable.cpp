@@ -24,7 +24,6 @@ under the License.
 #include <onika/scg/operator_slot.h>
 #include <onika/math/basic_types_stream.h>
 #include <onika/math/basic_types_yaml.h>
-#include <exaDEM/drivers.h>
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
@@ -32,6 +31,7 @@ under the License.
 
 #include <chrono>
 #include <ctime>
+#include <exaDEM/drivers.hpp>
 #include <exaDEM/dump_rockable_api.hpp>
 #include <exaDEM/shapes.hpp>
 #include <numeric>
