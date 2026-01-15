@@ -32,7 +32,8 @@ under the License.
 #include <iomanip>
 
 //#include <exanb/compute/compute_cell_particles.h>
-#include <exaDEM/drivers.hpp>
+#include <exaDEM/drivers.h>
+#include <exaDEM/stl_mesh.h>
 
 #include <mpi.h>
 

@@ -133,15 +133,13 @@ namespace rockable
     // skip pos, vel, fn, damp
     // missing, cell_i, cell_j, p_i, p_j
     exaDEM::Interaction res;
-    auto& pi      = res.i();
-    auto& pj      = res.j();
-    pi.id         = input.i;
-    pj.id         = input.j;
-    pi.sub        = input.subi;
-    pj.sub        = input.subj;
-    res.pair.type = input.type;
-    res.friction  = input.ft;
-    res.moment    = input.mom;
+    res.id_i     = input.i;
+    res.id_j     = input.j;
+    res.sub_i    = input.subi;
+    res.sub_j    = input.subj;
+    res.type     = input.type;
+    res.friction = input.ft;
+    res.moment   = input.mom;
     return res;
   }
 
@@ -225,11 +223,7 @@ namespace rockable
       for(size_t p = 0 ; p < particles.size() ; p++)
       {
         std::getline(input, line); 
-        if( line[0] != '#' )
-        {
-          particles[p] = decrypt_particle(std::stringstream(line), ptm); 
-        }
-        else p--;
+        particles[p] = decrypt_particle(std::stringstream(line), ptm); 
       }
     }
 
@@ -254,6 +248,7 @@ namespace rockable
           it--;
           continue;
         }
+
         rockable::Interaction I = decrypt_interaction(std::stringstream(line));
         bool is_driver = false;
 

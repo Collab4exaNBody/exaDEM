@@ -24,49 +24,46 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/compute/compute_cell_particles.h>
+#include <memory>
 
 #include <exaDEM/traversal.h>
-#include <exaDEM/angular_velocity.hpp>
+#include <exaDEM/angular_velocity.h>
 
-namespace exaDEM {
-template <typename GridT,
-          class = AssertGridHasFields<GridT, field::_vrot, field::_arot>>
-class PushToAngularVelocity : public OperatorNode {
-  // attributes processed during computation
-  using ComputeFields = field_accessor_tuple_from_field_set_t<
-      FieldSet<field::_vrot, field::_arot>>;
-  static constexpr ComputeFields compute_field_set{};
+namespace exaDEM
+{
+  using namespace exanb;
 
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(double, dt,
-           INPUT, REQUIRED,
-           DocString{"dt is the time increment of the timeloop"});
-  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED,
-           DocString{"list of non empty cells within the current grid"});
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_vrot, field::_arot>> class PushToAngularVelocity : public OperatorNode
+  {
+    // attributes processed during computation
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_vrot, field::_arot>>;
+    static constexpr ComputeFields compute_field_set{};
 
- public:
-  inline std::string documentation() const final {
-    return R"EOF(
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
         This operator computes particle angular velocitiy values from angular velocities and angular accelerations. 
         )EOF";
-  }
+    }
 
-  inline void execute() final {
-    const double dt = *(this->dt);
-    const double dt_2 = 0.5 * dt;
-    const ComputeCellParticlesOptions ccpo =
-        traversal_real->get_compute_cell_particles_options();
-    PushToAngularVelocityFunctor func{dt_2};
-    compute_cell_particles(*grid, false, func, compute_field_set,
-                           parallel_execution_context(), ccpo);
-  }
-};
+    inline void execute() override final
+    {
+      const double dt = *(this->dt);
+      const double dt_2 = 0.5 * dt;
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
+      PushToAngularVelocityFunctor func{dt_2};
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
+    }
+  };
 
-// === register factories ===
-ONIKA_AUTORUN_INIT(push_to_angular_velocity) {
-  OperatorNodeFactory::instance()->register_factory(
-      "push_to_angular_velocity",
-      make_grid_variant_operator<PushToAngularVelocity>);
-}
-}  // namespace exaDEM
+  template <class GridT> using PushToAngularVelocityTmpl = PushToAngularVelocity<GridT>;
+
+  // === register factories ===
+  ONIKA_AUTORUN_INIT(push_to_angular_velocity) { OperatorNodeFactory::instance()->register_factory("push_to_angular_velocity", make_grid_variant_operator<PushToAngularVelocityTmpl>); }
+
+} // namespace exaDEM

@@ -20,7 +20,7 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exaDEM/drivers.hpp>
+#include <exaDEM/drivers.h>
 #include <mpi.h>
 
 namespace exaDEM

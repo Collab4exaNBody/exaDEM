@@ -1,13 +1,13 @@
 /*
-   Licensed to the Apache Software Foundation (ASF) under one
-   or more contributor license agreements.  See the NOTICE file
-   distributed with this work for additional information
-   regarding copyright ownership.  The ASF licenses this file
-   to you under the Apache License, Version 2.0 (the
-   "License"); you may not use this file except in compliance
-   with the License.  You may obtain a copy of the License at
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+  http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -25,46 +25,42 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/compute/compute_cell_particles.h>
+#include <memory>
 
 #include <exaDEM/traversal.h>
-#include <exaDEM/angular_acceleration.hpp>
+#include <exaDEM/angular_acceleration.h>
 
-namespace exaDEM {
-template <typename GridT, class = AssertGridHasFields<GridT, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>>
-class PushToAngularAcceleration : public OperatorNode {
-  // attributes processed during computation
-  using ComputeFields = field_accessor_tuple_from_field_set_t<
-      FieldSet<field::_orient, field::_mom, field::_vrot, field::_arot,
-      field::_inertia>>;
-  static constexpr ComputeFields compute_field_set{};
+namespace exaDEM
+{
+  using namespace exanb;
 
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(Traversal, traversal_real,
-           INPUT, REQUIRED,
-           DocString{"list of non empty cells within the current grid"});
+  template <typename GridT, class = AssertGridHasFields<GridT, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>> class PushToAngularAcceleration : public OperatorNode
+  {
+    // attributes processed during computation
+    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>>;
+    static constexpr ComputeFields compute_field_set{};
 
- public:
-  inline std::string documentation() const final {
-    return R"EOF(
-        This operator computes the new values of angular acceleration from moments,
-        orientations, angular velocities, angular accelerations and inertia.
+    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+
+  public:
+    inline std::string documentation() const override final
+    {
+      return R"EOF(
+        This operator computes the new values of angular acceleration from moments, orientations, angular velocities, angular accelerations and inertia.
         )EOF";
-  }
+    }
 
-  inline void execute() final {
-    const ComputeCellParticlesOptions ccpo =
-        traversal_real->get_compute_cell_particles_options();
-    PushToAngularAccelerationFunctor func{};
-    compute_cell_particles(*grid, false, func, compute_field_set,
-                           parallel_execution_context(), ccpo);
-  }
-};
+    inline void execute() override final
+    {
+      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
+      PushToAngularAccelerationFunctor func{};
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
+    }
+  };
 
-// === register factories ===
-ONIKA_AUTORUN_INIT(push_to_angular_acceleration) {
-  OperatorNodeFactory::instance()->register_factory(
-      "push_to_angular_acceleration",
-      make_grid_variant_operator<PushToAngularAcceleration>);
-}
-}  // namespace exaDEM
+  template <class GridT> using PushToAngularAccelerationTmpl = PushToAngularAcceleration<GridT>;
+
+  // === register factories ===
+  ONIKA_AUTORUN_INIT(push_to_angular_acceleration) { OperatorNodeFactory::instance()->register_factory("push_to_angular_acceleration", make_grid_variant_operator<PushToAngularAccelerationTmpl>); }
+} // namespace exaDEM

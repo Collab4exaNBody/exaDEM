@@ -17,85 +17,93 @@ specific language governing permissions and limitations
 under the License.
 */
 #include <mpi.h>
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_factory.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/string_utils.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/make_grid_variant_operator.h>
+#include <cassert>
+#include <vector>
+#include <iomanip>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 
+#include <memory>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
+#include <exanb/core/make_grid_variant_operator.h>
+#include <exanb/core/grid.h>
+
+#include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
-#include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/network.hpp>
 #include <exaDEM/shapes.hpp>
+#include <onika/string_utils.h>
+#include <exaDEM/network.hpp>
 
-namespace exaDEM {
-template <typename GridT, class = AssertGridHasFields<GridT>>
-class ContactNetwork : public OperatorNode {
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(Classifier, ic,
-           INPUT, REQUIRED,
-           DocString{"Interaction lists classified according to their types"});
-  ADD_SLOT(std::string, filename,
-           INPUT, "output");
-  ADD_SLOT(long, timestep,
-           INPUT, REQUIRED,
-           DocString{"Iteration number"});
+namespace exaDEM
+{
+  using namespace exanb;
 
- public:
-  inline std::string documentation() const final {
-    return R"EOF(
+	template <typename GridT, class = AssertGridHasFields<GridT>> class ContactNetwork : public OperatorNode
+	{
+		ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+		ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+		ADD_SLOT(Classifier<InteractionSOA>, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
+		ADD_SLOT(std::string , filename , INPUT , "output");
+		ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
+		public:
+		inline std::string documentation() const override final
+		{
+			return R"EOF(
         This operator creates paraview files containing the contact network.
 
         YAML example [no option]:
  
           - dump_contact_network
-       )EOF";
-  }
+		  )EOF";
+		}
 
-  inline void execute() final {
-    // mpi stuff
-    int rank, size;
-    MPI_Comm_rank(*mpi, &rank);
-    MPI_Comm_size(*mpi, &size);
+		inline void execute() override final
+		{
+			// mpi stuff
+			int rank, size;
+			MPI_Comm_rank(*mpi, &rank);
+			MPI_Comm_size(*mpi, &size);
 
-    Classifier& classifier = (*ic);
-    NetworkFunctor<GridT> manager(*grid);
+			Classifier<InteractionSOA>& classifier = (*ic);
+			NetworkFunctor<GridT> manager(*grid);
 
-    if (rank == 0) {
-      std::filesystem::create_directories(*filename);
-    }
+			if (rank == 0)
+			{
+				std::filesystem::create_directories( *filename );
+			}
 
-    MPI_Barrier(*mpi);
+			MPI_Barrier(*mpi);
 
-    // iterate over interaction types
-    // for (size_t type = 0; type < classifier.number_of_waves(); type++)
-    for (size_t type = 0; type < 4; type++) {  // skip drivers
-      auto& interactions = classifier.waves[type];
-      auto& forces = classifier.buffers[type];
-      const size_t n = interactions.size();
-      manager(n, interactions, forces);
-    }
+			// iterate over interaction types
+			// for (size_t type = 0; type < classifier.number_of_waves(); type++)
+			for (size_t type = 0; type < 4; type++) // skip drivers
+			{
+				auto& interactions = classifier.waves[type];
+				auto& forces = classifier.buffers[type];
+        const size_t n = interactions.size();
+				manager(n, interactions, forces); 
+			}
 
-    if (rank == 0) {
-      manager.write_pvtp(*filename, size);
-    }
+			if (rank == 0)
+			{
+				manager.write_pvtp(*filename, size);
+			}
 
-    std::string file = *filename + "/%06d.vtp";
-    file = onika::format_string(file, rank);
-    manager.fill_fn_at_point_data();
-    manager.write_vtp(file);
-  }
-};
+			std::string file = *filename + "/%06d.vtp";
+			file = onika::format_string(file,  rank);
+			manager.fill_fn_at_point_data();
+			manager.write_vtp(file);
+		}
+	};
 
-// === register factories ===
-ONIKA_AUTORUN_INIT(dump_contact_network) {
-  OperatorNodeFactory::instance()->register_factory(
-      "dump_contact_network", make_grid_variant_operator<ContactNetwork>);
-}
-}  // namespace exaDEM
+	template <class GridT> using ContactNetworkTmpl = ContactNetwork<GridT>;
+
+	// === register factories ===
+	ONIKA_AUTORUN_INIT(dump_contact_network) { OperatorNodeFactory::instance()->register_factory("dump_contact_network", make_grid_variant_operator<ContactNetworkTmpl>); }
+} // namespace exaDEM

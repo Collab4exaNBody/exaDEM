@@ -107,14 +107,13 @@ namespace exaDEM
         auto *__restrict__ vz = cells[cell_a][field::vz];
         auto *__restrict__ type = cells[cell_a][field::type];
         auto *__restrict__ id = cells[cell_a][field::id];
-        auto *__restrict__ h = cells[cell_a][field::homothety];
         auto *__restrict__ orient = cells[cell_a][field::orient];
         for (int j = 0; j < n_particles; j++)
         {
           exanb::Vec3d pos{rx[j], ry[j], rz[j]};
           if(defbox) pos = xform.transformCoord(pos);
           const shape *shp = shps[type[j]];
-          build_buffer_polyhedron(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], h[j], buffers);
+          build_buffer_polyhedron(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], buffers);
         }
       };
 

@@ -56,44 +56,31 @@ namespace exaDEM
     std::stringstream ranks; 
   };
 
-  inline void build_buffer_polyhedron(const exanb::Vec3d &pos,
-                                      const shape *shp,
-                                      const exanb::Quaternion &orient,
-                                      uint64_t id,
-                                      uint16_t type,
-                                      double vx,
-                                      double vy,
-                                      double vz,
-                                      double h,
-                                      par_poly_helper& buffers) {
-    auto writer_v = [&buffers](const exanb::Vec3d &v,
-                               const exanb::Vec3d &p,
-                               const double &h,
-                               const exanb::Quaternion &q) {
-      exanb::Vec3d new_pos = p + q * (h * v);
+  inline void build_buffer_polyhedron(const exanb::Vec3d &pos, const shape *shp, const exanb::Quaternion &orient, uint64_t id, uint16_t type, double vx, double vy, double vz, par_poly_helper& buffers)
+  {
+    auto writer_v = [&buffers](const exanb::Vec3d &v, const exanb::Vec3d &p, const exanb::Quaternion &q)
+    {
+      exanb::Vec3d new_pos = p + q * v;
       buffers.vertices << " " << new_pos.x << " " << new_pos.y << " " << new_pos.z;
     };
 
-    auto writer_components = [&buffers] (const exanb::Vec3d &v,
-                                         uint64_t i,
-                                         uint16_t t,
-                                         double v_x,
-                                         double v_y,
-                                         double v_z) {
+    auto writer_components = [&buffers] (const exanb::Vec3d &v, uint64_t i, uint16_t t, double v_x, double v_y, double v_z)
+    {
       buffers.ids   << " " << i;
       buffers.types << " " << t;
       buffers.velocities << " " << v_x << " " << v_y << " " << v_z;
     };
 
-    shp->for_all_vertices(writer_v, pos, h, orient);
+    shp->for_all_vertices(writer_v, pos, orient);
     shp->for_all_vertices(writer_components, id, type, vx, vy, vz);
 
     size_t n_faces = shp->get_number_of_faces();
     buffers.n_polygons += n_faces;
 
-    if (n_faces == 0) {
-      auto writer_e = [&buffers, &shp](const int first,
-                                       const int second) {
+    if(n_faces == 0)
+    {
+      auto writer_e = [&buffers, &shp](const int first, const int second)
+      {
         buffers.n_lines ++;
         buffers.lines << " " << buffers.n_vertices + first << " " << buffers.n_vertices + second;
         buffers.tube_size << " " << shp->m_radius;
@@ -107,9 +94,8 @@ namespace exaDEM
     {
       buffers.offsets << buffers.incr_offset + size << " ";
       buffers.incr_offset += size;
-      for (size_t it = 0; it < size; it++) {
+      for (size_t it = 0; it < size; it++)
         buffers.faces << " " << data[it] + buffers.n_vertices;
-      }
     };
     shp->for_all_faces(writer_f);
     buffers.n_vertices += shp->get_number_of_vertices(); // warning, increment n_vertices after all_faces
@@ -168,21 +154,21 @@ namespace exaDEM
     add_offset(2); // 5 
     add_offset(2); // 6
     buffers.lines << " " << count // 1
-        << " " << count + 1 
-        << " " << count + 2 
-        << " " << count + 3 
-        << " " << count;
+                  << " " << count + 1 
+                  << " " << count + 2 
+                  << " " << count + 3 
+                  << " " << count;
     buffers.lines << " " << count + 4 // 2
-        << " " << count + 5 
-        << " " << count + 6 
-        << " " << count + 7 
-        << " " << count + 4;
+                  << " " << count + 5 
+                  << " " << count + 6 
+                  << " " << count + 7 
+                  << " " << count + 4;
     buffers.lines << " " << count << " " << count + 4; // 3
     buffers.lines << " " << count + 1 << " " << count + 5; // 4
     buffers.lines << " " << count + 2 << " " << count + 6; // 5
     buffers.lines << " " << count + 3 << " " << count + 7; // 6
     buffers.count += 8; // number of corners
-                        // [3] add id
+    // [3] add id
     for(int i = 0 ; i < 8 ; i++)
     {
       buffers.ids << " " << id;

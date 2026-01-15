@@ -26,7 +26,7 @@ under the License.
 #include <memory>
 #include <exanb/compute/compute_cell_particles.h>
 #include <exaDEM/traversal.h>
-#include <exaDEM/forcefield/quadratic_force.h>
+#include <exaDEM/quadratic_force.h>
 
 namespace exaDEM
 {

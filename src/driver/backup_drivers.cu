@@ -21,7 +21,7 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <mpi.h>
 #include <memory>
-#include <exaDEM/drivers.hpp>
+#include <exaDEM/drivers.h>
 
 namespace exaDEM
 {

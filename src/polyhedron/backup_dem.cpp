@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
@@ -25,67 +25,72 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/grid_fields.h>
 #include <exanb/core/domain.h>
-#include <exaDEM/polyhedron/backup_dem.h>
+#include <exaDEM/backup_dem.h>
 
-namespace exaDEM {
-template <typename GridT>
-struct DEMBackupNode : public OperatorNode {
-  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
-  ADD_SLOT(Domain, domain, INPUT, REQUIRED);
-  ADD_SLOT(DEMBackupData, backup_dem, INPUT_OUTPUT);
+namespace exaDEM
+{
 
-  inline void execute() final {
-    IJK dims = grid->dimension();
-    auto cells = grid->cells();
-    const ssize_t gl = grid->ghost_layers();
+  using namespace exaDEM;
+  template <typename GridT> struct DEMBackupNode : public OperatorNode
+  {
+    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+    ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+    ADD_SLOT(DEMBackupData, backup_dem, INPUT_OUTPUT);
 
-    const bool defbox = !domain->xform_is_identity();
-    Mat3d m_xform = domain->xform();
-    backup_dem->m_data.clear();
-    backup_dem->m_data.resize(grid->number_of_cells());
-
-#   pragma omp parallel
+    inline void execute() override final
     {
-      GRID_OMP_FOR_BEGIN(dims - 2 * gl, _, loc_no_gl) {
-        const IJK loc = loc_no_gl + gl;
-        const size_t i = grid_ijk_to_index(dims, loc);
-        const size_t n_particles = cells[i].size();
-        backup_dem->m_data[i].resize(n_particles * 7);
+      IJK dims = grid->dimension();
+      auto cells = grid->cells();
+      const ssize_t gl = grid->ghost_layers();
 
-        double *rb = backup_dem->m_data[i].data();
-        const auto *__restrict__ rx = cells[i][field::rx];
-        const auto *__restrict__ ry = cells[i][field::ry];
-        const auto *__restrict__ rz = cells[i][field::rz];
-        const auto *__restrict__ orient = cells[i][field::orient];
+      const bool defbox = !domain->xform_is_identity();
+      Mat3d m_xform = domain->xform();
+      backup_dem->m_data.clear();
+      backup_dem->m_data.resize(grid->number_of_cells());
 
-        const size_t block_size = n_particles;
-#       pragma omp simd
-        for (size_t j = 0; j < n_particles; j++) {
-          if (defbox) {
-            Vec3d r = m_xform * Vec3d{rx[j], ry[j], rz[j]};
-            rb[                 j] = r.x;
-            rb[    block_size + j] = r.y;
-            rb[2 * block_size + j] = r.z;
-          } else {
-            rb[                 j] = rx[j];
-            rb[    block_size + j] = ry[j];
-            rb[2 * block_size + j] = rz[j];
+#     pragma omp parallel
+      {
+        GRID_OMP_FOR_BEGIN (dims - 2 * gl, _, loc_no_gl)
+        {
+          const IJK loc = loc_no_gl + gl;
+          const size_t i = grid_ijk_to_index(dims, loc);
+          const size_t n_particles = cells[i].size();
+          backup_dem->m_data[i].resize(n_particles * 7);
+
+          double *rb = backup_dem->m_data[i].data();
+          const auto *__restrict__ rx = cells[i][field::rx];
+          const auto *__restrict__ ry = cells[i][field::ry];
+          const auto *__restrict__ rz = cells[i][field::rz];
+          const auto *__restrict__ orient = cells[i][field::orient];
+
+          const size_t block_size = n_particles;
+#         pragma omp simd
+          for (size_t j = 0; j < n_particles; j++)
+          {
+            if (defbox) 
+            { 
+              Vec3d r = m_xform * Vec3d{ rx[j], ry[j], rz[j] }; 
+              rb[                 j] = r.x;
+              rb[    block_size + j] = r.y;
+              rb[2 * block_size + j] = r.z;
+            } 
+            else
+            {
+              rb[                 j] = rx[j];
+              rb[    block_size + j] = ry[j];
+              rb[2 * block_size + j] = rz[j];
+            }
+            rb[3 * block_size + j] = orient[j].w;
+            rb[4 * block_size + j] = orient[j].x;
+            rb[5 * block_size + j] = orient[j].y;
+            rb[6 * block_size + j] = orient[j].z;
           }
-          rb[3 * block_size + j] = orient[j].w;
-          rb[4 * block_size + j] = orient[j].x;
-          rb[5 * block_size + j] = orient[j].y;
-          rb[6 * block_size + j] = orient[j].z;
         }
+        GRID_OMP_FOR_END
       }
-      GRID_OMP_FOR_END
     }
-  }
-};
+  };
 
-// === register factories ===
-ONIKA_AUTORUN_INIT(backup_dem) {
-  OperatorNodeFactory::instance()->register_factory(
-      "backup_dem",
-      make_grid_variant_operator<DEMBackupNode>);
-}
-}  // namespace exaDEM
+  // === register factories ===
+  ONIKA_AUTORUN_INIT(backup_dem) { OperatorNodeFactory::instance()->register_factory("backup_dem", make_grid_variant_operator<DEMBackupNode>); }
+} // namespace exaDEM
