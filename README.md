@@ -19,7 +19,6 @@ Additionally, ExaDEM offers compatibility with MPI+GPUs, using the CUDA programm
 Documentation is available here: 
 
 - Website: [ExaDEM Website](https://collab4exanbody.github.io/doc_exaDEM/)
-- Github: [ExaDEM Documentation](https://github.com/Collab4exaNBody/doc_exaDEM.git)
 
 - Main Sections:
   - [Overview](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Overview.html#overview-of-exadem)
