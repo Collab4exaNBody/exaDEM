@@ -21,44 +21,35 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <exanb/core/grid.h>
 #include <onika/math/basic_types.h>
+
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/grid_fields.h>
 #include <exanb/core/domain.h>
-#include <mpi.h>
-
 #include <exanb/compute/reduce_cell_particles.h>
 #include <exanb/mpi/particle_displ_over_async_request.h>
-#include <exaDEM/polyhedron/backup_dem.h>
-#include <exaDEM/traversal.h>
+
+#include <mpi.h>
+
+#include <exaDEM/polyhedron/backup_dem.hpp>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
 template <typename GridT>
 class VertexDisplacementOver : public OperatorNode {
-  static constexpr FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_homothety, field::_orient> reduce_field_set{};
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(double, threshold,
-           INPUT, 0.0);
-  ADD_SLOT(Domain, domain,
-           INPUT);
-  ADD_SLOT(bool, async,
-           INPUT, false);
-  ADD_SLOT(shapes, shapes_collection,
-           INPUT, REQUIRED,
-           DocString{"Collection of shapes"});
-  ADD_SLOT(bool, result,
-           OUTPUT);
-  ADD_SLOT(DEMBackupData, backup_dem,
-           INPUT, REQUIRED);
-  ADD_SLOT(Traversal, traversal_real,
-           INPUT, REQUIRED,
-           DocString{"list of non empty cells within the current grid"});
-  ADD_SLOT(ParticleDisplOverAsyncRequest, particle_displ_comm,
-           INPUT_OUTPUT);
+  static constexpr FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_homothety, field::_orient>
+      reduce_field_set{};
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(double, threshold, INPUT, 0.0);
+  ADD_SLOT(Domain, domain, INPUT);
+  ADD_SLOT(bool, async, INPUT, false);
+  ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
+  ADD_SLOT(bool, result, OUTPUT);
+  ADD_SLOT(DEMBackupData, backup_dem, INPUT, REQUIRED);
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(ParticleDisplOverAsyncRequest, particle_displ_comm, INPUT_OUTPUT);
 
  public:
   // -----------------------------------------------
@@ -78,14 +69,13 @@ class VertexDisplacementOver : public OperatorNode {
   // -----------------------------------------------
   inline void execute() final {
     MPI_Comm comm = *mpi;
-    const shapes &shps = *shapes_collection;
+    const shapes& shps = *shapes_collection;
 
     // interest for auto here, is to be able to easily switch between single and double precision floats if needed.
     const double max_dist = *threshold;
     const double max_dist2 = max_dist * max_dist;
 
-    const ReduceCellParticlesOptions rcpo =
-        traversal_real->get_reduce_cell_particles_options();
+    const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
 
     const bool defbox = !domain->xform_is_identity();
 
@@ -102,61 +92,49 @@ class VertexDisplacementOver : public OperatorNode {
       auto user_cb = onika::parallel::ParallelExecutionCallback{reduction_end_callback, &(*particle_displ_comm)};
 
       if (defbox) {
-        ReduceMaxVertexDisplacementFunctor<true> func = {
-          backup_dem->m_data.data(),
-          max_dist2, shps.data(), domain->xform()};
+        ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->m_data.data(), max_dist2, shps.data(),
+                                                         domain->xform()};
 
-        reduce_cell_particles(*grid, false, func,
-                              particle_displ_comm->m_particles_over, reduce_field_set,
+        reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
                               parallel_execution_context(), user_cb, rcpo);
       } else {  // defbox
-        ReduceMaxVertexDisplacementFunctor<false> func = {
-          backup_dem->m_data.data(),
-          max_dist2, shps.data(), domain->xform()};
+        ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->m_data.data(), max_dist2, shps.data(),
+                                                          domain->xform()};
 
-        reduce_cell_particles(*grid, false, func,
-                              particle_displ_comm->m_particles_over, reduce_field_set,
+        reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
                               parallel_execution_context(), user_cb, rcpo);
       }
       particle_displ_comm->start_mpi_async_request();
       *result = false;
     } else {  // async
-      ldbg << "Nb part moved over " << max_dist
-          << " (local) = " << particle_displ_comm->m_particles_over
-          << std::endl;
+      ldbg << "Nb part moved over " << max_dist << " (local) = " << particle_displ_comm->m_particles_over << std::endl;
       if (grid->number_of_cells() > 0) {
         auto user_cb = onika::parallel::ParallelExecutionCallback{};
         if (defbox) {
-          ReduceMaxVertexDisplacementFunctor<true> func = {
-            backup_dem->m_data.data(),
-            max_dist2, shps.data(), domain->xform()};
+          ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->m_data.data(), max_dist2, shps.data(),
+                                                           domain->xform()};
 
-          reduce_cell_particles(*grid, false, func,
-                                particle_displ_comm->m_particles_over, reduce_field_set,
+          reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
                                 parallel_execution_context(), user_cb, rcpo);
         } else {  // defbox
-          ReduceMaxVertexDisplacementFunctor<false> func = {
-            backup_dem->m_data.data(),
-            max_dist2, shps.data(), domain->xform()};
+          ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->m_data.data(), max_dist2, shps.data(),
+                                                            domain->xform()};
 
-          reduce_cell_particles(*grid, false, func,
-                                particle_displ_comm->m_particles_over,
-                                reduce_field_set, parallel_execution_context(), user_cb, rcpo);
+          reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
+                                parallel_execution_context(), user_cb, rcpo);
         }
       }
-      MPI_Allreduce(&(particle_displ_comm->m_particles_over),
-                    &(particle_displ_comm->m_all_particles_over),
-                    1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
-      ldbg << "Nb part moved over " << max_dist
-          << " (local/all) = " << particle_displ_comm->m_particles_over
-          << " / " << particle_displ_comm->m_all_particles_over << std::endl;
+      MPI_Allreduce(&(particle_displ_comm->m_particles_over), &(particle_displ_comm->m_all_particles_over), 1,
+                    MPI_UNSIGNED_LONG_LONG, MPI_SUM, comm);
+      ldbg << "Nb part moved over " << max_dist << " (local/all) = " << particle_displ_comm->m_particles_over << " / "
+           << particle_displ_comm->m_all_particles_over << std::endl;
       *result = (particle_displ_comm->m_all_particles_over > 0);
     }
   }
 
-  static inline void reduction_end_callback(void *userData) {
+  static inline void reduction_end_callback(void* userData) {
     ::exanb::ldbg << "async CPU/GPU reduction done, start async MPI collective" << std::endl;
-    auto *particle_displ_comm = static_cast<ParticleDisplOverAsyncRequest *>(userData);
+    auto* particle_displ_comm = static_cast<ParticleDisplOverAsyncRequest*>(userData);
     assert(particle_displ_comm != nullptr);
     assert(particle_displ_comm->m_all_particles_over >= particle_displ_comm->m_particles_over);
     particle_displ_comm->start_mpi_async_request();
@@ -165,8 +143,7 @@ class VertexDisplacementOver : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(vertex_displ_over) {
-  OperatorNodeFactory::instance()->register_factory(
-      "vertex_displ_over",
-      make_grid_variant_operator<VertexDisplacementOver>);
+  OperatorNodeFactory::instance()->register_factory("vertex_displ_over",
+                                                    make_grid_variant_operator<VertexDisplacementOver>);
 }
 }  // namespace exaDEM

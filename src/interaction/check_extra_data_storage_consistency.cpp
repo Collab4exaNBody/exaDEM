@@ -22,13 +22,11 @@ under the License.
 
 namespace exaDEM {
 template <class GridT>
-using CheckInfoInteractionConsistencyTmpl =
-CheckInfoConsistency<GridT, GridCellParticleInteraction>;
+using CheckInfoInteractionConsistencyTmpl = CheckInfoConsistency<GridT, GridCellParticleInteraction>;
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(check_extra_data_storage_consistency) {
-  OperatorNodeFactory::instance()->register_factory(
-      "check_info_interaction_consistency",
-      make_grid_variant_operator<CheckInfoInteractionConsistencyTmpl>);
+  OperatorNodeFactory::instance()->register_factory("check_info_interaction_consistency",
+                                                    make_grid_variant_operator<CheckInfoInteractionConsistencyTmpl>);
 }
 }  // namespace exaDEM

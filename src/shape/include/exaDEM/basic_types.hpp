@@ -25,41 +25,35 @@ under the License.
 #include <exaDEM/type/OBBtree.hpp>
 
 namespace exaDEM {
-using namespace exanb;
-ONIKA_HOST_DEVICE_FUNC inline
-    vec3r conv_to_vec3r(const exanb::Vec3d &v) {
-      return vec3r{v.x, v.y, v.z};
-    }
+using exanb::Vec3d;
+using exanb::Quaternion;
+ONIKA_HOST_DEVICE_FUNC inline vec3r conv_to_vec3r(const exanb::Vec3d& v) {
+  return vec3r{v.x, v.y, v.z};
+}
 
-ONIKA_HOST_DEVICE_FUNC inline
-    vec3r conv_to_vec3r(exanb::Vec3d &v) {
-      return vec3r{v.x, v.y, v.z};
-    }
+ONIKA_HOST_DEVICE_FUNC inline vec3r conv_to_vec3r(exanb::Vec3d& v) {
+  return vec3r{v.x, v.y, v.z};
+}
 
-ONIKA_HOST_DEVICE_FUNC inline
-    exanb::Vec3d conv_to_Vec3d(vec3r &v) {
-      return exanb::Vec3d{v[0], v[1], v[2]};
-    }
+ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d conv_to_Vec3d(vec3r& v) {
+  return exanb::Vec3d{v[0], v[1], v[2]};
+}
 
-ONIKA_HOST_DEVICE_FUNC inline
-    quat conv_to_quat(const exanb::Quaternion &Q) {
-      return quat{vec3r{Q.x, Q.y, Q.z}, Q.w};
-    }
+ONIKA_HOST_DEVICE_FUNC inline quat conv_to_quat(const exanb::Quaternion& Q) {
+  return quat{vec3r{Q.x, Q.y, Q.z}, Q.w};
+}
 
-ONIKA_HOST_DEVICE_FUNC inline
-    OBB compute_obb(const OBB& in_obb,
-                    const exanb::Vec3d& in_pos,
-                    const exanb::Quaternion& in_q,
-                    const double homothety) {
-      OBB obb = in_obb;
-      auto p = conv_to_vec3r(in_pos);
-      auto q = conv_to_quat(in_q);
-      obb.rotate(q);
-      if(homothety != 1.0) {
-        obb.extent *= homothety;
-        obb.center *= homothety;
-      }
-      obb.center += p;
-      return obb;
-    }
-} // namespace exaDEM
+ONIKA_HOST_DEVICE_FUNC inline OBB compute_obb(const OBB& in_obb, const exanb::Vec3d& in_pos,
+                                              const exanb::Quaternion& in_q, const double homothety) {
+  OBB obb = in_obb;
+  auto p = conv_to_vec3r(in_pos);
+  auto q = conv_to_quat(in_q);
+  obb.rotate(q);
+  if (homothety != 1.0) {
+    obb.extent *= homothety;
+    obb.center *= homothety;
+  }
+  obb.center += p;
+  return obb;
+}
+}  // namespace exaDEM

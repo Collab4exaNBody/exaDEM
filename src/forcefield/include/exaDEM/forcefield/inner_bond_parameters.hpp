@@ -16,7 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#pragma once 
+#pragma once
 
 #include <yaml-cpp/yaml.h>
 #include <onika/string_utils.h>
@@ -29,10 +29,10 @@ using onika::lout;
  * @brief Encapsulates contact mechanics parameters for a contact interaction model.
  */
 struct InnerBondParams {
-  double kn = 0.0;         /**< Normal stiffness coefficient (force per unit displacement in the normal direction). */
-  double kt = 0.0;         /**< Tangential stiffness coefficient (force per unit displacement in the tangential direction). */
+  double kn = 0.0; /**< Normal stiffness coefficient (force per unit displacement in the normal direction). */
+  double kt = 0.0; /**< Tangential stiffness coefficient (force per unit displacement in the tangential direction). */
   double damp_rate = 0.0;
-  double g  = 0.0;
+  double g = 0.0;
 };
 
 /**
@@ -43,27 +43,26 @@ struct InnerBondParams {
  * @return true if all fields of both instances are equal; false otherwise.
  */
 inline bool operator==(InnerBondParams& a, InnerBondParams& b) {
-  return (a.kn == b.kn) &&
-      (a.kt == b.kt) &&
-      (a.damp_rate == b.damp_rate) &&
-      (a.g == b.g);
+  return (a.kn == b.kn) && (a.kt == b.kt) && (a.damp_rate == b.damp_rate) && (a.g == b.g);
 }
 
 /**
  * @brief Displays the header for a parameter table.
  */
-template<typename CPT> inline void display_header();
+template <typename CPT>
+inline void display_header();
 
 /**
  * @brief Displays the footer or closing line for a parameter table.
  */
-template<typename CPT> inline void display_end_table();
+template <typename CPT>
+inline void display_end_table();
 
 /**
  * @brief Displays a formatted header line for a table of InnerBondParams entries.
  */
-template<> inline
-void display_header<InnerBondParams>() {
+template <>
+inline void display_header<InnerBondParams>() {
   lout << "===============================================================================" << std::endl;
   lout << "|        typeA |        typeB |        kn |        kt | damp_rate |         g |" << std::endl;
   lout << "-------------------------------------------------------------------------------" << std::endl;
@@ -72,8 +71,8 @@ void display_header<InnerBondParams>() {
 /**
  * @brief Displays a formatted footer line for a table of InnerBondParams entries.
  */
-template<> inline
-void display_end_table<InnerBondParams>() {
+template <>
+inline void display_end_table<InnerBondParams>() {
   lout << "===============================================================================" << std::endl;
 }
 
@@ -81,13 +80,9 @@ void display_end_table<InnerBondParams>() {
  * @brief Formats the contact parameters into a single table row string.
  */
 inline std::string display(InnerBondParams& params) {
-  std::string line = onika::format_string(
-      " %.3e | %.3e | %.3e | %.3e |", 
-      params.kn, 
-      params.kt, 
-      params.damp_rate, 
-      params.g); 
-  return line; 
+  std::string line =
+      onika::format_string(" %.3e | %.3e | %.3e | %.3e |", params.kn, params.kt, params.damp_rate, params.g);
+  return line;
 }
 
 /**
@@ -98,7 +93,7 @@ inline std::string display(InnerBondParams& params) {
  * @param params Reference to the InnerBondParams instance to display.
  */
 inline void display_multimat(std::string typeA, std::string typeB, InnerBondParams& params) {
-  std::string line_types = onika::format_string("| %12s | %12s |", typeA, typeB); 
+  std::string line_types = onika::format_string("| %12s | %12s |", typeA, typeB);
   std::string line_params = display(params);
   lout << line_types << line_params << std::endl;
 }
@@ -110,15 +105,12 @@ inline void display_multimat(std::string typeA, std::string typeB, InnerBondPara
  * @param stream Output stream to write to.
  * @param params Reference to the InnerBondParams instance to stream.
  */
-template<typename STREAM>
+template <typename STREAM>
 void streaming(STREAM& stream, InnerBondParams& params) {
-  stream << "{ kn: " << params.kn << 
-      ", kt: " << params.kt << 
-      ", damp_rate: " << params.damp_rate << 
-      ", g: " << params.g << 
-      " }";
+  stream << "{ kn: " << params.kn << ", kt: " << params.kt << ", damp_rate: " << params.damp_rate << ", g: " << params.g
+         << " }";
 }
-} // namespace exaDEM
+}  // namespace exaDEM
 
 // Yaml conversion operators, allows to read potential parameters from config file
 namespace YAML {
@@ -126,35 +118,36 @@ using exaDEM::InnerBondParams;
 using exanb::lerr;
 using onika::physics::Quantity;
 
-template <> struct convert<InnerBondParams> {
-static bool decode(const Node &node, InnerBondParams &v) {
-  v = InnerBondParams{}; // initializes defaults values
-  if (!node.IsMap()) {
-    return false;
-  }
-  if (!node["kn"]) {
-    lerr << "kn is missing\n";
-    return false;
-  }
-  if (!node["kt"]) {
-    lerr << "kt is missing\n";
-    return false;
-  }
-  if (!node["damp_rate"]) {
-    lerr << "en is missing\n";
-    return false;
-  }
-  if (!node["g"]) {
-    lerr << "g is missing\n";
-    return false;
-  }
+template <>
+struct convert<InnerBondParams> {
+  static bool decode(const Node& node, InnerBondParams& v) {
+    v = InnerBondParams{};  // initializes defaults values
+    if (!node.IsMap()) {
+      return false;
+    }
+    if (!node["kn"]) {
+      lerr << "kn is missing\n";
+      return false;
+    }
+    if (!node["kt"]) {
+      lerr << "kt is missing\n";
+      return false;
+    }
+    if (!node["damp_rate"]) {
+      lerr << "en is missing\n";
+      return false;
+    }
+    if (!node["g"]) {
+      lerr << "g is missing\n";
+      return false;
+    }
 
-  v.kn = node["kn"].as<Quantity>().convert();
-  v.kt = node["kt"].as<Quantity>().convert();
-  v.damp_rate = node["damp_rate"].as<Quantity>().convert();
-  v.g = node["g"].as<Quantity>().convert();
+    v.kn = node["kn"].as<Quantity>().convert();
+    v.kt = node["kt"].as<Quantity>().convert();
+    v.damp_rate = node["damp_rate"].as<Quantity>().convert();
+    v.g = node["g"].as<Quantity>().convert();
 
-  return true;
-}
+    return true;
+  }
 };
-} // namespace YAML
+}  // namespace YAML

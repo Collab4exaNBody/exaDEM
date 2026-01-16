@@ -36,6 +36,9 @@ under the License.
 // #include <exaDEM/shape_printer.hpp>
 
 namespace exaDEM {
+using onika::ldbg;
+using onika::lout;
+
 struct subBox {
   size_t isub;
   int nbPoints;
@@ -52,19 +55,19 @@ struct shape {
 
   VectorT<exanb::Vec3d> m_vertices;  ///< List of vertices of the shape
   exanb::Vec3d m_inertia_on_mass;    ///< Inertia vector divided by mass
-  VectorT<OBB> m_obb_vertices;  ///< Oriented bounding boxes for each vertex
-                                ///< (only for STL meshes)
-  VectorT<OBB> m_obb_edges;     ///< OBBs for edges (only for STL meshes)
-  VectorT<OBB> m_obb_faces;     ///< OBBs for faces (only for STL meshes)
-  OBB obb;                      ///< Global OBB of the shape
-  VectorT<int> m_edges;  ///< List of edges, stored as pairs of vertex indices
-  VectorT<int> m_faces;  ///< List of faces, stored as sequences of vertex indices
+  VectorT<OBB> m_obb_vertices;       ///< Oriented bounding boxes for each vertex
+                                     ///< (only for STL meshes)
+  VectorT<OBB> m_obb_edges;          ///< OBBs for edges (only for STL meshes)
+  VectorT<OBB> m_obb_faces;          ///< OBBs for faces (only for STL meshes)
+  OBB obb;                           ///< Global OBB of the shape
+  VectorT<int> m_edges;              ///< List of edges, stored as pairs of vertex indices
+  VectorT<int> m_faces;              ///< List of faces, stored as sequences of vertex indices
   VectorT<int> m_offset_faces;       ///< Offsets for indexing faces in m_faces
   VectorT<double> m_face_area;       ///< Face area
   double m_radius;                   ///< Radius used for contact detection
   double m_volume;                   ///< Volume of the shape
   std::string m_name = "undefined";  ///< Name of the shape
-  OBBtree<subBox> obbtree;            ///< Optional OBB tree for accelerated collision detection
+  OBBtree<subBox> obbtree;           ///< Optional OBB tree for accelerated collision detection
 
   /**
    * @brief Default constructor.
@@ -92,16 +95,14 @@ struct shape {
    * @param particle_center Center of the particle.
    * @param particle_quat Orientation of the particle.
    */
-  inline void pre_compute_obb_edges(const exanb::Vec3d& particle_center,
-                                    const exanb::Quaternion& particle_quat);
+  inline void pre_compute_obb_edges(const exanb::Vec3d& particle_center, const exanb::Quaternion& particle_quat);
 
   /**
    * @brief Precompute OBBs for faces based on particle center and orientation.
    * @param particle_center Center of the particle.
    * @param particle_quat Orientation of the particle.
    */
-  inline void pre_compute_obb_faces(const exanb::Vec3d& particle_center,
-                                    const exanb::Quaternion& particle_quat);
+  inline void pre_compute_obb_faces(const exanb::Vec3d& particle_center, const exanb::Quaternion& particle_quat);
 
   /**
    * @brief Precompute OBBs for vertices using scratch memory.
@@ -134,8 +135,7 @@ struct shape {
    * @param particle_center Center of the particle.
    * @param particle_quat Orientation of the particle.
    */
-  void compute_prepro_obb(exanb::Vec3d* scratch,
-                          const exanb::Vec3d& particle_center,
+  void compute_prepro_obb(exanb::Vec3d* scratch, const exanb::Vec3d& particle_center,
                           const exanb::Quaternion& particle_quat);
 
   /**
@@ -155,9 +155,7 @@ struct shape {
    * @return Reference to inertia vector
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline const exanb::Vec3d get_Im(double h = 1.0) {
-    return h * h * m_inertia_on_mass;
-  }
+  inline const exanb::Vec3d get_Im(double h = 1.0) { return h * h * m_inertia_on_mass; }
 
   /**
    * @brief Get the inertia on mass vector (const version).
@@ -165,45 +163,35 @@ struct shape {
    * @return Reference to inertia vector
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline const exanb::Vec3d get_Im(double h = 1.0) const {
-    return h * h * m_inertia_on_mass;
-  }
+  inline const exanb::Vec3d get_Im(double h = 1.0) const { return h * h * m_inertia_on_mass; }
 
   /**
    * @brief Get number of vertices.
    * @return Number of vertices
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline int get_number_of_vertices() {
-    return onika::cuda::vector_size(m_vertices);
-  }
+  inline int get_number_of_vertices() { return onika::cuda::vector_size(m_vertices); }
 
   /**
    * @brief Get number of vertices (const version).
    * @return Number of vertices
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline int get_number_of_vertices() const {
-    return onika::cuda::vector_size(m_vertices);
-  }
+  inline int get_number_of_vertices() const { return onika::cuda::vector_size(m_vertices); }
 
   /**
    * @brief Get number of edges.
    * @return Number of edges
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline int get_number_of_edges() {
-    return onika::cuda::vector_size(m_edges) / 2;
-  }
+  inline int get_number_of_edges() { return onika::cuda::vector_size(m_edges) / 2; }
 
   /**
    * @brief Get number of edges (const version).
    * @return Number of edges
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline int get_number_of_edges() const {
-    return onika::cuda::vector_size(m_edges) / 2;
-  }
+  inline int get_number_of_edges() const { return onika::cuda::vector_size(m_edges) / 2; }
 
   /**
    * @brief Get number of faces.
@@ -256,8 +244,7 @@ struct shape {
    * @return Transformed vertex position
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline exanb::Vec3d get_vertex(int i, const exanb::Vec3d& p, const double h,
-                                 const exanb::Quaternion& orient) {
+  inline exanb::Vec3d get_vertex(int i, const exanb::Vec3d& p, const double h, const exanb::Quaternion& orient) {
     const Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
     return p + orient * (h * vertices[i]);
   }
@@ -271,8 +258,7 @@ struct shape {
    * @return Transformed vertex position
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline exanb::Vec3d get_vertex(int i, const exanb::Vec3d& p, const double h,
-                                 const exanb::Quaternion& orient) const {
+  inline exanb::Vec3d get_vertex(int i, const exanb::Vec3d& p, const double h, const exanb::Quaternion& orient) const {
     const Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
     return p + orient * (h * vertices[i]);
   }
@@ -331,8 +317,7 @@ struct shape {
       int* ptr = start + 1;  // the first element is the total number of face
       int acc = 1;
       for (int it = i; it > 0; it--) {
-        acc +=
-            ptr[0] + 1;  // ptr[0] contains the number of vertices of this face
+        acc += ptr[0] + 1;  // ptr[0] contains the number of vertices of this face
         ptr += ptr[0] + 1;
       }
       m_offset_faces[i] = acc;
@@ -435,8 +420,7 @@ struct shape {
     assert(num_vertices != 0);
     m_faces[0]++;
     const size_t old_size = m_faces.size();
-    m_faces.resize(old_size + num_vertices +
-                   1);  // number of vertex + 1 storage to this number
+    m_faces.resize(old_size + num_vertices + 1);  // number of vertex + 1 storage to this number
     m_faces[old_size] = num_vertices;
     for (size_t it = 0; it < num_vertices; it++) {
       m_faces[old_size + 1 + it] = vertex_indices[it];
@@ -447,29 +431,19 @@ struct shape {
    * @brief retur, the minkowski radius used for detection.
    * @param radius Minkowsku radius
    */
-  double minskowski() {
-    return m_radius;
-  }
+  double minskowski() { return m_radius; }
 
-  double minskowski(double h) {
-    return h * minskowski();
-  }
+  double minskowski(double h) { return h * minskowski(); }
 
-  double minskowski() const {
-    return m_radius;
-  }
+  double minskowski() const { return m_radius; }
 
-  double minskowski(double h) const {
-    return h * minskowski();
-  }
+  double minskowski(double h) const { return h * minskowski(); }
 
   /**
    * @brief Set the minkowski radius used for detection.
    * @param radius Minkowsku radius
    */
-  void add_radius(const double radius) {
-    m_radius = radius;
-  }
+  void add_radius(const double radius) { m_radius = radius; }
 
   /**
    * @brief Compute the maximum cutoff radius (distance from origin + Minkowski
@@ -488,9 +462,7 @@ struct shape {
     return rcut;
   }
 
-  double compute_max_rcut(double h) const {
-    return h * compute_max_rcut();
-  }
+  double compute_max_rcut(double h) const { return h * compute_max_rcut(); }
   /**
    * @brief Apply a function to all vertices of the shape (non-const version).
    *
@@ -615,8 +587,7 @@ struct shape {
     m_inertia_on_mass = this->get_Im(scale);
     std::vector<vec3r> vertices;
     vertices.resize(m_vertices.size());
-    for (size_t vid = 0; vid < m_vertices.size(); vid++)
-      vertices[vid] = conv_to_vec3r(get_vertex(vid));
+    for (size_t vid = 0; vid < m_vertices.size(); vid++) vertices[vid] = conv_to_vec3r(get_vertex(vid));
     obb = build_OBB(vertices, m_radius);
   }
 
@@ -674,9 +645,7 @@ struct shape {
    * @param shift The shift vector applied to each vertex.
    */
   void shift_vertices(const Vec3d& shift) {
-    auto shift_vertex = [](Vec3d& vertex, const Vec3d& shift) {
-      vertex -= shift;
-    };
+    auto shift_vertex = [](Vec3d& vertex, const Vec3d& shift) { vertex -= shift; };
     for_all_vertices(shift_vertex, shift);
   }
 
@@ -702,11 +671,9 @@ struct shape {
       if (input == face) return fid;
     }
 
-    std::string msg =
-        "Impossible to identify a face in shape: " + m_name + ".\n";
+    std::string msg = "Impossible to identify a face in shape: " + m_name + ".\n";
     msg += "Vertices ID are: [ ";
-    for (size_t i = 0; i < vertices.size(); i++)
-      msg += std::to_string(vertices[i]) + " ";
+    for (size_t i = 0; i < vertices.size(); i++) msg += std::to_string(vertices[i]) + " ";
     msg += "]";
     color_log::error("shape::identify_face", msg);
   }
@@ -730,8 +697,7 @@ struct shape {
       bundle.data.isub = face_idx;
       bundle.data.nbPoints = n_vertices;
 
-      for (int vi = 0; vi < n_vertices; vi++)
-        bundle.points.push_back(conv_to_vec3r(m_vertices[vertex_ids[vi]]));
+      for (int vi = 0; vi < n_vertices; vi++) bundle.points.push_back(conv_to_vec3r(m_vertices[vertex_ids[vi]]));
 
       std::vector<OBBbundle<subBox>> single_bundle{bundle};
       bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
@@ -753,8 +719,7 @@ struct shape {
     }
 
     // Build OBBs for vertices
-    for (int vert_idx = 0; vert_idx < this->get_number_of_vertices();
-         ++vert_idx) {
+    for (int vert_idx = 0; vert_idx < this->get_number_of_vertices(); ++vert_idx) {
       OBBbundle<subBox> bundle;
       bundle.data.isub = vert_idx;
       bundle.data.nbPoints = 1;
@@ -766,8 +731,7 @@ struct shape {
     }
 
     // Recursively build the OBB tree
-    obbtree.root =
-        OBBtree<subBox>::recursiveBuild(obbtree.root, obb_bundles, m_radius);
+    obbtree.root = OBBtree<subBox>::recursiveBuild(obbtree.root, obb_bundles, m_radius);
   }
 
   /// IO Section
@@ -777,12 +741,10 @@ struct shape {
   void print_vertices() {
     int vertex_idx = 0;
     auto printer = [&vertex_idx](exanb::Vec3d& v) {
-      lout << "Vertex[" << vertex_idx++ << "]: [" << v.x << "," << v.y << ","
-           << v.z << "]" << std::endl;
+      lout << "Vertex[" << vertex_idx++ << "]: [" << v.x << "," << v.y << "," << v.z << "]" << std::endl;
     };
 
-    lout << "Number of vertices = " << this->get_number_of_vertices()
-         << std::endl;
+    lout << "Number of vertices = " << this->get_number_of_vertices() << std::endl;
     for_all_vertices(printer);
   }
 
@@ -792,8 +754,7 @@ struct shape {
   void print_edges() {
     int edge_idx = 0;
     auto printer = [&edge_idx](int v0, int v1) {
-      lout << "Edge[" << edge_idx++ << "]: [" << v0 << "," << v1 << "]"
-           << std::endl;
+      lout << "Edge[" << edge_idx++ << "]: [" << v0 << "," << v1 << "]" << std::endl;
     };
 
     if (this->get_number_of_edges() == 0) {
@@ -835,8 +796,7 @@ struct shape {
     lout << "======= Shape Configuration =====" << std::endl;
     lout << "Shape Name        = " << this->m_name << std::endl;
     lout << "Shape Radius      = " << this->m_radius << std::endl;
-    lout << "Shape I/m         = [" << this->m_inertia_on_mass << "]"
-         << std::endl;
+    lout << "Shape I/m         = [" << this->m_inertia_on_mass << "]" << std::endl;
     lout << "Shape Volume      = " << this->m_volume << std::endl;
     print_vertices();
     print_edges();
@@ -852,32 +812,24 @@ struct shape {
     std::string name = m_name + ".vtk";
     std::ofstream outFile(name);
     if (!outFile) {
-      color_log::error("Shape::write_paraview",
-                       "Impossible to create an output file!", false);
-      color_log::error("Shape::write_paraview",
-                       "Impossible to open the file: " + name, false);
+      color_log::error("Shape::write_paraview", "Impossible to create an output file!", false);
+      color_log::error("Shape::write_paraview", "Impossible to open the file: " + name, false);
       return;
     }
     outFile << "# vtk DataFile Version 3.0" << std::endl;
     outFile << "Spheres" << std::endl;
     outFile << "ASCII" << std::endl;
     outFile << "DATASET POLYDATA" << std::endl;
-    outFile << "POINTS " << this->get_number_of_vertices() << " float"
-            << std::endl;
-    auto writer_v = [](exanb::Vec3d& v, std::ofstream& out) {
-      out << v.x << " " << v.y << " " << v.z << std::endl;
-    };
+    outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
+    auto writer_v = [](exanb::Vec3d& v, std::ofstream& out) { out << v.x << " " << v.y << " " << v.z << std::endl; };
 
     for_all_vertices(writer_v, outFile);
 
     outFile << std::endl;
 
-    outFile << "LINES " << this->get_number_of_edges() << " "
-            << 3 * this->get_number_of_edges() << std::endl;
+    outFile << "LINES " << this->get_number_of_edges() << " " << 3 * this->get_number_of_edges() << std::endl;
 
-    auto writer_e = [](int a, int b, std::ofstream& out) {
-      out << "2 " << a << " " << b << std::endl;
-    };
+    auto writer_e = [](int a, int b, std::ofstream& out) { out << "2 " << a << " " << b << std::endl; };
 
     for_all_edges(writer_e, outFile);
 
@@ -885,14 +837,12 @@ struct shape {
     int count_polygon_table_size = 0;
     int* ptr = this->m_faces.data() + 1;
     for (int it = 0; it < count_polygon_size; it++) {
-      count_polygon_table_size +=
-          ptr[0] + 1;     // number of vertices + vertex idexes
-      ptr += ptr[0] + 1;  // -> next face
+      count_polygon_table_size += ptr[0] + 1;  // number of vertices + vertex idexes
+      ptr += ptr[0] + 1;                       // -> next face
     }
     outFile << std::endl;
 
-    outFile << "POLYGONS " << count_polygon_size << " "
-            << count_polygon_table_size << std::endl;
+    outFile << "POLYGONS " << count_polygon_size << " " << count_polygon_table_size << std::endl;
     auto writer_f = [](const size_t size, const int* data, std::ofstream& out) {
       out << size;
       for (size_t it = 0; it < size; it++) out << " " << data[it];
@@ -909,26 +859,22 @@ struct shape {
    * @param center Translation vector of the shape.
    * @param quat Orientation quaternion of the shape.
    */
-  inline void write_move_paraview(std::string path, int timestep, Vec3d& center,
-                                  Quaternion& quat) {
+  inline void write_move_paraview(std::string path, int timestep, Vec3d& center, Quaternion& quat) {
     std::string time = std::to_string(timestep);
-    ldbg << " writting paraview for shape " << this->m_name
-         << " timestep: " << time << std::endl;
+    ldbg << " writting paraview for shape " << this->m_name << " timestep: " << time << std::endl;
     std::string name = path + m_name + "_" + time + ".vtk";
     std::ofstream outFile(name);
     if (!outFile) {
-      color_log::error("Shape::write_move_paraview",
-                       "Impossible to create the output file: " + name, false);
+      color_log::error("Shape::write_move_paraview", "Impossible to create the output file: " + name, false);
       return;
     }
     outFile << "# vtk DataFile Version 3.0" << std::endl;
     outFile << "Spheres" << std::endl;
     outFile << "ASCII" << std::endl;
     outFile << "DATASET POLYDATA" << std::endl;
-    outFile << "POINTS " << this->get_number_of_vertices() << " float"
-            << std::endl;
-    auto writer_v = [](const exanb::Vec3d& v, const exanb::Vec3d& center,
-                       const exanb::Quaternion& Q, std::ofstream& out) {
+    outFile << "POINTS " << this->get_number_of_vertices() << " float" << std::endl;
+    auto writer_v = [](const exanb::Vec3d& v, const exanb::Vec3d& center, const exanb::Quaternion& Q,
+                       std::ofstream& out) {
       exanb::Vec3d Vertex = center + Q * v;
       out << Vertex.x << " " << Vertex.y << " " << Vertex.z << std::endl;
     };
@@ -940,13 +886,11 @@ struct shape {
     int count_polygon_table_size = 0;
     int* ptr = this->m_faces.data() + 1;
     for (int it = 0; it < count_polygon_size; it++) {
-      count_polygon_table_size +=
-          ptr[0] + 1;     // number of vertices + vertex idexes
-      ptr += ptr[0] + 1;  // -> next face
+      count_polygon_table_size += ptr[0] + 1;  // number of vertices + vertex idexes
+      ptr += ptr[0] + 1;                       // -> next face
     }
 
-    outFile << "POLYGONS " << count_polygon_size << " "
-            << count_polygon_table_size << std::endl;
+    outFile << "POLYGONS " << count_polygon_size << " " << count_polygon_table_size << std::endl;
     auto writer_f = [](const size_t size, const int* data, std::ofstream& out) {
       out << size;
       for (size_t it = 0; it < size; it++) out << " " << data[it];

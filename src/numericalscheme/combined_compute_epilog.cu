@@ -27,21 +27,18 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/defbox/push_vec3_1st_order.h>
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/angular_acceleration.hpp>
 #include <exaDEM/angular_velocity.hpp>
-
-#include <memory>
 
 namespace exaDEM {
 struct CombinedEpilogFunctor {
   PushToAngularAccelerationFunctor angular_accel;
   PushToAngularVelocityFunctor angular_vel;
   PushVec3FirstOrderFunctor push_f_v;
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(
-      const Quaternion& Q, const Vec3d& mom, Vec3d& vrot, Vec3d& arot,
-      const Vec3d& inertia, double& vx, double& vy, double& vz, double fx,
-      double fy, double fz) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(const Quaternion& Q, const Vec3d& mom, Vec3d& vrot, Vec3d& arot,
+                                                const Vec3d& inertia, double& vx, double& vy, double& vz, double fx,
+                                                double fy, double fz) const {
     angular_accel(Q, mom, vrot, arot, inertia);
     angular_vel(vrot, arot);
     push_f_v(vx, vy, vz, fx, fy, fz);
@@ -52,10 +49,9 @@ struct CombinedEpilogXFormFunctor {
   PushToAngularAccelerationFunctor angular_accel;
   PushToAngularVelocityFunctor angular_vel;
   PushVec3FirstOrderXFormFunctor push_f_v;
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(
-      const Quaternion& Q, const Vec3d& mom, Vec3d& vrot, Vec3d& arot,
-      const Vec3d& inertia, double& vx, double& vy, double& vz, double fx,
-      double fy, double fz) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(const Quaternion& Q, const Vec3d& mom, Vec3d& vrot, Vec3d& arot,
+                                                const Vec3d& inertia, double& vx, double& vy, double& vz, double fx,
+                                                double fy, double fz) const {
     angular_accel(Q, mom, vrot, arot, inertia);
     angular_vel(vrot, arot);
     push_f_v(vx, vy, vz, fx, fy, fz);
@@ -80,49 +76,39 @@ struct ComputeCellParticlesTraits<exaDEM::CombinedEpilogXFormFunctor> {
 
 namespace exaDEM {
 template <typename GridT,
-          class = AssertGridHasFields<
-              GridT, field::_orient, field::_mom, field::_vrot, field::_arot,
-              field::_inertia, field::_vx, field::_vy, field::_vz, field::_fx,
-              field::_fy, field::_fz>>
+          class = AssertGridHasFields<GridT, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia,
+                                      field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz>>
 class CombinedComputeEpilog : public OperatorNode {
   // attributes processed during computation
-  using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<
-      field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia,
-      field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz>>;
+  using ComputeFields = field_accessor_tuple_from_field_set_t<
+      FieldSet<field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_vx, field::_vy,
+               field::_vz, field::_fx, field::_fy, field::_fz>>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(Domain, domain,
-           INPUT, REQUIRED);
-  ADD_SLOT(double, dt,
-           INPUT, REQUIRED);
-  ADD_SLOT(Traversal, traversal_real,
-           INPUT, REQUIRED,
-           DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+  ADD_SLOT(double, dt, INPUT, REQUIRED);
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
  public:
   inline void execute() final {
     const double delta_t = *dt;
     const double half_delta_t = delta_t * 0.5;
-    const ComputeCellParticlesOptions ccpo =
-        traversal_real->get_compute_cell_particles_options();
+    const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
 
     if (domain->xform_is_identity()) {
       PushToAngularAccelerationFunctor func1{};
       PushToAngularVelocityFunctor func2{half_delta_t};
       PushVec3FirstOrderFunctor func3{half_delta_t};
       CombinedEpilogFunctor func{func1, func2, func3};
-      compute_cell_particles(*grid, false, func, compute_field_set,
-                             parallel_execution_context(), ccpo);
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     } else {
       const Mat3d inv_xform = domain->inv_xform();
       PushToAngularAccelerationFunctor func1{};
       PushToAngularVelocityFunctor func2{half_delta_t};
       PushVec3FirstOrderXFormFunctor func3{inv_xform, half_delta_t};
       CombinedEpilogXFormFunctor func{func1, func2, func3};
-      compute_cell_particles(*grid, false, func, compute_field_set,
-                             parallel_execution_context(), ccpo);
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }
   }
 };
@@ -132,8 +118,7 @@ using CombinedComputeEpilogTmpl = CombinedComputeEpilog<GridT>;
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(combined_compute_epilog) {
-  OperatorNodeFactory::instance()->register_factory(
-      "combined_compute_epilog",
-      make_grid_variant_operator<CombinedComputeEpilogTmpl>);
+  OperatorNodeFactory::instance()->register_factory("combined_compute_epilog",
+                                                    make_grid_variant_operator<CombinedComputeEpilogTmpl>);
 }
 }  // namespace exaDEM

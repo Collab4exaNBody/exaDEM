@@ -23,8 +23,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <memory>
-#include <exaDEM/set_fields.h>
+#include <exaDEM/set_fields.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_type>>

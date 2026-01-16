@@ -29,12 +29,8 @@ class UnclassifyInteractions : public OperatorNode {
   using ComputeFields = FieldSet<field::_vrot, field::_arot>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridCellParticleInteraction, ges,
-           INPUT_OUTPUT, REQUIRED,
-           DocString{"Interaction list"});
-  ADD_SLOT(Classifier, ic,
-           INPUT,
-           DocString{"Interaction lists classified according to their types"});
+  ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED, DocString{"Interaction list"});
+  ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
 
  public:
   inline std::string documentation() const final {
@@ -57,7 +53,7 @@ class UnclassifyInteractions : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(unclassify_interactions) {
-  OperatorNodeFactory::instance()->register_factory(
-      "unclassify_interactions", make_simple_operator<UnclassifyInteractions>);
+  OperatorNodeFactory::instance()->register_factory("unclassify_interactions",
+                                                    make_simple_operator<UnclassifyInteractions>);
 }
 }  // namespace exaDEM

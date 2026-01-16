@@ -27,11 +27,8 @@ under the License.
 namespace exaDEM {
 template <typename GridT>
 class CheckClassifierInteractionPair : public OperatorNode {
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(Classifier,
-           ic, INPUT,
-           DocString{"Interaction lists classified according to their types"});
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
 
  public:
   inline std::string documentation() const final {
@@ -60,32 +57,26 @@ class CheckClassifierInteractionPair : public OperatorNode {
         size_t particlePosition = idata.p_i[j];
         auto& cell = cells[cellId];
         if (particlePosition >= cell.size()) {
-          color_log::warning(
-              operator_name(),
-              "Details -> wave: " + std::to_string(i) +
-                  " position in the classifier: " + std::to_string(j) +
-                  " looking for the cell: " + std::to_string(cellId) +
-                  " at the position: " + std::to_string(particlePosition));
-          color_log::error(
-              operator_name(),
-              "The first part of the interaction points to a location in "
-              "storage that does not exist or no longer exists.");
+          color_log::warning(operator_name(), "Details -> wave: " + std::to_string(i) +
+                                                  " position in the classifier: " + std::to_string(j) +
+                                                  " looking for the cell: " + std::to_string(cellId) +
+                                                  " at the position: " + std::to_string(particlePosition));
+          color_log::error(operator_name(),
+                           "The first part of the interaction points to a location in "
+                           "storage that does not exist or no longer exists.");
         }
         if (is_particle_particle) {
           size_t cellId = idata.cell_j[j];
           size_t particlePosition = idata.p_j[j];
           auto& cell = cells[cellId];
           if (particlePosition >= cell.size()) {
-            color_log::warning(
-                operator_name(),
-                "Details -> wave: " + std::to_string(i) +
-                    " position in the classifier: " + std::to_string(j) +
-                    " looking for the cell: " + std::to_string(cellId) +
-                    " at the position: " + std::to_string(particlePosition));
-            color_log::error(
-                operator_name(),
-                "The second part of the interaction points to a location in "
-                "storage that does not exist or no longer exists.");
+            color_log::warning(operator_name(), "Details -> wave: " + std::to_string(i) +
+                                                    " position in the classifier: " + std::to_string(j) +
+                                                    " looking for the cell: " + std::to_string(cellId) +
+                                                    " at the position: " + std::to_string(particlePosition));
+            color_log::error(operator_name(),
+                             "The second part of the interaction points to a location in "
+                             "storage that does not exist or no longer exists.");
           }
         }
       }
@@ -102,48 +93,40 @@ class CheckClassifierInteractionPair : public OperatorNode {
         size_t particlePosition = idata.p_i[j];
         auto& cell = cells[cellId];
         if (particlePosition >= cell.size()) {
-          color_log::warning(
-              operator_name(),
-              "Details -> wave: " + std::to_string(i) +
-                  " position in the classifier: " + std::to_string(j) +
-                  " looking for the cell: " + std::to_string(cellId) +
-                  " at the position: " + std::to_string(particlePosition));
-          color_log::error(
-              operator_name(),
-              "The first part of the interaction points to a location in "
-              "storage that does not exist or no longer exists.");
+          color_log::warning(operator_name(), "Details -> wave: " + std::to_string(i) +
+                                                  " position in the classifier: " + std::to_string(j) +
+                                                  " looking for the cell: " + std::to_string(cellId) +
+                                                  " at the position: " + std::to_string(particlePosition));
+          color_log::error(operator_name(),
+                           "The first part of the interaction points to a location in "
+                           "storage that does not exist or no longer exists.");
         }
         if (is_particle_particle) {
           size_t cellId = idata.cell_j[j];
           size_t particlePosition = idata.p_j[j];
           auto& cell = cells[cellId];
           if (particlePosition >= cell.size()) {
-            color_log::warning(
-                operator_name(),
-                "Details -> wave: " + std::to_string(i) +
-                    " position in the classifier: " + std::to_string(j) +
-                    " looking for the cell: " + std::to_string(cellId) +
-                    " at the position: " + std::to_string(particlePosition));
-            color_log::error(
-                operator_name(),
-                "The second part of the interaction points to a location in "
-                "storage that does not exist or no longer exists.");
+            color_log::warning(operator_name(), "Details -> wave: " + std::to_string(i) +
+                                                    " position in the classifier: " + std::to_string(j) +
+                                                    " looking for the cell: " + std::to_string(cellId) +
+                                                    " at the position: " + std::to_string(particlePosition));
+            color_log::error(operator_name(),
+                             "The second part of the interaction points to a location in "
+                             "storage that does not exist or no longer exists.");
           }
         }
       }
     }
 
-    color_log::highlight(
-        operator_name(),
-        "The “pair” parts (i.e., interaction_pair) of the interactions in the "
-        "classifier define existing locations in the grid.");
+    color_log::highlight(operator_name(),
+                         "The “pair” parts (i.e., interaction_pair) of the interactions in the "
+                         "classifier define existing locations in the grid.");
   }
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(check_classifier_interaction_pair) {
-  OperatorNodeFactory::instance()->register_factory(
-      "check_classifier_interaction_pair",
-      make_grid_variant_operator<CheckClassifierInteractionPair>);
+  OperatorNodeFactory::instance()->register_factory("check_classifier_interaction_pair",
+                                                    make_grid_variant_operator<CheckClassifierInteractionPair>);
 }
 }  // namespace exaDEM

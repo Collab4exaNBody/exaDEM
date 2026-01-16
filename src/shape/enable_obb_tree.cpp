@@ -24,8 +24,7 @@ under the License.
 
 namespace exaDEM {
 class EnableOBBTree : public OperatorNode {
-  ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, REQUIRED,
-           DocString{"Collection of shapes"});
+  ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, REQUIRED, DocString{"Collection of shapes"});
   ADD_SLOT(bool, verbosity, INPUT, false, PRIVATE);
   ADD_SLOT(bool, enable_obb_tree, OUTPUT);
 
@@ -48,8 +47,7 @@ class EnableOBBTree : public OperatorNode {
       shape* shp = shapes[sid];
       shp->buildOBBtree();
       if (*verbosity) {
-        lout << "Build OBBTree for the shape " << shp->m_name << "."
-             << std::endl;
+        lout << "Build OBBTree for the shape " << shp->m_name << "." << std::endl;
       }
     }
     *enable_obb_tree = true;
@@ -58,7 +56,6 @@ class EnableOBBTree : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(enable_obb_tree) {
-  OperatorNodeFactory::instance()->register_factory(
-      "enable_obb_tree", make_simple_operator<EnableOBBTree>);
+  OperatorNodeFactory::instance()->register_factory("enable_obb_tree", make_simple_operator<EnableOBBTree>);
 }
 }  // namespace exaDEM

@@ -33,16 +33,12 @@ class CheckConsistencyGridClassifier : public OperatorNode {
   using ComputeFields = FieldSet<field::_vrot, field::_arot>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridCellParticleInteraction, ges,
-           INPUT_OUTPUT, REQUIRED,
+  ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED,
            DocString{"List of particle interactions within each grid cell"});
-  ADD_SLOT(Classifier,
-           ic, INPUT,
-           DocString{ "Interaction lists, classified and grouped by interaction type"});
-  ADD_SLOT(bool, verbosity,
-           PRIVATE, false,
+  ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists, classified and grouped by interaction type"});
+  ADD_SLOT(bool, verbosity, PRIVATE, false,
            DocString{"Enable detailed messages to verify consistency between "
-           "the classifier and GridCellParticleInteraction"});
+                     "the classifier and GridCellParticleInteraction"});
 
  public:
   inline std::string documentation() const final {
@@ -68,8 +64,7 @@ class CheckConsistencyGridClassifier : public OperatorNode {
       std::array<uint64_t, Classifier::types + 1> counts_by_type = {};
     };
 
-    auto extract_data = [](InteractionCounter& input_counter,
-                           const auto& I) -> void {
+    auto extract_data = [](InteractionCounter& input_counter, const auto& I) -> void {
       if (I.active()) {
         input_counter.counts_by_type[I.type()] += 1;
       }
@@ -88,8 +83,7 @@ class CheckConsistencyGridClassifier : public OperatorNode {
       }
     }
     // Fragmentation, always active interaction
-    classifier_side.counts_by_type[Classifier::InnerBondTypeId] +=
-        classifier.get_size(Classifier::InnerBondTypeId);
+    classifier_side.counts_by_type[Classifier::InnerBondTypeId] += classifier.get_size(Classifier::InnerBondTypeId);
 
     // GridCellParticleInteraction
     auto& ces = grid.m_data;
@@ -120,12 +114,11 @@ class CheckConsistencyGridClassifier : public OperatorNode {
     }
 
     if (error)
-      color_log::error(
-          operator_name(),
-          "The number of active interactions between the classifier and the "
-          "GridCellParticleInteraction is inconsistent. Ensure that this "
-          "operator is invoked after the unclassify operator and before any "
-          "compute_force call.");
+      color_log::error(operator_name(),
+                       "The number of active interactions between the classifier and the "
+                       "GridCellParticleInteraction is inconsistent. Ensure that this "
+                       "operator is invoked after the unclassify operator and before any "
+                       "compute_force call.");
     if (*verbosity)
       color_log::highlight(operator_name(),
                            "The classifier and the GridCellParticleInteraction "
@@ -136,8 +129,7 @@ class CheckConsistencyGridClassifier : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(check_consistency_grid_classifier) {
-  OperatorNodeFactory::instance()->register_factory(
-      "check_consistency_grid_classifier",
-      make_simple_operator<CheckConsistencyGridClassifier>);
+  OperatorNodeFactory::instance()->register_factory("check_consistency_grid_classifier",
+                                                    make_simple_operator<CheckConsistencyGridClassifier>);
 }
 }  // namespace exaDEM

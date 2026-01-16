@@ -45,47 +45,29 @@ under the License.
 namespace exaDEM {
 template <typename GridT>
 class RSARndRad : public OperatorNode {
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(Domain, domain,
-           INPUT_OUTPUT);
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT);
-  ADD_SLOT(double, enlarge_bounds,
-           INPUT, 0.0);
-  ADD_SLOT(ReadBoundsSelectionMode, bounds_mode,
-           INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
-  ADD_SLOT(std::vector<bool>, periodicity,
-           INPUT, OPTIONAL,
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(Domain, domain, INPUT_OUTPUT);
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+  ADD_SLOT(double, enlarge_bounds, INPUT, 0.0);
+  ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS);
+  ADD_SLOT(std::vector<bool>, periodicity, INPUT, OPTIONAL,
            DocString{"if set, overrides domain's periodicity stored in file with this value"});
-  ADD_SLOT(bool, expandable,
-           INPUT, OPTIONAL,
-           DocString{"if set, override domain expandability stored in file"});
-  ADD_SLOT(AABB, bounds,
-           INPUT, REQUIRED,
+  ADD_SLOT(bool, expandable, INPUT, OPTIONAL, DocString{"if set, override domain expandability stored in file"});
+  ADD_SLOT(AABB, bounds, INPUT, REQUIRED,
            DocString{"if set, override domain's bounds, filtering out particle outside of overriden bounds"});
-  ADD_SLOT(int, type,
-           INPUT, 0);
-  ADD_SLOT(bool, pbc_adjust_xform,
-           INPUT, true);
-  ADD_SLOT(double, r_min,
-           INPUT, REQUIRED,
-           DocString{"Value of the smallest radius possible"});
-  ADD_SLOT(double, r_max,
-           INPUT, REQUIRED,
-           DocString{"Value of the biggest radius possible"});
-  ADD_SLOT(uint64_t, n_max,
-           INPUT, 1e16,
-           DocString{"Maximal number of particles. Default is 1e16."});
-  ADD_SLOT(ParticleRegions, particle_regions,
-           INPUT, OPTIONAL);
-  ADD_SLOT(ParticleRegionCSG, region,
-           INPUT, OPTIONAL);
+  ADD_SLOT(int, type, INPUT, 0);
+  ADD_SLOT(bool, pbc_adjust_xform, INPUT, true);
+  ADD_SLOT(double, r_min, INPUT, REQUIRED, DocString{"Value of the smallest radius possible"});
+  ADD_SLOT(double, r_max, INPUT, REQUIRED, DocString{"Value of the biggest radius possible"});
+  ADD_SLOT(uint64_t, n_max, INPUT, 1e16, DocString{"Maximal number of particles. Default is 1e16."});
+  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+  ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
  public:
   inline void execute() final {
     //-------------------------------------------------------------------------------------------
-    using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
+    using ParticleTupleIO =
+        onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
     using ParticleTuple = decltype(grid->cells()[0][0]);
 
     assert(grid->number_of_particles() == 0);
@@ -103,7 +85,7 @@ class RSARndRad : public OperatorNode {
     double rmin = *r_min;
     double rmax = *r_max;
     double exclusion_distance = 0.;
-    auto nonlinear_transform = [rmin, rmax](double x) {return rmin + (rmax - rmin) * x;};
+    auto nonlinear_transform = [rmin, rmax](double x) { return rmin + (rmax - rmin) * x; };
     sac_de_billes::RandomRadiusGenerator random_radius_generator(nonlinear_transform, phase);
 
     // domain size
@@ -111,7 +93,8 @@ class RSARndRad : public OperatorNode {
     std::array<double, DIM> domain_sup = {b.bmax.x, b.bmax.y, b.bmax.z};
 
     // gen
-    sac_de_billes::RadiusGenerator<DIM> radius_generator(rmin, rmax, &random_radius_generator, *n_max, exclusion_distance);
+    sac_de_billes::RadiusGenerator<DIM> radius_generator(rmin, rmax, &random_radius_generator, *n_max,
+                                                         exclusion_distance);
     rsa_domain<DIM> rsa_domain(domain_inf, domain_sup, ghost_layer, radius_generator.get_max_radius());
 
     size_t seed = 0;
@@ -156,7 +139,7 @@ class RSARndRad : public OperatorNode {
         ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
         region->build_from_expression_string(particle_regions->data(), particle_regions->size());
       }
-      prcsg =  *region;
+      prcsg = *region;
     }
 
     // Fill grid, particles will migrate accross mpi processed
@@ -189,9 +172,12 @@ class RSARndRad : public OperatorNode {
     lout << "Domain XForm     = " << domain->xform() << std::endl;
     lout << "Domain bounds    = " << domain->bounds() << std::endl;
     lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
-    lout << "Real size        = " << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33} << std::endl;
+    lout << "Real size        = "
+         << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
+         << std::endl;
     lout << "Cell size        = " << domain->cell_size() << std::endl;
-    lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension()) << " cells)" << std::endl;
+    lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension())
+         << " cells)" << std::endl;
     lout << "=================================" << std::endl;
 
     grid->rebuild_particle_offsets();
@@ -200,8 +186,6 @@ class RSARndRad : public OperatorNode {
 
 // === register factories ===
 __attribute__((constructor)) static void register_factories() {
-  OperatorNodeFactory::instance()->register_factory(
-      "rsa_rnd_rad",
-      make_grid_variant_operator<RSARndRad>);
+  OperatorNodeFactory::instance()->register_factory("rsa_rnd_rad", make_grid_variant_operator<RSARndRad>);
 }
 }  // namespace exaDEM

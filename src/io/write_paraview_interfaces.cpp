@@ -42,35 +42,19 @@ under the License.
 namespace exaDEM {
 template <class GridT, class = AssertGridHasFields<GridT>>
 class WriteParaviewInterfaceOperator : public OperatorNode {
-  using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz,
-                                 field::_type, field::_orient>;
+  using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_orient>;
   static constexpr ComputeFields compute_field_set{};
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(Domain, domain,
-           INPUT, REQUIRED);
-  ADD_SLOT(std::string, filename,
-           INPUT,
-           "ParaviewOutputFiles/interface_%010d");
-  ADD_SLOT(long, timestep,
-           INPUT, REQUIRED,
-           DocString{"Iteration number"});
-  ADD_SLOT(shapes, shapes_collection,
-           INPUT, REQUIRED,
-           DocString{"Collection of shapes"});
-  ADD_SLOT(InterfaceManager, im,
-           INPUT,
-           DocString{""});
-  ADD_SLOT(Classifier, ic,
-           INPUT,
-           DocString{"Interaction lists classified according to their types"});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+  ADD_SLOT(std::string, filename, INPUT, "ParaviewOutputFiles/interface_%010d");
+  ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
+  ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
+  ADD_SLOT(InterfaceManager, im, INPUT, DocString{""});
+  ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
 
   // optionnal
-  ADD_SLOT(bool, mpi_rank,
-           INPUT, false,
-           DocString{"Add a field containing the mpi rank."});
+  ADD_SLOT(bool, mpi_rank, INPUT, false, DocString{"Add a field containing the mpi rank."});
 
  public:
   inline std::string documentation() const final {
@@ -94,8 +78,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
     auto cells = grid->cells();
     InterfaceManager& interfaces = *im;
     Classifier& classifier = *ic;
-    auto& interactions = 
-        classifier.get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
+    auto& interactions = classifier.get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
     auto& shps = *shapes_collection;
     paraview_interface_helper buffers = {*mpi_rank};  // it conatins streams
 
@@ -121,8 +104,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
         uint16_t type = cell[field::type][loc.p];
         Quaternion quat = cell[field::orient][loc.p];
         auto* shp = shps[type];
-        Vec3d r = {cell[field::rx][loc.p], cell[field::ry][loc.p],
-                   cell[field::rz][loc.p]};
+        Vec3d r = {cell[field::rx][loc.p], cell[field::ry][loc.p], cell[field::rz][loc.p]};
         double h = cell[field::homothety][loc.p];
         Vec3d v = shp->get_vertex(loc.sub, r, h, quat);
         buffers.vertices << v.x << " " << v.y << " " << v.z << " ";
@@ -133,8 +115,9 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
         E += (interaction.en + interaction.et) / interaction.criterion;
       }
       buffers.offsets << buffers.n_vertices << " ";
-      for (size_t j = 0; j < interface.size; j++)
+      for (size_t j = 0; j < interface.size; j++) {
         buffers.fracturation << E << " ";
+      }
     };
 
     if (rank == 0) {
@@ -155,8 +138,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(write_paraview_interfaces) {
-  OperatorNodeFactory::instance()->register_factory(
-      "write_paraview_interfaces",
-      make_grid_variant_operator<WriteParaviewInterfaceOperator>);
+  OperatorNodeFactory::instance()->register_factory("write_paraview_interfaces",
+                                                    make_grid_variant_operator<WriteParaviewInterfaceOperator>);
 }
 }  // namespace exaDEM

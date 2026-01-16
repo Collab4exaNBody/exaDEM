@@ -31,11 +31,8 @@ under the License.
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class CheckInteractionConsistency : public OperatorNode {
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(GridCellParticleInteraction, ges,
-           INPUT, REQUIRED,
-           DocString{"Interaction list"});
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(GridCellParticleInteraction, ges, INPUT, REQUIRED, DocString{"Interaction list"});
 
  public:
   inline std::string documentation() const final {
@@ -59,8 +56,7 @@ class CheckInteractionConsistency : public OperatorNode {
       auto* info_ptr = storage.m_info.data();
       auto* data_ptr = storage.m_data.data();
       [[maybe_unused]] bool is_okay =
-          interaction_test::check_extra_interaction_storage_consistency(
-              n_particles_stored, info_ptr, data_ptr);
+          interaction_test::check_extra_interaction_storage_consistency(n_particles_stored, info_ptr, data_ptr);
       assert(is_okay && "CheckInteractionConsistency");
     }
   }
@@ -68,8 +64,7 @@ class CheckInteractionConsistency : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(check_interaction_consistency) {
-  OperatorNodeFactory::instance()->register_factory(
-      "check_interaction_consistency",
-      make_grid_variant_operator<CheckInteractionConsistency>);
+  OperatorNodeFactory::instance()->register_factory("check_interaction_consistency",
+                                                    make_grid_variant_operator<CheckInteractionConsistency>);
 }
 }  // namespace exaDEM

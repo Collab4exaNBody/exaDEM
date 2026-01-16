@@ -32,13 +32,9 @@ under the License.
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class CheckOwnerPartnerGhosts : public OperatorNode {
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(GridCellParticleInteraction, ges,
-           INPUT, REQUIRED,
-           DocString{"Interaction list"});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(GridCellParticleInteraction, ges, INPUT, REQUIRED, DocString{"Interaction list"});
 
  public:
   inline std::string documentation() const final {
@@ -86,28 +82,24 @@ class CheckOwnerPartnerGhosts : public OperatorNode {
     }
 
     std::vector<std::string> names = {
-      "* Vertex - Vertex           = ", "* Vertex - Edge             = ",
-      "* Vertex - Face             = ", "* Edge   - Edge             = ",
-      "* Vertex - Cylinder         = ", "* Vertex - Surface          = ",
-      "* Vertex - Ball             = ", "* Vertex - Vertex (STL)     = ",
-      "* Vertex - Edge (STL)       = ", "* Vertex - Face (STL)       = ",
-      "* Edge   - Edge (STL)       = ", "* Edge (STL) - Vertex       = ",
-      "* Face (STL) - Vertex       = ", "* Vertice - Vertex (Stick)  = "};
+        "* Vertex - Vertex           = ", "* Vertex - Edge             = ", "* Vertex - Face             = ",
+        "* Edge   - Edge             = ", "* Vertex - Cylinder         = ", "* Vertex - Surface          = ",
+        "* Vertex - Ball             = ", "* Vertex - Vertex (STL)     = ", "* Vertex - Edge (STL)       = ",
+        "* Vertex - Face (STL)       = ", "* Edge   - Edge (STL)       = ", "* Edge (STL) - Vertex       = ",
+        "* Face (STL) - Vertex       = ", "* Vertice - Vertex (Stick)  = "};
 
     lout << "=====================================================" << std::endl;
     lout << "* Ghost type of interaction = partner / owner / error" << std::endl;
     for (int i = 0; i < 14; i++) {
       lout << names[i] << val[i] << " / " << val[14 + i] << " / " << val[i] - val[14 + i] << std::endl;
     }
-    lout << "====================================================="
-        << std::endl;
+    lout << "=====================================================" << std::endl;
   }
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(check_owner_partner_ghosts) {
-  OperatorNodeFactory::instance()->register_factory(
-      "check_owner_partner_ghosts",
-      make_grid_variant_operator<CheckOwnerPartnerGhosts>);
+  OperatorNodeFactory::instance()->register_factory("check_owner_partner_ghosts",
+                                                    make_grid_variant_operator<CheckOwnerPartnerGhosts>);
 }
 }  // namespace exaDEM

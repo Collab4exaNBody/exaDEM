@@ -22,21 +22,15 @@ under the License.
 
 namespace exaDEM {
 // rVerletMax = rVerlet + sphere radius
-std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(
-    const Stl_mesh& mesh,
-    const size_t cell,
-    const size_t p,
-    const uint64_t id,
-    const size_t drv_id,
-    const double rx,
-    const double ry,
-    const double rz,
-    const double radius,
-    const double rVerletMax) {
+std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const Stl_mesh& mesh, const size_t cell,
+                                                                    const size_t p, const uint64_t id,
+                                                                    const size_t drv_id, const double rx,
+                                                                    const double ry, const double rz,
+                                                                    const double radius, const double rVerletMax) {
   using onika::cuda::vector_data;
   std::vector<exaDEM::PlaceholderInteraction> res;
   exaDEM::PlaceholderInteraction item;
-  auto& pi = item.i();  // particle i (id, cell, pos, sub)
+  auto& pi = item.i();       // particle i (id, cell, pos, sub)
   auto& pd = item.driver();  // driver (id, cell, pos, sub)
   pi.cell = cell;
   pi.p = p;
@@ -46,8 +40,8 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(
 
   // Get info from stl mesh
   const Vec3d* dvertices = vector_data(mesh.vertices);
-  auto &list = mesh.grid_indexes[cell];
-  auto &shp  = mesh.shp;
+  auto& list = mesh.grid_indexes[cell];
+  auto& shp = mesh.shp;
   const size_t stl_nv = list.vertices.size();
   const size_t stl_ne = list.edges.size();
   const size_t stl_nf = list.faces.size();

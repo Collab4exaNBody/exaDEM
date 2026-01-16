@@ -44,36 +44,25 @@ under the License.
 namespace exaDEM {
 template <typename GridT>
 class InitRSA : public OperatorNode {
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT);
-  ADD_SLOT(Domain, domain,
-           INPUT_OUTPUT);
-  ADD_SLOT(double, enlarge_bounds,
-           INPUT, 0.0);
-  ADD_SLOT(std::vector<bool>, periodicity,
-           INPUT, OPTIONAL,
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+  ADD_SLOT(Domain, domain, INPUT_OUTPUT);
+  ADD_SLOT(double, enlarge_bounds, INPUT, 0.0);
+  ADD_SLOT(std::vector<bool>, periodicity, INPUT, OPTIONAL,
            DocString{"if set, overrides domain's periodicity stored in file with this value"});
-  ADD_SLOT(bool, expandable,
-           INPUT, OPTIONAL,
-           DocString{"if set, override domain expandability stored in file"});
-  ADD_SLOT(AABB, bounds,
-           INPUT, REQUIRED,
+  ADD_SLOT(bool, expandable, INPUT, OPTIONAL, DocString{"if set, override domain expandability stored in file"});
+  ADD_SLOT(AABB, bounds, INPUT, REQUIRED,
            DocString{"if set, override domain's bounds, filtering out particle outside of overriden bounds"});
-  ADD_SLOT(int, type,
-           INPUT, 0);
-  ADD_SLOT(bool, pbc_adjust_xform,
-           INPUT, true);
-  ADD_SLOT(double, radius,
-           INPUT, REQUIRED);
-  ADD_SLOT(double, rcut_max,
-           INPUT_OUTPUT, 0.0);
+  ADD_SLOT(int, type, INPUT, 0);
+  ADD_SLOT(bool, pbc_adjust_xform, INPUT, true);
+  ADD_SLOT(double, radius, INPUT, REQUIRED);
+  ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
 
  public:
   inline void execute() final {
     //-------------------------------------------------------------------------------------------
-    using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
+    using ParticleTupleIO =
+        onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
     using ParticleTuple = decltype(grid->cells()[0][0]);
 
     assert(grid->number_of_particles() == 0);
@@ -97,7 +86,8 @@ class InitRSA : public OperatorNode {
 
     if (rank == 0) {
       /** FILE_BOUNDS sounds wrong in this context, but it works. */
-      compute_domain_bounds(*domain, exanb::ReadBoundsSelectionMode::FILE_BOUNDS, *enlarge_bounds, b, b, *pbc_adjust_xform);
+      compute_domain_bounds(*domain, exanb::ReadBoundsSelectionMode::FILE_BOUNDS, *enlarge_bounds, b, b,
+                            *pbc_adjust_xform);
     }
 
     // compute indexes
@@ -149,9 +139,12 @@ class InitRSA : public OperatorNode {
     lout << "Domain XForm     = " << domain->xform() << std::endl;
     lout << "Domain bounds    = " << domain->bounds() << std::endl;
     lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
-    lout << "Real size        = " << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33} << std::endl;
+    lout << "Real size        = "
+         << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
+         << std::endl;
     lout << "Cell size        = " << domain->cell_size() << std::endl;
-    lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension()) << " cells)" << std::endl;
+    lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension())
+         << " cells)" << std::endl;
     lout << "=================================" << std::endl;
 
     grid->rebuild_particle_offsets();
@@ -161,8 +154,6 @@ class InitRSA : public OperatorNode {
 
 // === register factories ===
 __attribute__((constructor)) static void register_factories() {
-  OperatorNodeFactory::instance()->register_factory(
-      "init_rsa",
-      make_grid_variant_operator<InitRSA>);
+  OperatorNodeFactory::instance()->register_factory("init_rsa", make_grid_variant_operator<InitRSA>);
 }
 }  // namespace exaDEM

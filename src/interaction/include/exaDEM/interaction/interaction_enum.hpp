@@ -16,34 +16,30 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
-
 #pragma once
 
-namespace exaDEM
-{
-  enum InteractionType
-  { 
-    ParticleParticle,
-    ParticleDriver,
-    InnerBond 
-  };
+namespace exaDEM {
+enum InteractionType {
+  ParticleParticle,
+  ParticleDriver,
+  InnerBond
+};
 
-  struct InteractionTypeId
-  {
-    // classic
-    static constexpr int NTypesParticleParticle = 13;
-    static constexpr int VertexVertex = 0;
-    static constexpr int VertexEdge = 1;
-    static constexpr int VertexFace = 2;
-    static constexpr int EdgeEdge = 3;
-    static constexpr int VertexCylinder = 4;
-    static constexpr int VertexSurface = 5;
-    static constexpr int VertexBall = 6;
-    // fragmentation
-    static constexpr int NTypesStickecParticles = 1;
-    static constexpr int InnerBond = 13;
-    static constexpr int NTypes = NTypesParticleParticle + NTypesStickecParticles;
-    // control initialization
-    static constexpr int Undefined = 666;
-  };
-}
+struct InteractionTypeId {
+  // classic
+  static constexpr int NTypesParticleParticle = 13;
+  static constexpr int VertexVertex = 0;
+  static constexpr int VertexEdge = 1;
+  static constexpr int VertexFace = 2;
+  static constexpr int EdgeEdge = 3;
+  static constexpr int VertexCylinder = 4;
+  static constexpr int VertexSurface = 5;
+  static constexpr int VertexBall = 6;
+  // fragmentation
+  static constexpr int NTypesStickecParticles = 1;
+  static constexpr int InnerBond = 13;
+  static constexpr int NTypes = NTypesParticleParticle + NTypesStickecParticles;
+  // control initialization
+  static constexpr int Undefined = 666;
+};
+}  // namespace exaDEM

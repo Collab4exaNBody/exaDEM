@@ -28,18 +28,11 @@ under the License.
 namespace exaDEM {
 class ApplyInterfaceFractureCriterion : public OperatorNode {
   // attributes processed during computation
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(Classifier, ic, INPUT_OUTPUT,
-           DocString{"Interaction lists classified according to their types"});
-  ADD_SLOT(InterfaceManager, im,
-           INPUT_OUTPUT,
-           DocString{""});
-  ADD_SLOT(bool, result,
-           OUTPUT);
-  ADD_SLOT(bool, display,
-           INPUT, false,
-           DocString{"Display interface broken."});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+  ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{""});
+  ADD_SLOT(bool, result, OUTPUT);
+  ADD_SLOT(bool, display, INPUT, false, DocString{"Display interface broken."});
 
  public:
   inline std::string documentation() const final {
@@ -54,11 +47,9 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
   inline void execute() final {
     auto& interfaces = *im;
     uint64_t number_of_broken_interfaces = 0;
-    InteractionWrapper<InteractionType::InnerBond> data_wrapper =
-        ic->get_sticked_interaction_wrapper();
-    ApplyInterfaceFractureCriterionFunc func = {
-        interfaces.data.data(), interfaces.break_interface.data(),
-        data_wrapper};
+    InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
+    ApplyInterfaceFractureCriterionFunc func = {interfaces.data.data(), interfaces.break_interface.data(),
+                                                data_wrapper};
 
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_STATIC;
@@ -75,16 +66,13 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
         number_of_broken_interfaces += interfaces.break_interface[i];
         auto& idi = data_wrapper.id_i[offset];
         auto& idj = data_wrapper.id_j[offset];
-        std::cout << "Break the interface between the particle " << idi
-                  << " and the particle " << idj << std::endl;
+        std::cout << "Break the interface between the particle " << idi << " and the particle " << idj << std::endl;
       }
     }
 
-    MPI_Allreduce(MPI_IN_PLACE, &number_of_broken_interfaces, 1,
-                  MPI_UINT64_T, MPI_SUM, *mpi);
+    MPI_Allreduce(MPI_IN_PLACE, &number_of_broken_interfaces, 1, MPI_UINT64_T, MPI_SUM, *mpi);
     if (*display && number_of_broken_interfaces > 0) {
-      lout << number_of_broken_interfaces << " interfaces have been broken."
-           << std::endl;
+      lout << number_of_broken_interfaces << " interfaces have been broken." << std::endl;
     }
     *result = number_of_broken_interfaces > 0;
   }
@@ -92,8 +80,7 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(apply_interface_fracture_criterion) {
-  OperatorNodeFactory::instance()->register_factory(
-      "apply_interface_fracture_criterion",
-      make_simple_operator<ApplyInterfaceFractureCriterion>);
+  OperatorNodeFactory::instance()->register_factory("apply_interface_fracture_criterion",
+                                                    make_simple_operator<ApplyInterfaceFractureCriterion>);
 }
 }  // namespace exaDEM

@@ -22,27 +22,22 @@ under the License.
 #include <cassert>
 
 namespace exaDEM {
-template<bool def_box>
+template <bool def_box>
 struct PolyhedraComputeVerticesFunctor {
-  const shape *shps;
-  VertexField * pcvf;
+  const shape* shps;
+  VertexField* pcvf;
   const Mat3d xform;
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(const size_t cell_idx,
-                                                const size_t p,
-                                                const uint32_t type,
-                                                const double& rx,
-                                                const double& ry,
-                                                const double& rz,
-                                                const double& h,
-                                                const exanb::Quaternion &orient) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(const size_t cell_idx, const size_t p, const uint32_t type,
+                                                const double& rx, const double& ry, const double& rz, const double& h,
+                                                const exanb::Quaternion& orient) const {
     // get vertices
-    ParticleVertexView vertices = {p , pcvf[cell_idx]};
+    ParticleVertexView vertices = {p, pcvf[cell_idx]};
 
     // h will be used in a next development
-    const auto &shp = shps[type];
+    const auto& shp = shps[type];
     const unsigned int nv = shp.get_number_of_vertices();
     exanb::Vec3d position = {rx, ry, rz};
-    if constexpr(def_box) position = xform * position;
+    if constexpr (def_box) position = xform * position;
     for (size_t i = 0; i < nv; i++) {
       Vec3d vertex = shp.get_vertex(i, position, h, orient);
       vertices.set(vertex, i);

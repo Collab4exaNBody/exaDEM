@@ -21,7 +21,7 @@ under the License.
 #include <onika/scg/operator_slot.h>
 
 #include <exanb/core/grid.h>
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/classifier/classifier_transfert.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 
@@ -31,15 +31,9 @@ class ClassifyInteractions : public OperatorNode {
   using ComputeFields = FieldSet<field::_vrot, field::_arot>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridCellParticleInteraction, ges,
-           INPUT, REQUIRED,
-           DocString{"Interaction list"});
-  ADD_SLOT(Classifier, ic,
-           INPUT_OUTPUT,
-           DocString{"Interaction lists classified according to their types"});
-  ADD_SLOT(Traversal, traversal_all,
-           INPUT, REQUIRED,
-           DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(GridCellParticleInteraction, ges, INPUT, REQUIRED, DocString{"Interaction list"});
+  ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+  ADD_SLOT(Traversal, traversal_all, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
  public:
   inline std::string documentation() const final {
@@ -63,7 +57,7 @@ class ClassifyInteractions : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(classify_interactions) {
-  OperatorNodeFactory::instance()->register_factory(
-      "classify_interactions", make_simple_operator<ClassifyInteractions>);
+  OperatorNodeFactory::instance()->register_factory("classify_interactions",
+                                                    make_simple_operator<ClassifyInteractions>);
 }
 }  // namespace exaDEM

@@ -41,30 +41,16 @@ class DumpWriterConfRockable : public OperatorNode {
   using ComputeFields = FieldSet<field::_vrot, field::_arot>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT);
-  ADD_SLOT(Domain, domain,
-           INPUT);
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(ParticleTypeMap, particle_type_map,
-           INPUT);
-  ADD_SLOT(Drivers, drivers,
-           INPUT_OUTPUT, REQUIRED,
-           DocString{"List of Drivers"});
-  ADD_SLOT(shapes, shapes_collection,
-           INPUT_OUTPUT,
-           DocString{"Collection of shapes"});
-  ADD_SLOT(std::string, dir_name,
-           INPUT, REQUIRED,
-           DocString{"Write an Output file containing stress tensors."});
-  ADD_SLOT(long, timestep,
-           INPUT, REQUIRED,
-           DocString{"Iteration number"});
-  ADD_SLOT(double, physical_time,
-           INPUT, REQUIRED);
-  ADD_SLOT(double, dt,
-           INPUT, REQUIRED);
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+  ADD_SLOT(Domain, domain, INPUT);
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT);
+  ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+  ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
+  ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Write an Output file containing stress tensors."});
+  ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
+  ADD_SLOT(double, physical_time, INPUT, REQUIRED);
+  ADD_SLOT(double, dt, INPUT, REQUIRED);
 
  public:
   // -----------------------------------------------
@@ -96,8 +82,8 @@ class DumpWriterConfRockable : public OperatorNode {
     }
 
     shapes all_shapes = shps;
-    int n_drivers = 0;          // keep only stl mesh drivers
-    std::stringstream sdriver;  // stream for drivers
+    int n_drivers = 0;                                    // keep only stl mesh drivers
+    std::stringstream sdriver;                            // stream for drivers
     for (size_t did = 0; did < drvs.get_size(); did++) {  // driver idx
       if (drvs.type(did) == DRIVER_TYPE::STL_MESH) {
         n_drivers++;
@@ -105,14 +91,11 @@ class DumpWriterConfRockable : public OperatorNode {
         if (!all_shapes.contains(D.shp)) {  // add shape
           all_shapes.add_shape(D.shp);
         }
-        sdriver << D.shp.m_name << " " << 0 /* group */ << " "
-                << 0 /* cluster */ << " " << 1 /* homothety */ << " "
-                << D.center.x << " " << D.center.y << " " << D.center.z << " "
-                << D.vel.x << " " << D.vel.y << " " << D.vel.z << " " << D.acc.x
-                << " " << D.acc.y << " " << D.acc.z << " " << D.quat.w << " "
-                << D.quat.x << " " << D.quat.y << " " << D.quat.z << " "
-                << D.vrot.x << " " << D.vrot.y << " " << D.vrot.z << " " << 0
-                << " " << 0 << " " << 0; /* arot */
+        sdriver << D.shp.m_name << " " << 0 /* group */ << " " << 0 /* cluster */ << " " << 1 /* homothety */ << " "
+                << D.center.x << " " << D.center.y << " " << D.center.z << " " << D.vel.x << " " << D.vel.y << " "
+                << D.vel.z << " " << D.acc.x << " " << D.acc.y << " " << D.acc.z << " " << D.quat.w << " " << D.quat.x
+                << " " << D.quat.y << " " << D.quat.z << " " << D.vrot.x << " " << D.vrot.y << " " << D.vrot.z << " "
+                << 0 << " " << 0 << " " << 0; /* arot */
         sdriver << std::endl;
       }
     }
@@ -193,8 +176,7 @@ class DumpWriterConfRockable : public OperatorNode {
       GRID_OMP_FOR_END
 #pragma omp critical
       {
-        particles.insert(particles.end(), TLS_particles.begin(),
-                         TLS_particles.end());
+        particles.insert(particles.end(), TLS_particles.begin(), TLS_particles.end());
       }
     }
 
@@ -205,13 +187,11 @@ class DumpWriterConfRockable : public OperatorNode {
 
     long number_of_particles = particles.size();
     long all_particles = 0;
-    MPI_Gather(&number_of_particles, 1, MPI_INT, mpi_n_particles.data(), 1,
-               MPI_INT, mpi_root, *mpi);
+    MPI_Gather(&number_of_particles, 1, MPI_INT, mpi_n_particles.data(), 1, MPI_INT, mpi_root, *mpi);
 
     if (rank == mpi_root) {
       // get the number of particles in bytes
-      all_particles =
-          std::accumulate(mpi_n_particles.begin(), mpi_n_particles.end(), 0);
+      all_particles = std::accumulate(mpi_n_particles.begin(), mpi_n_particles.end(), 0);
       int tot = 0;
       for (size_t proc = 0; proc < mpi_n_particles.size(); proc++) {
         mpi_n_particles[proc] *= sizeof(rockable::Particle);
@@ -221,9 +201,8 @@ class DumpWriterConfRockable : public OperatorNode {
     }
 
     std::vector<rockable::Particle> mpi_particles(all_particles);
-    MPI_Gatherv(particles.data(), particles.size() * sizeof(rockable::Particle),
-                MPI_CHAR, mpi_particles.data(), mpi_n_particles.data(),
-                mpi_displ.data(), MPI_CHAR, mpi_root, *mpi);
+    MPI_Gatherv(particles.data(), particles.size() * sizeof(rockable::Particle), MPI_CHAR, mpi_particles.data(),
+                mpi_n_particles.data(), mpi_displ.data(), MPI_CHAR, mpi_root, *mpi);
 
     if (rank == 0) {
       std::ofstream file;
@@ -234,8 +213,7 @@ class DumpWriterConfRockable : public OperatorNode {
       file << "t " << *physical_time << std::endl;
       file << "dt " << *dt << std::endl;
       file << "iconf " << step << std::endl;  //*timestep << std::endl;
-      file << "periodicity " << domain->periodic_boundary_x() << " "
-           << domain->periodic_boundary_y() << " "
+      file << "periodicity " << domain->periodic_boundary_x() << " " << domain->periodic_boundary_y() << " "
            << domain->periodic_boundary_z() << std::endl;
       file << "nDriven 0" << std::endl;
       file << "shapeFile shape.shp" << std::endl;
@@ -262,8 +240,7 @@ class DumpWriterConfRockable : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(sim_dump_writer_conf_rockable) {
-  OperatorNodeFactory::instance()->register_factory(
-      "write_conf_rockable",
-      make_grid_variant_operator<DumpWriterConfRockable>);
+  OperatorNodeFactory::instance()->register_factory("write_conf_rockable",
+                                                    make_grid_variant_operator<DumpWriterConfRockable>);
 }
 }  // namespace exaDEM

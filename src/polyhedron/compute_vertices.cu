@@ -24,7 +24,7 @@ under the License.
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/polyhedron/compute_vertices.hpp>
@@ -32,27 +32,20 @@ under the License.
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_type, field::_homothety, field::_orient>>
 class PolyhedraComputeVertices : public OperatorNode {
-  using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_type, field::_rx, field::_ry, field::_rz, field::_homothety, field::_orient>>;
+  using ComputeFields = field_accessor_tuple_from_field_set_t<
+      FieldSet<field::_type, field::_rx, field::_ry, field::_rz, field::_homothety, field::_orient>>;
   static constexpr ComputeFields compute_field_set{};
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(CellVertexField, cvf,
-           INPUT_OUTPUT,
-           DocString{"Store vertex positions for every polyhedron"});
-  ADD_SLOT(Domain, domain,
-           INPUT, REQUIRED);
-  ADD_SLOT(shapes, shapes_collection,
-           INPUT, REQUIRED,
-           DocString{"Collection of shapes"});
-  ADD_SLOT(Traversal, traversal_all,
-           INPUT, REQUIRED,
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(CellVertexField, cvf, INPUT_OUTPUT, DocString{"Store vertex positions for every polyhedron"});
+  ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+  ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
+  ADD_SLOT(Traversal, traversal_all, INPUT, REQUIRED,
            DocString{"list of non empty cells [ALL] within the current grid"});
-  ADD_SLOT(bool, resize_vertex,
-           INPUT, true,
-           DocString{"enable to resize the data storage used for vertices"});
-  ADD_SLOT(bool, minimize_memory_footprint,
-           INPUT, false,
-           DocString{"enable to resize the data storage using only the maximum of vertices according to the particle shapes into a cell. This option is useful if there are some particles with a very high number of particles."});
+  ADD_SLOT(bool, resize_vertex, INPUT, true, DocString{"enable to resize the data storage used for vertices"});
+  ADD_SLOT(bool, minimize_memory_footprint, INPUT, false,
+           DocString{
+               "enable to resize the data storage using only the maximum of vertices according to the particle shapes "
+               "into a cell. This option is useful if there are some particles with a very high number of particles."});
 
   // -----------------------------------------------
   // ----------- Operator documentation ------------
@@ -73,36 +66,32 @@ class PolyhedraComputeVertices : public OperatorNode {
 
  public:
   inline void execute() final {
-    const shape *shps = shapes_collection->data();
+    const shape* shps = shapes_collection->data();
     bool is_def_box = !domain->xform_is_identity();
     auto& vertex_fields = *cvf;
     const auto cells = grid->cells();
     const size_t n_cells = grid->number_of_cells();
 
-    const ComputeCellParticlesOptions ccpo =
-        traversal_all->get_compute_cell_particles_options();
+    const ComputeCellParticlesOptions ccpo = traversal_all->get_compute_cell_particles_options();
 
     if (*resize_vertex || *minimize_memory_footprint) {
       vertex_fields.resize(n_cells);
       if (!(*minimize_memory_footprint)) {
         int max_number_of_vertices = shapes_collection->max_number_of_vertices();
-        ldbg << "[compute_vertices] max number of vertices: "
-            << max_number_of_vertices << std::endl;
-#       pragma omp parallel for schedule(guided)
-        for (size_t cell_id = 0 ; cell_id < n_cells ; cell_id++) {
+        ldbg << "[compute_vertices] max number of vertices: " << max_number_of_vertices << std::endl;
+#        pragma omp parallel for schedule(guided)
+        for (size_t cell_id = 0; cell_id < n_cells; cell_id++) {
           size_t np = cells[cell_id].size();
           vertex_fields.resize(cell_id, np, max_number_of_vertices);
         }
       } else {
 #       pragma omp parallel for schedule(guided)
-        for (size_t cell_id = 0 ; cell_id < n_cells ; cell_id++) {
-          const auto *__restrict__ type = cells[cell_id][field::type];
+        for (size_t cell_id = 0; cell_id < n_cells; cell_id++) {
+          const auto* __restrict__ type = cells[cell_id][field::type];
           size_t np = cells[cell_id].size();
           int max_number_of_vertices = 0;
-          for (size_t p = 0 ; p < np ; p++) {
-            max_number_of_vertices = std::max(
-                max_number_of_vertices,
-                shps[type[p]].get_number_of_vertices());
+          for (size_t p = 0; p < np; p++) {
+            max_number_of_vertices = std::max(max_number_of_vertices, shps[type[p]].get_number_of_vertices());
           }
           vertex_fields.resize(cell_id, np, max_number_of_vertices);
         }
@@ -113,7 +102,7 @@ class PolyhedraComputeVertices : public OperatorNode {
       PolyhedraComputeVerticesFunctor<true> func{shps, vertex_fields.data(), domain->xform()};
       compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), ccpo);
     } else {
-      PolyhedraComputeVerticesFunctor<false> func{shps, vertex_fields.data(), domain->xform() };
+      PolyhedraComputeVerticesFunctor<false> func{shps, vertex_fields.data(), domain->xform()};
       compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), ccpo);
     }
   }
@@ -121,8 +110,7 @@ class PolyhedraComputeVertices : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(compute_vertices) {
-  OperatorNodeFactory::instance()->register_factory(
-      "compute_vertices",
-      make_grid_variant_operator<PolyhedraComputeVertices>);
+  OperatorNodeFactory::instance()->register_factory("compute_vertices",
+                                                    make_grid_variant_operator<PolyhedraComputeVertices>);
 }
 }  // namespace exaDEM

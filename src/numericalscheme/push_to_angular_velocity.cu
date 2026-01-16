@@ -25,25 +25,19 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/compute/compute_cell_particles.h>
 
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/angular_velocity.hpp>
 
 namespace exaDEM {
-template <typename GridT,
-          class = AssertGridHasFields<GridT, field::_vrot, field::_arot>>
+template <typename GridT, class = AssertGridHasFields<GridT, field::_vrot, field::_arot>>
 class PushToAngularVelocity : public OperatorNode {
   // attributes processed during computation
-  using ComputeFields = field_accessor_tuple_from_field_set_t<
-      FieldSet<field::_vrot, field::_arot>>;
+  using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_vrot, field::_arot>>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(double, dt,
-           INPUT, REQUIRED,
-           DocString{"dt is the time increment of the timeloop"});
-  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED,
-           DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
  public:
   inline std::string documentation() const final {
@@ -55,18 +49,15 @@ class PushToAngularVelocity : public OperatorNode {
   inline void execute() final {
     const double dt = *(this->dt);
     const double dt_2 = 0.5 * dt;
-    const ComputeCellParticlesOptions ccpo =
-        traversal_real->get_compute_cell_particles_options();
+    const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
     PushToAngularVelocityFunctor func{dt_2};
-    compute_cell_particles(*grid, false, func, compute_field_set,
-                           parallel_execution_context(), ccpo);
+    compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
   }
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(push_to_angular_velocity) {
-  OperatorNodeFactory::instance()->register_factory(
-      "push_to_angular_velocity",
-      make_grid_variant_operator<PushToAngularVelocity>);
+  OperatorNodeFactory::instance()->register_factory("push_to_angular_velocity",
+                                                    make_grid_variant_operator<PushToAngularVelocity>);
 }
 }  // namespace exaDEM

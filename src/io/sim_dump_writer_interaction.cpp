@@ -20,22 +20,31 @@ under the License.
 #include <exanb/extra_storage/sim_dump_writer_es.hpp>
 #include <exanb/extra_storage/dump_filter_dynamic_data_storage.h>
 
-namespace exaDEM
-{
-  using namespace exanb;
-  using DumpFieldSet = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type>;
-  using DumpFragmentationFieldSet = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_cluster, field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type>;
+namespace exaDEM {
+using DumpFieldSet = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_mass,
+                              field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot,
+                              field::_arot, field::_inertia, field::_id, field::_type>;
+using DumpFragmentationFieldSet =
+    FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_cluster, field::_mass,
+             field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot,
+             field::_inertia, field::_id, field::_type>;
 
-  template <typename GridT> using SimDumpWriteParticleInteractionTmpl = SimDumpWriteParticleES<GridT, exaDEM::PlaceholderInteraction, DumpFieldSet>;
-  template <typename GridT> using SimDumpWriteParticleFragmentationTmpl = SimDumpWriteParticleES<GridT, exaDEM::PlaceholderInteraction, DumpFragmentationFieldSet>;
-  template <typename GridT> using SimDumpWriteParticleDoubleTmpl = SimDumpWriteParticleES<GridT, double, DumpFieldSet>;
+template <typename GridT>
+using SimDumpWriteParticleInteractionTmpl = SimDumpWriteParticleES<GridT, exaDEM::PlaceholderInteraction, DumpFieldSet>;
+template <typename GridT>
+using SimDumpWriteParticleFragmentationTmpl =
+    SimDumpWriteParticleES<GridT, exaDEM::PlaceholderInteraction, DumpFragmentationFieldSet>;
+template <typename GridT>
+using SimDumpWriteParticleDoubleTmpl = SimDumpWriteParticleES<GridT, double, DumpFieldSet>;
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(sim_dump_writer_interaction)
-  {
-    OperatorNodeFactory::instance()->register_factory("write_dump_particle_interaction", make_grid_variant_operator<SimDumpWriteParticleInteractionTmpl>);
-    OperatorNodeFactory::instance()->register_factory("write_dump_particle_fragmentation", make_grid_variant_operator<SimDumpWriteParticleFragmentationTmpl>);
-    OperatorNodeFactory::instance()->register_factory("write_dump_particle_friction", make_grid_variant_operator<SimDumpWriteParticleDoubleTmpl>);
-  }
+// === register factories ===
+ONIKA_AUTORUN_INIT(sim_dump_writer_interaction) {
+  OperatorNodeFactory::instance()->register_factory("write_dump_particle_interaction",
+                                                    make_grid_variant_operator<SimDumpWriteParticleInteractionTmpl>);
+  OperatorNodeFactory::instance()->register_factory("write_dump_particle_fragmentation",
+                                                    make_grid_variant_operator<SimDumpWriteParticleFragmentationTmpl>);
+  OperatorNodeFactory::instance()->register_factory("write_dump_particle_friction",
+                                                    make_grid_variant_operator<SimDumpWriteParticleDoubleTmpl>);
+}
 
-} // namespace exaDEM
+}  // namespace exaDEM

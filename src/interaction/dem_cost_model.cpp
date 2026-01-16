@@ -32,13 +32,9 @@ under the License.
 namespace exaDEM {
 template <class GridT>
 class DEMCostModel : public OperatorNode {
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(CellCosts, cell_costs,
-           OUTPUT);
-  ADD_SLOT(GridCellParticleInteraction, ges,
-           INPUT_OUTPUT,
-           DocString{"Interaction list"});
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(CellCosts, cell_costs, OUTPUT);
+  ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
 
  public:
   inline void execute() final {
@@ -64,15 +60,14 @@ class DEMCostModel : public OperatorNode {
     auto& interactions = ges->m_data;
     bool skip_interaction = interactions.size() == 0 ? true : false;
 
-#pragma omp parallel
+#   pragma omp parallel
     {
       GRID_OMP_FOR_BEGIN(dims, i, loc, schedule(static)) {
         const size_t cell_i = grid_ijk_to_index(grid_dims, loc + ghost_layers);
         const size_t N = cells[cell_i].size();
         double cost = 3 * N + 1;
         if (!skip_interaction) {
-          CellExtraDynamicDataStorageT<PlaceholderInteraction>& storage =
-              interactions[cell_i];
+          CellExtraDynamicDataStorageT<PlaceholderInteraction>& storage = interactions[cell_i];
           auto* __restrict__ data = storage.m_data.data();
           size_t size = storage.m_data.size();
           for (size_t i = 0; i < size; i++) {
@@ -102,7 +97,6 @@ class DEMCostModel : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(dem_cost_model) {
-  OperatorNodeFactory::instance()->register_factory(
-      "dem_cost_model", make_grid_variant_operator<DEMCostModel>);
+  OperatorNodeFactory::instance()->register_factory("dem_cost_model", make_grid_variant_operator<DEMCostModel>);
 }
 }  // namespace exaDEM

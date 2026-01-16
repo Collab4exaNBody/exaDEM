@@ -30,25 +30,17 @@ under the License.
 
 // exaDEM
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/interaction/interaction_ghost_manager.hpp>
-
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class UpdateInteractionGhost : public OperatorNode {
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(GhostCommunicationScheme, ghost_comm_scheme,
-           INPUT, REQUIRED);
-  ADD_SLOT(GridCellParticleInteraction, ges,
-           INPUT_OUTPUT,
-           DocString{"Interaction list"});
-  ADD_SLOT(InteractionGhostManager, interaction_ghost_manager,
-           INPUT_OUTPUT,
-           DocString{""});
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(GhostCommunicationScheme, ghost_comm_scheme, INPUT, REQUIRED);
+  ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
+  ADD_SLOT(InteractionGhostManager, interaction_ghost_manager, INPUT_OUTPUT, DocString{""});
 
  public:
   inline std::string documentation() const final {
@@ -86,8 +78,7 @@ class UpdateInteractionGhost : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(update_interaction_ghost) {
-  OperatorNodeFactory::instance()->register_factory(
-      "update_interaction_ghost",
-      make_grid_variant_operator<UpdateInteractionGhost>);
+  OperatorNodeFactory::instance()->register_factory("update_interaction_ghost",
+                                                    make_grid_variant_operator<UpdateInteractionGhost>);
 }
 }  // namespace exaDEM

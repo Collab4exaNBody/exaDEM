@@ -35,9 +35,9 @@ namespace polyhedron {
  * @param val Reference to the double variable to be modified.
  * @param add Value to add atomically to the variable.
  */
-ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(double &val, double add) {
-      ONIKA_CU_ATOMIC_ADD(val, add);
-    }
+ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(double& val, double add) {
+  ONIKA_CU_ATOMIC_ADD(val, add);
+}
 
 /**
  * @brief Atomically adds components of a Vec3d to another Vec3d variable.
@@ -46,24 +46,24 @@ ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(double &val, double add) {
  * @param add Rvalue reference to the source Vec3d whose components are to be added.
  */
 ONIKA_HOST_DEVICE_FUNC
-    inline void lockAndAdd(Vec3d &val, Vec3d &add) {
-      ONIKA_CU_ATOMIC_ADD(val.x, add.x);
-      ONIKA_CU_ATOMIC_ADD(val.y, add.y);
-      ONIKA_CU_ATOMIC_ADD(val.z, add.z);
-    }
+inline void lockAndAdd(Vec3d& val, Vec3d& add) {
+  ONIKA_CU_ATOMIC_ADD(val.x, add.x);
+  ONIKA_CU_ATOMIC_ADD(val.y, add.y);
+  ONIKA_CU_ATOMIC_ADD(val.z, add.z);
+}
 
 ONIKA_HOST_DEVICE_FUNC
-    inline void lockAndAdd(Vec3d &val, Vec3d &&add) {
-      ONIKA_CU_ATOMIC_ADD(val.x, add.x);
-      ONIKA_CU_ATOMIC_ADD(val.y, add.y);
-      ONIKA_CU_ATOMIC_ADD(val.z, add.z);
-    }
+inline void lockAndAdd(Vec3d& val, Vec3d&& add) {
+  ONIKA_CU_ATOMIC_ADD(val.x, add.x);
+  ONIKA_CU_ATOMIC_ADD(val.y, add.y);
+  ONIKA_CU_ATOMIC_ADD(val.z, add.z);
+}
 
 /**
  * @struct contact_law
  * @brief Structure defining contact law interactions for particles (polyhedra).
  */
-template<int interaction_type, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename XFormT>
+template <int interaction_type, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename XFormT>
 struct contact_law {
   XFormT xform;
   detect<interaction_type> detection;
@@ -85,8 +85,7 @@ struct contact_law {
    * @return Vec3d Position vector of the particle.
    */
   template <typename TMPLC>
-  ONIKA_HOST_DEVICE_FUNC
-  inline const Vec3d get_r(TMPLC &cell, const int p) const {
+  ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_r(TMPLC& cell, const int p) const {
     Vec3d res = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
     return xform.transformCoord(res);
   }
@@ -103,8 +102,8 @@ struct contact_law {
    * @param pi.p Index of the particle.
    * @return Vec3d Velocity vector of the particle.
    */
-  template <typename TMPLC> ONIKA_HOST_DEVICE_FUNC
-  inline const Vec3d get_v(TMPLC &cell, const int p) const {
+  template <typename TMPLC>
+  ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_v(TMPLC& cell, const int p) const {
     const Vec3d res = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
     return res;
   }
@@ -121,46 +120,42 @@ struct contact_law {
    * @param shps Pointer to the shapes array providing shape information for interactions.
    * @param dt Time increment for the simulation step.
    */
-  template <typename TMPLC, typename TCFPA, typename TMPLV> ONIKA_HOST_DEVICE_FUNC
-  inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
-      Interaction &item,
-      TMPLC* const __restrict__ cells,
+  template <typename TMPLC, typename TCFPA, typename TMPLV>
+  ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
+      Interaction& item, TMPLC* const __restrict__ cells,
       TMPLV* const __restrict__ gv,  // grid of vertices
-      TCFPA& cpa,
-      const shape * const shps,
-      const double dt) const {
+      TCFPA& cpa, const shape* const shps, const double dt) const {
     auto& pi = item.i();  // particle i (id, cell id, particle position, sub vertex)
     auto& pj = item.j();  // particle j (id, cell id, particle position, sub vertex)
-    auto &cell_i = cells[pi.cell];
-    auto &cell_j = cells[pj.cell];
+    auto& cell_i = cells[pi.cell];
+    auto& cell_j = cells[pj.cell];
 
     // === positions
     const Vec3d ri = get_r(cell_i, pi.p);
     const Vec3d rj = get_r(cell_j, pj.p);
 
     // === vrot
-    const Vec3d &vrot_i = cell_i[field::vrot][pi.p];
-    const Vec3d &vrot_j = cell_j[field::vrot][pj.p];
+    const Vec3d& vrot_i = cell_i[field::vrot][pi.p];
+    const Vec3d& vrot_j = cell_j[field::vrot][pj.p];
 
     // === type
-    const auto &type_i = cell_i[field::type][pi.p];
-    const auto &type_j = cell_j[field::type][pj.p];
+    const auto& type_i = cell_i[field::type][pi.p];
+    const auto& type_j = cell_j[field::type][pj.p];
 
     // === vertex array
-    const ParticleVertexView vertices_i = { pi.p, gv[pi.cell] };
-    const ParticleVertexView vertices_j = { pj.p, gv[pj.cell] };
+    const ParticleVertexView vertices_i = {pi.p, gv[pi.cell]};
+    const ParticleVertexView vertices_j = {pj.p, gv[pj.cell]};
 
     // == homothety
-    const auto &h_i = cell_i[field::homothety][pi.p];
-    const auto &h_j = cell_j[field::homothety][pj.p];
+    const auto& h_i = cell_i[field::homothety][pi.p];
+    const auto& h_j = cell_j[field::homothety][pj.p];
 
     // === shapes
-    const shape &shp_i = shps[type_i];
-    const shape &shp_j = shps[type_j];
+    const shape& shp_i = shps[type_i];
+    const shape& shp_j = shps[type_j];
 
-    auto [contact, dn, n, contact_position] = detection(
-        vertices_i, h_i, pi.sub, &shp_i,
-        vertices_j, h_j, pj.sub, &shp_j);
+    auto [contact, dn, n, contact_position] =
+        detection(vertices_i, h_i, pi.sub, &shp_i, vertices_j, h_j, pj.sub, &shp_j);
     // temporary vec3d to store forces.
     Vec3d f = {0, 0, 0};
     Vec3d fn = {0, 0, 0};
@@ -177,32 +172,30 @@ struct contact_law {
     if (contact) {
       const Vec3d vi = get_v(cell_i, pi.p);
       const Vec3d vj = get_v(cell_j, pj.p);
-      const auto &m_i = cell_i[field::mass][pi.p];
-      const auto &m_j = cell_j[field::mass][pj.p];
+      const auto& m_i = cell_i[field::mass][pi.p];
+      const auto& m_j = cell_j[field::mass][pj.p];
       double rad_i = shp_i.minskowski(h_i);
       double rad_j = shp_j.minskowski(h_j);
 
       const double meff = compute_effective_mass(m_i, m_j);
       const double reff = compute_effective_mass(rad_i, rad_j);
 
-      contact_force_core<ContactLaw, CohesiveLaw>(
-          dn, n, dt, cp, meff, reff,
-          item.friction, contact_position,
-          ri, vi, f, item.moment, vrot_i,  // particle 1
-          rj, vj, vrot_j);  // particle nbh
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction, contact_position, ri, vi, f,
+                                                  item.moment, vrot_i,  // particle 1
+                                                  rj, vj, vrot_j);      // particle nbh
 
       fn = f - item.friction;
 
       // === update particle informations
       // ==== Particle i
-      auto &mom_i = cell_i[field::mom][pi.p];
+      auto& mom_i = cell_i[field::mom][pi.p];
       lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment));
       lockAndAdd(cell_i[field::fx][pi.p], f.x);
       lockAndAdd(cell_i[field::fy][pi.p], f.y);
       lockAndAdd(cell_i[field::fz][pi.p], f.z);
 
       // ==== Particle j
-      auto &mom_j = cell_j[field::mom][pj.p];
+      auto& mom_j = cell_j[field::mom][pj.p];
       lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment));
       lockAndAdd(cell_j[field::fx][pj.p], -f.x);
       lockAndAdd(cell_j[field::fy][pj.p], -f.y);
@@ -241,34 +234,28 @@ struct contact_law_driver {
    */
   template <typename TMPLC, typename TCFPA, typename TMPLV>
   ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
-      Interaction &item,
-      TMPLC * __restrict__ cells,
-      TMPLV* const __restrict__ gv, /* grid of vertices */
-      const DriversGPUAccessor& drvs,
-      TCFPA &cpa,
-      const shape *shps,
-      const double dt) const {
+      Interaction& item, TMPLC* __restrict__ cells, TMPLV* const __restrict__ gv, /* grid of vertices */
+      const DriversGPUAccessor& drvs, TCFPA& cpa, const shape* shps, const double dt) const {
     // particle i (id, cell id, particle position, sub vertex)
     auto& pi = item.i();
     // particle driver (id, cell id, particle position, sub vertex)
     auto& pd = item.driver();
     const int driver_idx = pd.id;
-    TMPLD &driver = drvs.get_typed_driver<TMPLD>(driver_idx);
-    auto &cell = cells[pi.cell];
+    TMPLD& driver = drvs.get_typed_driver<TMPLD>(driver_idx);
+    auto& cell = cells[pi.cell];
     const auto type = cell[field::type][pi.p];
-    auto &shp = shps[type];
+    auto& shp = shps[type];
 
     const size_t p = pi.p;
     const size_t sub = pi.sub;
     // === positions
     const Vec3d r = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
     // === vertex array
-    ParticleVertexView vertices = { p, gv[pi.cell] };
+    ParticleVertexView vertices = {p, gv[pi.cell]};
     // == homothety
-    const auto &h = cell[field::homothety][pi.p];
+    const auto& h = cell[field::homothety][pi.p];
 
-    auto [contact, dn, n, contact_position] =
-        exaDEM::detector_vertex_driver(driver, vertices, h, sub, &shp);
+    auto [contact, dn, n, contact_position] = exaDEM::detector_vertex_driver(driver, vertices, h, sub, &shp);
     constexpr Vec3d null = {0, 0, 0};
     Vec3d f = null;
     Vec3d fn = null;
@@ -284,16 +271,14 @@ struct contact_law_driver {
 
     if (contact) {
       // === vrot
-      const Vec3d &vrot = cell[field::vrot][p];
-      auto &mom = cell[field::mom][p];
+      const Vec3d& vrot = cell[field::vrot][p];
+      auto& mom = cell[field::mom][p];
       const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
       const double meff = cell[field::mass][p];
       const double reff = shp.minskowski(h);
-      contact_force_core<ContactLaw, CohesiveLaw>(
-          dn, n, dt, cp, meff, reff,
-          item.friction, contact_position,
-          r, v, f, item.moment, vrot,  // particle i
-          driver.center, driver.get_vel(), driver.vrot);  // particle j
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction, contact_position, r, v, f,
+                                                  item.moment, vrot,                              // particle i
+                                                  driver.center, driver.get_vel(), driver.vrot);  // particle j
 
       // === for analysis
       fn = f - item.friction;
@@ -318,7 +303,8 @@ struct contact_law_driver {
 /**
  * @brief Functor for applying contact law interactions with STL mesh objects.
  */
-template<int interaction_type, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename XFormT> /* def xform does nothing*/
+template <int interaction_type, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw,
+          typename XFormT> /* def xform does nothing*/
 struct contact_law_stl {
   XFormT xform;
   detect<interaction_type> detection;
@@ -345,44 +331,38 @@ struct contact_law_stl {
    */
   template <typename TMPLC, typename TCFPA, typename TMPLV>
   ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
-      Interaction &item,
-      TMPLC * __restrict__ cells,
-      TMPLV* const __restrict__ gv, /* grid of vertices */
-      const DriversGPUAccessor& drvs,
-      TCFPA& cpa,
-      const shape *shps,
-      const double dt) const {
+      Interaction& item, TMPLC* __restrict__ cells, TMPLV* const __restrict__ gv, /* grid of vertices */
+      const DriversGPUAccessor& drvs, TCFPA& cpa, const shape* shps, const double dt) const {
     // particle i (id, cell id, particle position, sub vertex)
     auto& pi = item.i();
     // particle driver (id, cell id, particle position, sub vertex)
     auto& pd = item.driver();
     const int driver_idx = pd.id;
-    Stl_mesh &driver = drvs.get_typed_driver<exaDEM::Stl_mesh>(driver_idx);
-    auto &cell = cells[pi.cell];
+    Stl_mesh& driver = drvs.get_typed_driver<exaDEM::Stl_mesh>(driver_idx);
+    auto& cell = cells[pi.cell];
     // renaming
     const size_t sub_i = pi.sub;
     const size_t sub_d = pd.sub;
 
     // get shapes
     const auto type = cell[field::type][pi.p];
-    const auto &shp_i = shps[type];
-    const auto &shp_d = driver.shp;
+    const auto& shp_i = shps[type];
+    const auto& shp_d = driver.shp;
 
     // === positions
     const Vec3d r_i = {cell[field::rx][pi.p], cell[field::ry][pi.p], cell[field::rz][pi.p]};
-    const ParticleVertexView vertices_i = { pi.p, gv[pi.cell] };
+    const ParticleVertexView vertices_i = {pi.p, gv[pi.cell]};
     // === vrot
-    const Vec3d &vrot_i = cell[field::vrot][pi.p];
+    const Vec3d& vrot_i = cell[field::vrot][pi.p];
     // == homothety
-    const auto &h_i = cell[field::homothety][pi.p];
+    const auto& h_i = cell[field::homothety][pi.p];
 
     // STL Vertices
     const Vec3d* const stl_vertices = onika::cuda::vector_data(driver.vertices);
     constexpr double stl_homothety = 1.0;
     // === detection
-    auto [contact, dn, n, contact_position] = detection(
-        vertices_i, h_i, sub_i, &shp_i,
-        stl_vertices, stl_homothety, sub_d, &shp_d);
+    auto [contact, dn, n, contact_position] =
+        detection(vertices_i, h_i, sub_i, &shp_i, stl_vertices, stl_homothety, sub_d, &shp_d);
     constexpr Vec3d null = {0, 0, 0};
     Vec3d fn = null;
 
@@ -397,17 +377,15 @@ struct contact_law_stl {
 
     if (contact) {
       Vec3d f = null;
-      auto &mom = cell[field::mom][pi.p];
+      auto& mom = cell[field::mom][pi.p];
       const Vec3d v_i = {cell[field::vx][pi.p], cell[field::vy][pi.p], cell[field::vz][pi.p]};
       const double meff = cell[field::mass][pi.p];
-      const double reff = compute_effective_radius(shp_i.minskowski(h_i),
-                                                   driver.shp.minskowski(stl_homothety));
+      const double reff = compute_effective_radius(shp_i.minskowski(h_i), driver.shp.minskowski(stl_homothety));
 
       // i to j
-      if constexpr (interaction_type <= 10 && interaction_type >= 7 ) {
-        contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff,
-                                                    item.friction, contact_position,
-                                                    r_i, v_i, f, item.moment, vrot_i,         // particle i
+      if constexpr (interaction_type <= 10 && interaction_type >= 7) {
+        contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction, contact_position, r_i,
+                                                    v_i, f, item.moment, vrot_i,              // particle i
                                                     driver.center, driver.vel, driver.vrot);  // particle driver
 
         // === used for analysis
@@ -424,11 +402,10 @@ struct contact_law_stl {
 
       //  j to i
       if constexpr (interaction_type <= 12 && interaction_type >= 11) {
-        contact_force_core<ContactLaw, CohesiveLaw>(
-            dn, n, dt, cp, meff, reff,
-            item.friction, contact_position,
-            driver.center, driver.get_vel(), f, item.moment, driver.vrot,  // particle j
-            r_i, v_i,  vrot_i);  // particle i
+        contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction, contact_position,
+                                                    driver.center, driver.get_vel(), f, item.moment,
+                                                    driver.vrot,        // particle j
+                                                    r_i, v_i, vrot_i);  // particle i
 
         // === used for analysis
         fn = item.friction - f;

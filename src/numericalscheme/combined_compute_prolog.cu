@@ -26,23 +26,20 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
 #include <exanb/compute/compute_cell_particles.h>
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 #include <exanb/defbox/push_vec3_2nd_order.h>
 #include <exanb/defbox/push_vec3_1st_order.h>
 #include <exaDEM/push_to_quaternion.hpp>
 
 namespace exaDEM {
-using namespace exanb;
-
 struct CombinedPrologFunctor {
   PushVec3SecondOrderFunctor push_f_v_r;
   PushVec3FirstOrderFunctor push_f_v;
   PushToQuaternionFunctor push_to_quaternion;
 
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(
-      double& rx, double& ry, double& rz, double& vx, double& vy, double& vz,
-      double& fx, double& fy, double& fz, Quaternion& Q, Vec3d& vrot,
-      const Vec3d& arot) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(double& rx, double& ry, double& rz, double& vx, double& vy, double& vz,
+                                                double& fx, double& fy, double& fz, Quaternion& Q, Vec3d& vrot,
+                                                const Vec3d& arot) const {
     push_f_v_r(rx, ry, rz, vx, vy, vz, fx, fy, fz);
     push_f_v(vx, vy, vz, fx, fy, fz);
     push_to_quaternion(Q, vrot, arot);
@@ -54,10 +51,9 @@ struct CombinedPrologXFormFunctor {
   PushVec3FirstOrderXFormFunctor push_f_v;
   PushToQuaternionFunctor push_to_quaternion;
 
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(
-      double& rx, double& ry, double& rz, double& vx, double& vy, double& vz,
-      double& fx, double& fy, double& fz, Quaternion& Q, Vec3d& vrot,
-      const Vec3d& arot) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(double& rx, double& ry, double& rz, double& vx, double& vy, double& vz,
+                                                double& fx, double& fy, double& fz, Quaternion& Q, Vec3d& vrot,
+                                                const Vec3d& arot) const {
     push_f_v_r(rx, ry, rz, vx, vy, vz, fx, fy, fz);
     push_f_v(vx, vy, vz, fx, fy, fz);
     push_to_quaternion(Q, vrot, arot);
@@ -80,27 +76,19 @@ struct ComputeCellParticlesTraits<exaDEM::CombinedPrologXFormFunctor> {
 }  // namespace exanb
 
 namespace exaDEM {
-template <typename GridT,
-          class = AssertGridHasFields<
-              GridT, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy,
-              field::_fz, field::_orient, field::_vrot, field::_arot>>
+template <typename GridT, class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy,
+                                                      field::_fz, field::_orient, field::_vrot, field::_arot>>
 class CombinedComputeProlog : public OperatorNode {
   // attributes processed during computation
   using ComputeFields = field_accessor_tuple_from_field_set_t<
-      FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy,
-               field::_vz, field::_fx, field::_fy, field::_fz, field::_orient,
-               field::_vrot, field::_arot>>;
+      FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy,
+               field::_fz, field::_orient, field::_vrot, field::_arot>>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(Domain, domain,
-           INPUT, REQUIRED);
-  ADD_SLOT(double, dt,
-           INPUT, REQUIRED);
-  ADD_SLOT(Traversal, traversal_real,
-           INPUT, REQUIRED,
-           DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+  ADD_SLOT(double, dt, INPUT, REQUIRED);
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
  public:
   inline void execute() final {
@@ -109,24 +97,21 @@ class CombinedComputeProlog : public OperatorNode {
     const double delta_t = *dt;
     const double delta_t2_2 = delta_t * delta_t * 0.5;
     // get non-empty cells
-    const ComputeCellParticlesOptions ccpo =
-        traversal_real->get_compute_cell_particles_options();
+    const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
 
     if (domain->xform_is_identity()) {
       PushVec3SecondOrderFunctor func1{delta_t, delta_t2_2};
       PushVec3FirstOrderFunctor func2{half_delta_t};
       PushToQuaternionFunctor func3{delta_t, half_delta_t, delta_t2_2};
       CombinedPrologFunctor func{func1, func2, func3};
-      compute_cell_particles(*grid, false, func, compute_field_set,
-                             parallel_execution_context(), ccpo);
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     } else {
       const Mat3d inv_xform = domain->inv_xform();
       PushVec3SecondOrderXFormFunctor func1{inv_xform, delta_t, delta_t2_2};
       PushVec3FirstOrderXFormFunctor func2{inv_xform, half_delta_t};
       PushToQuaternionFunctor func3{delta_t, half_delta_t, delta_t2_2};
       CombinedPrologXFormFunctor func{func1, func2, func3};
-      compute_cell_particles(*grid, false, func, compute_field_set,
-                             parallel_execution_context(), ccpo);
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }
   }
 };
@@ -136,8 +121,7 @@ using CombinedComputePrologTmpl = CombinedComputeProlog<GridT>;
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(combined_compute_prolog) {
-  OperatorNodeFactory::instance()->register_factory(
-      "combined_compute_prolog",
-      make_grid_variant_operator<CombinedComputePrologTmpl>);
+  OperatorNodeFactory::instance()->register_factory("combined_compute_prolog",
+                                                    make_grid_variant_operator<CombinedComputePrologTmpl>);
 }
 }  // namespace exaDEM

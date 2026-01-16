@@ -25,7 +25,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/grid_fields.h>
 #include <exanb/core/domain.h>
-#include <exaDEM/polyhedron/backup_dem.h>
+#include <exaDEM/polyhedron/backup_dem.hpp>
 
 namespace exaDEM {
 template <typename GridT>
@@ -44,7 +44,7 @@ struct DEMBackupNode : public OperatorNode {
     backup_dem->m_data.clear();
     backup_dem->m_data.resize(grid->number_of_cells());
 
-#   pragma omp parallel
+#pragma omp parallel
     {
       GRID_OMP_FOR_BEGIN(dims - 2 * gl, _, loc_no_gl) {
         const IJK loc = loc_no_gl + gl;
@@ -52,23 +52,23 @@ struct DEMBackupNode : public OperatorNode {
         const size_t n_particles = cells[i].size();
         backup_dem->m_data[i].resize(n_particles * 7);
 
-        double *rb = backup_dem->m_data[i].data();
-        const auto *__restrict__ rx = cells[i][field::rx];
-        const auto *__restrict__ ry = cells[i][field::ry];
-        const auto *__restrict__ rz = cells[i][field::rz];
-        const auto *__restrict__ orient = cells[i][field::orient];
+        double* rb = backup_dem->m_data[i].data();
+        const auto* __restrict__ rx = cells[i][field::rx];
+        const auto* __restrict__ ry = cells[i][field::ry];
+        const auto* __restrict__ rz = cells[i][field::rz];
+        const auto* __restrict__ orient = cells[i][field::orient];
 
         const size_t block_size = n_particles;
-#       pragma omp simd
+#pragma omp simd
         for (size_t j = 0; j < n_particles; j++) {
           if (defbox) {
             Vec3d r = m_xform * Vec3d{rx[j], ry[j], rz[j]};
-            rb[                 j] = r.x;
-            rb[    block_size + j] = r.y;
+            rb[j] = r.x;
+            rb[block_size + j] = r.y;
             rb[2 * block_size + j] = r.z;
           } else {
-            rb[                 j] = rx[j];
-            rb[    block_size + j] = ry[j];
+            rb[j] = rx[j];
+            rb[block_size + j] = ry[j];
             rb[2 * block_size + j] = rz[j];
           }
           rb[3 * block_size + j] = orient[j].w;
@@ -84,8 +84,6 @@ struct DEMBackupNode : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(backup_dem) {
-  OperatorNodeFactory::instance()->register_factory(
-      "backup_dem",
-      make_grid_variant_operator<DEMBackupNode>);
+  OperatorNodeFactory::instance()->register_factory("backup_dem", make_grid_variant_operator<DEMBackupNode>);
 }
 }  // namespace exaDEM

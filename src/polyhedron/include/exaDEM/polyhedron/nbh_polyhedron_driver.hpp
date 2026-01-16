@@ -59,27 +59,16 @@ namespace exaDEM {
  */
 template <typename Func>
 ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
-    Stl_mesh &mesh,
-    size_t cell_a,
-    Func &add_contact,
-    PlaceholderInteraction &item,
-    const size_t n_particles,
-    const double rVerlet,
-    const ParticleTypeInt *__restrict__ type,
-    const uint64_t *__restrict__ id,
-    const double *__restrict__ rx,
-    const double *__restrict__ ry,
-    const double *__restrict__ rz,
-    VertexField& vertices,
-    const double *__restrict__ homothety,
-    const exanb::Quaternion *__restrict__ orient,
-    shapes &shps) {
+    Stl_mesh& mesh, size_t cell_a, Func& add_contact, PlaceholderInteraction& item, const size_t n_particles,
+    const double rVerlet, const ParticleTypeInt* __restrict__ type, const uint64_t* __restrict__ id,
+    const double* __restrict__ rx, const double* __restrict__ ry, const double* __restrict__ rz, VertexField& vertices,
+    const double* __restrict__ homothety, const exanb::Quaternion* __restrict__ orient, shapes& shps) {
   using onika::cuda::vector_data;
   constexpr double dhomothety = 1.0;
 #define __particle__ vertices_i, hi, i, shpi
 #define __driver__ mesh.vertices.data(), dhomothety, idx, &mesh.shp
   assert(cell_a < mesh.grid_indexes.size());
-  auto &list = mesh.grid_indexes[cell_a];
+  auto& list = mesh.grid_indexes[cell_a];
   const size_t stl_nv = list.vertices.size();
   const size_t stl_ne = list.edges.size();
   const size_t stl_nf = list.faces.size();
@@ -89,10 +78,10 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
   }
 
   // Get OBBs from stl mesh
-  auto &stl_shp = mesh.shp;
-  OBB *__restrict__ stl_obb_vertices = onika::cuda::vector_data(stl_shp.m_obb_vertices);
-  [[maybe_unused]] OBB *__restrict__ stl_obb_edges = vector_data(stl_shp.m_obb_edges);
-  [[maybe_unused]] OBB *__restrict__ stl_obb_faces = vector_data(stl_shp.m_obb_faces);
+  auto& stl_shp = mesh.shp;
+  OBB* __restrict__ stl_obb_vertices = onika::cuda::vector_data(stl_shp.m_obb_vertices);
+  [[maybe_unused]] OBB* __restrict__ stl_obb_edges = vector_data(stl_shp.m_obb_edges);
+  [[maybe_unused]] OBB* __restrict__ stl_obb_faces = vector_data(stl_shp.m_obb_faces);
 
   // particle i (id, cell id, particle position, sub vertex)
   auto& pi = item.i();
@@ -105,7 +94,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     pi.p = p;
     pi.id = id[p];
     auto ti = type[p];
-    const shape *shpi = shps[ti];
+    const shape* shpi = shps[ti];
     const size_t nv = shpi->get_number_of_vertices();
     const size_t ne = shpi->get_number_of_edges();
     const size_t nf = shpi->get_number_of_faces();
@@ -217,19 +206,14 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
  * @param shps        Shape container indexed by particle type.
  */
 template <typename DriverT, typename Func>
-ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
-    DriverT &driver,
-    Func &add_contact,
-    PlaceholderInteraction &item,
-    const size_t n_particles,
-    const double rVerlet,
-    const ParticleTypeInt *__restrict__ type,
-    const uint64_t *__restrict__ id,
-    VertexField& vertices,
-    const double *__restrict__ homothety,
-    shapes &shps) {
+ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(DriverT& driver, Func& add_contact,
+                                                          PlaceholderInteraction& item, const size_t n_particles,
+                                                          const double rVerlet,
+                                                          const ParticleTypeInt* __restrict__ type,
+                                                          const uint64_t* __restrict__ id, VertexField& vertices,
+                                                          const double* __restrict__ homothety, shapes& shps) {
   constexpr int DRIVER_VERTEX_SUB_IDX = -1;  // Convention
-  auto& pi = item.i();  // particle i (id, cell id, particle position, sub vertex)
+  auto& pi = item.i();                       // particle i (id, cell id, particle position, sub vertex)
 
   for (size_t pid = 0; pid < n_particles; pid++) {
     pi.p = pid;
@@ -237,7 +221,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     const double h = homothety[pid];
     ParticleVertexView vertex_view = {pid, vertices};
 
-    const shape *shp = shps[type[pid]];
+    const shape* shp = shps[type[pid]];
     assert(shp != nullptr);
     int num_vertices = shp->get_number_of_vertices();
     for (int vertex_index = 0; vertex_index < num_vertices; vertex_index++) {

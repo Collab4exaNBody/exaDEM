@@ -25,24 +25,19 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/compute/compute_cell_particles.h>
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/push_to_quaternion.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_orient, field::_vrot, field::_arot>>
 class PushToQuaternion : public OperatorNode {
   // attributes processed during computation
-  using ComputeFields = field_accessor_tuple_from_field_set_t<
-      FieldSet<field::_orient, field::_vrot, field::_arot>>;
+  using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_orient, field::_vrot, field::_arot>>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(double, dt, INPUT, REQUIRED,
-           DocString{"dt is the time increment of the timeloop"});
-  ADD_SLOT(Traversal, traversal_real,
-           INPUT, REQUIRED,
-           DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
  public:
   inline std::string documentation() const final {
@@ -55,17 +50,14 @@ class PushToQuaternion : public OperatorNode {
     const double dt = *(this->dt);
     const double dt_2 = 0.5 * dt;
     const double dt2_2 = dt_2 * dt;
-    const ComputeCellParticlesOptions ccpo =
-        traversal_real->get_compute_cell_particles_options();
+    const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
     PushToQuaternionFunctor func{dt, dt_2, dt2_2};
-    compute_cell_particles(*grid, false, func, compute_field_set,
-                           parallel_execution_context(), ccpo);
+    compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
   }
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(push_to_quaternion) {
-  OperatorNodeFactory::instance()->register_factory(
-      "push_to_quaternion", make_grid_variant_operator<PushToQuaternion>);
+  OperatorNodeFactory::instance()->register_factory("push_to_quaternion", make_grid_variant_operator<PushToQuaternion>);
 }
 }  // namespace exaDEM

@@ -47,14 +47,13 @@ struct ParticleType {
 
   inline void set_name(const std::string& s) {
     if (s.length() >= MAX_STR_LEN) {
-      std::cerr << "Particle name too long : length=" << s.length()
-          << ", max=" << (MAX_STR_LEN - 1) << "\n";
+      std::cerr << "Particle name too long : length=" << s.length() << ", max=" << (MAX_STR_LEN - 1) << "\n";
       std::abort();
     }
     std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
     m_name[MAX_STR_LEN - 1] = '\0';
   }
-  inline std::string name() const { 
+  inline std::string name() const {
     return m_name;
   }
 };
@@ -63,37 +62,20 @@ using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;
 
 template <typename GridT>
 class DumpReaderConfRockable : public OperatorNode {
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT);
-  ADD_SLOT(std::string, filename,
-           INPUT, REQUIRED,
-           DocString{" Dump file name to read."});
-  ADD_SLOT(ReadBoundsSelectionMode, bounds_mode,
-           INPUT, ReadBoundsSelectionMode::COMPUTED_BOUNDS);
-  ADD_SLOT(shapes, shapes_collection,
-           OUTPUT,
-           DocString{"Collection of shapes"});
-  ADD_SLOT(Domain, domain,
-           INPUT_OUTPUT);
-  ADD_SLOT(AABB, bounds,
-           INPUT, OPTIONAL,
-           DocString{"This option overide the domain bounds."});
-  ADD_SLOT(double, enlarge_bounds,
-           INPUT, 0.0,
-           DocString{"Define a layer around the volume size. Default size is 0."});
-  ADD_SLOT(ParticleTypeMap, particle_type_map,
-           OUTPUT);
-  ADD_SLOT(Drivers, drivers,
-           INPUT_OUTPUT, REQUIRED,
-           DocString{"List of Drivers"});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+  ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{" Dump file name to read."});
+  ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::COMPUTED_BOUNDS);
+  ADD_SLOT(shapes, shapes_collection, OUTPUT, DocString{"Collection of shapes"});
+  ADD_SLOT(Domain, domain, INPUT_OUTPUT);
+  ADD_SLOT(AABB, bounds, INPUT, OPTIONAL, DocString{"This option overide the domain bounds."});
+  ADD_SLOT(double, enlarge_bounds, INPUT, 0.0, DocString{"Define a layer around the volume size. Default size is 0."});
+  ADD_SLOT(ParticleTypeMap, particle_type_map, OUTPUT);
+  ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
 
   // overloaded slots
-  ADD_SLOT(double, physical_time,
-           INPUT_OUTPUT);
-  ADD_SLOT(double, dt,
-           INPUT_OUTPUT);
+  ADD_SLOT(double, physical_time, INPUT_OUTPUT);
+  ADD_SLOT(double, dt, INPUT_OUTPUT);
 
   // -----------------------------------------------
   // ----------- Operator documentation ------------
@@ -132,25 +114,22 @@ class DumpReaderConfRockable : public OperatorNode {
     lout << "======== " << basename << " ========" << std::endl;
     //-------------------------------------------------------------------------------------------
 
-    using ParticleTupleIO =
-        decltype(grid->cells()[0][0]);  // onika::soatl::FieldTuple<field::_rx,
-                                        // field::_ry, field::_rz, field::_id,
-                                        // field::_vx, field::_vy, field::_vz,
-                                        // field::_fx, field::_fy, field::_fz,
-                                        // field::_vrot, field::_arot,
-                                        // field::_orient, field::_type,
-                                        // field::_inertia,  field::_mass,
-                                        // field::_radius,  field::_homothety >;
+    using ParticleTupleIO = decltype(grid->cells()[0][0]);  // onika::soatl::FieldTuple<field::_rx,
+                                                            // field::_ry, field::_rz, field::_id,
+                                                            // field::_vx, field::_vy, field::_vz,
+                                                            // field::_fx, field::_fy, field::_fz,
+                                                            // field::_vrot, field::_arot,
+                                                            // field::_orient, field::_type,
+                                                            // field::_inertia,  field::_mass,
+                                                            // field::_radius,  field::_homothety >;
     using ParticleTuple = decltype(grid->cells()[0][0]);
 
-    static constexpr bool has_field_cluster =
-        ParticleTuple::has_field(field::cluster);
+    static constexpr bool has_field_cluster = ParticleTuple::has_field(field::cluster);
 
     if constexpr (!has_field_cluster) {
-      color_log::warning(
-          "read_conf_rockable",
-          "\"cluster\" field is ignored as the exaDEM::grid doesn't contain a "
-          "field named cluster. Please use another grid_flavor.");
+      color_log::warning("read_conf_rockable",
+                         "\"cluster\" field is ignored as the exaDEM::grid doesn't contain a "
+                         "field named cluster. Please use another grid_flavor.");
     }
 
     assert(grid->number_of_particles() == 0);
@@ -167,13 +146,11 @@ class DumpReaderConfRockable : public OperatorNode {
     std::ifstream file;
     file.open(file_name, std::ifstream::in);
     if (!file.is_open()) {
-      color_log::error("read_conf_rockable",
-                       "File " + file_name + " not found !");
+      color_log::error("read_conf_rockable", "File " + file_name + " not found !");
     }
     manager.read_stream(file);
-    auto map_shift = scan_shape_position(
-        manager.shapeFile);  // get "position" stored in shapes and shift
-                             // particle positions.
+    auto map_shift = scan_shape_position(manager.shapeFile);  // get "position" stored in shapes and shift
+                                                              // particle positions.
 
     shapes shps = manager.shps;
     *particle_type_map = manager.ptm;
@@ -257,27 +234,20 @@ class DumpReaderConfRockable : public OperatorNode {
       lout << "Domain bounds    = " << file_bounds << std::endl;
 
       // domain->m_bounds = bounds;
-      compute_domain_bounds(*domain, *bounds_mode, *enlarge_bounds, file_bounds,
-                            file_bounds, false);
-      domain->set_periodic_boundary(manager.periodic[0], manager.periodic[1],
-                                    manager.periodic[2]);
+      compute_domain_bounds(*domain, *bounds_mode, *enlarge_bounds, file_bounds, file_bounds, false);
+      domain->set_periodic_boundary(manager.periodic[0], manager.periodic[1], manager.periodic[2]);
       lout << "Particles        = " << particle_data.size() << std::endl;
       lout << "Domain XForm     = " << domain->xform() << std::endl;
       lout << "Domain bounds    = " << domain->bounds() << std::endl;
-      lout << "Domain size      = " << bounds_size(domain->bounds())
-          << std::endl;
-      lout << "Periodicity      = [" << domain->periodic_boundary_x() << ","
-          << domain->periodic_boundary_y() << ","
-          << domain->periodic_boundary_z() << "]" << std::endl;
+      lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
+      lout << "Periodicity      = [" << domain->periodic_boundary_x() << "," << domain->periodic_boundary_y() << ","
+           << domain->periodic_boundary_z() << "]" << std::endl;
       lout << "Real size        = "
-          << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11,
-            domain->xform().m22,
-            domain->xform().m33}
-      << std::endl;
+           << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
+           << std::endl;
       lout << "Cell size        = " << domain->cell_size() << std::endl;
-      lout << "Grid dimensions  = " << domain->grid_dimension() << " ("
-          << grid_cell_count(domain->grid_dimension()) << " cells)"
-          << std::endl;
+      lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension())
+           << " cells)" << std::endl;
     }
     // send bounds and size_box values to all cores
     MPI_Bcast(&(*domain), sizeof(Domain), MPI_CHARACTER, 0, *mpi);
@@ -293,35 +263,27 @@ class DumpReaderConfRockable : public OperatorNode {
         Vec3d r{p[field::rx], p[field::ry], p[field::rz]};
         IJK loc = domain_periodic_location(*domain, r);  // grid.locate_cell(r);
         assert(grid->contains(loc));
-        assert(min_distance2_between(r, grid->cell_bounds(loc)) <
-               grid->epsilon_cell_size2());
+        assert(min_distance2_between(r, grid->cell_bounds(loc)) < grid->epsilon_cell_size2());
         p[field::rx] = r.x;
         p[field::ry] = r.y;
         p[field::rz] = r.z;
         ParticleTuple t = p;
-        ldbg << "ID: " << t[field::id] << " pos " << "(" << t[field::rx] << ","
-            << t[field::ry] << "," << t[field::rz] << ")" << std::endl;
-        ldbg << "ID: " << t[field::id] << " vel " << "(" << t[field::vx] << ","
-            << t[field::vy] << "," << t[field::vz] << ")" << std::endl;
-        ldbg << "ID: " << t[field::id] << " acc " << "(" << t[field::fx] << ","
-            << t[field::fy] << "," << t[field::fz] << ")" << std::endl;
-        ldbg << "ID: " << t[field::id] << " quat " << t[field::orient].w << " "
-            << t[field::orient].x << " " << t[field::orient].y << " "
-            << t[field::orient].z << std::endl;
-        ldbg << "ID: " << t[field::id] << " vrot " << "(" << t[field::vrot].x
-            << "," << t[field::vrot].y << "," << t[field::vrot].z << ")"
-            << std::endl;
-        ldbg << "ID: " << t[field::id] << " arot " << "(" << t[field::arot].x
-            << "," << t[field::arot].y << "," << t[field::arot].z << ")"
-            << std::endl;
-        ldbg << "ID: " << t[field::id] << " h " << t[field::homothety]
-            << std::endl;
-        ldbg << "ID: " << t[field::id] << " radius " << t[field::radius]
-            << std::endl;
-        ldbg << "ID: " << t[field::id] << " mass " << t[field::mass]
-            << std::endl;
-        ldbg << "ID: " << t[field::id] << " intertia " << t[field::inertia]
-            << std::endl;
+        ldbg << "ID: " << t[field::id] << " pos " << "(" << t[field::rx] << "," << t[field::ry] << "," << t[field::rz]
+             << ")" << std::endl;
+        ldbg << "ID: " << t[field::id] << " vel " << "(" << t[field::vx] << "," << t[field::vy] << "," << t[field::vz]
+             << ")" << std::endl;
+        ldbg << "ID: " << t[field::id] << " acc " << "(" << t[field::fx] << "," << t[field::fy] << "," << t[field::fz]
+             << ")" << std::endl;
+        ldbg << "ID: " << t[field::id] << " quat " << t[field::orient].w << " " << t[field::orient].x << " "
+             << t[field::orient].y << " " << t[field::orient].z << std::endl;
+        ldbg << "ID: " << t[field::id] << " vrot " << "(" << t[field::vrot].x << "," << t[field::vrot].y << ","
+             << t[field::vrot].z << ")" << std::endl;
+        ldbg << "ID: " << t[field::id] << " arot " << "(" << t[field::arot].x << "," << t[field::arot].y << ","
+             << t[field::arot].z << ")" << std::endl;
+        ldbg << "ID: " << t[field::id] << " h " << t[field::homothety] << std::endl;
+        ldbg << "ID: " << t[field::id] << " radius " << t[field::radius] << std::endl;
+        ldbg << "ID: " << t[field::id] << " mass " << t[field::mass] << std::endl;
+        ldbg << "ID: " << t[field::id] << " intertia " << t[field::inertia] << std::endl;
         grid->cell(loc).push_back(t, grid->cell_allocator());
       }
     }
@@ -359,8 +321,7 @@ class DumpReaderConfRockable : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(sim_dump_writer_conf_rockable) {
-  OperatorNodeFactory::instance()->register_factory(
-      "read_conf_rockable",
-      make_grid_variant_operator<DumpReaderConfRockable>);
+  OperatorNodeFactory::instance()->register_factory("read_conf_rockable",
+                                                    make_grid_variant_operator<DumpReaderConfRockable>);
 }
 }  // namespace exaDEM

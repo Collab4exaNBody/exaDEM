@@ -35,11 +35,11 @@ namespace exaDEM {
 template <int type, bool sym>
 struct compute_stress_tensor {
   template <typename TMPLC>
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(
-      uint64_t idx, Interaction& I, TMPLC* const __restrict__ cells,
-      const double* const __restrict__ dnp, const Vec3d* const __restrict__ fnp,
-      const Vec3d* const __restrict__ ftp,
-      const Vec3d* const __restrict__ cpp) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t idx, Interaction& I, TMPLC* const __restrict__ cells,
+                                                const double* const __restrict__ dnp,
+                                                const Vec3d* const __restrict__ fnp,
+                                                const Vec3d* const __restrict__ ftp,
+                                                const Vec3d* const __restrict__ cpp) const {
     assert(type == I.type());
     if (dnp[idx] < 0.0) {
       // get fij and cij
@@ -47,11 +47,9 @@ struct compute_stress_tensor {
                         // sub for vertex id
       auto& cell = cells[i.cell];
       Vec3d fij = fnp[idx] + ftp[idx];
-      Vec3d pos_i = {cell[field::rx][i.p], cell[field::ry][i.p],
-        cell[field::rz][i.p]};
+      Vec3d pos_i = {cell[field::rx][i.p], cell[field::ry][i.p], cell[field::rz][i.p]};
       Vec3d cij = cpp[idx] - pos_i;
-      exanb::mat3d_atomic_add_contribution(cell[field::stress][i.p],
-                                           exanb::tensor(fij, cij));
+      exanb::mat3d_atomic_add_contribution(cell[field::stress][i.p], exanb::tensor(fij, cij));
 
       // polyhedron - polyhedron || sphere - sphere
       if constexpr (type <= 3 && sym == true) {
@@ -59,11 +57,9 @@ struct compute_stress_tensor {
                           // position, sub for vertex id
         auto& cellj = cells[j.cell];
         Vec3d fji = -fij;
-        Vec3d pos_j = {cellj[field::rx][j.p], cellj[field::ry][j.p],
-          cellj[field::rz][j.p]};
+        Vec3d pos_j = {cellj[field::rx][j.p], cellj[field::ry][j.p], cellj[field::rz][j.p]};
         Vec3d cji = cpp[idx] - pos_j;
-        exanb::mat3d_atomic_add_contribution(cellj[field::stress][j.p],
-                                             exanb::tensor(fji, cji));
+        exanb::mat3d_atomic_add_contribution(cellj[field::stress][j.p], exanb::tensor(fji, cji));
       }
     }
   }
@@ -80,9 +76,9 @@ struct compute_stress_tensors {
     if (size > 0) {
       ParallelForOptions opts;
       opts.omp_scheduling = OMP_SCHED_STATIC;
-      const auto [dnp, cpp, fnp, ftp] = classifier.buffer_p(
-          Type);  // get parameters: get forces (fn, ft) and contact positions
-                  // (cp) computed into the contact force operators.
+      const auto [dnp, cpp, fnp, ftp] =
+          classifier.buffer_p(Type);          // get parameters: get forces (fn, ft) and contact positions
+                                              // (cp) computed into the contact force operators.
       InteractionWrapper interactions(Ip);    // get data: interaction
       compute_stress_tensor<Type, Sym> func;  // get kernel
                                               // pack data, kernel, and interaction in a wrapper
@@ -108,13 +104,9 @@ struct compute_stress_tensors {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_stress>>
 class StressTensor : public OperatorNode {
   // attributes processed during computation
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(Classifier, ic,
-           INPUT, REQUIRED,
-           DocString{"Interaction lists classified according to their types"});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(Classifier, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
 
  public:
   inline std::string documentation() const final {
@@ -147,7 +139,6 @@ class StressTensor : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(stress_tensor) {
-  OperatorNodeFactory::instance()->register_factory(
-      "stress_tensor", make_grid_variant_operator<StressTensor>);
+  OperatorNodeFactory::instance()->register_factory("stress_tensor", make_grid_variant_operator<StressTensor>);
 }
 }  // namespace exaDEM

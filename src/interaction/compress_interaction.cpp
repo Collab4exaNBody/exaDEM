@@ -28,9 +28,7 @@ under the License.
 
 namespace exaDEM {
 class CompressInteraction : public OperatorNode {
-  ADD_SLOT(GridCellParticleInteraction, ges,
-           INPUT_OUTPUT, REQUIRED,
-           DocString{"Interaction list"});
+  ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED, DocString{"Interaction list"});
 
  public:
   inline std::string documentation() const final {
@@ -50,7 +48,7 @@ class CompressInteraction : public OperatorNode {
       return interaction.active();
     };
 
-#pragma omp parallel for
+#   pragma omp parallel for
     for (size_t current_cell = 0; current_cell < cell_interactions.size(); current_cell++) {
       auto& storage = cell_interactions[current_cell];
       storage.compress_data(save);
@@ -60,7 +58,6 @@ class CompressInteraction : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(compress_interaction) {
-  OperatorNodeFactory::instance()->register_factory(
-      "compress_interaction", make_simple_operator<CompressInteraction>);
+  OperatorNodeFactory::instance()->register_factory("compress_interaction", make_simple_operator<CompressInteraction>);
 }
 }  // namespace exaDEM

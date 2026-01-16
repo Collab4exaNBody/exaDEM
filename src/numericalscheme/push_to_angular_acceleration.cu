@@ -26,23 +26,20 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/compute/compute_cell_particles.h>
 
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/angular_acceleration.hpp>
 
 namespace exaDEM {
-template <typename GridT, class = AssertGridHasFields<GridT, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>>
+template <typename GridT,
+          class = AssertGridHasFields<GridT, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>>
 class PushToAngularAcceleration : public OperatorNode {
   // attributes processed during computation
   using ComputeFields = field_accessor_tuple_from_field_set_t<
-      FieldSet<field::_orient, field::_mom, field::_vrot, field::_arot,
-      field::_inertia>>;
+      FieldSet<field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(Traversal, traversal_real,
-           INPUT, REQUIRED,
-           DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
  public:
   inline std::string documentation() const final {
@@ -53,18 +50,15 @@ class PushToAngularAcceleration : public OperatorNode {
   }
 
   inline void execute() final {
-    const ComputeCellParticlesOptions ccpo =
-        traversal_real->get_compute_cell_particles_options();
+    const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
     PushToAngularAccelerationFunctor func{};
-    compute_cell_particles(*grid, false, func, compute_field_set,
-                           parallel_execution_context(), ccpo);
+    compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
   }
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(push_to_angular_acceleration) {
-  OperatorNodeFactory::instance()->register_factory(
-      "push_to_angular_acceleration",
-      make_grid_variant_operator<PushToAngularAcceleration>);
+  OperatorNodeFactory::instance()->register_factory("push_to_angular_acceleration",
+                                                    make_grid_variant_operator<PushToAngularAcceleration>);
 }
 }  // namespace exaDEM

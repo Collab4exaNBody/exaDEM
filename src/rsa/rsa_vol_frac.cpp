@@ -24,6 +24,7 @@ under the License.
 #include <onika/math/basic_types_stream.h>
 #include <onika/log.h>
 #include <onika/file_utils.h>
+
 #include <exanb/core/domain.h>
 #include <exanb/core/check_particles_inside_cell.h>
 #include <exanb/core/simple_block_rcb.h>
@@ -54,11 +55,9 @@ struct ParticleType {
   double m_radius = 1.0;
   char m_name[MAX_STR_LEN] = {'\0'};
 
-  inline void set_name(const std::string &s) {
+  inline void set_name(const std::string& s) {
     if (s.length() >= MAX_STR_LEN) {
-      std::cerr << "Particle name too long : length="
-          << s.length() << ", max="
-          << (MAX_STR_LEN - 1) << "\n";
+      std::cerr << "Particle name too long : length=" << s.length() << ", max=" << (MAX_STR_LEN - 1) << "\n";
       std::abort();
     }
     std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
@@ -83,8 +82,8 @@ using exaDEM::RSAParameters;
 
 template <>
 struct convert<RSAParameters> {
-  static bool decode(const Node &node, RSAParameters &v) {
-    if (node.size()<2 && node.size()>3) {
+  static bool decode(const Node& node, RSAParameters& v) {
+    if (node.size() < 2 && node.size() > 3) {
       return false;
     }
 
@@ -113,50 +112,37 @@ struct convert<RSAParameters> {
 namespace exaDEM {
 template <typename GridT>
 class RSAVolFrac : public OperatorNode {
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD,
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD,
            DocString{"MPI communicator used for parallel RSA particle generation."});
-  ADD_SLOT(Domain, domain,
-           INPUT_OUTPUT,
+  ADD_SLOT(Domain, domain, INPUT_OUTPUT,
            DocString{"Simulation domain in which particles are inserted. Can be updated during initialization."});
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT,
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT,
            DocString{"Grid structure to be filled with particles. Will be modified by the RSA operator."});
-  ADD_SLOT(ParticleTypeMap, particle_type_map,
-           INPUT, REQUIRED,
+  ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED,
            DocString{"Mapping between particle type names and their internal identifiers."});
-  ADD_SLOT(double, enlarge_bounds,
-           INPUT, 0.0,
+  ADD_SLOT(double, enlarge_bounds, INPUT, 0.0,
            DocString{"Optional value to enlarge the domain bounds by a fixed margin."});
-  ADD_SLOT(ReadBoundsSelectionMode, bounds_mode,
-           INPUT, ReadBoundsSelectionMode::FILE_BOUNDS,
+  ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::FILE_BOUNDS,
            DocString{"Controls how bounds are interpreted: from file or overridden manually."});
-  ADD_SLOT(std::vector<bool>, periodicity,
-           INPUT, OPTIONAL,
+  ADD_SLOT(std::vector<bool>, periodicity, INPUT, OPTIONAL,
            DocString{"If set, overrides the periodicity of the domain stored in the input file."});
-  ADD_SLOT(bool, expandable,
-           INPUT, OPTIONAL,
+  ADD_SLOT(bool, expandable, INPUT, OPTIONAL,
            DocString{"If set, overrides the domain expandability flag stored in the input file."});
-  ADD_SLOT(AABB, bounds,
-           INPUT, REQUIRED,
+  ADD_SLOT(AABB, bounds, INPUT, REQUIRED,
            DocString{"Overrides the domain bounds. Particles outside these bounds will be filtered out."});
-  ADD_SLOT(bool, pbc_adjust_xform,
-           INPUT, true,
+  ADD_SLOT(bool, pbc_adjust_xform, INPUT, true,
            DocString{"If true, adjusts particle transformations to enforce periodic boundary conditions."});
-  ADD_SLOT(std::vector<RSAParameters>, params,
-           INPUT, REQUIRED,
+  ADD_SLOT(std::vector<RSAParameters>, params, INPUT, REQUIRED,
            DocString{"List of RSA particle parameters. Each entry defines [radius, volume fraction, type name]."});
-  ADD_SLOT(ParticleRegions, particle_regions,
-           INPUT, OPTIONAL,
+  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL,
            DocString{"Optional region-based filtering for particle placement."});
   ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL,
-           DocString{"Optional CSG (constructive solid geometry) region used to restrict where particles can be placed."});
-  ADD_SLOT(shapes, shapes_collection,
-           INPUT, OPTIONAL,
-           DocString{"Collection of shapes"});
-  ADD_SLOT(bool, use_shape,
-           INPUT, false,
-           DocString{"This option uses the shape data to fill informations like the 'radius'. Please, do not use it with spheres."});
+           DocString{
+               "Optional CSG (constructive solid geometry) region used to restrict where particles can be placed."});
+  ADD_SLOT(shapes, shapes_collection, INPUT, OPTIONAL, DocString{"Collection of shapes"});
+  ADD_SLOT(bool, use_shape, INPUT, false,
+           DocString{"This option uses the shape data to fill informations like the 'radius'. Please, do not use it "
+                     "with spheres."});
 
  public:
   inline std::string documentation() const final {
@@ -190,9 +176,7 @@ class RSAVolFrac : public OperatorNode {
         )EOF";
   }
 
-  std::string operator_name() {
-    return "rsa_vol_frac";
-  }
+  std::string operator_name() { return "rsa_vol_frac"; }
 
   void type_not_found(std::string type_name) {
     color_log::error(operator_name(), "The type [" + type_name + "] is not defined", false);
@@ -206,7 +190,8 @@ class RSAVolFrac : public OperatorNode {
 
   inline void execute() final {
     //-------------------------------------------------------------------------------------------
-    using ParticleTupleIO = onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
+    using ParticleTupleIO =
+        onika::soatl::FieldTuple<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
     using ParticleTuple = decltype(grid->cells()[0][0]);
 
     assert(grid->number_of_particles() == 0);
@@ -230,10 +215,10 @@ class RSAVolFrac : public OperatorNode {
 
     // check domain size
     double dcs = domain->cell_size();
-    for (int dim = 0 ; dim < DIM ; dim++) {
+    for (int dim = 0; dim < DIM; dim++) {
       if (std::fmod(domain_sup[dim] - domain_inf[dim], dcs) > 1e-14) {
         lout << "\033[1;33mThe domain may be ill-formed. Please specify a domain that is a multiple of the cell size ("
-            << dcs << "). If you want to define a subdomain, please use a region.\033[0m" << std::endl;
+             << dcs << "). If you want to define a subdomain, please use a region.\033[0m" << std::endl;
       }
     }
 
@@ -256,7 +241,7 @@ class RSAVolFrac : public OperatorNode {
     // Check that radius are well-defined
     for (auto& it : list) {
       if (it.radius <= 0.0) {
-        std::string msg =  "radius is negative for type ";
+        std::string msg = "radius is negative for type ";
         msg += it.type;
         msg += ". Please, verify that use_shape is set to true.";
         color_log::error("rsa_vol_frac", msg);
@@ -280,28 +265,23 @@ class RSAVolFrac : public OperatorNode {
       }
       cast_list.push_back(make_tuple(it.radius, it.volume_fraction, type->second));
       std::sort(cast_list.begin(), cast_list.end(),
-                [] (const tuple<double, double, int>& a,
-                    const tuple<double, double, int>&b) -> bool {
-                return  std::get<0>(a) > std::get<0>(b);
+                [](const tuple<double, double, int>& a, const tuple<double, double, int>& b) -> bool {
+                  return std::get<0>(a) > std::get<0>(b);
                 });
     }
     for (auto& it : cast_list) {
-      lout << "RSA Parameters, Type: " << std::get<2>(it) << ", radius: "
-          << std::get<0>(it) << ", volume fraction: "
-          << std::get<1>(it) << std::endl;
+      lout << "RSA Parameters, Type: " << std::get<2>(it) << ", radius: " << std::get<0>(it)
+           << ", volume fraction: " << std::get<1>(it) << std::endl;
     }
 
-    sac_de_billes::RadiusGenerator<DIM> radius_generator(
-        cast_list, rsa_domain.get_total_volume());
+    sac_de_billes::RadiusGenerator<DIM> radius_generator(cast_list, rsa_domain.get_total_volume());
 
     size_t seed = 0;
-    algorithm::uniform_generate<DIM, method>(rsa_domain, radius_generator,
-                                             6000, 10, seed);
+    algorithm::uniform_generate<DIM, method>(rsa_domain, radius_generator, 6000, 10, seed);
     auto spheres = rsa_domain.extract_spheres();
 
     if (rank == 0) {
-      compute_domain_bounds(*domain, *bounds_mode,
-                            *enlarge_bounds, b, b, *pbc_adjust_xform);
+      compute_domain_bounds(*domain, *bounds_mode, *enlarge_bounds, b, b, *pbc_adjust_xform);
     }
 
     // compute indexes
@@ -337,10 +317,9 @@ class RSAVolFrac : public OperatorNode {
 
       if (region->m_nb_operands == 0) {
         ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
-        region->build_from_expression_string(
-            particle_regions->data(), particle_regions->size());
+        region->build_from_expression_string(particle_regions->data(), particle_regions->size());
       }
-      prcsg =  *region;
+      prcsg = *region;
     }
 
     // Fill grid, particles will migrate accross mpi processed
@@ -373,9 +352,12 @@ class RSAVolFrac : public OperatorNode {
     lout << "Domain XForm     = " << domain->xform() << std::endl;
     lout << "Domain bounds    = " << domain->bounds() << std::endl;
     lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
-    lout << "Real size        = " << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33} << std::endl;
+    lout << "Real size        = "
+         << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
+         << std::endl;
     lout << "Cell size        = " << domain->cell_size() << std::endl;
-    lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension()) << " cells)" << std::endl;
+    lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension())
+         << " cells)" << std::endl;
     lout << "=================================" << std::endl;
     grid->rebuild_particle_offsets();
   }
@@ -383,8 +365,6 @@ class RSAVolFrac : public OperatorNode {
 
 // === register factories ===
 __attribute__((constructor)) static void register_factories() {
-  OperatorNodeFactory::instance()->register_factory(
-      "rsa_vol_frac",
-      make_grid_variant_operator<RSAVolFrac>);
+  OperatorNodeFactory::instance()->register_factory("rsa_vol_frac", make_grid_variant_operator<RSAVolFrac>);
 }
 }  // namespace exaDEM

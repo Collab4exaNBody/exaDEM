@@ -23,13 +23,11 @@ under the License.
 namespace exaDEM {
 // helper template to avoid bug in older g++ compilers
 template <class GridT>
-using MigrateCellParticlesInteractionTmpl =
-MigrateCellParticlesES<GridT, exaDEM::PlaceholderInteraction>;
+using MigrateCellParticlesInteractionTmpl = MigrateCellParticlesES<GridT, exaDEM::PlaceholderInteraction>;
 
 // === register factory ===
 ONIKA_AUTORUN_INIT(migrate_cell_particles_interaction) {
-  OperatorNodeFactory::instance()->register_factory(
-      "migrate_cell_particles_interaction",
-      make_grid_variant_operator<MigrateCellParticlesInteractionTmpl>);
+  OperatorNodeFactory::instance()->register_factory("migrate_cell_particles_interaction",
+                                                    make_grid_variant_operator<MigrateCellParticlesInteractionTmpl>);
 }
 }  // namespace exaDEM

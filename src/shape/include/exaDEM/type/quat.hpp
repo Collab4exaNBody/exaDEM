@@ -9,31 +9,32 @@
 #include <chrono>
 
 /// Quaternions (spacialized class for rotations)
-class quat
-{
-public:
-  vec3r v;  ///< a vector
-  double s; ///< a scalar
+class quat {
+ public:
+  vec3r v;   ///< a vector
+  double s;  ///< a scalar
 
-  ONIKA_HOST_DEVICE_FUNC inline quat() : v(), s(1.0) {} // No rotation (identity) by default
+  ONIKA_HOST_DEVICE_FUNC inline quat() : v(), s(1.0) {}  // No rotation (identity) by default
 
-  ONIKA_HOST_DEVICE_FUNC inline quat(double X, double Y, double Z, double S) : v(X, Y, Z), s(S) {} // Take care of order
+  ONIKA_HOST_DEVICE_FUNC inline quat(double X, double Y, double Z, double S)
+      : v(X, Y, Z), s(S) {}  // Take care of order
 
-  ONIKA_HOST_DEVICE_FUNC inline quat(const vec3r &V, const double S) : v(V), s(S) {} // Be carreful! This is NOT axis with angle of rotation!!
+  ONIKA_HOST_DEVICE_FUNC inline quat(const vec3r& V, const double S)
+      : v(V), s(S) {}  // Be carreful! This is NOT axis with angle of rotation!!
 
-  ONIKA_HOST_DEVICE_FUNC inline quat(const quat &Q) : v(Q.v), s(Q.s) {} // copy Ctor
+  ONIKA_HOST_DEVICE_FUNC inline quat(const quat& Q) : v(Q.v), s(Q.s) {}  // copy Ctor
 
-  ONIKA_HOST_DEVICE_FUNC inline static quat identity() { return quat(0.0, 0.0, 0.0, 1.0); }
+  ONIKA_HOST_DEVICE_FUNC inline static quat identity() {
+    return quat(0.0, 0.0, 0.0, 1.0);
+  }
 
-  ONIKA_HOST_DEVICE_FUNC inline quat &operator=(const quat &Q)
-  {
+  ONIKA_HOST_DEVICE_FUNC inline quat& operator=(const quat& Q) {
     v = Q.v;
     s = Q.s;
     return (*this);
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline quat &operator+=(const quat &a)
-  {
+  ONIKA_HOST_DEVICE_FUNC inline quat& operator+=(const quat& a) {
     s += a.s;
     v.x += a.v.x;
     v.y += a.v.y;
@@ -41,8 +42,7 @@ public:
     return *this;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline quat &operator-=(const quat &a)
-  {
+  ONIKA_HOST_DEVICE_FUNC inline quat& operator-=(const quat& a) {
     s -= a.s;
     v.x -= a.v.x;
     v.y -= a.v.y;
@@ -50,8 +50,7 @@ public:
     return *this;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline quat &operator*=(double k)
-  {
+  ONIKA_HOST_DEVICE_FUNC inline quat& operator*=(double k) {
     s *= k;
     v.x *= k;
     v.y *= k;
@@ -59,8 +58,7 @@ public:
     return *this;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline quat &operator/=(double k)
-  {
+  ONIKA_HOST_DEVICE_FUNC inline quat& operator/=(double k) {
     s /= k;
     v.x /= k;
     v.y /= k;
@@ -70,15 +68,15 @@ public:
 
   /// Product operation between two quaternions (note that q1*q2 is generally not equal to q2*q1)
   /// In term of rotations, the rotation q2 is first applied and then q1
-  ONIKA_HOST_DEVICE_FUNC inline friend quat operator*(const quat &q1, const quat &q2)
-  { // OP: 14*, 10±
-    return quat(q1.v.y * q2.v.z - q1.v.z * q2.v.y + q1.s * q2.v.x + q1.v.x * q2.s, q1.v.z * q2.v.x - q1.v.x * q2.v.z + q1.s * q2.v.y + q1.v.y * q2.s, q1.v.x * q2.v.y - q1.v.y * q2.v.x + q1.s * q2.v.z + q1.v.z * q2.s, q1.s * q2.s - q1.v * q2.v);
+  ONIKA_HOST_DEVICE_FUNC inline friend quat operator*(const quat& q1, const quat& q2) {  // OP: 14*, 10±
+    return quat(q1.v.y * q2.v.z - q1.v.z * q2.v.y + q1.s * q2.v.x + q1.v.x * q2.s,
+                q1.v.z * q2.v.x - q1.v.x * q2.v.z + q1.s * q2.v.y + q1.v.y * q2.s,
+                q1.v.x * q2.v.y - q1.v.y * q2.v.x + q1.s * q2.v.z + q1.v.z * q2.s, q1.s * q2.s - q1.v * q2.v);
   }
 
   // Rotation of a vector by a quat (Found in @see http://xrual.googlecode.com)
   // It seems to be faster than rotate method (but rotate is not deprecated since it is sure)
-  ONIKA_HOST_DEVICE_FUNC inline vec3r operator*(const vec3r &V) const
-  {
+  ONIKA_HOST_DEVICE_FUNC inline vec3r operator*(const vec3r& V) const {
     // nVidia SDK implementation,
     // this is cool!!
     vec3r qvec(v.x, v.y, v.z);
@@ -91,20 +89,23 @@ public:
   }
 
   /// @brief Return the time derivative of the quaternion \f$ \dot{q} = \frac{1}{2} \omega q\f$
-  ONIKA_HOST_DEVICE_FUNC inline quat dot(const vec3r &omega)
-  {
-    quat q(0.5 * (omega.y * v.z - omega.z * v.y + omega.x * s), 0.5 * (omega.z * v.x - omega.x * v.z + omega.y * s), 0.5 * (omega.x * v.y - omega.y * v.x + omega.z * s), -0.5 * (omega * v));
+  ONIKA_HOST_DEVICE_FUNC inline quat dot(const vec3r& omega) {
+    quat q(0.5 * (omega.y * v.z - omega.z * v.y + omega.x * s), 0.5 * (omega.z * v.x - omega.x * v.z + omega.y * s),
+           0.5 * (omega.x * v.y - omega.y * v.x + omega.z * s), -0.5 * (omega * v));
     return q;
   }
 
   /// @brief Change the quaternion to its conjugate
-  ONIKA_HOST_DEVICE_FUNC inline void conjugate() { v = -v; }
+  ONIKA_HOST_DEVICE_FUNC inline void conjugate() {
+    v = -v;
+  }
 
-  ONIKA_HOST_DEVICE_FUNC inline quat get_conjugated() const { return quat(-v.x, -v.y, -v.z, s); }
+  ONIKA_HOST_DEVICE_FUNC inline quat get_conjugated() const {
+    return quat(-v.x, -v.y, -v.z, s);
+  }
 
   /// @brief Reset the rotation to a zero rotation
-  ONIKA_HOST_DEVICE_FUNC inline void reset()
-  {
+  ONIKA_HOST_DEVICE_FUNC inline void reset() {
     v.reset();
     s = 1.0;
   }
@@ -112,39 +113,43 @@ public:
   /// @brief Set the quaternion from a rotation around an axis
   /// @param[in] V      Axis (the resulting quaternion is normalized when V is normalized)
   /// @param[in] angle  Angle of rotation (radian)
-  ONIKA_HOST_DEVICE_FUNC inline void set_axis_angle(const vec3r &V, double angle)
-  {
+  ONIKA_HOST_DEVICE_FUNC inline void set_axis_angle(const vec3r& V, double angle) {
     double half_angle = 0.5 * angle;
     s = cos(half_angle);
     v = sin(half_angle) * V;
   }
 
   /// @brief Set the four components of the quaternion (Be carreful! It is different from set_axis_angle)
-  ONIKA_HOST_DEVICE_FUNC inline void set(double X, double Y, double Z, double S)
-  {
+  ONIKA_HOST_DEVICE_FUNC inline void set(double X, double Y, double Z, double S) {
     v.set(X, Y, Z);
     s = S;
   }
 
   /// @brief Return the rotation angle
-  ONIKA_HOST_DEVICE_FUNC inline double get_angle() const { return (2.0 * acos(s)); }
+  ONIKA_HOST_DEVICE_FUNC inline double get_angle() const {
+    return (2.0 * acos(s));
+  }
 
   /// @brief Return Pitch angle (z-axis rotation)
-  ONIKA_HOST_DEVICE_FUNC inline double get_Pitch() const { return atan2(2.0 * (v.y * v.z + s * v.x), s * s - v.x * v.x - v.y * v.y + v.z * v.z); }
+  ONIKA_HOST_DEVICE_FUNC inline double get_Pitch() const {
+    return atan2(2.0 * (v.y * v.z + s * v.x), s * s - v.x * v.x - v.y * v.y + v.z * v.z);
+  }
 
   /// @brief Return Yaw angle (z-axis rotation)
-  ONIKA_HOST_DEVICE_FUNC inline double get_Yaw() const { return asin(-2.0 * (v.x * v.z - s * v.y)); }
+  ONIKA_HOST_DEVICE_FUNC inline double get_Yaw() const {
+    return asin(-2.0 * (v.x * v.z - s * v.y));
+  }
 
   /// @brief Return Roll angle (x-axis rotation)
-  ONIKA_HOST_DEVICE_FUNC inline double get_Roll() const { return atan2(2.0 * (v.x * v.y + s * v.z), s * s + v.x * v.x - v.y * v.y - v.z * v.z); }
+  ONIKA_HOST_DEVICE_FUNC inline double get_Roll() const {
+    return atan2(2.0 * (v.x * v.y + s * v.z), s * s + v.x * v.x - v.y * v.y - v.z * v.z);
+  }
 
   /// @brief Return the rotation axis
-  ONIKA_HOST_DEVICE_FUNC inline vec3r get_axis() const
-  {
+  ONIKA_HOST_DEVICE_FUNC inline vec3r get_axis() const {
     vec3r Axis;
     double scale = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    if (scale > 0.0)
-    {
+    if (scale > 0.0) {
       scale = 1.0 / scale;
       Axis = scale * v;
     }
@@ -177,8 +182,7 @@ public:
   //
   // (Found in http://xrual.googlecode.com)
   // Remark: it seems to me that V1 and V2 must be normalized (FIXME: check that)
-  ONIKA_HOST_DEVICE_FUNC inline void set_from_to(const vec3r &V1, const vec3r &V2)
-  {
+  ONIKA_HOST_DEVICE_FUNC inline void set_from_to(const vec3r& V1, const vec3r& V2) {
     vec3r bisector = V1 + V2;
     bisector.normalize();
 
@@ -186,27 +190,21 @@ public:
     vec3r crossT;
     s = cos_05t;
 
-    if (cos_05t != 0.0)
-    {
+    if (cos_05t != 0.0) {
       crossT = cross(V1, bisector);
       v.x = crossT.x;
       v.y = crossT.y;
       v.z = crossT.z;
-    }
-    else
-    {
+    } else {
       float invLen;
-      if (fabs(V1.x) >= fabs(V1.y))
-      {
+      if (fabs(V1.x) >= fabs(V1.y)) {
         // V1.x or V1.z is the largest magnitude component
         invLen = 1.0 / sqrt(V1.x * V1.x + V1.z * V1.z);
 
         v.x = -V1.z * invLen;
         v.y = 0.0;
         v.z = +V1.x * invLen;
-      }
-      else
-      {
+      } else {
         // V1.y or V1.z is the largest magnitude component
         invLen = 1.0 / sqrt(V1.y * V1.y + V1.z * V1.z);
 
@@ -218,27 +216,23 @@ public:
   }
 
   /// @see http://xrual.googlecode.com
-  ONIKA_HOST_DEVICE_FUNC inline void TwistSwingDecomp(const vec3r &V1, quat &twist, quat &swing)
-  {
-    vec3r V2 = (*this) * V1; // V2 is obtained by rotating V1 (by means of the 'this' quaternion)
+  ONIKA_HOST_DEVICE_FUNC inline void TwistSwingDecomp(const vec3r& V1, quat& twist, quat& swing) {
+    vec3r V2 = (*this) * V1;  // V2 is obtained by rotating V1 (by means of the 'this' quaternion)
     swing.set_from_to(V1, V2);
     twist = (*this) * swing.get_conjugated();
   }
 
   /// @see http://xrual.googlecode.com
-  ONIKA_HOST_DEVICE_FUNC inline void SwingTwistDecomp(const vec3r &V1, quat &swing, quat &twist)
-  {
+  ONIKA_HOST_DEVICE_FUNC inline void SwingTwistDecomp(const vec3r& V1, quat& swing, quat& twist) {
     vec3r V2 = (*this) * V1;
     swing.set_from_to(V1, V2);
     twist = swing.get_conjugated() * (*this);
   }
 
   /// @brief Makes the quaternion normalized and return its length (before normalization of course!)
-  ONIKA_HOST_DEVICE_FUNC inline double normalize()
-  {
+  ONIKA_HOST_DEVICE_FUNC inline double normalize() {
     double norm2 = s * s + v * v;
-    if (norm2 <= 1e-9)
-    {
+    if (norm2 <= 1e-9) {
       reset();
       return 0.0;
     }
@@ -264,12 +258,12 @@ public:
   }
    */
 
-  inline void randomize(bool seedTime = false)
-  {
+  inline void randomize(bool seedTime = false) {
     // @see http://hub.jmonkeyengine.org/t/random-quaternions/8431
     static std::default_random_engine engine;
-    if (seedTime == true)
+    if (seedTime == true) {
       engine.seed(std::chrono::system_clock::now().time_since_epoch().count());
+    }
     static std::uniform_real_distribution<double> distrib(-1.0, 1.0);
     double sum = 0.0;
     s = distrib(engine);
@@ -282,8 +276,7 @@ public:
   }
 
   // DEPRECATED!! use randomize(true) instead
-  void randomizeSeed()
-  {
+  void randomizeSeed() {
     static std::default_random_engine engine;
     engine.seed(std::chrono::system_clock::now().time_since_epoch().count());
     static std::uniform_real_distribution<double> distrib(-1.0, 1.0);
@@ -299,8 +292,7 @@ public:
 
   /// Quaternion must be normalized in order to use this function!!
   /// The builded matrix M is stored with in row-major order
-  ONIKA_HOST_DEVICE_FUNC inline void get_rot_matrix(double M[]) const
-  { // OP: 12*, 6+, 6-
+  ONIKA_HOST_DEVICE_FUNC inline void get_rot_matrix(double M[]) const {  // OP: 12*, 6+, 6-
     double Tx = 2.0 * v.x;
     double Ty = 2.0 * v.y;
     double Tz = 2.0 * v.z;
@@ -327,8 +319,7 @@ public:
 
   /// Quaternion must be normalized in order to use this function!!
   /// The builded mat9r M is stored with in row-major order
-  ONIKA_HOST_DEVICE_FUNC inline void get_rot_matrix(mat9r &M) const
-  { // OP: 12*, 6+, 6-
+  ONIKA_HOST_DEVICE_FUNC inline void get_rot_matrix(mat9r& M) const {  // OP: 12*, 6+, 6-
     double Tx = 2.0 * v.x;
     double Ty = 2.0 * v.y;
     double Tz = 2.0 * v.z;
@@ -355,40 +346,32 @@ public:
 
   // @see http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
   // remark: Q or -Q can be set
-  ONIKA_HOST_DEVICE_FUNC inline int set_rot_matrix(double m[])
-  {
+  ONIKA_HOST_DEVICE_FUNC inline int set_rot_matrix(double m[]) {
     double tr = m[0] + m[4] + m[8];
 
-    if (tr > 0)
-    {
-      double S = 2.0 * sqrt(tr + 1.0); // S = 4*qw
+    if (tr > 0) {
+      double S = 2.0 * sqrt(tr + 1.0);  // S = 4*qw
       s = 0.25 * S;
       v.x = (m[7] - m[5]) / S;
       v.y = (m[2] - m[6]) / S;
       v.z = (m[3] - m[1]) / S;
       return 1;
-    }
-    else if ((m[0] > m[4]) & (m[0] > m[8]))
-    {
-      double S = sqrt(1.0 + m[0] - m[4] - m[8]) * 2.0; // S=4*qx
+    } else if ((m[0] > m[4]) & (m[0] > m[8])) {
+      double S = sqrt(1.0 + m[0] - m[4] - m[8]) * 2.0;  // S=4*qx
       s = (m[5] - m[7]) / S;
       v.x = 0.25 * S;
       v.y = (m[1] + m[3]) / S;
       v.z = (m[2] + m[6]) / S;
       return 2;
-    }
-    else if (m[4] > m[8])
-    {
-      double S = sqrt(1.0 + m[4] - m[0] - m[8]) * 2.0; // S=4*qy
+    } else if (m[4] > m[8]) {
+      double S = sqrt(1.0 + m[4] - m[0] - m[8]) * 2.0;  // S=4*qy
       s = (m[2] - m[6]) / S;
       v.x = (m[1] + m[3]) / S;
       v.y = 0.25 * S;
       v.z = (m[5] + m[7]) / S;
       return 3;
-    }
-    else
-    {
-      double S = sqrt(1.0 + m[8] - m[0] - m[4]) * 2.0; // S=4*qz
+    } else {
+      double S = sqrt(1.0 + m[8] - m[0] - m[4]) * 2.0;  // S=4*qz
       s = (m[3] - m[1]) / S;
       v.x = (m[2] + m[6]) / S;
       v.y = (m[5] + m[7]) / S;
@@ -401,8 +384,7 @@ public:
   /// Compute \f[ P^TIP \f]
   /// where I a diagonal matrix with vector u as diagonal terms,
   /// and P the rotation matrix obtained from the quaternion (superscript T denotes for transposed)
-  ONIKA_HOST_DEVICE_FUNC inline mat9<double> rotate_diag_mat(const vec3r &u) const
-  {
+  ONIKA_HOST_DEVICE_FUNC inline mat9<double> rotate_diag_mat(const vec3r& u) const {
     double P[9];
     get_rot_matrix(P);
     mat9<double> Res;
@@ -420,10 +402,9 @@ public:
 
   /// Rotate the vector u with the rotation hold by the quaternion.
   /// Note that q*u*conj(q) require more operations (28*, 23±)
-  ONIKA_HOST_DEVICE_FUNC inline vec3r rotate(const vec3r &u) const
-  { // OP: 21*, 18±
+  ONIKA_HOST_DEVICE_FUNC inline vec3r rotate(const vec3r& u) const {  // OP: 21*, 18±
     double M[9];
-    get_rot_matrix(M); // OP: 12*, 12±
+    get_rot_matrix(M);  // OP: 12*, 12±
     vec3r v;
     // OP: 9*, 6+
     v.x = M[0] * u.x + M[1] * u.y + M[2] * u.z;
@@ -433,8 +414,7 @@ public:
   }
 
   /// Unrotate the vector u with the (oposite) rotation hold by the quaternion.
-  ONIKA_HOST_DEVICE_FUNC inline vec3r unrotate(const vec3r &u) const
-  {
+  ONIKA_HOST_DEVICE_FUNC inline vec3r unrotate(const vec3r& u) const {
     double M[9];
     get_rot_matrix(M);
     vec3r v;
@@ -444,64 +424,63 @@ public:
     return v;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline bool operator==(const quat &other) const { return (this->s == other.s && this->v == other.v); }
+  ONIKA_HOST_DEVICE_FUNC inline bool operator==(const quat& other) const {
+    return (this->s == other.s && this->v == other.v);
+  }
 
-  ONIKA_HOST_DEVICE_FUNC inline bool operator!=(const quat &other) const { return !(*this == other); }
+  ONIKA_HOST_DEVICE_FUNC inline bool operator!=(const quat& other) const {
+    return !(*this == other);
+  }
 
   // --- input/output ---
-  friend std::ostream &operator<<(std::ostream &pStr, const quat &Q)
-  {
+  friend std::ostream& operator<<(std::ostream& pStr, const quat& Q) {
     pStr << Q.s << CommBox().sep << Q.v;
     return pStr;
   }
 
-  friend std::istream &operator>>(std::istream &pStr, quat &Q)
-  {
+  friend std::istream& operator>>(std::istream& pStr, quat& Q) {
     pStr >> Q.s >> Q.v;
     return pStr;
   }
 
-}; // End class quat
+};  // End class quat
 
-namespace
-{
+namespace {
 
-  // Adapted from NeHe production
-  // glMultMatrixf(Matrix);
-  // Note that openGL uses a column-major convention for the matrix storage
-  //
-  // usage: GLfloat Rot_Matrix[16];quat2GLMatrix<GLfloat>(Q, Rot_Matrix);
-  template <typename floatType> ONIKA_HOST_DEVICE_FUNC inline void quat2GLMatrix(quat &q, floatType *pMatrix)
-  {
-    // Make sure the matrix has allocated memory to store the rotation data
-    if (!pMatrix)
-      return;
+// Adapted from NeHe production
+// glMultMatrixf(Matrix);
+// Note that openGL uses a column-major convention for the matrix storage
+//
+// usage: GLfloat Rot_Matrix[16];quat2GLMatrix<GLfloat>(Q, Rot_Matrix);
+template <typename floatType>
+ONIKA_HOST_DEVICE_FUNC inline void quat2GLMatrix(quat& q, floatType* pMatrix) {
+  // Make sure the matrix has allocated memory to store the rotation data
+  if (!pMatrix) return;
 
-    // First row
-    pMatrix[0] = 1.0f - 2.0f * (q.v.y * q.v.y + q.v.z * q.v.z);
-    pMatrix[1] = 2.0f * (q.v.x * q.v.y + q.v.z * q.s);
-    pMatrix[2] = 2.0f * (q.v.x * q.v.z - q.v.y * q.s);
-    pMatrix[3] = 0.0f;
+  // First row
+  pMatrix[0] = 1.0f - 2.0f * (q.v.y * q.v.y + q.v.z * q.v.z);
+  pMatrix[1] = 2.0f * (q.v.x * q.v.y + q.v.z * q.s);
+  pMatrix[2] = 2.0f * (q.v.x * q.v.z - q.v.y * q.s);
+  pMatrix[3] = 0.0f;
 
-    // Second row
-    pMatrix[4] = 2.0f * (q.v.x * q.v.y - q.v.z * q.s);
-    pMatrix[5] = 1.0f - 2.0f * (q.v.x * q.v.x + q.v.z * q.v.z);
-    pMatrix[6] = 2.0f * (q.v.z * q.v.y + q.v.x * q.s);
-    pMatrix[7] = 0.0f;
+  // Second row
+  pMatrix[4] = 2.0f * (q.v.x * q.v.y - q.v.z * q.s);
+  pMatrix[5] = 1.0f - 2.0f * (q.v.x * q.v.x + q.v.z * q.v.z);
+  pMatrix[6] = 2.0f * (q.v.z * q.v.y + q.v.x * q.s);
+  pMatrix[7] = 0.0f;
 
-    // Third row
-    pMatrix[8] = 2.0f * (q.v.x * q.v.z + q.v.y * q.s);
-    pMatrix[9] = 2.0f * (q.v.y * q.v.z - q.v.x * q.s);
-    pMatrix[10] = 1.0f - 2.0f * (q.v.x * q.v.x + q.v.y * q.v.y);
-    pMatrix[11] = 0.0f;
+  // Third row
+  pMatrix[8] = 2.0f * (q.v.x * q.v.z + q.v.y * q.s);
+  pMatrix[9] = 2.0f * (q.v.y * q.v.z - q.v.x * q.s);
+  pMatrix[10] = 1.0f - 2.0f * (q.v.x * q.v.x + q.v.y * q.v.y);
+  pMatrix[11] = 0.0f;
 
-    // Fourth row
-    pMatrix[12] = 0.0f;
-    pMatrix[13] = 0.0f;
-    pMatrix[14] = 0.0f;
-    pMatrix[15] = 1.0f;
+  // Fourth row
+  pMatrix[12] = 0.0f;
+  pMatrix[13] = 0.0f;
+  pMatrix[14] = 0.0f;
+  pMatrix[15] = 1.0f;
 
-    // Now pMatrix[] is a 4x4 homogeneous · that can be applied to an OpenGL Matrix
-  }
-} // end namespace
-
+  // Now pMatrix[] is a 4x4 homogeneous · that can be applied to an OpenGL Matrix
+}
+}  // end namespace
