@@ -67,7 +67,6 @@ input_data:
      region: GEYSERE
   - write_grid_vtk:
      filename: fluid
-#  - reader2
 
 +update_particles_full_body:
   - set_cell_values:
@@ -75,7 +74,6 @@ input_data:
      grid_subdiv: 15
      value: [1, 0, 0,20]
      region: GEYSERE
-
 
 compute_force:
   - gravity_force
@@ -95,13 +93,7 @@ domain:
   grid_dims: [30,30,30]
   bounds: [[0,0,0],[300,300,300]]
 
-write_vtklegacy:
-  ascii: true
-  ghost: false
-
 global:
-#  simulation_dump_frequency: 1
-#  simulation_end_iteration: 1
   simulation_dump_frequency: 1
   simulation_end_iteration: 2
   simulation_log_frequency: 500
