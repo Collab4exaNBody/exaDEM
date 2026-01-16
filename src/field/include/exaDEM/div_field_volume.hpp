@@ -23,9 +23,7 @@ namespace exaDEM {
 template <typename FieldT>
 struct poly_div_field_volume {
   const shape* shps;
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(const uint32_t type,
-                                                double homothety,
-                                                FieldT& value) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(const uint32_t type, double homothety, FieldT& value) const {
     const double volume = shps[type].get_volume(homothety);
     value = value / volume;
   }
@@ -34,8 +32,7 @@ struct poly_div_field_volume {
 template <typename FieldT>
 struct sphere_div_field_volume {
   double coeff_4t3_pi = (4 / 3) * std::atan(-1);
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(const double radius,
-                                                FieldT& value) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(const double radius, FieldT& value) const {
     const double volume = coeff_4t3_pi * radius * radius * radius;
     value = value / volume;
   }

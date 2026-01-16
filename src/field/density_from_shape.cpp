@@ -24,26 +24,19 @@ under the License.
 #include <onika/scg/operator_slot.h>
 
 #include <exaDEM/shapes.hpp>
-#include <memory>
 #include <random>
 
 namespace exaDEM {
-template <typename GridT,
-class = AssertGridHasFields<GridT, field::_radius, field::_mass, field::_homothety>>
-    class PolyhedraSetDensity : public OperatorNode {
-      ADD_SLOT(GridT, grid,
-               INPUT_OUTPUT, REQUIRED);
-      ADD_SLOT(double, density,
-               INPUT, 1,
-               DocString{"density value applied to all particles"});
-      ADD_SLOT(shapes, shapes_collection,
-               INPUT, REQUIRED,
-               DocString{"Collection of shapes"});
+template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_mass, field::_homothety>>
+class PolyhedraSetDensity : public OperatorNode {
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(double, density, INPUT, 1, DocString{"density value applied to all particles"});
+  ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
 
-      // -----------------------------------------------
-      // ----------- Operator documentation ------------
-      inline std::string documentation() const final {
-        return R"EOF(
+  // -----------------------------------------------
+  // ----------- Operator documentation ------------
+  inline std::string documentation() const final {
+    return R"EOF(
         DEPRECIATED [1.1.3], please use set_fields 
         This operator applies the same density to all particles.
         If you want to apply various densities according to their material properties, use set_densities_multiple_materials.
@@ -52,35 +45,34 @@ class = AssertGridHasFields<GridT, field::_radius, field::_mass, field::_homothe
 
           - density_from_shape
         )EOF";
-      }
+  }
 
-     public:
-      inline void execute() final {
-        auto cells = grid->cells();
-        const IJK dims = grid->dimension();
-        const shapes shps = *shapes_collection;
-        const double d = *density;
-#       pragma omp parallel
-        {
-          GRID_OMP_FOR_BEGIN(dims, i, loc, schedule(dynamic)) {
-            double* __restrict__ m = cells[i][field::mass];
-            auto* __restrict__ t = cells[i][field::type];
-            auto* __restrict__ h = cells[i][field::homothety];
-            const size_t n = cells[i].size();
-#           pragma omp simd
-            for (size_t j = 0; j < n; j++) {
-              m[j] = d * shps[t[j]]->get_volume(h[j]);
-            }
-          }
-          GRID_OMP_FOR_END
+ public:
+  inline void execute() final {
+    auto cells = grid->cells();
+    const IJK dims = grid->dimension();
+    const shapes shps = *shapes_collection;
+    const double d = *density;
+#pragma omp parallel
+    {
+      GRID_OMP_FOR_BEGIN(dims, i, loc, schedule(dynamic)) {
+        double* __restrict__ m = cells[i][field::mass];
+        auto* __restrict__ t = cells[i][field::type];
+        auto* __restrict__ h = cells[i][field::homothety];
+        const size_t n = cells[i].size();
+#pragma omp simd
+        for (size_t j = 0; j < n; j++) {
+          m[j] = d * shps[t[j]]->get_volume(h[j]);
         }
       }
-    };
+      GRID_OMP_FOR_END
+    }
+  }
+};
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(density_from_shape) {
-  OperatorNodeFactory::instance()->register_factory(
-      "density_from_shape",
-      make_grid_variant_operator<PolyhedraSetDensity>);
+  OperatorNodeFactory::instance()->register_factory("density_from_shape",
+                                                    make_grid_variant_operator<PolyhedraSetDensity>);
 }
 }  // namespace exaDEM

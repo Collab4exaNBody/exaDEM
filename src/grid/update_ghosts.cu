@@ -44,16 +44,15 @@ under the License.
 #include <tuple>
 
 namespace exaDEM {
-template <typename GridT> using UpdateGhostsRQ =
-UpdateGhostsNode<GridT, FieldSet<field::_rx, field::_ry, field::_rz,
-    field::_vx, field::_vy, field::_vz,
-    field::_type, field::_radius,
-    field::_mass, field::_vrot, field::_orient>, false>;
+template <typename GridT>
+using UpdateGhostsRQ =
+    UpdateGhostsNode<GridT,
+                     FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_type,
+                              field::_radius, field::_mass, field::_vrot, field::_orient>,
+                     false>;
 
 // === register factory ===
 ONIKA_AUTORUN_INIT(update_ghosts) {
-  OperatorNodeFactory::instance()->register_factory(
-      "ghost_update_rq",
-      make_grid_variant_operator<UpdateGhostsRQ>);
+  OperatorNodeFactory::instance()->register_factory("ghost_update_rq", make_grid_variant_operator<UpdateGhostsRQ>);
 }
 }  // namespace exaDEM

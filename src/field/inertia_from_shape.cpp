@@ -27,14 +27,10 @@ under the License.
 
 namespace exaDEM {
 template <typename GridT,
-          class = AssertGridHasFields<GridT, field::_inertia, field::_radius,
-                                      field::_mass, field::_homothety>>
+          class = AssertGridHasFields<GridT, field::_inertia, field::_radius, field::_mass, field::_homothety>>
 class PolyhedraUpdateInertia : public OperatorNode {
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(shapes, shapes_collection,
-           INPUT, REQUIRED,
-           DocString{"Collection of shapes"});
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
 
  public:
   // -----------------------------------------------
@@ -54,7 +50,7 @@ class PolyhedraUpdateInertia : public OperatorNode {
     const IJK dims = grid->dimension();
     auto& sphs = *shapes_collection;
 
-#   pragma omp parallel
+#pragma omp parallel
     {
       GRID_OMP_FOR_BEGIN(dims, i, loc, schedule(dynamic)) {
         auto* __restrict__ m = cells[i][field::mass];
@@ -62,7 +58,7 @@ class PolyhedraUpdateInertia : public OperatorNode {
         auto* __restrict__ t = cells[i][field::type];
         auto* __restrict__ h = cells[i][field::homothety];
         const size_t n = cells[i].size();
-#       pragma omp simd
+#pragma omp simd
         for (size_t j = 0; j < n; j++) {
           inertia[j] = m[j] * sphs[t[j]]->get_Im(h[j]);
         }
@@ -74,8 +70,7 @@ class PolyhedraUpdateInertia : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(inertia_from_shape) {
-  OperatorNodeFactory::instance()->register_factory(
-      "inertia_from_shape",
-      make_grid_variant_operator<PolyhedraUpdateInertia>);
+  OperatorNodeFactory::instance()->register_factory("inertia_from_shape",
+                                                    make_grid_variant_operator<PolyhedraUpdateInertia>);
 }
 }  // namespace exaDEM

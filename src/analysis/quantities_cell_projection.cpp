@@ -32,23 +32,17 @@ under the License.
 #include <exaDEM/color_log.hpp>
 
 namespace exaDEM {
-template< class GridT >
+template <class GridT>
 class QuantitiesCellProjection : public OperatorNode {
   using StringList = std::vector<std::string>;
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT);
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(double, splat_size,
-           INPUT , -1.0,
+  ADD_SLOT(MPI_Comm, mpi, INPUT);
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(double, splat_size, INPUT, -1.0,
            DocString{"Overlap width centered on the particle to calculate its contribution to neighboring cells"});
-  ADD_SLOT(StringList, fields,
-           INPUT , StringList({".*"}),
+  ADD_SLOT(StringList, fields, INPUT, StringList({".*"}),
            DocString{"List of regular expressions to select fields to project"});
-  ADD_SLOT(long, grid_subdiv,
-           INPUT_OUTPUT , 1);
-  ADD_SLOT(GridCellValues, grid_cell_values,
-           INPUT_OUTPUT);
+  ADD_SLOT(long, grid_subdiv, INPUT_OUTPUT, 1);
+  ADD_SLOT(GridCellValues, grid_cell_values, INPUT_OUTPUT);
 
  public:
   inline void execute() final {
@@ -72,7 +66,7 @@ class QuantitiesCellProjection : public OperatorNode {
     ParticleCountCombiner count = {};
 
     auto proj_fields = make_field_tuple_from_field_set(grid->field_set, count, vnorm);
-    auto field_selector = [flist = *fields] (const std::string& name) -> bool {
+    auto field_selector = [flist = *fields](const std::string& name) -> bool {
       for (const auto& f : flist) {
         if (std::regex_match(name, std::regex(f))) {
           return true;
@@ -81,15 +75,13 @@ class QuantitiesCellProjection : public OperatorNode {
       return false;
     };
 
-    ParticleCellProjectionTools::project_particle_fields_to_grid(
-        ldbg, *grid, *grid_cell_values,
-        *grid_subdiv, *splat_size,
-        field_selector, proj_fields);
+    ParticleCellProjectionTools::project_particle_fields_to_grid(ldbg, *grid, *grid_cell_values, *grid_subdiv,
+                                                                 *splat_size, field_selector, proj_fields);
   }
 
   // -----------------------------------------------
   // -----------------------------------------------
-  inline std::string documentation() const final{
+  inline std::string documentation() const final {
     return R"EOF(
         Project particle quantities onto a regular grid.
 
@@ -118,8 +110,7 @@ class QuantitiesCellProjection : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(quantities_cell_projection) {
-  OperatorNodeFactory::instance()->register_factory(
-      "quantities_cell_projection",
-      make_grid_variant_operator<QuantitiesCellProjection>);
+  OperatorNodeFactory::instance()->register_factory("quantities_cell_projection",
+                                                    make_grid_variant_operator<QuantitiesCellProjection>);
 }
 }  // namespace exaDEM

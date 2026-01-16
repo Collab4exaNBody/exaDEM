@@ -22,22 +22,20 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class UpdateTraversal : public OperatorNode {
   using ComputeFields = FieldSet<>;
   static constexpr ComputeFields compute_field_set{};
-  template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
+  template <typename T>
+  using VectorT = onika::memory::CudaMMVector<T>;
 
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(Traversal, traversal_real,
-           INPUT_OUTPUT,
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT,
            DocString{"list of non empty cells [REAL] within the current grid"});
-  ADD_SLOT(Traversal, traversal_all,
-           INPUT_OUTPUT,
+  ADD_SLOT(Traversal, traversal_all, INPUT_OUTPUT,
            DocString{"list of non empty cells [ALL = REAL+GHOST] within the current grid"});
 
  public:
@@ -49,11 +47,11 @@ class UpdateTraversal : public OperatorNode {
   }
 
   inline void execute() final {
-    const auto &cells = grid->cells();
+    const auto& cells = grid->cells();
     IJK dims = grid->dimension();
     const ssize_t gl = grid->ghost_layers();
-    auto &tr_real = traversal_real->m_data;
-    auto &tr_all = traversal_all->m_data;
+    auto& tr_real = traversal_real->m_data;
+    auto& tr_all = traversal_all->m_data;
 
     // reset the cell list
     tr_real.clear();
@@ -73,11 +71,11 @@ class UpdateTraversal : public OperatorNode {
       }
     }
     GRID_OMP_FOR_END
-        traversal_real->m_max_block_size = max_n_particles;
+    traversal_real->m_max_block_size = max_n_particles;
 
     max_n_particles = 0;
     // sequential -> need #pragma omp parallel to activate it
-    GRID_OMP_FOR_BEGIN(dims, _ , loc) {
+    GRID_OMP_FOR_BEGIN(dims, _, loc) {
       // const IJK loc = loc;
       const size_t i = grid_ijk_to_index(dims, loc);
       const size_t n_particles = cells[i].size();
@@ -87,7 +85,7 @@ class UpdateTraversal : public OperatorNode {
       }
     }
     GRID_OMP_FOR_END
-        traversal_all->m_max_block_size = max_n_particles;
+    traversal_all->m_max_block_size = max_n_particles;
 
     traversal_real->iterator = true;
     traversal_all->iterator = true;
@@ -99,8 +97,6 @@ class UpdateTraversal : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(traversals) {
-  OperatorNodeFactory::instance()->register_factory(
-      "update_traversals",
-      make_grid_variant_operator<UpdateTraversal>);
+  OperatorNodeFactory::instance()->register_factory("update_traversals", make_grid_variant_operator<UpdateTraversal>);
 }
 }  // namespace exaDEM

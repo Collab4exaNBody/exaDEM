@@ -36,12 +36,8 @@ struct AnalysisFileManager {
   std::stringstream line;
   std::stringstream header;
 
-  void set_path(std::string p) {
-    path = p;
-  }
-  void set_filename(std::string f) {
-    filename = f;
-  }
+  void set_path(std::string p) { path = p; }
+  void set_filename(std::string f) { filename = f; }
 
   bool first() {
     std::string full_name = path.string() + "/" + this->filename;
@@ -49,9 +45,7 @@ struct AnalysisFileManager {
   }
 
   template <typename T>
-  void add_element(std::string name,
-                   T& new_element,
-                   std::string format) {
+  void add_element(std::string name, T& new_element, std::string format) {
     header << name << " ";
     std::string element = onika::format_string(format, new_element);
     line << element << " ";
@@ -62,9 +56,7 @@ struct AnalysisFileManager {
     std::filesystem::create_directories(this->path);
   }
 
-  void endl() {
-    line << std::endl;
-  }
+  void endl() { line << std::endl; }
 
   void write() {
     int rank;

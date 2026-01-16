@@ -23,7 +23,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exaDEM/set_fields.h>
+#include <exaDEM/set_fields.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_type>>
@@ -33,15 +33,10 @@ class SetParticleType : public OperatorNode {
   static constexpr ComputeFields compute_field_set{};
   static constexpr ComputeRegionFields compute_region_field_set{};
 
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(uint32_t, type,
-           INPUT, REQUIRED,
-           DocString{"type value applied to all particles"});
-  ADD_SLOT(ParticleRegions, particle_regions,
-           INPUT, OPTIONAL);
-  ADD_SLOT(ParticleRegionCSG, region,
-           INPUT, OPTIONAL);
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(uint32_t, type, INPUT, REQUIRED, DocString{"type value applied to all particles"});
+  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+  ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
   // -----------------------------------------------
   // ----------- Operator documentation ------------
@@ -59,37 +54,31 @@ class SetParticleType : public OperatorNode {
   }
 
  public:
-  inline void execute() override final {
+  inline void execute() final {
     uint32_t t = *type;
     if (region.has_value()) {
       if (!particle_regions.has_value()) {
-        fatal_error() << "Region is defined, but particle_regions has no value"
-            << std::endl;
+        fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
       }
 
       if (region->m_nb_operands == 0) {
         ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
-        region->build_from_expression_string(particle_regions->data(),
-                                             particle_regions->size());
+        region->build_from_expression_string(particle_regions->data(), particle_regions->size());
       }
 
       ParticleRegionCSGShallowCopy prcsg = *region;
       SetRegionFunctor<uint32_t> func = {prcsg, t};
-      compute_cell_particles(*grid, false, func, compute_region_field_set,
-                             parallel_execution_context());
+      compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
     } else {
       SetFunctor<uint32_t> func = {t};
-      compute_cell_particles(*grid, false, func, compute_field_set,
-                             parallel_execution_context());
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context());
     }
   }
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(set_type) {
-  OperatorNodeFactory::instance()->register_factory(
-      "set_type",
-      make_grid_variant_operator<SetParticleType>);
+  OperatorNodeFactory::instance()->register_factory("set_type", make_grid_variant_operator<SetParticleType>);
 }
 
 }  // namespace exaDEM

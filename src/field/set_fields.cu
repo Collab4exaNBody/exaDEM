@@ -25,9 +25,9 @@ under the License.
 #include <exanb/core/particle_type_id.h>
 #include <exanb/core/make_grid_variant_operator.h>
 
-#include <exaDEM/set_fields.h>
+#include <exaDEM/set_fields.hpp>
 #include <exaDEM/color_log.hpp>
-#include <exaDEM/random_quaternion.h>
+#include <exaDEM/random_quaternion.hpp>
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
@@ -74,76 +74,50 @@ struct field_manager {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_type>>
 class SetFields : public OperatorNode {
   // fields : vx, vy, vz, mass, radius, anv, inertia, quat
-  using ComputeFields =
-      FieldSet<field::_type, field::_homothety, field::_vx, field::_vy,
-      field::_vz, field::_mass, field::_radius, field::_vrot,
-      field::_inertia, field::_orient>;
+  using ComputeFields = FieldSet<field::_type, field::_homothety, field::_vx, field::_vy, field::_vz, field::_mass,
+                                 field::_radius, field::_vrot, field::_inertia, field::_orient>;
   using ComputeRegionFields =
-      FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type,
-      field::_homothety, field::_vx, field::_vy, field::_vz,
-      field::_mass, field::_radius, field::_vrot, field::_inertia,
-      field::_orient>;
+      FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_homothety, field::_vx, field::_vy,
+               field::_vz, field::_mass, field::_radius, field::_vrot, field::_inertia, field::_orient>;
   static constexpr ComputeFields compute_fields{};
   static constexpr ComputeRegionFields compute_region_fields{};
 
-  ADD_SLOT(GridT, grid,
-           INPUT_OUTPUT);
-  ADD_SLOT(std::vector<double>, density,
-           INPUT, OPTIONAL,
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+  ADD_SLOT(std::vector<double>, density, INPUT, OPTIONAL,
            DocString{"List of density values. If not defined, density is 1"});
-  ADD_SLOT(std::vector<double>, radius,
-           INPUT, OPTIONAL,
+  ADD_SLOT(std::vector<double>, radius, INPUT, OPTIONAL,
            DocString{"List of radius values. If not defined, radius is 0.5 for "
-           "spheres, do not define it for polyhedra."});
-  ADD_SLOT(std::vector<double>, homothety,
-           INPUT, OPTIONAL,
+                     "spheres, do not define it for polyhedra."});
+  ADD_SLOT(std::vector<double>, homothety, INPUT, OPTIONAL,
            DocString{"List of homothty values [only used by polyhedra]. If not "
-           "defined, homothety is 1."});
-  ADD_SLOT(std::vector<Vec3d>, velocity,
-           INPUT, OPTIONAL,
-           DocString{
-           "List of velocity values. If not defined, velocity is [0,0,0]."});
-  ADD_SLOT(std::vector<double>, sigma_velocity,
-           INPUT, OPTIONAL,
+                     "defined, homothety is 1."});
+  ADD_SLOT(std::vector<Vec3d>, velocity, INPUT, OPTIONAL,
+           DocString{"List of velocity values. If not defined, velocity is [0,0,0]."});
+  ADD_SLOT(std::vector<double>, sigma_velocity, INPUT, OPTIONAL,
            DocString{"Standard deviation (sigma). If not defined, the normal "
-           "distribution is not applied."});
-  ADD_SLOT(std::vector<Vec3d>, angular_velocity,
-           INPUT, OPTIONAL,
+                     "distribution is not applied."});
+  ADD_SLOT(std::vector<Vec3d>, angular_velocity, INPUT, OPTIONAL,
            DocString{"List of angular velocity values. If not defined, angular "
-           "velocity is [0,0,0]."});
-  ADD_SLOT(std::vector<double>, sigma_angular_velocity,
-           INPUT, OPTIONAL,
+                     "velocity is [0,0,0]."});
+  ADD_SLOT(std::vector<double>, sigma_angular_velocity, INPUT, OPTIONAL,
            DocString{"Standard deviation (sigma). If not defined, the normal "
-           "distribution is not applied."});
-  ADD_SLOT(std::vector<Quaternion>, quaternion,
-           INPUT, OPTIONAL,
+                     "distribution is not applied."});
+  ADD_SLOT(std::vector<Quaternion>, quaternion, INPUT, OPTIONAL,
            DocString{"List of orientations. If not defined, quaternion is [w = 1,0,0,0]"});
-  ADD_SLOT(std::vector<bool>, random_quaternion,
-           INPUT, OPTIONAL,
+  ADD_SLOT(std::vector<bool>, random_quaternion, INPUT, OPTIONAL,
            DocString{"Choice if the orientation is random or not. If not "
-           "defined, random is false."});
-  ADD_SLOT(ParticleTypeMap, particle_type_map,
-           INPUT, REQUIRED);
-  ADD_SLOT(std::vector<std::string>, type,
-           INPUT, REQUIRED,
-           DocString{"Particle type names"});
+                     "defined, random is false."});
+  ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED);
+  ADD_SLOT(std::vector<std::string>, type, INPUT, REQUIRED, DocString{"Particle type names"});
 
   // outputs
-  ADD_SLOT(double, rcut_max,
-           INPUT_OUTPUT, 0.0,
-           DocString{"rcut_max"});
+  ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0, DocString{"rcut_max"});
 
   // others
-  ADD_SLOT(bool, polyhedra,
-           INPUT, REQUIRED,
-           DocString{"Define if the kind of particles is polyhedron or sphere."});
-  ADD_SLOT(ParticleRegions, particle_regions,
-           INPUT, OPTIONAL);
-  ADD_SLOT(ParticleRegionCSG, region,
-           INPUT, OPTIONAL);
-  ADD_SLOT(shapes, shapes_collection,
-           INPUT, OPTIONAL,
-           DocString{"Collection of shapes"});
+  ADD_SLOT(bool, polyhedra, INPUT, REQUIRED, DocString{"Define if the kind of particles is polyhedron or sphere."});
+  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+  ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
+  ADD_SLOT(shapes, shapes_collection, INPUT, OPTIONAL, DocString{"Collection of shapes"});
 
   // -----------------------------------------------
   // ----------- Operator documentation ------------
@@ -173,9 +147,7 @@ class SetFields : public OperatorNode {
         )EOF";
   }
 
-  inline std::string operator_name() {
-    return "set_fields";
-  }
+  inline std::string operator_name() { return "set_fields"; }
 
   void check_slots() {
     if (grid->number_of_cells() == 0) {
@@ -190,14 +162,13 @@ class SetFields : public OperatorNode {
       }
       size_t size_shps = shapes_collection->size();
       if (size_shps == 0 && (*polyhedra)) {
-        color_log::error(operator_name(),
-                         "You are defining polyhedra without using shapes.");
+        color_log::error(operator_name(), "You are defining polyhedra without using shapes.");
       }
     }
   }
 
  public:
-  inline void execute() override final {
+  inline void execute() final {
     check_slots();
 
     const auto& type_map = *particle_type_map;
@@ -285,21 +256,18 @@ class SetFields : public OperatorNode {
       lout << std::endl;
       lout << "Density          = " << d << std::endl;
       if (!rnd_q) {
-        lout << "Quaternion       = [w: " << quat.w << ", v: (" << quat.x << ","
-            << quat.y << "," << quat.z << ")]";
+        lout << "Quaternion       = [w: " << quat.w << ", v: (" << quat.x << "," << quat.y << "," << quat.z << ")]";
       } else {
         lout << "Quaternion       = random";
       }
-        lout << std::endl;
+      lout << std::endl;
 
       if (*polyhedra) {
         const shapes& shps = *shapes_collection;
         const auto& shp = shps[type_id];
         if (type_id >= shps.size() || shp->m_name != type_name) {
-          color_log::error(
-              operator_name(),
-              "We can't find the shape related to the type " + type_name +
-              ". Please verify that you have load all shape files.");
+          color_log::error(operator_name(), "We can't find the shape related to the type " + type_name +
+                                                ". Please verify that you have load all shape files.");
         }
         m = d * shp->get_volume(h);
         inertia = m * shp->get_Im(h);
@@ -316,8 +284,7 @@ class SetFields : public OperatorNode {
         lout << "Inertia          = " << inertia << std::endl;
       } else {  // spheres
         if (!mat.set_r) {
-          color_log::error(operator_name(),
-                           "You should define a radius: radius: \"[1.0]\"");
+          color_log::error(operator_name(), "You should define a radius: radius: \"[1.0]\"");
         } else {
           auto& rr = *radius;
           r = rr[i];
@@ -336,77 +303,57 @@ class SetFields : public OperatorNode {
       if (is_region) {
         ParticleRegionCSGShallowCopy prcsg = *region;
         if (!particle_regions.has_value()) {
-          fatal_error()
-              << "Region is defined, but particle_regions has no value"
-              << std::endl;
+          fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
         }
 
         if (region->m_nb_operands == 0) {
           ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
-          region->build_from_expression_string(particle_regions->data(),
-                                               particle_regions->size());
+          region->build_from_expression_string(particle_regions->data(), particle_regions->size());
         }
 
         // fields : vx, vy, vz, mass, radius, anv, inertia, quat
-        FilteredSetRegionFunctor<double, double, double, double, double, double,
-            Vec3d, Vec3d, Quaternion>
-                func = {prcsg,
-                  uint32_t(type_id),
-                  {h, vx, vy, vz, m, r, ang_v, inertia, quat}};
+        FilteredSetRegionFunctor<double, double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {
+            prcsg, uint32_t(type_id), {h, vx, vy, vz, m, r, ang_v, inertia, quat}};
 
-        compute_cell_particles(*grid, false, func, compute_region_fields,
-                               parallel_execution_context());
+        compute_cell_particles(*grid, false, func, compute_region_fields, parallel_execution_context());
 
         if (mat.set_rnd_v) {
           jammy gen(sigma_v);
-          FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy,
-              field::_vz>
-                  compute_rnd_v;
+          FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz> compute_rnd_v;
           GenSetRegionFunctor<jammy> generator = {prcsg, gen};
-          compute_cell_particles(*grid, false, generator, compute_rnd_v,
-                                 parallel_execution_context());
+          compute_cell_particles(*grid, false, generator, compute_rnd_v, parallel_execution_context());
         }
 
         if (mat.set_rnd_ang_v) {
           jammy gen(sigma_ang_v);
-          FieldSet<field::_rx, field::_ry, field::_rz, field::_vrot>
-              compute_rnd_ang_v;
+          FieldSet<field::_rx, field::_ry, field::_rz, field::_vrot> compute_rnd_ang_v;
 
           GenSetRegionFunctor<jammy> generator = {prcsg, gen};
-          compute_cell_particles(*grid, false, generator, compute_rnd_ang_v,
-                                 parallel_execution_context());
+          compute_cell_particles(*grid, false, generator, compute_rnd_ang_v, parallel_execution_context());
         }
 
         if (rnd_q) { /** Random Quaternion */
-          FieldSet<field::_rx, field::_ry, field::_rz, field::_id,
-              field::_orient>
-                  compute_orient;
+          FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_orient> compute_orient;
 
           RandomQuaternionFunctor RndQuatFunc = {prcsg};
-          compute_cell_particles(*grid, false, RndQuatFunc, compute_orient,
-                                 parallel_execution_context());
+          compute_cell_particles(*grid, false, RndQuatFunc, compute_orient, parallel_execution_context());
         }
       } else {  // no region
-        FilteredSetFunctor<double, double, double, double, double, double,
-            Vec3d, Vec3d, Quaternion>
-                func = {uint32_t(type_id),
-                  {h, vx, vy, vz, m, r, ang_v, inertia, quat}};
+        FilteredSetFunctor<double, double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {
+            uint32_t(type_id), {h, vx, vy, vz, m, r, ang_v, inertia, quat}};
 
-        compute_cell_particles(*grid, false, func, compute_fields,
-                               parallel_execution_context());
+        compute_cell_particles(*grid, false, func, compute_fields, parallel_execution_context());
 
         if (mat.set_rnd_v) {
           jammy gen(sigma_v);
           FieldSet<field::_vx, field::_vy, field::_vz> compute_rnd_v;
           GenSetFunctor<jammy> generator = {gen};
-          compute_cell_particles(*grid, false, generator, compute_rnd_v,
-                                 parallel_execution_context());
+          compute_cell_particles(*grid, false, generator, compute_rnd_v, parallel_execution_context());
         }
         if (rnd_q) { /** Random Quaternion */
           FieldSet<field::_orient> compute_orient;
           RandomQuaternionFunctor RndQuatFunc = {};
-          compute_cell_particles(*grid, false, RndQuatFunc, compute_orient,
-                                 parallel_execution_context());
+          compute_cell_particles(*grid, false, RndQuatFunc, compute_orient, parallel_execution_context());
         }
       }
     }
@@ -416,7 +363,6 @@ class SetFields : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(set_fields) {
-  OperatorNodeFactory::instance()->register_factory(
-      "set_fields", make_grid_variant_operator<SetFields>);
+  OperatorNodeFactory::instance()->register_factory("set_fields", make_grid_variant_operator<SetFields>);
 }
 }  // namespace exaDEM

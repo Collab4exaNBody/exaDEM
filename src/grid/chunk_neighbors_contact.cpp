@@ -46,10 +46,7 @@ template <class CellsT>
 struct ContactNeighborFilterFunc {
   CellsT cells;
   const double rcut_inc = 0.0;
-  inline bool operator()(
-      double d2, double rcut2,
-      size_t cell_a, size_t p_a,
-      size_t cell_b, size_t p_b) const {
+  inline bool operator()(double d2, double rcut2, size_t cell_a, size_t p_a, size_t cell_b, size_t p_b) const {
     assert(cell_a != cell_b || p_a != p_b);
     const double r_a = cells[cell_a][field::radius][p_a];
     const double r_b = cells[cell_b][field::radius][p_b];
@@ -61,10 +58,9 @@ struct ContactNeighborFilterFunc {
 
 template <typename GridT>
 struct ChunkNeighborsContact : public OperatorNode {
-#   ifdef XSTAMP_CUDA_VERSION
-  ADD_SLOT(onika::cuda::CudaContext, cuda_ctx,
-           INPUT, OPTIONAL);
-#   endif
+#ifdef XSTAMP_CUDA_VERSION
+  ADD_SLOT(onika::cuda::CudaContext, cuda_ctx, INPUT, OPTIONAL);
+#endif
 
   ADD_SLOT(GridT, grid, INPUT);
   ADD_SLOT(AmrGrid, amr, INPUT);
@@ -108,26 +104,19 @@ struct ChunkNeighborsContact : public OperatorNode {
 
     if (!domain->xform_is_identity()) {
       LinearXForm xform = {domain->xform()};
-      chunk_neighbors_execute(ldbg, *chunk_neighbors,
-                              *grid, *amr, *amr_grid_pairs,
-                              *config, *chunk_neighbors_scratch,
-                              cs, cs_log2, *nbh_dist_lab, xform,
-                              gpu_enabled, no_z_order, nbh_filter);
+      chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch,
+                              cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
     } else {
       NullXForm xform = {};
-      chunk_neighbors_execute(ldbg, *chunk_neighbors,
-                              *grid, *amr, *amr_grid_pairs,
-                              *config, *chunk_neighbors_scratch,
-                              cs, cs_log2, *nbh_dist_lab, xform,
-                              gpu_enabled, no_z_order, nbh_filter);
+      chunk_neighbors_execute(ldbg, *chunk_neighbors, *grid, *amr, *amr_grid_pairs, *config, *chunk_neighbors_scratch,
+                              cs, cs_log2, *nbh_dist_lab, xform, gpu_enabled, no_z_order, nbh_filter);
     }
   }
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(chunk_neighbors_contact) {
-  OperatorNodeFactory::instance()->register_factory(
-      "chunk_neighbors_contact",
-      make_grid_variant_operator<ChunkNeighborsContact>);
+  OperatorNodeFactory::instance()->register_factory("chunk_neighbors_contact",
+                                                    make_grid_variant_operator<ChunkNeighborsContact>);
 }
 }  // namespace exaDEM

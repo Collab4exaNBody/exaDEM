@@ -37,9 +37,7 @@ struct InitGridFlavorNode : public OperatorNode {
         )EOF";
   }
 
-  inline InitGridFlavorNode() {
-    set_profiling(false);
-  }
+  inline InitGridFlavorNode() { set_profiling(false); }
 
   inline void execute() final {
     if (grid->number_of_cells() == 0) {
@@ -52,14 +50,13 @@ struct InitGridFlavorNode : public OperatorNode {
 // === register factories ===
 ONIKA_AUTORUN_INIT(grid_flavor) {
   OperatorNodeFactory::instance()->register_factory(
-      "grid_flavor_dem",
-      make_compatible_operator< InitGridFlavorNode< GridFromFieldSet<DEMFieldSet>>>);
+      "grid_flavor_dem", make_compatible_operator<InitGridFlavorNode<GridFromFieldSet<DEMFieldSet>>>);
 }
 
 ONIKA_AUTORUN_INIT(grid_flavor_fragmentation) {
   OperatorNodeFactory::instance()->register_factory(
       "grid_flavor_dem_fragmentation",
-      make_compatible_operator<InitGridFlavorNode< GridFromFieldSet<FragmentationDEMFieldSet>>>);
+      make_compatible_operator<InitGridFlavorNode<GridFromFieldSet<FragmentationDEMFieldSet>>>);
 }
 
 }  // namespace exaDEM

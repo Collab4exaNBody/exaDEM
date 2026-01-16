@@ -25,7 +25,7 @@ under the License.
 #include <exanb/grid_cell_particles/particle_region.h>
 #include <exanb/core/grid.h>
 
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/analysis_manager.hpp>
 #include <exaDEM/barycenter.hpp>
@@ -35,31 +35,17 @@ namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_rx, field::_ry, field::_rz, field::_type>>
 class ParticleBarycenterAnalysis : public OperatorNode {
   static constexpr FieldSet<field::_rx, field::_ry, field::_rz, field::_type> reduce_field_set{};
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(GridT, grid,
-           INPUT, REQUIRED);
-  ADD_SLOT(Traversal, traversal_real,
-           INPUT, REQUIRED,
-           DocString{"list of non empty cells within the current grid"});
-  ADD_SLOT(double, dt,
-           INPUT, REQUIRED);
-  ADD_SLOT(long, timestep,
-           INPUT, REQUIRED,
-           DocString{"Iteration number"});
-  ADD_SLOT(ParticleRegions, particle_regions,
-           INPUT, OPTIONAL);
-  ADD_SLOT(ParticleRegionCSG, region,
-           INPUT, OPTIONAL);
-  ADD_SLOT(std::string, dir_name,
-           INPUT, REQUIRED,
-           DocString{"Output directory, usually defined into io_config."});
-  ADD_SLOT(std::string, name,
-           INPUT, "ParticleBarycenter.txt",
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(double, dt, INPUT, REQUIRED);
+  ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
+  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+  ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
+  ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory, usually defined into io_config."});
+  ADD_SLOT(std::string, name, INPUT, "ParticleBarycenter.txt",
            DocString{"Filename. Default is: ParticleBarycenter.txt"});
-  ADD_SLOT(std::vector<int>, types,
-           INPUT, REQUIRED,
-           DocString{"List of types"});
+  ADD_SLOT(std::vector<int>, types, INPUT, REQUIRED, DocString{"List of types"});
 
  public:
   inline std::string documentation() const final {
@@ -82,16 +68,14 @@ class ParticleBarycenterAnalysis : public OperatorNode {
     auto& list_of_types = (*types);
 
     if (list_of_types.size() == 0) {
-      lout << "[Analysis/barycenter] types is empty, this operator is skipped"
-          << std::endl;
+      lout << "[Analysis/barycenter] types is empty, this operator is skipped" << std::endl;
     }
 
-    const ReduceCellParticlesOptions rcpo =
-        traversal_real->get_reduce_cell_particles_options();
+    const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
 
     // iterate over types -- it could be optimized by computing all types
     // in a single call of reduce_cell_particles.
-    for (size_t i = 0 ; i < list_of_types.size() ; i++) {
+    for (size_t i = 0; i < list_of_types.size(); i++) {
       uint16_t type = list_of_types[i];
       ParticleRegionCSGShallowCopy prcsg;
       // now, fill the radius field
@@ -104,23 +88,16 @@ class ParticleBarycenterAnalysis : public OperatorNode {
           ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
           region->build_from_expression_string(particle_regions->data(), particle_regions->size());
         }
-        prcsg =  *region;
+        prcsg = *region;
       }
 
       // Reduce over the subdomain
       ReduceParticleBarycenterTypeFunctor func = {prcsg, type};
       ParticleBarycenterTypeValue value = {0, {0.0, 0.0, 0.0}};  // int , Vec3d
-      reduce_cell_particles(
-          *grid, false,
-          func, value,
-          reduce_field_set,
-          parallel_execution_context(),
-          {}, rcpo);
+      reduce_cell_particles(*grid, false, func, value, reduce_field_set, parallel_execution_context(), {}, rcpo);
 
       // Reduce over MPI processes
-      double local[4] = {
-        static_cast<double>(value.count), value.barycenter.x,
-        value.barycenter.y, value.barycenter.z};
+      double local[4] = {static_cast<double>(value.count), value.barycenter.x, value.barycenter.y, value.barycenter.z};
       double global[4] = {0.0, 0.0, 0.0, 0.0};  // count, x, y, z
       MPI_Reduce(&local, &global, 4, MPI_DOUBLE, MPI_SUM, 0, *mpi);
       std::string var_name_rx = "Type[" + std::to_string(type) + "][rx]";
@@ -128,8 +105,8 @@ class ParticleBarycenterAnalysis : public OperatorNode {
       std::string var_name_rz = "Type[" + std::to_string(type) + "][rz]";
       // Compute means
       if (global[0] != 0.0) {  // There is at least one particle
-        for (int i = 0 ; i < 3 ; i++) {
-          global[i+1] /= global[0];  // It compute the average values
+        for (int i = 0; i < 3; i++) {
+          global[i + 1] /= global[0];  // It compute the average values
         }
       } else {
         color_log::warning("barycenter",
@@ -147,8 +124,7 @@ class ParticleBarycenterAnalysis : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(barycenter) {
-  OperatorNodeFactory::instance()->register_factory(
-      "particle_barycenter",
-      make_grid_variant_operator<ParticleBarycenterAnalysis>);
+  OperatorNodeFactory::instance()->register_factory("particle_barycenter",
+                                                    make_grid_variant_operator<ParticleBarycenterAnalysis>);
 }
 }  // namespace exaDEM

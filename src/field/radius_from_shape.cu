@@ -28,114 +28,100 @@ under the License.
 #include <random>
 #include <exaDEM/shapes.hpp>
 
-namespace exaDEM
-{
-  using namespace exanb;
-  struct UpdateRadiusPolyhedronFunctor
-  {
-    const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
-    double *list_of_radius;                    /** filled in PolyhedraDefineRadius. */
+namespace exaDEM {
+using namespace exanb;
+struct UpdateRadiusPolyhedronFunctor {
+  const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
+  double* list_of_radius;                    /** filled in PolyhedraDefineRadius. */
 
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(uint32_t type, double &radius) const { radius = list_of_radius[type]; }
-    // If the region feature is activated
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(const double rx, const double ry, const double rz, const uint64_t id, uint32_t type, double &radius) const
-    {
-      Vec3d r = {rx, ry, rz};
-      if (region.contains(r, id))
-      {
-        radius = list_of_radius[type];
-      }
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(uint32_t type, double& radius) const { radius = list_of_radius[type]; }
+  // If the region feature is activated
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(const double rx, const double ry, const double rz, const uint64_t id,
+                                                uint32_t type, double& radius) const {
+    Vec3d r = {rx, ry, rz};
+    if (region.contains(r, id)) {
+      radius = list_of_radius[type];
     }
-  };
-} // namespace exaDEM
+  }
+};
+}  // namespace exaDEM
 
-namespace exanb
-{
-  template <> struct ComputeCellParticlesTraits<exaDEM::UpdateRadiusPolyhedronFunctor>
-  {
-    static inline constexpr bool RequiresBlockSynchronousCall = true;
-    static inline constexpr bool CudaCompatible = false;
-  };
-} // namespace exanb
+namespace exanb {
+template <>
+struct ComputeCellParticlesTraits<exaDEM::UpdateRadiusPolyhedronFunctor> {
+  static inline constexpr bool RequiresBlockSynchronousCall = true;
+  static inline constexpr bool CudaCompatible = false;
+};
+}  // namespace exanb
 
-namespace exaDEM
-{
-  using namespace exanb;
+namespace exaDEM {
+template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>>
+class PolyhedraDefineRadius : public OperatorNode {
+  using ComputeFields = FieldSet<field::_type, field::_radius>;
+  using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
+  static constexpr ComputeFields compute_field_set{};
+  static constexpr ComputeRegionFields compute_region_field_set{};
 
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class PolyhedraDefineRadius : public OperatorNode
-  {
-    using ComputeFields = FieldSet<field::_type, field::_radius>;
-    using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_radius>;
-    static constexpr ComputeFields compute_field_set{};
-    static constexpr ComputeRegionFields compute_region_field_set{};
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
+  ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
+  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+  ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
-    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
-    ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
-    ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
-
-    // -----------------------------------------------
-    // ----------- Operator documentation ------------
-    inline std::string documentation() const override final
-    {
-      return R"EOF(
+  // -----------------------------------------------
+  // ----------- Operator documentation ------------
+  inline std::string documentation() const final {
+    return R"EOF(
         DEPRECIATED [1.1.3], please use set_fields.
 
         YAML example [no option]:
 
           - radius_from_shape
         )EOF";
+  }
+
+ public:
+  inline void execute() final {
+    // compute the biggest radius for each polyhedron
+    const shapes shps = *shapes_collection;
+    const size_t size = shps.size();
+    onika::memory::CudaMMVector<double> r;
+    r.resize(size);
+    double rmax = *rcut_max;
+    lout << "start rmax " << rmax << std::endl;
+    for (size_t i = 0; i < size; i++) {
+      double rad_max = shps[i]->compute_max_rcut();
+      r[i] = rad_max;
+      rmax = std::max(rmax, 2 * rad_max);  // r * maxrcut
+      lout << "shape " << i << " rmax " << rmax << std::endl;
     }
+    *rcut_max = rmax;
 
-  public:
-    inline void execute() override final
-    {
-      // compute the biggest radius for each polyhedron
-      const shapes shps = *shapes_collection;
-      const size_t size = shps.size();
-      onika::memory::CudaMMVector<double> r;
-      r.resize(size);
-      double rmax = *rcut_max;
-      lout << "start rmax " << rmax << std::endl;
-      for (size_t i = 0; i < size; i++)
-      {
-        double rad_max = shps[i]->compute_max_rcut();
-        r[i] = rad_max;
-        rmax = std::max(rmax, 2 * rad_max); // r * maxrcut
-        lout << "shape " << i << " rmax " << rmax << std::endl;
+    // now, fill the radius field
+    if (region.has_value()) {
+      ParticleRegionCSGShallowCopy prcsg = *region;
+      UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};
+      if (!particle_regions.has_value()) {
+        fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
       }
-      *rcut_max = rmax;
 
-      // now, fill the radius field
-     if (region.has_value())
-      {
-        ParticleRegionCSGShallowCopy prcsg = *region;
-        UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};
-        if (!particle_regions.has_value())
-        {
-          fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
-        }
-
-        if (region->m_nb_operands == 0)
-        {
-          ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
-          region->build_from_expression_string(particle_regions->data(), particle_regions->size());
-        }
-        compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
+      if (region->m_nb_operands == 0) {
+        ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
+        region->build_from_expression_string(particle_regions->data(), particle_regions->size());
       }
-      else
-      {
-        ParticleRegionCSGShallowCopy prcsg;
-        UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};
-        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context());
-      }
+      compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
+    } else {
+      ParticleRegionCSGShallowCopy prcsg;
+      UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context());
     }
-  };
+  }
+};
 
-  template <class GridT> using PolyhedraDefineRadiusTmpl = PolyhedraDefineRadius<GridT>;
+// === register factories ===
+ONIKA_AUTORUN_INIT(radius_from_shape) {
+  OperatorNodeFactory::instance()->register_factory("radius_from_shape",
+                                                    make_grid_variant_operator<PolyhedraDefineRadius>);
+}
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(radius_from_shape) { OperatorNodeFactory::instance()->register_factory("radius_from_shape", make_grid_variant_operator<PolyhedraDefineRadiusTmpl>); }
-
-} // namespace exaDEM
+}  // namespace exaDEM
