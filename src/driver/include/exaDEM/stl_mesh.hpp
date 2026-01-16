@@ -18,10 +18,10 @@ under the License.
  */
 
 #pragma once
-#include <exaDEM/driver_base.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/quaternion.h>
 #include <onika/math/quaternion_yaml.h>
+#include <onika/physics/units.h>
 
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_numerical_scheme_kernel.hpp>
@@ -29,15 +29,12 @@ under the License.
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_reader.hpp>
 #include <exaDEM/shape_writer.hpp>
-// #include <exaDEM/interaction/interaction.hpp>
-#include <onika/physics/units.h>
 
 #include <filesystem>
 
 namespace exaDEM {
 template <typename T>
 using vector_t = onika::memory::CudaMMVector<T>;
-// template <typename T> using vector_t = std::vector<T>;
 
 /**
  * @brief Struct representing a list of elements( vertex, edge, or face).
@@ -54,13 +51,12 @@ struct list_of_elements {
 };
 
 struct Stl_params {
-  exanb::Vec3d center = Vec3d{0, 0, 0}; /**< Center position of the STL mesh. */
-  exanb::Vec3d vel = Vec3d{0, 0, 0};    /**< Velocity of the STL mesh. */
-  exanb::Vec3d vrot = Vec3d{0, 0, 0}; /**< Angular velocity of the STL mesh. */
-  exanb::Quaternion quat = {1, 0, 0, 0}; /**< Quaternion of the STL mesh. */
-  double surface = -1; /**< Surface, used with linear_compression_motion. */
-  double mass =
-      std::numeric_limits<double>::max() / 4; /**< Mass of the STL mesh */
+  exanb::Vec3d center = Vec3d{0, 0, 0};                 /**< Center position of the STL mesh. */
+  exanb::Vec3d vel = Vec3d{0, 0, 0};                    /**< Velocity of the STL mesh. */
+  exanb::Vec3d vrot = Vec3d{0, 0, 0};                   /**< Angular velocity of the STL mesh. */
+  exanb::Quaternion quat = {1, 0, 0, 0};                /**< Quaternion of the STL mesh. */
+  double surface = -1;                                  /**< Surface, used with linear_compression_motion. */
+  double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the STL mesh */
   // special mode to control the rotation by a moment
   bool drive_by_mom = false;
   exanb::Vec3d applied_mom; /**< Moment of the STL mesh. */
@@ -114,20 +110,18 @@ struct convert<Stl_params> {
 
 namespace exaDEM {
 const std::vector<MotionType> stl_valid_motion_types = {
-    STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION,
-    TABULATED,  SHAKER,        EXPRESSION};
+    STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION, TABULATED, SHAKER, EXPRESSION};
 
 using namespace exanb;
 /**
  * @brief Struct representing a STL mesh in the exaDEM simulation.
  */
 struct Stl_mesh : public Stl_params, Driver_params {
-  shape shp;                /**< Shape of the STL mesh. */
-  vector_t<Vec3d> vertices; /**< Collection of vertices (computed from shp, quat
-                               and center). */
-  std::vector<list_of_elements>
-      grid_indexes;                     /**< Grid indices of the STL mesh. */
-  std::vector<omp_lock_t> grid_mutexes; /**< Grid indices of the STL mesh. */
+  shape shp;                                  /**< Shape of the STL mesh. */
+  vector_t<Vec3d> vertices;                   /**< Collection of vertices (computed from shp, quat
+                                                 and center). */
+  std::vector<list_of_elements> grid_indexes; /**< Grid indices of the STL mesh. */
+  std::vector<omp_lock_t> grid_mutexes;       /**< Grid indices of the STL mesh. */
   /** We don't need to save these values */
   exanb::Vec3d acc = {0, 0, 0}; /**< Acceleration of the mesh */
 
@@ -135,7 +129,9 @@ struct Stl_mesh : public Stl_params, Driver_params {
    * @brief Get the type of the driver (in this case, STL_MESH).
    * @return The type of the driver.
    */
-  constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::STL_MESH; }
+  constexpr DRIVER_TYPE get_type() {
+    return DRIVER_TYPE::STL_MESH;
+  }
 
   /**
    * @brief Add stl shape.
@@ -151,9 +147,10 @@ struct Stl_mesh : public Stl_params, Driver_params {
     lout << "Center             = " << center << std::endl;
     lout << "Velocity           = " << vel << std::endl;
     lout << "Angular Velocity   = " << vrot << std::endl;
-    lout << "Orientation        = " << quat.w << " " << quat.x << " " << quat.y
-         << " " << quat.z << std::endl;
-    if (surface > 0.0) lout << "Surface            = " << surface << std::endl;
+    lout << "Orientation        = " << quat.w << " " << quat.x << " " << quat.y << " " << quat.z << std::endl;
+    if (surface > 0.0) {
+      lout << "Surface            = " << surface << std::endl;
+    }
     if (this->drive_by_mom) {
       lout << "Applied moment     = " << applied_mom << std::endl;
       lout << "Inertia            = " << inertia << std::endl;
@@ -161,8 +158,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
     }
     lout << "Number of faces    = " << shp.get_number_of_faces() << std::endl;
     lout << "Number of edges    = " << shp.get_number_of_edges() << std::endl;
-    lout << "Number of vertices = " << shp.get_number_of_vertices()
-         << std::endl;
+    lout << "Number of vertices = " << shp.get_number_of_vertices() << std::endl;
     Driver_params::print_driver_params();
   }
 
@@ -171,8 +167,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
    */
   inline void initialize() {
     // checks
-    if (shp.get_number_of_faces() == 0 && shp.get_number_of_edges() == 0 &&
-        shp.get_number_of_vertices() == 0) {
+    if (shp.get_number_of_faces() == 0 && shp.get_number_of_edges() == 0 && shp.get_number_of_vertices() == 0) {
       color_log::error("Stl_mesh::initialize",
                        "Your shape is not correctly defined, no vertex, no "
                        "edge, and no face.");
@@ -180,7 +175,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
 
     // resize and initialize vertices
     vertices.resize(shp.get_number_of_vertices());
-#pragma omp parallel for schedule(static)
+#   pragma omp parallel for schedule(static)
     for (int i = 0; i < shp.get_number_of_vertices(); i++) {
       this->update_vertex(i);
     }
@@ -189,34 +184,28 @@ struct Stl_mesh : public Stl_params, Driver_params {
     std::filesystem::path full_name = this->shp.m_name;
     this->shp.m_name = full_name.filename();
     // motion type
-    if (!Driver_params::is_valid_motion_type(stl_valid_motion_types))
+    if (!Driver_params::is_valid_motion_type(stl_valid_motion_types)) {
       std::exit(EXIT_FAILURE);
-    if (!Driver_params::check_motion_coherence()) std::exit(EXIT_FAILURE);
-    if (mass <= 0.0) {
-      color_log::error("Stl_mesh::initialize",
-                       "Please, define a positive mass.");
+    } else if (!Driver_params::check_motion_coherence()) {
+      std::exit(EXIT_FAILURE);
+    } else if (mass <= 0.0) {
+      color_log::error("Stl_mesh::initialize", "Please, define a positive mass.");
     }
 
     if (is_compressive()) {
       double s = shp.compute_surface();
       if (surface <= 0) {
-        color_log::warning(
-            "Stl_mesh::initialize",
-            "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. "
-            "You need to specify surface: XX in the 'state' slot.");
-        color_log::error(
-            "Stl_mesh::initialize",
-            "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. "
-            "You need to specify surface: XX in the 'state' slot.",
-            false);
-        color_log::error(
-            "Stl_mesh::initialize",
-            "The computed surface of all faces is: " + std::to_string(s), true);
+        color_log::warning("Stl_mesh::initialize",
+                           "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. "
+                           "You need to specify surface: XX in the 'state' slot.");
+        color_log::error("Stl_mesh::initialize",
+                         "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. "
+                         "You need to specify surface: XX in the 'state' slot.",
+                         false);
+        color_log::error("Stl_mesh::initialize", "The computed surface of all faces is: " + std::to_string(s), true);
       }
       if (s - surface > 1e-6) {
-        color_log::warning(
-            "Stl_mesh::initialize",
-            "The computed surface of all faces is: " + std::to_string(s));
+        color_log::warning("Stl_mesh::initialize", "The computed surface of all faces is: " + std::to_string(s));
       }
     }
   }
@@ -232,9 +221,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
         acc = exanb::dot(tmp, this->motion_vector) * this->motion_vector;
       }
     } else if (is_force_motion()) {
-      if (mass >= 1e100)
-        color_log::warning("f_to_a", "The mass of the stl mesh is set to " +
-                                         std::to_string(mass));
+      if (mass >= 1e100) color_log::warning("f_to_a", "The mass of the stl mesh is set to " + std::to_string(mass));
       acc = Driver_params::sum_forces() / mass;
     } else {
       acc = {0, 0, 0};
@@ -289,21 +276,22 @@ struct Stl_mesh : public Stl_params, Driver_params {
     if (need_moment()) {
       DriverPushToAngularAccelerationFunctor compute_arot = {};
       DriverPushToAngularVelocityFunctor compute_vrot = {dt * 0.5};
-      DriverPushToQuaternionFunctor compute_quat_vrot = {dt, dt * 0.5,
-                                                         dt * dt * 0.5};
-      Vec3d project_mom =
-          dot(this->applied_mom + this->mom, this->mom_axis) * this->mom_axis;
+      DriverPushToQuaternionFunctor compute_quat_vrot = {dt, dt * 0.5, dt * dt * 0.5};
+
+      Vec3d project_mom = dot(this->applied_mom + this->mom, this->mom_axis) * this->mom_axis;
       Vec3d arot;
+
       compute_arot(this->quat, project_mom, this->vrot, arot, this->inertia);
       compute_vrot(this->vrot, arot);
       compute_quat_vrot(this->quat, this->vrot, arot);
       this->mom = {0, 0, 0};
+
     } else {
       this->quat = this->quat + dot(this->quat, this->vrot) * dt;
       this->quat = normalize(this->quat);
     }
-    ldbg << "Quat[stl mesh]: " << this->quat.w << " " << this->quat.x << " "
-         << this->quat.y << " " << this->quat.z << std::endl;
+    ldbg << "Quat[stl mesh]: " << this->quat.w << " " << this->quat.x << " " << this->quat.y << " " << this->quat.z
+         << std::endl;
   }
 
   ONIKA_HOST_DEVICE_FUNC
@@ -351,11 +339,9 @@ struct Stl_mesh : public Stl_params, Driver_params {
       stream << ", surface: " << surface;
     }
     if (drive_by_mom) {
-      stream << ", moment: " << this->applied_mom
-             << ", inertia: " << this->inertia;
+      stream << ", moment: " << this->applied_mom << ", inertia: " << this->inertia;
     }
-    stream << ", quat: [" << quat.w << "," << quat.x << "," << quat.y << ","
-           << quat.z << "]";
+    stream << ", quat: [" << quat.w << "," << quat.x << "," << quat.y << "," << quat.z << "]";
     if (is_force_motion()) {
       stream << ",mass: " << this->mass;
     }
@@ -371,11 +357,9 @@ struct Stl_mesh : public Stl_params, Driver_params {
    */
   inline void grid_indexes_summary() {
     const size_t size = grid_indexes.size();
-    size_t nb_fill_cells(0), nb_v(0), nb_e(0), nb_f(0), max_v(0), max_e(0),
-        max_f(0);
+    size_t nb_fill_cells(0), nb_v(0), nb_e(0), nb_f(0), max_v(0), max_e(0), max_f(0);
 
-#pragma omp parallel for reduction(+ : nb_fill_cells, nb_v, nb_e, nb_f) \
-    reduction(max : max_v, max_e, max_f)
+#pragma omp parallel for reduction(+ : nb_fill_cells, nb_v, nb_e, nb_f) reduction(max : max_v, max_e, max_f)
     for (size_t i = 0; i < size; i++) {
       auto& list = grid_indexes[i];
       if (list.vertices.size() == 0 && list.edges.size() == 0 && list.faces.size()) {
@@ -391,8 +375,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
     }
 
     lout << "========= STL Grid summary ======" << std::endl;
-    lout << "Number of emplty cells = " << nb_fill_cells << " / " << size
-         << std::endl;
+    lout << "Number of emplty cells = " << nb_fill_cells << " / " << size << std::endl;
     lout << "Vertices (Total/Max)   = " << nb_v << " / " << max_v << std::endl;
     lout << "Edges    (Total/Max)   = " << nb_e << " / " << max_e << std::endl;
     lout << "Faces    (Total/Max)   = " << nb_f << " / " << max_f << std::endl;

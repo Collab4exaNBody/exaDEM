@@ -16,38 +16,31 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
 #include <mpi.h>
-#include <memory>
-#include <exaDEM/driver_base.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
 #include <exaDEM/drivers.hpp>
-#include <exaDEM/surface.h>
 
-namespace exaDEM
-{
+namespace exaDEM {
+class InitDrivers : public OperatorNode {
+  ADD_SLOT(Drivers, drivers, OUTPUT, DocString{"List of Drivers"});
 
-	using namespace exanb;
-
-  class InitDrivers : public OperatorNode
-  {
-    ADD_SLOT(Drivers, drivers, OUTPUT, DocString{"List of Drivers"});
-
-  public:
-    inline std::string documentation() const override final
-    {
-      return R"EOF(
+ public:
+  inline std::string documentation() const final {
+    return R"EOF(
         This operator creates a slot for drivers.
         )EOF";
-    }
+  }
 
-    inline void execute() override final
-    {
-      // do nothing
-    }
-  };
+  inline void execute() final {
+    // do nothing
+  }
+};
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(init_drivers) { OperatorNodeFactory::instance()->register_factory("init_drivers", make_simple_operator<InitDrivers>); }
-} // namespace exaDEM
+// === register factories ===
+ONIKA_AUTORUN_INIT(init_drivers) {
+  OperatorNodeFactory::instance()->register_factory("init_drivers", make_simple_operator<InitDrivers>);
+}
+}  // namespace exaDEM

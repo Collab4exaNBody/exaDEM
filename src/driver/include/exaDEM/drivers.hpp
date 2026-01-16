@@ -18,14 +18,13 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/ball.h>
-#include <exaDEM/cylinder.h>
-#include <exaDEM/driver_base.h>
-#include <exaDEM/surface.h>
-#include <exaDEM/undefined_driver.h>
 #include <onika/flat_tuple.h>
-
+#include <exaDEM/ball.hpp>
+#include <exaDEM/cylinder.hpp>
+#include <exaDEM/driver_base.hpp>
+#include <exaDEM/surface.hpp>
 #include <exaDEM/stl_mesh.hpp>
+#include <exaDEM/undefined_driver.hpp>
 
 namespace exaDEM {
 struct Drivers {
@@ -45,11 +44,7 @@ struct Drivers {
   /** just a duplicate on CPU to avoid weird copies from GPU */
   std::vector<DriverTypeAndIndex> m_type_index_cpu; /**< Vector storing the types of drivers. */
   // vector_t<data_t> m_data;   /**< Vector storing the data of drivers. */
-  onika::FlatTuple<
-      vector_t<Cylinder>,
-      vector_t<Surface>,
-      vector_t<Ball>,
-      vector_t<Stl_mesh> > m_data;
+  onika::FlatTuple<vector_t<Cylinder>, vector_t<Surface>, vector_t<Ball>, vector_t<Stl_mesh> > m_data;
 
   /**
    * @brief Get the size of the Drivers collection.
@@ -78,8 +73,7 @@ struct Drivers {
     const auto& driver_vec = m_data.get_nth_const<t>();
     assert(idx >= 0 && idx < m_type_index.size());
     assert(m_type_index[idx].m_type == t);
-    assert(m_type_index[idx].m_index >= 0 &&
-           m_type_index[idx].m_index < driver_vec.size());
+    assert(m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < driver_vec.size());
     return driver_vec[m_type_index[idx].m_index];
   }
 
@@ -90,8 +84,7 @@ struct Drivers {
     auto& driver_vec = m_data.get_nth<t>();
     assert(idx >= 0 && idx < static_cast<int>(m_type_index.size()));
     assert(m_type_index[idx].m_type == t);
-    assert(m_type_index[idx].m_index >= 0 &&
-           m_type_index[idx].m_index < static_cast<int>(driver_vec.size()));
+    assert(m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < static_cast<int>(driver_vec.size()));
     return driver_vec[m_type_index[idx].m_index];
   }
 
@@ -102,7 +95,7 @@ struct Drivers {
     DRIVER_TYPE t = m_type_index_cpu[idx].m_type;
     assert(t != DRIVER_TYPE::UNDEFINED);
     if (t == DRIVER_TYPE::CYLINDER) {
-      return func( m_data.get_nth<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[idx].m_index]);
+      return func(m_data.get_nth<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[idx].m_index]);
     } else if (t == DRIVER_TYPE::SURFACE) {
       return func(m_data.get_nth<DRIVER_TYPE::SURFACE>()[m_type_index_cpu[idx].m_index]);
     } else if (t == DRIVER_TYPE::BALL) {
@@ -110,8 +103,7 @@ struct Drivers {
     } else if (t == DRIVER_TYPE::STL_MESH) {
       return func(m_data.get_nth<DRIVER_TYPE::STL_MESH>()[m_type_index_cpu[idx].m_index]);
     }
-    fatal_error() << "Internal error: unsupported driver type encountered"
-        << std::endl;
+    fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
     static Cylinder tmp;
     return func(tmp);
   }
@@ -131,8 +123,7 @@ struct Drivers {
     } else if (t == DRIVER_TYPE::STL_MESH) {
       return func(m_data.get_nth<DRIVER_TYPE::STL_MESH>()[m_type_index_cpu[idx].m_index]);
     }
-    fatal_error() << "Internal error: unsupported driver type encountered"
-        << std::endl;
+    fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
     static Cylinder tmp;
     return func(tmp);
   }
@@ -190,10 +181,10 @@ struct Drivers {
    * @return The type of the driver at the specified index.
    */
   ONIKA_HOST_DEVICE_FUNC
-      inline DRIVER_TYPE type(size_t idx) {
-        assert(idx < m_type_index.size());
-        return m_type_index[idx].m_type;
-      }
+  inline DRIVER_TYPE type(size_t idx) {
+    assert(idx < m_type_index.size());
+    return m_type_index[idx].m_type;
+  }
 
   /**
    * @brief Checks if all drivers in the collection are well-defined.
@@ -254,9 +245,8 @@ struct Drivers {
 struct DriversGPUAccessor {
   size_t m_nb_drivers = 0;
   Drivers::DriverTypeAndIndex* const __restrict__ m_type_index = nullptr;
-  onika::FlatTuple<Cylinder* __restrict__, Surface* __restrict__,
-      Ball* __restrict__, Stl_mesh* __restrict__>
-          m_data = {nullptr, nullptr, nullptr, nullptr};
+  onika::FlatTuple<Cylinder* __restrict__, Surface* __restrict__, Ball* __restrict__, Stl_mesh* __restrict__> m_data = {
+      nullptr, nullptr, nullptr, nullptr};
   onika::FlatTuple<size_t, size_t, size_t, size_t> m_data_size = {0, 0, 0, 0};
 
   DriversGPUAccessor() = default;
@@ -264,26 +254,21 @@ struct DriversGPUAccessor {
   DriversGPUAccessor(DriversGPUAccessor&&) = default;
   inline DriversGPUAccessor(Drivers& drvs)
       : m_nb_drivers(drvs.m_type_index.size()),
-      m_type_index(drvs.m_type_index.data()),
-      m_data(
-          {drvs.m_data.get_nth<0>().data(), drvs.m_data.get_nth<1>().data(),
-          drvs.m_data.get_nth<2>().data(), drvs.m_data.get_nth<3>().data()}),
-      m_data_size({drvs.m_data.get_nth<0>().size(),
-                  drvs.m_data.get_nth<1>().size(),
-                  drvs.m_data.get_nth<2>().size(),
-                  drvs.m_data.get_nth<3>().size()}) {}
+        m_type_index(drvs.m_type_index.data()),
+        m_data({drvs.m_data.get_nth<0>().data(), drvs.m_data.get_nth<1>().data(), drvs.m_data.get_nth<2>().data(),
+                drvs.m_data.get_nth<3>().data()}),
+        m_data_size({drvs.m_data.get_nth<0>().size(), drvs.m_data.get_nth<1>().size(), drvs.m_data.get_nth<2>().size(),
+                     drvs.m_data.get_nth<3>().size()}) {}
 
   template <class T>
   ONIKA_HOST_DEVICE_FUNC inline T& get_typed_driver(const int idx) const {
     constexpr DRIVER_TYPE t = get_type<T>();
     static_assert(t != DRIVER_TYPE::UNDEFINED);
     auto* __restrict__ driver_vec = m_data.get_nth_const<t>();
-    [[maybe_unused]] const size_t driver_vec_size =
-        m_data_size.get_nth_const<t>();
+    [[maybe_unused]] const size_t driver_vec_size = m_data_size.get_nth_const<t>();
     assert(idx >= 0 && idx < static_cast<int>(m_nb_drivers));
     assert(m_type_index[idx].m_type == t);
-    assert(m_type_index[idx].m_index >= 0 &&
-           m_type_index[idx].m_index < static_cast<int>(driver_vec_size));
+    assert(m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < static_cast<int>(driver_vec_size));
     return driver_vec[m_type_index[idx].m_index];
   }
 };

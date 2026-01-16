@@ -30,21 +30,11 @@ namespace exaDEM {
 class ParaviewDriver : public OperatorNode {
   static constexpr Vec3d null = {0.0, 0.0, 0.0};
 
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT,
-           MPI_COMM_WORLD);
-  ADD_SLOT(Domain, domain,
-           INPUT,
-           REQUIRED);
-  ADD_SLOT(Drivers, drivers,
-           INPUT, REQUIRED,
-           DocString{"List of Drivers"});
-  ADD_SLOT(long, timestep,
-           INPUT, REQUIRED,
-           DocString{"Iteration number"});
-  ADD_SLOT(std::string, dir_name,
-           INPUT, REQUIRED,
-           DocString{"Main output directory."});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+  ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
+  ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
+  ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
  public:
   inline std::string documentation() const final {
@@ -64,18 +54,15 @@ class ParaviewDriver : public OperatorNode {
     std::vector<info_surface> surfaces;
     for (size_t id = mpi_rank; id < drivers->get_size(); id += mpi_size) {
       if (drivers->type(id) == DRIVER_TYPE::BALL) {
-        exaDEM::Ball& ball =
-            drivers->get_typed_driver<exaDEM::Ball>(id);
+        exaDEM::Ball& ball = drivers->get_typed_driver<exaDEM::Ball>(id);
         balls.push_back({static_cast<int>(id), ball.center, ball.radius, ball.vel});
       }
       if (drivers->type(id) == DRIVER_TYPE::SURFACE) {
-        exaDEM::Surface& surface =
-            drivers->get_typed_driver<exaDEM::Surface>(id);
+        exaDEM::Surface& surface = drivers->get_typed_driver<exaDEM::Surface>(id);
         surfaces.push_back({static_cast<int>(id), surface.normal, surface.offset, surface.vel});
       }
       if (drivers->type(id) == DRIVER_TYPE::STL_MESH) {
-        exaDEM::Stl_mesh& mesh =
-            drivers->get_typed_driver<exaDEM::Stl_mesh>(id);
+        exaDEM::Stl_mesh& mesh = drivers->get_typed_driver<exaDEM::Stl_mesh>(id);
         mesh.shp.write_move_paraview(path, *timestep, mesh.center, mesh.quat);
       }
     }
@@ -97,7 +84,6 @@ class ParaviewDriver : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(paraview_driver) {
-  OperatorNodeFactory::instance()->register_factory(
-      "paraview_driver", make_simple_operator<ParaviewDriver>);
+  OperatorNodeFactory::instance()->register_factory("paraview_driver", make_simple_operator<ParaviewDriver>);
 }
 }  // namespace exaDEM

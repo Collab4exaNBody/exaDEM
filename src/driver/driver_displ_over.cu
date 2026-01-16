@@ -18,10 +18,10 @@ under the License.
 */
 
 #include <mpi.h>
-#include <onika/math/basic_types.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
+#include <onika/math/basic_types.h>
 
 #include <exaDEM/drivers.hpp>
 #include <exaDEM/reduce_stl_mesh.hpp>
@@ -38,22 +38,16 @@ struct Accumulator {
   VectorT<int> data;  ///< Storage buffer
 
  public:
-  Accumulator() {
-    reset();
-  }
+  Accumulator() { reset(); }
   /// Reset accumulator to zero
   void reset() {
     data.resize(1);
     data[0] = 0;
   }
   /// Get raw pointer to data
-  int* __restrict__ get_ptr() {
-    return data.data();
-  }
+  int* __restrict__ get_ptr() { return data.data(); }
   /// Get current value
-  int get() {
-    return data[0];
-  }
+  int get() { return data[0]; }
 };
 
 /**
@@ -62,15 +56,13 @@ struct Accumulator {
 template <class ParallelExecutionContextFunctor>
 struct driver_displ_over {
   ParallelExecutionContextFunctor m_parallel_execution_context;  ///< Parallel execution context
-  const double r2;                   ///< Squared distance
-  MPI_Comm& comm;                    ///< MPI communicator
-  Drivers& bcpd;                     ///< Backup drivers
-  const size_t bd_idx;               ///< Backup driver index
-  Accumulator storage;               ///< Result accumulator
+  const double r2;                                               ///< Squared distance
+  MPI_Comm& comm;                                                ///< MPI communicator
+  Drivers& bcpd;                                                 ///< Backup drivers
+  const size_t bd_idx;                                           ///< Backup driver index
+  Accumulator storage;                                           ///< Result accumulator
 
-  inline int operator()(exaDEM::Cylinder& a) {
-    return 0;
-  }  // WARNING should not move
+  inline int operator()(exaDEM::Cylinder& a) { return 0; }  // WARNING should not move
 
   inline int operator()(exaDEM::Surface& a) {
     exaDEM::Surface& b = bcpd.get_typed_driver<exaDEM::Surface>(bd_idx);
@@ -78,30 +70,27 @@ struct driver_displ_over {
 
     if (b.motion_type == PENDULUM_MOTION) {
       // Utility function: compute the intersection between a line and a plane
-      auto intersect_line_plane =
-          [](const Vec3d& plane_point,   // A point lying on the plane (pendulum anchor)
-             const Vec3d& plane_normal,  // Plane normal vector
-             const Vec3d& line_point,    // Starting point of the line (initial
-                                         // pendulum position)
-             const Vec3d& line_dir       // Direction vector of the line
-            ) -> Vec3d {
-            // Ensure the line is not parallel to the plane
-            assert(std::abs(exanb::dot(plane_normal, line_dir)) >= 1e-12);
-            // Vector from line_point to plane_point
-            Vec3d delta = plane_point - line_point;
-            // Scalar parameter t of the intersection
-            double t = exanb::dot(delta, plane_normal) / exanb::dot(line_dir, plane_normal);
-            // Intersection point
-            return line_point + t * line_dir;
-          };
+      auto intersect_line_plane = [](const Vec3d& plane_point,   // A point lying on the plane (pendulum anchor)
+                                     const Vec3d& plane_normal,  // Plane normal vector
+                                     const Vec3d& line_point,    // Starting point of the line (initial
+                                                                 // pendulum position)
+                                     const Vec3d& line_dir       // Direction vector of the line
+                                     ) -> Vec3d {
+        // Ensure the line is not parallel to the plane
+        assert(std::abs(exanb::dot(plane_normal, line_dir)) >= 1e-12);
+        // Vector from line_point to plane_point
+        Vec3d delta = plane_point - line_point;
+        // Scalar parameter t of the intersection
+        double t = exanb::dot(delta, plane_normal) / exanb::dot(line_dir, plane_normal);
+        // Intersection point
+        return line_point + t * line_dir;
+      };
 
       // Project the initial pendulum positions onto their respective planes
-      Vec3d proj_a = intersect_line_plane(a.pendulum_anchor_point, a.normal,
-                                          a.pendulum_initial_position,
-                                          a.pendulum_direction());
-      Vec3d proj_b = intersect_line_plane(b.pendulum_anchor_point, b.normal,
-                                          b.pendulum_initial_position,
-                                          b.pendulum_direction());
+      Vec3d proj_a =
+          intersect_line_plane(a.pendulum_anchor_point, a.normal, a.pendulum_initial_position, a.pendulum_direction());
+      Vec3d proj_b =
+          intersect_line_plane(b.pendulum_anchor_point, b.normal, b.pendulum_initial_position, b.pendulum_direction());
       d = proj_b - proj_a;
     }
 
@@ -117,8 +106,7 @@ struct driver_displ_over {
     Vec3d d = a.center - b.center;
     if (b.is_compressive()) {
       if (exanb::dot(d, d) >= 1e-12) {
-        color_log::error("driver_displ_over",
-                         "Ball with compressive motion type should not move");
+        color_log::error("driver_displ_over", "Ball with compressive motion type should not move");
       }
       double r_diff = a.radius - b.radius;
       if (r_diff * r_diff >= r2) {
@@ -147,8 +135,7 @@ struct driver_displ_over {
     storage.reset();
     size_t size = a.shp.get_number_of_vertices();
     const Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp.m_vertices);
-    STLVertexDisplacementFunctor SVDFunc = {r2,     ptr_shp_vertices, a.center,
-      a.quat, b.center,         b.quat};
+    STLVertexDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.center, a.quat, b.center, b.quat};
     ReduceMaxSTLVertexDisplacementFunctor func = {SVDFunc, storage.get_ptr()};
 
     ParallelForOptions opts;
@@ -193,18 +180,11 @@ struct driver_displ_over {
 class DriverDisplacementOver : public OperatorNode {
   // -----------------------------------------------
   // -----------------------------------------------
-  ADD_SLOT(MPI_Comm, mpi,
-           INPUT, MPI_COMM_WORLD);
-  ADD_SLOT(double, threshold,
-           INPUT, 0.0);
-  ADD_SLOT(bool, result,
-           OUTPUT);
-  ADD_SLOT(Drivers, drivers,
-           INPUT, REQUIRED,
-           DocString{"List of Drivers"});
-  ADD_SLOT(Drivers, backup_drvs,
-           INPUT, REQUIRED,
-           DocString{"List of backup Drivers"});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(double, threshold, INPUT, 0.0);
+  ADD_SLOT(bool, result, OUTPUT);
+  ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
+  ADD_SLOT(Drivers, backup_drvs, INPUT, REQUIRED, DocString{"List of backup Drivers"});
 
  public:
   // -----------------------------------------------
@@ -237,13 +217,10 @@ class DriverDisplacementOver : public OperatorNode {
     size_t bcpd_size = bcpd.get_size();
     // assert(bcpd_size == size);
 
-    auto pec_func = [this]() {
-      return this->parallel_execution_context();
-    };
+    auto pec_func = [this]() { return this->parallel_execution_context(); };
 
     for (size_t i = 0; i < bcpd_size && local_drivers_displ == 0; i++) {
-      driver_displ_over<decltype(pec_func)> func = {pec_func, max_dist2, comm,
-        bcpd, i};
+      driver_displ_over<decltype(pec_func)> func = {pec_func, max_dist2, comm, bcpd, i};
       local_drivers_displ += drvs.apply(i, func);
     }
 
@@ -254,7 +231,6 @@ class DriverDisplacementOver : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(driver_displ_over) {
-  OperatorNodeFactory::instance()->register_factory(
-      "driver_displ_over", make_simple_operator<DriverDisplacementOver>);
+  OperatorNodeFactory::instance()->register_factory("driver_displ_over", make_simple_operator<DriverDisplacementOver>);
 }
 }  // namespace exaDEM
