@@ -16,7 +16,6 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
-#include <mpi.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
@@ -24,6 +23,7 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/domain.h>
+#include <mpi.h>
 
 // exaNBody
 #include <exanb/mpi/ghosts_comm_scheme.h>
@@ -55,7 +55,6 @@ class UpdateInteractionGhost : public OperatorNode {
     InteractionGhostManager& manager = *interaction_ghost_manager;
     auto& g = *grid;
     auto cells = g.cells();
-    MPI_Comm& comm = *mpi;
 
     // Reset Interaction within the grid ghost layer
 #pragma omp parallel for
@@ -69,7 +68,7 @@ class UpdateInteractionGhost : public OperatorNode {
     }
 
     // MPI comms are done here
-    manager.setup(*ghost_comm_scheme, comm, interaction_cells, g);
+    manager.setup(*ghost_comm_scheme, *mpi, interaction_cells, g);
 
     // Fill ghost layers with
     manager.copy_interaction(g, interaction_cells);
