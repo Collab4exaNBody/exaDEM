@@ -70,6 +70,8 @@ compress_data:
   - compress_interaction
   - interaction_consistency_checker
 
+write_dump_particle_op: nop # defined in config_sphere.msp or polyhedra or fragmentation
+
 dump_data_particles:
   - timestep_paraview_file: "CheckpointFiles/exadem_%010d.dump"
   - message: { mesg: "Write dump " , endl: false }
@@ -79,7 +81,7 @@ dump_data_particles:
         - message: { endl: true }
   - compress_data
   - stats_interactions
-  - write_dump_particle_interaction
+  - write_dump_particle_op
   - dump_driver
   - chunk_neighbors_impl #redbuild interactions
 

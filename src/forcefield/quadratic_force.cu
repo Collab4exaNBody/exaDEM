@@ -23,30 +23,28 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <memory>
 #include <exanb/compute/compute_cell_particles.h>
-#include <exaDEM/traversal.h>
-#include <exaDEM/quadratic_force.h>
+#include <exaDEM/traversal.hpp>
+#include <exaDEM/forcefield/quadratic_force.hpp>
 
-namespace exaDEM
-{
-  using namespace exanb;
+namespace exaDEM {
 
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz, field::_vx, field::_vy, field::_vz>> class QuadraticForce : public OperatorNode
-  {
-    // attributes processed during computation
-    using ComputeFields = field_accessor_tuple_from_field_set_t<FieldSet<field::_fx, field::_fy, field::_fz, field::_vx, field::_vy, field::_vz>>;
-    static constexpr ComputeFields compute_field_set{};
+template <typename GridT,
+          class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz, field::_vx, field::_vy, field::_vz>>
+class QuadraticForce : public OperatorNode {
+  // attributes processed during computation
+  using ComputeFields = field_accessor_tuple_from_field_set_t<
+      FieldSet<field::_fx, field::_fy, field::_fz, field::_vx, field::_vy, field::_vz>>;
+  static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(double, cx, INPUT, REQUIRED, DocString{"aerodynamic coefficient."});
-    ADD_SLOT(double, mu, INPUT, REQUIRED, DocString{"drag coefficient. air = 0.000015"});
-    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(double, cx, INPUT, REQUIRED, DocString{"aerodynamic coefficient."});
+  ADD_SLOT(double, mu, INPUT, REQUIRED, DocString{"drag coefficient. air = 0.000015"});
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
-  public:
-    inline std::string documentation() const override final
-    {
-      return R"EOF(
+ public:
+  inline std::string documentation() const final {
+    return R"EOF(
         This operator computes friction forces related to air or fluide.
 
         YAML example:
@@ -55,18 +53,17 @@ namespace exaDEM
              cx: 0.38
              mu: 0.0000015
         )EOF";
-    }
+  }
 
-    inline void execute() override final
-    {
-      const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
-      QuadraticForceFunctor func{(*cx) * (*mu)};
-      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
-    }
-  };
+  inline void execute() final {
+    const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
+    QuadraticForceFunctor func{(*cx) * (*mu)};
+    compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
+  }
+};
 
-  template <class GridT> using QuadraticForceTmpl = QuadraticForce<GridT>;
-
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(quadratic_force) { OperatorNodeFactory::instance()->register_factory("quadratic_force", make_grid_variant_operator<QuadraticForceTmpl>); }
-} // namespace exaDEM
+// === register factories ===
+ONIKA_AUTORUN_INIT(quadratic_force) {
+  OperatorNodeFactory::instance()->register_factory("quadratic_force", make_grid_variant_operator<QuadraticForce>);
+}
+}  // namespace exaDEM

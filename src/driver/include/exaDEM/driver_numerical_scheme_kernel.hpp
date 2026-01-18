@@ -23,59 +23,39 @@ under the License.
 #include <onika/math/basic_types_operators.h>
 
 // These kernels are closed / idenitcal to the kernels defined whithin the numerical scheme plugin
-// TODO Move them later
-namespace exaDEM
-{
-  using namespace exanb;
-  struct DriverPushToQuaternionFunctor
-  {
-    double m_dt;
-    double m_dt_2;
-    double m_dt2_2;
+namespace exaDEM {
+struct DriverPushToQuaternionFunctor {
+  double m_dt;
+  double m_dt_2;
+  double m_dt2_2;
 
-    ONIKA_HOST_DEVICE_FUNC 
-      inline void operator()(
-          exanb::Quaternion &Q, 
-          exanb::Vec3d &vrot, 
-          const exanb::Vec3d arot) const
-      {
-        Q = Q + dot(Q, vrot) * m_dt;
-        Q = normalize(Q);
-        vrot += m_dt_2 * arot;
-      }
-  };
+  ONIKA_HOST_DEVICE_FUNC
+  inline void operator()(exanb::Quaternion& Q, exanb::Vec3d& vrot, const exanb::Vec3d arot) const {
+    Q = Q + dot(Q, vrot) * m_dt;
+    Q = normalize(Q);
+    vrot += m_dt_2 * arot;
+  }
+};
 
-  struct DriverPushToAngularVelocityFunctor
-  {
-    double m_dt_2;
-    ONIKA_HOST_DEVICE_FUNC 
-      inline void operator()(
-          exanb::Vec3d &vrot, 
-          const exanb::Vec3d &arot) const 
-      { 
-        vrot += arot * m_dt_2; 
-      }
-  };
+struct DriverPushToAngularVelocityFunctor {
+  double m_dt_2;
+  ONIKA_HOST_DEVICE_FUNC
+  inline void operator()(exanb::Vec3d& vrot, const exanb::Vec3d& arot) const { vrot += arot * m_dt_2; }
+};
 
-  struct DriverPushToAngularAccelerationFunctor
-  {
-    ONIKA_HOST_DEVICE_FUNC 
-      inline void operator()(
-          const exanb::Quaternion &Q, 
-          const exanb::Vec3d &mom, 
-          const exanb::Vec3d &vrot, 
-          exanb::Vec3d &arot, 
-          const exanb::Vec3d &inertia) const
-      {
-        using exanb::Quaternion;
-        using exanb::Vec3d;
-        Quaternion Qinv = get_conjugated(Q);
-        const auto omega = Qinv * vrot; // Express omega in the body framework
-        const auto M = Qinv * mom;      // Express torque in the body framework
-        Vec3d domega{ (M.x - (inertia.z - inertia.y) * omega.y * omega.z) / inertia.x, 
-          (M.y - (inertia.x - inertia.z) * omega.z * omega.x) / inertia.y, 
-          (M.z - (inertia.y - inertia.x) * omega.x * omega.y) / inertia.z};
-        arot = Q * domega; // Express arot in the global framework
-      }
-  };
-}
+struct DriverPushToAngularAccelerationFunctor {
+  ONIKA_HOST_DEVICE_FUNC
+  inline void operator()(const exanb::Quaternion& Q, const exanb::Vec3d& mom, const exanb::Vec3d& vrot,
+                         exanb::Vec3d& arot, const exanb::Vec3d& inertia) const {
+    using exanb::Quaternion;
+    using exanb::Vec3d;
+    Quaternion Qinv = get_conjugated(Q);
+    const auto omega = Qinv * vrot;  // Express omega in the body framework
+    const auto M = Qinv * mom;       // Express torque in the body framework
+    Vec3d domega{(M.x - (inertia.z - inertia.y) * omega.y * omega.z) / inertia.x,
+                 (M.y - (inertia.x - inertia.z) * omega.z * omega.x) / inertia.y,
+                 (M.z - (inertia.y - inertia.x) * omega.x * omega.y) / inertia.z};
+    arot = Q * domega;  // Express arot in the global framework
+  }
+};
+}  // namespace exaDEM

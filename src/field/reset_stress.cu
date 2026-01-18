@@ -23,67 +23,56 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <memory>
-#include <exaDEM/set_fields.h>
+#include <exaDEM/set_fields.hpp>
 
-namespace exaDEM
-{
-  using namespace exanb;
+namespace exaDEM {
+template <typename GridT, class = AssertGridHasFields<GridT, field::_type>>
+class ResetStressTensor : public OperatorNode {
+  using ComputeFields = FieldSet<field::_stress>;
+  using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_stress>;
+  static constexpr ComputeFields compute_field_set{};
+  static constexpr ComputeRegionFields compute_region_field_set{};
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+  ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_type>> class ResetStressTensor : public OperatorNode
-  {
-    using ComputeFields = FieldSet<field::_stress>;
-    using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_stress>;
-    static constexpr ComputeFields compute_field_set{};
-    static constexpr ComputeRegionFields compute_region_field_set{};
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
-    ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
-
-    // -----------------------------------------------
-    // ----------- Operator documentation ------------
-    inline std::string documentation() const override final
-    {
-      return R"EOF(
+  // -----------------------------------------------
+  // ----------- Operator documentation ------------
+  inline std::string documentation() const final {
+    return R"EOF(
         This operator resets the stress tensor of all particles. 
  
         YAML example [no option]:
 
           - reset_stress
         )EOF";
-    }
+  }
 
-  public:
-    inline void execute() override final
-    {
-      if (region.has_value())
-      {
-        if (!particle_regions.has_value())
-        {
-          fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
-        }
-
-        if (region->m_nb_operands == 0)
-        {
-          ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
-          region->build_from_expression_string(particle_regions->data(), particle_regions->size());
-        }
-
-        ParticleRegionCSGShallowCopy prcsg = *region;
-        SetRegionFunctor<exanb::Mat3d> func = {prcsg, exanb::make_zero_matrix()};
-        compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
+ public:
+  inline void execute() final {
+    if (region.has_value()) {
+      if (!particle_regions.has_value()) {
+        fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
       }
-      else
-      {
-        SetFunctor<exanb::Mat3d> func = {exanb::make_zero_matrix()};
-        compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context());
+
+      if (region->m_nb_operands == 0) {
+        ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
+        region->build_from_expression_string(particle_regions->data(), particle_regions->size());
       }
+
+      ParticleRegionCSGShallowCopy prcsg = *region;
+      SetRegionFunctor<exanb::Mat3d> func = {prcsg, exanb::make_zero_matrix()};
+      compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
+    } else {
+      SetFunctor<exanb::Mat3d> func = {exanb::make_zero_matrix()};
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context());
     }
-  };
+  }
+};
 
-  template <class GridT> using ResetStressTensorTmpl = ResetStressTensor<GridT>;
+// === register factories ===
+ONIKA_AUTORUN_INIT(reset_stress) {
+  OperatorNodeFactory::instance()->register_factory("reset_stress", make_grid_variant_operator<ResetStressTensor>);
+}
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(reset_stress) { OperatorNodeFactory::instance()->register_factory("reset_stress", make_grid_variant_operator<ResetStressTensorTmpl>); }
-
-} // namespace exaDEM
+}  // namespace exaDEM

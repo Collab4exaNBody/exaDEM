@@ -24,60 +24,58 @@ under the License.
 #include <exanb/core/grid.h>
 #include <memory>
 #include <mpi.h>
-#include <filesystem> // C++17
+#include <filesystem>  // C++17
 
-namespace exaDEM
-{
-  using namespace exanb;
+namespace exaDEM {
 
-  template <typename GridT, class = AssertGridHasFields<GridT>> class WriteStressTensor : public OperatorNode
-  {
-    // attributes processed during computation
-    using ComputeFields = FieldSet<field::_vrot, field::_arot>;
-    static constexpr ComputeFields compute_field_set{};
+template <typename GridT, class = AssertGridHasFields<GridT>>
+class WriteStressTensor : public OperatorNode {
+  // attributes processed during computation
+  using ComputeFields = FieldSet<field::_vrot, field::_arot>;
+  static constexpr ComputeFields compute_field_set{};
 
-    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(Mat3d, stress_tensor, INPUT, REQUIRED, DocString{"Write an Output file containing stress tensors."});
-    ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Write an Output file containing stress tensors."});
-    ADD_SLOT(std::string, avg_stress_tensor_name, INPUT, REQUIRED, DocString{"Write an Output file containing stress tensors."});
-    ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
-    ADD_SLOT(double, dt, INPUT, REQUIRED);
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(Mat3d, stress_tensor, INPUT, REQUIRED, DocString{"Write an Output file containing stress tensors."});
+  ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Write an Output file containing stress tensors."});
+  ADD_SLOT(std::string, avg_stress_tensor_name, INPUT, REQUIRED,
+           DocString{"Write an Output file containing stress tensors."});
+  ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
+  ADD_SLOT(double, dt, INPUT, REQUIRED);
 
-  public:
-    inline std::string documentation() const override final { return R"EOF( Write the average stensor tensor. )EOF"; }
+ public:
+  inline std::string documentation() const final {
+    return R"EOF( Write the average stensor tensor. )EOF";
+  }
 
-    inline void execute() override final
-    {
-      namespace fs = std::filesystem;
-      std::string full_path = (*dir_name) + "/" + (*avg_stress_tensor_name);
-      fs::path path(full_path);
-      const Mat3d &stress = *stress_tensor;
+  inline void execute() final {
+    namespace fs = std::filesystem;
+    std::string full_path = (*dir_name) + "/" + (*avg_stress_tensor_name);
+    fs::path path(full_path);
+    const Mat3d& stress = *stress_tensor;
 
-      int rank;
-      MPI_Comm_rank(*mpi, &rank);
+    int rank;
+    MPI_Comm_rank(*mpi, &rank);
+    fs::create_directory(*dir_name);
+
+    if (rank == 0) {
+      std::ofstream file;
       fs::create_directory(*dir_name);
-
-      if (rank == 0)
-      {
-        std::ofstream file;
-        fs::create_directory(*dir_name);
-        if (!fs::exists(path))
-        {
-          file.open(full_path);
-          file << "Time Sxx Sxy Sxz Syx Syy Syz Szx Szy Szz" << std::endl;
-        }
-        else
-        {
-          file.open(full_path, std::ofstream::in | std::ofstream::ate);
-        }
-        double t = (*dt) * (*timestep);
-        file << t << " " << stress.m11 << " " << stress.m12 << " " << stress.m13 << " " << stress.m21 << " " << stress.m22 << " " << stress.m23 << " " << stress.m31 << " " << stress.m32 << " " << stress.m33 << std::endl;
+      if (!fs::exists(path)) {
+        file.open(full_path);
+        file << "Time Sxx Sxy Sxz Syx Syy Syz Szx Szy Szz" << std::endl;
+      } else {
+        file.open(full_path, std::ofstream::in | std::ofstream::ate);
       }
+      double t = (*dt) * (*timestep);
+      file << t << " " << stress.m11 << " " << stress.m12 << " " << stress.m13 << " " << stress.m21 << " " << stress.m22
+           << " " << stress.m23 << " " << stress.m31 << " " << stress.m32 << " " << stress.m33 << std::endl;
     }
-  };
+  }
+};
 
-  template <class GridT> using WriteStressTensorTmpl = WriteStressTensor<GridT>;
-
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(write_stress_tensor) { OperatorNodeFactory::instance()->register_factory("write_stress_tensor", make_grid_variant_operator<WriteStressTensorTmpl>); }
-} // namespace exaDEM
+// === register factories ===
+ONIKA_AUTORUN_INIT(write_stress_tensor) {
+  OperatorNodeFactory::instance()->register_factory("write_stress_tensor",
+                                                    make_grid_variant_operator<WriteStressTensor>);
+}
+}  // namespace exaDEM

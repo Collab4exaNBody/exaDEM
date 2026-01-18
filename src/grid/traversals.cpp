@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -22,86 +22,81 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <exaDEM/traversal.h>
-#include <memory>
+#include <exaDEM/traversal.hpp>
 
-namespace exaDEM
-{
-  using namespace exanb;
+namespace exaDEM {
+template <typename GridT, class = AssertGridHasFields<GridT>>
+class UpdateTraversal : public OperatorNode {
+  using ComputeFields = FieldSet<>;
+  static constexpr ComputeFields compute_field_set{};
+  template <typename T>
+  using VectorT = onika::memory::CudaMMVector<T>;
 
-  template <typename GridT, class = AssertGridHasFields<GridT>> class UpdateCellList : public OperatorNode
-  {
-    using ComputeFields = FieldSet<>;
-    static constexpr ComputeFields compute_field_set{};
-    template <typename T> using VectorT = onika::memory::CudaMMVector<T>;
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT,
+           DocString{"list of non empty cells [REAL] within the current grid"});
+  ADD_SLOT(Traversal, traversal_all, INPUT_OUTPUT,
+           DocString{"list of non empty cells [ALL = REAL+GHOST] within the current grid"});
 
-    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
-    ADD_SLOT(Traversal, traversal_real, INPUT_OUTPUT, DocString{"list of non empty cells [REAL] within the current grid"});
-    ADD_SLOT(Traversal, traversal_all, INPUT_OUTPUT, DocString{"list of non empty cells [ALL = REAL+GHOST] within the current grid"});
+ public:
+  inline std::string documentation() const final {
+    return R"EOF(
+        This operator update the list of non-empty cells.
+        This operator should be called as long as a particle
+        move from a cell to another cell.)EOF";
+  }
 
-  public:
-    inline std::string documentation() const override final
-    {
-      return R"EOF( This operator update the list of non-empty cells. This operator should be called as long as a particle move from a cell to another cell.
-				        )EOF";
-    }
+  inline void execute() final {
+    const auto& cells = grid->cells();
+    IJK dims = grid->dimension();
+    const ssize_t gl = grid->ghost_layers();
+    auto& tr_real = traversal_real->m_data;
+    auto& tr_all = traversal_all->m_data;
 
-    inline void execute() override final
-    {
-      const auto &cells = grid->cells();
-      IJK dims = grid->dimension();
-      const ssize_t gl = grid->ghost_layers();
-      auto &tr_real = traversal_real->m_data;
-      auto &tr_all = traversal_all->m_data;
+    // reset the cell list
+    tr_real.clear();
+    tr_all.clear();
 
-      // reset the cell list
-      tr_real.clear();
-      tr_all.clear();
+    size_t max_n_particles = 0;
 
-      size_t max_n_particles = 0;
-
-      // iterate over "real" cells
-      // sequential -> need #pragma omp parallel to activate it
-      GRID_OMP_FOR_BEGIN (dims - 2 * gl, _, loc_no_gl)
-      {
-        const IJK loc = loc_no_gl + gl;
-        const size_t i = grid_ijk_to_index(dims, loc);
-        const size_t n_particles = cells[i].size();
-        if (n_particles > 0)
-        {
-          max_n_particles = std::max(max_n_particles, n_particles);
-          tr_real.push_back(i);
-        }
+    // iterate over "real" cells
+    // sequential -> need #pragma omp parallel to activate it
+    GRID_OMP_FOR_BEGIN(dims - 2 * gl, _, loc_no_gl) {
+      const IJK loc = loc_no_gl + gl;
+      const size_t i = grid_ijk_to_index(dims, loc);
+      const size_t n_particles = cells[i].size();
+      if (n_particles > 0) {
+        max_n_particles = std::max(max_n_particles, n_particles);
+        tr_real.push_back(i);
       }
-      GRID_OMP_FOR_END
-      traversal_real->m_max_block_size = max_n_particles;
-
-      max_n_particles = 0;
-      // sequential -> need #pragma omp parallel to activate it
-      GRID_OMP_FOR_BEGIN (dims, _ , loc)
-      {
-        //const IJK loc = loc;
-        const size_t i = grid_ijk_to_index(dims, loc);
-        const size_t n_particles = cells[i].size();
-        if (n_particles > 0)
-        {
-          max_n_particles = std::max(max_n_particles, n_particles);
-          tr_all.push_back(i);
-        }
-      }
-      GRID_OMP_FOR_END
-      traversal_all->m_max_block_size = max_n_particles;
-      
-      traversal_real->iterator = true;
-      traversal_all->iterator = true;
-
-      traversal_real->reorder(REORDER::NONE);
-      traversal_all->reorder(REORDER::NONE);
     }
-  };
+    GRID_OMP_FOR_END
+    traversal_real->m_max_block_size = max_n_particles;
 
-  template <class GridT> using UpdateCellListTmpl = UpdateCellList<GridT>;
+    max_n_particles = 0;
+    // sequential -> need #pragma omp parallel to activate it
+    GRID_OMP_FOR_BEGIN(dims, _, loc) {
+      // const IJK loc = loc;
+      const size_t i = grid_ijk_to_index(dims, loc);
+      const size_t n_particles = cells[i].size();
+      if (n_particles > 0) {
+        max_n_particles = std::max(max_n_particles, n_particles);
+        tr_all.push_back(i);
+      }
+    }
+    GRID_OMP_FOR_END
+    traversal_all->m_max_block_size = max_n_particles;
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(traversals) { OperatorNodeFactory::instance()->register_factory("update_traversals", make_grid_variant_operator<UpdateCellListTmpl>); }
-} // namespace exaDEM
+    traversal_real->iterator = true;
+    traversal_all->iterator = true;
+
+    traversal_real->reorder(REORDER::NONE);
+    traversal_all->reorder(REORDER::NONE);
+  }
+};
+
+// === register factories ===
+ONIKA_AUTORUN_INIT(traversals) {
+  OperatorNodeFactory::instance()->register_factory("update_traversals", make_grid_variant_operator<UpdateTraversal>);
+}
+}  // namespace exaDEM

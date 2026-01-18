@@ -39,27 +39,25 @@ under the License.
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_printer.hpp>
 
-namespace exaDEM
-{
-  using namespace exanb;
-  template <class GridT, class = AssertGridHasFields<GridT>> class WriteParaviewPolyhedraOperator : public OperatorNode
-  {
-    using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_orient>;
-    static constexpr ComputeFields compute_field_set{};
-    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
-    ADD_SLOT(Domain, domain, INPUT, REQUIRED);
-    ADD_SLOT(std::string , filename, INPUT , "output");
-    ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
-    ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
+namespace exaDEM {
+using namespace exanb;
+template <class GridT, class = AssertGridHasFields<GridT>>
+class WriteParaviewPolyhedraOperator : public OperatorNode {
+  using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_orient>;
+  static constexpr ComputeFields compute_field_set{};
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+  ADD_SLOT(std::string, filename, INPUT, "output");
+  ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
+  ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
 
-    // optionnal
-    ADD_SLOT(bool, mpi_rank, INPUT, false, DocString{"Add a field containing the mpi rank."});
+  // optionnal
+  ADD_SLOT(bool, mpi_rank, INPUT, false, DocString{"Add a field containing the mpi rank."});
 
-    public:
-    inline std::string documentation() const override final
-    {
-      return R"EOF( 
+ public:
+  inline std::string documentation() const final {
+    return R"EOF( 
       This operator initialize shapes data structure from a shape input file.
 
       YAML example:
@@ -68,77 +66,72 @@ namespace exaDEM
            filename: "OptionalFilename_%10d"
            mpi_rank: true
                 )EOF";
+  }
+
+  inline void execute() final {
+    // mpi stuff
+    int rank, size;
+    MPI_Comm_rank(*mpi, &rank);
+    MPI_Comm_size(*mpi, &size);
+
+    if (rank == 0) {
+      std::filesystem::create_directories(*filename);
     }
 
-    inline void execute() override final
-    {
-      // mpi stuff
-      int rank, size;
-      MPI_Comm_rank(*mpi, &rank);
-      MPI_Comm_size(*mpi, &size);
+    MPI_Barrier(*mpi);
 
-      if (rank == 0)
-      {
-        std::filesystem::create_directories( *filename );
+    auto& shps = *shapes_collection;
+    const auto cells = grid->cells();
+    const size_t n_cells = grid->number_of_cells();
+    par_poly_helper buffers = {*mpi_rank};  // it conatins streams
+
+    bool defbox = !domain->xform_is_identity();
+    LinearXForm xform;
+    if (defbox) xform.m_matrix = domain->xform();
+
+    // fill string buffers
+    for (size_t cell_a = 0; cell_a < n_cells; cell_a++) {
+      if (grid->is_ghost_cell(cell_a)) {
+        continue;
       }
-
-      MPI_Barrier(*mpi);
-
-      auto &shps = *shapes_collection;
-      const auto cells = grid->cells();
-      const size_t n_cells = grid->number_of_cells();
-      par_poly_helper buffers = {*mpi_rank}; // it conatins streams 
-
-      bool defbox = !domain->xform_is_identity();
-      LinearXForm xform;
-      if(defbox) xform.m_matrix = domain->xform();      
-
-      // fill string buffers
-      for (size_t cell_a = 0; cell_a < n_cells; cell_a++)
-      {
-        if (grid->is_ghost_cell(cell_a))
-          continue;
-        const int n_particles = cells[cell_a].size();
-        auto *__restrict__ rx = cells[cell_a][field::rx];
-        auto *__restrict__ ry = cells[cell_a][field::ry];
-        auto *__restrict__ rz = cells[cell_a][field::rz];
-        auto *__restrict__ vx = cells[cell_a][field::vx];
-        auto *__restrict__ vy = cells[cell_a][field::vy];
-        auto *__restrict__ vz = cells[cell_a][field::vz];
-        auto *__restrict__ type = cells[cell_a][field::type];
-        auto *__restrict__ id = cells[cell_a][field::id];
-        auto *__restrict__ orient = cells[cell_a][field::orient];
-        for (int j = 0; j < n_particles; j++)
-        {
-          exanb::Vec3d pos{rx[j], ry[j], rz[j]};
-          if(defbox) pos = xform.transformCoord(pos);
-          const shape *shp = shps[type[j]];
-          build_buffer_polyhedron(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], buffers);
-        }
-      };
-
-      if (rank == 0)
-      {
-        exaDEM::write_pvtp_polyhedron(*filename, size, buffers);
+      const int n_particles = cells[cell_a].size();
+      auto* __restrict__ rx = cells[cell_a][field::rx];
+      auto* __restrict__ ry = cells[cell_a][field::ry];
+      auto* __restrict__ rz = cells[cell_a][field::rz];
+      auto* __restrict__ vx = cells[cell_a][field::vx];
+      auto* __restrict__ vy = cells[cell_a][field::vy];
+      auto* __restrict__ vz = cells[cell_a][field::vz];
+      auto* __restrict__ type = cells[cell_a][field::type];
+      auto* __restrict__ id = cells[cell_a][field::id];
+      auto* __restrict__ h = cells[cell_a][field::homothety];
+      auto* __restrict__ orient = cells[cell_a][field::orient];
+      for (int j = 0; j < n_particles; j++) {
+        exanb::Vec3d pos{rx[j], ry[j], rz[j]};
+        if (defbox) pos = xform.transformCoord(pos);
+        const shape* shp = shps[type[j]];
+        build_buffer_polyhedron(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], h[j], buffers);
       }
+    };
 
-      if(buffers.mpi_rank) // add ranks 
-      {
-        for(int i = 0 ; i < buffers.n_vertices ; i++)
-        {
-          buffers.ranks << rank << " ";
-        }
-      }
-
-      std::string file = *filename + "/%06d.vtp";
-      file = onika::format_string(file,  rank);
-      exaDEM::write_vtp_polyhedron(file, buffers);
+    if (rank == 0) {
+      exaDEM::write_pvtp_polyhedron(*filename, size, buffers);
     }
-  };
 
-  // this helps older versions of gcc handle the unnamed default second template parameter
-  template <class GridT> using WriteParaviewPolyhedraOperatorTemplate = WriteParaviewPolyhedraOperator<GridT>;
+    if (buffers.mpi_rank) {  // add ranks
+      for (int i = 0; i < buffers.n_vertices; i++) {
+        buffers.ranks << rank << " ";
+      }
+    }
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(write_paraview_polyhedra) { OperatorNodeFactory::instance()->register_factory("write_paraview_polyhedra", make_grid_variant_operator<WriteParaviewPolyhedraOperatorTemplate>); }
-} // namespace exaDEM
+    std::string file = *filename + "/%06d.vtp";
+    file = onika::format_string(file, rank);
+    exaDEM::write_vtp_polyhedron(file, buffers);
+  }
+};
+
+// === register factories ===
+ONIKA_AUTORUN_INIT(write_paraview_polyhedra) {
+  OperatorNodeFactory::instance()->register_factory("write_paraview_polyhedra",
+                                                    make_grid_variant_operator<WriteParaviewPolyhedraOperator>);
+}
+}  // namespace exaDEM

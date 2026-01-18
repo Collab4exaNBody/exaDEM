@@ -19,5 +19,5 @@ under the License.
 #pragma once
 
 // This file has been splitted
-#include<exaDEM/shape_detection_core.hpp>
-#include<exaDEM/shape_detection_api.hpp>
+#include <exaDEM/shape_detection_core.hpp>
+#include <exaDEM/shape_detection_api.hpp>

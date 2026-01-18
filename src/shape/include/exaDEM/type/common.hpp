@@ -29,49 +29,49 @@ under the License.
 typedef double real;
 typedef unsigned int uint;
 
-class Common
-{
-public:
+class Common {
+ public:
   char sep;
   int precision;
 
-  static Common &Instance()
-  {
+  static Common& Instance() {
     static Common inst;
     return inst;
   }
 
-  void set_precision(int p)
-  {
-    if (p <= 0)
+  void set_precision(int p) {
+    if (p <= 0) {
       precision = std::numeric_limits<double>::digits10 + 1;
-    else
+    } else {
       precision = p;
+    }
   }
 
-  void sepFromKeyword(std::string &kw)
-  {
-    if (kw == "tab")
+  void sepFromKeyword(std::string& kw) {
+    if (kw == "tab") {
       sep = '\t';
-    else if (kw == "semicolon")
+    } else if (kw == "semicolon") {
       sep = ';';
-    else if (kw == "space")
+    } else if (kw == "space") {
       sep = ' ';
-    else
+    } else {
       sep = ' ';
+    }
   }
 
-  std::string keywordFromSep()
-  {
-    if (sep == ' ')
+  std::string keywordFromSep() {
+    if (sep == ' ') {
       return std::string("space");
-    if (sep == '\t')
+    }
+    if (sep == '\t') {
       return std::string("tab");
-    if (sep == ';')
+    }
+    if (sep == ';') {
       return std::string("semicolon");
+    }
     return std::string("space");
   }
 
-private:
+ private:
   Common() : sep(' '), precision(std::numeric_limits<double>::digits10 + 1) {}
 };

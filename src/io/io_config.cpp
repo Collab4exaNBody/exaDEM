@@ -20,21 +20,21 @@ under the License.
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
 
-namespace exaDEM
-{
-  using namespace exanb;
+namespace exaDEM {
+using namespace exanb;
 
-  class IOConfigNode : public OperatorNode
-  {
-    // save file
-    ADD_SLOT(std::string, dir_name, INPUT_OUTPUT, "ExaDEMOutputDir", DocString{"Main output directory."});
-    ADD_SLOT(std::string, log_name, INPUT_OUTPUT, "log.txt", DocString{"Write an Output file containing log lines."});
-    ADD_SLOT(std::string, avg_stress_tensor_name, INPUT_OUTPUT, "AvgStressTensor.txt", DocString{"Write an Output file containing stress tensors."});
-    ADD_SLOT(std::string, interaction_basename, INPUT_OUTPUT, "InteractionOutputDir-", DocString{"Write an Output file containing interactions."});
+class IOConfigNode : public OperatorNode {
+  // save file
+  ADD_SLOT(std::string, dir_name, INPUT_OUTPUT, "ExaDEMOutputDir", DocString{"Main output directory."});
+  ADD_SLOT(std::string, log_name, INPUT_OUTPUT, "log.txt", DocString{"Write an Output file containing log lines."});
+  ADD_SLOT(std::string, avg_stress_tensor_name, INPUT_OUTPUT, "AvgStressTensor.txt",
+           DocString{"Write an Output file containing stress tensors."});
+  ADD_SLOT(std::string, interaction_basename, INPUT_OUTPUT, "InteractionOutputDir-",
+           DocString{"Write an Output file containing interactions."});
 
-    public:
-    inline std::string documentation() const override final { 
-      return R"EOF(
+ public:
+  inline std::string documentation() const final {
+    return R"EOF(
       This operator defines the tree structure of output files.
 
       YAML example:
@@ -42,30 +42,33 @@ namespace exaDEM
         - config_io:
            dir_name: "YourExaDEMOutputDirName"
            log_name: "ExaDEMLogs.txt"
-      )EOF"; }
+      )EOF";
+  }
 
-      inline bool is_sink() const override final { return true; }
+  inline bool is_sink() const final {
+    return true;
+  }
 
-    inline void execute() override final
-    {
+  inline void execute() final {
+    std::string dirName = *dir_name;
+    std::string logName = dirName + "/" + (*log_name);
+    std::string avgStressTensorName = dirName + "/" + (*avg_stress_tensor_name);
+    std::string interactionBasename = dirName + "/ExaDEMAnalyses/" + (*interaction_basename);
+    lout << std::endl;
+    lout << "==================== IO Directory Configuration =================" << std::endl;
+    lout << "Directory Name:             " << dirName << std::endl;
+    lout << "Log Filename:               " << logName << std::endl;
+    lout << "Avg Stress Tensor Filename: " << avgStressTensorName << std::endl;
+    lout << "Interaction Basename Dir:   " << interactionBasename << std::endl;
+    lout << "Paraview Files Directory:   " << dirName + "/ParaviewOutputs/" << std::endl;
+    lout << "Checkpoint Files Directory: " << dirName + "/CheckpointFiles/" << std::endl;
+    lout << "=================================================================" << std::endl;
+  }
+};
 
-      std::string dirName = *dir_name;
-      std::string logName = dirName + "/" + (*log_name);
-      std::string avgStressTensorName = dirName + "/" + (*avg_stress_tensor_name);
-      std::string interactionBasename = dirName + "/ExaDEMAnalyses/" + (*interaction_basename);
-      lout << std::endl;
-      lout << "==================== IO Directory Configuration =================" << std::endl;
-      lout << "Directory Name:             " << dirName << std::endl;
-      lout << "Log Filename:               " << logName << std::endl;
-      lout << "Avg Stress Tensor Filename: " << avgStressTensorName << std::endl;
-      lout << "Interaction Basename Dir:   " << interactionBasename << std::endl;
-      lout << "Paraview Files Directory:   " << dirName + "/ParaviewOutputs/" << std::endl;
-      lout << "Checkpoint Files Directory: " << dirName + "/CheckpointFiles/" << std::endl;
-      lout << "=================================================================" << std::endl;
-    }
-  };
+// === register factories ===
+ONIKA_AUTORUN_INIT(io_config) {
+  OperatorNodeFactory::instance()->register_factory("io_config", make_simple_operator<IOConfigNode>);
+}
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(io_config) { OperatorNodeFactory::instance()->register_factory("io_config", make_simple_operator<IOConfigNode>); }
-
-} // namespace exaDEM
+}  // namespace exaDEM

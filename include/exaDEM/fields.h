@@ -14,6 +14,7 @@
 XNB_DECLARE_FIELD(double, mass, "particle mass");
 XNB_DECLARE_FIELD(double, homothety, "particle shape homothety");
 XNB_DECLARE_FIELD(double, radius, "radius");
+XNB_DECLARE_FIELD(uint32_t, cluster, "cluster");
 XNB_DECLARE_FIELD(::exanb::Quaternion, orient, "angular position");
 XNB_DECLARE_FIELD(::exanb::Vec3d, mom, "moment");
 XNB_DECLARE_FIELD(::exanb::Vec3d, vrot, "angular velocity");     //
@@ -30,8 +31,12 @@ namespace exaDEM
       // rx, ry and rz are added implicitly
       field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type, field::_stress
       >;
+  using FragmentationDEMFieldSet = FieldSet<
+      // rx, ry and rz are added implicitly
+      field::_cluster, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type, field::_stress
+      >;
   
-  static inline constexpr exanb::FieldSets<DEMFieldSet> available_field_sets_v = {};
+  static inline constexpr exanb::FieldSets<DEMFieldSet, FragmentationDEMFieldSet> available_field_sets_v = {};
 }
 
 #define HAS_POSITION_BACKUP_FIELDS false

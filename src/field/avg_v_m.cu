@@ -25,81 +25,67 @@ under the License.
 #include <exanb/compute/reduce_cell_particles.h>
 #include <memory>
 
-#include <exaDEM/traversal.h>
+#include <exaDEM/traversal.hpp>
 
-
-namespace exaDEM
-{
-  using namespace exanb;
-
-  ONIKA_HOST_DEVICE_FUNC inline void ATOMIC_ADD(Vec3d& a, const Vec3d& b)
-  {
-     ONIKA_CU_ATOMIC_ADD(a.x, b.x);
-     ONIKA_CU_ATOMIC_ADD(a.y, b.y);
-     ONIKA_CU_ATOMIC_ADD(a.z, b.z);
-  }
-
-  struct ParticleVelMassValue
-  {
-    double m_tot; // the number of particles of a type
-    Vec3d v_m_tot; // sum of the v_i * m_i
-    void print() 
-    { 
-      lout << "{mass tot: " << m_tot << ", velocity * mass tot: " << v_m_tot << "}" << std::endl; 
-    }
-  };
-
-  struct ReduceParticleVelMassFunctor
-  {
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(ParticleVelMassValue& local, const double vx, const double vy, const double vz, const double mass, reduce_thread_local_t = {}) const
-    {
-      Vec3d v = {vx, vy, vz};
-      local.v_m_tot += v * mass; 
-      local.m_tot += mass;
-    }
-
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(ParticleVelMassValue& global, const ParticleVelMassValue& local, reduce_thread_block_t) const
-    {
-      ONIKA_CU_ATOMIC_ADD(global.m_tot, local.m_tot);
-      ATOMIC_ADD(global.v_m_tot, local.v_m_tot);
-    }
-
-    ONIKA_HOST_DEVICE_FUNC inline void operator()(ParticleVelMassValue& global, const ParticleVelMassValue& local, reduce_global_t) const
-    {
-      ONIKA_CU_ATOMIC_ADD(global.m_tot, local.m_tot);
-      ATOMIC_ADD(global.v_m_tot, local.v_m_tot);
-    }
-  };
+namespace exaDEM {
+ONIKA_HOST_DEVICE_FUNC inline void ATOMIC_ADD(Vec3d& a, const Vec3d& b) {
+  ONIKA_CU_ATOMIC_ADD(a.x, b.x);
+  ONIKA_CU_ATOMIC_ADD(a.y, b.y);
+  ONIKA_CU_ATOMIC_ADD(a.z, b.z);
 }
 
-namespace exanb
-{
-  template <> struct ReduceCellParticlesTraits<exaDEM::ReduceParticleVelMassFunctor>
-  {
-    static inline constexpr bool RequiresBlockSynchronousCall = false;
-    static inline constexpr bool RequiresCellParticleIndex = false;
-    static inline constexpr bool CudaCompatible = true;
-  };
-} // namespace exanb
+struct ParticleVelMassValue {
+  double m_tot;   // the number of particles of a type
+  Vec3d v_m_tot;  // sum of the v_i * m_i
+  void print() { lout << "{mass tot: " << m_tot << ", velocity * mass tot: " << v_m_tot << "}" << std::endl; }
+};
 
-namespace exaDEM
-{
-  using namespace exanb;
+struct ReduceParticleVelMassFunctor {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(ParticleVelMassValue& local, const double vx, const double vy,
+                                                const double vz, const double mass, reduce_thread_local_t = {}) const {
+    Vec3d v = {vx, vy, vz};
+    local.v_m_tot += v * mass;
+    local.m_tot += mass;
+  }
 
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz,  field::_mass>> 
-  class GetAvgVelMass : public OperatorNode
-  {
-    using ReduceFields = FieldSet<field::_vx, field::_vy, field::_vz, field::_mass>;
-    static constexpr ReduceFields reduce_field_set{};
-    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
-    ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
-    ADD_SLOT(Vec3d, out, OUTPUT, DocString("Sum[v_i*m_i] / mass_{systeme}"));
-    // Remark : do not hesite to use rebind to rename the output variable
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(ParticleVelMassValue& global, const ParticleVelMassValue& local,
+                                                reduce_thread_block_t) const {
+    ONIKA_CU_ATOMIC_ADD(global.m_tot, local.m_tot);
+    ATOMIC_ADD(global.v_m_tot, local.v_m_tot);
+  }
 
-    inline std::string documentation() const override final
-    {
-      return R"EOF(
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(ParticleVelMassValue& global, const ParticleVelMassValue& local,
+                                                reduce_global_t) const {
+    ONIKA_CU_ATOMIC_ADD(global.m_tot, local.m_tot);
+    ATOMIC_ADD(global.v_m_tot, local.v_m_tot);
+  }
+};
+}  // namespace exaDEM
+
+namespace exanb {
+template <>
+struct ReduceCellParticlesTraits<exaDEM::ReduceParticleVelMassFunctor> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool RequiresCellParticleIndex = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+}  // namespace exanb
+
+namespace exaDEM {
+using namespace exanb;
+
+template <typename GridT, class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz, field::_mass>>
+class GetAvgVelMass : public OperatorNode {
+  using ReduceFields = FieldSet<field::_vx, field::_vy, field::_vz, field::_mass>;
+  static constexpr ReduceFields reduce_field_set{};
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(Vec3d, out, OUTPUT, DocString("Sum[v_i*m_i] / mass_{systeme}"));
+  // Remark : do not hesite to use rebind to rename the output variable
+
+  inline std::string documentation() const final {
+    return R"EOF(
         This operator returns out = Sum_{particles p}(v_p*m_p) / mass_{systeme}.
         Remark: do not hesite to use rebind to rename the output variable
 
@@ -111,34 +97,33 @@ namespace exaDEM
             body:
               - avg_v_m
         )EOF";
-    }
+  }
 
-  public:
-    inline void execute() override final
-    {
-      const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
+ public:
+  inline void execute() final {
+    const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
 
-      // Reduce over the subdomain
-      ParticleVelMassValue value = {0.0, Vec3d{0.0,0.0,0.0}}; 
-      ReduceParticleVelMassFunctor func;
-      reduce_cell_particles(*grid, false, func, value, reduce_field_set, parallel_execution_context(), {}, rcpo);
+    // Reduce over the subdomain
+    ParticleVelMassValue value = {0.0, Vec3d{0.0, 0.0, 0.0}};
+    ReduceParticleVelMassFunctor func;
+    reduce_cell_particles(*grid, false, func, value, reduce_field_set, parallel_execution_context(), {}, rcpo);
 
-      // Reduce over MPI processes
-      double local[4] = {value.m_tot, value.v_m_tot.x, value.v_m_tot.y, value.v_m_tot.z};
-      double global[4] = {0.0, 0.0, 0.0, 0.0}; // count, x, y, z
-      MPI_Allreduce(&local, &global, 4, MPI_DOUBLE, MPI_SUM, *mpi);
+    // Reduce over MPI processes
+    double local[4] = {value.m_tot, value.v_m_tot.x, value.v_m_tot.y, value.v_m_tot.z};
+    double global[4] = {0.0, 0.0, 0.0, 0.0};  // count, x, y, z
+    MPI_Allreduce(&local, &global, 4, MPI_DOUBLE, MPI_SUM, *mpi);
 
-      assert(global[0] != 0.0);
-      Vec3d v_m = {global[1] / global[0], global[2] / global[0], global[3] / global[0]};
+    assert(global[0] != 0.0);
+    Vec3d v_m = {global[1] / global[0], global[2] / global[0], global[3] / global[0]};
 
-      // Set the result into the output slot
-      *out = -v_m; // 
-    }
-  };
+    // Set the result into the output slot
+    *out = -v_m;  //
+  }
+};
 
-  template <class GridT> using GetAvgVelMassTmpl = GetAvgVelMass<GridT>;
+// === register factories ===
+ONIKA_AUTORUN_INIT(avg_vel_m) {
+  OperatorNodeFactory::instance()->register_factory("avg_v_m", make_grid_variant_operator<GetAvgVelMass>);
+}
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(avg_vel_m) { OperatorNodeFactory::instance()->register_factory("avg_v_m", make_grid_variant_operator<GetAvgVelMassTmpl>); }
-
-} // namespace exaDEM
+}  // namespace exaDEM

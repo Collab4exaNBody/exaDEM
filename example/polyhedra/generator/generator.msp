@@ -19,6 +19,7 @@ init_new_particles:
      polyhedra: true
      type:             [ Octahedron ]
      random_quaterion: [       true ]
+     region: AREA
 
 input_data:
   - init_rcb_grid

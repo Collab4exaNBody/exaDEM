@@ -28,49 +28,44 @@ under the License.
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/div_field_volume.hpp>
 
-namespace exaDEM
-{
-  using namespace exanb;
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_stress>> class DivStressV : public OperatorNode
-  {
-    using ComputeFieldType = FieldSet<field::_type, field::_stress>;
-    using ComputeFieldRadius = FieldSet<field::_radius, field::_stress>;
-    static constexpr ComputeFieldType compute_field_set_type{};
-    static constexpr ComputeFieldRadius compute_field_set_radius{};
+namespace exaDEM {
+template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_stress>>
+class DivStressV : public OperatorNode {
+  using ComputeFieldType = FieldSet<field::_type, field::_stress>;
+  using ComputeFieldRadius = FieldSet<field::_radius, field::_stress>;
+  static constexpr ComputeFieldType compute_field_set_type{};
+  static constexpr ComputeFieldRadius compute_field_set_radius{};
 
-    ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-    ADD_SLOT(shapes, shapes_collection, INPUT, OPTIONAL, DocString{"Collection of shapes"});
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(shapes, shapes_collection, INPUT, OPTIONAL, DocString{"Collection of shapes"});
 
-    public:
-    inline std::string documentation() const override final
-    {
-      return R"EOF(
+ public:
+  inline std::string documentation() const final {
+    return R"EOF(
         This operator divides the stress tensor field by the volume (spheres or polyhedra).
 
         YAML example:
 
           - set_div_stress_v
         )EOF";
-    }
+  }
 
-    inline void execute() override final
+  inline void execute() final {
+    if (shapes_collection.has_value())  // polyhedra
     {
-      if( shapes_collection.has_value()) // polyhedra
-      {
-        poly_div_field_volume<exanb::Mat3d> func = {shapes_collection->data()};
-        compute_cell_particles(*grid, false, func, compute_field_set_type, parallel_execution_context());
-      }
-      else // spheres
-      {
-        sphere_div_field_volume<exanb::Mat3d> func = {};
-        compute_cell_particles(*grid, false, func, compute_field_set_radius, parallel_execution_context());
-      }
+      poly_div_field_volume<exanb::Mat3d> func = {shapes_collection->data()};
+      compute_cell_particles(*grid, false, func, compute_field_set_type, parallel_execution_context());
+    } else  // spheres
+    {
+      sphere_div_field_volume<exanb::Mat3d> func = {};
+      compute_cell_particles(*grid, false, func, compute_field_set_radius, parallel_execution_context());
     }
-  };
+  }
+};
 
-  template <class GridT> using DivStressVTmpl = DivStressV<GridT>;
+// === register factories ===
+ONIKA_AUTORUN_INIT(set_div_stress_v) {
+  OperatorNodeFactory::instance()->register_factory("set_div_stress_v", make_grid_variant_operator<DivStressV>);
+}
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(set_div_stress_v) { OperatorNodeFactory::instance()->register_factory("set_div_stress_v", make_grid_variant_operator<DivStressVTmpl>); }
-
-} // namespace exaDEM
+}  // namespace exaDEM

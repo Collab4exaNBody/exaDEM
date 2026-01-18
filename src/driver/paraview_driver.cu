@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -16,84 +16,79 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
-#include <exanb/core/domain.h>
 #include <mpi.h>
-#include <memory>
-#include <exaDEM/stl_mesh.h>
-#include <exaDEM/drivers.h>
-#include <exaDEM/paraview_driver.hpp>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
 #include <onika/string_utils.h>
+#include <exanb/core/domain.h>
 
+#include <exaDEM/drivers.hpp>
+#include <exaDEM/paraview_driver.hpp>
 
-namespace exaDEM
-{
+namespace exaDEM {
+class ParaviewDriver : public OperatorNode {
+  static constexpr Vec3d null = {0.0, 0.0, 0.0};
 
-  using namespace exanb;
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+  ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
+  ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
+  ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
 
-  class ParaviewDriver : public OperatorNode
-  {
-    static constexpr Vec3d null = {0.0, 0.0, 0.0};
+ public:
+  inline std::string documentation() const final {
+    return R"EOF(
+           This operator creates a parview file of stl meshes.)EOF";
+  }
 
+  inline void execute() final {
+    std::string path = *dir_name + "/ParaviewOutputFiles/";
 
-    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(Domain, domain, INPUT, REQUIRED);
-    ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
-    ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});
+    int mpi_rank;
+    int mpi_size;
+    MPI_Comm_rank(*mpi, &mpi_rank);
+    MPI_Comm_size(*mpi, &mpi_size);
 
-  public:
-    inline std::string documentation() const override final { return R"EOF( This operator creates a parview file of stl meshes.)EOF"; }
+    if (mpi_rank == 0) {
+      std::filesystem::create_directories(path);
+    }
+    MPI_Barrier(*mpi);
 
-    inline void execute() override final
-    {
-      std::string path = *dir_name + "/ParaviewOutputFiles/";
-
-      int mpi_rank;
-      int mpi_size;
-      MPI_Comm_rank(*mpi, &mpi_rank);
-      MPI_Comm_size(*mpi, &mpi_size);
-
-      std::vector<info_ball> balls;
-      std::vector<info_surface> surfaces;
-      for (size_t id = mpi_rank; id < drivers->get_size(); id+=mpi_size)
-      {
-        if (drivers->type(id) == DRIVER_TYPE::BALL)
-        {
-          exaDEM::Ball &ball = drivers->get_typed_driver<exaDEM::Ball>(id); //std::get<exaDEM::Ball>(drivers->data(id));
-          balls.push_back({int(id), ball.center, ball.radius, ball.vel});
-        }
-        if (drivers->type(id) == DRIVER_TYPE::SURFACE)
-        {
-          exaDEM::Surface &surface = drivers->get_typed_driver<exaDEM::Surface>(id); //std::get<exaDEM::Surface>(drivers->data(id));
-          surfaces.push_back({int(id), surface.normal, surface.offset, surface.vel});
-        }
-        if (drivers->type(id) == DRIVER_TYPE::STL_MESH)
-        {
-          exaDEM::Stl_mesh &mesh = drivers->get_typed_driver<exaDEM::Stl_mesh>(id); //std::get<exaDEM::Stl_mesh>(drivers->data(id));
-          mesh.shp.write_move_paraview(path, *timestep, mesh.center, mesh.quat);
-        }
+    std::vector<info_ball> balls;
+    std::vector<info_surface> surfaces;
+    for (size_t id = mpi_rank; id < drivers->get_size(); id += mpi_size) {
+      if (drivers->type(id) == DRIVER_TYPE::BALL) {
+        exaDEM::Ball& ball = drivers->get_typed_driver<exaDEM::Ball>(id);
+        balls.push_back({static_cast<int>(id), ball.center, ball.radius, ball.vel});
       }
- 
-      if( balls.size() > 0 )
-      {
-        std::filesystem::path dir(path);
-        std::string driver_ball_name = "driver_balls_%010d.vtk";
-        driver_ball_name = onika::format_string(driver_ball_name,  *timestep);
-        write_balls_paraview(balls, path, driver_ball_name);
+      if (drivers->type(id) == DRIVER_TYPE::SURFACE) {
+        exaDEM::Surface& surface = drivers->get_typed_driver<exaDEM::Surface>(id);
+        surfaces.push_back({static_cast<int>(id), surface.normal, surface.offset, surface.vel});
       }
-      if( surfaces.size() > 0 )
-      {
-        std::filesystem::path dir(path);
-        std::string driver_surface_name = "driver_surfaces_%010d.vtk";
-        driver_surface_name = onika::format_string(driver_surface_name,  *timestep);
-        write_surfaces_paraview(*domain, surfaces, path, driver_surface_name);
+      if (drivers->type(id) == DRIVER_TYPE::STL_MESH) {
+        exaDEM::Stl_mesh& mesh = drivers->get_typed_driver<exaDEM::Stl_mesh>(id);
+        mesh.shp.write_move_paraview(path, *timestep, mesh.center, mesh.quat);
       }
     }
-  };
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(paraview_driver) { OperatorNodeFactory::instance()->register_factory("paraview_driver", make_simple_operator<ParaviewDriver>); }
-} // namespace exaDEM
+    if (balls.size() > 0) {
+      std::filesystem::path dir(path);
+      std::string driver_ball_name = "driver_balls_%010d.vtk";
+      driver_ball_name = onika::format_string(driver_ball_name, *timestep);
+      write_balls_paraview(balls, path, driver_ball_name);
+    }
+    if (surfaces.size() > 0) {
+      std::filesystem::path dir(path);
+      std::string driver_surface_name = "driver_surfaces_%010d.vtk";
+      driver_surface_name = onika::format_string(driver_surface_name, *timestep);
+      write_surfaces_paraview(*domain, surfaces, path, driver_surface_name);
+    }
+  }
+};
+
+// === register factories ===
+ONIKA_AUTORUN_INIT(paraview_driver) {
+  OperatorNodeFactory::instance()->register_factory("paraview_driver", make_simple_operator<ParaviewDriver>);
+}
+}  // namespace exaDEM
