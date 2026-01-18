@@ -24,6 +24,7 @@ input_data:
   - set_rand_velocity:
      var: 0.1
      mean: [0.0,0.0,0.0]
+  - set_homothety
   - set_density:
      density: 0.02
   - set_rand_vrot_arot

@@ -77,6 +77,7 @@ struct InteractionWrapper {
   double* mom_z;
   // Fragmentation
   double* en;
+  Vec3d* tds;
   double* et;
   double* dn0;
   double* criterion;
@@ -116,6 +117,7 @@ struct InteractionWrapper {
       ft_z = vector_data(data.ft_z);
 
       en = vector_data(data.en);
+      tds = vector_data(data.tds);
       et = vector_data(data.et);
       dn0 = vector_data(data.dn0);
       criterion = vector_data(data.criterion);
@@ -150,7 +152,7 @@ struct InteractionWrapper {
       return Interaction{ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}};
     } else if constexpr (IT == InnerBond) {
       return InnerBondInteraction{
-          ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, en[idx], et[idx], dn0[idx], criterion[idx], unbroken[idx]};
+          ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, en[idx], tds[idx], et[idx], dn0[idx], criterion[idx], unbroken[idx]};
     } else {
       // static_assert(always_false<T>::value, "Unsupported interaction type");
     }
@@ -158,6 +160,10 @@ struct InteractionWrapper {
 
   ONIKA_HOST_DEVICE_FUNC inline double& En(const uint64_t idx) const {
     return en[idx];
+  }
+
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& Tds(const uint64_t idx) const {
+    return tds[idx];
   }
 
   ONIKA_HOST_DEVICE_FUNC inline double& Et(const uint64_t idx) const {
@@ -189,6 +195,7 @@ struct InteractionWrapper {
     ft_y[idx] = item.friction.y;
     ft_z[idx] = item.friction.z;
     en[idx] = item.en;
+    tds[idx] = item.tds;
     et[idx] = item.et;
     dn0[idx] = item.dn0;
     criterion[idx] = item.criterion;

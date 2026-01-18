@@ -333,6 +333,7 @@ class RSAVolFrac : public OperatorNode {
       p[field::ry] = r.y;
       p[field::rz] = r.z;
       ParticleTuple t = p;
+      t[field::homothety] = 1.0;
       if (is_region) {
         if (prcsg.contains(r)) {
           grid->cell(loc).push_back(t, grid->cell_allocator());
@@ -353,11 +354,11 @@ class RSAVolFrac : public OperatorNode {
     lout << "Domain bounds    = " << domain->bounds() << std::endl;
     lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
     lout << "Real size        = "
-         << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
-         << std::endl;
+        << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
+    << std::endl;
     lout << "Cell size        = " << domain->cell_size() << std::endl;
     lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension())
-         << " cells)" << std::endl;
+        << " cells)" << std::endl;
     lout << "=================================" << std::endl;
     grid->rebuild_particle_offsets();
   }

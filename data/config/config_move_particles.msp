@@ -82,6 +82,7 @@ particle_generator:
   body:
     - message: { mesg: "The particle generator is triggered ...", endl: true} 
     - add_generated_particles
+    - check_homothety  ## check all particles (on CPU)
 
 parallel_update_particles:
   - migrate_particles

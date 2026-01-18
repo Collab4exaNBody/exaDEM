@@ -50,6 +50,11 @@ class ParaviewDriver : public OperatorNode {
     MPI_Comm_rank(*mpi, &mpi_rank);
     MPI_Comm_size(*mpi, &mpi_size);
 
+    if (mpi_rank == 0) {
+      std::filesystem::create_directories(path);
+    }
+    MPI_Barrier(*mpi);
+
     std::vector<info_ball> balls;
     std::vector<info_surface> surfaces;
     for (size_t id = mpi_rank; id < drivers->get_size(); id += mpi_size) {

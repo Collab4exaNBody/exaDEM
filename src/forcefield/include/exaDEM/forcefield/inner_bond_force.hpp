@@ -26,7 +26,9 @@ namespace exaDEM {
 ONIKA_HOST_DEVICE_FUNC
 inline void force_law_core(const double dn,
                            const Vec3d& n,  // -normal
-                           const double dn0, const double dt, const InnerBondParams& ibp, const double meff, double& En,
+                           const double dn0, const double dt, const InnerBondParams& ibp, const double meff,
+                           double& En,
+                           Vec3d& tds,  // cummalative tangential displacement
                            double& Et,
                            Vec3d& vft,  // tangential force between particle i and j
                            const Vec3d& contact_position,
@@ -55,6 +57,7 @@ inline void force_law_core(const double dn,
 
   // === Tangential force (friction)
   const Vec3d ft = compute_tangential_force(dt, vn, n, vel);
+  tds += ft;
   vft += ibp.kt * ft;
   vft += exaDEM::contribution_stick_tangential_force(damp, vn, n, vel);
 
@@ -66,6 +69,6 @@ inline void force_law_core(const double dn,
   } else {
     En = 0.5 * ibp.kn * (dn - dn0) * (dn - dn0);
   }
-  Et = 0.5 * ibp.kt * dot(ft, ft);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
+  Et += 0.5 * ibp.kt * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
 }
 }  // namespace exaDEM

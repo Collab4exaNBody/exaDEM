@@ -132,7 +132,7 @@ struct contact_law {
 
     // === positions
     const Vec3d ri = get_r(cell_i, i.p);
-    const Vec3d rj = get_r(cell_j, i.p);
+    const Vec3d rj = get_r(cell_j, j.p);
 
     // === positions
     // === radii

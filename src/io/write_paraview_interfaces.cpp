@@ -110,6 +110,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
         buffers.vertices << v.x << " " << v.y << " " << v.z << " ";
         buffers.ids << i << " ";
         buffers.connectivities << buffers.n_vertices++ << " ";
+        buffers.tds << interaction.tds << " ";
         buffers.et << interaction.et << " ";
         buffers.en << interaction.en << " ";
         E += (interaction.en + interaction.et) / interaction.criterion;

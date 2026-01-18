@@ -27,7 +27,7 @@ under the License.
 #include <exaDEM/interaction/placeholder_interaction.hpp>
 
 namespace exaDEM {
-
+using exanb::Vec3d;
 /**
  * @brief Structure representing the Structure of Arrays data structure for the interactions in a Discrete Element
  * Method (DEM) simulation.
@@ -47,6 +47,7 @@ struct ClassifierContainer {
   VectorT<double> mom_z; /**< List of the z coordinate for the moment.  */
 
   VectorT<double> en;        /**< List of the en.  */
+  VectorT<Vec3d> tds;        /**< List of cumulative tangential displacement.  */
   VectorT<double> et;        /**< List of the et.  */
   VectorT<double> dn0;       /**< List of the dn0.  */
   VectorT<double> criterion; /**< List of the criterion.  */
@@ -91,7 +92,7 @@ struct ClassifierContainer {
     }
     if constexpr (IT == InteractionType::InnerBond) {
       // ldbg << "Func applied on [ft_x, ft_y, ft_z, en, et, dn0, s(surface)]" << std::endl;
-      apply_on_fields(func, ft_x, ft_y, ft_z, en, et, dn0, criterion, unbroken);
+      apply_on_fields(func, ft_x, ft_y, ft_z, en, tds, et, dn0, criterion, unbroken);
     }
   }
 
@@ -162,6 +163,7 @@ struct ClassifierContainer {
       ft_z[idx] = I.friction.z;
 
       en[idx] = I.en;
+      tds[idx] = I.tds;
       et[idx] = I.et;
       dn0[idx] = I.dn0;
       criterion[idx] = I.criterion;
@@ -241,6 +243,7 @@ struct ClassifierContainer {
       exaDEM::InnerBondInteraction res{ip,
                                        {vector_data(ft_x)[id], vector_data(ft_y)[id], vector_data(ft_z)[id]},
                                        vector_data(en)[id],
+                                       vector_data(tds)[id],
                                        vector_data(et)[id],
                                        vector_data(dn0)[id],
                                        vector_data(criterion)[id],
@@ -273,6 +276,7 @@ struct ClassifierContainer {
       vector_data(ft_z)[id] = I.friction.z;
 
       vector_data(en)[id] = I.en;
+      vector_data(tds)[id] = I.tds;
       vector_data(et)[id] = I.et;
       vector_data(dn0)[id] = I.dn0;
       vector_data(criterion)[id] = I.criterion;

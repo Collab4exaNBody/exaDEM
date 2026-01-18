@@ -130,6 +130,7 @@ simulation:
     - grid_flavor
     - particle_regions
     - input_data
+    - check_homothety 
     - init_rcut_max
     - init_prolog
     - grid_post_processing

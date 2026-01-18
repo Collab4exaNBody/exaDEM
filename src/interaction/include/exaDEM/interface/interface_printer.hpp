@@ -16,6 +16,7 @@ struct paraview_interface_helper {
   std::stringstream connectivities;
   std::stringstream fracturation;
   std::stringstream en;
+  std::stringstream tds;
   std::stringstream et;
 };
 
@@ -53,8 +54,12 @@ inline void write_vtp_interface(std::string name, paraview_interface_helper& buf
   outFile << buffers.en.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
 
+  outFile << "      <DataArray type=\"Float64\" Name=\"Tangential Displacement\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+  outFile << buffers.tds.rdbuf() << std::endl;
+
   outFile << "      <DataArray type=\"Float64\" Name=\"Et\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
   outFile << buffers.et.rdbuf() << std::endl;
+
   outFile << "      </DataArray>" << std::endl;
 
   outFile << "    </PointData>" << std::endl;
@@ -94,6 +99,7 @@ inline void write_pvtp_interface(std::string filename, size_t number_of_files, p
   }
   outFile << "      <PDataArray type=\"Float64\" Name=\"Fracturation rate\"  NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "      <PDataArray type=\"Float64\" Name=\"En\"  NumberOfComponents=\"1\"/>" << std::endl;
+  outFile << "      <PDataArray type=\"Float64\" Name=\"Tangential Displacement\"  NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "      <PDataArray type=\"Float64\" Name=\"Et\"  NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "    </PPointData>" << std::endl;
   outFile << "    <PPoints>" << std::endl;

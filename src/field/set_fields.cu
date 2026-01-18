@@ -255,6 +255,7 @@ class SetFields : public OperatorNode {
       }
       lout << std::endl;
       lout << "Density          = " << d << std::endl;
+      lout << "Homothety        = " << h << std::endl;
       if (!rnd_q) {
         lout << "Quaternion       = [w: " << quat.w << ", v: (" << quat.x << "," << quat.y << "," << quat.z << ")]";
       } else {

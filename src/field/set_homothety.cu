@@ -31,7 +31,7 @@ using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_homothety>>
 class SetHomothety : public OperatorNode {
-  static constexpr double default_h = 0.0;
+  static constexpr double default_h = 1.0;
   // attributes processed during computation
   using ComputeFields = FieldSet<field::_homothety>;
   using ComputeRegionFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_homothety>;

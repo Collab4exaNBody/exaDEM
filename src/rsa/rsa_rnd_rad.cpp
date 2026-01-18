@@ -153,6 +153,7 @@ class RSARndRad : public OperatorNode {
       p[field::ry] = r.y;
       p[field::rz] = r.z;
       ParticleTuple t = p;
+      t[field::homothety] = 1.0;
       if (is_region) {
         if (prcsg.contains(r)) {
           grid->cell(loc).push_back(t, grid->cell_allocator());
