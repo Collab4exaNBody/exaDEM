@@ -25,16 +25,18 @@ under the License.
 namespace exaDEM {
 struct func_push_av_to_quat {
   const double t;
+  const double dt;
   template <typename T>
   inline void operator()(T& drv) const {
     if constexpr (std::is_same_v<std::remove_cv_t<T>, exaDEM::Stl_mesh>) {
-      drv.push_av_to_quat(t);
+      drv.push_av_to_quat(t, dt);
     }
   }
 };
 
 class PushAngularVelocityToQuaternionDriver : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+  ADD_SLOT(double, physical_time, INPUT, REQUIRED);
   ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
 
  public:
@@ -49,8 +51,9 @@ class PushAngularVelocityToQuaternionDriver : public OperatorNode {
   }
 
   inline void execute() final {
-    double t = *dt;
-    func_push_av_to_quat func = {t};
+    double time = *physical_time;
+    double incr_time = *dt;
+    func_push_av_to_quat func = {time, incr_time};
     for (size_t id = 0; id < drivers->get_size(); id++) {
       drivers->apply(id, func);
     }
