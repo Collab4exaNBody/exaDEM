@@ -24,89 +24,86 @@
 #include <mpi.h>
 #include <exaDEM/classifier/classifier.hpp>
 
-namespace exaDEM
-{
+namespace exaDEM {
 
-  namespace itools
-  {
-    using namespace exanb;
+namespace itools {
+using namespace exanb;
 
-    /** CPU only */
-    template <typename GridT, typename T> std::stringstream create_buffer(GridT &grid, Classifier<T> &ic)
-    {
-      std::stringstream stream;
-      const int ntypes = ic.number_of_waves();
+/** CPU only */
+template <typename GridT>
+std::stringstream create_buffer(GridT& grid, Classifier& ic) {
+  std::stringstream stream;
+  auto cells = grid.cells();
+  for (int i = 0; i < Classifier::types; i++) {
+    size_t size = ic.get_size(i);
+    InterationPairWrapper wrapper;
+    if (i < Classifier::typesPP)
+      wrapper.wrap(ic.get_data<ParticleParticle>(i));
+    else if (i == Classifier::InnerBondTypeId)
+      wrapper.wrap(ic.get_data<InnerBond>(i));
+    else {
+      lout << "skip interaction type: " << i << std::endl;
+      continue;
+    }
 
-      const auto& cells = grid.cells();
-      for (int i = 0; i < ntypes; i++)
-      {
-        auto [i_data, size] = ic.get_info(i);
-        auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.buffer_p(i);
+    auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.buffer_p(i);
 
-        for (size_t idx = 0; idx < size; idx++)
-        {
-          double dn = dn_ptr[idx];
-          /** filter empty interactions */
-          if (dn < 0)
+    for (size_t idx = 0; idx < size; idx++) {
+      double dn = dn_ptr[idx];
+      /** filter empty interactions */
+      if (dn < 0) {
+        auto [i, j, type, swap, ghost] = wrapper(idx);
+        /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
+        if (ghost != InteractionPair::PartnerGhost) {
+          stream << i.id << "," << j.id << ",";
+          stream << i.sub << "," << j.sub << ",";
+          stream << type << ",";
+          stream << dn << ",";
+          stream << cp_ptr[idx] << ",";
+          stream << fn_ptr[idx] << ",";
+          stream << ft_ptr[idx] << ",";
+          stream << cells[i.cell][field::rx][i.p] << ",";
+          stream << cells[i.cell][field::ry][i.p] << ",";
+          stream << cells[i.cell][field::rz][i.p] << ",";
+          if (type >= 4 && type < 13)  // drivers
           {
-            auto I = i_data[idx];
-            /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
-            if (filter_duplicates(grid, I))
-            {
-              stream << I.id_i << "," << I.id_j << ",";
-              stream << I.sub_i << "," << I.sub_j << ",";
-              stream << I.type << ",";
-              stream << dn << ",";
-              stream << cp_ptr[idx] << ",";
-              stream << fn_ptr[idx] << ",";
-              stream << ft_ptr[idx] << ",";
-              stream << cells[I.cell_i][field::rx][I.p_i] << ",";
-              stream << cells[I.cell_i][field::ry][I.p_i] << ",";
-              stream << cells[I.cell_i][field::rz][I.p_i] << ",";
-              if( I.type >= 4 && I.type < 13) // drivers
-              {
-                stream << 0 << ",";
-                stream << 0 << ",";
-                stream << 0;
-              }
-              else
-              {
-                stream << cells[I.cell_j][field::rx][I.p_j] << ",";
-                stream << cells[I.cell_j][field::ry][I.p_j] << ",";
-                stream << cells[I.cell_j][field::rz][I.p_j];
-              }
-              stream << std::endl;
-            }
+            stream << 0 << ",";
+            stream << 0 << ",";
+            stream << 0;
+          } else {
+            stream << cells[j.cell][field::rx][j.p] << ",";
+            stream << cells[j.cell][field::ry][j.p] << ",";
+            stream << cells[j.cell][field::rz][j.p];
           }
+          stream << std::endl;
         }
       }
-      return stream;
     }
+  }
+  return stream;
+}
 
-    void write_file(std::stringstream &stream, std::string directory, std::string filename)
-    {
-      int rank, size;
-      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-      MPI_Comm_size(MPI_COMM_WORLD, &size);
+inline void write_file(std::stringstream& stream, std::string directory, std::string filename) {
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-      std::string subdirectory = directory + "/ExaDEMAnalyses";
-      std::string subsubdirectory = subdirectory + "/" + filename;
-      if (rank == 0)
-      {
-        namespace fs = std::filesystem;
-        fs::create_directory(directory);
-        fs::create_directory(subdirectory);
-        fs::create_directory(subsubdirectory);
-      }
-      MPI_Barrier(MPI_COMM_WORLD);
-      std::string name = subsubdirectory + "/" + filename + "_" + std::to_string(rank) + ".txt";
-      std::ofstream outFile(name);
-      if (!outFile)
-      {
-        color_log::error("itools::write_file", "Impossible to create the output file: " + name, false);
-        return;
-      }
-      outFile << stream.rdbuf();
-    }
-  } // namespace itools
-} // namespace exaDEM
+  std::string subdirectory = directory + "/ExaDEMAnalyses";
+  std::string subsubdirectory = subdirectory + "/" + filename;
+  if (rank == 0) {
+    namespace fs = std::filesystem;
+    fs::create_directory(directory);
+    fs::create_directory(subdirectory);
+    fs::create_directory(subsubdirectory);
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  std::string name = subsubdirectory + "/" + filename + "_" + std::to_string(rank) + ".txt";
+  std::ofstream outFile(name);
+  if (!outFile) {
+    color_log::error("itools::write_file", "Impossible to create the output file: " + name, false);
+    return;
+  }
+  outFile << stream.rdbuf();
+}
+}  // namespace itools
+}  // namespace exaDEM

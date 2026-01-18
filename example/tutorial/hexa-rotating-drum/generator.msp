@@ -16,7 +16,9 @@ init_new_particles:
      region: AREA
      var: 0.1
      mean: [0.0,0.0,-10.0]
-  - inertia_from_shape
+  - set_homothety:
+     region: AREA
+	- inertia_from_shape
   - set_quaternion:
      region: AREA
   - radius_from_shape:

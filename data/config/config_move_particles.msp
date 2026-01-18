@@ -74,12 +74,15 @@ ghost_full_update:
 ## These operator should be defined by your particle mode (spheres or polyhedra)
 migrate_particles: nop
 add_generated_particles: nop
+## redefined if config_fragmentation.msp is included.
+init_update_particle_neighbors: update_particle_neighbors
 
 particle_generator:
   condition: trigger_generator
   body:
     - message: { mesg: "The particle generator is triggered ...", endl: true} 
     - add_generated_particles
+    - check_homothety  ## check all particles (on CPU)
 
 parallel_update_particles:
   - migrate_particles
@@ -99,7 +102,7 @@ init_particles:
   - grid_post_processing
   - grid_stl_mesh:
      force_reset: true
-  - update_particle_neighbors
+  - init_update_particle_neighbors
 ###########################################################################
 
 

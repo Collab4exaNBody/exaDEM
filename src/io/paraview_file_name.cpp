@@ -25,39 +25,35 @@ under the License.
 
 #include <memory>
 
-namespace exanb
-{
+namespace exanb {
 
-  class TimeStepParaviewFileNameOperator : public OperatorNode
-  {
-    ADD_SLOT(long, timestep, INPUT, REQUIRED);
-    ADD_SLOT(std::string, format, INPUT, REQUIRED);
-    ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
-    ADD_SLOT(std::string, filename, OUTPUT);
+class TimeStepParaviewFileNameOperator : public OperatorNode {
+  ADD_SLOT(long, timestep, INPUT, REQUIRED);
+  ADD_SLOT(std::string, format, INPUT, REQUIRED);
+  ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
+  ADD_SLOT(std::string, filename, OUTPUT);
 
-  public:
-    inline void execute() override final
-    {
-      std::string paraview_filename = (*dir_name) + "/" + (*format);
-      *filename = onika::format_string(paraview_filename, *timestep);
+ public:
+  inline void execute() final {
+    std::string paraview_filename = (*dir_name) + "/" + (*format);
+    *filename = onika::format_string(paraview_filename, *timestep);
+  }
+
+  inline void yaml_initialize(const YAML::Node& node) final {
+    YAML::Node tmp;
+    if (node.IsScalar()) {
+      tmp["format"] = node;
+    } else {
+      tmp = node;
     }
+    this->OperatorNode::yaml_initialize(tmp);
+  }
+};
 
-    inline void yaml_initialize(const YAML::Node &node) override final
-    {
-      YAML::Node tmp;
-      if (node.IsScalar())
-      {
-        tmp["format"] = node;
-      }
-      else
-      {
-        tmp = node;
-      }
-      this->OperatorNode::yaml_initialize(tmp);
-    }
-  };
+// === register factories ===
+ONIKA_AUTORUN_INIT(paraview_file_name) {
+  OperatorNodeFactory::instance()->register_factory("timestep_paraview_file",
+                                                    make_compatible_operator<TimeStepParaviewFileNameOperator>);
+}
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(paraview_file_name) { OperatorNodeFactory::instance()->register_factory("timestep_paraview_file", make_compatible_operator<TimeStepParaviewFileNameOperator>); }
-
-} // namespace exanb
+}  // namespace exanb

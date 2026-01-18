@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -18,14 +18,16 @@ under the License.
 */
 #include <exanb/extra_storage/move_particles_es.hpp>
 #include <exanb/grid_cell_particles/move_particles_across_cells.h>
-#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 
-namespace exaDEM
-{
-  using namespace exanb;
+namespace exaDEM {
+template <typename GridT>
+using MovePaticlesWithInteractionTmpl = exanb::MovePaticlesWithES<GridT, exaDEM::PlaceholderInteraction>;
 
-  template <typename GridT> using MovePaticlesWithInteractionTmpl = exanb::MovePaticlesWithES<GridT, exaDEM::Interaction>;
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(move_particles_interaction) { OperatorNodeFactory::instance()->register_factory("move_particles_interaction", make_grid_variant_operator<MovePaticlesWithInteractionTmpl>); }
-} // namespace exaDEM
+// === register factories ===
+ONIKA_AUTORUN_INIT(move_particles_interaction) {
+  OperatorNodeFactory::instance()->register_factory("move_particles_interaction",
+                                                    make_grid_variant_operator<MovePaticlesWithInteractionTmpl>);
+}
+}  // namespace exaDEM

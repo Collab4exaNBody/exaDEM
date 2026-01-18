@@ -17,36 +17,32 @@ specific language governing permissions and limitations
 under the License.
  */
 #include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exaDEM/drivers.h>
-#include <mpi.h>
+#include <onika/scg/operator_slot.h>
 
-namespace exaDEM
-{
-  using namespace exanb;
+#include <exaDEM/drivers.hpp>
 
-  class ResetForceDriverFunctor : public OperatorNode
-  {
-    ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+namespace exaDEM {
+class ResetForceDriverFunctor : public OperatorNode {
+  ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
 
-    public:
-    inline std::string documentation() const override final
-    {
-      return R"EOF(
+ public:
+  inline std::string documentation() const final {
+    return R"EOF(
           This operator reset the forces of drivers.
         )EOF";
-    }
+  }
 
-    inline void execute() override final
-    {
-      for (size_t id = 0; id < drivers->get_size(); id++)
-      {
-        drivers->apply( id , [](auto& drv){ drv.forces = {0,0,0}; } );
-      }
+  inline void execute() final {
+    for (size_t id = 0; id < drivers->get_size(); id++) {
+      drivers->apply(id, [](auto& drv) { drv.forces = {0, 0, 0}; });
     }
-  };
+  }
+};
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(reset_force_driver) { OperatorNodeFactory::instance()->register_factory("reset_force_driver", make_simple_operator<ResetForceDriverFunctor>); }
-} // namespace exaDEM
+// === register factories ===
+ONIKA_AUTORUN_INIT(reset_force_driver) {
+  OperatorNodeFactory::instance()->register_factory("reset_force_driver",
+                                                    make_simple_operator<ResetForceDriverFunctor>);
+}
+}  // namespace exaDEM

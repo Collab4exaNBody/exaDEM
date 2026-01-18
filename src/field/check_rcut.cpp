@@ -27,80 +27,73 @@ under the License.
 #include <mpi.h>
 #include <exaDEM/color_log.hpp>
 
+namespace exaDEM {
+using namespace exanb;
 
-namespace exaDEM
-{
-  using namespace exanb;
+template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>>
+class CheckRadius : public OperatorNode {
+  //      using ReduceFields = FieldSet<field::_radius>;
+  //      static constexpr ReduceFields reduce_field_set {};
 
-  template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>> class CheckRadius : public OperatorNode
-  {
-    //      using ReduceFields = FieldSet<field::_radius>;
-    //      static constexpr ReduceFields reduce_field_set {};
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
+  ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
 
-    ADD_SLOT(GridT, grid, INPUT, REQUIRED);
-    ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
-    ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0);
-
-    // -----------------------------------------------
-    // ----------- Operator documentation ------------
-    inline std::string documentation() const override final { 
-      return R"EOF(
+  // -----------------------------------------------
+  // ----------- Operator documentation ------------
+  inline std::string documentation() const final {
+    return R"EOF(
         Check if the rcut_max is different of 0 or if the rcut_max is < particle rcut. 
 
         YAML example [no option]:
 
           - check_rcut
-      )EOF"; 
-    }
-
-    inline std::string operator_name() { return "check_rcut"; }
-
-    public:
-
-    void check_slots()
-    {
-      if(*rcut_max <= 0.0) 
-      {
-        color_log::error(operator_name(), "rmax is not correctly defined (rcut max <= 0.0)");
-      }
-    }
-
-    inline void execute() override final
-    {
-      check_slots();
-      MPI_Comm comm = *mpi;
-      double rmax = *rcut_max;
-
-      auto cells = grid->cells();
-      const IJK dims = grid->dimension();
-      double rcm = 0.0;
-#     pragma omp parallel
-      {
-        GRID_OMP_FOR_BEGIN (dims, i, loc, schedule(dynamic) reduction(max : rcm))
-        {
-          double *__restrict__ r = cells[i][field::radius];
-          const size_t n = cells[i].size();
-#     pragma omp simd
-          for (size_t j = 0; j < n; j++)
-          {
-            rcm = std::max(rcm, r[j]); // 4/3 * pi * r^3 * d
-          }
-        }
-        GRID_OMP_FOR_END
-      }
- 
-      MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, comm);
-
-      if ( rcm > rmax )
-      {
-        color_log::error(operator_name(), "At least one particle has a radius larger than the maximum radius cutoff.");
-      }
-    } // namespace exaDEM
+      )EOF";
   }
-  ;
 
-  template <class GridT> using CheckRadiusTmpl = CheckRadius<GridT>;
+  inline std::string operator_name() { return "check_rcut"; }
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(check_rcut) { OperatorNodeFactory::instance()->register_factory("check_rcut", make_grid_variant_operator<CheckRadiusTmpl>); }
+ public:
+  void check_slots() {
+    if (*rcut_max <= 0.0) {
+      color_log::error(operator_name(), "rmax is not correctly defined (rcut max <= 0.0)");
+    }
+  }
+
+  inline void execute() final {
+    check_slots();
+    MPI_Comm comm = *mpi;
+    double rmax = *rcut_max;
+
+    auto cells = grid->cells();
+    const IJK dims = grid->dimension();
+    double rcm = 0.0;
+#pragma omp parallel
+    {GRID_OMP_FOR_BEGIN(dims, i, loc,
+                        schedule(dynamic) reduction(max : rcm)){double* __restrict__ r = cells[i][field::radius];
+    const size_t n = cells[i].size();
+#pragma omp simd
+    for (size_t j = 0; j < n; j++) {
+      rcm = std::max(rcm, r[j]);  // 4/3 * pi * r^3 * d
+    }
+  }
+  GRID_OMP_FOR_END
+}
+
+MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, comm);
+
+if (rcm > rmax) {
+  color_log::error(operator_name(), "At least one particle has a radius larger than the maximum radius cutoff.");
+}
+}  // namespace exaDEM
+}
+;
+
+template <class GridT>
+using CheckRadiusTmpl = CheckRadius<GridT>;
+
+// === register factories ===
+ONIKA_AUTORUN_INIT(check_rcut) {
+  OperatorNodeFactory::instance()->register_factory("check_rcut", make_grid_variant_operator<CheckRadiusTmpl>);
+}
 }

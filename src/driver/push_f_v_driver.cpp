@@ -17,52 +17,58 @@ specific language governing permissions and limitations
 under the License.
 */
 #include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exaDEM/drivers.h>
+#include <onika/scg/operator_slot.h>
 
-namespace exaDEM
-{
-  using namespace exanb;
+#include <exaDEM/drivers.hpp>
 
-  struct push_f_v_r
-  {
-    const double dt;
+namespace exaDEM {
+struct push_f_v_r {
+  const double dt;
 
-    inline void operator()(Ball& arg) const { arg.push_f_v(dt); }
-    inline void operator()(Surface& arg) const { arg.push_f_v(dt); }
-    inline void operator()(Stl_mesh& arg) const { arg.push_f_v(dt); }
-    inline void operator()(Cylinder&) const { /** nothing */ }
-  };
+  inline void operator()(Ball& arg) const {
+    arg.push_f_v(dt);
+  }
 
-  class PushAccelToVelocityDriver : public OperatorNode
-  {
-    ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-    ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
+  inline void operator()(Surface& arg) const {
+    arg.push_f_v(dt);
+  }
 
-  public:
-    inline std::string documentation() const override final
-    {
-      return R"EOF(
+  inline void operator()(Stl_mesh& arg) const {
+    arg.push_f_v(dt);
+  }
+
+  inline void operator()(Cylinder&) const {
+    /** nothing */
+  }
+};
+
+class PushAccelToVelocityDriver : public OperatorNode {
+  ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+  ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
+
+ public:
+  inline std::string documentation() const final {
+    return R"EOF(
           This operator updates driver centers using their velocities. Not that accelerations are not used.
 
           YAML example [no option]:
 
             - push_f_v_driver
         )EOF";
-    }
+  }
 
-    inline void execute() override final
-    {
-      const double t = *dt;
-      push_f_v_r func = {t};
-      for (size_t id = 0; id < drivers->get_size(); id++)
-      {
-        drivers->apply( id , func );
-      }
+  inline void execute() final {
+    const double t = *dt;
+    push_f_v_r func = {t};
+    for (size_t id = 0; id < drivers->get_size(); id++) {
+      drivers->apply(id, func);
     }
-  };
+  }
+};
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(push_f_v_driver) { OperatorNodeFactory::instance()->register_factory("push_f_v_driver", make_simple_operator<PushAccelToVelocityDriver>); }
-} // namespace exaDEM
+// === register factories ===
+ONIKA_AUTORUN_INIT(push_f_v_driver) {
+  OperatorNodeFactory::instance()->register_factory("push_f_v_driver", make_simple_operator<PushAccelToVelocityDriver>);
+}
+}  // namespace exaDEM

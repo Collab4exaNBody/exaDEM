@@ -15,9 +15,6 @@ particle_regions:
 
 init_fields:
   - radius_from_shape
-  - set_density:
-     density: 0.0026
-     region: CYL1 and BOX 
   - set_rand_velocity:
      var: 0.0001
      mean: [0.0,0.0,-0.5]
@@ -26,6 +23,11 @@ init_fields:
      region: CYL1 and BOX 
   - set_quaternion:
      random: true
+     region: CYL1 and BOX 
+  - set_homothety:
+     region: CYL1 and BOX 
+  - set_density:
+     density: 0.0026
      region: CYL1 and BOX 
   - update_inertia:
      region: CYL1 and BOX 

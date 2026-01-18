@@ -31,23 +31,23 @@ under the License.
 #include <exanb/analytics/particle_cell_projection.h>
 #include <exanb/compute/fluid_friction.h>
 
-namespace exaDEM
-{
-  using namespace exanb;
+namespace exaDEM {
 
-  struct SphereFrictionFunctor
-  {
-    ONIKA_HOST_DEVICE_FUNC inline Vec3d operator()(const Vec3d &r, const Vec3d &pv, const Vec3d &fv, const double cx, const double radius) const
-    {
-      const Vec3d relative_velocity = fv - pv;
-      const double relative_velocity_norm = norm(relative_velocity);
-      return cx * (relative_velocity * relative_velocity_norm * M_PI * radius * radius);
-    }
-  };
+struct SphereFrictionFunctor {
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d operator()(const Vec3d& r, const Vec3d& pv, const Vec3d& fv, const double cx,
+                                                 const double radius) const {
+    const Vec3d relative_velocity = fv - pv;
+    const double relative_velocity_norm = norm(relative_velocity);
+    return cx * (relative_velocity * relative_velocity_norm * M_PI * radius * radius);
+  }
+};
 
-  template <class GridT> using SphereFluidFriction = FluidFriction<GridT, SphereFrictionFunctor, FieldSet<field::_radius>>;
+template <class GridT> using SphereFluidFriction = FluidFriction<GridT, SphereFrictionFunctor, FieldSet<field::_radius>>;
 
-  // === register factories ===
-  ONIKA_AUTORUN_INIT(sphere_fluid_friction) { OperatorNodeFactory::instance()->register_factory("sphere_fluid_friction", make_grid_variant_operator<SphereFluidFriction>); }
+// === register factories ===
+ONIKA_AUTORUN_INIT(sphere_fluid_friction) {
+  OperatorNodeFactory::instance()->register_factory("sphere_fluid_friction",
+                                                    make_grid_variant_operator<SphereFluidFriction>);
+}
 
-} // namespace exaDEM
+}  // namespace exaDEM

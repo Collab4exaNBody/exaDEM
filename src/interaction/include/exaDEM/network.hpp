@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -15,18 +15,17 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
-*/
+ */
 #pragma once
 
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
-#include <exaDEM/compute_contact_force.h>
-#include <exaDEM/contact_force_parameters.h>
-#include <vector>
-#include <tuple>
-#include <algorithm>
 #include <exaDEM/type/contact.hpp>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 
 namespace exaDEM
 {
@@ -56,11 +55,14 @@ namespace exaDEM
 
     NetworkFunctor(GridT &g) : grid(g) {}
 
-    void add(exaDEM::Interaction& I, double value)
+    template<typename InteractionT>
+    void add(InteractionT& I, double value)
     {
+      auto& pi = I.i();
+      auto& pj = I.j();
       // === build contact network key
-      IdType i = {I.cell_i, I.p_i};
-      IdType j = {I.cell_j, I.p_j};
+      IdType i = {pi.cell, pi.p};
+      IdType j = {pj.cell, pj.p};
       KeyType key = {i, j};
       auto it = network.find(key);
       if (it != network.end())
@@ -74,23 +76,23 @@ namespace exaDEM
     }
 
     template<typename Is, typename Data> 
-    void operator()(const size_t size, Is& interactions, Data& data)
-    {
-      Vec3d* fn = onika::cuda::vector_data(data.fn); 
-      Vec3d* ft = onika::cuda::vector_data(data.ft);
-      for(size_t i = 0; i < size ; i++)
+      void operator()(const size_t size, Is& interactions, Data& data)
       {
-        const double f = exanb::norm(fn[i] + ft[i]);
-        if( f != 0)
+        Vec3d* fn = onika::cuda::vector_data(data.fn); 
+        Vec3d* ft = onika::cuda::vector_data(data.ft);
+        for(size_t i = 0; i < size ; i++)
         {
-          Interaction I = interactions[i];
-          if (filter_duplicates(grid, I)) add(I, f);
-        }
-      } 
-    }
-    
-    /** 
-     * @brief new version
+          const double f = exanb::norm(fn[i] + ft[i]);
+          if( f != 0)
+          {
+            auto I = interactions[i];
+            if (filter_duplicates(I)) add(I, f);
+          }
+        } 
+      }
+
+    /**
+     * @brief Creates an indirection array for particle indexes (cell_id, pos_id).
      *
      */
     void fill_fn_at_point_data()

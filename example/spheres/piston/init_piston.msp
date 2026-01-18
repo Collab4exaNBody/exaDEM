@@ -17,6 +17,7 @@ init_spheres:
   - set_rand_velocity:
      var: 0.01
      mean: [0.0,0.0,-1.0]  
+  - set_homothety
   - set_density:
      density: 0.0026
      region: MYSUPERZONE
