@@ -154,6 +154,11 @@ struct Driver_params  //: public Driver_expr
     return motion_type == EXPRESSION;
   }
 
+  inline bool is_expr(double time) const {
+    // do nothing if time < start or time > end;
+    return motion_type == EXPRESSION && is_motion_triggered(time);
+  }
+
   void set_params(Driver_params& in) {
     (*this) = in;
   }
@@ -517,6 +522,25 @@ struct Driver_params  //: public Driver_expr
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return amplitude * sin(omega * time);
+  }
+ 
+  // Expression routines
+  Vec3d driver_expr_v(double time) {
+    assert(motion_start_threshold >= 0);
+    time -= motion_start_threshold;
+    return expr.expr_v(time);
+  }
+
+  Vec3d driver_expr_vrot(double time) {
+    assert(motion_start_threshold >= 0);
+    time -= motion_start_threshold;
+    return expr.expr_vrot(time);
+  }
+
+  Vec3d driver_expr_mom(double time) {
+    assert(motion_start_threshold >= 0);
+    time -= motion_start_threshold;
+    return expr.expr_mom(time);
   }
 };
 }  // namespace exaDEM

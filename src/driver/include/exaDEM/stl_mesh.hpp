@@ -266,12 +266,12 @@ struct Stl_mesh : public Stl_params, Driver_params {
         acc = Vec3d{0, 0, 0};  // reset acc
       }
 
-      if (this->is_expr()) {
+      if (is_expr(time)) {
         if(expr.expr_use_v) {
-          vel = this->expr.expr_v(time);
+          vel = driver_expr_v(time);
         }
         if(expr.expr_use_vrot) {
-          vrot = this->expr.expr_vrot(time);
+          vrot = driver_expr_vrot(time);
         }
       }
 
@@ -287,9 +287,9 @@ struct Stl_mesh : public Stl_params, Driver_params {
       DriverPushToAngularVelocityFunctor compute_vrot = {dt * 0.5};
       DriverPushToQuaternionFunctor compute_quat_vrot = {dt, dt * 0.5, dt * dt * 0.5};
 
-      if(this->is_expr()) {
+      if(is_expr(time)) {
         if(expr.expr_use_mom) {
-          this->applied_mom = this->expr.expr_mom(time);
+          this->applied_mom = driver_expr_mom(time);
           this->mom_axis = this->applied_mom / exanb::norm(this->applied_mom);
         }
       }
