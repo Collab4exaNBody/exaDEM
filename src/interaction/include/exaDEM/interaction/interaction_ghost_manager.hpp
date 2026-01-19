@@ -17,7 +17,7 @@ struct InteractionGhostManager {
   size_t n_procs = 0;
 
   template <typename InteractionT, typename GridT>
-  void setup(exanb::GhostCommunicationScheme& ghost_scheme, const MPI_Comm comm, const InteractionT& ges,
+  void setup(exanb::GhostCommunicationScheme& ghost_scheme, const MPI_Comm& comm, const InteractionT& ges,
              const GridT& grid) {
     // tags constants
     const int TAG_SIZE = 100;

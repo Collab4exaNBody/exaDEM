@@ -1,0 +1,81 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_polyhedra.msp
+
+io_tree:
+  - io_config:
+     dir_name: "AppliedMomentOutputDir"
+
+setup_drivers:
+  - register_stl_mesh:
+     id: 0
+     filename: pale2.stl
+     minskowski: 0.01
+     binary: true
+     state: 
+        vrot: [0,0,0]
+        center: [2.5,2.5,2]
+        quat: [0,-0.707107,-0.707107,0]
+        mass: 49.0454
+        inertia: [77.238167282, 388.401803042, 344.515979122]
+     params:
+        motion_type: EXPRESSION
+        expr:
+           momx: 0
+           momy: 0
+           momz: 5
+
+input_data:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: pale.shp
+  - read_xyz:
+     file: pos.txt
+  - set_fields:
+     polyhedra: true
+     type:              [    pale ]
+     velocity:          [ [0,0,0] ]
+     sigma_velocity:    [     0.0 ]
+     density:           [       1 ] # gramme par millimètre cube
+  - multimat_contact_params:
+     mat1:      [    pale ]
+     mat2:      [    pale ]
+     kn:        [    5000 ] # Newton / millimètre
+     kt:        [    4000 ]
+     kr:        [     0.0 ]
+     mu:        [     0.1 ]
+     damprate:  [    0.99 ]
+  - drivers_contact_params:
+     mat:       [    pale ]
+     driver_id: [       0 ]
+     kn:        [    5000 ]
+     kt:        [    4000 ]
+     kr:        [     0.0 ]
+     mu:        [     0.1 ]
+     damprate:  [    0.99 ]
+     default_config: { kn: 5000, kt: 4000, kr: 0.0, mu: 0.1, damp_rate: 0.99 }
+
+domain:
+  cell_size: 5 m
+  periodic: [false,false,false]
+  grid_dims: [2, 2, 4]
+  bounds: [[-5 ,-5, -10], [5, 5, 10]]
+  expandable: true
+
+compute_force:
+  - set_moment:
+     moment: [0,0,-1]
+  - contact_multimat_polyhedron
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 200000 #1000000
+  simulation_log_frequency: 10000
+  simulation_paraview_frequency: 10000
+  analysis_interaction_dump_frequency: 5000
+  dt: 0.0001 
+  rcut_inc: 0.4 m 

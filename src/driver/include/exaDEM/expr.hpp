@@ -24,14 +24,21 @@ under the License.
 namespace exaDEM {
 using exanb::Vec3d;
 struct Driver_expr {
+  bool expr_use_v = false;
   std::string expr_vx = "0";
   std::string expr_vy = "0";
   std::string expr_vz = "0";
+  bool expr_use_vrot = false;
   std::string expr_vrotx = "0";
   std::string expr_vroty = "0";
   std::string expr_vrotz = "0";
+  bool expr_use_mom = false;
+  std::string expr_momx = "0";
+  std::string expr_momy = "0";
+  std::string expr_momz = "0";
 
   Vec3d expr_v(double time) {
+    assert(expr_use_v);
     Vec3d res;
     te_variable the_t[] = {{"t", &time}};
 
@@ -47,6 +54,7 @@ struct Driver_expr {
   }
 
   Vec3d expr_vrot(double time) {
+    assert(expr_use_vrot);
     Vec3d res;
     te_variable the_t[] = {{"t", &time}};
 
@@ -61,6 +69,22 @@ struct Driver_expr {
     return res;
   }
 
+  Vec3d expr_mom(double time) {
+    assert(expr_use_mom);
+    Vec3d res;
+    te_variable the_t[] = {{"t", &time}};
+
+    int err;
+    te_expr* te_expr_momx = te_compile(expr_momx.c_str(), the_t, 1, &err);
+    te_expr* te_expr_momy = te_compile(expr_momy.c_str(), the_t, 1, &err);
+    te_expr* te_expr_momz = te_compile(expr_momz.c_str(), the_t, 1, &err);
+
+    res.x = te_eval(te_expr_momx);
+    res.y = te_eval(te_expr_momy);
+    res.z = te_eval(te_expr_momz);
+    return res;
+  }
+
   template <typename Stream>
   void expr_display(Stream& stream) const {
     stream << "Expression Vx      : " << expr_vx << std::endl;
@@ -69,6 +93,9 @@ struct Driver_expr {
     stream << "Expression Vrotx   : " << expr_vrotx << std::endl;
     stream << "Expression Vroty   : " << expr_vroty << std::endl;
     stream << "Expression Vrotz   : " << expr_vrotz << std::endl;
+    stream << "Expression Momx   : " << expr_momx << std::endl;
+    stream << "Expression Momy   : " << expr_momy << std::endl;
+    stream << "Expression Momz   : " << expr_momz << std::endl;
   }
 
   template <typename Stream>
@@ -79,7 +106,10 @@ struct Driver_expr {
     stream << "vz: " << expr_vz << " , ";
     stream << "vrotx: " << expr_vrotx << " , ";
     stream << "vroty: " << expr_vroty << " , ";
-    stream << "vrotz: " << expr_vrotz << " } ";
+    stream << "vrotz: " << expr_vrotz << " , ";
+    stream << "momx: " << expr_momx << " , ";
+    stream << "momy: " << expr_momy << " , ";
+    stream << "momz: " << expr_momz << " } ";
   }
 };
 }  // namespace exaDEM
@@ -92,28 +122,45 @@ using exanb::lout;
 template <>
 struct convert<Driver_expr> {
   static bool decode(const Node& node, Driver_expr& expr) {
-    lout << "test" << std::endl;
     if (!node.IsMap()) {
       lout << "Please, define this driver motion as STATIONNARY" << std::endl;
       return false;
     }
     if (node["vx"]) {
+      expr.expr_use_v = true;
       expr.expr_vx = node["vx"].as<std::string>();
     }
     if (node["vy"]) {
+      expr.expr_use_v = true;
       expr.expr_vy = node["vy"].as<std::string>();
     }
     if (node["vz"]) {
+      expr.expr_use_v = true;
       expr.expr_vz = node["vz"].as<std::string>();
     }
     if (node["vrotx"]) {
+      expr.expr_use_vrot = true;
       expr.expr_vrotx = node["vrotx"].as<std::string>();
     }
     if (node["vroty"]) {
+      expr.expr_use_vrot = true;
       expr.expr_vroty = node["vroty"].as<std::string>();
     }
     if (node["vrotz"]) {
+      expr.expr_use_vrot = true;
       expr.expr_vrotz = node["vrotz"].as<std::string>();
+    }
+    if (node["momx"]) {
+      expr.expr_use_mom = true;
+      expr.expr_momx = node["momx"].as<std::string>();
+    }
+    if (node["momy"]) {
+      expr.expr_use_mom = true;
+      expr.expr_momy = node["momy"].as<std::string>();
+    }
+    if (node["momz"]) {
+      expr.expr_use_mom = true;
+      expr.expr_momz = node["momz"].as<std::string>();
     }
     return true;
   }

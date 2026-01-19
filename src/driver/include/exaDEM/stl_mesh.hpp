@@ -98,11 +98,13 @@ struct convert<Stl_params> {
     }
     if (check(node, "moment")) {
       v.applied_mom = node["moment"].as<exanb::Vec3d>();
-      v.inertia = node["inertia"].as<exanb::Vec3d>();
       v.drive_by_mom = true;
       v.mom_axis = v.applied_mom / exanb::norm(v.applied_mom);
-      v.mom = Vec3d{0, 0, 0};
     }
+    if (check(node, "inertia")) {
+      v.inertia = node["inertia"].as<exanb::Vec3d>();
+    }
+    v.mom = Vec3d{0, 0, 0};
     return true;
   }
 };
@@ -117,9 +119,9 @@ using namespace exanb;
  * @brief Struct representing a STL mesh in the exaDEM simulation.
  */
 struct Stl_mesh : public Stl_params, Driver_params {
-  shape shp;                                  /**< Shape of the STL mesh. */
-  vector_t<Vec3d> vertices;                   /**< Collection of vertices (computed from shp, quat
-                                                 and center). */
+  shape shp;                 /**< Shape of the STL mesh. */
+  vector_t<Vec3d> vertices;  /**< Collection of vertices (computed from shp, quat
+                                  and center). */
   std::vector<list_of_elements> grid_indexes; /**< Grid indices of the STL mesh. */
   std::vector<omp_lock_t> grid_mutexes;       /**< Grid indices of the STL mesh. */
   /** We don't need to save these values */
@@ -136,7 +138,9 @@ struct Stl_mesh : public Stl_params, Driver_params {
   /**
    * @brief Add stl shape.
    */
-  void set_shape(shape& s) { shp = s; }
+  void set_shape(shape& s) {
+    shp = s;
+  }
 
   /**
    * @brief Print information about the STL mesh.
@@ -241,7 +245,9 @@ struct Stl_mesh : public Stl_params, Driver_params {
       }
 
       if (is_compressive()) {
-        if (this->sigma != 0) vel += 0.5 * dt * acc;
+        if (this->sigma != 0) {
+          vel += 0.5 * dt * acc;
+        }
       }
     }
   }
@@ -261,8 +267,12 @@ struct Stl_mesh : public Stl_params, Driver_params {
       }
 
       if (this->is_expr()) {
-        vel = this->expr.expr_v(time);
-        vrot = this->expr.expr_vrot(time);
+        if(expr.expr_use_v) {
+          vel = this->expr.expr_v(time);
+        }
+        if(expr.expr_use_vrot) {
+          vrot = this->expr.expr_vrot(time);
+        }
       }
 
       center += dt * vel + 0.5 * dt * dt * acc;
@@ -270,14 +280,19 @@ struct Stl_mesh : public Stl_params, Driver_params {
   }
 
   // angular velocity
-  inline void push_av_to_quat(double dt) {
+  inline void push_av_to_quat(double time, double dt) {
     using namespace exanb;
-    // std::cout << dt << " " << vrot << std::endl;
     if (need_moment()) {
       DriverPushToAngularAccelerationFunctor compute_arot = {};
       DriverPushToAngularVelocityFunctor compute_vrot = {dt * 0.5};
       DriverPushToQuaternionFunctor compute_quat_vrot = {dt, dt * 0.5, dt * dt * 0.5};
 
+      if(this->is_expr()) {
+        if(expr.expr_use_mom) {
+          this->applied_mom = this->expr.expr_mom(time);
+          this->mom_axis = this->applied_mom / exanb::norm(this->applied_mom);
+        }
+      }
       Vec3d project_mom = dot(this->applied_mom + this->mom, this->mom_axis) * this->mom_axis;
       Vec3d arot;
 
@@ -291,14 +306,14 @@ struct Stl_mesh : public Stl_params, Driver_params {
       this->quat = normalize(this->quat);
     }
     ldbg << "Quat[stl mesh]: " << this->quat.w << " " << this->quat.x << " " << this->quat.y << " " << this->quat.z
-         << std::endl;
+        << std::endl;
   }
 
   ONIKA_HOST_DEVICE_FUNC
-  inline void update_vertex(int i) {
-    // homothety = 1.0
-    vertices[i] = shp.get_vertex(i, this->center, 1.0, this->quat);
-  }
+      inline void update_vertex(int i) {
+        // homothety = 1.0
+        vertices[i] = shp.get_vertex(i, this->center, 1.0, this->quat);
+      }
 
   /**
    * @brief return driver velocity
@@ -318,7 +333,15 @@ struct Stl_mesh : public Stl_params, Driver_params {
    * @brief return drive_by_mom
    */
   ONIKA_HOST_DEVICE_FUNC inline bool need_moment() const {
-    return drive_by_mom;
+    if (drive_by_mom) {
+      return true;
+    }
+    if (is_expr()) {
+      if (expr.expr_use_mom) {
+        return true;
+      }
+    }
+    return false;
   }
 
   inline bool stationary() {
