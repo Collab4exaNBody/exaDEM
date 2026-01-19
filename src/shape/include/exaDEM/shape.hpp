@@ -431,13 +431,13 @@ struct shape {
    * @brief retur, the minkowski radius used for detection.
    * @param radius Minkowsku radius
    */
-  double minskowski() { return m_radius; }
+  ONIKA_HOST_DEVICE_FUNC double minskowski() { return m_radius; }
 
-  double minskowski(double h) { return h * minskowski(); }
+  ONIKA_HOST_DEVICE_FUNC double minskowski(double h) { return h * minskowski(); }
 
-  double minskowski() const { return m_radius; }
+  ONIKA_HOST_DEVICE_FUNC double minskowski() const { return m_radius; }
 
-  double minskowski(double h) const { return h * minskowski(); }
+  ONIKA_HOST_DEVICE_FUNC double minskowski(double h) const { return h * minskowski(); }
 
   /**
    * @brief Set the minkowski radius used for detection.

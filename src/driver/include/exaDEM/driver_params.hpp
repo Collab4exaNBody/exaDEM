@@ -150,11 +150,11 @@ struct Driver_params  //: public Driver_expr
     return motion_type == PENDULUM_MOTION;
   }
 
-  inline bool is_expr() const {
+  ONIKA_HOST_DEVICE_FUNC inline bool is_expr() const {
     return motion_type == EXPRESSION;
   }
 
-  inline bool is_expr(double time) const {
+  ONIKA_HOST_DEVICE_FUNC inline bool is_expr(double time) const {
     // do nothing if time < start or time > end;
     return motion_type == EXPRESSION && is_motion_triggered(time);
   }
@@ -321,11 +321,11 @@ struct Driver_params  //: public Driver_expr
     return true;  // Return true if the motion is coherent
   }
 
-  bool is_motion_triggered(double time) const {
+  ONIKA_HOST_DEVICE_FUNC bool is_motion_triggered(double time) const {
     return ((time >= motion_start_threshold) && (time <= motion_end_threshold));
   }
 
-  bool is_motion_triggered(uint64_t timesteps, double dt) const {
+  ONIKA_HOST_DEVICE_FUNC bool is_motion_triggered(uint64_t timesteps, double dt) const {
     const double time = timesteps * dt;
     return is_motion_triggered(time);
   }
