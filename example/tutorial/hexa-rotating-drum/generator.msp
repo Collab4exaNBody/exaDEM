@@ -11,17 +11,12 @@ add_particles:
      region: AREA
 
 init_new_particles:
-  - density_from_shape
-  - set_rand_velocity: 
-     region: AREA
-     var: 0.1
-     mean: [0.0,0.0,-10.0]
-  - set_homothety:
-     region: AREA
-	- inertia_from_shape
-  - set_quaternion:
-     region: AREA
-  - radius_from_shape:
+  - set_fields:
+     polyhedra: true
+     type:           [    alpha3 ]
+     velocity:       [ [0,0,-10] ]
+     sigma_velocity: [       0.1 ]
+     density:        [         1 ]
      region: AREA
 
 input_data:
