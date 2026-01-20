@@ -62,10 +62,10 @@ init_update_particle_neighbors:
   - do_update_persistent_interactions_if_required
   - update_interaction_ghost
   - classify_interactions
-  - check_classifier_interaction_pair
+#  - check_classifier_interaction_pair
   - update_interfaces
   - stats_interactions
 
 +chunk_neighbors_impl:
-  - check_classifier_interaction_pair
+#  - check_classifier_interaction_pair
   - update_interfaces

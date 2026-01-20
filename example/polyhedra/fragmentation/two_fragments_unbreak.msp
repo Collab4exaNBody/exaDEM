@@ -1,0 +1,53 @@
+includes:
+  - config_fragmentation.msp
+
+io_tree:
+  - io_config:
+     dir_name: "TwoFragmentsUnbreakDir"
+
+input_data:
+  - read_conf_rockable:
+     filename: two_fragments.txt
+  - density_from_shape:
+     density: 0.006
+  - inertia_from_shape
+  - set_velocity:
+     value: [0, 0, -1]
+  - multimat_contact_params:
+     default_config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1e5, kt: 8e4, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.87}
+  - drivers_contact_params:
+     default_config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1e6, kt: 8e5, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.87}
+  - inner_bond_params:
+     default_config: { kn: 1.e4, kt: 8.e3, damp_rate: 0.87, g: 2.e-5 } 
+
+compute_force:
+  - gravity_force:
+     gravity: [0,0,-9.81]
+  - contact_polyhedron_multimat
+  - inner_bond_polyhedron
+
+setup_drivers:
+  - register_surface:
+     id: 0
+     state: 
+        normal: [0,0,1]
+        offset: -1.1
+     params: 
+        motion_type: STATIONARY
+
+domain:
+  cell_size: 1 m
+  periodic: [false, false,false]
+  grid_dims: [5, 5, 5]
+  bounds: [[0 m ,0 m, 0 m],[5 m, 5 m, 5 m]]
+  expandable: true
+
+global:
+  symetric: true
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 1800000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 10000
+  apply_particle_sticking: true
+  sticking_threshold: 1e-4
+  rcut_inc: 0.05
