@@ -92,13 +92,13 @@ class VertexDisplacementOver : public OperatorNode {
       auto user_cb = onika::parallel::ParallelExecutionCallback{reduction_end_callback, &(*particle_displ_comm)};
 
       if (defbox) {
-        ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->m_data.data(), max_dist2, shps.data(),
+        ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->m_data.data(), backup_dem->m_index_map.data(), max_dist2, shps.data(),
                                                          domain->xform()};
 
         reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
                               parallel_execution_context(), user_cb, rcpo);
       } else {  // defbox
-        ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->m_data.data(), max_dist2, shps.data(),
+        ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->m_data.data(), backup_dem->m_index_map.data(), max_dist2, shps.data(),
                                                           domain->xform()};
 
         reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
@@ -111,13 +111,13 @@ class VertexDisplacementOver : public OperatorNode {
       if (grid->number_of_cells() > 0) {
         auto user_cb = onika::parallel::ParallelExecutionCallback{};
         if (defbox) {
-          ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->m_data.data(), max_dist2, shps.data(),
+          ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->m_data.data(), backup_dem->m_index_map.data(), max_dist2, shps.data(),
                                                            domain->xform()};
 
           reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
                                 parallel_execution_context(), user_cb, rcpo);
         } else {  // defbox
-          ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->m_data.data(), max_dist2, shps.data(),
+          ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->m_data.data(), backup_dem->m_index_map.data(), max_dist2, shps.data(),
                                                             domain->xform()};
 
           reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
