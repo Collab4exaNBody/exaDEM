@@ -34,7 +34,7 @@ namespace parallel {
 template <>
 struct ParallelForFunctorTraits<exaDEM::ApplyInterfaceFractureCriterionFunc> {
   static inline constexpr bool RequiresBlockSynchronousCall = true;
-  static inline constexpr bool CudaCompatible = false;  // true;
+  static inline constexpr bool CudaCompatible = true;
 };
 }  // namespace parallel
 }  // namespace onika
