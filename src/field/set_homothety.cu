@@ -38,7 +38,7 @@ class SetHomothety : public OperatorNode {
   static constexpr ComputeFields compute_field_set{};
   static constexpr ComputeRegionFields compute_region_field_set{};
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
-  ADD_SLOT(double, homothety, INPUT, default_h, DocString{"homothety value"});
+  ADD_SLOT(double, value, INPUT, default_h, DocString{"homothety value"});
   ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
   ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
@@ -52,12 +52,13 @@ class SetHomothety : public OperatorNode {
         YAML example:
    
           - set_homothety:
-             homothety: 2.0
+             value: 2.0
 
         )EOF";
   }
 
   inline void execute() final {
+    set_gpu_enabled(false);
     if (region.has_value()) {
       if (!particle_regions.has_value()) {
         fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
@@ -69,10 +70,10 @@ class SetHomothety : public OperatorNode {
       }
 
       ParticleRegionCSGShallowCopy prcsg = *region;
-      SetRegionFunctor<double> func = {prcsg, *homothety};
+      SetRegionFunctor<double> func = {prcsg, *value};
       compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
     } else {
-      SetFunctor<double> func = {*homothety};
+      SetFunctor<double> func = {*value};
       compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context());
     }
   }
