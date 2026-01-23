@@ -38,43 +38,44 @@ struct DEMBackupNode : public OperatorNode {
     IJK dims = grid->dimension();
     auto cells = grid->cells();
     const ssize_t gl = grid->ghost_layers();
+    auto& bd = *backup_dem;
 
     const bool defbox = !domain->xform_is_identity();
     Mat3d m_xform = domain->xform();
-    backup_dem->m_data.clear();
-    backup_dem->m_data.resize(grid->number_of_cells());
+    setup_dem_backup(bd, cells, dims);
 
-#pragma omp parallel
+    double* data = bd.m_data.data();
+    uint32_t* idxs = bd.m_index_map.data();
+
+#   pragma omp parallel
     {
       GRID_OMP_FOR_BEGIN(dims - 2 * gl, _, loc_no_gl) {
         const IJK loc = loc_no_gl + gl;
         const size_t i = grid_ijk_to_index(dims, loc);
         const size_t n_particles = cells[i].size();
-        backup_dem->m_data[i].resize(n_particles * 7);
-
-        double* rb = backup_dem->m_data[i].data();
+        double* rb = data + idxs[i];
         const auto* __restrict__ rx = cells[i][field::rx];
         const auto* __restrict__ ry = cells[i][field::ry];
         const auto* __restrict__ rz = cells[i][field::rz];
         const auto* __restrict__ orient = cells[i][field::orient];
 
-        const size_t block_size = n_particles;
-#pragma omp simd
+#       pragma omp simd
         for (size_t j = 0; j < n_particles; j++) {
+          const size_t p = j*DEMBackupData::components;
           if (defbox) {
             Vec3d r = m_xform * Vec3d{rx[j], ry[j], rz[j]};
-            rb[j] = r.x;
-            rb[block_size + j] = r.y;
-            rb[2 * block_size + j] = r.z;
+            rb[p] = r.x;
+            rb[p + 1] = r.y;
+            rb[p + 2] = r.z;
           } else {
-            rb[j] = rx[j];
-            rb[block_size + j] = ry[j];
-            rb[2 * block_size + j] = rz[j];
+            rb[p] = rx[j];
+            rb[p + 1] = ry[j];
+            rb[p + 2] = rz[j];
           }
-          rb[3 * block_size + j] = orient[j].w;
-          rb[4 * block_size + j] = orient[j].x;
-          rb[5 * block_size + j] = orient[j].y;
-          rb[6 * block_size + j] = orient[j].z;
+          rb[p + 3] = orient[j].w;
+          rb[p + 4] = orient[j].x;
+          rb[p + 5] = orient[j].y;
+          rb[p + 6] = orient[j].z;
         }
       }
       GRID_OMP_FOR_END
