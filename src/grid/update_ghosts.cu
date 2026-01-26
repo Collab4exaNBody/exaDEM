@@ -47,8 +47,8 @@ namespace exaDEM {
 template <typename GridT>
 using UpdateGhostsRQ =
     UpdateGhostsNode<GridT,
-                     FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_type,
-                              field::_radius, field::_mass, field::_vrot, field::_orient>,
+                     AddDefaultFields<FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_type,
+                              field::_radius, field::_mass, field::_vrot, field::_orient>>,
                      false>;
 
 // === register factory ===

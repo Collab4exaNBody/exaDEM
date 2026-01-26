@@ -69,8 +69,6 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex(const double rVerlet, Ve
 template <typename VecJ>
 ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex_v2(const double rVerlet, const Vec3d& pi, const double ri,
                                                            const VecJ& vaj, const double rj, const int j) {
-  assert(j < shpj->get_number_of_vertices());
-
   // === compute vertex position
   return filter_vertex_vertex(rVerlet, pi, ri, vaj[j], rj);
 }
