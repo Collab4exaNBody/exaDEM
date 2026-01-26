@@ -65,7 +65,7 @@ compute_all_vertices:
 ghost_full_update:
   - ghost_comm_scheme:
      mpi_tag: 220192
-  - ghost_update_all
+  - ghost_update_all:
      mpi_tag: 141092
   - update_traversals
   - compute_all_vertices
