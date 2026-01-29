@@ -1,46 +1,9 @@
-Rockable 29-11-2018
 #temps initial
 t 0  
-#temps max
-tmax 2
-#pas de temps
 dt 1.e-06
-#pas de temps pour mettre à jour la liste de voisin
-interVerlet 1.e-4
-#pas de temps pour enregistrer 
-interConf 0.01
-#Distance de detection de voisin pour les boites englobantes
-DVerlet 0.1
-#Distance de detection de voisin (entre les sous éléments des particules)
-dVerlet 0.05
-#densité des particules : les 0 et 1 c'est les groupes
 density 0 0.006
 density 1 0.006
-#gravité
-gravity 0 0 -9.81
-#type de loi de force utilisée
-forceLaw StickedLinks
-#les rigidités normales de contact 
-knContact 0 0 1e+05
-knContact 0 1 1e+05
-#les coefs de ristitutions au carré  
-en2Contact 0 0 0.001
-en2Contact 0 1 0.001
-#les rigidités tangentielles de contact 
-ktContact 0 0 8e+4
-ktContact 0 1 8e+4
-#les coefs de frottement
-muContact 0 0 0.3
-muContact 0 1 0.3
 
-#des ressorts pour ragrder le lien cohesif 
-knInnerBond 0 0 1e+04
-ktInnerBond 0 0 8e+03
-en2InnerBond 0 0 0.999
-powInnerBond 0 0 1.0
-
-#les energies de rupture par unité de surface
-GInnerBond 0 0 2.e20
 nDriven 1
 shapeFile ./two_fragments.shp
 Particles 3
@@ -48,5 +11,3 @@ Particles 3
 Plan 1 1 1 0 0 -2.01 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0
 shape_0 0 0 1.0000000000000000e+00 1.0434570122946889e-01 1.7723730126493781e-01 -3.0965681765038933e-01 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 9.5487146471253026e-01 2.3723241671172229e-01 -1.6492594327517346e-01 6.8852738316330764e-02 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00
 shape_1 0 0 1.0000000000000000e+00 -1.0395717030976791e-01 -1.7764624118795960e-01 3.0963375590517050e-01 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 9.4968146738167092e-01 2.6492859503782390e-01 -1.1369046950052963e-01 -1.2244356735994848e-01 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00 0.0000000000000000e+00
-#important à mettre pour indroduire la cohesion, c'est une distance minimale 
-stickVerticesInClusters 1.e-04

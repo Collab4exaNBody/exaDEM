@@ -277,7 +277,9 @@ class StickPolyhedraOperator : public OperatorNode {
                   // define the interface fracture criterion
                   // Et + En > 2.0 * area * g
                   item.as<InnerBondInteraction>().criterion =
-                      pi.id < pj.id ? 2 * hi * shpi->get_face_area(i) * ibp.g : 2 * hj * shpj->get_face_area(j) * ibp.g;
+                      pi.id < pj.id ?
+                      2 * shpi->get_face_area(i, hi) * ibp.g:
+                      2 * shpj->get_face_area(j, hj) * ibp.g;
 
                   found = true;
 
