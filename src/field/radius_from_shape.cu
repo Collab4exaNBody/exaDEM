@@ -99,16 +99,16 @@ class PolyhedraDefineRadius : public OperatorNode {
 
     // now, fill the radius field
     if (region.has_value()) {
-      ParticleRegionCSGShallowCopy prcsg = *region;
-      UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};
+      ParticleRegionCSGShallowCopy prcsg;
       if (!particle_regions.has_value()) {
         fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
       }
-
       if (region->m_nb_operands == 0) {
         ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
         region->build_from_expression_string(particle_regions->data(), particle_regions->size());
       }
+      prcsg = *region;
+      UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};
       compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
     } else {
       ParticleRegionCSGShallowCopy prcsg;
