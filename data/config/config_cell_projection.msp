@@ -10,7 +10,7 @@ paraview_start_cell_proj:
   - resize_grid_cell_values
 
 paraview_end_cell_proj:
-  - write_grid_vtklegacy
+  - write_grid_vtk: { adjust_spacing: true }
 
 all_cell_proj:
   - timestep_paraview_file: "ParaviewOutputFiles/quantities_%010d.vtk"
