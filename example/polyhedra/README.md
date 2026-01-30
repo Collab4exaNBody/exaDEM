@@ -6,6 +6,14 @@ This document provides a brief list of examples to showcase different test cases
 
 This example demonstrates how to add a lattice generator for particles. For details, see the file generator/generator.msp.
 
+## Basic Shape
+
+These examples use basic shape defined by operators instead of a shape file.
+
+- `add_cube.msp`: generate cuboïde particles inside a rotating drum
+- `impact.msp`: projects a sphere on a wall composed of cuboïde particle
+- `impact_with_frag.msp`: projects a sphere on a wall composed of cuboïde particle with sticked innerbond interactions
+
 ## Use Drivers
 
 ### Rotating Drum
