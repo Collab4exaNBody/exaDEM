@@ -84,6 +84,7 @@ shape create_cube(std::string name, double length, double minskowski) {
   shp.add_face({1, 2, 6, 5});
   shp.compute_offset_faces();
 
+  shp.compute_face_areas();
   shp.obb = build_obb_from_shape(shp);
   shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
   shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
