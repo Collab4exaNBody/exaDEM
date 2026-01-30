@@ -176,194 +176,198 @@ class SetFields : public OperatorNode {
 
     bool is_region = region.has_value();
 
-    field_manager mat;  // multi-materials
-    mat.set_t = type.has_value();
-    mat.set_d = density.has_value();
-    mat.set_h = homothety.has_value();
-    mat.set_r = radius.has_value();
-    mat.set_v = velocity.has_value();
-    mat.set_rnd_v = sigma_velocity.has_value();
-    mat.set_ang_v = angular_velocity.has_value();
-    mat.set_rnd_ang_v = sigma_angular_velocity.has_value();
-    mat.set_q = quaternion.has_value();
-    mat.set_rnd_q = random_quaternion.has_value();
+    ParticleRegionCSGShallowCopy prcsg = {};
 
-    lout << "======= Particle Fields =========" << std::endl;
-    for (size_t i = 0; i < types.size(); i++) {
-      std::string type_name = types[i];
-      if (type_map.find(type_name) == type_map.end()) {
-        lout << "The type [" << type_name << "] is not defined" << std::endl;
-        lout << "Available types are = ";
-        for (auto& it : type_map) lout << it.first << " ";
-        lout << std::endl;
-        std::exit(EXIT_FAILURE);
-      }
-      size_t type_id = type_map.at(type_name);
-      // default values;
-      double vx = 0;
-      double vy = 0;
-      double vz = 0;
-      double r = 1.0;  // it will be replaced if the polyhedra is to true.
-      double d = 1.0;
-      double m = 1.0;
-      double h = 1.0;  // homothety
-      Vec3d ang_v = {0, 0, 0};
-      Quaternion quat = {1, 0, 0, 0};
-      Vec3d inertia;
-      double sigma_v, sigma_ang_v;
-      bool rnd_q = false;
+		if (is_region) {
+			if (!particle_regions.has_value()) {
+			  fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+			}
 
-      if (mat.set_d) {
-        auto& dd = *density;
-        d = dd[i];
-      }
-      if (mat.set_h) {
-        auto& hh = *homothety;
-        h = hh[i];
-      }
-      if (mat.set_v) {
-        auto& vv = *velocity;
-        const Vec3d& v = vv[i];
-        vx = v.x;
-        vy = v.y;
-        vz = v.z;
-      }
-      if (mat.set_ang_v) {
-        auto& ang_vv = *angular_velocity;
-        ang_v = ang_vv[i];
-      }
-      if (mat.set_q) {
-        auto& qq = *quaternion;
-        quat = qq[i];
-      }
-      if (mat.set_rnd_q) {
-        auto& rq = *random_quaternion;
-        rnd_q = rq[i];
-      }
-
-      lout << "[>> " << type_name << " <<]" << std::endl;
-      lout << "Velocity         = (" << vx << "," << vy << "," << vz << ") ";
-      if (mat.set_rnd_v) {
-        sigma_v = (*sigma_velocity)[i];
-        lout << ", standart deviation (sigma): " << sigma_v;
-      }
-      lout << std::endl;
-      lout << "Angular velocity = " << ang_v;
-      if (mat.set_rnd_ang_v) {
-        sigma_ang_v = (*sigma_angular_velocity)[i];
-        lout << ", standart deviation (sigma): " << sigma_ang_v;
-      }
-      lout << std::endl;
-      lout << "Density          = " << d << std::endl;
-      lout << "Homothety        = " << h << std::endl;
-      if (!rnd_q) {
-        lout << "Quaternion       = [w: " << quat.w << ", v: (" << quat.x << "," << quat.y << "," << quat.z << ")]";
-      } else {
-        lout << "Quaternion       = random";
-      }
-      lout << std::endl;
-
-      if (*polyhedra) {
-        const shapes& shps = *shapes_collection;
-        const auto& shp = shps[type_id];
-        if (type_id >= shps.size() || shp->m_name != type_name) {
-          color_log::error(operator_name(), "We can't find the shape related to the type " + type_name +
-                                                ". Please verify that you have load all shape files.");
-        }
-        m = d * shp->get_volume(h);
-        inertia = m * shp->get_Im(h);
-
-        if (mat.set_r) {
-          color_log::warning(operator_name(),
-                             "The radius slot is ignored when using polyhedra, "
-                             "it is automaticly deducted from the shape file.");
-        }
-        r = shp->compute_max_rcut();
-        *rcut_max = std::max(*rcut_max, 2 * r);  // r * maxrcut
-        lout << "Radius (poly)    = " << r << std::endl;
-        lout << "Mass             = " << m << std::endl;
-        lout << "Inertia          = " << inertia << std::endl;
-      } else {  // spheres
-        if (!mat.set_r) {
-          color_log::error(operator_name(), "You should define a radius: radius: \"[1.0]\"");
-        } else {
-          auto& rr = *radius;
-          r = rr[i];
-        }
-        *rcut_max = std::max(*rcut_max, 2 * r);  // r * maxrcut
-        const double pi = 4 * std::atan(1);
-        const double V = ((4.0) / (3.0)) * pi * r * r * r;
-        m = V * d;
-        const double inertia_value = 0.4 * m * r * r;
-        inertia = {inertia_value, inertia_value, inertia_value};
-        lout << "Radius           = " << r << std::endl;
-        lout << "Mass             = " << m << std::endl;
-        lout << "Inertia          = " << inertia << std::endl;
-      }
-
-      if (is_region) {
-        ParticleRegionCSGShallowCopy prcsg = *region;
-        if (!particle_regions.has_value()) {
-          fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
-        }
-
-        if (region->m_nb_operands == 0) {
-          ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
-          region->build_from_expression_string(particle_regions->data(), particle_regions->size());
-        }
-
-        // fields : vx, vy, vz, mass, radius, anv, inertia, quat
-        FilteredSetRegionFunctor<double, double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {
-            prcsg, uint32_t(type_id), {h, vx, vy, vz, m, r, ang_v, inertia, quat}};
-
-        compute_cell_particles(*grid, false, func, compute_region_fields, parallel_execution_context());
-
-        if (mat.set_rnd_v) {
-          jammy gen(sigma_v);
-          FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz> compute_rnd_v;
-          GenSetRegionFunctor<jammy> generator = {prcsg, gen};
-          compute_cell_particles(*grid, false, generator, compute_rnd_v, parallel_execution_context());
-        }
-
-        if (mat.set_rnd_ang_v) {
-          jammy gen(sigma_ang_v);
-          FieldSet<field::_rx, field::_ry, field::_rz, field::_vrot> compute_rnd_ang_v;
-
-          GenSetRegionFunctor<jammy> generator = {prcsg, gen};
-          compute_cell_particles(*grid, false, generator, compute_rnd_ang_v, parallel_execution_context());
-        }
-
-        if (rnd_q) { /** Random Quaternion */
-          FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_orient> compute_orient;
-
-          RandomQuaternionFunctor RndQuatFunc = {prcsg};
-          compute_cell_particles(*grid, false, RndQuatFunc, compute_orient, parallel_execution_context());
-        }
-      } else {  // no region
-        FilteredSetFunctor<double, double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {
-            uint32_t(type_id), {h, vx, vy, vz, m, r, ang_v, inertia, quat}};
-
-        compute_cell_particles(*grid, false, func, compute_fields, parallel_execution_context());
-
-        if (mat.set_rnd_v) {
-          jammy gen(sigma_v);
-          FieldSet<field::_vx, field::_vy, field::_vz> compute_rnd_v;
-          GenSetFunctor<jammy> generator = {gen};
-          compute_cell_particles(*grid, false, generator, compute_rnd_v, parallel_execution_context());
-        }
-        if (rnd_q) { /** Random Quaternion */
-          FieldSet<field::_orient> compute_orient;
-          RandomQuaternionFunctor RndQuatFunc = {};
-          compute_cell_particles(*grid, false, RndQuatFunc, compute_orient, parallel_execution_context());
-        }
-      }
+			if (region->m_nb_operands == 0) {
+				region->build_from_expression_string(particle_regions->data(), particle_regions->size());
+			}
+			prcsg = *region;
     }
-    lout << "=================================" << std::endl;
-  }
+
+		field_manager mat;  // multi-materials
+		mat.set_t = type.has_value();
+		mat.set_d = density.has_value();
+		mat.set_h = homothety.has_value();
+		mat.set_r = radius.has_value();
+		mat.set_v = velocity.has_value();
+		mat.set_rnd_v = sigma_velocity.has_value();
+		mat.set_ang_v = angular_velocity.has_value();
+		mat.set_rnd_ang_v = sigma_angular_velocity.has_value();
+		mat.set_q = quaternion.has_value();
+		mat.set_rnd_q = random_quaternion.has_value();
+
+		lout << "======= Particle Fields =========" << std::endl;
+		for (size_t i = 0; i < types.size(); i++) {
+			std::string type_name = types[i];
+			if (type_map.find(type_name) == type_map.end()) {
+				lout << "The type [" << type_name << "] is not defined" << std::endl;
+				lout << "Available types are = ";
+				for (auto& it : type_map) lout << it.first << " ";
+				lout << std::endl;
+				std::exit(EXIT_FAILURE);
+			}
+			size_t type_id = type_map.at(type_name);
+			// default values;
+			double vx = 0;
+			double vy = 0;
+			double vz = 0;
+			double r = 1.0;  // it will be replaced if the polyhedra is to true.
+			double d = 1.0;
+			double m = 1.0;
+			double h = 1.0;  // homothety
+			Vec3d ang_v = {0, 0, 0};
+			Quaternion quat = {1, 0, 0, 0};
+			Vec3d inertia;
+			double sigma_v, sigma_ang_v;
+			bool rnd_q = false;
+
+			if (mat.set_d) {
+				auto& dd = *density;
+				d = dd[i];
+			}
+			if (mat.set_h) {
+				auto& hh = *homothety;
+				h = hh[i];
+			}
+			if (mat.set_v) {
+				auto& vv = *velocity;
+				const Vec3d& v = vv[i];
+				vx = v.x;
+				vy = v.y;
+				vz = v.z;
+			}
+			if (mat.set_ang_v) {
+				auto& ang_vv = *angular_velocity;
+				ang_v = ang_vv[i];
+			}
+			if (mat.set_q) {
+				auto& qq = *quaternion;
+				quat = qq[i];
+			}
+			if (mat.set_rnd_q) {
+				auto& rq = *random_quaternion;
+				rnd_q = rq[i];
+			}
+
+			lout << "[>> " << type_name << " <<]" << std::endl;
+			lout << "Velocity         = (" << vx << "," << vy << "," << vz << ") ";
+			if (mat.set_rnd_v) {
+				sigma_v = (*sigma_velocity)[i];
+				lout << ", standart deviation (sigma): " << sigma_v;
+			}
+			lout << std::endl;
+			lout << "Angular velocity = " << ang_v;
+			if (mat.set_rnd_ang_v) {
+				sigma_ang_v = (*sigma_angular_velocity)[i];
+				lout << ", standart deviation (sigma): " << sigma_ang_v;
+			}
+			lout << std::endl;
+			lout << "Density          = " << d << std::endl;
+			lout << "Homothety        = " << h << std::endl;
+			if (!rnd_q) {
+				lout << "Quaternion       = [w: " << quat.w << ", v: (" << quat.x << "," << quat.y << "," << quat.z << ")]";
+			} else {
+				lout << "Quaternion       = random";
+			}
+			lout << std::endl;
+
+			if (*polyhedra) {
+				const shapes& shps = *shapes_collection;
+				const auto& shp = shps[type_id];
+				if (type_id >= shps.size() || shp->m_name != type_name) {
+					color_log::error(operator_name(), "We can't find the shape related to the type " + type_name +
+																								". Please verify that you have load all shape files.");
+				}
+				m = d * shp->get_volume(h);
+				inertia = m * shp->get_Im(h);
+
+				if (mat.set_r) {
+					color_log::warning(operator_name(),
+														 "The radius slot is ignored when using polyhedra, "
+														 "it is automaticly deducted from the shape file.");
+				}
+				r = shp->compute_max_rcut();
+				*rcut_max = std::max(*rcut_max, 2 * r);  // r * maxrcut
+				lout << "Radius (poly)    = " << r << std::endl;
+				lout << "Mass             = " << m << std::endl;
+				lout << "Inertia          = " << inertia << std::endl;
+			} else {  // spheres
+				if (!mat.set_r) {
+					color_log::error(operator_name(), "You should define a radius: radius: \"[1.0]\"");
+				} else {
+					auto& rr = *radius;
+					r = rr[i];
+				}
+				*rcut_max = std::max(*rcut_max, 2 * r);  // r * maxrcut
+				const double pi = 4 * std::atan(1);
+				const double V = ((4.0) / (3.0)) * pi * r * r * r;
+				m = V * d;
+				const double inertia_value = 0.4 * m * r * r;
+				inertia = {inertia_value, inertia_value, inertia_value};
+				lout << "Radius           = " << r << std::endl;
+				lout << "Mass             = " << m << std::endl;
+				lout << "Inertia          = " << inertia << std::endl;
+			}
+
+			if (is_region) {
+				// fields : vx, vy, vz, mass, radius, anv, inertia, quat
+				FilteredSetRegionFunctor<double, double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {
+						prcsg, uint32_t(type_id), {h, vx, vy, vz, m, r, ang_v, inertia, quat}};
+
+				compute_cell_particles(*grid, false, func, compute_region_fields, parallel_execution_context());
+
+				if (mat.set_rnd_v) {
+					jammy gen(sigma_v);
+					FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz> compute_rnd_v;
+					GenSetRegionFunctor<jammy> generator = {prcsg, gen};
+					compute_cell_particles(*grid, false, generator, compute_rnd_v, parallel_execution_context());
+				}
+
+				if (mat.set_rnd_ang_v) {
+					jammy gen(sigma_ang_v);
+					FieldSet<field::_rx, field::_ry, field::_rz, field::_vrot> compute_rnd_ang_v;
+
+					GenSetRegionFunctor<jammy> generator = {prcsg, gen};
+					compute_cell_particles(*grid, false, generator, compute_rnd_ang_v, parallel_execution_context());
+				}
+
+				if (rnd_q) { /** Random Quaternion */
+					FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_orient> compute_orient;
+
+					RandomQuaternionFunctor RndQuatFunc = {prcsg};
+					compute_cell_particles(*grid, false, RndQuatFunc, compute_orient, parallel_execution_context());
+				}
+			} else {  // no region
+lout << "Not a Region " << std::endl;
+				FilteredSetFunctor<double, double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {
+						uint32_t(type_id), {h, vx, vy, vz, m, r, ang_v, inertia, quat}};
+
+				compute_cell_particles(*grid, false, func, compute_fields, parallel_execution_context());
+
+				if (mat.set_rnd_v) {
+					jammy gen(sigma_v);
+					FieldSet<field::_vx, field::_vy, field::_vz> compute_rnd_v;
+					GenSetFunctor<jammy> generator = {gen};
+					compute_cell_particles(*grid, false, generator, compute_rnd_v, parallel_execution_context());
+				}
+				if (rnd_q) { /** Random Quaternion */
+					FieldSet<field::_orient> compute_orient;
+					RandomQuaternionFunctor RndQuatFunc = {};
+					compute_cell_particles(*grid, false, RndQuatFunc, compute_orient, parallel_execution_context());
+				}
+			}
+		}
+		lout << "=================================" << std::endl;
+	}
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(set_fields) {
-  OperatorNodeFactory::instance()->register_factory("set_fields", make_grid_variant_operator<SetFields>);
+	OperatorNodeFactory::instance()->register_factory("set_fields", make_grid_variant_operator<SetFields>);
 }
 }  // namespace exaDEM
