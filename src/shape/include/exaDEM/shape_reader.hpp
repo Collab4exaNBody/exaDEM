@@ -123,13 +123,25 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
       }
       shp.compute_offset_faces();
     } else if (key == "na") {
-      color_log::warning("read_shape",
-                         "na is no longer used; face areas are now computed.");
+      int n_face_areas;
+      input >> n_face_areas;
+      for (int i = 0; i < n_face_areas; i++) {
+        double n_weights;
+        double area;
+        getline(input, line);
+        input >> n_weights >> area;
+        shp.m_face_area.push_back(area);
+        getline(input, line);  // skip weights WARNING
+      }
     } else if (key == ">") {
+      //        shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z -
+      //        position.z};
+      // shp.obb.center = {0,0,0};
+      // shp.obb.center = {shp.obb.center.x - position.x, shp.obb.center.y - position.y, shp.obb.center.z - position.z};
+      // shp.shift_vertices(position);
       shp.obb = build_obb_from_shape(shp);
       shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
       shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
-      shp.compute_face_areas();
       return shp;
     }
   }
@@ -164,25 +176,6 @@ inline std::vector<shape> read_shps(const std::string file_name, bool big_shape 
   return res;
 }
 
-/**
- * @brief Registers a collection of shapes into the particle type map and shape container.
- *
- * @param ptm   Reference to the particle type map.
- * @param shps  Reference to the shape container.
- * @param shp   Vector of shapes to register.
- */
-inline void register_shapes(ParticleTypeMap& ptm, shapes& shps, std::vector<shape>& shp) {
-  for (auto& s : shp) {
-    if (ptm.find(s.m_name) != ptm.end()) {
-      s.m_name = s.m_name + "X";
-      color_log::warning(
-          "read_shape",
-          "[read_shape, WARNING] This polyhedron name is already taken, exaDEM has renamed it to: " + s.m_name);
-    }
-    ptm[s.m_name] = shps.size();
-    shps.add_shape(&s);
-  }
-}
 /**
  * @brief Read multiple shapes from a file.
  *

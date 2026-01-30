@@ -353,13 +353,12 @@ struct shape {
   /**
    * @brief Get a face by index.
    * @param i Face index
-   * @param h homothety
    * @return Pair {pointer to vertex indices, number of vertices}
    */
   ONIKA_HOST_DEVICE_FUNC
-  double get_face_area(int i, double h = 1.0) const {
+  double get_face_area(int i) const {
     const auto* ptr = onika::cuda::vector_data(m_face_area);
-    return ptr[i] * h * h;
+    return ptr[i];
   }
 
   /**
@@ -398,7 +397,9 @@ struct shape {
    * @brief Add a vertex to the shape.
    * @param vertex 3D position of the vertex
    */
-  void add_vertex(const exanb::Vec3d& vertex) { m_vertices.push_back(vertex); }
+  void add_vertex(const exanb::Vec3d& vertex) {
+    m_vertices.push_back(vertex);
+  }
 
   /**
    * @brief Add an edge to the shape.
@@ -425,6 +426,33 @@ struct shape {
     m_faces[old_size] = num_vertices;
     for (size_t it = 0; it < num_vertices; it++) {
       m_faces[old_size + 1 + it] = vertex_indices[it];
+    }
+  }
+
+
+  void add_face(std::initializer_list<int> vertex_indices) {
+    size_t num_vertices = vertex_indices.size();
+    assert(num_vertices != 0);
+
+    // Initialise le compteur de faces si m_faces est vide
+    if (m_faces.empty()) {
+      m_faces.push_back(0);
+    }
+
+    m_faces[0]++; // Incrémente le nombre total de faces
+
+    const size_t old_size = m_faces.size();
+
+    // On réserve l'espace : num_vertices + 1 (pour stocker le nombre de sommets)
+    m_faces.resize(old_size + num_vertices + 1);
+
+    m_faces[old_size] = static_cast<int>(num_vertices);
+
+    // Copie efficace des sommets
+    size_t i = 1;
+    for (int idx : vertex_indices) {
+      m_faces[old_size + i] = idx;
+      i++;
     }
   }
 
@@ -641,43 +669,12 @@ struct shape {
   }
 
   /**
-   * @brief Compute the surfaces for each face.
-   */
-  void compute_face_areas() {
-    const size_t n_faces = this->get_number_of_faces();
-    m_face_area.resize(n_faces);
-
-#pragma omp parallel for
-    for (size_t face_idx = 0; face_idx < n_faces; face_idx++) {
-      double surface = 0;
-      auto [vertices_ptr, face_size] = this->get_face(face_idx);
-      const Vec3d& v0 = m_vertices[vertices_ptr[0]];
-
-      if (face_size >= 3) {
-        for (int j = 1; j < face_size - 1; j++) {
-          const size_t k = j + 1;
-          const Vec3d v1 = m_vertices[vertices_ptr[j]] - v0;
-          const Vec3d v2 = m_vertices[vertices_ptr[k]] - v0;
-          surface += 0.5 * exanb::norm(exanb::cross(v1, v2));
- 
-        }
-      } else {
-        color_log::error("compute_face_areas",
-                         "This is not a face (n_vertices<3)");
-      }
-      m_face_area[face_idx] = surface;
-    }
-  }
-
-  /**
    * @brief Shifts all mesh vertices by a given vector.
    *
    * @param shift The shift vector applied to each vertex.
    */
   void shift_vertices(const Vec3d& shift) {
-    auto shift_vertex = [](Vec3d& vertex, const Vec3d& shift) {
-      vertex -= shift;
-    };
+    auto shift_vertex = [](Vec3d& vertex, const Vec3d& shift) { vertex -= shift; };
     for_all_vertices(shift_vertex, shift);
   }
 
