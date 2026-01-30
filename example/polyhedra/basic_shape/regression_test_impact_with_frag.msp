@@ -1,0 +1,9 @@
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 3000
+  simulation_log_frequency: 500
+  simulation_paraview_frequency: -1
+  dt: 0.00001 s 
+  rcut_inc: 0.01
+  apply_particle_sticking: true
+  sticking_threshold: 3e-2
