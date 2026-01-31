@@ -58,7 +58,7 @@ compute_force:
         kt: 50000
         kr: 0.0
         mu: 0.3
-        damp_rate: 0.87}
+        damp_rate: 0.87
 
 domain:
   cell_size: 4 m
