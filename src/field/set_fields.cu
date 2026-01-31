@@ -343,7 +343,6 @@ class SetFields : public OperatorNode {
 					compute_cell_particles(*grid, false, RndQuatFunc, compute_orient, parallel_execution_context());
 				}
 			} else {  // no region
-lout << "Not a Region " << std::endl;
 				FilteredSetFunctor<double, double, double, double, double, double, Vec3d, Vec3d, Quaternion> func = {
 						uint32_t(type_id), {h, vx, vy, vz, m, r, ang_v, inertia, quat}};
 

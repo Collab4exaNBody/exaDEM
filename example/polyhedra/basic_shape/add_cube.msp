@@ -1,0 +1,78 @@
+includes:
+  - config_polyhedra.msp
+
+io_tree:
+  - io_config:
+     dir_name: "AddCubeDir"
+
+particle_regions:
+  - CYL1:
+      quadric:
+        shape: cyly
+        transform:
+          - scale: [ 9.0, 1, 9.0 ]
+          - translate: [ 10 m , 0 , 10 m ]
+
+input_data:
+  - init_rcb_grid
+  - add_cube:
+     length: 0.5
+     minskowki: 0.025
+  - lattice:
+      structure: SC
+      types: [ cube ]
+      size: [ 0.9 , 1.0 , 0.9 ]
+      region: CYL1
+  - set_fields:
+     polyhedra: true
+     type:              [    cube ]
+     random_quaternion: [    true ]
+     sigma_velocity:    [     0.1 ]
+     velocity:          [ [0,0,0] ]     
+
+setup_drivers:
+  - register_cylinder:
+     id: 0
+     state: 
+        radius: 10
+        center: [10,10,10]
+        axis: [1,0,1]
+        vrot: [0,1.0,0]
+     params:
+        motion_type: STATIONARY
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+
+compute_force:
+  - gravity_force
+  - contact_polyhedron:
+     config:
+        kn: 50000
+        kt: 50000
+        kr: 0.0
+        mu: 0.1
+        damp_rate: 0.87
+     config_driver:
+        kn: 50000
+        kt: 50000
+        kr: 0.0
+        mu: 0.3
+        damp_rate: 0.87
+
+domain:
+  cell_size: 4 m
+  periodic: [false,true,false]
+  grid_dims: [5, 2, 5]
+  bounds: [[0,0,0],[20, 8, 20]]
+  expandable: true
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 300000
+  simulation_log_frequency: 10000
+  simulation_paraview_frequency: 2500
+  dt: 0.0001 s 
+  rcut_inc: 0.025
+  enable_contact_network: true
+

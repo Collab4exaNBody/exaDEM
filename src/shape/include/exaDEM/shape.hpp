@@ -398,7 +398,9 @@ struct shape {
    * @brief Add a vertex to the shape.
    * @param vertex 3D position of the vertex
    */
-  void add_vertex(const exanb::Vec3d& vertex) { m_vertices.push_back(vertex); }
+  void add_vertex(const exanb::Vec3d& vertex) {
+    m_vertices.push_back(vertex);
+  }
 
   /**
    * @brief Add an edge to the shape.
@@ -425,6 +427,33 @@ struct shape {
     m_faces[old_size] = num_vertices;
     for (size_t it = 0; it < num_vertices; it++) {
       m_faces[old_size + 1 + it] = vertex_indices[it];
+    }
+  }
+
+
+  void add_face(std::initializer_list<int> vertex_indices) {
+    size_t num_vertices = vertex_indices.size();
+    assert(num_vertices != 0);
+
+    // Initialise le compteur de faces si m_faces est vide
+    if (m_faces.empty()) {
+      m_faces.push_back(0);
+    }
+
+    m_faces[0]++; // Incrémente le nombre total de faces
+
+    const size_t old_size = m_faces.size();
+
+    // On réserve l'espace : num_vertices + 1 (pour stocker le nombre de sommets)
+    m_faces.resize(old_size + num_vertices + 1);
+
+    m_faces[old_size] = static_cast<int>(num_vertices);
+
+    // Copie efficace des sommets
+    size_t i = 1;
+    for (int idx : vertex_indices) {
+      m_faces[old_size + i] = idx;
+      i++;
     }
   }
 

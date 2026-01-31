@@ -165,25 +165,6 @@ inline std::vector<shape> read_shps(const std::string file_name, bool big_shape 
 }
 
 /**
- * @brief Registers a collection of shapes into the particle type map and shape container.
- *
- * @param ptm   Reference to the particle type map.
- * @param shps  Reference to the shape container.
- * @param shp   Vector of shapes to register.
- */
-inline void register_shapes(ParticleTypeMap& ptm, shapes& shps, std::vector<shape>& shp) {
-  for (auto& s : shp) {
-    if (ptm.find(s.m_name) != ptm.end()) {
-      s.m_name = s.m_name + "X";
-      color_log::warning(
-          "read_shape",
-          "[read_shape, WARNING] This polyhedron name is already taken, exaDEM has renamed it to: " + s.m_name);
-    }
-    ptm[s.m_name] = shps.size();
-    shps.add_shape(&s);
-  }
-}
-/**
  * @brief Read multiple shapes from a file.
  *
  * @param file_name  Path to the input shape file.
