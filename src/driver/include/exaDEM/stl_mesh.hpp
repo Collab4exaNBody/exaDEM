@@ -222,7 +222,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
       }
     }
 
-    if(is_force_motion()) {
+    if (need_moment()) {
       if(inertia == null) {
         color_log::error("Stl_mesh::initialize",
                          "Inertia should be defined, either params, either in a shape file.");
