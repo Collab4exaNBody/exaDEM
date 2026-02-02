@@ -35,7 +35,8 @@ under the License.
 namespace exaDEM {
 template <typename T>
 using vector_t = onika::memory::CudaMMVector<T>;
-
+using exanb::Vec3d;
+constexpr Vec3d null = Vec3d{0, 0, 0};
 /**
  * @brief Struct representing a list of elements( vertex, edge, or face).
  */
@@ -51,21 +52,21 @@ struct list_of_elements {
 };
 
 struct Stl_params {
-  exanb::Vec3d center = Vec3d{0, 0, 0};                 /**< Center position of the STL mesh. */
-  exanb::Vec3d vel = Vec3d{0, 0, 0};                    /**< Velocity of the STL mesh. */
-  exanb::Vec3d vrot = Vec3d{0, 0, 0};                   /**< Angular velocity of the STL mesh. */
-  exanb::Quaternion quat = {1, 0, 0, 0};                /**< Quaternion of the STL mesh. */
-  double surface = -1;                                  /**< Surface, used with linear_compression_motion. */
+  exanb::Vec3d center = null;                 /**< Center position of the STL mesh. */
+  exanb::Vec3d vel = null;                    /**< Velocity of the STL mesh. */
+  exanb::Vec3d vrot = null;                   /**< Angular velocity of the STL mesh. */
+  exanb::Quaternion quat = {1,0,0,0};         /**< Quaternion of the STL mesh. */
+  double surface = -1;                        /**< Surface, used with linear_compression_motion. */
   double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the STL mesh */
   // special mode to control the rotation by a moment
   bool drive_by_mom = false;
-  exanb::Vec3d applied_mom; /**< Moment of the STL mesh. */
-  exanb::Vec3d mom;         /**< Moment of the STL mesh. */
-  exanb::Vec3d inertia;     /**< Inertia of the STL mesh. */
-  exanb::Vec3d mom_axis;    /**< normal vector of the moment. */
+  exanb::Vec3d applied_mom;     /**< Moment of the STL mesh. */
+  exanb::Vec3d mom;             /**< Moment of the STL mesh. */
+  exanb::Vec3d inertia = null;  /**< Inertia of the STL mesh. */
+  exanb::Vec3d mom_axis;        /**< normal vector of the moment. */
 };
 }  // namespace exaDEM
-
+ 
 namespace YAML {
 using exaDEM::MotionType;
 using exaDEM::Stl_params;
@@ -112,7 +113,9 @@ struct convert<Stl_params> {
 
 namespace exaDEM {
 const std::vector<MotionType> stl_valid_motion_types = {
-    STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION, TABULATED, SHAKER, EXPRESSION};
+    STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION,
+    LINEAR_COMPRESSIVE_MOTION, PARTICLE,
+    TABULATED, SHAKER, EXPRESSION};
 
 using namespace exanb;
 /**
@@ -149,6 +152,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
     lout << "Driver Type: MESH STL" << std::endl;
     lout << "Name               = " << shp.m_name << std::endl;
     lout << "Center             = " << center << std::endl;
+    lout << "Minskowski         = " << shp.minskowski() << std::endl;
     lout << "Velocity           = " << vel << std::endl;
     lout << "Angular Velocity   = " << vrot << std::endl;
     lout << "Orientation        = " << quat.w << " " << quat.x << " " << quat.y << " " << quat.z << std::endl;
@@ -159,6 +163,9 @@ struct Stl_mesh : public Stl_params, Driver_params {
       lout << "Applied moment     = " << applied_mom << std::endl;
       lout << "Inertia            = " << inertia << std::endl;
       lout << "normal(moment)     = " << mom_axis << std::endl;
+    } else if(motion_type == PARTICLE) {
+      lout << "Mass               = " << mass << std::endl;
+      lout << "Inertia            = " << inertia << std::endl;
     }
     lout << "Number of faces    = " << shp.get_number_of_faces() << std::endl;
     lout << "Number of edges    = " << shp.get_number_of_edges() << std::endl;
@@ -206,10 +213,19 @@ struct Stl_mesh : public Stl_params, Driver_params {
                          "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. "
                          "You need to specify surface: XX in the 'state' slot.",
                          false);
-        color_log::error("Stl_mesh::initialize", "The computed surface of all faces is: " + std::to_string(s), true);
+        color_log::error("Stl_mesh::initialize",
+                         "The computed surface of all faces is: " + std::to_string(s), true);
       }
       if (s - surface > 1e-6) {
-        color_log::warning("Stl_mesh::initialize", "The computed surface of all faces is: " + std::to_string(s));
+        color_log::warning("Stl_mesh::initialize",
+                           "The computed surface of all faces is: " + std::to_string(s));
+      }
+    }
+
+    if (need_moment()) {
+      if(inertia == null) {
+        color_log::error("Stl_mesh::initialize",
+                         "Inertia should be defined, either params, either in a shape file.");
       }
     }
   }
@@ -293,8 +309,16 @@ struct Stl_mesh : public Stl_params, Driver_params {
           this->mom_axis = this->applied_mom / exanb::norm(this->applied_mom);
         }
       }
-      Vec3d project_mom = dot(this->applied_mom + this->mom, this->mom_axis) * this->mom_axis;
+
+      Vec3d project_mom;
       Vec3d arot;
+
+      // do not use applied_mom direction if the motion type is PARTICLE
+      if (motion_type == MotionType::PARTICLE) {
+        project_mom = mom;
+      } else {
+        project_mom = dot(this->applied_mom + this->mom, this->mom_axis) * this->mom_axis;
+      }
 
       compute_arot(this->quat, project_mom, this->vrot, arot, this->inertia);
       compute_vrot(this->vrot, arot);
@@ -335,11 +359,12 @@ struct Stl_mesh : public Stl_params, Driver_params {
   ONIKA_HOST_DEVICE_FUNC inline bool need_moment() const {
     if (drive_by_mom) {
       return true;
-    }
-    if (is_expr()) {
+    } else if (is_expr()) {
       if (expr.expr_use_mom) {
         return true;
       }
+    } else if (motion_type == MotionType::PARTICLE) {
+      return true;
     }
     return false;
   }

@@ -36,7 +36,7 @@ enum MotionType {
   LINEAR_MOTION,             /**< Linear movement type, straight-line motion. */
   COMPRESSIVE_FORCE,         /**< Movement influenced by compressive forces. */
   LINEAR_FORCE_MOTION,       /**< Linear motion type influenced by applied forces. */
-  FORCE_MOTION,              /**< General movement caused by applied forces. */
+  PARTICLE,                  /**< General movement caused by applied forces. */
   LINEAR_COMPRESSIVE_MOTION, /**< Linear movement combined with compressive forces. */
   TABULATED,                 /**< Motion defined by precomputed or tabulated data. */
   SHAKER,                    /**< Oscillatory or vibratory motion, typically mimicking a shaking mechanism. */
@@ -55,8 +55,8 @@ inline std::string motion_type_to_string(MotionType motion_type) {
       return "COMPRESSIVE_FORCE";
     case LINEAR_FORCE_MOTION:
       return "LINEAR_FORCE_MOTION";
-    case FORCE_MOTION:
-      return "FORCE_MOTION";
+    case PARTICLE:
+      return "PARTICLE";
     case LINEAR_COMPRESSIVE_MOTION:
       return "LINEAR_COMPRESSIVE_MOTION";
     case TABULATED:
@@ -81,8 +81,8 @@ inline MotionType string_to_motion_type(const std::string& str) {
     return COMPRESSIVE_FORCE;
   } else if (str == "LINEAR_FORCE_MOTION") {
     return LINEAR_FORCE_MOTION;
-  } else if (str == "FORCE_MOTION") {
-    return FORCE_MOTION;
+  } else if (str == "PARTICLE") {
+    return PARTICLE;
   } else if (str == "LINEAR_COMPRESSIVE_MOTION") {
     return LINEAR_COMPRESSIVE_MOTION;
   } else if (str == "TABULATED") {
@@ -173,22 +173,22 @@ struct Driver_params  //: public Driver_expr
   }
 
   ONIKA_HOST_DEVICE_FUNC inline bool is_force_motion() const {
-    return (motion_type == FORCE_MOTION || motion_type == LINEAR_FORCE_MOTION);
+    return (motion_type == PARTICLE || motion_type == LINEAR_FORCE_MOTION);
   }
 
   ONIKA_HOST_DEVICE_FUNC inline bool need_forces() const {
     // Need for LINEAR_FORCE_MOTION
     // No need for STATIONARY
     // No need for LINEAR_MOTION
-    // Need for FORCE_MOTION
+    // Need for PARTICLE
     // Need for COMPRESSIVE_FORCE
     // Need for LINEAR_COMPRESSIVE_MOTION
-    return is_compressive() || motion_type == FORCE_MOTION || motion_type == LINEAR_FORCE_MOTION;
+    return is_compressive() || motion_type == PARTICLE || motion_type == LINEAR_FORCE_MOTION;
   }
 
   // Getter
   inline Vec3d sum_forces() {
-    if (motion_type == FORCE_MOTION) {
+    if (motion_type == PARTICLE) {
       return forces;
     }
     if (motion_type == LINEAR_FORCE_MOTION) {
