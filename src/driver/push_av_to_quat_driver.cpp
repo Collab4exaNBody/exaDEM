@@ -28,7 +28,7 @@ struct PushAVToQuatFunc {
   const double dt;
   template <typename T>
   inline void operator()(T& drv) const {
-    if constexpr (std::is_same_v<std::remove_cv_t<T>, exaDEM::Stl_mesh>) {
+    if constexpr (std::is_same_v<std::remove_cv_t<T>, exaDEM::RShapeDriver>) {
       drv.push_av_to_quat(t, dt);
     }
   }

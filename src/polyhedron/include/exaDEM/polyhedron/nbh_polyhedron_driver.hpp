@@ -24,7 +24,7 @@ under the License.
 
 namespace exaDEM {
 /**
- * @brief Add interactions between particles and a driver defined by an STL mesh.
+ * @brief Add interactions between particles and a driver defined by an RShape driver.
  *
  * This function detects contacts between all particles (vertices, edges, faces)
  * and the primitives (vertices, edges, faces) of a driver mesh. It relies on
@@ -35,7 +35,7 @@ namespace exaDEM {
  * @tparam Func   Functor type used to register contacts
  *                (signature: void(size_t pid, Interaction&, int sub_i, int sub_j)).
  *
- * @param mesh        STL mesh driver containing geometry and precomputed OBBs.
+ * @param mesh        RShape driver containing geometry and precomputed OBBs.
  * @param cell_a      Index of the mesh grid cell to process (must be < mesh.grid_indexes.size()).
  * @param add_contact Functor used to register detected contacts.
  * @param item        Reusable interaction object (fields are updated during processing).
@@ -59,7 +59,7 @@ namespace exaDEM {
  */
 template <typename Func>
 ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
-    Stl_mesh& mesh, size_t cell_a, Func& add_contact, PlaceholderInteraction& item, const size_t n_particles,
+    RShapeDriver& mesh, size_t cell_a, Func& add_contact, PlaceholderInteraction& item, const size_t n_particles,
     const double rVerlet, const ParticleTypeInt* __restrict__ type, const uint64_t* __restrict__ id,
     const double* __restrict__ rx, const double* __restrict__ ry, const double* __restrict__ rz, VertexField& vertices,
     const double* __restrict__ homothety, const exanb::Quaternion* __restrict__ orient, shapes& shps) {
@@ -69,19 +69,19 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
 #define __driver__ mesh.vertices.data(), dhomothety, idx, &mesh.shp
   assert(cell_a < mesh.grid_indexes.size());
   auto& list = mesh.grid_indexes[cell_a];
-  const size_t stl_nv = list.vertices.size();
-  const size_t stl_ne = list.edges.size();
-  const size_t stl_nf = list.faces.size();
+  const size_t rshape_nv = list.vertices.size();
+  const size_t rshape_ne = list.edges.size();
+  const size_t rshape_nf = list.faces.size();
 
-  if (stl_nv == 0 && stl_ne == 0 && stl_nf == 0) {
+  if (rshape_nv == 0 && rshape_ne == 0 && rshape_nf == 0) {
     return;
   }
 
-  // Get OBBs from stl mesh
-  auto& stl_shp = mesh.shp;
-  OBB* __restrict__ stl_obb_vertices = onika::cuda::vector_data(stl_shp.m_obb_vertices);
-  [[maybe_unused]] OBB* __restrict__ stl_obb_edges = vector_data(stl_shp.m_obb_edges);
-  [[maybe_unused]] OBB* __restrict__ stl_obb_faces = vector_data(stl_shp.m_obb_faces);
+  // Get OBBs from rshape mesh
+  auto& rshape_shp = mesh.shp;
+  OBB* __restrict__ rshape_obb_vertices = onika::cuda::vector_data(rshape_shp.m_obb_vertices);
+  [[maybe_unused]] OBB* __restrict__ rshape_obb_edges = vector_data(rshape_shp.m_obb_edges);
+  [[maybe_unused]] OBB* __restrict__ rshape_obb_faces = vector_data(rshape_shp.m_obb_faces);
 
   // particle i (id, cell id, particle position, sub vertex)
   auto& pi = item.i();
@@ -108,7 +108,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
 
     // Note:
     // loop i = particle p
-    // loop j = stl mesh
+    // loop j = rshape mesh
     for (size_t i = 0; i < nv; i++) {
       vec3r v = conv_to_vec3r(vertices_i[i]);
       OBB obb_v_i;
@@ -118,7 +118,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
       // vertex - vertex
       item.pair.type = 7;
       pi.sub = i;
-      for (size_t j = 0; j < stl_nv; j++) {
+      for (size_t j = 0; j < rshape_nv; j++) {
         size_t idx = list.vertices[j];
         if (filter_vertex_vertex_v2(rVerlet, __particle__, __driver__)) {
           add_contact(item, i, idx);
@@ -126,7 +126,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
       }
       // vertex - edge
       item.pair.type = 8;
-      for (size_t j = 0; j < stl_ne; j++) {
+      for (size_t j = 0; j < rshape_ne; j++) {
         size_t idx = list.edges[j];
         if (filter_vertex_edge(rVerlet, __particle__, __driver__)) {
           add_contact(item, i, idx);
@@ -134,10 +134,10 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
       }
       // vertex - face
       item.pair.type = 9;
-      for (size_t j = 0; j < stl_nf; j++) {
+      for (size_t j = 0; j < rshape_nf; j++) {
         size_t idx = list.faces[j];
-        const OBB& obb_f_stl_j = stl_obb_faces[idx];
-        if (obb_f_stl_j.intersect(obb_v_i)) {
+        const OBB& obb_f_rshape_j = rshape_obb_faces[idx];
+        if (obb_f_rshape_j.intersect(obb_v_i)) {
           if (filter_vertex_face(rVerlet, __particle__, __driver__)) {
             add_contact(item, i, idx);
           }
@@ -149,7 +149,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
       item.pair.type = 10;
       pi.sub = i;
       // edge - edge
-      for (size_t j = 0; j < stl_ne; j++) {
+      for (size_t j = 0; j < rshape_ne; j++) {
         const size_t idx = list.edges[j];
         if (filter_edge_edge(rVerlet, __particle__, __driver__)) {
           add_contact(item, i, idx);
@@ -157,11 +157,11 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
       }
     }
 
-    for (size_t j = 0; j < stl_nv; j++) {
+    for (size_t j = 0; j < rshape_nv; j++) {
       const size_t idx = list.vertices[j];
-      // rejects vertices that are too far from the stl mesh.
-      const OBB& obb_v_stl_j = stl_obb_vertices[idx];
-      if (!obb_v_stl_j.intersect(obb_i)) {
+      // rejects vertices that are too far from the rshape mesh.
+      const OBB& obb_v_rshape_j = rshape_obb_vertices[idx];
+      if (!obb_v_rshape_j.intersect(obb_i)) {
         continue;
       }
       item.pair.type = 11;

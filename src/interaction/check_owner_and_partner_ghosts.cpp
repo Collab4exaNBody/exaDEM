@@ -44,7 +44,7 @@ class CheckOwnerPartnerGhosts : public OperatorNode {
   inline void execute() final {
     auto& cells = ges->m_data;
 
-    // v vertex, e edge, f face, c cylinder, s surface, b ball, S stl, sp
+    // v vertex, e edge, f face, c cylinder, s surface, b ball, S rShape driver, sp
     // sticked particles
     int partners[14];
     int owners[14];
@@ -84,9 +84,9 @@ class CheckOwnerPartnerGhosts : public OperatorNode {
     std::vector<std::string> names = {
         "* Vertex - Vertex           = ", "* Vertex - Edge             = ", "* Vertex - Face             = ",
         "* Edge   - Edge             = ", "* Vertex - Cylinder         = ", "* Vertex - Surface          = ",
-        "* Vertex - Ball             = ", "* Vertex - Vertex (STL)     = ", "* Vertex - Edge (STL)       = ",
-        "* Vertex - Face (STL)       = ", "* Edge   - Edge (STL)       = ", "* Edge (STL) - Vertex       = ",
-        "* Face (STL) - Vertex       = ", "* Vertice - Vertex (Stick)  = "};
+        "* Vertex - Ball             = ", "* Vertex - Vertex (Driver)  = ", "* Vertex - Edge (Driver)    = ",
+        "* Vertex - Face (Driver)    = ", "* Edge   - Edge (Driver)    = ", "* Edge (Driver) - Vertex    = ",
+        "* Face (Driver) - Vertex    = ", "* Vertice - Vertex (Stick)  = "};
 
     lout << "=====================================================" << std::endl;
     lout << "* Ghost type of interaction = partner / owner / error" << std::endl;

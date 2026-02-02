@@ -41,7 +41,7 @@ under the License.
 #include <exaDEM/polyhedron/contact.hpp>
 
 namespace exaDEM {
-template <bool multimat, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename GridT,
+template <bool multimat, ContactLawType ContactLawT, CohesiveLawType CohesiveLawT, typename GridT,
           class = AssertGridHasFields<GridT, field::_radius>>
 class ComputeContactClassifierPolyhedron : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
@@ -118,7 +118,7 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
   template <int start, int end, template <int, ContactLawType, CohesiveLawType, typename> typename FuncT,
             typename XFormT, typename... Args>
   void loop_contact_force(Classifier& classifier, XFormT& cp_xform, Args&&... args) {
-    FuncT<start, ContactLaw, CohesiveLaw, XFormT> contact_law;
+    FuncT<start, ContactLawT, CohesiveLawT, XFormT> contact_law;
     contact_law.xform = cp_xform;
     run_contact_law<start>(parallel_execution_context(), classifier, contact_law, args...);
     if constexpr (start + 1 <= end) {
@@ -146,9 +146,9 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
   }
 
   inline void execute() final {
-    using polyhedron::contact_law;
-    using polyhedron::contact_law_driver;
-    using polyhedron::contact_law_stl;
+    using polyhedron::ContactLawFunc;
+    using polyhedron::ContactLawDriverFunc;
+    using polyhedron::ContactLawRShapeDriverFunc;
     if (grid->number_of_cells() == 0) {
       return;
     }
@@ -176,17 +176,17 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
     auto& classifier = *ic;
 
     /** Contact force kernels */
-    contact_law_driver<ContactLaw, CohesiveLaw, Cylinder> cyli;
-    contact_law_driver<ContactLaw, CohesiveLaw, Surface> surf;
-    contact_law_driver<ContactLaw, CohesiveLaw, Ball> ball;
+    ContactLawDriverFunc<ContactLawT, CohesiveLawT, Cylinder> cyli;
+    ContactLawDriverFunc<ContactLawT, CohesiveLawT, Surface> surf;
+    ContactLawDriverFunc<ContactLawT, CohesiveLawT, Ball> ball;
 
 #define __params__ cells, vertex_fields, cp, shps, time
 #define __params_driver__ cells, vertex_fields, drvs, cp_drvs, shps, time
 
     constexpr int poly_type_start = 0;
     constexpr int poly_type_end = 3;
-    constexpr int stl_type_start = 7;
-    constexpr int stl_type_end = 12;
+    constexpr int rshape_type_start = 7;
+    constexpr int rshape_type_end = 12;
 
     if constexpr (!multimat) { /** Single mat */
       const ContactParams& hkp = *config;
@@ -201,12 +201,12 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
 
       if (is_def_xform) {
         LinearXForm cp_xform = {xform};
-        loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
-        loop_contact_force<stl_type_start, stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
+        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(classifier, cp_xform, __params__);
+        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(classifier, cp_xform, __params_driver__);
       } else {
         NullXForm cp_xform;
-        loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
-        loop_contact_force<stl_type_start, stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
+        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(classifier, cp_xform, __params__);
+        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(classifier, cp_xform, __params_driver__);
       }
       run_contact_law<InteractionTypeId::VertexCylinder>(parallel_execution_context(), classifier, cyli,
                                                          __params_driver__);
@@ -220,12 +220,12 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
 
       if (is_def_xform) {
         LinearXForm cp_xform = {xform};
-        loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
-        loop_contact_force<stl_type_start, stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
+        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(classifier, cp_xform, __params__);
+        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(classifier, cp_xform, __params_driver__);
       } else {
         NullXForm cp_xform;
-        loop_contact_force<poly_type_start, poly_type_end, contact_law>(classifier, cp_xform, __params__);
-        loop_contact_force<stl_type_start, stl_type_end, contact_law_stl>(classifier, cp_xform, __params_driver__);
+        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(classifier, cp_xform, __params__);
+        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(classifier, cp_xform, __params_driver__);
       }
       run_contact_law<InteractionTypeId::VertexCylinder>(parallel_execution_context(), classifier, cyli,
                                                          __params_driver__);
@@ -252,7 +252,7 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
                        "The parameter symetric in contact classifier polyhedron has to be set to true.");
     }
 
-    constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
+    constexpr auto LawCombo = makeLawCombo(ContactLawT, CohesiveLawT);
 
     /** Some check mutlimat versus singlemat */
     if constexpr (multimat) { /** Multiple materials */

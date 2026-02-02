@@ -31,20 +31,22 @@ under the License.
 
 namespace exaDEM {
 using namespace exanb;
-struct WrapperSTLMeshComputeVertices {
+struct WrapperRShapeDriverComputeVertices {
   Vec3d center;
   Quaternion quat;
-  Vec3d* stl_vertices;
+  Vec3d* rshape_vertices;
   const Vec3d* shp_vertices;
   ONIKA_HOST_DEVICE_FUNC
-  void operator()(int idx) const { stl_vertices[idx] = center + quat * shp_vertices[idx]; }
+  void operator()(int idx) const {
+    rshape_vertices[idx] = center + quat * shp_vertices[idx];
+  }
 };
 }  // namespace exaDEM
 
 namespace onika {
 namespace parallel {
 template <>
-struct ParallelForFunctorTraits<exaDEM::WrapperSTLMeshComputeVertices> {
+struct ParallelForFunctorTraits<exaDEM::WrapperRShapeDriverComputeVertices> {
   static inline constexpr bool CudaCompatible = true;
 };
 }  // namespace parallel
@@ -55,9 +57,9 @@ namespace exaDEM {
 using namespace onika::parallel;
 class DriverVertices : public OperatorNode {
   template <class ParallelExcutionContextFuncT>
-  struct driver_compute_vertices {
+  struct DriverComputeVerticesFunc {
     ParallelExcutionContextFuncT m_parallel_execution_context;
-    inline void operator()(exaDEM::Stl_mesh& mesh) const {
+    inline void operator()(exaDEM::RShapeDriver& mesh) const {
       const size_t size = mesh.shp.get_number_of_vertices();
       if (mesh.stationary()) {
         return;
@@ -66,11 +68,11 @@ class DriverVertices : public OperatorNode {
       ParallelForOptions opts;
       opts.omp_scheduling = OMP_SCHED_STATIC;
 
-      Vec3d stl_center = mesh.center;
-      Quaternion stl_quat = mesh.quat;
-      Vec3d* ptr_stl_vertices = onika::cuda::vector_data(mesh.vertices);
+      Vec3d rshape_center = mesh.center;
+      Quaternion rshape_quat = mesh.quat;
+      Vec3d* ptr_rshape_vertices = onika::cuda::vector_data(mesh.vertices);
       Vec3d* ptr_shp_vertices = onika::cuda::vector_data(mesh.shp.m_vertices);
-      WrapperSTLMeshComputeVertices func = {stl_center, stl_quat, ptr_stl_vertices, ptr_shp_vertices};
+      WrapperRShapeDriverComputeVertices func = {rshape_center, rshape_quat, ptr_rshape_vertices, ptr_shp_vertices};
       parallel_for(size, func, m_parallel_execution_context(), opts);
     }
 
@@ -92,7 +94,7 @@ class DriverVertices : public OperatorNode {
   inline std::string documentation() const final {
     return R"EOF(
            This operator calculates new vertex positions. 
-           If stl mesh velocity and angular velocity are equal to [0,0,0], vertices are not calculated.
+           If rshape mesh velocity and angular velocity are equal to [0,0,0], vertices are not calculated.
         )EOF";
   }
 
@@ -102,9 +104,11 @@ class DriverVertices : public OperatorNode {
     Drivers& drvs = *drivers;
     size_t size = drvs.get_size();
     set_gpu_enabled(!(*force_host));
-    auto pec_func = [this]() { return this->parallel_execution_context(); };
+    auto pec_func = [this]() {
+      return this->parallel_execution_context();
+    };
     for (size_t i = 0; i < size; i++) {
-      driver_compute_vertices<decltype(pec_func)> func = {pec_func};
+      DriverComputeVerticesFunc<decltype(pec_func)> func = {pec_func};
       drivers->apply(i, func);
     }
   }

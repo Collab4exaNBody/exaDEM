@@ -57,9 +57,9 @@ struct shape {
   VectorT<exanb::Vec3d> m_vertices;  ///< List of vertices of the shape
   exanb::Vec3d m_inertia_on_mass;    ///< Inertia vector divided by mass
   VectorT<OBB> m_obb_vertices;       ///< Oriented bounding boxes for each vertex
-                                     ///< (only for STL meshes)
-  VectorT<OBB> m_obb_edges;          ///< OBBs for edges (only for STL meshes)
-  VectorT<OBB> m_obb_faces;          ///< OBBs for faces (only for STL meshes)
+                                     ///< (only for RShape drivers)
+  VectorT<OBB> m_obb_edges;          ///< OBBs for edges (only for RShape drivers)
+  VectorT<OBB> m_obb_faces;          ///< OBBs for faces (only for RShape drivers)
   OBB obb;                           ///< Global OBB of the shape
   VectorT<int> m_edges;              ///< List of edges, stored as pairs of vertex indices
   VectorT<int> m_faces;              ///< List of faces, stored as sequences of vertex indices

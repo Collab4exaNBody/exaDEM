@@ -72,7 +72,7 @@ namespace sphere {
  * @tparam sym Boolean indicating whether the calculations should be symmetric.
  */
 template <bool sym, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename XFormT>
-struct contact_law {
+struct ContactLawFunc {
   XFormT xform;
   /**
    * @brief Retrieves the position vector of a particle.
@@ -121,9 +121,10 @@ struct contact_law {
    * @param time Increment simulation time.
    */
   template <typename TMPLC, typename TCFPA>
-  ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
-                                                                                   const TCFPA& cpa,
-                                                                                   const double time) const {
+  ONIKA_HOST_DEVICE_FUNC inline
+  std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
+                                                     const TCFPA& cpa,
+                                                     const double time) const {
     using ContactParamsT = ContactParams;
     auto& i = item.i();  // id for particle id, cell for cell id, p for position, sub for vertex id
     auto& j = item.j();  // id for particle id, cell for cell id, p for position, sub for vertex id
@@ -211,12 +212,12 @@ struct contact_law {
  *
  * This structure provides methods for calculating forces according to contact law
  * in a simulation environment. The calculations can involve various types of drivers
- * such as cylinders, spheres, surfaces, or mesh faces (STL).
+ * such as cylinders, spheres, surfaces, or mesh faces (RShape drivers).
  *
  * @tparam TMPLD Template parameter for specifying the type of driver.
  */
 template <ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename TMPLD, typename XFormT>
-struct contact_law_driver {
+struct ContactLawDriverFunc {
   XFormT xform;
   /**
    * @brief Handles particle interactions using contact law parameters and various drivers.
@@ -226,15 +227,16 @@ struct contact_law_driver {
    * @param item Reference to the interaction item to be updated.
    * @param cells Pointer to the collection of cells containing the particles.
    * @param drvs Pointer to the collection of drivers, which can include cylinders,
-   *             spheres, surfaces, or mesh faces (STL).
+   *             spheres, surfaces, or mesh faces (RShape drivers).
    * @param cp Reference to the contact law parameters.
    * @param time Increment simulation time.
    */
   template <typename TMPLC, typename TCFPA>
-  ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
-                                                                                   const DriversGPUAccessor& drvs,
-                                                                                   const TCFPA& cpa,
-                                                                                   const double time) const {
+  ONIKA_HOST_DEVICE_FUNC inline
+  std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
+                                                     const DriversGPUAccessor& drvs,
+                                                     const TCFPA& cpa,
+                                                     const double time) const {
     auto& i = item.i();  // id for particle id, cell for cell id, p for position, sub for vertex id
     using ContactParamsT = ContactParams;
     const int driver_idx = item.driver_id();
@@ -272,9 +274,10 @@ struct contact_law_driver {
       const double reff = cell[field::radius][p];
 
       Vec3d f = null;
-      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item.friction, contact_position, r, v, f,
-                                                  item.moment, vrot,                              // particle i
-                                                  driver.center, driver.get_vel(), driver.vrot);  // particle j
+      contact_force_core<ContactLaw, CohesiveLaw>(
+          dn, n, time, cp, meff, reff, item.friction, contact_position, r, v, f,
+          item.moment, vrot,                              // particle i
+          driver.center, driver.get_vel(), driver.vrot);  // particle j
 
       // === For analysis
       fn = f - item.friction;
@@ -298,38 +301,39 @@ struct contact_law_driver {
 };
 
 /**
- * @struct contact_law_stl
- * @brief Structure for applying contact law interactions with STL drivers.
+ * @struct ContactLawRShapeDriverFunc
+ * @brief Structure for applying contact law interactions with RShape drivers.
  *
  * This structure provides methods for applying contact law interactions between
- * particles and STL drivers (such as cylinders, spheres, surfaces, or mesh faces).
+ * particles and RShape drivers (such as cylinders, spheres, surfaces, or mesh faces).
  */
 template <int interaction_type, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename XFormT>
-struct contact_law_stl {
+struct ContactLawRShapeDriverFunc {
   XFormT xform;
-  detect<interaction_type> detection;  ///< STL mesh detector function object.
+  detect<interaction_type> detection;  ///< RShape mesh detector function object.
   /**
-   * @brief Applies contact law interactions with STL drivers.
+   * @brief Applies contact law interactions with RShape drivers.
    *
    * @tparam TMPLC The type representing the collection of cells in the simulation.
    * @tparam TCFPA Template Contact Force Parameters Accessor.
    * @param item Reference to the interaction item to be updated.
    * @param cells Pointer to the collection of cells containing the particles.
    * @param drvs Pointer to the collection of drivers, which can include cylinders,
-   *             spheres, surfaces, or mesh faces (STL).
+   *             spheres, surfaces, or mesh faces (RShape).
    * @param cpa Reference to the contact law parameters.
    * @param time The simulation time increment.
    */
   template <typename TMPLC, typename TPCFA>
-  ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
-                                                                                   const DriversGPUAccessor& drvs,
-                                                                                   const TPCFA& cpa,
-                                                                                   const double time) const {
+  ONIKA_HOST_DEVICE_FUNC inline
+  std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
+                                                     const DriversGPUAccessor& drvs,
+                                                     const TPCFA& cpa,
+                                                     const double time) const {
     auto& i = item.i();  // id for particle id, cell for cell id, p for position, sub for vertex id
     auto& d = item.driver();
     using ContactParamsT = ContactParams;
     const int driver_idx = item.driver_id();
-    Stl_mesh& driver = drvs.get_typed_driver<Stl_mesh>(driver_idx);
+    RShapeDriver& driver = drvs.get_typed_driver<RShapeDriver>(driver_idx);
     auto& cell = cells[item.cell()];
 
     const size_t p_i = i.p;

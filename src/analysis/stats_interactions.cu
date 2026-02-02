@@ -44,7 +44,7 @@ class StatsInteractions : public OperatorNode {
   inline void execute() final {
     auto& cells = ges->m_data;
 
-    // v vertex, e edge, f face, c cylinder, s surface, b ball, S stl, sp sticked particles
+    // v vertex, e edge, f face, c cylinder, s surface, b ball, S rShape, sp sticked particles
 
     int nvv(0), nve(0), nvf(0), nee(0), nvvib(0);              // interaction counters [particles]
     int an(0), anvv(0), anve(0), anvf(0), anee(0), anvvib(0);  // active interaction counters
@@ -106,7 +106,7 @@ class StatsInteractions : public OperatorNode {
           case 6:
             incr_interaction_counters(item, nvb, anvb, an, gnvb, gn);
             break;
-            // stl
+            // rshape driver
           case 7:
             incr_interaction_counters(item, nSvv, anSvv, an, gnSvv, gn);
             break;
@@ -180,12 +180,12 @@ class StatsInteractions : public OperatorNode {
     lout << "* Vertex - Cylinder        = " << anvc << " / " << nvc << " / " << gnvc << std::endl;
     lout << "* Vertex - Surface         = " << anvs << " / " << nvs << " / " << gnvs << std::endl;
     lout << "* Vertex - Ball            = " << anvb << " / " << nvb << " / " << gnvb << std::endl;
-    lout << "* Vertex - Vertex (STL)    = " << anSvv << " / " << nSvv << " / " << gnSvv << std::endl;
-    lout << "* Vertex - Edge (STL)      = " << anSve << " / " << nSve << " / " << gnSve << std::endl;
-    lout << "* Vertex - Face (STL)      = " << anSvf << " / " << nSvf << " / " << gnSvf << std::endl;
-    lout << "* Edge   - Edge (STL)      = " << anSee << " / " << nSee << " / " << gnSee << std::endl;
-    lout << "* Edge (STL) - Vertex      = " << anSev << " / " << nSev << " / " << gnSev << std::endl;
-    lout << "* Face (STL) - Vertex      = " << anSfv << " / " << nSfv << " / " << gnSfv << std::endl;
+    lout << "* Vertex - Vertex (Driver) = " << anSvv << " / " << nSvv << " / " << gnSvv << std::endl;
+    lout << "* Vertex - Edge (Driver)   = " << anSve << " / " << nSve << " / " << gnSve << std::endl;
+    lout << "* Vertex - Face (Driver)   = " << anSvf << " / " << nSvf << " / " << gnSvf << std::endl;
+    lout << "* Edge   - Edge (Driver)   = " << anSee << " / " << nSee << " / " << gnSee << std::endl;
+    lout << "* Edge (Driver) - Vertex   = " << anSev << " / " << nSev << " / " << gnSev << std::endl;
+    lout << "* Face (Driver) - Vertex   = " << anSfv << " / " << nSfv << " / " << gnSfv << std::endl;
     lout << "* Vertice - Vertex (Stick) = " << nvvib << " / " << anvvib << " / " << gnvvib << std::endl;
     lout << "=====================================================" << std::endl;
   }
