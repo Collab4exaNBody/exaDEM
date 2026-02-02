@@ -35,12 +35,11 @@ class AddShapeSphereOperator : public OperatorNode {
   ADD_SLOT(double, length, INPUT, 1.0, DocString{"Define sphere length. "});
   ADD_SLOT(std::string, name, INPUT, "sphere", DocString{"Set Shape name."});
   ADD_SLOT(double, minskowski, INPUT, 0.01, DocString{"Set Minskowski value."});
-  ADD_SLOT(bool, verbosity, INPUT, true);
 
  public:
   inline std::string documentation() const override final {
     return R"EOF( 
-        This operator initialize shapes data structure from a shape input file.
+        This operator adds a sphere to the shape lists.
 
         YAML example:
 
