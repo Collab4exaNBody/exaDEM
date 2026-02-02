@@ -38,6 +38,7 @@ under the License.
 namespace exaDEM {
 using onika::ldbg;
 using onika::lout;
+using exanb::Vec3d;
 
 struct subBox {
   size_t isub;

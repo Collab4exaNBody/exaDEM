@@ -92,6 +92,10 @@ class RegisterSTLMesh : public OperatorNode {
       // not optimized
       bool big_shape = true;
       shp = read_shp(output_name, big_shape);
+      if(shp.get_Im() != null) {
+        color_log::warning("register_stl_mesh", "Override inertia using shape I/m");
+        state->inertia = shp.get_Im() / state->mass;
+      }
     }
 
     if (scale.has_value()) {

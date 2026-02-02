@@ -159,8 +159,14 @@ struct PlaceholderInteraction {
       return this->as<InnerBondInteraction>().persistent();
     }
 #ifndef ONIKA_CUDA_VERSION
+    if(type() == InteractionTypeId::Undefined) {
+      color_log::mpi_error("PlaceholderInteraction::persistent",
+                           "The interaction is undefined, please define it.");
+    }
+    pair.print();
     color_log::mpi_error("PlaceholderInteraction::persistent",
-                         "The type value of this interaction is invalid: " + std::to_string(type()));
+                         "The type value of this interaction is invalid: "
+                         + std::to_string(static_cast<int>(type())));
     std::exit(EXIT_FAILURE);
 #endif
     return false;  // default
