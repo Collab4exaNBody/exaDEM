@@ -23,7 +23,7 @@ under the License.
 #include <exaDEM/shape.hpp>
 
 namespace exaDEM {
-inline shape build_shape(stl_mesh_reader& mesh, std::string name) {
+inline shape build_shape(STLMeshReader& mesh, std::string name) {
   shape shp;
   const int n_faces = mesh.m_data.size();
   std::vector<int> idx;

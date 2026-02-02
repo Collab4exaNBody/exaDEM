@@ -29,7 +29,7 @@ namespace exaDEM {
  * The `stl_mesh` struct represents a 3D mesh composed of faces. It provides methods for adding faces to the mesh,
  * accessing the mesh data, and retrieving individual faces.
  */
-struct stl_mesh_reader {
+struct STLMeshReader {
   std::vector<Face> m_data; /**< A collection of Face objects representing the mesh. */
 
   /**

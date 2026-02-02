@@ -22,7 +22,7 @@ under the License.
 
 namespace exaDEM {
 // rVerletMax = rVerlet + sphere radius
-std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const Stl_mesh& mesh, const size_t cell,
+std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const RShapeDriver& mesh, const size_t cell,
                                                                     const size_t p, const uint64_t id,
                                                                     const size_t drv_id, const double rx,
                                                                     const double ry, const double rz,
@@ -38,20 +38,20 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const Stl_me
   pd.id = drv_id;
   pi.sub = 0;  // not used
 
-  // Get info from stl mesh
+  // Get info from the rshape mesh.
   const Vec3d* dvertices = vector_data(mesh.vertices);
   auto& list = mesh.grid_indexes[cell];
   auto& shp = mesh.shp;
-  const size_t stl_nv = list.vertices.size();
-  const size_t stl_ne = list.edges.size();
-  const size_t stl_nf = list.faces.size();
+  const size_t rshape_driver_nv = list.vertices.size();
+  const size_t rshape_driver_ne = list.edges.size();
+  const size_t rshape_driver_nf = list.faces.size();
 
   exanb::Vec3d v = {rx, ry, rz};
   constexpr double dhomothety = 1.0;
   double dradius = shp.minskowski(dhomothety);
   // vertex - vertex
   item.pair.type = 7;
-  for (size_t j = 0; j < stl_nv; j++) {
+  for (size_t j = 0; j < rshape_driver_nv; j++) {
     size_t didx = list.vertices[j];
     if (filter_vertex_vertex_v2(rVerletMax, v, radius, dvertices, dradius, didx)) {
       pd.sub = didx;
@@ -60,7 +60,7 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const Stl_me
   }
   // vertex - edge
   item.pair.type = 8;
-  for (size_t j = 0; j < stl_ne; j++) {
+  for (size_t j = 0; j < rshape_driver_ne; j++) {
     size_t didx = list.edges[j];
     if (filter_vertex_edge(rVerletMax, v, radius, dvertices, dhomothety, didx, &shp)) {
       pd.sub = didx;
@@ -69,7 +69,7 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const Stl_me
   }
   // vertex - face
   item.pair.type = 9;
-  for (size_t j = 0; j < stl_nf; j++) {
+  for (size_t j = 0; j < rshape_driver_nf; j++) {
     size_t didx = list.faces[j];
     if (filter_vertex_face(rVerletMax, v, radius, dvertices, dhomothety, didx, &shp)) {
       pd.sub = didx;

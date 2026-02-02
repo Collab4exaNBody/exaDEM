@@ -47,7 +47,7 @@ enum DRIVER_TYPE {
   CYLINDER = 0, /**< Cylinder driver type. */
   SURFACE = 1,  /**< Surface driver type. */
   BALL = 2,     /**< Ball driver type. */
-  STL_MESH = 3, /**< STL mesh driver type. */
+  RSHAPE = 3,   /**< R-shape driver type. */
   UNDEFINED = 4 /**< Undefined driver type. */
 };
 
@@ -66,8 +66,8 @@ inline std::string print(DRIVER_TYPE type) {
       return "Surface";
     case DRIVER_TYPE::BALL:
       return "Ball";
-    case DRIVER_TYPE::STL_MESH:
-      return "Stl_mesh";
+    case DRIVER_TYPE::RSHAPE:
+      return "RShapeDriver";
     case DRIVER_TYPE::UNDEFINED:
       return "Undefined Driver";
     default:
@@ -92,8 +92,8 @@ inline DRIVER_TYPE get_type(std::string driver_name) {
       return DRIVER_TYPE::SURFACE;
     case str2int("BALL"):
       return DRIVER_TYPE::BALL;
-    case str2int("STL_MESH"):
-      return DRIVER_TYPE::STL_MESH;
+    case str2int("RSHAPE"):
+      return DRIVER_TYPE::RSHAPE;
     default:
       std::cout << "error, no driver " << driver_name << " found" << std::endl;
       std::cout << "Use: CYLINDER, SURFACE, or BALL" << std::endl;
@@ -104,7 +104,7 @@ inline DRIVER_TYPE get_type(std::string driver_name) {
 struct Cylinder;
 struct Surface;
 struct Ball;
-struct Stl_mesh;
+struct RShapeDriver;
 struct UndefinedDriver;
 
 /**
@@ -129,8 +129,8 @@ constexpr DRIVER_TYPE get_type<exaDEM::Ball>() {
   return DRIVER_TYPE::BALL;
 }
 template <>
-constexpr DRIVER_TYPE get_type<exaDEM::Stl_mesh>() {
-  return DRIVER_TYPE::STL_MESH;
+constexpr DRIVER_TYPE get_type<exaDEM::RShapeDriver>() {
+  return DRIVER_TYPE::RSHAPE;
 }
 
 /**

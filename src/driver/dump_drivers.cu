@@ -34,14 +34,20 @@ struct DumpDriverFunc {
   const std::string directory = "";
   std::stringstream* const stream_ptr = nullptr;
 
-  inline void operator()(exaDEM::Surface& surface) const { surface.dump_driver((*id_ptr)++, *stream_ptr); }
+  inline void operator()(exaDEM::Surface& surface) const {
+    surface.dump_driver((*id_ptr)++, *stream_ptr);
+  }
 
-  inline void operator()(exaDEM::Ball& ball) const { ball.dump_driver((*id_ptr)++, *stream_ptr); }
+  inline void operator()(exaDEM::Ball& ball) const {
+    ball.dump_driver((*id_ptr)++, *stream_ptr);
+  }
 
-  inline void operator()(exaDEM::Cylinder& cylinder) const { cylinder.dump_driver((*id_ptr)++, *stream_ptr); }
+  inline void operator()(exaDEM::Cylinder& cylinder) const {
+    cylinder.dump_driver((*id_ptr)++, *stream_ptr);
+  }
 
-  inline void operator()(exaDEM::Stl_mesh& stl_param) const {
-    stl_param.dump_driver((*id_ptr)++, directory, *stream_ptr);
+  inline void operator()(exaDEM::RShapeDriver& rshape_param) const {
+    rshape_param.dump_driver((*id_ptr)++, directory, *stream_ptr);
   }
 };
 

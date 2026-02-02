@@ -23,7 +23,7 @@ under the License.
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
-struct push_f_v_r {
+struct PushForceVeloctyDriverFunc {
   const double dt;
 
   inline void operator()(Ball& arg) const {
@@ -34,7 +34,7 @@ struct push_f_v_r {
     arg.push_f_v(dt);
   }
 
-  inline void operator()(Stl_mesh& arg) const {
+  inline void operator()(RShapeDriver& arg) const {
     arg.push_f_v(dt);
   }
 
@@ -60,7 +60,7 @@ class PushAccelToVelocityDriver : public OperatorNode {
 
   inline void execute() final {
     const double t = *dt;
-    push_f_v_r func = {t};
+    PushForceVeloctyDriverFunc func = {t};
     for (size_t id = 0; id < drivers->get_size(); id++) {
       drivers->apply(id, func);
     }

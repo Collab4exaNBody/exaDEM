@@ -37,19 +37,22 @@ namespace exaDEM {
 using namespace exanb;
 
 template <class GridT>
-class UpdateGridSTLMeshOperator : public OperatorNode {
+class UpdateGridRShapeOperator : public OperatorNode {
   using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz>;
   static constexpr ComputeFields compute_field_set{};
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD, DocString{"MPI communicator for parallel processing."});
   ADD_SLOT(GridT, grid, INPUT, REQUIRED, DocString{"Grid used for computations."});
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"rcut_max"});
-  ADD_SLOT(bool, force_reset, INPUT, REQUIRED, DocString{"Force to rebuild grid for stl meshes."});
-  ADD_SLOT(std::vector<Vec3d>, grid_stl_buffer, PRIVATE);
+  ADD_SLOT(bool, force_reset, INPUT, REQUIRED, DocString{"Force to rebuild grid for rshape meshes."});
+  ADD_SLOT(std::vector<Vec3d>, grid_rshape_buffer, PRIVATE);
 
  public:
   inline std::string documentation() const final {
-    return R"EOF( Update the list of information for each cell regarding the vertex, edge, and face indices in contact with the cell in an STL mesh." )EOF";
+    return R"EOF(
+      Update the list of information for each cell regarding the vertex,
+      edge, and face indices in contact with the cell in an RShape."
+    )EOF";
   }
 
   inline void execute() final {
@@ -57,17 +60,17 @@ class UpdateGridSTLMeshOperator : public OperatorNode {
     const size_t n_cells = g.number_of_cells();
     const IJK dims = g.dimension();
     const double Rmax = *rcut_max;
-    bool ForceResetSTLGrid = *force_reset;
-    auto& gsb = *grid_stl_buffer;
+    bool ForceResetRShapeGrid = *force_reset;
+    auto& gsb = *grid_rshape_buffer;
 
     for (size_t id = 0; id < drivers->get_size(); id++) {
-      if (drivers->type(id) == DRIVER_TYPE::STL_MESH) {
-        exaDEM::Stl_mesh& mesh = drivers->get_typed_driver<exaDEM::Stl_mesh>(id);
-        auto& grid_stl = mesh.grid_indexes;
+      if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
+        exaDEM::RShapeDriver& mesh = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
+        auto& grid_rshape = mesh.grid_indexes;
         auto& mutexes = mesh.grid_mutexes;
 
-        if (!ForceResetSTLGrid) {
-          if (mesh.stationary() && grid_stl.size() == n_cells) {
+        if (!ForceResetRShapeGrid) {
+          if (mesh.stationary() && grid_rshape.size() == n_cells) {
             // The grid is already built and didn't change
             continue;
           }
@@ -75,9 +78,9 @@ class UpdateGridSTLMeshOperator : public OperatorNode {
 
         gsb.resize(mesh.shp.get_number_of_vertices());  // we just need to get the upper size.
         mesh.shp.compute_prepro_obb(gsb.data(), mesh.center, mesh.quat);
-        bool resize = grid_stl.size() != n_cells;
+        bool resize = grid_rshape.size() != n_cells;
         if (resize) {
-          grid_stl.resize(n_cells);
+          grid_rshape.resize(n_cells);
           mutexes.resize(n_cells);
         }
 
@@ -90,7 +93,7 @@ class UpdateGridSTLMeshOperator : public OperatorNode {
 
 #pragma omp parallel for
         for (size_t i = 0; i < n_cells; i++) {
-          grid_stl[i].clean();
+          grid_rshape[i].clean();
         }
 
         auto& obb_v = mesh.shp.m_obb_vertices;
@@ -116,7 +119,7 @@ class UpdateGridSTLMeshOperator : public OperatorNode {
                     if (obb.intersect(cell_obb)) {
                       size_t cell_next_id = grid_ijk_to_index(dims, next);
                       omp_set_lock(&mutexes[cell_next_id]);
-                      grid_stl[cell_next_id].vertices.push_back(vid);
+                      grid_rshape[cell_next_id].vertices.push_back(vid);
                       omp_unset_lock(&mutexes[cell_next_id]);
                     }
                   }
@@ -143,7 +146,7 @@ class UpdateGridSTLMeshOperator : public OperatorNode {
                     if (obb.intersect(cell_obb)) {
                       size_t cell_next_id = grid_ijk_to_index(dims, next);
                       omp_set_lock(&mutexes[cell_next_id]);
-                      grid_stl[cell_next_id].edges.push_back(eid);
+                      grid_rshape[cell_next_id].edges.push_back(eid);
                       omp_unset_lock(&mutexes[cell_next_id]);
                     }
                   }
@@ -169,7 +172,7 @@ class UpdateGridSTLMeshOperator : public OperatorNode {
                     if (obb.intersect(cell_obb)) {
                       size_t cell_next_id = grid_ijk_to_index(dims, next);
                       omp_set_lock(&mutexes[cell_next_id]);
-                      grid_stl[cell_next_id].faces.push_back(fid);
+                      grid_rshape[cell_next_id].faces.push_back(fid);
                       omp_unset_lock(&mutexes[cell_next_id]);
                     }
                   }
@@ -185,9 +188,9 @@ class UpdateGridSTLMeshOperator : public OperatorNode {
 
 // === register factories ==
 template <class GridT>
-using UpdateGridSTLMeshOperatorTemplate = UpdateGridSTLMeshOperator<GridT>;
-ONIKA_AUTORUN_INIT(grid_stl_mesh) {
-  OperatorNodeFactory::instance()->register_factory("grid_stl_mesh",
-                                                    make_grid_variant_operator<UpdateGridSTLMeshOperatorTemplate>);
+using UpdateGridRShapeOperatorTemplate = UpdateGridRShapeOperator<GridT>;
+ONIKA_AUTORUN_INIT(grid_rshape_mesh) {
+  OperatorNodeFactory::instance()->register_factory("grid_rshape_driver",
+                                                    make_grid_variant_operator<UpdateGridRShapeOperatorTemplate>);
 }
 }  // namespace exaDEM

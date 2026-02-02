@@ -31,7 +31,7 @@ struct reduce_thread_block_t {};
 struct reduce_thread_local_t {};
 struct reduce_global_t {};
 
-struct STLVertexDisplacementFunctor {
+struct RShapeDriverDisplacementFunctor {
   const double m_threshold_sqr = 0.0;
   const Vec3d* vertices;
   const Vec3d c_a;
@@ -57,8 +57,8 @@ struct STLVertexDisplacementFunctor {
   }
 };
 
-struct ReduceMaxSTLVertexDisplacementFunctor {
-  const STLVertexDisplacementFunctor m_func;
+struct ReduceMaxRShapeDriverDisplacementFunctor {
+  const RShapeDriverDisplacementFunctor m_func;
   int* m_reduced_val;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const {
     int local_val = int();
@@ -87,7 +87,7 @@ struct ReduceMaxSTLVertexDisplacementFunctor {
 namespace onika {
 namespace parallel {
 template <>
-struct ParallelForFunctorTraits<exaDEM::ReduceMaxSTLVertexDisplacementFunctor> {
+struct ParallelForFunctorTraits<exaDEM::ReduceMaxRShapeDriverDisplacementFunctor> {
   static inline constexpr bool CudaCompatible = true;
 };
 }  // namespace parallel

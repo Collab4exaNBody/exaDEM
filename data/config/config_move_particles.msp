@@ -90,7 +90,7 @@ parallel_update_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - grid_stl_mesh:
+  - grid_rshape_driver:
      force_reset: true
   - update_particle_neighbors
 
@@ -102,7 +102,7 @@ init_particles:
   - migrate_particles
   - ghost_full_update
   - grid_post_processing
-  - grid_stl_mesh:
+  - grid_rshape_driver:
      force_reset: true
   - init_update_particle_neighbors
 ###########################################################################
@@ -136,7 +136,7 @@ load_balancing_if_triggered:
   condition: trigger_load_balance
   body:
     - load_balance
-    - grid_stl_mesh: # force to rebuild grid mesh
+    - grid_rshape_driver: # force to rebuild grid mesh
        force_reset: true
 
 update_particles_full_body:
