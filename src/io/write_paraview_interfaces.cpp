@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
- */
+*/
 #include <mpi.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
@@ -80,7 +80,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
     Classifier& classifier = *ic;
     auto& interactions = classifier.get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
     auto& shps = *shapes_collection;
-    paraview_interface_helper buffers = {*mpi_rank};  // it conatins streams
+    paraview_interface_helper buffers = {*mpi_rank};  // it contains streams
 
     if (rank == 0) {
       std::filesystem::create_directories(*filename);
@@ -92,11 +92,14 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
     buffers.n_vertices = 0;
     buffers.n_polygons = number_of_interfaces;
 
+    std::vector<Vec3d> vertices;
     // fill string buffers
     for (size_t i = 0; i < number_of_interfaces; i++) {
       auto& interface = interfaces.data[i];
 
       double E = 0;
+
+      vertices.resize(interface.size);
       for (size_t j = interface.loc; j < interface.loc + interface.size; j++) {
         exaDEM::InnerBondInteraction interaction = interactions[j];
         auto& loc = interaction.i();
@@ -106,18 +109,23 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
         auto* shp = shps[type];
         Vec3d r = {cell[field::rx][loc.p], cell[field::ry][loc.p], cell[field::rz][loc.p]};
         double h = cell[field::homothety][loc.p];
-        Vec3d v = shp->get_vertex(loc.sub, r, h, quat);
-        buffers.vertices << v.x << " " << v.y << " " << v.z << " ";
+        vertices[j - interface.loc] = shp->get_vertex(loc.sub, r, h, quat);
         buffers.ids << i << " ";
         buffers.connectivities << buffers.n_vertices++ << " ";
-        buffers.tds << interaction.tds << " ";
+        buffers.tds << interaction.tds.x << " "
+                    << interaction.tds.y << " "
+                    << interaction.tds.z << " ";
         buffers.et << interaction.et << " ";
         buffers.en << interaction.en << " ";
         E += (interaction.en + interaction.et) / interaction.criterion;
       }
+
+      order_face_vertices(vertices);
+
       buffers.offsets << buffers.n_vertices << " ";
       for (size_t j = 0; j < interface.size; j++) {
         buffers.fracturation << E << " ";
+        buffers.vertices << vertices[j].x << " " << vertices[j].y << " " << vertices[j].z << " ";
       }
     };
 
