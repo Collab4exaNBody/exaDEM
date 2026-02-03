@@ -47,7 +47,7 @@ class UpdateInterfaces : public OperatorNode {
     int n_interfaces = build_manager.data.size();
     int total_interfaces = 0;
     MPI_Reduce(&n_interfaces, &total_interfaces, 1, MPI_INT, MPI_SUM, 0, *mpi);
-    lout << "Number of interfaces: " << total_interfaces << std::endl;
+    ldbg<< "Number of interfaces: " << total_interfaces << std::endl;
     auto& manager = *im;
     manager.resize(build_manager.data.size());
     std::memcpy(manager.data.data(), build_manager.data.data(), build_manager.data.size() * sizeof(Interface));
