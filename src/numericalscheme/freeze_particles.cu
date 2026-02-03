@@ -30,17 +30,20 @@ under the License.
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz, field::_mom>>
-class ResetForceMomentNode : public OperatorNode {
+class FreezeFieldsNode : public OperatorNode{
+# define FREEZE_TMPL double, double, double, Vec3d, double, double, double, Vec3d 
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
   ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
   ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
   using ComputeFields = field_accessor_tuple_from_field_set_t<
-                        FieldSet<field::_fx, field::_fy, field::_fz, field::_mom>>;
+                        FieldSet<field::_fx, field::_fy, field::_fz, field::_mom,
+                                 field::_vx, field::_vy, field::_vz, field::_vrot>>;
   using ComputeRegionFields = field_accessor_tuple_from_field_set_t<
                         FieldSet<field::_rx, field::_ry, field::_rz, field::_id,
-                                 field::_fx, field::_fy, field::_fz, field::_mom>>;
+                                 field::_fx, field::_fy, field::_fz, field::_mom,
+                                 field::_vx, field::_vy, field::_vz, field::_vrot>>;
 
   static constexpr ComputeFields compute_field_set{};
   static constexpr ComputeRegionFields compute_region_field_set{};
@@ -63,17 +66,24 @@ class ResetForceMomentNode : public OperatorNode {
         region->build_from_expression_string(particle_regions->data(), particle_regions->size());
       }
       ParticleRegionCSGShallowCopy prcsg = *region;
-      SetRegionFunctor<double, double, double, Vec3d> func = {prcsg, {0.0, 0.0, 0.0, Vec3d{0.0, 0.0, 0.0}}};
+      SetRegionFunctor<FREEZE_TMPL> func = {prcsg, 
+        {0.0, 0.0, 0.0, Vec3d{0.0, 0.0, 0.0}, 0.0, 0.0, 0.0, Vec3d{0.0, 0.0, 0.0}}};
       compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context(), ccpo);
     } else {
-      SetFunctor<double, double, double, Vec3d> func = {{0.0, 0.0, 0.0, Vec3d{0.0, 0.0, 0.0}}};
+      SetFunctor<FREEZE_TMPL> func = {0.0, 0.0, 0.0,
+                                      Vec3d{0.0, 0.0, 0.0},
+                                      0.0, 0.0, 0.0,
+                                      Vec3d{0.0, 0.0, 0.0}};
       compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }
 	}
+# undef FREEZE_TMPL
 };
 // === register factories ===
-ONIKA_AUTORUN_INIT(reset_force_moment) {
-  OperatorNodeFactory::instance()->register_factory("reset_force_moment",
-                                                    make_grid_variant_operator<ResetForceMomentNode>);
+ONIKA_AUTORUN_INIT(freeze_particles) {
+  OperatorNodeFactory::instance()->register_factory("freeze_particles",
+                                                    make_grid_variant_operator<FreezeFieldsNode>);
+  OperatorNodeFactory::instance()->register_factory("pas_libere_pas_delivre",
+                                                    make_grid_variant_operator<FreezeFieldsNode>);
 }
 }  // namespace exaDEM
