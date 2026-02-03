@@ -54,12 +54,12 @@ inline void write_vtp_interface(std::string name, paraview_interface_helper& buf
   outFile << buffers.en.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
 
-  outFile << "      <DataArray type=\"Float64\" Name=\"Tangential Displacement\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+  outFile << "      <DataArray type=\"Float64\" Name=\"TangentialDisplacement\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
   outFile << buffers.tds.rdbuf() << std::endl;
+  outFile << "      </DataArray>" << std::endl;
 
   outFile << "      <DataArray type=\"Float64\" Name=\"Et\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
   outFile << buffers.et.rdbuf() << std::endl;
-
   outFile << "      </DataArray>" << std::endl;
 
   outFile << "    </PointData>" << std::endl;
@@ -99,7 +99,7 @@ inline void write_pvtp_interface(std::string filename, size_t number_of_files, p
   }
   outFile << "      <PDataArray type=\"Float64\" Name=\"Fracturation rate\"  NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "      <PDataArray type=\"Float64\" Name=\"En\"  NumberOfComponents=\"1\"/>" << std::endl;
-  outFile << "      <PDataArray type=\"Float64\" Name=\"Tangential Displacement\"  NumberOfComponents=\"1\"/>" << std::endl;
+  outFile << "      <PDataArray type=\"Float64\" Name=\"TangentialDisplacement\"  NumberOfComponents=\"3\"/>" << std::endl;
   outFile << "      <PDataArray type=\"Float64\" Name=\"Et\"  NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "    </PPointData>" << std::endl;
   outFile << "    <PPoints>" << std::endl;
@@ -117,5 +117,38 @@ inline void write_pvtp_interface(std::string filename, size_t number_of_files, p
   }
   outFile << "  </PPolyData>" << std::endl;
   outFile << "</VTKFile>" << std::endl;
+}
+
+/*
+ * Orders vertices to form a non-self-intersecting face.
+ * Note: This assumes the vertices are roughly coplanar (e.g., on the XY plane).
+ */
+void order_face_vertices(std::vector<Vec3d>& vertices) {
+  if (vertices.size() < 3) return;
+
+  // 1. Calculate the Centroid (Arithmetic Mean)
+  Vec3d centroid = {0, 0, 0};
+  for (const auto& v : vertices) {
+    centroid.x += v.x;
+    centroid.y += v.y;
+    centroid.z += v.z; // Included for 3D completeness
+  }
+  centroid.x /= vertices.size();
+  centroid.y /= vertices.size();
+
+  // 2. Sort by polar angle around the centroid
+  // Using atan2(y, x) to handle all 4 quadrants
+  std::sort(vertices.begin(), vertices.end(), [centroid](const Vec3d& a, const Vec3d& b) {
+            double angleA = std::atan2(a.y - centroid.y, a.x - centroid.x);
+            double angleB = std::atan2(b.y - centroid.y, b.x - centroid.x);
+
+            if (angleA != angleB) {
+            return angleA < angleB;
+            }
+            // Tie-breaker: sort by distance if angles are identical
+            double distA = std::pow(a.x - centroid.x, 2) + std::pow(a.y - centroid.y, 2);
+            double distB = std::pow(b.x - centroid.x, 2) + std::pow(b.y - centroid.y, 2);
+            return distA < distB;
+            });
 }
 }  // namespace exaDEM
