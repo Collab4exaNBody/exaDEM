@@ -1,0 +1,2 @@
++chunk_neighbors_impl:
+  - nbh_polyhedron_gpu

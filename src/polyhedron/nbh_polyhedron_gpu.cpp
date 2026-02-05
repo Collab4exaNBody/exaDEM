@@ -77,23 +77,47 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     const size_t n_cells = g.number_of_cells();
     shapes& shps = *shapes_collection;
     auto [cell_ptr, cell_size] = traversal_real->info();
+    auto* vertex_fields = cvf->data();
 
-    brute_force_storage storage;
-    storage.m_data.resize(n_cells);
+    brute_force_storage coffset, csize;
+    csize.m_data.resize(n_cells);
 
     ApplyNbhBruteForceFunc func_brute_force;
     NeighborRunner runner(cell_ptr, dims, func_brute_force,  // members
-                          cells, storage.m_data.data(), *rcut_inc, shps.data());  // params
+                          cells, csize.m_data.data(), *rcut_inc, shps.data(), vertex_fields);  // params
+    coffset.m_data.resize(n_cells);
 
     ParallelForOptions opts;
-    opts.omp_scheduling = OMP_SCHED_GUIDED;   
+    opts.omp_scheduling = OMP_SCHED_GUIDED;
+    for (size_t i = 0 ; i < n_cells ; i++) {
+      csize.m_data[i] = {0,0,0,0};
+      coffset.m_data[i] = {0,0,0,0};
+    }
+
     // 26 = number of neighbor cells per cell
     ParallelExecutionSpace<3> parallel_range = {{0,0,0} , {static_cast<long int>(cell_size),26,1}};
     parallel_for(parallel_range, runner, parallel_execution_context(), opts);
+    PrefxSumInteractionTypePerCellCounter func_prefix = {coffset.m_data.data(), csize.m_data.data(), coffset.m_data.size()};
 
-    for (size_t i = 0 ; i < n_cells ; i++) {
-      lout << "Neighbors cell["<<i<<"]: "<< storage.m_data[i] << std::endl;
+    parallel_for(4, func_prefix, parallel_execution_context(), opts);
+
+    ONIKA_CU_DEVICE_SYNCHRONIZE();
+    debug_print(coffset.m_data[n_cells-1], csize.m_data[n_cells-1]);
+
+    for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
+      auto& c = container.get_data<ParticleParticle>(id);
+      c.resize(coffset.m_data[n_cells-1][type_id], csize.m_data[n_cells-1][type_id]);
     }
+
+    auto& interactions = ges->m_data;
+    for (size_t ci = 0; ci < n_cells; ci++) {
+      int size = 0;
+      for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
+        size += csize.m_data[ci][type_id];
+      }
+      interactions[ci].resize(size);
+    }
+
   }
 };
 
