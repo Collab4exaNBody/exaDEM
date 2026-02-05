@@ -38,6 +38,7 @@ under the License.
 #include <exaDEM/traversal.hpp>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/itools/itools.hpp>
+#include <exaDEM/interface/interface.hpp>
 
 // ================== Thermodynamic state compute operator ======================
 namespace exaDEM {
@@ -58,6 +59,7 @@ struct SimulationStateNode : public OperatorNode {
   // DEM data
   ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(bool, symetric, INPUT, REQUIRED, DocString{"Use of symetric feature (contact law)"});
+  ADD_SLOT(InterfaceManager, im, INPUT, OPTIONAL, DocString{"List of interfaces"});
 
   static constexpr FieldSet<field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass> reduce_field_set{};
 
@@ -112,6 +114,11 @@ struct SimulationStateNode : public OperatorNode {
 
     // reduce partial sums and share the result
     uint64_t active_interactions, total_interactions;
+    uint64_t interfaces = 0;
+    if (im.has_value()) {
+      interfaces = im->size();
+    }
+
     double dn;
     {
       double tmpDouble[7] = {sim.rotation_energy.x,
@@ -121,7 +128,7 @@ struct SimulationStateNode : public OperatorNode {
                              sim.kinetic_energy.y,
                              sim.kinetic_energy.z,
                              sim.mass};
-      uint64_t tmpUInt64T[3] = {sim.n_particles, red.n_act_interaction, red.n_tot_interaction};
+      uint64_t tmpUInt64T[4] = {sim.n_particles, red.n_act_interaction, red.n_tot_interaction, interfaces};
       MPI_Allreduce(MPI_IN_PLACE, tmpDouble, 7, MPI_DOUBLE, MPI_SUM, comm);
       MPI_Allreduce(MPI_IN_PLACE, &red.min_dn, 1, MPI_DOUBLE, MPI_MAX, comm);
       MPI_Allreduce(MPI_IN_PLACE, tmpUInt64T, 3, MPI_UINT64_T, MPI_SUM, comm);
@@ -138,6 +145,7 @@ struct SimulationStateNode : public OperatorNode {
       total_particles = tmpUInt64T[0];
       active_interactions = tmpUInt64T[1];
       total_interactions = tmpUInt64T[2];
+      interfaces = tmpUInt64T[3];
     }
 
     // Volume
@@ -160,6 +168,7 @@ struct SimulationStateNode : public OperatorNode {
     sim_info.set_active_interaction_count(active_interactions);
     sim_info.set_interaction_count(total_interactions);
     sim_info.set_dn(dn);
+    sim_info.set_interface_count(interfaces);
 
     // for other operators
     *system_mass = mass;

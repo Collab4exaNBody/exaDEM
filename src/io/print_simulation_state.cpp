@@ -22,6 +22,7 @@ under the License.
 #include <onika/log.h>
 #include <onika/string_utils.h>
 
+#include <exaDEM/interface/interface.hpp>
 #include <exaDEM/dem_simulation_state.hpp>
 #include <mpi.h>
 #include <filesystem>  // C++17
@@ -51,16 +52,23 @@ class PrintSimulationStateNode : public OperatorNode {
   ADD_SLOT(long, domain_ext_counter, INPUT_OUTPUT);
   ADD_SLOT(double, lb_inbalance_max, INPUT_OUTPUT);
 
-  // optional physics quantities
-  ADD_SLOT(double, electronic_energy, INPUT, OPTIONAL);
+  // Fragmentation
+  ADD_SLOT(InterfaceManager, im, INPUT, OPTIONAL, DocString{"List of interfaces"});
 
  public:
-  inline bool is_sink() const final { return true; }
+  inline bool is_sink() const final {
+    return true;
+  }
 
   inline void execute() final {
-    static const std::string header =
+    static std::string header =
         "     Step     Time          Particles  Mv/Ext/Imb.       |dn|  avg. act. I     avg. I   avg. Ec   avg. Erot   "
         "  Volume       Mass  Throughput";
+
+    if (im.has_value()) {  // fragmentation
+      header += "    Interfaces";
+    }
+
 
     bool lb_flag = (*lb_counter) > 0;
     long move_count = *move_counter;
@@ -109,9 +117,6 @@ class PrintSimulationStateNode : public OperatorNode {
 
     if (*print_header) {
       lout << header;
-      if (electronic_energy.has_value()) {
-        lout << "  Elect. Energy";
-      }
       lout << std::endl;
     }
 
@@ -134,6 +139,10 @@ class PrintSimulationStateNode : public OperatorNode {
         lb_move_char, domext_char, lb_value,  // %c %c %.8s
         std::abs(sim_info.dn()), avg_act_I, avg_I, sim_info.kinetic_energy_scal() / sim_info.particle_count(),
         sim_info.rotation_energy_scal() / sim_info.particle_count(), sim_info.volume(), sim_info.mass(), throughput);
+
+    if (im.has_value()) {  // Fragmentation
+      line += onika::format_string(" %13ld", sim_info.interface_count());
+    }
 
     lout << line;
     lout << std::endl;
