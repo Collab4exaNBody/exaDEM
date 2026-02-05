@@ -68,6 +68,6 @@ inline void force_law_core(const double dn,
   } else {
     En = 0.5 * ibp.kn * (dn - dn0) * (dn - dn0);
   }
-  Et += 0.5 * ibp.kt * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
+  Et = 0.5 * ibp.kt * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
 }
 }  // namespace exaDEM
