@@ -121,34 +121,56 @@ inline void write_pvtp_interface(std::string filename, size_t number_of_files, p
 
 /*
  * Orders vertices to form a non-self-intersecting face.
- * Note: This assumes the vertices are roughly coplanar (e.g., on the XY plane).
+ * Note: This assumes the vertices are roughly coplanar.
  */
 void order_face_vertices(std::vector<Vec3d>& vertices) {
   if (vertices.size() < 3) return;
 
-  // 1. Calculate the Centroid (Arithmetic Mean)
+  //  Calculate the Centroid
   Vec3d centroid = {0, 0, 0};
   for (const auto& v : vertices) {
     centroid.x += v.x;
     centroid.y += v.y;
-    centroid.z += v.z; // Included for 3D completeness
+    centroid.z += v.z;
   }
   centroid.x /= vertices.size();
   centroid.y /= vertices.size();
+  centroid.z /= vertices.size();
 
-  // 2. Sort by polar angle around the centroid
-  // Using atan2(y, x) to handle all 4 quadrants
-  std::sort(vertices.begin(), vertices.end(), [centroid](const Vec3d& a, const Vec3d& b) {
-            double angleA = std::atan2(a.y - centroid.y, a.x - centroid.x);
-            double angleB = std::atan2(b.y - centroid.y, b.x - centroid.x);
+  Vec3d a = vertices[0] - centroid;
+  Vec3d normal = {0, 0, 1}; // Default value to prevent faillure
 
-            if (angleA != angleB) {
+  Vec3d b = vertices[1] - centroid;
+  normal = exanb::cross(a, b);
+  normal = normal / exanb::norm(normal);
+
+  Vec3d u = (vertices[0] - centroid);
+  u = u / exanb::norm(u); // Normalize u
+  Vec3d v = exanb::cross(normal, u); 
+
+  // Sort by polar angle around the centroid
+  std::sort(vertices.begin(), vertices.end(),
+            [centroid, u, v](const Vec3d& a, const Vec3d& b) {
+            Vec3d da = a - centroid;
+            Vec3d db = b - centroid;
+
+            // Project on local plan to get 2D coordonates
+            double xA = exanb::dot(da, u);
+            double yA = exanb::dot(da, v);
+
+            double xB = exanb::dot(db, u);
+            double yB = exanb::dot(db, v);
+
+            double angleA = std::atan2(yA, xA);
+            double angleB = std::atan2(yB, xB);
+
+            // Handle numerical error
+            if (std::abs(angleA - angleB) > 1e-9) {
             return angleA < angleB;
             }
-            // Tie-breaker: sort by distance if angles are identical
-            double distA = std::pow(a.x - centroid.x, 2) + std::pow(a.y - centroid.y, 2);
-            double distB = std::pow(b.x - centroid.x, 2) + std::pow(b.y - centroid.y, 2);
-            return distA < distB;
+
+            // Tie-breaker
+            return exanb::dot(da, da) < exanb::dot(db, db);
             });
 }
 }  // namespace exaDEM
