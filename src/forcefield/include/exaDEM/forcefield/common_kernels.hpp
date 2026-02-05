@@ -89,14 +89,6 @@ inline Vec3d compute_tangential_force(const double kt, const double dt, const do
 }
 
 ONIKA_HOST_DEVICE_FUNC
-inline Vec3d contribution_stick_tangential_force(const double damp, const double vn, const Vec3d& n, const Vec3d& vel) {
-  // Tangential viscosity ===================================
-  // This term should be added only on the elastic part of ft
-  // So it is somehow wrong because the viscosity is cumulated... Be carreful!
-  return damp * (vel - vn * n);
-}
-
-ONIKA_HOST_DEVICE_FUNC
 inline double compute_effective_mass(const double mi, const double mj) {
   const double ret = (mi * mj) / (mi + mj);
   return ret;

@@ -59,7 +59,6 @@ inline void force_law_core(const double dn,
   const Vec3d ft = compute_tangential_force(dt, vn, n, vel);
   tds += ft;
   vft += ibp.kt * ft;
-  vft += exaDEM::contribution_stick_tangential_force(damp, vn, n, vel);
 
   // === sum forces
   f_i = vfn + vft;
