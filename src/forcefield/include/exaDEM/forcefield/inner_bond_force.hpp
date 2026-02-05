@@ -59,7 +59,6 @@ inline void force_law_core(const double dn,
   const Vec3d ft = compute_tangential_force(dt, vn, n, vel);
   tds += ft;
   vft += ibp.kt * ft;
-  vft += exaDEM::contribution_stick_tangential_force(damp, vn, n, vel);
 
   // === sum forces
   f_i = vfn + vft;
@@ -69,6 +68,6 @@ inline void force_law_core(const double dn,
   } else {
     En = 0.5 * ibp.kn * (dn - dn0) * (dn - dn0);
   }
-  Et += 0.5 * ibp.kt * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
+  Et = 0.5 * ibp.kt * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
 }
 }  // namespace exaDEM
