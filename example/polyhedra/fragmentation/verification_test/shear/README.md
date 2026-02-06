@@ -27,7 +27,7 @@ The following graph shows the evolution of the tangential force $F_t$ relative t
 
 ![Traction results with several values of Gc](exadem_res.png)
 
-Note that the surface area used is 0.98x0.98 while the surface are is forces to 1.0 in `Rockable`.
+Note that the surface area used is 0.98x0.98 while the surface is forced to 1.0 in `Rockable`.
 
 [Rockable Analysis](rockable_res.pdf)
 
