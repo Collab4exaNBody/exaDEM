@@ -30,7 +30,6 @@ using VectorT = onika::memory::CudaMMVector<T>;
 struct reduce_thread_block_t {};
 struct reduce_thread_local_t {};
 struct reduce_global_t {};
-
 struct RShapeDriverDisplacementFunctor {
   const double m_threshold_sqr = 0.0;
   const Vec3d* vertices;
