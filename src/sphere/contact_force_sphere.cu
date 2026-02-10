@@ -131,16 +131,19 @@ class ComputeContactClassifierSphere : public OperatorNode {
 
   template <bool is_sym, typename XFormT>
   void core(XFormT& xform) {
+    using exaDEM::sphere::ContactLawFunc;
+    using exaDEM::sphere::ContactLawDriverFunc;
+    using exaDEM::sphere::ContactLawRShapeDriverFunc;
     const DriversGPUAccessor drvs = *drivers;
     auto* cells = grid->cells();
 
     const double time = *dt;
     auto& classifier = *ic;
 
-    exaDEM::sphere::contact_law<is_sym, ContactLaw, CohesiveLaw, XFormT> sph = {xform};
-    exaDEM::sphere::contact_law_driver<ContactLaw, CohesiveLaw, Cylinder, XFormT> cyl = {xform};
-    exaDEM::sphere::contact_law_driver<ContactLaw, CohesiveLaw, Surface, XFormT> surf = {xform};
-    exaDEM::sphere::contact_law_driver<ContactLaw, CohesiveLaw, Ball, XFormT> ball = {xform};
+    ContactLawFunc<is_sym, ContactLaw, CohesiveLaw, XFormT> sph = {xform};
+    ContactLawDriverFunc<ContactLaw, CohesiveLaw, Cylinder, XFormT> cyl = {xform};
+    ContactLawDriverFunc<ContactLaw, CohesiveLaw, Surface, XFormT> surf = {xform};
+    ContactLawDriverFunc<ContactLaw, CohesiveLaw, Ball, XFormT> ball = {xform};
 
     if (!multimat) {
       const ContactParams hkp = *config;
@@ -161,9 +164,9 @@ class ComputeContactClassifierSphere : public OperatorNode {
       run_contact_law<InteractionTypeId::VertexBall>(parallel_execution_context(), classifier, ball, cells, drvs,
                                                      cp_drvs, time);
 
-      constexpr int stl_type_start = 7;
-      constexpr int stl_type_end = 9;
-      loop_contact_force<stl_type_start, stl_type_end, exaDEM::sphere::contact_law_stl, XFormT>(
+      constexpr int rshape_driver_type_start = 7;
+      constexpr int rshape_driver_type_end = 9;
+      loop_contact_force<rshape_driver_type_start, rshape_driver_type_end, ContactLawRShapeDriverFunc, XFormT>(
           classifier, xform, cells, drvs, cp_drvs, time);
     } else {
       const auto& contact_parameters = *multimat_cp;
@@ -177,9 +180,9 @@ class ComputeContactClassifierSphere : public OperatorNode {
       run_contact_law<InteractionTypeId::VertexBall>(parallel_execution_context(), classifier, ball, cells, drvs,
                                                      cp_drvs, time);
 
-      constexpr int stl_type_start = 7;
-      constexpr int stl_type_end = 9;
-      loop_contact_force<stl_type_start, stl_type_end, exaDEM::sphere::contact_law_stl, XFormT>(
+      constexpr int rshape_driver_type_start = 7;
+      constexpr int rshape_driver_type_end = 9;
+      loop_contact_force<rshape_driver_type_start, rshape_driver_type_end, ContactLawRShapeDriverFunc, XFormT>(
           classifier, xform, cells, drvs, cp_drvs, time);
     }
   }

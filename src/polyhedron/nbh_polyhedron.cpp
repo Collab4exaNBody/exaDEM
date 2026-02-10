@@ -199,8 +199,8 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
               Ball& driver = drvs.get_typed_driver<Ball>(drvs_idx);
               add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, h_a,
                                      shps);
-            } else if (drvs.type(drvs_idx) == DRIVER_TYPE::STL_MESH) {
-              Stl_mesh& driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx);
+            } else if (drvs.type(drvs_idx) == DRIVER_TYPE::RSHAPE) {
+              RShapeDriver& driver = drvs.get_typed_driver<RShapeDriver>(drvs_idx);
               // driver.grid_indexes_summary();
               add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a,
                                      rz_a, vertex_cell_a, h_a, orient_a, shps);

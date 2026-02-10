@@ -60,17 +60,17 @@ inline void lockAndAdd(Vec3d& val, Vec3d&& add) {
 }
 
 /**
- * @struct contact_law
+ * @struct ContactLawFunc
  * @brief Structure defining contact law interactions for particles (polyhedra).
  */
 template <int interaction_type, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename XFormT>
-struct contact_law {
+struct ContactLawFunc {
   XFormT xform;
   detect<interaction_type> detection;
   /**
    * @brief Default constructor for contact_law struct.
    */
-  contact_law() {}
+  ContactLawFunc() {}
 
   /**
    * @brief Retrieves the position vector of a particle from a cell.
@@ -214,7 +214,7 @@ struct contact_law {
  * @tparam TMPLD Type of the drivers.
  */
 template <ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename TMPLD>
-struct contact_law_driver {
+struct ContactLawDriverFunc {
   /**
    * @brief Functor for applying contact law interactions driven by drivers.
    *
@@ -301,21 +301,21 @@ struct contact_law_driver {
 };
 
 /**
- * @brief Functor for applying contact law interactions with STL mesh objects.
+ * @brief Functor for applying contact law interactions with RShape drivers.
  */
 template <int interaction_type, ContactLawType ContactLaw, CohesiveLawType CohesiveLaw,
           typename XFormT> /* def xform does nothing*/
-struct contact_law_stl {
+struct ContactLawRShapeDriverFunc {
   XFormT xform;
   detect<interaction_type> detection;
 
   /* Default constructor */
-  contact_law_stl() {}
+  ContactLawRShapeDriverFunc() {}
 
   /**
-   * @brief Operator function for applying contact law interactions with STL mesh objects.
+   * @brief Operator function for applying contact law interactions with RShape drivers.
    *
-   * This function applies contact law interactions between particles or cells and STL mesh objects,
+   * This function applies contact law interactions between particles or cells and RShape drivers,
    * driven by specified drivers (`drvs`). It uses interaction parameters (`hkp`), precomputed shapes
    * (`shps`), and a time increment (`dt`) for simulation.
    *
@@ -338,7 +338,7 @@ struct contact_law_stl {
     // particle driver (id, cell id, particle position, sub vertex)
     auto& pd = item.driver();
     const int driver_idx = pd.id;
-    Stl_mesh& driver = drvs.get_typed_driver<exaDEM::Stl_mesh>(driver_idx);
+    RShapeDriver& driver = drvs.get_typed_driver<exaDEM::RShapeDriver>(driver_idx);
     auto& cell = cells[pi.cell];
     // renaming
     const size_t sub_i = pi.sub;
@@ -357,12 +357,12 @@ struct contact_law_stl {
     // == homothety
     const auto& h_i = cell[field::homothety][pi.p];
 
-    // STL Vertices
-    const Vec3d* const stl_vertices = onika::cuda::vector_data(driver.vertices);
-    constexpr double stl_homothety = 1.0;
+    // RShape driver Vertices
+    const Vec3d* const rshape_vertices = onika::cuda::vector_data(driver.vertices);
+    constexpr double rshape_homothety = 1.0;
     // === detection
     auto [contact, dn, n, contact_position] =
-        detection(vertices_i, h_i, sub_i, &shp_i, stl_vertices, stl_homothety, sub_d, &shp_d);
+        detection(vertices_i, h_i, sub_i, &shp_i, rshape_vertices, rshape_homothety, sub_d, &shp_d);
     constexpr Vec3d null = {0, 0, 0};
     Vec3d fn = null;
 
@@ -380,7 +380,7 @@ struct contact_law_stl {
       auto& mom = cell[field::mom][pi.p];
       const Vec3d v_i = {cell[field::vx][pi.p], cell[field::vy][pi.p], cell[field::vz][pi.p]};
       const double meff = cell[field::mass][pi.p];
-      const double reff = compute_effective_radius(shp_i.minskowski(h_i), driver.shp.minskowski(stl_homothety));
+      const double reff = compute_effective_radius(shp_i.minskowski(h_i), driver.shp.minskowski(rshape_homothety));
 
       // i to j
       if constexpr (interaction_type <= 10 && interaction_type >= 7) {

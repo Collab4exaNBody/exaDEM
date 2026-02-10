@@ -1,0 +1,21 @@
+set terminal pngcairo size 1024,768 enhanced font "Verdana,12"
+set output "resultat_traction.png"
+set grid
+set xlabel "d_n / Cube length"
+set ylabel "F_n / Cube length"
+set title "Traction results with several values of Gc, kn = 1e3"
+
+# 3. Tracé (avec gestion du range pour éviter l'erreur précédente)
+set autoscale x
+set autoscale y
+
+# Liste des valeurs de GC
+NAMES = "5e-3 1e-2 2e-2 4e-2 8e-2 1e-1"
+
+
+# La boucle de tracé
+# . est l'opérateur de concaténation de chaînes dans gnuplot
+plot for [v in NAMES] "res_".v.".txt" u 1:2 w lines lw 2 title "gc: ".v
+
+# 4. Finalisation (important pour fermer le fichier proprement)
+set output

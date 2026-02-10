@@ -35,11 +35,12 @@ under the License.
 namespace exaDEM {
 template <typename T>
 using vector_t = onika::memory::CudaMMVector<T>;
-
+using exanb::Vec3d;
+constexpr Vec3d null = Vec3d{0, 0, 0};
 /**
  * @brief Struct representing a list of elements( vertex, edge, or face).
  */
-struct list_of_elements {
+struct RShapeDriverListOfElements {
   std::vector<int> vertices; /**< List of vertex indices. */
   std::vector<int> edges;    /**< List of edge indices. */
   std::vector<int> faces;    /**< List of face indices. */
@@ -50,31 +51,31 @@ struct list_of_elements {
   }
 };
 
-struct Stl_params {
-  exanb::Vec3d center = Vec3d{0, 0, 0};                 /**< Center position of the STL mesh. */
-  exanb::Vec3d vel = Vec3d{0, 0, 0};                    /**< Velocity of the STL mesh. */
-  exanb::Vec3d vrot = Vec3d{0, 0, 0};                   /**< Angular velocity of the STL mesh. */
-  exanb::Quaternion quat = {1, 0, 0, 0};                /**< Quaternion of the STL mesh. */
-  double surface = -1;                                  /**< Surface, used with linear_compression_motion. */
-  double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the STL mesh */
+struct RShapeDriverParams {
+  exanb::Vec3d center = null;                 /**< Center position of the R-Shape. */
+  exanb::Vec3d vel = null;                    /**< Velocity of the R-Shape. */
+  exanb::Vec3d vrot = null;                   /**< Angular velocity of the R-Shape. */
+  exanb::Quaternion quat = {1,0,0,0};         /**< Quaternion of the R-Shape. */
+  double surface = -1;                        /**< Surface, used with linear_compression_motion. */
+  double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the R-Shape */
   // special mode to control the rotation by a moment
   bool drive_by_mom = false;
-  exanb::Vec3d applied_mom; /**< Moment of the STL mesh. */
-  exanb::Vec3d mom;         /**< Moment of the STL mesh. */
-  exanb::Vec3d inertia;     /**< Inertia of the STL mesh. */
-  exanb::Vec3d mom_axis;    /**< normal vector of the moment. */
+  exanb::Vec3d applied_mom;     /**< Moment of the R-Shape. */
+  exanb::Vec3d mom;             /**< Moment of the R-Shape. */
+  exanb::Vec3d inertia = null;  /**< Inertia of the R-Shape. */
+  exanb::Vec3d mom_axis;        /**< normal vector of the moment. */
 };
 }  // namespace exaDEM
-
+ 
 namespace YAML {
 using exaDEM::MotionType;
-using exaDEM::Stl_params;
+using exaDEM::RShapeDriverParams;
 using exanb::lerr;
 using onika::physics::Quantity;
 
 template <>
-struct convert<Stl_params> {
-  static bool decode(const Node& node, Stl_params& v) {
+struct convert<RShapeDriverParams> {
+  static bool decode(const Node& node, RShapeDriverParams& v) {
     if (!node.IsMap()) {
       return false;
     }
@@ -111,44 +112,47 @@ struct convert<Stl_params> {
 }  // namespace YAML
 
 namespace exaDEM {
-const std::vector<MotionType> stl_valid_motion_types = {
-    STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION, LINEAR_COMPRESSIVE_MOTION, TABULATED, SHAKER, EXPRESSION};
+const std::vector<MotionType> rshape_valid_motion_types = {
+    STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION,
+    LINEAR_COMPRESSIVE_MOTION, PARTICLE,
+    TABULATED, SHAKER, EXPRESSION};
 
 using namespace exanb;
 /**
- * @brief Struct representing a STL mesh in the exaDEM simulation.
+ * @brief Struct representing a R-Shape in the exaDEM simulation.
  */
-struct Stl_mesh : public Stl_params, Driver_params {
-  shape shp;                 /**< Shape of the STL mesh. */
+struct RShapeDriver : public RShapeDriverParams, Driver_params {
+  shape shp;                 /**< Shape of the R-Shape. */
   vector_t<Vec3d> vertices;  /**< Collection of vertices (computed from shp, quat
                                   and center). */
-  std::vector<list_of_elements> grid_indexes; /**< Grid indices of the STL mesh. */
-  std::vector<omp_lock_t> grid_mutexes;       /**< Grid indices of the STL mesh. */
+  std::vector<RShapeDriverListOfElements> grid_indexes; /**< Grid indices of the R-Shape. */
+  std::vector<omp_lock_t> grid_mutexes;       /**< Grid indices of the R-Shape. */
   /** We don't need to save these values */
   exanb::Vec3d acc = {0, 0, 0}; /**< Acceleration of the mesh */
 
   /**
-   * @brief Get the type of the driver (in this case, STL_MESH).
+   * @brief Get the type of the driver (in this case, RSHAPE).
    * @return The type of the driver.
    */
   constexpr DRIVER_TYPE get_type() {
-    return DRIVER_TYPE::STL_MESH;
+    return DRIVER_TYPE::RSHAPE;
   }
 
   /**
-   * @brief Add stl shape.
+   * @brief Add RShapeDriver shape.
    */
   void set_shape(shape& s) {
     shp = s;
   }
 
   /**
-   * @brief Print information about the STL mesh.
+   * @brief Print information about the R-Shape.
    */
   inline void print() const {
-    lout << "Driver Type: MESH STL" << std::endl;
+    lout << "Driver Type: R-Shape" << std::endl;
     lout << "Name               = " << shp.m_name << std::endl;
     lout << "Center             = " << center << std::endl;
+    lout << "Minskowski         = " << shp.minskowski() << std::endl;
     lout << "Velocity           = " << vel << std::endl;
     lout << "Angular Velocity   = " << vrot << std::endl;
     lout << "Orientation        = " << quat.w << " " << quat.x << " " << quat.y << " " << quat.z << std::endl;
@@ -159,6 +163,9 @@ struct Stl_mesh : public Stl_params, Driver_params {
       lout << "Applied moment     = " << applied_mom << std::endl;
       lout << "Inertia            = " << inertia << std::endl;
       lout << "normal(moment)     = " << mom_axis << std::endl;
+    } else if(motion_type == PARTICLE) {
+      lout << "Mass               = " << mass << std::endl;
+      lout << "Inertia            = " << inertia << std::endl;
     }
     lout << "Number of faces    = " << shp.get_number_of_faces() << std::endl;
     lout << "Number of edges    = " << shp.get_number_of_edges() << std::endl;
@@ -167,12 +174,12 @@ struct Stl_mesh : public Stl_params, Driver_params {
   }
 
   /**
-   * @brief Print information about the STL mesh.
+   * @brief Print information about the R-Shape.
    */
   inline void initialize() {
     // checks
     if (shp.get_number_of_faces() == 0 && shp.get_number_of_edges() == 0 && shp.get_number_of_vertices() == 0) {
-      color_log::error("Stl_mesh::initialize",
+      color_log::error("RShape::initialize",
                        "Your shape is not correctly defined, no vertex, no "
                        "edge, and no face.");
     }
@@ -188,28 +195,37 @@ struct Stl_mesh : public Stl_params, Driver_params {
     std::filesystem::path full_name = this->shp.m_name;
     this->shp.m_name = full_name.filename();
     // motion type
-    if (!Driver_params::is_valid_motion_type(stl_valid_motion_types)) {
+    if (!Driver_params::is_valid_motion_type(rshape_valid_motion_types)) {
       std::exit(EXIT_FAILURE);
     } else if (!Driver_params::check_motion_coherence()) {
       std::exit(EXIT_FAILURE);
     } else if (mass <= 0.0) {
-      color_log::error("Stl_mesh::initialize", "Please, define a positive mass.");
+      color_log::error("RShape::initialize", "Please, define a positive mass.");
     }
 
     if (is_compressive()) {
       double s = shp.compute_surface();
       if (surface <= 0) {
-        color_log::warning("Stl_mesh::initialize",
+        color_log::warning("RShape::initialize",
                            "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. "
                            "You need to specify surface: XX in the 'state' slot.");
-        color_log::error("Stl_mesh::initialize",
+        color_log::error("RShape::initialize",
                          "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. "
                          "You need to specify surface: XX in the 'state' slot.",
                          false);
-        color_log::error("Stl_mesh::initialize", "The computed surface of all faces is: " + std::to_string(s), true);
+        color_log::error("RShape::initialize",
+                         "The computed surface of all faces is: " + std::to_string(s), true);
       }
       if (s - surface > 1e-6) {
-        color_log::warning("Stl_mesh::initialize", "The computed surface of all faces is: " + std::to_string(s));
+        color_log::warning("RShape::initialize",
+                           "The computed surface of all faces is: " + std::to_string(s));
+      }
+    }
+
+    if (need_moment()) {
+      if(inertia == null) {
+        color_log::error("RShape::initialize",
+                         "Inertia should be defined, either params, either in a shape file.");
       }
     }
   }
@@ -225,7 +241,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
         acc = exanb::dot(tmp, this->motion_vector) * this->motion_vector;
       }
     } else if (is_force_motion()) {
-      if (mass >= 1e100) color_log::warning("f_to_a", "The mass of the stl mesh is set to " + std::to_string(mass));
+      if (mass >= 1e100) color_log::warning("f_to_a", "The mass of the rshape is set to " + std::to_string(mass));
       acc = Driver_params::sum_forces() / mass;
     } else {
       acc = {0, 0, 0};
@@ -293,8 +309,16 @@ struct Stl_mesh : public Stl_params, Driver_params {
           this->mom_axis = this->applied_mom / exanb::norm(this->applied_mom);
         }
       }
-      Vec3d project_mom = dot(this->applied_mom + this->mom, this->mom_axis) * this->mom_axis;
+
+      Vec3d project_mom;
       Vec3d arot;
+
+      // do not use applied_mom direction if the motion type is PARTICLE
+      if (motion_type == MotionType::PARTICLE) {
+        project_mom = mom;
+      } else {
+        project_mom = dot(this->applied_mom + this->mom, this->mom_axis) * this->mom_axis;
+      }
 
       compute_arot(this->quat, project_mom, this->vrot, arot, this->inertia);
       compute_vrot(this->vrot, arot);
@@ -305,7 +329,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
       this->quat = this->quat + dot(this->quat, this->vrot) * dt;
       this->quat = normalize(this->quat);
     }
-    ldbg << "Quat[stl mesh]: " << this->quat.w << " " << this->quat.x << " " << this->quat.y << " " << this->quat.z
+    ldbg << "Quat[rshape]: " << this->quat.w << " " << this->quat.x << " " << this->quat.y << " " << this->quat.z
         << std::endl;
   }
 
@@ -335,11 +359,12 @@ struct Stl_mesh : public Stl_params, Driver_params {
   ONIKA_HOST_DEVICE_FUNC inline bool need_moment() const {
     if (drive_by_mom) {
       return true;
-    }
-    if (is_expr()) {
+    } else if (is_expr()) {
       if (expr.expr_use_mom) {
         return true;
       }
+    } else if (motion_type == MotionType::PARTICLE) {
+      return true;
     }
     return false;
   }
@@ -350,7 +375,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
 
   void dump_driver(int id, std::string path, std::stringstream& stream) {
     std::string filename = path + this->shp.m_name + ".shp";
-    stream << "  - register_stl_mesh:" << std::endl;
+    stream << "  - register_rshape:" << std::endl;
     stream << "     id: " << id << std::endl;
     stream << "     filename: " << filename << std::endl;
     stream << "     minskowski: " << this->shp.m_radius << std::endl;
@@ -374,7 +399,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
   }
 
   /**
-   * @brief Prints a summary of grid indices for the STL mesh.
+   * @brief Prints a summary of grid indices for the R-Shape.
    * @details This function prints the number of elements in the grid indexes
    * for vertices, edges, and faces.
    */
@@ -397,7 +422,7 @@ struct Stl_mesh : public Stl_params, Driver_params {
       max_f = std::max(max_f, list.faces.size());
     }
 
-    lout << "========= STL Grid summary ======" << std::endl;
+    lout << "========= R-Shape Grid summary ==" << std::endl;
     lout << "Number of emplty cells = " << nb_fill_cells << " / " << size << std::endl;
     lout << "Vertices (Total/Max)   = " << nb_v << " / " << max_v << std::endl;
     lout << "Edges    (Total/Max)   = " << nb_e << " / " << max_e << std::endl;
@@ -410,9 +435,9 @@ struct Stl_mesh : public Stl_params, Driver_params {
 namespace onika {
 namespace memory {
 template <>
-struct MemoryUsage<exaDEM::Stl_mesh> {
-  static inline size_t memory_bytes(const exaDEM::Stl_mesh& obj) {
-    const exaDEM::Stl_params* cparms = &obj;
+struct MemoryUsage<exaDEM::RShapeDriver> {
+  static inline size_t memory_bytes(const exaDEM::RShapeDriver& obj) {
+    const exaDEM::RShapeDriverParams* cparms = &obj;
     const exaDEM::Driver_params* dparms = &obj;
     return onika::memory::memory_bytes(*cparms, *dparms);
   }

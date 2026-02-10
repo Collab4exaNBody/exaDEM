@@ -39,7 +39,7 @@ class ParaviewDriver : public OperatorNode {
  public:
   inline std::string documentation() const final {
     return R"EOF(
-           This operator creates a parview file of stl meshes.)EOF";
+           This operator creates a parview file of RShapeDriver(s).)EOF";
   }
 
   inline void execute() final {
@@ -66,8 +66,8 @@ class ParaviewDriver : public OperatorNode {
         exaDEM::Surface& surface = drivers->get_typed_driver<exaDEM::Surface>(id);
         surfaces.push_back({static_cast<int>(id), surface.normal, surface.offset, surface.vel});
       }
-      if (drivers->type(id) == DRIVER_TYPE::STL_MESH) {
-        exaDEM::Stl_mesh& mesh = drivers->get_typed_driver<exaDEM::Stl_mesh>(id);
+      if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
+        exaDEM::RShapeDriver& mesh = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
         mesh.shp.write_move_paraview(path, *timestep, mesh.center, mesh.quat);
       }
     }

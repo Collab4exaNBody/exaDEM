@@ -12,7 +12,8 @@ evaluate_polyhedron_displ:
 evaluate_interface_breakage:
   rebind: { result: broken_interface }
   body:
-    - apply_interface_fracture_criterion
+    - apply_interface_fracture_criterion:
+       display: true
 
 displ_or_break:
   rebind: { in1: particle_displ, in2: broken_interface, result: particle_displ }
@@ -49,6 +50,7 @@ particle_write_paraview_generic:
         - message: { endl: true }
   - write_paraview_interfaces:
      mpi_rank: true
+
 read_dump_particle_op: read_dump_particle_fragmentation
 write_dump_particle_op: write_dump_particle_fragmentation
 

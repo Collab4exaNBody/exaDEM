@@ -88,27 +88,25 @@ class PolyhedraDefineRadius : public OperatorNode {
     onika::memory::CudaMMVector<double> r;
     r.resize(size);
     double rmax = *rcut_max;
-    lout << "start rmax " << rmax << std::endl;
     for (size_t i = 0; i < size; i++) {
       double rad_max = shps[i]->compute_max_rcut();
       r[i] = rad_max;
       rmax = std::max(rmax, 2 * rad_max);  // r * maxrcut
-      lout << "shape " << i << " rmax " << rmax << std::endl;
     }
     *rcut_max = rmax;
 
     // now, fill the radius field
     if (region.has_value()) {
-      ParticleRegionCSGShallowCopy prcsg = *region;
-      UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};
+      ParticleRegionCSGShallowCopy prcsg;
       if (!particle_regions.has_value()) {
         fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
       }
-
       if (region->m_nb_operands == 0) {
         ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
         region->build_from_expression_string(particle_regions->data(), particle_regions->size());
       }
+      prcsg = *region;
+      UpdateRadiusPolyhedronFunctor func = {prcsg, onika::cuda::vector_data(r)};
       compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
     } else {
       ParticleRegionCSGShallowCopy prcsg;

@@ -1,7 +1,9 @@
-compute_force: nop
+compute_force: nop  # user-definition
+reine_des_neiges: nop  # user-definition
+freeze: reine_des_neiges
 
 # define the verlet numerical scheme
-numerical_scheme_verlet_macro(compute_force_op):
+numerical_scheme_verlet_macro:
   name: scheme
   body:
 #    - push_f_v_r: { dt_scale: 1.0 }
@@ -15,7 +17,8 @@ numerical_scheme_verlet_macro(compute_force_op):
     - reset_force_driver
     - reset_force_moment
     - mpi_barrier
-    - compute_force_op
+    - compute_force
+    - freeze
     - update_stress_tensor
     - force_to_accel 
     - force_to_accel_driver 
@@ -26,7 +29,7 @@ numerical_scheme_verlet_macro(compute_force_op):
     - combined_compute_epilog
 
 # define the verlet numerical scheme
-numerical_scheme_verlet: numerical_scheme_verlet_macro(compute_force)
+numerical_scheme_verlet: numerical_scheme_verlet_macro
 
 numerical_scheme: numerical_scheme_verlet
 

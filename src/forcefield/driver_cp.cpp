@@ -86,8 +86,8 @@ class DriversContactParams : public OperatorNode {
     for (int i = 0; i < int(drvs.get_size()); i++) {
       auto driver_type = drvs.type(i);
       std::string driver_name;
-      if (driver_type == DRIVER_TYPE::STL_MESH) {
-        Stl_mesh& D = drvs.get_typed_driver<Stl_mesh>(i);
+      if (driver_type == DRIVER_TYPE::RSHAPE) {
+        RShapeDriver& D = drvs.get_typed_driver<RShapeDriver>(i);
         driver_name = D.shp.m_name;
       } else {
         driver_name = print(driver_type) + "_" + std::to_string(i);

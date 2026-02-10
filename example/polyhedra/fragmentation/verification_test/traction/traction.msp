@@ -1,0 +1,88 @@
+includes:
+  - config_fragmentation.msp
+
+io_tree:
+  - io_config:
+     dir_name: "TractionTwoCubesGCDir"
+
+particle_regions:
+  - AREA:
+     bounds: [[0,0,0],[2, 1, 1]]
+  - FREEZE:
+     bounds: [[0,0,0],[1, 1, 1]]
+  - MOVE:
+     bounds: [[1,0,0],[2, 1, 1]]
+
+reine_des_neiges:
+  - pas_libere_pas_delivre:
+     region: FREEZE
+
+input_data:
+  - init_rcb_grid
+  - add_cube:
+     length: 0.98
+     minskowki: 0.01
+  - lattice:
+     structure: SC
+     types: [ cube ]
+     size: [ 1.0 , 1.0 , 1.0 ]
+     region: AREA
+  - set_fields:
+     polyhedra: true
+     type:              [    cube ]
+     random_quaternion: [   false ]
+     sigma_velocity:    [     0.0 ]
+     velocity:          [ [0,0,0] ]     
+     density:           [   0.006 ]
+  - inner_bond_params:
+     default_config: { kn: 1.e3, kt: 8.e2, damp_rate: 0.87, g: GC } 
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+
+trigger_output:
+  rebind: { freq: simulation_paraview_frequency , result: trigger_output }
+  body:
+    - nth_timestep: { first: true }
+
+output:
+  condition: trigger_output
+  body:
+  - timestep_file: "XYZFilesGC/dem_pos_vel_%09d.xyz"
+  - write_xyz:
+     fields: [ id, velocity, force, mass ]
+
+compute_force:
+  - contact_polyhedron:
+     config:
+        kn: 1.e4
+        kt: 8.e3
+        kr: 0.0
+        mu: 0.1
+        damp_rate: 0.87
+  - inner_bond_polyhedron
+  - trigger_output
+  - output
+  - pas_libere_pas_delivre:
+     region: MOVE
+  - set_velocity:
+     value: [0.01, 0, 0]
+     region: MOVE
+
+domain:
+  cell_size: 2 m
+  periodic: [false,true,false]
+  grid_dims: [3, 3, 3]
+  bounds: [[-2,-2,-2],[4, 4, 4]]
+  expandable: true
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 300000
+  simulation_log_frequency: 10000
+  simulation_paraview_frequency: 100
+  dt: 5.e-6 s
+  analysis_interaction_dump_frequency: 100 
+  rcut_inc: 0.1
+  apply_particle_sticking: true
+  sticking_threshold: 1.5e-4

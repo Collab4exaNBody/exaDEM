@@ -292,14 +292,14 @@ class DumpReaderConfRockable : public OperatorNode {
     grid->rebuild_particle_offsets();
     assert(check_particles_inside_cell(*grid));
 
-    // Particles within the "nDriven" section become stl_mesh with a motion type
+    // Particles within the "nDriven" section become rshape driver with a motion type
     // "STATIONARY"
     if (manager.nDriven > 0) {
       auto& drvs = *drivers;
       int next_id = drvs.get_size();
       for (int id = 0; id < manager.nDriven; id++) {
         Driver_params motion = Driver_params();
-        Stl_params state = Stl_params();
+        RShapeDriverParams state = RShapeDriverParams();
 
         auto& particle = manager.drivers[id];
         state.center = particle.pos;
@@ -310,7 +310,7 @@ class DumpReaderConfRockable : public OperatorNode {
 
         int type = particle.type;
         shape shp = *(manager.shps[type]);
-        Stl_mesh driver = {state, motion};
+        RShapeDriver driver = {state, motion};
         driver.set_shape(shp);
         driver.initialize();
         drvs.add_driver(next_id + id, driver);

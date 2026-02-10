@@ -23,19 +23,27 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/grid.h>
-#include <exanb/compute/compute_cell_particles.h>
-#include <exaDEM/set_fields.hpp>
 #include <exaDEM/traversal.hpp>
+#include <exanb/compute/compute_cell_particles.h>
+#include <exanb/grid_cell_particles/particle_region.h>
+#include <exaDEM/set_fields.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz, field::_mom>>
 class ResetForceMomentNode : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+  ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
-  static inline constexpr field_accessor_tuple_from_field_set_t<
-      FieldSet<field::_fx, field::_fy, field::_fz, field::_mom>>
-      compute_field_set = {};
+  using ComputeFields = field_accessor_tuple_from_field_set_t<
+                        FieldSet<field::_fx, field::_fy, field::_fz, field::_mom>>;
+  using ComputeRegionFields = field_accessor_tuple_from_field_set_t<
+                        FieldSet<field::_rx, field::_ry, field::_rz, field::_id,
+                                 field::_fx, field::_fy, field::_fz, field::_mom>>;
+
+  static constexpr ComputeFields compute_field_set{};
+  static constexpr ComputeRegionFields compute_region_field_set{};
 
  public:
   inline std::string documentation() const final {
@@ -46,9 +54,22 @@ class ResetForceMomentNode : public OperatorNode {
 
   inline void execute() final {
     const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
-    SetFunctor<double, double, double, Vec3d> func = {{0.0, 0.0, 0.0, Vec3d{0.0, 0.0, 0.0}}};
-    compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
-  }
+    if (region.has_value()) {
+      if (!particle_regions.has_value()) {
+        fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+      }
+      if (region->m_nb_operands == 0) {
+        ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
+        region->build_from_expression_string(particle_regions->data(), particle_regions->size());
+      }
+      ParticleRegionCSGShallowCopy prcsg = *region;
+      SetRegionFunctor<double, double, double, Vec3d> func = {prcsg, {0.0, 0.0, 0.0, Vec3d{0.0, 0.0, 0.0}}};
+      compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context(), ccpo);
+    } else {
+      SetFunctor<double, double, double, Vec3d> func = {{0.0, 0.0, 0.0, Vec3d{0.0, 0.0, 0.0}}};
+      compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
+    }
+	}
 };
 // === register factories ===
 ONIKA_AUTORUN_INIT(reset_force_moment) {

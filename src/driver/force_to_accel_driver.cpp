@@ -64,7 +64,7 @@ struct gather_forces_moment {
 
   inline std::tuple<bool, Vec3d, Vec3d> operator()(Cylinder& arg) { return {false, {0, 0, 0}, {0, 0, 0}}; }
 
-  inline std::tuple<bool, Vec3d, Vec3d> operator()(Stl_mesh& arg) {
+  inline std::tuple<bool, Vec3d, Vec3d> operator()(RShapeDriver& arg) {
     if (arg.need_forces() || arg.need_moment()) {
       return {true, arg.forces, arg.mom};
     }
@@ -82,7 +82,7 @@ struct set_forces_moment {
 
   inline void operator()(Cylinder& arg) { arg.forces = forces; }
 
-  inline void operator()(Stl_mesh& arg) {
+  inline void operator()(RShapeDriver& arg) {
     arg.forces = forces;
     arg.mom = moment;
   }

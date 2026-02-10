@@ -82,12 +82,12 @@ class DumpWriterConfRockable : public OperatorNode {
     }
 
     shapes all_shapes = shps;
-    int n_drivers = 0;                                    // keep only stl mesh drivers
+    int n_drivers = 0;                                    // keep only rshape drivers
     std::stringstream sdriver;                            // stream for drivers
     for (size_t did = 0; did < drvs.get_size(); did++) {  // driver idx
-      if (drvs.type(did) == DRIVER_TYPE::STL_MESH) {
+      if (drvs.type(did) == DRIVER_TYPE::RSHAPE) {
         n_drivers++;
-        Stl_mesh& D = drvs.get_typed_driver<Stl_mesh>(did);
+        RShapeDriver& D = drvs.get_typed_driver<RShapeDriver>(did);
         if (!all_shapes.contains(D.shp)) {  // add shape
           all_shapes.add_shape(D.shp);
         }

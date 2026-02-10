@@ -100,9 +100,19 @@ class SimulationState {
     return m_dn;
   }
 
+  inline void set_interface_count(uint64_t n) {
+    m_interface_count = n;
+  }
+
+  inline uint64_t interface_count() const {
+    return m_interface_count;
+  }
+
   inline size_t compute_particles_throughput(std::chrono::time_point<std::chrono::steady_clock> new_timepoint,
                                              int new_timestep) const {
-    if (m_last_timestep == -1) return 0;
+    if (m_last_timestep == -1) {
+      return 0;
+    }
     return m_particle_count * (new_timestep - m_last_timestep) /
            (std::chrono::duration<double>(new_timepoint - m_last_timepoint).count());
   }
@@ -122,6 +132,7 @@ class SimulationState {
   uint64_t m_active_interactions = 0;
   uint64_t m_interaction_count = 0;
   double m_dn = 0;
+  uint64_t m_interface_count = 0;
   int m_last_timestep = -1;
   std::chrono::time_point<std::chrono::steady_clock> m_last_timepoint;
 };

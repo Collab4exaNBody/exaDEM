@@ -24,7 +24,7 @@ under the License.
 #include <onika/math/basic_types.h>
 
 #include <exaDEM/drivers.hpp>
-#include <exaDEM/reduce_stl_mesh.hpp>
+#include <exaDEM/reduce_rshape_driver.hpp>
 
 namespace exaDEM {
 template <typename T>
@@ -38,23 +38,32 @@ struct Accumulator {
   VectorT<int> data;  ///< Storage buffer
 
  public:
-  Accumulator() { reset(); }
+  Accumulator() {
+    reset();
+  }
+
   /// Reset accumulator to zero
   void reset() {
     data.resize(1);
     data[0] = 0;
   }
+
   /// Get raw pointer to data
-  int* __restrict__ get_ptr() { return data.data(); }
-  /// Get current value
-  int get() { return data[0]; }
+  int* __restrict__ get_ptr() {
+    return data.data();
+  }
+
+	/// Get current value
+  int get() {
+    return data[0];
+  }
 };
 
 /**
  * @brief Driver displacement overlap handler.
  */
 template <class ParallelExecutionContextFunctor>
-struct driver_displ_over {
+struct DriverDisplOver {
   ParallelExecutionContextFunctor m_parallel_execution_context;  ///< Parallel execution context
   const double r2;                                               ///< Squared distance
   MPI_Comm& comm;                                                ///< MPI communicator
@@ -62,7 +71,9 @@ struct driver_displ_over {
   const size_t bd_idx;                                           ///< Backup driver index
   Accumulator storage;                                           ///< Result accumulator
 
-  inline int operator()(exaDEM::Cylinder& a) { return 0; }  // WARNING should not move
+  inline int operator()(exaDEM::Cylinder& a) {
+    return 0;  // WARNING should not move
+  }
 
   inline int operator()(exaDEM::Surface& a) {
     exaDEM::Surface& b = bcpd.get_typed_driver<exaDEM::Surface>(bd_idx);
@@ -123,9 +134,9 @@ struct driver_displ_over {
     }
   }
 
-  inline int operator()(exaDEM::Stl_mesh& a) {
+  inline int operator()(exaDEM::RShapeDriver& a) {
     using onika::cuda::vector_data;
-    exaDEM::Stl_mesh& b = bcpd.get_typed_driver<exaDEM::Stl_mesh>(bd_idx);
+    exaDEM::RShapeDriver& b = bcpd.get_typed_driver<exaDEM::RShapeDriver>(bd_idx);
 
     if ((a.center == b.center) && (a.quat == b.quat)) {
       return 0;
@@ -135,8 +146,8 @@ struct driver_displ_over {
     storage.reset();
     size_t size = a.shp.get_number_of_vertices();
     const Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp.m_vertices);
-    STLVertexDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.center, a.quat, b.center, b.quat};
-    ReduceMaxSTLVertexDisplacementFunctor func = {SVDFunc, storage.get_ptr()};
+    RShapeDriverDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.center, a.quat, b.center, b.quat};
+    ReduceMaxRShapeDriverDisplacementFunctor func = {SVDFunc, storage.get_ptr()};
 
     ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_STATIC;
@@ -215,12 +226,13 @@ class DriverDisplacementOver : public OperatorNode {
     // get backup
     Drivers& bcpd = *backup_drvs;
     size_t bcpd_size = bcpd.get_size();
-    // assert(bcpd_size == size);
 
-    auto pec_func = [this]() { return this->parallel_execution_context(); };
+    auto pec_func = [this]() {
+      return this->parallel_execution_context();
+    };
 
     for (size_t i = 0; i < bcpd_size && local_drivers_displ == 0; i++) {
-      driver_displ_over<decltype(pec_func)> func = {pec_func, max_dist2, comm, bcpd, i};
+      DriverDisplOver<decltype(pec_func)> func = {pec_func, max_dist2, comm, bcpd, i};
       local_drivers_displ += drvs.apply(i, func);
     }
 

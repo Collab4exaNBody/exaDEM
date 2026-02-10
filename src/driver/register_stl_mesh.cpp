@@ -27,15 +27,15 @@ under the License.
 #include <exaDEM/stl_mesh_to_driver.hpp>
 
 namespace exaDEM {
-class RegisterSTLMesh : public OperatorNode {
+class RegisterRShapeDriver : public OperatorNode {
   const Driver_params default_params = Driver_params();
-  static constexpr Stl_params default_stl_mesh_params = Stl_params();
+  static constexpr RShapeDriverParams default_rshape_params = RShapeDriverParams();
 
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
   ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"Input filename"});
   ADD_SLOT(
-      Stl_params, state, INPUT, default_stl_mesh_params,
+      RShapeDriverParams, state, INPUT, default_rshape_params,
       DocString{
           "Define the center, velocity, angular velocity and the orientatation. Default is: state: {center: [0,0,0], "
           "vel: [0,0,0], vrot: [0,0,0], quat: [1,0,0,0]}."});
@@ -43,20 +43,22 @@ class RegisterSTLMesh : public OperatorNode {
            DocString{"List of params, motion type, motion vectors .... Default is { motion_type: STATIONARY}."});
   ADD_SLOT(double, minskowski, INPUT, REQUIRED, DocString{"Minskowski radius value"});
   ADD_SLOT(bool, binary, INPUT, false,
-           DocString{"Binary mode, it only works if the stl mesh is cmposed of triangles. Default is false."});
-  ADD_SLOT(double, scale, INPUT, OPTIONAL, DocString{"Rescale your stl mesh"});
-  ADD_SLOT(exanb::Vec3d, deform, INPUT, OPTIONAL, DocString{"Deform your stl mesh. Usage: deform: [x, y, z]"});
+           DocString{"Binary mode, it only works if the shape is composed of triangles. Default is false."});
+  ADD_SLOT(double, scale, INPUT, OPTIONAL, DocString{"Rescale your RShapeDriver"});
+  ADD_SLOT(exanb::Vec3d, deform, INPUT, OPTIONAL, DocString{"Deform your shape [uniaxial]. Usage: deform: [x, y, z]"});
   ADD_SLOT(double, rcut_inc, INPUT,
            DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This operator add a stl mesh to the drivers list.
+        This operator add a R-Shape driver to the drivers list.
         )EOF";
   }
 
-  inline std::string operator_name() { return "register_stl_mesh"; }
+  inline std::string operator_name() {
+    return "register_stl_mesh/rshape";
+  }
 
   inline void execute() final {
     std::string output_name = *filename;
@@ -80,11 +82,10 @@ class RegisterSTLMesh : public OperatorNode {
     }
 
     assert(is_stl != is_shp);
-    // load shape
     shape shp;
 
     if (is_stl) {
-      stl_mesh_reader reader;
+      STLMeshReader reader;
       reader(*filename, *binary);
       output_name.erase(it_stl, old_extension_stl.length());
       shp = build_shape(reader, output_name);
@@ -92,6 +93,10 @@ class RegisterSTLMesh : public OperatorNode {
       // not optimized
       bool big_shape = true;
       shp = read_shp(output_name, big_shape);
+      if(shp.get_Im() != null) {
+        color_log::warning(operator_name(), "Override inertia using shape I/m");
+        state->inertia = shp.get_Im() / state->mass;
+      }
     }
 
     if (scale.has_value()) {
@@ -99,8 +104,13 @@ class RegisterSTLMesh : public OperatorNode {
         shp.rescale(*scale, false);
         shp.write_paraview();  // replace
       } else {
-        if (*scale <= 0.0) color_log::error("register_stl_mesh", "Impossible to rescale the mesh, scale <= 0.0.");
-        if (*scale == 1.0) color_log::warning("register_stl_mesh", "rescale mesh option is ignored, scale = 1.0.");
+        if (*scale <= 0.0) {
+          color_log::error(operator_name(),
+                           "Impossible to rescale the mesh, scale <= 0.0.");
+        } else if (*scale == 1.0) {
+          color_log::warning(operator_name(),
+                             "rescale mesh option is ignored, scale = 1.0.");
+        }
       }
     }
 
@@ -108,7 +118,8 @@ class RegisterSTLMesh : public OperatorNode {
       const exanb::Vec3d d = *deform;
 
       if (d.x <= 0.0 || d.y <= 0.0 || d.z <= 0.0) {
-        color_log::error("register_stl_mesh", "Impossible to deform: factors must be strictly positive (x,y,z > 0).");
+        color_log::error(operator_name(),
+                         "Impossible to deform: factors must be strictly positive (x,y,z > 0).");
       }
 
       if (d.x != 1.0 || d.y != 1.0 || d.z != 1.0) {
@@ -121,7 +132,7 @@ class RegisterSTLMesh : public OperatorNode {
     // shp.increase_obb(*rcut_inc);
     shp.increase_obb(shp.m_radius);
 
-    exaDEM::Stl_mesh driver = {*state, *params};
+    exaDEM::RShapeDriver driver = {*state, *params};
     driver.set_shape(shp);
     driver.initialize();
     drivers->add_driver(*id, driver);
@@ -130,7 +141,8 @@ class RegisterSTLMesh : public OperatorNode {
 };
 
 // === register factories ===
-ONIKA_AUTORUN_INIT(register_stl_mesh) {
-  OperatorNodeFactory::instance()->register_factory("register_stl_mesh", make_simple_operator<RegisterSTLMesh>);
+ONIKA_AUTORUN_INIT(register_rshape_driver) {
+  OperatorNodeFactory::instance()->register_factory("register_stl_mesh", make_simple_operator<RegisterRShapeDriver>);
+  OperatorNodeFactory::instance()->register_factory("register_rshape", make_simple_operator<RegisterRShapeDriver>);
 }
 }  // namespace exaDEM:

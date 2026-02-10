@@ -64,23 +64,29 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
           data_wrapper.broke(j + offset);
         }
         number_of_broken_interfaces += interfaces.break_interface[i];
-        auto& idi = data_wrapper.id_i[offset];
-        auto& idj = data_wrapper.id_j[offset];
-        std::cout << "Break the interface between the particle " << idi << " and the particle " << idj << std::endl;
+        // auto& idi = data_wrapper.id_i[offset];
+        // auto& idj = data_wrapper.id_j[offset];
+        // std::cout << "Break the interface between the particle " << idi << " and the particle " << idj << std::endl;
       }
     }
 
     MPI_Allreduce(MPI_IN_PLACE, &number_of_broken_interfaces, 1, MPI_UINT64_T, MPI_SUM, *mpi);
     if (*display && number_of_broken_interfaces > 0) {
-      lout << number_of_broken_interfaces << " interfaces have been broken." << std::endl;
-    }
-    *result = number_of_broken_interfaces > 0;
-  }
+			if (number_of_broken_interfaces == 1) {
+        lout << number_of_broken_interfaces
+            << " interface has been broken." << std::endl;
+			} else {
+			  lout << number_of_broken_interfaces
+             << " interfaces have been broken." << std::endl;
+      }
+		}
+		*result = number_of_broken_interfaces > 0;
+	}
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(apply_interface_fracture_criterion) {
-  OperatorNodeFactory::instance()->register_factory("apply_interface_fracture_criterion",
-                                                    make_simple_operator<ApplyInterfaceFractureCriterion>);
+	OperatorNodeFactory::instance()->register_factory("apply_interface_fracture_criterion",
+																										make_simple_operator<ApplyInterfaceFractureCriterion>);
 }
 }  // namespace exaDEM

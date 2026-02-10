@@ -55,7 +55,7 @@ class UpdateContactInteractionSphere : public OperatorNode {
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This operator add a stl mesh to the drivers list.
+        This operator build the interactions lists.
 
         YAML example:
 
@@ -200,10 +200,10 @@ class UpdateContactInteractionSphere : public OperatorNode {
                   manager.add_item(item);
                 }
               }
-            } else if (type == DRIVER_TYPE::STL_MESH) {
-              auto& driver = drvs.get_typed_driver<Stl_mesh>(drvs_idx);
+            } else if (type == DRIVER_TYPE::RSHAPE) {
+              auto& driver = drvs.get_typed_driver<RShapeDriver>(drvs_idx);
               for (size_t p = 0; p < n_particles; p++) {
-                // a sphere can have multiple interactions with a stl mesh
+                // a sphere can have multiple interactions with a RShape driver
                 auto items =
                     detection_sphere_driver(driver, cell_a, p, id_a[p], drvs_idx, rx[p], ry[p], rz[p], rad[p], rVerlet);
                 for (auto& it : items) {
