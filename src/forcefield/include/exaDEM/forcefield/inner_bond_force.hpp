@@ -26,7 +26,11 @@ namespace exaDEM {
 ONIKA_HOST_DEVICE_FUNC
 inline void force_law_core(const double dn,
                            const Vec3d& n,  // -normal
-                           const double dn0, const double dt, const InnerBondParams& ibp, const double meff,
+                           const double dn0,
+                           const double weight,
+                           const double dt,
+                           const InnerBondParams& ibp,
+                           const double meff,
                            double& En,
                            Vec3d& tds,  // cummalative tangential displacement
                            double& Et,
@@ -44,30 +48,32 @@ inline void force_law_core(const double dn,
   const double damp = compute_damp(ibp.damp_rate, ibp.kn, meff);
 
   // === Relative velocity (j relative to i)
-  auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
+  auto vel = compute_relative_velocity(
+      contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
 
   // compute relative velocity
   const double vn = exanb::dot(vel, n);
+
   // === Normal force (elatic contact + viscous damping)
-  double fne = -ibp.kn * (dn - dn0);
+  double fne = -ibp.kn * weight * (dn - dn0);
   double fnv = damp * vn;
   double fn = fne + fnv;
-  // double fn = normal_force(ibp.kn, damp, dn - dn0, vn);
   const Vec3d vfn = fn * n;
 
   // === Tangential force (friction)
   const Vec3d ft = compute_tangential_force(dt, vn, n, vel);
   tds += ft;
-  vft += ibp.kt * ft;
+  vft += weight * ibp.kt * ft;
 
   // === sum forces
   f_i = vfn + vft;
 
+  // === Compute energies
   if (fne > 0) {
     En = 0;
   } else {
-    En = 0.5 * ibp.kn * (dn - dn0) * (dn - dn0);
+    En = 0.5 * weight * ibp.kn * (dn - dn0) * (dn - dn0);
   }
-  Et = 0.5 * ibp.kt * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
+  Et = 0.5 * weight * ibp.kt * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
 }
 }  // namespace exaDEM
