@@ -171,7 +171,9 @@ struct inner_bond_law {
 
     const double meff = compute_effective_mass(mi, mj);
 
-    force_law_core(dn, n, item.dn0, dt, ibp, meff, item.en, item.tds, item.et, item.friction,
+    force_law_core(dn, n, item.dn0, item.weight,
+                   dt, ibp, meff,
+                   item.en, item.tds, item.et, item.friction,
                    contact_position, ri, vi, fi, vroti,  // particle 1
                    rj, vj, vrotj);  // particle nbh
 
