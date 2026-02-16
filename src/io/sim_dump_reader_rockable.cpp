@@ -28,6 +28,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/check_particles_inside_cell.h>
+#include <exanb/grid_cell_particles/particle_region.h>
 
 #include <chrono>
 #include <ctime>
@@ -35,6 +36,7 @@ under the License.
 #include <exaDEM/dump_rockable_api.hpp>
 #include <exaDEM/shapes.hpp>
 #include <numeric>
+#include <algorithm>
 #include <string>
 
 namespace exaDEM {
@@ -72,6 +74,8 @@ class DumpReaderConfRockable : public OperatorNode {
   ADD_SLOT(double, enlarge_bounds, INPUT, 0.0, DocString{"Define a layer around the volume size. Default size is 0."});
   ADD_SLOT(ParticleTypeMap, particle_type_map, OUTPUT);
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+  ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
   // overloaded slots
   ADD_SLOT(double, physical_time, INPUT_OUTPUT);
@@ -163,6 +167,30 @@ class DumpReaderConfRockable : public OperatorNode {
       *dt = manager.dt;
     }
 
+    // filter
+    ParticleRegionCSGShallowCopy prcsg;
+    if (region.has_value()) {
+      if (!particle_regions.has_value()) {
+        fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+      }
+
+      if (region->m_nb_operands == 0) {
+        ldbg << "rebuild CSG from expr " << region->m_user_expr << std::endl;
+        region->build_from_expression_string(particle_regions->data(), particle_regions->size());
+      }
+      prcsg = *region;
+      std::vector<rockable::Particle>& rockable_particles = manager.particles;
+      uint64_t max_id = rockable_particles.size();
+      auto filter = [prcsg, max_id] (rockable::Particle& p) {
+        if (prcsg.contains(p.pos, max_id)) {
+          return false;
+        } 
+        return true;
+      };
+      std::erase_if(rockable_particles, filter);
+    }
+
+
     if (rank == 0) {
       std::vector<rockable::Particle>& rockable_particles = manager.particles;
       double min_x = std::numeric_limits<double>::max();
@@ -241,13 +269,13 @@ class DumpReaderConfRockable : public OperatorNode {
       lout << "Domain bounds    = " << domain->bounds() << std::endl;
       lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
       lout << "Periodicity      = [" << domain->periodic_boundary_x() << "," << domain->periodic_boundary_y() << ","
-           << domain->periodic_boundary_z() << "]" << std::endl;
+          << domain->periodic_boundary_z() << "]" << std::endl;
       lout << "Real size        = "
-           << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
-           << std::endl;
+          << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
+      << std::endl;
       lout << "Cell size        = " << domain->cell_size() << std::endl;
       lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension())
-           << " cells)" << std::endl;
+          << " cells)" << std::endl;
     }
     // send bounds and size_box values to all cores
     MPI_Bcast(&(*domain), sizeof(Domain), MPI_CHARACTER, 0, *mpi);
@@ -269,17 +297,17 @@ class DumpReaderConfRockable : public OperatorNode {
         p[field::rz] = r.z;
         ParticleTuple t = p;
         ldbg << "ID: " << t[field::id] << " pos " << "(" << t[field::rx] << "," << t[field::ry] << "," << t[field::rz]
-             << ")" << std::endl;
+            << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " vel " << "(" << t[field::vx] << "," << t[field::vy] << "," << t[field::vz]
-             << ")" << std::endl;
+            << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " acc " << "(" << t[field::fx] << "," << t[field::fy] << "," << t[field::fz]
-             << ")" << std::endl;
+            << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " quat " << t[field::orient].w << " " << t[field::orient].x << " "
-             << t[field::orient].y << " " << t[field::orient].z << std::endl;
+            << t[field::orient].y << " " << t[field::orient].z << std::endl;
         ldbg << "ID: " << t[field::id] << " vrot " << "(" << t[field::vrot].x << "," << t[field::vrot].y << ","
-             << t[field::vrot].z << ")" << std::endl;
+            << t[field::vrot].z << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " arot " << "(" << t[field::arot].x << "," << t[field::arot].y << ","
-             << t[field::arot].z << ")" << std::endl;
+            << t[field::arot].z << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " h " << t[field::homothety] << std::endl;
         ldbg << "ID: " << t[field::id] << " radius " << t[field::radius] << std::endl;
         ldbg << "ID: " << t[field::id] << " mass " << t[field::mass] << std::endl;
