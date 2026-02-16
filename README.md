@@ -9,7 +9,7 @@
 
 ExaDEM is a software solution in the field of computational simulations. It's a Discrete Element Method (DEM) code developed within the exaNBody framework. This framework provides the basis for DEM functionalities and performance optimizations. A notable aspect of ExaDEM is its hybrid parallelization approach, which combines the use of MPI (Message Passing Interface) and Threads (OpenMP). This combination aims to enhance computation times for simulations, making them more efficient and manageable.
 
-Additionally, ExaDEM offers compatibility with MPI+GPUs, using the CUDA programming model (Onika layer). This feature provides the option to leverage GPU processing power for potential performance gains in simulations. Written in C++17, ExaDEM is built on a contemporary codebase. It aims to provide researchers and engineers with a tool for adressing DEM simulations.
+Additionally, ExaDEM offers compatibility with MPI+GPUs, using the CUDA programming model (Onika layer). This feature provides the option to leverage GPU processing power for potential performance gains in simulations. Written in C++20, ExaDEM is built on a contemporary codebase. It aims to provide researchers and engineers with a tool for adressing DEM simulations.
 
 ## Documentation
 
@@ -26,7 +26,9 @@ Documentation is available here:
   - [ExaNBody](https://collab4exanbody.github.io/doc_exaDEM/project_exaNBody/index.html)
   - [Spheres](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/spheres.html) / [Polyhedra](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/polyhedra.html)
   - [Force field](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/force_field.html)
+  - [Driver](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/drivers.html)
   - [I/O](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/IO.html)
+  - [PostPro](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/user_guide/post_processings.html)
   - [Examples](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Test_cases.html)
   - [Tutorials](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Tutorial.html)
 
@@ -46,11 +48,11 @@ For more details, see `CONTRIBUTING.md`. Main guidelines are:
 - Thierry Carrard (CEA/DAM)
 - Carlo Elia Doncecchi (CEA/DES)
 - Vincent Topin (CEA/DES)
-- 
+- Lhassan Amarsid (CEA/DES)
+
 ### Contributors
 
 - Paul Lafourcade (CEA/DAM)
-- Lhassan Amarsid (CEA/DES)
 - Vincent Richefeu (CNRS)
 
 ### Citation
