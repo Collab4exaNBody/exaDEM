@@ -80,6 +80,7 @@ struct InteractionWrapper {
   Vec3d* tds;
   double* et;
   double* dn0;
+  double* weight;
   double* criterion;
   uint8_t* unbroken;
 
@@ -120,6 +121,7 @@ struct InteractionWrapper {
       tds = vector_data(data.tds);
       et = vector_data(data.et);
       dn0 = vector_data(data.dn0);
+      weight = vector_data(data.weight);
       criterion = vector_data(data.criterion);
       unbroken = vector_data(data.unbroken);
     }
@@ -152,7 +154,7 @@ struct InteractionWrapper {
       return Interaction{ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}};
     } else if constexpr (IT == InnerBond) {
       return InnerBondInteraction{
-          ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, en[idx], tds[idx], et[idx], dn0[idx], criterion[idx], unbroken[idx]};
+          ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, en[idx], tds[idx], et[idx], dn0[idx], weight[idx], criterion[idx], unbroken[idx]};
     } else {
       // static_assert(always_false<T>::value, "Unsupported interaction type");
     }
@@ -198,6 +200,7 @@ struct InteractionWrapper {
     tds[idx] = item.tds;
     et[idx] = item.et;
     dn0[idx] = item.dn0;
+    weight[idx] = item.weight;
     criterion[idx] = item.criterion;
     unbroken[idx] = item.unbroken;
   }

@@ -29,11 +29,13 @@ namespace exaDEM {
  */
 struct InnerBondInteraction {
   InteractionPair pair;
+  // specialized members
   exanb::Vec3d friction = {0, 0, 0}; /**< Friction vector associated with the interaction. */
   double en;
   exanb::Vec3d tds;
   double et;
   double dn0;
+  double weight = 1.0;
   double criterion;  // interface fracture criterion
   uint8_t unbroken = true;
 
@@ -76,6 +78,7 @@ struct InnerBondInteraction {
     tds = exanb::Vec3d{0,0,0};
     et = 0;
     unbroken = true;
+    // weight and criterion are not reset
   }
 
   /**
@@ -104,7 +107,7 @@ struct InnerBondInteraction {
   void print() {
     pair.print();
     std::cout << "Friction: " << friction << ", en: " << en <<", tds: " << tds << ", et: " << et << ", dn0: " << dn0
-              << ", criterion: " << criterion << ")" << std::endl;
+              << ", weight: " << weight << ", criterion: " << criterion << ")" << std::endl;
   }
 
   /**
@@ -113,7 +116,7 @@ struct InnerBondInteraction {
   void print() const {
     pair.print();
     std::cout << "Friction: " << friction << ", en: " << en <<", tds: " << tds << ", et: " << et << ", dn0: " << dn0
-              << ", criterion: " << criterion << ")" << std::endl;
+              << ", weight: " << weight << ", criterion: " << criterion << ")" << std::endl;
   }
 
   ONIKA_HOST_DEVICE_FUNC void update(InnerBondInteraction& I) {
@@ -122,6 +125,7 @@ struct InnerBondInteraction {
     this->tds = I.tds;
     this->et = I.et;
     this->dn0 = I.dn0;
+    this->weight = I.weight;
     this->criterion = I.criterion;
     this->unbroken = I.unbroken;
   }
