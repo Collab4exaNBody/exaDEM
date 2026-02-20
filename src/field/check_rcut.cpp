@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
- */
+*/
 
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
@@ -43,15 +43,19 @@ class CheckRadius : public OperatorNode {
   // ----------- Operator documentation ------------
   inline std::string documentation() const final {
     return R"EOF(
-        Check if the rcut_max is different of 0 or if the rcut_max is < particle rcut. 
-
+        Check if  - rcut_max is different of 0
+                  - rcut_max is < particle rcut
+                  - 0.5 cell size  < particle rcut  
+                 
         YAML example [no option]:
 
           - check_rcut
       )EOF";
   }
 
-  inline std::string operator_name() { return "check_rcut"; }
+  inline std::string operator_name() {
+    return "check_rcut";
+  }
 
  public:
   void check_slots() {
@@ -65,29 +69,54 @@ class CheckRadius : public OperatorNode {
     MPI_Comm comm = *mpi;
     double rmax = *rcut_max;
 
+    double half_cell_size =  0.5 * grid->cell_size();
     auto cells = grid->cells();
     const IJK dims = grid->dimension();
     double rcm = 0.0;
-#pragma omp parallel
-    {GRID_OMP_FOR_BEGIN(dims, i, loc,
-                        schedule(dynamic) reduction(max : rcm)){double* __restrict__ r = cells[i][field::radius];
-    const size_t n = cells[i].size();
-#pragma omp simd
-    for (size_t j = 0; j < n; j++) {
-      rcm = std::max(rcm, r[j]);  // 4/3 * pi * r^3 * d
+    uint64_t count_oversize_particles = 0;
+    uint64_t count_unsuitable_particle_grid = 0;
+
+#   pragma omp parallel
+    {
+      GRID_OMP_FOR_BEGIN(dims, i, loc,
+                         schedule(dynamic) reduction(max : rcm)
+                         reduction(+: count_oversize_particles,
+                                   count_unsuitable_particle_grid) ){
+        double* __restrict__ r = cells[i][field::radius];
+        const size_t n = cells[i].size();
+#       pragma omp simd
+        for (size_t j = 0; j < n; j++) {
+          if (r[j]>rmax) {
+            count_oversize_particles++;
+          }
+          if (r[j]>half_cell_size) {
+            count_unsuitable_particle_grid++;
+          }
+          rcm = std::max(rcm, r[j]);
+        }
+      }
+      GRID_OMP_FOR_END
+    }
+
+    MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, comm);
+    MPI_Allreduce(MPI_IN_PLACE, &count_oversize_particles, 1, MPI_UINT64_T, MPI_SUM, comm);
+    MPI_Allreduce(MPI_IN_PLACE, &count_unsuitable_particle_grid, 1, MPI_UINT64_T, MPI_SUM, comm);
+
+    if (count_unsuitable_particle_grid>0) {
+      color_log::error(operator_name(),
+                       std::to_string(count_unsuitable_particle_grid)
+                       + " particles are larger than 1/2 cell size: "
+                       + std::to_string(half_cell_size));
+    }
+
+    if (count_oversize_particles>0) {
+      color_log::error(operator_name(),
+                       std::to_string(count_oversize_particles)
+                       + " particles are larger than rmax: "
+                       + std::to_string(rmax));
     }
   }
-  GRID_OMP_FOR_END
-}
-
-MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, comm);
-
-if (rcm > rmax) {
-  color_log::error(operator_name(), "At least one particle has a radius larger than the maximum radius cutoff.");
-}
-}  // namespace exaDEM
-}
-;
+};  // namespace exaDEM
 
 template <class GridT>
 using CheckRadiusTmpl = CheckRadius<GridT>;
