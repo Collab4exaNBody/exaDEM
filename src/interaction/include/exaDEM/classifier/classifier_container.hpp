@@ -50,6 +50,7 @@ struct ClassifierContainer {
   VectorT<Vec3d> tds;        /**< List of cumulative tangential displacement.  */
   VectorT<double> et;        /**< List of the et.  */
   VectorT<double> dn0;       /**< List of the dn0.  */
+  VectorT<double> weight;       /**< List of the weight.  */
   VectorT<double> criterion; /**< List of the criterion.  */
   VectorT<uint8_t> unbroken; /**< List of the sticked interactions are unbroken.  */
 
@@ -84,15 +85,12 @@ struct ClassifierContainer {
 
   template <typename Func>
   void apply_on_fields(Func& func) {
-    // ldbg << "Func applied on [id_i, id_j, cell_i, cell_j, p_i, p_j, sub_i, sub_j]" << std::endl;
     apply_on_fields(func, id_i, id_j, cell_i, cell_j, p_i, p_j, sub_i, sub_j, swap, ghost);
     if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) {
-      // ldbg << "Func applied on [ft_x, ft_y, ft_z, mom_x, mom_y, mom_z]" << std::endl;
       apply_on_fields(func, ft_x, ft_y, ft_z, mom_x, mom_y, mom_z);
     }
     if constexpr (IT == InteractionType::InnerBond) {
-      // ldbg << "Func applied on [ft_x, ft_y, ft_z, en, et, dn0, s(surface)]" << std::endl;
-      apply_on_fields(func, ft_x, ft_y, ft_z, en, tds, et, dn0, criterion, unbroken);
+      apply_on_fields(func, ft_x, ft_y, ft_z, en, tds, et, dn0, weight, criterion, unbroken);
     }
   }
 
@@ -166,6 +164,7 @@ struct ClassifierContainer {
       tds[idx] = I.tds;
       et[idx] = I.et;
       dn0[idx] = I.dn0;
+      weight[idx] = I.weight;
       criterion[idx] = I.criterion;
       unbroken[idx] = I.unbroken;
     }
@@ -246,6 +245,7 @@ struct ClassifierContainer {
                                        vector_data(tds)[id],
                                        vector_data(et)[id],
                                        vector_data(dn0)[id],
+                                       vector_data(weight)[id],
                                        vector_data(criterion)[id],
                                        vector_data(unbroken)[id]};
       return res;
@@ -279,6 +279,7 @@ struct ClassifierContainer {
       vector_data(tds)[id] = I.tds;
       vector_data(et)[id] = I.et;
       vector_data(dn0)[id] = I.dn0;
+      vector_data(weight)[id] = I.weight;
       vector_data(criterion)[id] = I.criterion;
       vector_data(unbroken)[id] = I.unbroken;
     }

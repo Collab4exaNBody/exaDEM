@@ -20,8 +20,6 @@ struct ApplyInterfaceFractureCriterionFunc {
       Et += interaction.Et(j);
     }
 
-    Et /= size;
-
     if ((En + Et) > criterion) {  //(2 * area * g))
       break_interface[i] = true;
     }

@@ -227,7 +227,6 @@ inline std::map<std::string, Vec3d> scan_shape_position(std::string_view file_na
 
         if (key == "position") {
           iss >> position.x >> position.y >> position.z;
-          std::cout << position << std::endl;
         }
       }
 

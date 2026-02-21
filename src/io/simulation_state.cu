@@ -130,7 +130,7 @@ struct SimulationStateNode : public OperatorNode {
                              sim.mass};
       uint64_t tmpUInt64T[4] = {sim.n_particles, red.n_act_interaction, red.n_tot_interaction, interfaces};
       MPI_Allreduce(MPI_IN_PLACE, tmpDouble, 7, MPI_DOUBLE, MPI_SUM, comm);
-      MPI_Allreduce(MPI_IN_PLACE, &red.min_dn, 1, MPI_DOUBLE, MPI_MAX, comm);
+      MPI_Allreduce(MPI_IN_PLACE, &red.min_dn, 1, MPI_DOUBLE, MPI_MIN, comm);
       MPI_Allreduce(MPI_IN_PLACE, tmpUInt64T, 3, MPI_UINT64_T, MPI_SUM, comm);
 
       rotation_energy.x = tmpDouble[0];

@@ -314,6 +314,12 @@ class StickPolyhedraOperator : public OperatorNode {
                 }
               }
 
+              // compute inner bond weight such as kn / kt are
+              // imposed on a interface instead of a for each interaction
+              for (auto& it: local) {
+                it.as<InnerBondInteraction>().weight = 1. / static_cast<double>(local.size());
+              }
+
               bool check = check_stiked_face(local, p_i, vertices_i);
               if (check) manager.add(local);
               local.clear();

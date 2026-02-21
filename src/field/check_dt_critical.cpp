@@ -96,8 +96,9 @@ class CheckDTCritical : public OperatorNode {
       color_log::highlight(operator_name(),
                            "The time step is correctly defined, dt_critical: " + std::to_string(dt_critical));
     } else {
-      color_log::warning(operator_name(), "The time step is probably too high. Please consider reducing dt to: " +
-                                              std::to_string(dt_critical));
+      color_log::warning(operator_name(), "The time step is probably too high. Please consider reducing dt to: "
+                         + std::to_string(ratio_treshold) + "*" + std::to_string(dt_critical) + "= "
+                         + std::to_string(ratio_treshold*dt_critical));
     }
   }
 };

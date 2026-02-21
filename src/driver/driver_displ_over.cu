@@ -146,8 +146,8 @@ struct DriverDisplOver {
     storage.reset();
     size_t size = a.shp.get_number_of_vertices();
     const Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp.m_vertices);
-    RShapeDriverVertexDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.center, a.quat, b.center, b.quat};
-    ReduceMaxRShapeDriverVertexDisplacementFunctor func = {SVDFunc, storage.get_ptr()};
+    RShapeDriverDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.center, a.quat, b.center, b.quat};
+    ReduceMaxRShapeDriverDisplacementFunctor func = {SVDFunc, storage.get_ptr()};
 
     ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_STATIC;
