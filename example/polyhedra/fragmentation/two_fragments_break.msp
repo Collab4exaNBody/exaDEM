@@ -8,6 +8,7 @@ io_tree:
 input_data:
   - read_conf_rockable:
      filename: two_fragments.txt
+     bounds_mode: DOMAIN
   - density_from_shape:
      density: 0.006
   - inertia_from_shape
@@ -36,10 +37,10 @@ setup_drivers:
         motion_type: STATIONARY
 
 domain:
-  cell_size: 1 m
+  cell_size: 2.5
   periodic: [false, false,false]
-  grid_dims: [5, 5, 5]
-  bounds: [[0 m ,0 m, 0 m],[5 m, 5 m, 5 m]]
+  grid_dims: [2, 2, 2]
+  bounds: [[-2.5,-2.5, -2.5],[2.5, 2.5, 2.5]]
   expandable: true
 
 global:

@@ -32,6 +32,7 @@ input_data:
      filename: pale.shp
   - read_xyz:
      file: pos.txt
+     bounds_mode: DOMAIN
   - set_fields:
      polyhedra: true
      type:              [    pale ]
@@ -57,9 +58,9 @@ input_data:
      default_config: { kn: 5000, kt: 4000, kr: 0.0, mu: 0.1, damp_rate: 0.99 }
 
 domain:
-  cell_size: 5 m
+  cell_size: 10 m
   periodic: [false,false,false]
-  grid_dims: [2, 2, 4]
+  grid_dims: [1, 1, 2]
   bounds: [[-5 ,-5, -10], [5, 5, 10]]
   expandable: true
 
