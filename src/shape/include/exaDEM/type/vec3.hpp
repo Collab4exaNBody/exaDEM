@@ -77,6 +77,7 @@ class vec3 {
     z = Z;
   }
 
+  ONIKA_HOST_DEVICE_FUNC
   void set(T val) {
     x = y = z = val;
   }
@@ -135,6 +136,7 @@ class vec3 {
     return (&x)[i];
   }
 
+  ONIKA_HOST_DEVICE_FUNC
   const T& operator[](int i) const {
     return (&x)[i];
   }
@@ -239,7 +241,7 @@ class vec3 {
     return vec3<T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
   }
 
-  friend vec3<T> cross(const vec3<T>& a, const vec3<T>& b) {
+  ONIKA_HOST_DEVICE_FUNC friend vec3<T> cross(const vec3<T>& a, const vec3<T>& b) {
     return vec3<T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
   }
 

@@ -1,13 +1,20 @@
 #pragma once
 
+#include <onika/oarray.h>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/polyhedron/nbh_runner.hpp>
 
 namespace exaDEM {
 
 static constexpr int ParticleParticleSize = 4;
-typedef std::array<size_t, ParticleParticleSize> InteractionTypePerCellCounter;
+//typedef std::array<size_t, ParticleParticleSize> InteractionTypePerCellCounter;
+typedef onika::oarray_t<int, ParticleParticleSize> InteractionTypePerCellCounter;
 //typedef InteractionTypePerCellCounter std::array<size_t, ParticleParticleSize>;
+
+InteractionTypePerCellCounter operator+(InteractionTypePerCellCounter& a,
+                                        InteractionTypePerCellCounter& b) {
+  return {a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]};
+}
 
 void debug_print(InteractionTypePerCellCounter& in)
 {
@@ -45,6 +52,92 @@ struct PrefxSumInteractionTypePerCellCounter {
       offset[i][id] = offset[i-1][id] + size[i-1][id];
     }
   }
+};
+struct NbhManagerStrorageHost {
+  template<typename T> using VectorT = std::vector<T>;
+  VectorT<size_t> owner_cell;
+  VectorT<size_t> partner_cell;
+};
+
+struct reset_members {
+  InteractionTypePerCellCounter* __restrict__ _size;
+  InteractionTypePerCellCounter* __restrict__ _offset;
+  uint8_t* __restrict__ _skip;
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t i) const {
+    _skip[i] = true;  // used by the second pass
+    for(size_t j = 0 ; j < ParticleParticleSize ; j++) {
+      _size[i][j];
+      _offset[i][j];
+    }
+  }
+};
+
+
+struct NbhManagerStrorage {
+  //template<typename T> using VectorT = onika::cuda::CudaDeviceStorage<T>;
+  template<typename T> using VectorT = onika::memory::CudaMMVector<T>;
+  VectorT<InteractionTypePerCellCounter> size;
+  VectorT<InteractionTypePerCellCounter> offset;
+  VectorT<size_t> owner_cell;
+  VectorT<size_t> partner_cell;
+  VectorT<uint8_t> skip;
+
+  template<typename ExecCtx>
+  NbhManagerStrorage(NbhManagerStrorageHost& host, ExecCtx& exec_ctx) {
+    auto n = host.owner_cell.size();
+    if (host.partner_cell.size() != n) {
+      color_log::mpi_error(
+          "NbhManagerStrorage",
+          "Consistency issue regarding the size of vectors.");
+    }
+
+    auto transfer_data = [](auto& dest, auto& from, size_t elems) {
+      using TDest = typename std::decay_t<decltype(dest)>::value_type;
+      using TFrom = typename std::decay_t<decltype(from)>::value_type;
+      static_assert(sizeof(TDest) == sizeof(TFrom));
+      dest.resize(elems);
+      ONIKA_CU_MEMCPY_KIND(dest.data(), from.data(), elems * sizeof(TDest), onikaMemcpyHostToDevice); 
+    };
+    transfer_data(owner_cell, host.owner_cell, n);
+    transfer_data(partner_cell, host.partner_cell, n);
+
+    size.resize(n);
+    skip.resize(n);
+    offset.resize(n);
+
+    reset_members func = {size.data(), offset.data(), skip.data()};
+
+    ParallelForOptions opts;
+    opts.omp_scheduling = OMP_SCHED_GUIDED;
+    parallel_for(n, func, exec_ctx(), opts);
+  }
+};
+
+struct NbhManagerAcessor {
+  InteractionTypePerCellCounter* __restrict__ size;
+  InteractionTypePerCellCounter* __restrict__ offset;
+  uint8_t* __restrict__ skip;
+  size_t* __restrict__ owner_cell;
+  size_t* __restrict__ partner_cell;
+
+ public:
+  NbhManagerAcessor(NbhManagerStrorage& storage) :
+      size(storage.size.data()),
+      offset(storage.offset.data()),
+      skip(storage.skip.data()),
+      owner_cell(storage.owner_cell.data()),
+      partner_cell(storage.partner_cell.data()) {
+        // basic test
+        auto n = storage.owner_cell.size();
+        if (storage.size.size() != n 
+            || storage.offset.size() != n
+            || storage.skip.size() != n
+            || storage.partner_cell.size() != n) {
+          color_log::mpi_error(
+              "NbhManagerAcessor",
+              "Consistency issue regarding the size of wrapped vectors.");
+        }
+      }
 };
 
 struct ApplyNbhBruteForceFunc {
@@ -190,6 +283,17 @@ struct ApplyNbhBruteForceFunc {
   }
 };
 
+struct FillNbhBruteForceFunc {
+  template<typename TMPLC> ONIKA_HOST_DEVICE_FUNC
+  inline void operator()(uint64_t cell_id_a, uint64_t cell_id_b,
+                         TMPLC cells,
+                         InteractionTypePerCellCounter* const offset,
+                         InteractionTypePerCellCounter* const size,
+                         const double rcut_inc, const shape* const shps,
+                         VertexField* const vertex_fields) const {
+  }
+};
+
 template<>
 struct NeighborRunnerFunctorTraits<ApplyNbhBruteForceFunc> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;
@@ -201,6 +305,11 @@ namespace onika {
 namespace parallel {
 template<>
 struct ParallelForFunctorTraits<exaDEM::PrefxSumInteractionTypePerCellCounter> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+template<>
+struct ParallelForFunctorTraits<exaDEM::NbhManagerStrorageHost> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;
   static inline constexpr bool CudaCompatible = true;
 };

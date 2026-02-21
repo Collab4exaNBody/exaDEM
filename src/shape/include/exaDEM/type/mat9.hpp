@@ -18,14 +18,18 @@ class mat9 {
   // static const mat9 zero;
   // static const mat9 unit;
 
-  mat9() : xx(0), xy(0), xz(0), yx(0), yy(0), yz(0), zx(0), zy(0), zz(0) {}
-  mat9(const T XX, const T XY, const T XZ, const T YX, const T YY, const T YZ, const T ZX, const T ZY, const T ZZ)
+  ONIKA_HOST_DEVICE_FUNC
+      mat9() : xx(0), xy(0), xz(0), yx(0), yy(0), yz(0), zx(0), zy(0), zz(0) {}
+  ONIKA_HOST_DEVICE_FUNC
+      mat9(const T XX, const T XY, const T XZ, const T YX, const T YY, const T YZ, const T ZX, const T ZY, const T ZZ)
       : xx(XX), xy(XY), xz(XZ), yx(YX), yy(YY), yz(YZ), zx(ZX), zy(ZY), zz(ZZ) {}
-  /*explicit*/ mat9(const T val) : xx(val), xy(val), xz(val), yx(val), yy(val), yz(val), zx(val), zy(val), zz(val) {}
+  ONIKA_HOST_DEVICE_FUNC
+      mat9(const T val) : xx(val), xy(val), xz(val), yx(val), yy(val), yz(val), zx(val), zy(val), zz(val) {}
 
-  mat9(const vec3<T>& col1, const vec3<T>& col2, const vec3<T>& col3) {
-    set(col1, col2, col3);
-  }
+  ONIKA_HOST_DEVICE_FUNC
+      mat9(const vec3<T>& col1, const vec3<T>& col2, const vec3<T>& col3) {
+        set(col1, col2, col3);
+      }
 
   /*explicit*/ mat9(const T M[]) {
     xx = M[0];
@@ -39,20 +43,22 @@ class mat9 {
     zz = M[8];
   }
 
-  mat9(const mat9& M) : xx(M.xx), xy(M.xy), xz(M.xz), yx(M.yx), yy(M.yy), yz(M.yz), zx(M.zx), zy(M.zy), zz(M.zz) {}
+  ONIKA_HOST_DEVICE_FUNC
+      mat9(const mat9& M) : xx(M.xx), xy(M.xy), xz(M.xz), yx(M.yx), yy(M.yy), yz(M.yz), zx(M.zx), zy(M.zy), zz(M.zz) {}
 
-  mat9& operator=(const mat9& M) {
-    xx = M.xx;
-    xy = M.xy;
-    xz = M.xz;
-    yx = M.yx;
-    yy = M.yy;
-    yz = M.yz;
-    zx = M.zx;
-    zy = M.zy;
-    zz = M.zz;
-    return (*this);
-  }
+  ONIKA_HOST_DEVICE_FUNC
+      mat9& operator=(const mat9& M) {
+        xx = M.xx;
+        xy = M.xy;
+        xz = M.xz;
+        yx = M.yx;
+        yy = M.yy;
+        yz = M.yz;
+        zx = M.zx;
+        zy = M.zy;
+        zz = M.zz;
+        return (*this);
+      }
 
   // Constants
   static mat9 zero() {
@@ -62,52 +68,59 @@ class mat9 {
   static mat9 unit() {
     return mat9(1, 0, 0, 0, 1, 0, 0, 0, 1);
   }
- 
+
   static mat9 one() {
     return mat9(1, 1, 1, 1, 1, 1, 1, 1, 1);
   }
 
-  void set(const vec3<T>& col1, const vec3<T>& col2, const vec3<T>& col3) {
-    xx = col1.x;
-    xy = col2.x;
-    xz = col3.x;
-    yx = col1.y;
-    yy = col2.y;
-    yz = col3.y;
-    zx = col1.z;
-    zy = col2.z;
-    zz = col3.z;
-  }
+  ONIKA_HOST_DEVICE_FUNC
+      void set(const vec3<T>& col1, const vec3<T>& col2, const vec3<T>& col3) {
+        xx = col1.x;
+        xy = col2.x;
+        xz = col3.x;
+        yx = col1.y;
+        yy = col2.y;
+        yz = col3.y;
+        zx = col1.z;
+        zy = col2.z;
+        zz = col3.z;
+      }
 
-  void reset() {
-    xx = xy = xz = 0.0;
-    yx = yy = yz = 0.0;
-    zx = zy = zz = 0.0;
-  }
+  ONIKA_HOST_DEVICE_FUNC
+      void reset() {
+        xx = xy = xz = 0.0;
+        yx = yy = yz = 0.0;
+        zx = zy = zz = 0.0;
+      }
 
-  void reset(const T val) {
-    xx = xy = xz = val;
-    yx = yy = yz = val;
-    zx = zy = zz = val;
-  }
+  ONIKA_HOST_DEVICE_FUNC
+      void reset(const T val) {
+        xx = xy = xz = val;
+        yx = yy = yz = val;
+        zx = zy = zz = val;
+      }
 
-  void set_diag(const T XX, const T YY, const T ZZ) {
-    xx = XX;
-    yy = YY;
-    zz = ZZ;
-  }
+  ONIKA_HOST_DEVICE_FUNC
+      void set_diag(const T XX, const T YY, const T ZZ) {
+        xx = XX;
+        yy = YY;
+        zz = ZZ;
+      }
 
-  T& operator[](int i) {
-    return (&xx)[i];
-  }
+  ONIKA_HOST_DEVICE_FUNC
+      T& operator[](int i) {
+        return (&xx)[i];
+      }
 
-  const T& operator[](int i) const {
-    return (&xx)[i];
-  }
+  ONIKA_HOST_DEVICE_FUNC
+      const T& operator[](int i) const {
+        return (&xx)[i];
+      }
 
-  T* c_mtx() {
-    return &xx;
-  }
+  ONIKA_HOST_DEVICE_FUNC
+      T* c_mtx() {
+        return &xx;
+      }
 
   // Arithmetic operations
   friend mat9 operator+(const mat9& a, const mat9& b) {
@@ -152,14 +165,14 @@ class mat9 {
   /// Dyadic product (tensorial product or otimes)
   // template<typename U>
   /*
-           friend mat9<double> dyadic_product(const vec3<double> &a, const vec3<double> &b) {
-           return mat9<double> (
-           a.x * b.x, a.x * b.y, a.x * b.z,
-           a.y * b.x, a.y * b.y, a.y * b.z,
-           a.z * b.x, a.z * b.y, a.z * b.z
-           );
-           }
-   */
+     friend mat9<double> dyadic_product(const vec3<double> &a, const vec3<double> &b) {
+     return mat9<double> (
+     a.x * b.x, a.x * b.y, a.x * b.z,
+     a.y * b.x, a.y * b.y, a.y * b.z,
+     a.z * b.x, a.z * b.y, a.z * b.z
+     );
+     }
+     */
 
   void operator+=(const mat9& a) {
     xx += a.xx;
@@ -400,8 +413,8 @@ class mat9 {
   // input/output
   friend std::ostream& operator<<(std::ostream& pStr, const mat9& M) {
     return (pStr << M.xx << CommBox().sep << M.xy << CommBox().sep << M.xz << CommBox().sep << M.yx << CommBox().sep
-                 << M.yy << CommBox().sep << M.yz << CommBox().sep << M.zx << CommBox().sep << M.zy << CommBox().sep
-                 << M.zz);
+            << M.yy << CommBox().sep << M.yz << CommBox().sep << M.zx << CommBox().sep << M.zy << CommBox().sep
+            << M.zz);
   }
 
   friend std::istream& operator>>(std::istream& pStr, mat9& M) {
