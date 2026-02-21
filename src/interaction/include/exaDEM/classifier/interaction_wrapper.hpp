@@ -68,37 +68,39 @@ struct InterationPairWrapper {
 template <InteractionType IT>
 struct InteractionWrapper {
   // forces
-  double* ft_x;
-  double* ft_y;
-  double* ft_z;
+  double* ft_x = nullptr;
+  double* ft_y = nullptr;
+  double* ft_z = nullptr;
   // moment
-  double* mom_x;
-  double* mom_y;
-  double* mom_z;
+  double* mom_x = nullptr;
+  double* mom_y = nullptr;
+  double* mom_z = nullptr;
   // Fragmentation
-  double* en;
-  Vec3d* tds;
-  double* et;
-  double* dn0;
-  double* weight;
-  double* criterion;
-  uint8_t* unbroken;
+  double* en = nullptr;
+  Vec3d* tds = nullptr;
+  double* et = nullptr;
+  double* dn0 = nullptr;
+  double* weight = nullptr;
+  double* criterion = nullptr;
+  uint8_t* unbroken = nullptr;
 
   // particle id
-  uint64_t* id_i;
-  uint64_t* id_j;
+  uint64_t* id_i = nullptr;
+  uint64_t* id_j = nullptr;
   // cell id
-  uint32_t* cell_i;
-  uint32_t* cell_j;
+  uint32_t* cell_i = nullptr;
+  uint32_t* cell_j = nullptr;
   // position into the cell
-  uint16_t* p_i;
-  uint16_t* p_j;
+  uint16_t* p_i = nullptr;
+  uint16_t* p_j = nullptr;
   // sub id
-  uint32_t* sub_i;
-  uint32_t* sub_j;
-  uint16_t m_type;
-  uint8_t* m_swap;
-  uint8_t* m_ghost;
+  uint32_t* sub_i = nullptr;
+  uint32_t* sub_j = nullptr;
+  uint16_t m_type = InteractionTypeId::Undefined;
+  uint8_t* m_swap = nullptr;
+  uint8_t* m_ghost = nullptr;
+
+  InteractionWrapper() {}
 
   InteractionWrapper(ClassifierContainer<IT>& data) {
     using namespace onika::cuda;
@@ -178,6 +180,30 @@ struct InteractionWrapper {
 
   ONIKA_HOST_DEVICE_FUNC inline void broke(const uint64_t idx) const {
     unbroken[idx] = false;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) const {
+    assert(type == item.pair.type);
+    // --- particle ids
+    id_i[idx] = item.pair.pi.id;
+    id_j[idx] = item.pair.pj.id;
+
+    // --- cell ids
+    cell_i[idx] = item.pair.pi.cell;
+    cell_j[idx] = item.pair.pj.cell;
+
+    // --- position in cell
+    p_i[idx] = item.pair.pi.p;
+    p_j[idx] = item.pair.pj.p;
+
+    // --- sub ids
+    sub_i[idx] = item.pair.pi.sub;
+    sub_j[idx] = item.pair.pj.sub;
+
+    // --- swap, ghost
+    m_swap[idx] = item.pair.swap;
+    m_ghost[idx] = item.pair.ghost;    
   }
 
   ONIKA_HOST_DEVICE_FUNC

@@ -65,14 +65,15 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 
         YAML example [no option]:
 
-          - nbh_polyhedron
+          - nbh_polyhedron_gpu
        )EOF";
   }
 
-  inline void check_slots() {
-  }
-
   inline void execute() final {
+#ifndef ONIKA_CUDA_VERSION
+    color_log::error("nbh_polyhedron_gpu", "This operator only work on GPU.\n"
+                     "                     Please use nbh_polyhedron.");
+#else
     lout << "Operator in progress" << std::endl;
     auto& g = *grid;
     const auto cells = g.cells();
@@ -126,13 +127,19 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 
     ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_GUIDED;
-    ApplyNbhFunc apply = {
+
+		// ****** First pass ******* //
+    // prepare ApplyNbhFunc
+		ApplyNbhFunc apply = {
       cells, accessor, *rcut_inc, shps.data(), vertex_fields};
     auto cell_pair_size = CellInfoStorageHost.owner_cell.size();
     ONIKA_CU_DEVICE_SYNCHRONIZE();
     lout << "Get the number of interactions" << std::endl;
-    parallel_for(cell_pair_size, apply, parallel_execution_context(), opts);
-    // fill offset
+ 
+    // run ApplyNbhFunc
+		parallel_for(cell_pair_size, apply, parallel_execution_context(), opts);
+
+		// fill offset
     lout << "Prefix sum to get offsets per cell pairs" << std::endl;
     PrefxSumInteractionTypePerCellCounter func_prefix = {
       accessor.offset, accessor.size, cell_pair_size};
@@ -141,66 +148,29 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     ONIKA_CU_DEVICE_SYNCHRONIZE();
     debug_print(cellinfostorage.offset.back(), cellinfostorage.size.back());
 
+	  // ****** Second pass ******* //
+	  // prepare ApplyClassifierFunc
     auto new_size = cellinfostorage.offset.back() + cellinfostorage.size.back();
-    for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
-      auto& c = container.get_data<ParticleParticle>(type_id);
-      c.resize(new_size[type_id]);
-    }
+    using array_i = onika::oarray_t<InteractionWrapper<ParticleParticle>, ParticleParticleSize>;
+    array_i classifier_accessor;
+		for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
+			auto& c = container.get_data<ParticleParticle>(type_id);
+			c.resize(new_size[type_id]);
+      classifier_accessor[type_id] = InteractionWrapper(c); 
+		}
+	  ApplyClassifierFunc<8,8, decltype(cells)> filler = {cells, accessor,
+      *rcut_inc, shps.data(),
+      vertex_fields, classifier_accessor};
 
-    /*
-    auto& interactions = ges->m_data;
-    for (size_t ci = 0; ci < n_cells; ci++) {
-      int size = 0;
-      for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
-        size += csize.m_data[ci][type_id];
-      }
-      interactions[ci].resize(size);
-    }
-*/
-    // Fill particle counters per type / skip
-    /*
-       ApplyNbhBruteForceFunc func_brute_force;
-       NeighborRunner runner(cell_ptr, dims, func_brute_force,  // members
-       cells, csize.m_data.data(), *rcut_inc, shps.data(), vertex_fields);  // params
-       coffset.m_data.resize(n_cells);
-
-       ParallelForOptions opts;
-       opts.omp_scheduling = OMP_SCHED_GUIDED;
-       for (size_t i = 0 ; i < n_cells ; i++) {
-       csize.m_data[i] = {0,0,0,0};
-       coffset.m_data[i] = {0,0,0,0};
-       }
-
-    // 26 = number of neighbor cells per cell
-    ParallelExecutionSpace<3> parallel_range = {{0,0,0} , {static_cast<long int>(cell_size),26,1}};
-    parallel_for(parallel_range, runner, parallel_execution_context(), opts);
-    PrefxSumInteractionTypePerCellCounter func_prefix = {coffset.m_data.data(), csize.m_data.data(), coffset.m_data.size()};
-
-    parallel_for(4, func_prefix, parallel_execution_context(), opts);
-
-    ONIKA_CU_DEVICE_SYNCHRONIZE();
-    debug_print(coffset.m_data[n_cells-1], csize.m_data[n_cells-1]);
-
-    for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
-    auto& c = container.get_data<ParticleParticle>(id);
-    c.resize(coffset.m_data[n_cells-1][type_id], csize.m_data[n_cells-1][type_id]);
-    }
-
-    auto& interactions = ges->m_data;
-    for (size_t ci = 0; ci < n_cells; ci++) {
-    int size = 0;
-    for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
-    size += csize.m_data[ci][type_id];
-    }
-    interactions[ci].resize(size);
-    }
-    */
-  }
+		// run ApplyClassifierFunc 
+		parallel_for(cell_pair_size, filler, parallel_execution_context(), opts);
+#endif
+	}
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(nbh_polyhedron_gpu) {
-  OperatorNodeFactory::instance()->register_factory("nbh_polyhedron_gpu",
-                                                    make_grid_variant_operator<UpdateClassifierPolyhedronGPU>);
+	OperatorNodeFactory::instance()->register_factory("nbh_polyhedron_gpu",
+																										make_grid_variant_operator<UpdateClassifierPolyhedronGPU>);
 }
 }  // namespace exaDEM
