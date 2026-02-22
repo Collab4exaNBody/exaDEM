@@ -248,6 +248,18 @@ struct PlaceholderInteraction {
   ONIKA_HOST_DEVICE_FUNC bool operator<(const PlaceholderInteraction& I) const {
     return (pair < I.pair);
   }
+
+  PlaceholderInteraction& operator=(const Interaction& I) {
+    Interaction& AsI = as<Interaction>();
+    AsI = I;
+    return *this;
+  }
+
+  PlaceholderInteraction& operator=(const InnerBondInteraction& I) {
+    InnerBondInteraction& AsI = as<InnerBondInteraction>();
+    AsI = I;
+    return *this;
+  }
 };
 
 inline void update(std::vector<PlaceholderInteraction>& interactions, std::vector<PlaceholderInteraction>& history) {

@@ -16,6 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+
+#define DEBUG_NBH_GPU 1
+
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
@@ -38,9 +41,11 @@ under the License.
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/polyhedron/nbh_polyhedron_driver.hpp>
-#include <exaDEM/polyhedron/nbh_dem.hpp>
-#include <exaDEM/polyhedron/nbh_gpu.hpp>
-#include <exaDEM/polyhedron/nbh_runner.hpp>
+#include <exaDEM/polyhedron/nbh_gpu/nbh_utils.hpp>
+#include <exaDEM/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/polyhedron/nbh_gpu/nbh_gpu.hpp>
+#include <exaDEM/polyhedron/nbh_gpu/nbh_cell_data.hpp>
+#include <exaDEM/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
@@ -70,6 +75,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
   }
 
   inline void execute() final {
+    using namespace onika::parallel;
 #ifndef ONIKA_CUDA_VERSION
     color_log::error("nbh_polyhedron_gpu", "This operator only work on GPU.\n"
                      "                     Please use nbh_polyhedron.");
@@ -86,8 +92,9 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 
     // CPU Stage : get cell a / cell b 
     // Reset other fields (particle counters per type / skip)
-    NbhManagerStrorageHost CellInfoStorageHost;
-    // Sequential
+    NbhCellHostStorage CellInfoStorageHost;
+    CellInteractionInformation cell_ii;
+		// Sequential
     auto convert_offset_ijk = [] (int offset) {
       assert(offset < 27);
       IJK res;
@@ -99,19 +106,26 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 
     //
     lout << "Fill CPU data storage" << std::endl;
-    for(size_t i = 0 ; i < cell_size ; i++) {
-      size_t cell_a = cell_ptr[i];
+    cell_ii.start_cell.resize(cell_size);
+    cell_ii.number_of_pair_cells.resize(cell_size);
+    size_t shift = 0;
+		for(size_t i = 0 ; i < cell_size ; i++) {
+      cell_ii.start_cell[i] = shift;
+      size_t incr = 0;
+			size_t cell_a = cell_ptr[i];
       IJK loc_a = grid_index_to_ijk(dims, cell_a);
 
       for (size_t j = 0; j < 26 ; j++) {
         size_t cell_b = grid_ijk_to_index(
             dims, loc_a + convert_offset_ijk(j));
         if (cells[cell_b].size() > 0) {
-          lout << "add " << cell_a << " - " << cell_b << std::endl;
           CellInfoStorageHost.owner_cell.push_back(cell_a);
           CellInfoStorageHost.partner_cell.push_back(cell_b);
+          incr++;
         }        
       }
+      cell_ii.number_of_pair_cells[i] = incr;
+      shift += incr;
     }
 
     auto get_exec_ctx = [this] () {
@@ -119,13 +133,13 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     };
     lout << "Copy to GPU" << std::endl;
     // copy to gpu here
-    NbhManagerStrorage cellinfostorage(CellInfoStorageHost, get_exec_ctx);
+    NbhCellStorage cellinfostorage(CellInfoStorageHost, get_exec_ctx);
 
     lout << "cellinfostorage cella: " << cellinfostorage.owner_cell[0] << std::endl;
     // define a wrapper function
-    NbhManagerAcessor accessor(cellinfostorage);
+    NbhCellAccessor accessor(cellinfostorage);
 
-    ParallelForOptions opts;
+		ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_GUIDED;
 
 		// ****** First pass ******* //
@@ -141,29 +155,54 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 
 		// fill offset
     lout << "Prefix sum to get offsets per cell pairs" << std::endl;
-    PrefxSumInteractionTypePerCellCounter func_prefix = {
+    PrefixSumInteractionTypePerCellCounter func_prefix = {
       accessor.offset, accessor.size, cell_pair_size};
     parallel_for(4, func_prefix, parallel_execution_context(), opts);
 
     ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+#ifdef DEBUG_NBH_GPU
     debug_print(cellinfostorage.offset.back(), cellinfostorage.size.back());
+#endif
 
 	  // ****** Second pass ******* //
 	  // prepare ApplyClassifierFunc
     auto new_size = cellinfostorage.offset.back() + cellinfostorage.size.back();
-    using array_i = onika::oarray_t<InteractionWrapper<ParticleParticle>, ParticleParticleSize>;
-    array_i classifier_accessor;
+    InteractionAccessor classifier_accessor;
+    lout << "Prepare containers (classifier)" << std::endl;
 		for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
 			auto& c = container.get_data<ParticleParticle>(type_id);
 			c.resize(new_size[type_id]);
       classifier_accessor[type_id] = InteractionWrapper(c); 
 		}
-	  ApplyClassifierFunc<8,8, decltype(cells)> filler = {cells, accessor,
-      *rcut_inc, shps.data(),
-      vertex_fields, classifier_accessor};
+
+    constexpr int block_size_x = 8;
+    constexpr int block_size_y = 8;
+		ApplyClassifierFunc<block_size_x, block_size_y, decltype(cells)> filler = {
+      cells, accessor,
+			*rcut_inc, shps.data(),
+			vertex_fields, classifier_accessor};
 
 		// run ApplyClassifierFunc 
-		parallel_for(cell_pair_size, filler, parallel_execution_context(), opts);
+		lout << "Copy interaction within the classifier" << std::endl;
+		auto pec = parallel_execution_context();
+		pec->s_gpu_block_dims = {block_size_x, block_size_y, 1};  // enforce block size 
+		ParallelExecutionSpace<2> parallel_range = { {0,0}, {static_cast<long>(cell_pair_size), 1} };
+		onika::parallel::block_parallel_for(parallel_range, filler, pec, BlockParallelForOptions{});
+		lout << "victory" << std::endl;
+
+#ifdef DEBUG_NBH_GPU
+		// Debug check
+		ONIKA_CU_DEVICE_SYNCHRONIZE();
+		for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
+			auto& InteractionList = container.get_data<ParticleParticle>(type_id);
+			for(size_t i = 0 ; i < InteractionList.size(); i++) {
+				auto I = InteractionList[i];
+				I.print();
+			} 
+		}
+#endif
+
 #endif
 	}
 };

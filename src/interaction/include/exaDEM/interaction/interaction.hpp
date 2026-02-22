@@ -149,4 +149,7 @@ struct Interaction {
     return (pair < I.pair);
   }
 };
+
+static_assert(std::is_trivially_copyable_v<Interaction>,
+              "Interaction must remain trivially copyable");
 }  // namespace exaDEM
