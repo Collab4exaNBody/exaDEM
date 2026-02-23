@@ -80,6 +80,8 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     color_log::error("nbh_polyhedron_gpu", "This operator only work on GPU.\n"
                      "                     Please use nbh_polyhedron.");
 #else
+    constexpr int block_size_x = 8;
+    constexpr int block_size_y = 8;
     lout << "Operator in progress" << std::endl;
     auto& g = *grid;
     const auto cells = g.cells();
@@ -89,6 +91,11 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     auto [cell_ptr, cell_size] = traversal_real->info();
     auto* vertex_fields = cvf->data();
     auto& container = *ic;
+
+    //onikaStream_t&
+    onikaStream_t st_updateghost, st_history;
+    ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_updateghost);
+    ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_history);
 
     // CPU Stage : get cell a / cell b 
     // Reset other fields (particle counters per type / skip)
@@ -127,6 +134,8 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
       cell_ii.number_of_pair_cells[i] = incr;
       shift += incr;
     }
+    cell_ii.prefetch_cpu(st_updateghost);
+
 
     auto get_exec_ctx = [this] () {
       return this->parallel_execution_context();
@@ -141,17 +150,32 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 
 		ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_GUIDED;
+		BlockParallelForOptions bopts;
 
 		// ****** First pass ******* //
     // prepare ApplyNbhFunc
 		ApplyNbhFunc apply = {
-      cells, accessor, *rcut_inc, shps.data(), vertex_fields};
+      cells, accessor,
+      *rcut_inc, shps.data(),
+      vertex_fields};
+
     auto cell_pair_size = CellInfoStorageHost.owner_cell.size();
     ONIKA_CU_DEVICE_SYNCHRONIZE();
     lout << "Get the number of interactions" << std::endl;
  
     // run ApplyNbhFunc
-		parallel_for(cell_pair_size, apply, parallel_execution_context(), opts);
+		auto pec1 = parallel_execution_context();
+		pec1->s_gpu_block_dims = {block_size_x, block_size_y, 1};  // enforce block size 
+		ParallelExecutionSpace<3> parallel_range = {
+       {0, 0, 0}, {static_cast<long>(cell_pair_size), 1, 1} };
+		block_parallel_for(parallel_range, apply, pec1, bopts);
+
+
+    // Recover it by history update on CPU
+    // project ghost / edge interactions
+    InteractionHistory history;
+    setup_history_clean_ges(cells, cell_ptr, cell_size,
+                            *ges, history, st_history);
 
 		// fill offset
     lout << "Prefix sum to get offsets per cell pairs" << std::endl;
@@ -168,7 +192,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 	  // ****** Second pass ******* //
 	  // prepare ApplyClassifierFunc
     auto new_size = cellinfostorage.offset.back() + cellinfostorage.size.back();
-    InteractionAccessor classifier_accessor;
+    InteractionParticleAccessor classifier_accessor;
     lout << "Prepare containers (classifier)" << std::endl;
 		for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
 			auto& c = container.get_data<ParticleParticle>(type_id);
@@ -176,8 +200,6 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
       classifier_accessor[type_id] = InteractionWrapper(c); 
 		}
 
-    constexpr int block_size_x = 8;
-    constexpr int block_size_y = 8;
 		ApplyClassifierFunc<block_size_x, block_size_y, decltype(cells)> filler = {
       cells, accessor,
 			*rcut_inc, shps.data(),
@@ -185,11 +207,11 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 
 		// run ApplyClassifierFunc 
 		lout << "Copy interaction within the classifier" << std::endl;
-		auto pec = parallel_execution_context();
-		pec->s_gpu_block_dims = {block_size_x, block_size_y, 1};  // enforce block size 
-		ParallelExecutionSpace<2> parallel_range = { {0,0}, {static_cast<long>(cell_pair_size), 1} };
-		onika::parallel::block_parallel_for(parallel_range, filler, pec, BlockParallelForOptions{});
+		auto pec2 = parallel_execution_context();
+		pec2->s_gpu_block_dims = {block_size_x, block_size_y, 1};  // enforce block size 
+		onika::parallel::block_parallel_for(parallel_range, filler, pec2, bopts);
 		lout << "victory" << std::endl;
+
 
 #ifdef DEBUG_NBH_GPU
 		// Debug check

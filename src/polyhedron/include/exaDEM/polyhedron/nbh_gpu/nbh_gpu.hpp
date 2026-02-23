@@ -95,24 +95,28 @@ inline void detection(Func& func,
 #define PARAMETERS_SWAP_FALSE rcut_inc, vertices_a, a.homothety, i, &shpa, vertices_b, b.homothety, j, &shpb
 #define PARAMETERS_SWAP_TRUE rcut_inc, vertices_b, b.homothety, j, &shpb, vertices_a, a.homothety, i, &shpa
 
-  for (int i = 0; i < nva; i++) {
+
+  const onikaDim3_t& block = ONIKA_CU_BLOCK_DIMS;
+  const onikaDim3_t& thread = ONIKA_CU_THREAD_COORD;
+
+  for (int i = thread.x; i < nva; i+=block.x) {
     auto vi = vertices_a[i];
     // exclude possibilities with obb
     OBB obbvi;
     obbvi.center = {vi.x, vi.y, vi.z};
     obbvi.enlarge(shpa.minskowski(a.homothety));
     if (obb_b.intersect(obbvi)) {
-      for (int j = 0; j < nvb; j++) {
+      for (int j = thread.y; j < nvb; j+= block.y) {
         if (filter_vertex_vertex(PARAMETERS_SWAP_FALSE)) {
           func(i, j, InteractionTypeId::VertexVertex, false);
         }
       }
-      for (int j = 0; j < neb; j++) {
+      for (int j = thread.y; j < neb; j+= block.y) {
         if (filter_vertex_edge(PARAMETERS_SWAP_FALSE)) {
           func(i, j, InteractionTypeId::VertexEdge, false);
         }
       }
-      for (int j = 0; j < nfb; j++) {
+      for (int j = thread.y; j < nfb; j+= block.y) {
         if (filter_vertex_face(PARAMETERS_SWAP_FALSE)) {
           func(i, j, InteractionTypeId::VertexFace, false);
         }
@@ -122,19 +126,19 @@ inline void detection(Func& func,
 
   func.swap_ij();
 
-  for (int j = 0; j < nvb; j++) {
+  for (int j = thread.y; j < nvb; j+= block.y) {
     auto vbj = vertices_b[j];
     OBB obbvj;
     obbvj.center = {vbj.x, vbj.y, vbj.z};
     obbvj.enlarge(shpb.minskowski(b.homothety));
 
     if (obb_a.intersect(obbvj)) {
-      for (int i = 0; i < nea; i++) {
+      for (int i = thread.x; i < nea; i+= block.x) {
         if (filter_vertex_edge(PARAMETERS_SWAP_TRUE)) {
           func(i, j, InteractionTypeId::VertexEdge, true);
         }
       }
-      for (int i = 0; i < nfa; i++) {
+      for (int i = thread.x; i < nfa; i+= block.x) {
         if (filter_vertex_face(PARAMETERS_SWAP_TRUE)) {
           func(i, j, InteractionTypeId::VertexFace, true);
         }
@@ -152,7 +156,9 @@ struct ApplyNbhFunc {
   const double rcut_inc;
   const shape* const shps;
   VertexField* const vertex_fields;
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t idx) const {
+//  ONIKA_HOST_DEVICE_FUNC inline void operator()(long idx) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(onikaInt3_t coord) const {
+    long idx = coord.x;
     size_t cell_id_a = accessor.owner_cell[idx];
     size_t cell_id_b = accessor.partner_cell[idx];
     auto& cell_a = cells[cell_id_a];
@@ -203,6 +209,7 @@ struct ApplyNbhFunc {
     for (int type_id = 0 ; type_id < ParticleParticleSize ; type_id++) {
       if (func.counter[type_id]>0) {
         accessor.skip[idx] = false;
+        //printf("do not skip cell pair %ld\n", idx); 
         ONIKA_CU_ATOMIC_ADD(res[type_id], func.counter[type_id]);
       }
     } 
@@ -211,24 +218,19 @@ struct ApplyNbhFunc {
 
 template<size_t BLOCKX, size_t BLOCKY, typename TMPLC>
 struct ApplyClassifierFunc {  // Second pass 
+  // Note: This operator is quite demanding in terms of memory.
+  // Do not increase the number of members.
+  // That's why we only recover useful wrappers.
   TMPLC cells;
   NbhCellAccessor accessor;
   const double rcut_inc;
   const shape* const shps;
   VertexField* const vertex_fields;
-  InteractionAccessor interactions;
+  InteractionParticleAccessor interactions;
+
   ONIKA_HOST_DEVICE_FUNC inline void operator()(onikaInt3_t coord) const {
     using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
-#ifdef ONIKA_CUDA_VERSION
-#ifdef DEBUG_NBH_GPU
-    auto block_size = ONIKA_CU_BLOCK_DIMS;
-    printf("blockSize %d x %d x %d\n", block_size.x, block_size.y,  block_size.z);
-#endif
-#endif
     long idx = coord.x;
-#ifdef ONIKA_CUDA_VERSION
-    printf("idx %ld\n", idx);
-#endif
     //std::assert(coord.y == 0);
     if (accessor.skip[idx]) {  // set by the first pass
       return;
@@ -248,12 +250,13 @@ struct ApplyClassifierFunc {  // Second pass
     };
 
     struct add_interaction {
-      const InteractionAccessor& data; 
+      const InteractionParticleAccessor& data; 
       PlaceholderInteraction item;
       InteractionTypePerCellCounter prefix;
 
       ONIKA_HOST_DEVICE_FUNC
-          add_interaction(const InteractionAccessor& in) : data(in), prefix({0,0,0,0}) {};
+          add_interaction(const InteractionParticleAccessor& in):
+              data(in), prefix({0,0,0,0}) {};
 
       ONIKA_HOST_DEVICE_FUNC
           void set_ghost(int level_of_ghost) {
@@ -266,9 +269,7 @@ struct ApplyClassifierFunc {  // Second pass
             item.pair.pi.sub = i;
             item.pair.pj.sub = j;
             item.pair.type = InteractionType;
-#ifdef DEBUG_NBH_GPU
-            printf("add %d at place %d\n", InteractionType, prefix[InteractionType]);
-#endif
+            printf("set %ld %ld %d\n", item.pair.pi.id,  item.pair.pj.id, InteractionType);
             data[InteractionType].set(prefix[InteractionType]++, item);
           }
 
@@ -313,23 +314,14 @@ struct ApplyClassifierFunc {  // Second pass
       }
     }
 
-#ifdef DEBUG_NBH_GPU
-    printf("step2 start\n");
-#endif
     add_interaction adder(interactions);
     auto& sdata = accessor.offset[idx];
-#ifdef DEBUG_NBH_GPU
-    printf("step2 prefix sum\n");
-#endif
-    for(int type = 0 ; type < ParticleParticleSize ; type++)
-    {
+    for(int type = 0 ; type < ParticleParticleSize ; type++) {
       BlockScan(temp_storage).ExclusiveSum(func.counter[type], adder.prefix[type]);
       ONIKA_CU_BLOCK_SYNC();
       adder.prefix[type] += sdata[type];
+      //printf("adder.prefix[%d] = %d\n", type, adder.prefix[type]);
     }
-#ifdef DEBUG_NBH_GPU
-    printf("step2 after prefix sum\n");
-#endif
     for(size_t pa = 0; pa < cell_a.size() ; pa++) {
       // load data relative to the particle a
       auto body_a = load(cell_a, pa);
@@ -357,10 +349,7 @@ struct ApplyClassifierFunc {  // Second pass
         adder.item.pair.pj.id = body_b.id;
         adder.item.pair.pj.p = pb;
         adder.item.pair.pj.cell = cell_id_b;
-#ifdef DEBUG_NBH_GPU
-        printf("test inf particles %ld and %ld\n", adder.item.pair.pi.id, adder.item.pair.pj.id);
-#endif
-        detection(func, rcut_inc, body_a, vertices_a,
+        detection(adder, rcut_inc, body_a, vertices_a,
                   shpa, aabb_body_a, obb_a,
                   body_b, vertices_b, shpb);
       }
@@ -372,7 +361,7 @@ struct ApplyClassifierFunc {  // Second pass
 namespace onika {
 namespace parallel {
 template<typename TMPLC>
-struct ParallelForFunctorTraits<exaDEM::ApplyNbhFunc<TMPLC>> {
+struct BlockParallelForFunctorTraits<exaDEM::ApplyNbhFunc<TMPLC>> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;
   static inline constexpr bool CudaCompatible = true;
 };

@@ -29,10 +29,8 @@ void setup_history_clean_ges(TMPLC& cells,
                              GridCellParticleInteraction& ges,
                              InteractionHistory& history,
                              onikaStream_t& st) {
-  size_t all_active_interactions = 0;
   history.start.resize(ncells);
   history.size.resize(ncells);
-
 
   size_t sum = 0;
 /*
@@ -52,8 +50,11 @@ void setup_history_clean_ges(TMPLC& cells,
 #pragma omp parallel for reduction(+: sum)
   for(size_t i = 0; i < ncells; ++i)
   {
-    sum += sum;
+    sum += ges.m_data[idxs[i]].m_data.size();
     history.size[i] = ges.m_data[idxs[i]].m_data.size();
+    for (size_t j = 0 ; j < ges.m_data[idxs[i]].m_data.size() ; j++) {
+      ges.m_data[idxs[i]].m_data[j].print();
+    }
   }
 
   history.start[0] = 0;
@@ -70,10 +71,12 @@ void setup_history_clean_ges(TMPLC& cells,
     size_t cell_idx = idxs[i];
     auto& storage = ges.m_data[cell_idx];
     const size_t data_size = storage.m_data.size();
-    PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
 
-    std::memcpy(history.size.data() + history.size[cell_idx],
-                data_ptr, data_size * sizeof(PlaceholderInteraction));
+    if (data_size > 0) {
+      PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
+      std::memcpy(history.data.data() + history.start[cell_idx],
+                  data_ptr, data_size * sizeof(PlaceholderInteraction));
+    }
 
     size_t n_particles = cells[cell_idx].size();
     storage.initialize(n_particles);
@@ -81,6 +84,7 @@ void setup_history_clean_ges(TMPLC& cells,
     const uint64_t* __restrict__ id_a = cells[cell_idx][field::id];
     ONIKA_ASSUME_ALIGNED(id_a);
     auto& info_particles = storage.m_info;
+
     // Fill particle ids in the interaction storage
     for (size_t it = 0; it < n_particles; it++) {
       info_particles[it].pid = id_a[it];
