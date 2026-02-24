@@ -17,6 +17,8 @@ under the License.
 
 #pragma once
 
+#include <cassert>
+
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/classifier/classifier_container.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
@@ -32,6 +34,7 @@ namespace exaDEM {
  */
 struct Classifier {
   using WavePP = ClassifierContainer<InteractionType::ParticleParticle>;
+  using WavePD = ClassifierContainer<InteractionType::ParticleDriver>;
   using WaveIB = ClassifierContainer<InteractionType::InnerBond>;
   static constexpr int typesParticles = 4;                       // Particle / Particle + Particle / Driver
   static constexpr int typesDirvers = 9;                         // Particle / Particle + Particle / Driver
@@ -82,14 +85,14 @@ struct Classifier {
   template <InteractionType IT>
   auto& get_data(size_t id) {
     if constexpr (IT == ParticleParticle) {
-      if (id < types) {
-        return waves[id];
-      }
-    }
-    if constexpr (IT == InnerBond) {
-      if (id == InnerBondTypeId) {
-        return sticked_interaction;
-      }
+      assert(id < types);
+      return waves[id];
+    } else if constexpr (IT == ParticleDriver) {
+      assert(id < types);
+      return waves[id];
+    } else if constexpr (IT == InnerBond) {
+      assert(id == InnerBondTypeId);
+      return sticked_interaction;
     }
     color_log::error("Classifier::get_wave", "Invalid id in get_wave()");
     std::exit(EXIT_FAILURE);
@@ -101,15 +104,12 @@ struct Classifier {
 
   template <InteractionType IT>
   const auto& get_data(size_t id) const {
-    if constexpr (IT == ParticleParticle) {
-      if (id < types) {
-        return waves[id];
-      }
-    }
-    if constexpr (IT == InnerBond) {
-      if (id == InnerBondTypeId) {
-        return sticked_interaction;
-      }
+    if constexpr (IT == ParticleParticle || IT == ParticleDriver) {
+      assert(id < types);
+      return waves[id];
+    } else if constexpr (IT == InnerBond) {
+      assert(id == InnerBondTypeId);
+      return sticked_interaction;
     }
     color_log::error("Classifier::get_wave", "Invalid id in get_wave()");
     std::exit(EXIT_FAILURE);
@@ -207,3 +207,5 @@ struct Classifier {
   }
 };
 }  // namespace exaDEM
+
+#include <exaDEM/classifier/interaction_wrapper_accessor.hpp>

@@ -269,7 +269,7 @@ struct ApplyClassifierFunc {  // Second pass
             item.pair.pi.sub = i;
             item.pair.pj.sub = j;
             item.pair.type = InteractionType;
-            printf("set %ld %ld %d\n", item.pair.pi.id,  item.pair.pj.id, InteractionType);
+            // printf("set %ld %ld %d\n", item.pair.pi.id,  item.pair.pj.id, InteractionType);
             data[InteractionType].set(prefix[InteractionType]++, item);
           }
 

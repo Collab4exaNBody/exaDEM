@@ -62,7 +62,7 @@ struct NbhCellStorage {
    * @param exec_ctx Execution context
    */
   template<typename ExecCtx>
-  NbhCellStorage(NbhCellHostStorage& host, ExecCtx& exec_ctx) {
+  void reset(NbhCellHostStorage& host, ExecCtx& exec_ctx) {
     const size_t n_cells = host.owner_cell.size();
 
     // Consistency check

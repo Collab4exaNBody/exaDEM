@@ -14,6 +14,7 @@ struct CellInteractionInformation {
 
   // Resize all vectors to a given size
   void resize(size_t size) {
+    // lout << "CellInteractionInformation::resize " << size << std::endl;
     start_cell.resize(size);
     number_of_pair_cells.resize(size);
     update_ghost.resize(size);
@@ -37,40 +38,77 @@ struct CellInteractionInformation {
   }
 };
 
+
+struct CopierFunc {
+  template<InteractionType IT>
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(
+      InteractionWrapper<IT>& wrapper,
+      PlaceholderInteraction* __restrict__ data_ptr,
+      size_t& shift, int start, int size) const {
+      printf("for(%d,%d)\n", start, size);
+    for (int j = start; j < start+size; j++) {
+      printf("shift %lu\n", shift);
+      data_ptr[shift++] = wrapper(j);
+    }
+  }
+};
+
+struct CountActiveInteractionFunc {
+  template<InteractionType IT>
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(
+      InteractionWrapper<IT>& wrapper,
+      size_t& count, int start, int size) const {
+    for (int j = start; j < start+size; j++) {
+      if (wrapper(j).active()) {
+        count++;
+      }
+    }
+  }
+};
+
+struct CopierActiveInteractionFunc {
+  template<InteractionType IT>
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(
+      InteractionWrapper<IT>& wrapper,
+      PlaceholderInteraction* __restrict__ data_ptr,
+      size_t& shift, int start, int size) const {
+    for (int j = start; j < start+size; j++) {
+      if (wrapper(j).active()) {
+        data_ptr[shift++] = wrapper(j);
+      }
+    }
+  }
+};
+
 /**
  * @brief Transfer ghost interactions from classifier to grid storage.
- * @tparam TMPLC Type of the cell container.
- * @param cells Reference to the container of cells.
  * @param info CellInteractionInformation storing start indices, number of pair cells, and ghost flags.
  * @param classifier_helper Helper structure providing offsets and owner cell mapping.
  * @param classifier Classifier providing access to interactions per type.
  * @param ges GridCellParticleInteraction storage for the grid.
  * @param ghost_only If true, only transfers interactions flagged as ghost.
  */
-template<typename TMPLC>
-void transfer_classifier_ghosts(TMPLC& cells,
-                                CellInteractionInformation& info,
-                                NbhCellStorage& classifier_helper,
-                                Classifier& classifier,
-                                GridCellParticleInteraction& ges,
-                                bool ghost_only) 
-{
+template<bool ghost_only, bool active_interaction>
+void transfer_classifier_grid(size_t* cell_ptr,
+                              CellInteractionInformation& info,
+                              NbhCellStorage& classifier_helper,
+                              InteractionWrapperAccessor& iaccessor,
+                              GridCellParticleInteraction& ges) {
   // Number of non-empty cells to process
   size_t ncells = info.start_cell.size();
-
-  // Accessor to fetch interactions by type from the classifier
-  InteractionAccessor iaccessor;
-  for (size_t type_id = 0; type_id < iaccessor.size(); type_id++) {
-    iaccessor[type_id] = InteractionWrapper(
-        classifier.get_data<ParticleParticle>(type_id));
-  }
 
   // Parallel loop over non-empty cells
 #pragma omp parallel for
   for (size_t cell_idx = 0; cell_idx < ncells; cell_idx++) {
 
     // Skip if we only want ghost cells and this cell is not flagged
-    if (ghost_only && info.update_ghost[cell_idx] == 0) {
+    if constexpr (ghost_only) {
+      if (info.update_ghost[cell_idx] == 0) {
+        continue;
+      }
+    }
+
+    if (info.number_of_pair_cells[cell_idx] == 0) {
       continue;
     }
 
@@ -79,7 +117,11 @@ void transfer_classifier_ghosts(TMPLC& cells,
     size_t last_interaction  = first_interaction + info.number_of_pair_cells[cell_idx] - 1;
 
     // Grid cell that owns this non-empty cell
-    size_t owner_cell = classifier_helper.owner_cell[cell_idx];
+    size_t owner_cell = cell_ptr[cell_idx];
+
+    lout << "- first_interaction: " << first_interaction
+        << "- last_interaction: " << last_interaction
+        << std::endl;
 
     // Compute number of interactions per type for this cell
     auto& first_elem_per_type = classifier_helper.offset[first_interaction];
@@ -89,8 +131,17 @@ void transfer_classifier_ghosts(TMPLC& cells,
 
     // Total number of interactions in this cell
     size_t number_of_interactions = 0;
-    for (size_t type_id = 0; type_id < iaccessor.size(); type_id++) {
-      number_of_interactions += n_elem_per_type[type_id];
+    if constexpr (!active_interaction) {
+      for (size_t type_id = 0; type_id < InteractionTypeId::NTypes; type_id++) {
+        number_of_interactions += n_elem_per_type[type_id];
+      }
+    } else {
+      CountActiveInteractionFunc counter;
+      for (size_t type_id = 0; type_id < InteractionTypeId::NTypes; type_id++) {
+        int start = first_elem_per_type[type_id];
+        int size = n_elem_per_type[type_id];
+        IDispatcher::dispatch(type_id, iaccessor, counter, number_of_interactions, start, size);
+      }
     }
 
     // Reference to storage for this grid cell
@@ -99,19 +150,59 @@ void transfer_classifier_ghosts(TMPLC& cells,
 
     // Resize storage to fit all interactions
     storage.m_data.resize(number_of_interactions);
+
+    if (number_of_interactions == 0) {
+      continue;
+    }
+
     PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
 
     // Copy classified interactions into storage
     size_t shift = 0;
-    for (size_t type_id = 0; type_id < iaccessor.size(); type_id++) {
-      auto& classified_interactions = iaccessor[type_id];
-      for (size_t j = 0; j < n_elem_per_type[type_id]; j++) {
-        data_ptr[shift++] = classified_interactions(j);
+    for (size_t type_id = 0; type_id < InteractionTypeId::NTypes; type_id++) {
+      int start = first_elem_per_type[type_id];
+      int size = n_elem_per_type[type_id];
+      if (size>0) {
+        lout << "type " << type_id << std::endl;
+        lout << "size " << size << std::endl;
+        lout << "shift " << shift << std::endl;
+        if constexpr (!active_interaction) {
+          CopierFunc copier;
+          IDispatcher::dispatch(type_id, iaccessor, copier, data_ptr, shift, start, size);
+        } else {
+          CopierActiveInteractionFunc copier;
+          IDispatcher::dispatch(type_id, iaccessor, copier, data_ptr, shift, start, size);
+        }
       }
     }
 
     // Sanity check: copied all interactions
-    //std::assert(shift == number_of_interactions);
+    assert(shift == number_of_interactions);
+
+    // sorted according the particle position in the cell
+    std::stable_sort(storage.m_data.begin(), storage.m_data.end(),
+                     [](const PlaceholderInteraction& a, const PlaceholderInteraction& b) {
+                     return a.sort_by_owner_p(b);
+                     });
+
+    // reindex info
+    int info_offset = 0;
+
+    lout << "Particle Info size: " << info_particles.size() << std::endl;
+    for(size_t i = 0 ; i < info_particles.size() ; i++) {
+      auto& [_offset, _size, _pid] = info_particles[i];
+      _offset = info_offset;
+      _size = 0;
+      for(size_t j = info_offset; j < storage.m_data.size() ; j++) {
+        if (_pid != data_ptr[j].owner().id) {
+          break;
+        }
+        _size++;
+      }
+      info_offset += _size;
+      lout << "Particle Info[" << _pid << "]: " << _offset << " " << _size << std::endl;
+    }
+    lout << "end" << std::endl;
   }
 }
 }  // namespace exaDEM

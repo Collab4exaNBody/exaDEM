@@ -92,4 +92,50 @@ void setup_history_clean_ges(TMPLC& cells,
   }
   history.prefetch_gpu(st);
 }
+
+struct UpdateHistoryImplFunc {
+
+  template<InteractionType IT>
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(
+      InteractionWrapper<IT>& wrapper,
+      const PlaceholderInteraction& I,
+      int begin,
+      int end) const {
+    for (int j = begin ; j < end ; j++) {
+      if (wrapper.same(j, I)) {
+        wrapper.update(j,I);
+      }
+    }
+  }
+};
+
+struct UpdateHistoryFunc {
+  size_t* __restrict__ start;
+  size_t* __restrict__ size;
+  PlaceholderInteraction* __restrict__ data;
+  size_t* __restrict__ start_cell;
+  size_t* __restrict__ number_of_pair_cells;
+  NbhCellAccessor accessor_shift;
+  InteractionWrapperAccessor classifier_accessor;
+
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(long idx) const {
+    const UpdateHistoryImplFunc func;
+    size_t begin = start[idx];
+    size_t end = begin + size[idx];
+    size_t first_block_id = start_cell[idx];
+    size_t last_block_id = first_block_id + number_of_pair_cells[idx] -1;
+
+    auto& c_begin = accessor_shift.offset[first_block_id];
+    auto c_end = accessor_shift.offset[last_block_id] + accessor_shift.size[last_block_id];
+
+    for (size_t i = begin ; i < end ; i++) {
+      const PlaceholderInteraction& I = data[i];
+      auto type = I.type();
+      int a = c_begin[type];
+      int b = c_end[type];
+      IDispatcher::dispatch(type, classifier_accessor, func, I, a, b);
+    }
+  }
+};
+
 }  // namespace exaDEM

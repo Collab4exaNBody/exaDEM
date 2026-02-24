@@ -32,13 +32,24 @@ struct InteractionTypeId {
   static constexpr int VertexEdge = 1;
   static constexpr int VertexFace = 2;
   static constexpr int EdgeEdge = 3;
+  static constexpr int FirstIdParticle = VertexVertex;
+  static constexpr int LastIdParticle = EdgeEdge;
+  static constexpr int NTypesPP = LastIdParticle - FirstIdParticle + 1;
+
+  // drivers
   static constexpr int VertexCylinder = 4;
   static constexpr int VertexSurface = 5;
   static constexpr int VertexBall = 6;
+  static constexpr int FirstIdDriver = VertexCylinder;  
+  static constexpr int LastIdDriver = 12;
+  static constexpr int NTypesParticleDriver = LastIdDriver - FirstIdDriver + 1;
   // fragmentation
   static constexpr int NTypesStickecParticles = 1;
   static constexpr int InnerBond = 13;
-  static constexpr int NTypes = NTypesParticleParticle + NTypesStickecParticles;
+  static constexpr int FirstIdInnerBond = InnerBond;
+  static constexpr int LastIdInnerBond = InnerBond;
+  static constexpr int NTypesInnerBond = LastIdInnerBond - FirstIdInnerBond + 1;
+  static constexpr int NTypes = NTypesPP + NTypesParticleDriver + NTypesInnerBond;
   // control initialization
   static constexpr int Undefined = 666;
 };

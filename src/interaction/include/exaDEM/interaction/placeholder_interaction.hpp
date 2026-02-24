@@ -94,6 +94,10 @@ struct PlaceholderInteraction {
     return pair.owner();
   }
 
+  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& owner() const {
+    return pair.owner();
+  }
+
   ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& partner() {
     return pair.partner();
   }
@@ -249,17 +253,52 @@ struct PlaceholderInteraction {
     return (pair < I.pair);
   }
 
-  PlaceholderInteraction& operator=(const Interaction& I) {
-    Interaction& AsI = as<Interaction>();
-    AsI = I;
-    return *this;
+  /**
+   * @brief Comparison operator used to sort interactions by owner particle index.
+   * Ordering rule:
+   * 1. Compare owner particle local index (p)
+   * 2. If equal, fallback to pair comparison
+   * @param I Interaction to compare with
+   */
+  ONIKA_HOST_DEVICE_FUNC bool sort_by_owner_p(const PlaceholderInteraction& I) const {
+    if (this->owner().p != I.owner().p) {
+      return (this->owner().p < I.owner().p);
+    }
+    return (this->pair < I.pair);
   }
 
-  PlaceholderInteraction& operator=(const InnerBondInteraction& I) {
-    InnerBondInteraction& AsI = as<InnerBondInteraction>();
-    AsI = I;
-    return *this;
-  }
+  /**
+   * @brief Assign from an  Interaction.
+   *
+   * Reinterprets the internal storage as Interaction and performs
+   * a copy assignment. Allows implicit conversion from Interaction
+   * to PlaceholderInteraction.
+   *
+   * @param I Source interaction
+   * @return Reference to this PlaceholderInteraction
+   */
+  ONIKA_HOST_DEVICE_FUNC inline
+      PlaceholderInteraction& operator=(const Interaction& I) {
+        Interaction& AsI = as<Interaction>();
+        AsI = I;
+        return *this;
+      }
+
+  /**
+   * @brief Assign from an InnerBondInteraction.
+   *
+   * Reinterprets the internal storage as InnerBondInteraction and
+   * performs a copy assignment.
+   *
+   * @param I Source inner bond interaction
+   * @return Reference to this PlaceholderInteraction
+   */
+  ONIKA_HOST_DEVICE_FUNC inline
+      PlaceholderInteraction& operator=(const InnerBondInteraction& I) {
+        InnerBondInteraction& AsI = as<InnerBondInteraction>();
+        AsI = I;
+        return *this;
+      }
 };
 
 inline void update(std::vector<PlaceholderInteraction>& interactions, std::vector<PlaceholderInteraction>& history) {

@@ -46,6 +46,7 @@ under the License.
 #include <exaDEM/polyhedron/nbh_gpu/nbh_gpu.hpp>
 #include <exaDEM/polyhedron/nbh_gpu/nbh_cell_data.hpp>
 #include <exaDEM/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
+#include <exaDEM/polyhedron/nbh_gpu/nbh_manager.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
@@ -62,6 +63,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+  ADD_SLOT(NBHManager, nbh_manager, INPUT_OUTPUT, DocString{"Data about packed interactions within classifier."});
 
  public:
   inline std::string documentation() const final {
@@ -82,9 +84,10 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 #else
     constexpr int block_size_x = 8;
     constexpr int block_size_y = 8;
-    lout << "Operator in progress" << std::endl;
     auto& g = *grid;
     const auto cells = g.cells();
+    using ACF = ApplyClassifierFunc<block_size_x, block_size_y, decltype(cells)>;
+    lout << "Operator in progress" << std::endl;
     const IJK dims = g.dimension();
     const size_t n_cells = g.number_of_cells();
     shapes& shps = *shapes_collection;
@@ -93,14 +96,17 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     auto& container = *ic;
 
     //onikaStream_t&
-    onikaStream_t st_updateghost, st_history;
+    onikaStream_t st_updateghost, st_history, st_particle, st_driver, st_innerbond;
     ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_updateghost);
     ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_history);
+    ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_particle);
+    ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_driver);
+    ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_innerbond);
 
     // CPU Stage : get cell a / cell b 
     // Reset other fields (particle counters per type / skip)
     NbhCellHostStorage CellInfoStorageHost;
-    CellInteractionInformation cell_ii;
+    CellInteractionInformation& info_cell = nbh_manager->info_cell;
 		// Sequential
     auto convert_offset_ijk = [] (int offset) {
       assert(offset < 27);
@@ -113,11 +119,10 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 
     //
     lout << "Fill CPU data storage" << std::endl;
-    cell_ii.start_cell.resize(cell_size);
-    cell_ii.number_of_pair_cells.resize(cell_size);
+    info_cell.resize(cell_size);
     size_t shift = 0;
 		for(size_t i = 0 ; i < cell_size ; i++) {
-      cell_ii.start_cell[i] = shift;
+      info_cell.start_cell[i] = shift;
       size_t incr = 0;
 			size_t cell_a = cell_ptr[i];
       IJK loc_a = grid_index_to_ijk(dims, cell_a);
@@ -131,10 +136,10 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
           incr++;
         }        
       }
-      cell_ii.number_of_pair_cells[i] = incr;
+      info_cell.number_of_pair_cells[i] = incr;
       shift += incr;
     }
-    cell_ii.prefetch_cpu(st_updateghost);
+    info_cell.prefetch_cpu(st_updateghost);
 
 
     auto get_exec_ctx = [this] () {
@@ -142,11 +147,11 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     };
     lout << "Copy to GPU" << std::endl;
     // copy to gpu here
-    NbhCellStorage cellinfostorage(CellInfoStorageHost, get_exec_ctx);
+    NbhCellStorage& info_cell_pair = nbh_manager->info_pair_cell;
+    info_cell_pair.reset(CellInfoStorageHost, get_exec_ctx);
 
-    lout << "cellinfostorage cella: " << cellinfostorage.owner_cell[0] << std::endl;
     // define a wrapper function
-    NbhCellAccessor accessor(cellinfostorage);
+    NbhCellAccessor accessor(info_cell_pair);
 
 		ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_GUIDED;
@@ -186,22 +191,22 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
 #ifdef DEBUG_NBH_GPU
-    debug_print(cellinfostorage.offset.back(), cellinfostorage.size.back());
+    debug_print(info_cell_pair.offset.back(), info_cell_pair.size.back());
 #endif
 
 	  // ****** Second pass ******* //
 	  // prepare ApplyClassifierFunc
-    auto new_size = cellinfostorage.offset.back() + cellinfostorage.size.back();
+    auto new_size = info_cell_pair.offset.back() + info_cell_pair.size.back();
     InteractionParticleAccessor classifier_accessor;
     lout << "Prepare containers (classifier)" << std::endl;
 		for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
-			auto& c = container.get_data<ParticleParticle>(type_id);
-			c.resize(new_size[type_id]);
-      classifier_accessor[type_id] = InteractionWrapper(c); 
+				auto& c = container.get_data<ParticleParticle>(type_id);
+				c.resize(new_size[type_id]);
+				classifier_accessor[type_id] = InteractionWrapper(c); 
 		}
 
-		ApplyClassifierFunc<block_size_x, block_size_y, decltype(cells)> filler = {
-      cells, accessor,
+		ACF filler = {
+			cells, accessor,
 			*rcut_inc, shps.data(),
 			vertex_fields, classifier_accessor};
 
@@ -212,6 +217,29 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 		onika::parallel::block_parallel_for(parallel_range, filler, pec2, bopts);
 		lout << "victory" << std::endl;
 
+    lout << "Prepare containers (classifier)" << std::endl;
+    InteractionWrapperStorage wrappers(container);
+    InteractionWrapperAccessor classifier_interaction_accessor = wrappers.accessor();
+
+		UpdateHistoryFunc update_history = {
+			history.start.data(),
+			history.size.data(),
+			history.data.data(), 
+			info_cell.start_cell.data(),
+			info_cell.number_of_pair_cells.data(),
+			accessor,
+		  classifier_interaction_accessor};
+
+    parallel_for(history.start.size(), update_history, parallel_execution_context(), opts);
+
+
+    // update ghost area with interactions
+    lout << "Project ghost interactions on grid." << std::endl;
+    constexpr bool do_ghost_only = false;  // should be true, but false is better for debugging
+    constexpr bool do_active_interaction_only = false;
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
+      cell_ptr, info_cell,  info_cell_pair,
+      classifier_interaction_accessor, *ges);
 
 #ifdef DEBUG_NBH_GPU
 		// Debug check

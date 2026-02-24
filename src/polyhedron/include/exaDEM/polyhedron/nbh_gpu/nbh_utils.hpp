@@ -15,8 +15,8 @@ typedef onika::oarray_t<InteractionWrapper<ParticleParticle>,
 typedef onika::oarray_t<InteractionWrapper<ParticleParticle>,
         ParticleParticleSize> InteractionParticleAccessor;
 
-InteractionTypePerCellCounter operator+(const InteractionTypePerCellCounter& a,
-                                        const InteractionTypePerCellCounter& b) {
+inline InteractionTypePerCellCounter operator+(const InteractionTypePerCellCounter& a,
+                                               const InteractionTypePerCellCounter& b) {
   InteractionTypePerCellCounter res;
   for (size_t i = 0; i < InteractionTypeId::NTypes ; i++) {
     res[i] = a[i] + b[i];
@@ -24,8 +24,8 @@ InteractionTypePerCellCounter operator+(const InteractionTypePerCellCounter& a,
   return res;
 }
 
-InteractionTypePerCellCounter operator-(const InteractionTypePerCellCounter& a,
-                                        const InteractionTypePerCellCounter& b) {
+inline InteractionTypePerCellCounter operator-(const InteractionTypePerCellCounter& a,
+                                               const InteractionTypePerCellCounter& b) {
   InteractionTypePerCellCounter res;
   for (size_t i = 0; i < InteractionTypeId::NTypes ; i++) {
     res[i] = a[i] - b[i];
@@ -33,7 +33,7 @@ InteractionTypePerCellCounter operator-(const InteractionTypePerCellCounter& a,
   return res;
 }
 
-void debug_print(InteractionTypePerCellCounter& in) {
+inline void debug_print(InteractionTypePerCellCounter& in) {
   std::cout << "VertexVertex = "
       << in[InteractionTypeId::VertexVertex] << std::endl;
   std::cout << "VertexEdge   = "
@@ -44,8 +44,8 @@ void debug_print(InteractionTypePerCellCounter& in) {
       << in[InteractionTypeId::EdgeEdge] << std::endl;
 }
 
-void debug_print(InteractionTypePerCellCounter& in1,
-                 InteractionTypePerCellCounter& in2) {
+inline void debug_print(InteractionTypePerCellCounter& in1,
+                        InteractionTypePerCellCounter& in2) {
   InteractionTypePerCellCounter sum;
   for(size_t i=0 ; i<InteractionTypeId::NTypes ; i++) {
     sum[i] = in1[i] + in2[i];
