@@ -229,8 +229,9 @@ struct PlaceholderInteraction {
   auto& convert() {
     if constexpr (IT == ParticleParticle) {
       return as<Interaction>();
-    }
-    if constexpr (IT == InnerBond) {
+    } else if constexpr (IT == ParticleDriver) {
+      return as<Interaction>();
+    } if constexpr (IT == InnerBond) {
       return as<InnerBondInteraction>();
     }
     color_log::mpi_error("PlaceholderInteraction::as<InteractionType>",

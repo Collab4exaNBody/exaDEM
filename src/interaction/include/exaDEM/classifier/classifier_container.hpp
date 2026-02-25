@@ -220,7 +220,11 @@ struct ClassifierContainer {
     const size_t old_size = this->size();
     this->resize(old_size + new_elements);
 
-    type = w;
+    if (w != type) {
+      color_log::mpi_error("Classifier::insert",
+                           "Wrong interaction type Id: " + std::to_string(w) +
+                           ". It should be: " + std::to_string(type));
+    }
 
     for (size_t i = 0; i < new_elements; i++) {
       const size_t idx = old_size + i;
@@ -231,9 +235,12 @@ struct ClassifierContainer {
 
   void copy(size_t start, size_t size, std::vector<exaDEM::PlaceholderInteraction>& tmp, int w) {
     if (tmp.size() != size) {
-      color_log::error("Classifier::copy", "When resizing wave: " + std::to_string(w));
+      color_log::mpi_error("Classifier::copy", "When resizing wave: " + std::to_string(w));
+    } else if (w != type) {
+      color_log::mpi_error("Classifier::copy",
+			 "Wrong interaction type Id: " + std::to_string(w) +
+                           ". It should be: " + std::to_string(type));
     }
-    type = w;
 
     for (size_t i = 0; i < size; i++) {
       const size_t idx = start + i;
@@ -315,4 +322,63 @@ struct ClassifierContainer {
     onika::lout << " and it contains " << this->size() << " interactions." << std::endl;
   }
 };
+
+
+template<InteractionType IT, typename Func, typename... Args>
+void for_all_interactions(ClassifierContainer<IT>& container, Func& func, Args&&... args) {
+  size_t size = container.size();
+  for(size_t i = 0 ; i<size ; i++) {
+    auto I = container[i];  // I is built, not a ref
+    func(I, std::forward<Args>(args)...);
+  }
+}
+
+template<InteractionType... Types>
+struct ClassifierContainerDispatcher
+{
+  template<typename ClassifierT, typename Func, typename... Args>
+    static inline void dispatch(
+	int type,
+	ClassifierT& iwa,
+	Func& func,
+	Args&&... args)
+    {
+      ((get_typed(type) == static_cast<int>(Types)
+	? (func.template operator()<Types>(
+	    iwa.template get_data<Types>(type),
+	    std::forward<Args>(args)...), 0)
+	: 0), ...);
+    }
+};
+using CDispatcher = ClassifierContainerDispatcher<InteractionType::ParticleParticle, InteractionType::ParticleDriver, InteractionType::InnerBond>;
+
+// bunch of functions used by the dispatcher
+struct ClassifierContainerSizeFunc {
+  size_t value = 0;
+  template<InteractionType IT>
+    void operator()(ClassifierContainer<IT>& container) {
+      value = container.size();
+    }
+};
+
+struct ClassifierContainerResizerFunc {
+  template<InteractionType IT>
+  void operator()(ClassifierContainer<IT>& container,
+                  size_t new_size) {
+    container.resize(new_size);
+  } 
+};
+
+struct ClassifierContainerCopierFunc {
+  template<InteractionType IT>
+    void operator()(ClassifierContainer<IT>& container,
+        std::vector<exaDEM::PlaceholderInteraction>& vec,
+	const size_t start,
+	const size_t size,
+        const int typeID) {
+      // std::cout << get_name<IT>() << std::endl;
+      container.copy(start, size, vec, typeID);
+    } 
+};
+
 }  // namespace exaDEM

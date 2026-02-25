@@ -35,7 +35,7 @@ inline void classify(Classifier& classifier, GridCellParticleInteraction& ges, s
   constexpr int spti = InteractionTypeId::InnerBond;
   constexpr int ntypes = InteractionTypeId::NTypes;
 
-  classifier.reset_waves();  // Clear existing waves
+  classifier.reset_containers();  // Clear existing waves
   auto& ces = ges.m_data;    // Reference to cells containing interactions
 
   size_t n_threads;
@@ -109,39 +109,41 @@ inline void classify(Classifier& classifier, GridCellParticleInteraction& ges, s
   }
 }
 
-template <template <InteractionType> class Wave, InteractionType IT>
-void unclassify_core(GridCellParticleInteraction& ges, Wave<IT>& data, size_t n1) {
-  using namespace onika::cuda;
-  auto& ces = ges.m_data;  // Reference to cells containing interactions
-                           // Parallel loop to process interactions within a wave
+struct UnclassifyFunc {
+  template <InteractionType IT>
+  void operator()(ClassifierContainer<IT>& container, GridCellParticleInteraction& ges) {
+    using namespace onika::cuda;
+    auto& ces = ges.m_data;  // Reference to cells containing interactions
+                             // Parallel loop to process interactions within a wave
 # pragma omp for schedule(guided) nowait
-  for (size_t it = 0; it < n1; it++) {
-    auto item1 = data[it];
-    // Check if interaction in wave has non-zero friction and moment
-    if (item1.active())  // alway true if unclassify is called after compress
-    {
-      auto& celli = ces[item1.pair.owner().cell];
-      // auto &celli = ces[item1.pair.pi.cell];
-      const unsigned int ni = vector_size(celli.m_data);
-      PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
-      // Iterate through interactions in cell to find matching interaction
-      bool find = false;
-      for (size_t it2 = 0; it2 < ni; it2++) {
-        auto& item2 = (data_i_ptr[it2]).convert<IT>();
-        if (item1 == item2) {
-          item2.update(item1);
-          find = true;
-          break;
+    for (size_t it = 0; it < container.size(); it++) {
+      auto item1 = container[it];
+      // Check if interaction in wave has non-zero friction and moment
+      if (item1.active())  // alway true if unclassify is called after compress
+      {
+        auto& celli = ces[item1.pair.owner().cell];
+        // auto &celli = ces[item1.pair.pi.cell];
+        const unsigned int ni = vector_size(celli.m_data);
+        PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
+        // Iterate through interactions in cell to find matching interaction
+        bool find = false;
+        for (size_t it2 = 0; it2 < ni; it2++) {
+          auto& item2 = (data_i_ptr[it2]).convert<IT>();
+          if (item1 == item2) {
+            item2.update(item1);
+            find = true;
+            break;
+          }
         }
-      }
 
-      if (!find) {
-        item1.print();
-        color_log::error("unclassify", "One active interaction has not been updated");
+        if (!find) {
+          item1.print();
+          color_log::error("unclassify", "One active interaction has not been updated");
+        }
       }
     }
   }
-}
+};
 
 /**
  * @brief Restores friction and moment data for interactions from categorized waves to cell interactions.
@@ -155,17 +157,10 @@ void unclassify_core(GridCellParticleInteraction& ges, Wave<IT>& data, size_t n1
  */
 inline void unclassify(Classifier& classifier, GridCellParticleInteraction& ges) {
   using namespace onika::cuda;
-#pragma omp parallel
-  {
-    for (int interacion_type = 0; interacion_type < InteractionTypeId::NTypes; interacion_type++) {
-      if (interacion_type < InteractionTypeId::NTypesParticleParticle) {
-        auto [data, n1] = classifier.get_info<ParticleParticle>(interacion_type);
-        unclassify_core(ges, data, n1);
-      } else if (interacion_type == InteractionTypeId::InnerBond) {
-        auto [data, n1] = classifier.get_info<InnerBond>(interacion_type);
-        unclassify_core(ges, data, n1);
-      }
-    }
+
+  UnclassifyFunc func;
+  for (int typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
+    CDispatcher::dispatch(typeID, classifier, func, ges);
   }
 }
 }  // namespace exaDEM

@@ -244,11 +244,14 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 #ifdef DEBUG_NBH_GPU
 		// Debug check
 		ONIKA_CU_DEVICE_SYNCHRONIZE();
-		for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
+		for (size_t type_id = 1; type_id<ParticleParticleSize ; type_id++) {
+      lout << "type_id " << type_id << std::endl;
 			auto& InteractionList = container.get_data<ParticleParticle>(type_id);
 			for(size_t i = 0 ; i < InteractionList.size(); i++) {
 				auto I = InteractionList[i];
-				I.print();
+				if( I.pair.type == 0 && I.pair.pj.sub > 8 ) {
+				  I.print();
+        }
 			} 
 		}
 #endif

@@ -20,36 +20,19 @@ under the License.
 namespace exaDEM {
 struct InteractionWrapperAccessor {
   InteractionWrapper<ParticleParticle>* particleparticle;
-  InteractionWrapper<ParticleParticle>* particledriver;
-//  InteractionWrapper<ParticleDriver>* particledriver;
+//  InteractionWrapper<ParticleParticle>* particledriver;
+  InteractionWrapper<ParticleDriver>* particledriver;
   InteractionWrapper<InnerBond>* innerbond;
 
   template<InteractionType IT>
   ONIKA_HOST_DEVICE_FUNC auto& get_typed_accessor(int idx) const {
     if constexpr (IT == InteractionType::ParticleParticle) {
-      return particleparticle[idx];
+      return particleparticle[get_typed_idx<IT>(idx)];
     } else if constexpr (IT == InteractionType::ParticleDriver) {
-      return particledriver[idx - InteractionTypeId::FirstIdDriver];
+      return particledriver[get_typed_idx<IT>(idx)];
     } else if constexpr(IT == InteractionType::InnerBond) {
-      return innerbond[idx - InteractionTypeId::FirstIdInnerBond];
+      return innerbond[get_typed_idx<IT>(idx)];
     }
-  } 
-  ONIKA_HOST_DEVICE_FUNC int get_typed(int idx) const {
-    if (idx >=InteractionTypeId::FirstIdParticle && 
-        idx <= InteractionTypeId::LastIdParticle) {
-      return 0;
-    }
-    if (idx >= InteractionTypeId::FirstIdDriver &&
-        idx <= InteractionTypeId::LastIdDriver) {
-      return 0;
-//      return 1;
-    }
-    if (idx >= InteractionTypeId::FirstIdInnerBond &&
-        idx <= InteractionTypeId::LastIdInnerBond) {
-      return 1;
-//      return 2;
-    }
-    return 3;
   } 
 };
 
@@ -57,8 +40,8 @@ struct InteractionWrapperStorage {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
   VectorT<InteractionWrapper<ParticleParticle>> particleparticle;
-  VectorT<InteractionWrapper<ParticleParticle>> particledriver;
-//  VectorT<InteractionWrapper<ParticleDriver>> particledriver;
+//  VectorT<InteractionWrapper<ParticleParticle>> particledriver;
+  VectorT<InteractionWrapper<ParticleDriver>> particledriver;
   VectorT<InteractionWrapper<InnerBond>> innerbond;
 
   InteractionWrapperStorage(Classifier& classifier) {
@@ -69,10 +52,10 @@ struct InteractionWrapperStorage {
     }
     particledriver.resize(InteractionTypeId::NTypesParticleDriver);
     for (size_t i = InteractionTypeId::FirstIdDriver ; i <= InteractionTypeId::LastIdDriver ; i++) {
-      auto& c = classifier.get_data<InteractionType::ParticleParticle>(i);
-      particledriver[i - InteractionTypeId::FirstIdDriver] = InteractionWrapper<InteractionType::ParticleParticle>(c);
-      //auto& c = classifier.get_data<InteractionType::ParticleDriver>(i);
-      //particledriver[i - InteractionTypeId::FirstIdDriver] = InteractionWrapper<InteractionType::ParticleDriver>(c);
+      //auto& c = classifier.get_data<InteractionType::ParticleParticle>(i);
+      //particledriver[i - InteractionTypeId::FirstIdDriver] = InteractionWrapper<InteractionType::ParticleParticle>(c);
+      auto& c = classifier.get_data<InteractionType::ParticleDriver>(i);
+      particledriver[i - InteractionTypeId::FirstIdDriver] = InteractionWrapper<InteractionType::ParticleDriver>(c);
     }
     innerbond.resize(InteractionTypeId::NTypesStickecParticles);
     for (size_t i = InteractionTypeId::FirstIdInnerBond ; i <= InteractionTypeId::LastIdInnerBond ; i++) {
@@ -103,7 +86,7 @@ struct InteractionDispatcher
       const Func& func,
       Args&&... args)
   {
-    ((iwa.get_typed(type) == static_cast<int>(Types)
+    ((get_typed(type) == static_cast<int>(Types)
       ? (func.template operator()<Types>(
               iwa.template get_typed_accessor<Types>(type),
               //              args...), 0)
@@ -113,7 +96,7 @@ struct InteractionDispatcher
 };
 
 
-using IDispatcher = InteractionDispatcher<InteractionType::ParticleParticle, InteractionType::InnerBond>;
+//using IDispatcher = InteractionDispatcher<InteractionType::ParticleParticle, InteractionType::InnerBond>;
 // using IDispatcher = InteractionDispatcher<InteractionType::ParticleParticle, InteractionType::ParticleParticle, InteractionType::InnerBond>;
-//using IDispatcher = InteractionDispatcher<InteractionType::ParticleParticle, InteractionType::ParticleDriver, InteractionType::InnerBond>;
+using IDispatcher = InteractionDispatcher<InteractionType::ParticleParticle, InteractionType::ParticleDriver, InteractionType::InnerBond>;
 }  // namespace exaDEM

@@ -25,6 +25,47 @@ under the License.
 #include <exaDEM/interface/interface.hpp>
 
 namespace exaDEM {
+
+template<typename TMPLC>
+struct CheckClassifierInteractionPairFunc {
+  TMPLC cells;
+  std::string operator_name;
+
+  template<InteractionType IT>
+  void operator()(ClassifierContainer<IT>& container) {
+    for (size_t j = 0; j < container.size(); j++) {
+      size_t cellId = container.cell_i[j];
+      size_t particlePosition = container.p_i[j];
+      auto& cell = cells[cellId];
+      if (particlePosition >= cell.size()) {
+        color_log::warning(operator_name, "Details -> wave: " + std::to_string(container.type) +
+                           " position in the classifier: " + std::to_string(j) +
+                           " looking for the cell: " + std::to_string(cellId) +
+                           " at the position: " + std::to_string(particlePosition));
+        color_log::error(operator_name,
+                         "The first part of the interaction points to a location in "
+                         "storage that does not exist or no longer exists.");
+      }
+      if constexpr (IT == InteractionType::ParticleParticle ||
+                    IT == InteractionType::InnerBond) {
+        size_t cellId = container.cell_j[j];
+        size_t particlePosition = container.p_j[j];
+        auto& cell = cells[cellId];
+        if (particlePosition >= cell.size()) {
+          color_log::warning(operator_name, "Details -> wave: " + std::to_string(container.type) +
+                             " position in the classifier: " + std::to_string(j) +
+                             " looking for the cell: " + std::to_string(cellId) +
+                             " at the position: " + std::to_string(particlePosition));
+          color_log::error(operator_name,
+                           "The second part of the interaction points to a location in "
+                           "storage that does not exist or no longer exists.");
+
+        }
+      }
+    }
+  }
+};
+
 template <typename GridT>
 class CheckClassifierInteractionPair : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
@@ -45,79 +86,10 @@ class CheckClassifierInteractionPair : public OperatorNode {
   }
 
   inline void execute() final {
-    auto& classifier = *ic;
-    auto cells = grid->cells();
-
-    for (int i = 0; i < Classifier::typesPP; i++) {
-      auto& idata = classifier.get_data<InteractionType::ParticleParticle>(i);
-      auto isize = classifier.get_size(i);
-      const bool is_particle_particle = i < Classifier::typesParticles;
-      for (size_t j = 0; j < isize; j++) {
-        size_t cellId = idata.cell_i[j];
-        size_t particlePosition = idata.p_i[j];
-        auto& cell = cells[cellId];
-        if (particlePosition >= cell.size()) {
-          color_log::warning(operator_name(), "Details -> wave: " + std::to_string(i) +
-                                                  " position in the classifier: " + std::to_string(j) +
-                                                  " looking for the cell: " + std::to_string(cellId) +
-                                                  " at the position: " + std::to_string(particlePosition));
-          color_log::error(operator_name(),
-                           "The first part of the interaction points to a location in "
-                           "storage that does not exist or no longer exists.");
-        }
-        if (is_particle_particle) {
-          size_t cellId = idata.cell_j[j];
-          size_t particlePosition = idata.p_j[j];
-          auto& cell = cells[cellId];
-          if (particlePosition >= cell.size()) {
-            color_log::warning(operator_name(), "Details -> wave: " + std::to_string(i) +
-                                                    " position in the classifier: " + std::to_string(j) +
-                                                    " looking for the cell: " + std::to_string(cellId) +
-                                                    " at the position: " + std::to_string(particlePosition));
-            color_log::error(operator_name(),
-                             "The second part of the interaction points to a location in "
-                             "storage that does not exist or no longer exists.");
-          }
-        }
-      }
+    CheckClassifierInteractionPairFunc func = {grid->cells(), operator_name()};
+    for (size_t typeID = 0; typeID < ic->number_of_waves() ; typeID++) {
+      CDispatcher::dispatch(typeID, *ic, func);
     }
-
-    // InnerBond
-    {
-      size_t i = Classifier::InnerBondTypeId;
-      auto& idata = classifier.get_data<InteractionType::InnerBond>(i);
-      auto isize = classifier.get_size(i);
-      const bool is_particle_particle = true;
-      for (size_t j = 0; j < isize; j++) {
-        size_t cellId = idata.cell_i[j];
-        size_t particlePosition = idata.p_i[j];
-        auto& cell = cells[cellId];
-        if (particlePosition >= cell.size()) {
-          color_log::warning(operator_name(), "Details -> wave: " + std::to_string(i) +
-                                                  " position in the classifier: " + std::to_string(j) +
-                                                  " looking for the cell: " + std::to_string(cellId) +
-                                                  " at the position: " + std::to_string(particlePosition));
-          color_log::error(operator_name(),
-                           "The first part of the interaction points to a location in "
-                           "storage that does not exist or no longer exists.");
-        }
-        if (is_particle_particle) {
-          size_t cellId = idata.cell_j[j];
-          size_t particlePosition = idata.p_j[j];
-          auto& cell = cells[cellId];
-          if (particlePosition >= cell.size()) {
-            color_log::warning(operator_name(), "Details -> wave: " + std::to_string(i) +
-                                                    " position in the classifier: " + std::to_string(j) +
-                                                    " looking for the cell: " + std::to_string(cellId) +
-                                                    " at the position: " + std::to_string(particlePosition));
-            color_log::error(operator_name(),
-                             "The second part of the interaction points to a location in "
-                             "storage that does not exist or no longer exists.");
-          }
-        }
-      }
-    }
-
     color_log::highlight(operator_name(),
                          "The “pair” parts (i.e., interaction_pair) of the interactions in the "
                          "classifier define existing locations in the grid.");

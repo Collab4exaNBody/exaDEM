@@ -235,22 +235,14 @@ using namespace onika::parallel;
 template <int type, typename Kernel, typename... Args>
 static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext* exec_ctx, Classifier& ic,
                                                        Kernel& kernel, Args&&... args) {
+  static_assert(type < InteractionTypeId::NTypes);
+  constexpr InteractionType IT = ConvertToIntertactionType<type>();
   ParallelForOptions opts;
   opts.omp_scheduling = OMP_SCHED_STATIC;
   AnalysisDataPacker packer(ic, type);
-  if constexpr (type < Classifier::typesPP) {
-    auto [data, size] = ic.get_info<ParticleParticle>(type);
-    InteractionWrapper<ParticleParticle> interactions(data);
-    WrapperContactLawForAll func(interactions, kernel, packer, args...);
-    return parallel_for(size, func, exec_ctx, opts);
-  }
-  if constexpr (type == Classifier::InnerBondTypeId) {
-    auto [data, size] = ic.get_info<InnerBond>(Classifier::InnerBondTypeId);
-    InteractionWrapper<InnerBond> interactions(data);
-    WrapperContactLawForAll func(interactions, kernel, packer, args...);
-    return parallel_for(size, func, exec_ctx, opts);
-  }
-  color_log::error("run_contact_law", "Interaction type is not defined correctly");
-  std::exit(EXIT_FAILURE);
+  auto [data, size] = ic.get_info<IT>(type);
+  InteractionWrapper<IT> interactions(data);
+  WrapperContactLawForAll func(interactions, kernel, packer, args...);
+  return parallel_for(size, func, exec_ctx, opts);
 }
 }  // namespace exaDEM

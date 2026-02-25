@@ -154,6 +154,8 @@ struct InteractionWrapper {
 
     if constexpr (IT == ParticleParticle) {
       return Interaction{ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}};
+    } else if constexpr (IT == ParticleDriver) {
+      return Interaction{ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}};
     } else if constexpr (IT == InnerBond) {
       return InnerBondInteraction{
         ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, en[idx], tds[idx], et[idx], dn0[idx], weight[idx], criterion[idx], unbroken[idx]};

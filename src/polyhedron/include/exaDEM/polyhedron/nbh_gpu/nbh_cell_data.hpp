@@ -14,7 +14,6 @@ struct CellInteractionInformation {
 
   // Resize all vectors to a given size
   void resize(size_t size) {
-    // lout << "CellInteractionInformation::resize " << size << std::endl;
     start_cell.resize(size);
     number_of_pair_cells.resize(size);
     update_ghost.resize(size);
@@ -45,9 +44,7 @@ struct CopierFunc {
       InteractionWrapper<IT>& wrapper,
       PlaceholderInteraction* __restrict__ data_ptr,
       size_t& shift, int start, int size) const {
-      printf("for(%d,%d)\n", start, size);
     for (int j = start; j < start+size; j++) {
-      printf("shift %lu\n", shift);
       data_ptr[shift++] = wrapper(j);
     }
   }
@@ -118,10 +115,6 @@ void transfer_classifier_grid(size_t* cell_ptr,
 
     // Grid cell that owns this non-empty cell
     size_t owner_cell = cell_ptr[cell_idx];
-
-    lout << "- first_interaction: " << first_interaction
-        << "- last_interaction: " << last_interaction
-        << std::endl;
 
     // Compute number of interactions per type for this cell
     auto& first_elem_per_type = classifier_helper.offset[first_interaction];
