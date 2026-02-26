@@ -105,18 +105,17 @@ class ClassificationInteractionGhost : public OperatorNode {
       // Partial
 #   pragma omp for
       for (int typeID = 0; typeID < ntypes; typeID++) {
-	size_t size = bounds[n_threads-1][typeID].first + bounds[n_threads-1][typeID].second;
-	CDispatcher::dispatch(typeID, classifier, resize, size);
+        size_t size = bounds[n_threads-1][typeID].first + bounds[n_threads-1][typeID].second;
+        CDispatcher::dispatch(typeID, classifier, resize, size);
       }
 
 #   pragma omp barrier
       // All
       for (int typeID = 0; typeID < ntypes; typeID++) {
-lout << "typeID " << typeID << std::endl;
-	size_t start = bound[typeID].first;
-	size_t size = bound[typeID].second;
-	CDispatcher::dispatch(typeID, classifier, interaction_copier,
-	    TmpBuff[typeID], start, size, typeID);
+        size_t start = bound[typeID].first;
+        size_t size = bound[typeID].second;
+        CDispatcher::dispatch(typeID, classifier, interaction_copier,
+                              TmpBuff[typeID], start, size, typeID);
       }
     }
   }
@@ -125,6 +124,6 @@ lout << "typeID " << typeID << std::endl;
 // === register factories ===
 ONIKA_AUTORUN_INIT(classify_interaction_ghost) {
   OperatorNodeFactory::instance()->register_factory("classify_interaction_ghost",
-      make_grid_variant_operator<ClassificationInteractionGhost>);
+                                                    make_grid_variant_operator<ClassificationInteractionGhost>);
 }
 }  // namespace exaDEM

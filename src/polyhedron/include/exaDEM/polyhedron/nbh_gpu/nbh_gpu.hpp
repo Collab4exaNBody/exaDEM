@@ -58,9 +58,7 @@ inline void detection(Func& func,
                       ParticleVertexView& vertices_b,
                       const shape& shpb) {
 
-  func.set_ghost(InteractionPair::NotGhost);
-
-  if (a.id>=b.id) {  // TODO add ghost
+  if (a.id>=b.id) {
     return;
   }
 
@@ -106,23 +104,29 @@ inline void detection(Func& func,
     obbvi.center = {vi.x, vi.y, vi.z};
     obbvi.enlarge(shpa.minskowski(a.homothety));
     if (obb_b.intersect(obbvi)) {
-      for (int j = thread.y; j < nvb; j+= block.y) {
-        if (filter_vertex_vertex(PARAMETERS_SWAP_FALSE)) {
-          func(i, j, InteractionTypeId::VertexVertex, false);
-        }
-      }
-      for (int j = thread.y; j < neb; j+= block.y) {
-        if (filter_vertex_edge(PARAMETERS_SWAP_FALSE)) {
-          func(i, j, InteractionTypeId::VertexEdge, false);
-        }
-      }
-      for (int j = thread.y; j < nfb; j+= block.y) {
-        if (filter_vertex_face(PARAMETERS_SWAP_FALSE)) {
-          func(i, j, InteractionTypeId::VertexFace, false);
-        }
-      }
-    }
-  }
+      if (!func.skip(InteractionTypeId::VertexVertex)) {
+        for (int j = thread.y; j < nvb; j+= block.y) {
+          if (filter_vertex_vertex(PARAMETERS_SWAP_FALSE)) {
+            func(i, j, InteractionTypeId::VertexVertex, false);
+          }
+        }  // thread.y
+      }  // VertexVertex
+      if (!func.skip(InteractionTypeId::VertexEdge)) {
+        for (int j = thread.y; j < neb; j+= block.y) {
+          if (filter_vertex_edge(PARAMETERS_SWAP_FALSE)) {
+            func(i, j, InteractionTypeId::VertexEdge, false);
+          }
+        }  // thread.y
+      }  // VertexEdge
+      if (!func.skip(InteractionTypeId::VertexFace)) {
+        for (int j = thread.y; j < nfb; j+= block.y) {
+          if (filter_vertex_face(PARAMETERS_SWAP_FALSE)) {
+            func(i, j, InteractionTypeId::VertexFace, false);
+          }
+        }  // thread.y
+      }  // VertexFace
+    }  // if obb
+  }  // end thread.x
 
   func.swap_ij();
 
@@ -133,18 +137,22 @@ inline void detection(Func& func,
     obbvj.enlarge(shpb.minskowski(b.homothety));
 
     if (obb_a.intersect(obbvj)) {
-      for (int i = thread.x; i < nea; i+= block.x) {
-        if (filter_vertex_edge(PARAMETERS_SWAP_TRUE)) {
-          func(i, j, InteractionTypeId::VertexEdge, true);
-        }
-      }
-      for (int i = thread.x; i < nfa; i+= block.x) {
-        if (filter_vertex_face(PARAMETERS_SWAP_TRUE)) {
-          func(i, j, InteractionTypeId::VertexFace, true);
-        }
-      }
-    }
-  }
+      if (!func.skip(InteractionTypeId::VertexEdge)) {
+        for (int i = thread.x; i < nea; i+= block.x) {
+          if (filter_vertex_edge(PARAMETERS_SWAP_TRUE)) {
+            func(i, j, InteractionTypeId::VertexEdge, true);
+          }
+        }  // thread.x
+      }  // VertexEdge
+      if (!func.skip(InteractionTypeId::VertexFace)) {
+        for (int i = thread.x; i < nfa; i+= block.x) {
+          if (filter_vertex_face(PARAMETERS_SWAP_TRUE)) {
+            func(i, j, InteractionTypeId::VertexFace, true);
+          }
+        }  // thread.x 
+      }  // VertexFace
+    }  // if obb
+  }  // thread.y
 #undef PARAMETERS_SWAP_FALSE
 #undef PARAMETERS_SWAP_TRUE
 }
@@ -156,7 +164,6 @@ struct ApplyNbhFunc {
   const double rcut_inc;
   const shape* const shps;
   VertexField* const vertex_fields;
-//  ONIKA_HOST_DEVICE_FUNC inline void operator()(long idx) const {
   ONIKA_HOST_DEVICE_FUNC inline void operator()(onikaInt3_t coord) const {
     long idx = coord.x;
     size_t cell_id_a = accessor.owner_cell[idx];
@@ -170,7 +177,7 @@ struct ApplyNbhFunc {
     struct counter_func {
       InteractionTypePerCellCounter counter;
       ONIKA_HOST_DEVICE_FUNC counter_func() : counter({0,0,0,0}) {}
-      ONIKA_HOST_DEVICE_FUNC void set_ghost(bool g) {}
+      ONIKA_HOST_DEVICE_FUNC inline bool skip(uint8_t i) { return false ; }
       ONIKA_HOST_DEVICE_FUNC void swap_ij() {}
       ONIKA_HOST_DEVICE_FUNC inline void operator() (
           size_t i, size_t j, int InteractionType, bool swap) {
@@ -206,11 +213,12 @@ struct ApplyNbhFunc {
       }
     }
     auto& res = accessor.size[idx];
-    for (int type_id = 0 ; type_id < ParticleParticleSize ; type_id++) {
-      if (func.counter[type_id]>0) {
+    for (int typeID = get_first_id<InteractionType::ParticleParticle>() ;
+         typeID <= get_last_id<InteractionType::ParticleParticle>() ; typeID++) {
+      if (func.counter[typeID]>0) {
         accessor.skip[idx] = false;
         //printf("do not skip cell pair %ld\n", idx); 
-        ONIKA_CU_ATOMIC_ADD(res[type_id], func.counter[type_id]);
+        ONIKA_CU_ATOMIC_ADD(res[typeID], func.counter[typeID]);
       }
     } 
   }
@@ -218,9 +226,9 @@ struct ApplyNbhFunc {
 
 template<size_t BLOCKX, size_t BLOCKY, typename TMPLC>
 struct ApplyClassifierFunc {  // Second pass 
-  // Note: This operator is quite demanding in terms of memory.
-  // Do not increase the number of members.
-  // That's why we only recover useful wrappers.
+                              // Note: This operator is quite demanding in terms of memory.
+                              // Do not increase the number of members.
+                              // That's why we only recover useful wrappers.
   TMPLC cells;
   NbhCellAccessor accessor;
   const double rcut_inc;
@@ -241,21 +249,21 @@ struct ApplyClassifierFunc {  // Second pass
     // used by detection
     struct counter_func {
       InteractionTypePerCellCounter counter = {0,0,0,0};
-      ONIKA_HOST_DEVICE_FUNC void set_ghost(bool g) {}
-      ONIKA_HOST_DEVICE_FUNC void swap_ij() {}
+      ONIKA_HOST_DEVICE_FUNC inline void swap_ij() {}
+      ONIKA_HOST_DEVICE_FUNC inline bool skip(uint8_t i) { return false; }
       ONIKA_HOST_DEVICE_FUNC inline void operator() (
           size_t i, size_t j, int InteractionType, bool swap) {
         counter[InteractionType]++;
       }
     };
 
-    struct add_interaction {
+    struct AddInteractionFunc {
       const InteractionParticleAccessor& data; 
       PlaceholderInteraction item;
       InteractionTypePerCellCounter prefix;
 
       ONIKA_HOST_DEVICE_FUNC
-          add_interaction(const InteractionParticleAccessor& in):
+          AddInteractionFunc(const InteractionParticleAccessor& in):
               data(in), prefix({0,0,0,0}) {};
 
       ONIKA_HOST_DEVICE_FUNC
@@ -269,12 +277,12 @@ struct ApplyClassifierFunc {  // Second pass
             item.pair.pi.sub = i;
             item.pair.pj.sub = j;
             item.pair.type = InteractionType;
-            if (InteractionType == 0 && swap == true) {
-              printf("set %ld %ld %d\n", item.pair.pi.id,  item.pair.pj.id, InteractionType);
-            }
             data[InteractionType].set(prefix[InteractionType]++, item);
           }
 
+      ONIKA_HOST_DEVICE_FUNC inline bool skip(uint8_t i) {
+        return false;
+      }
 
       ONIKA_HOST_DEVICE_FUNC inline void swap_ij() {
         gpu_swap(item.pair.pi.id, item.pair.pj.id);
@@ -316,12 +324,16 @@ struct ApplyClassifierFunc {  // Second pass
       }
     }
 
-    add_interaction adder(interactions);
+    AddInteractionFunc adder(interactions);
+    // These Interactions are tagged to be copied in ghost areas
+    adder.set_ghost(accessor.ghost[idx]);
+
     auto& sdata = accessor.offset[idx];
-    for(int type = 0 ; type < ParticleParticleSize ; type++) {
-      BlockScan(temp_storage).ExclusiveSum(func.counter[type], adder.prefix[type]);
+    for (int typeID = get_first_id<InteractionType::ParticleParticle>() ;
+         typeID <= get_last_id<InteractionType::ParticleParticle>() ; typeID++) {
+      BlockScan(temp_storage).ExclusiveSum(func.counter[typeID], adder.prefix[typeID]);
       ONIKA_CU_BLOCK_SYNC();
-      adder.prefix[type] += sdata[type];
+      adder.prefix[typeID] += sdata[typeID];
       //printf("adder.prefix[%d] = %d\n", type, adder.prefix[type]);
     }
     for(size_t pa = 0; pa < cell_a.size() ; pa++) {

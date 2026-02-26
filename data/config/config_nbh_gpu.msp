@@ -13,4 +13,4 @@ compress_data:
   - stats_interactions
   - update_interaction_ghost
   - classify_interaction_ghost
-  - interaction_consistency_checker
+#  - interaction_consistency_checker

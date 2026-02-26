@@ -23,6 +23,7 @@ under the License.
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_stream.h>
 #include <exaDEM/interaction/interaction_enum.hpp>
+#include <exaDEM/color_log.hpp>
 
 namespace exaDEM {
 struct ParticleSubLocation {
@@ -93,6 +94,28 @@ struct InteractionPair {
     return ghost != PartnerGhost;
   }
 
+  // used for debugging
+  // CPU only
+  inline bool consistent() const {
+    bool res = true;
+    if (owner() == partner()) {
+      color_log::warning("InteractionPair::consistent()",
+                         "owner ParticleSubLocation is equal to the partner()");
+      res = false;
+    }
+    if (ghost > InteractionPair::PartnerGhost) {
+      color_log::warning("InteractionPair::consistent()",
+                         "ghost is undefined: " + std::to_string(ghost));
+      res = false;
+    }
+    if (swap >= 2 /* not a boolean */) {
+      color_log::warning("InteractionPair::consistent()",
+                         "swap is undefined: " + std::to_string(swap));
+      res = false;
+    }
+    return res;
+  }
+
   /**
    * @brief Displays the Interaction data.
    */
@@ -116,6 +139,10 @@ struct InteractionPair {
               << " [cell: " << cell_j << ", idx " << p_j << ", particle id: " << id_j << ", sub: " << sub_j << "]"
               << " swap: " << int(swap) << " ghost: " << int(ghost) << ")" << std::endl;
   }
+
+  ///////////////
+  // Operators //
+  ///////////////
 
   /**
    * @brief return true if particles id and particles sub id are equals.

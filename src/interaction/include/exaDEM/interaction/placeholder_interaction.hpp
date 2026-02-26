@@ -110,6 +110,12 @@ struct PlaceholderInteraction {
     return pair;
   }
 
+  // used for debugging
+  // CPU only
+  inline bool consistent() const {
+    return pair.consistent();
+  }
+
   /**
    * @brief Displays the Interaction data.
    */

@@ -45,7 +45,9 @@ struct CopierFunc {
       PlaceholderInteraction* __restrict__ data_ptr,
       size_t& shift, int start, int size) const {
     for (int j = start; j < start+size; j++) {
+      // printf("CopierFunc::shift %lu\n", shift);
       data_ptr[shift++] = wrapper(j);
+      // printf("CopierFunc -> shift %lu, id %lu id wrapper %lu\n", shift, data_ptr[shift-1].pair.pi.id, wrapper(j).pair.pi.id);
     }
   }
 };
@@ -57,6 +59,7 @@ struct CountActiveInteractionFunc {
       size_t& count, int start, int size) const {
     for (int j = start; j < start+size; j++) {
       if (wrapper(j).active()) {
+        // printf("count %lu\n", count);
         count++;
       }
     }
@@ -70,8 +73,10 @@ struct CopierActiveInteractionFunc {
       PlaceholderInteraction* __restrict__ data_ptr,
       size_t& shift, int start, int size) const {
     for (int j = start; j < start+size; j++) {
+      // printf("shift %lu\n", shift);
       if (wrapper(j).active()) {
         data_ptr[shift++] = wrapper(j);
+        // printf("shift %lu, id %lu id wrapper %lu\n", shift, data_ptr[shift-1].pair.pi.id, wrapper(j).pair.pi.id);
       }
     }
   }
@@ -125,15 +130,15 @@ void transfer_classifier_grid(size_t* cell_ptr,
     // Total number of interactions in this cell
     size_t number_of_interactions = 0;
     if constexpr (!active_interaction) {
-      for (size_t type_id = 0; type_id < InteractionTypeId::NTypes; type_id++) {
-        number_of_interactions += n_elem_per_type[type_id];
+      for (size_t typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
+        number_of_interactions += n_elem_per_type[typeID];
       }
     } else {
       CountActiveInteractionFunc counter;
-      for (size_t type_id = 0; type_id < InteractionTypeId::NTypes; type_id++) {
-        int start = first_elem_per_type[type_id];
-        int size = n_elem_per_type[type_id];
-        IDispatcher::dispatch(type_id, iaccessor, counter, number_of_interactions, start, size);
+      for (size_t typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
+        int start = first_elem_per_type[typeID];
+        int size = n_elem_per_type[typeID];
+        IDispatcher::dispatch(typeID, iaccessor, counter, number_of_interactions, start, size);
       }
     }
 
@@ -152,19 +157,16 @@ void transfer_classifier_grid(size_t* cell_ptr,
 
     // Copy classified interactions into storage
     size_t shift = 0;
-    for (size_t type_id = 0; type_id < InteractionTypeId::NTypes; type_id++) {
-      int start = first_elem_per_type[type_id];
-      int size = n_elem_per_type[type_id];
+    for (size_t typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
+      int start = first_elem_per_type[typeID];
+      int size = n_elem_per_type[typeID];
       if (size>0) {
-        lout << "type " << type_id << std::endl;
-        lout << "size " << size << std::endl;
-        lout << "shift " << shift << std::endl;
         if constexpr (!active_interaction) {
           CopierFunc copier;
-          IDispatcher::dispatch(type_id, iaccessor, copier, data_ptr, shift, start, size);
+          IDispatcher::dispatch(typeID, iaccessor, copier, data_ptr, shift, start, size);
         } else {
           CopierActiveInteractionFunc copier;
-          IDispatcher::dispatch(type_id, iaccessor, copier, data_ptr, shift, start, size);
+          IDispatcher::dispatch(typeID, iaccessor, copier, data_ptr, shift, start, size);
         }
       }
     }
@@ -180,22 +182,22 @@ void transfer_classifier_grid(size_t* cell_ptr,
 
     // reindex info
     int info_offset = 0;
-
-    lout << "Particle Info size: " << info_particles.size() << std::endl;
     for(size_t i = 0 ; i < info_particles.size() ; i++) {
       auto& [_offset, _size, _pid] = info_particles[i];
       _offset = info_offset;
       _size = 0;
       for(size_t j = info_offset; j < storage.m_data.size() ; j++) {
+        if (!data_ptr[j].consistent()) {
+          data_ptr[j].print();
+          color_log::mpi_error("transfer_classifier_grid", "This interacion is illformed");
+        }
         if (_pid != data_ptr[j].owner().id) {
           break;
         }
         _size++;
       }
       info_offset += _size;
-      lout << "Particle Info[" << _pid << "]: " << _offset << " " << _size << std::endl;
     }
-    lout << "end" << std::endl;
   }
 }
 }  // namespace exaDEM

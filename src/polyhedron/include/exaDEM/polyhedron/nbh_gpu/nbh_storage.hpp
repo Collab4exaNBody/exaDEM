@@ -12,6 +12,7 @@ struct NbhCellHostStorage {
   template<typename T> using VectorT = std::vector<T>;
   VectorT<size_t> owner_cell;   ///< Index of the cell that owns each non-empty cell
   VectorT<size_t> partner_cell; ///< Index of the interacting partner cell
+  VectorT<uint8_t> ghost;       ///< 1 if the partner cell is ghost
 };
 
 /**
@@ -30,8 +31,8 @@ struct ResetCellMembers {
       inline void operator()(size_t i) const {
         _skip[i] = true;  // used by the second pass
         for (size_t j = 0; j < InteractionTypeId::NTypes; j++) {
-          _size[i][j];
-          _offset[i][j];
+          _size[i][j] = 0;
+          _offset[i][j] = 0;
         }
       }
 };
@@ -49,6 +50,7 @@ struct NbhCellStorage {
   VectorT<InteractionTypePerCellCounter> offset;    ///< Offset for each interaction type per cell
   VectorT<size_t> owner_cell;                       ///< Owner cell index for each non-empty cell
   VectorT<size_t> partner_cell;                     ///< Partner cell index for each non-empty cell
+  VectorT<uint8_t> ghost;                           ///< Flag to skip a partner cell is a ghost
   VectorT<uint8_t> skip;                            ///< Flag to skip a cell in the second pass
 
   /**
@@ -85,6 +87,7 @@ struct NbhCellStorage {
     // Transfer owner and partner cells
     transfer_data(owner_cell, host.owner_cell, n_cells);
     transfer_data(partner_cell, host.partner_cell, n_cells);
+    transfer_data(ghost, host.ghost, n_cells);
 
     // Resize size, offset, skip vectors
     size.resize(n_cells);
@@ -107,9 +110,10 @@ struct NbhCellStorage {
 struct NbhCellAccessor {
   InteractionTypePerCellCounter* __restrict__ size;      ///< Number of interactions per type for each cell
   InteractionTypePerCellCounter* __restrict__ offset;    ///< Offset for each interaction type per cell
-  uint8_t* __restrict__ skip;                            ///< Flag to skip a cell in second pass
   size_t* __restrict__ owner_cell;                       ///< Owner cell index for each non-empty cell
   size_t* __restrict__ partner_cell;                     ///< Partner cell index for each non-empty cell
+  uint8_t* __restrict__ ghost;                           ///< Partner cell is a ghost ?
+  uint8_t* __restrict__ skip;                            ///< Flag to skip a cell in second pass
 
  public:
   /**
@@ -119,15 +123,17 @@ struct NbhCellAccessor {
   NbhCellAccessor(NbhCellStorage& storage)
       : size(storage.size.data()),
       offset(storage.offset.data()),
-      skip(storage.skip.data()),
       owner_cell(storage.owner_cell.data()),
-      partner_cell(storage.partner_cell.data())
+      partner_cell(storage.partner_cell.data()),
+      ghost(storage.ghost.data()),
+      skip(storage.skip.data())
   {
     // Basic consistency check
     const auto n = storage.owner_cell.size();
     if (storage.size.size() != n
         || storage.offset.size() != n
         || storage.skip.size() != n
+        || storage.ghost.size() != n
         || storage.partner_cell.size() != n) 
     {
       color_log::mpi_error(

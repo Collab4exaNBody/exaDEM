@@ -48,23 +48,24 @@ void setup_history_clean_ges(TMPLC& cells,
   }
   */
 #pragma omp parallel for reduction(+: sum)
-  for(size_t i = 0; i < ncells; ++i)
-  {
-    sum += ges.m_data[idxs[i]].m_data.size();
-    history.size[i] = ges.m_data[idxs[i]].m_data.size();
+  for (size_t i = 0; i < ncells; ++i) {
+    size_t cell_idx = idxs[i];
+    sum += ges.m_data[cell_idx].m_data.size();
+    history.size[i] = ges.m_data[cell_idx].m_data.size();
+    /*
     for (size_t j = 0 ; j < ges.m_data[idxs[i]].m_data.size() ; j++) {
       ges.m_data[idxs[i]].m_data[j].print();
-    }
+    }*/
   }
 
   history.start[0] = 0;
-  for(size_t i = 1; i < ncells; ++i)
-  {
+  for(size_t i = 1; i < ncells; ++i) {
     history.start[i] = history.start[i-1] + history.size[i-1];
   }
 
   history.data.resize(sum);
 
+  PlaceholderInteraction* __restrict__ history_data_ptr = history.data.data();
   // reset storage for new data;
 # pragma omp parallel for
   for(size_t i = 0 ; i < ncells ; i++) {
@@ -74,15 +75,14 @@ void setup_history_clean_ges(TMPLC& cells,
 
     if (data_size > 0) {
       PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
-      std::memcpy(history.data.data() + history.start[cell_idx],
+      std::memcpy(history_data_ptr + history.start[i],
                   data_ptr, data_size * sizeof(PlaceholderInteraction));
     }
 
     size_t n_particles = cells[cell_idx].size();
-    storage.initialize(n_particles);
-
-    const uint64_t* __restrict__ id_a = cells[cell_idx][field::id];
-    ONIKA_ASSUME_ALIGNED(id_a);
+    storage.initialize(n_particles);  // clean storage.m_data
+    const uint64_t* id_a = cells[cell_idx][field::id];
+    // ONIKA_ASSUME_ALIGNED(id_a);
     auto& info_particles = storage.m_info;
 
     // Fill particle ids in the interaction storage
@@ -90,7 +90,7 @@ void setup_history_clean_ges(TMPLC& cells,
       info_particles[it].pid = id_a[it];
     }
   }
-  history.prefetch_gpu(st);
+  //history.prefetch_gpu(st);
 }
 
 struct UpdateHistoryImplFunc {

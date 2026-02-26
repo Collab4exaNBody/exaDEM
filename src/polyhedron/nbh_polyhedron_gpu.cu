@@ -87,7 +87,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     auto& g = *grid;
     const auto cells = g.cells();
     using ACF = ApplyClassifierFunc<block_size_x, block_size_y, decltype(cells)>;
-    lout << "Operator in progress" << std::endl;
+    // lout << "Operator in progress" << std::endl;
     const IJK dims = g.dimension();
     const size_t n_cells = g.number_of_cells();
     shapes& shps = *shapes_collection;
@@ -118,7 +118,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     };
 
     //
-    lout << "Fill CPU data storage" << std::endl;
+    // lout << "Fill CPU data storage" << std::endl;
     info_cell.resize(cell_size);
     size_t shift = 0;
 		for(size_t i = 0 ; i < cell_size ; i++) {
@@ -133,19 +133,25 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
         if (cells[cell_b].size() > 0) {
           CellInfoStorageHost.owner_cell.push_back(cell_a);
           CellInfoStorageHost.partner_cell.push_back(cell_b);
-          incr++;
-        }        
-      }
+          if (g.is_ghost_cell(cell_b)) {
+            info_cell.update_ghost[i] = 1;
+            CellInfoStorageHost.ghost.push_back(InteractionPair::OwnerGhost);
+          } else {
+            CellInfoStorageHost.ghost.push_back(InteractionPair::NotGhost);
+          }  // test ghost
+					incr++;
+        }  //  test cb.size > 0
+      }  // loop j
       info_cell.number_of_pair_cells[i] = incr;
       shift += incr;
-    }
+    }  // loop i
     info_cell.prefetch_cpu(st_updateghost);
 
 
     auto get_exec_ctx = [this] () {
       return this->parallel_execution_context();
     };
-    lout << "Copy to GPU" << std::endl;
+    // lout << "Copy to GPU" << std::endl;
     // copy to gpu here
     NbhCellStorage& info_cell_pair = nbh_manager->info_pair_cell;
     info_cell_pair.reset(CellInfoStorageHost, get_exec_ctx);
@@ -166,7 +172,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 
     auto cell_pair_size = CellInfoStorageHost.owner_cell.size();
     ONIKA_CU_DEVICE_SYNCHRONIZE();
-    lout << "Get the number of interactions" << std::endl;
+    // lout << "Get the number of interactions" << std::endl;
  
     // run ApplyNbhFunc
 		auto pec1 = parallel_execution_context();
@@ -183,7 +189,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
                             *ges, history, st_history);
 
 		// fill offset
-    lout << "Prefix sum to get offsets per cell pairs" << std::endl;
+    // lout << "Prefix sum to get offsets per cell pairs" << std::endl;
     PrefixSumInteractionTypePerCellCounter func_prefix = {
       accessor.offset, accessor.size, cell_pair_size};
     parallel_for(4, func_prefix, parallel_execution_context(), opts);
@@ -191,18 +197,18 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
 #ifdef DEBUG_NBH_GPU
-    debug_print(info_cell_pair.offset.back(), info_cell_pair.size.back());
+    // debug_print(info_cell_pair.offset.back(), info_cell_pair.size.back());
 #endif
 
 	  // ****** Second pass ******* //
 	  // prepare ApplyClassifierFunc
     auto new_size = info_cell_pair.offset.back() + info_cell_pair.size.back();
     InteractionParticleAccessor classifier_accessor;
-    lout << "Prepare containers (classifier)" << std::endl;
-		for (size_t type_id = 0; type_id<ParticleParticleSize ; type_id++) {
-				auto& c = container.get_data<ParticleParticle>(type_id);
-				c.resize(new_size[type_id]);
-				classifier_accessor[type_id] = InteractionWrapper(c); 
+    // lout << "Prepare containers (classifier)" << std::endl;
+		for (size_t typeID = 0; typeID<ParticleParticleSize ; typeID++) {
+				auto& c = container.get_data<ParticleParticle>(typeID);
+				c.resize(new_size[typeID]);
+				classifier_accessor[typeID] = InteractionWrapper(c); 
 		}
 
 		ACF filler = {
@@ -211,13 +217,12 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 			vertex_fields, classifier_accessor};
 
 		// run ApplyClassifierFunc 
-		lout << "Copy interaction within the classifier" << std::endl;
+		// lout << "Copy interaction within the classifier" << std::endl;
 		auto pec2 = parallel_execution_context();
 		pec2->s_gpu_block_dims = {block_size_x, block_size_y, 1};  // enforce block size 
 		onika::parallel::block_parallel_for(parallel_range, filler, pec2, bopts);
-		lout << "victory" << std::endl;
 
-    lout << "Prepare containers (classifier)" << std::endl;
+    // lout << "Prepare Wrappers (on classifier)" << std::endl;
     InteractionWrapperStorage wrappers(container);
     InteractionWrapperAccessor classifier_interaction_accessor = wrappers.accessor();
 
@@ -234,7 +239,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 
 
     // update ghost area with interactions
-    lout << "Project ghost interactions on grid." << std::endl;
+    // lout << "Project ghost interactions on grid." << std::endl;
     constexpr bool do_ghost_only = false;  // should be true, but false is better for debugging
     constexpr bool do_active_interaction_only = false;
 		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
@@ -244,16 +249,15 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 #ifdef DEBUG_NBH_GPU
 		// Debug check
 		ONIKA_CU_DEVICE_SYNCHRONIZE();
-		for (size_t type_id = 1; type_id<ParticleParticleSize ; type_id++) {
-      lout << "type_id " << type_id << std::endl;
-			auto& InteractionList = container.get_data<ParticleParticle>(type_id);
+		//for (size_t typeID = 0; typeID< 1 ; typeID++) {
+/*
+		for (size_t typeID = 0; typeID<ParticleParticleSize ; typeID++) {
+			auto& InteractionList = container.get_data<ParticleParticle>(typeID);
 			for(size_t i = 0 ; i < InteractionList.size(); i++) {
 				auto I = InteractionList[i];
-				if( I.pair.type == 0 && I.pair.pj.sub > 8 ) {
-				  I.print();
-        }
+			  I.print();
 			} 
-		}
+		}*/
 #endif
 
 #endif
