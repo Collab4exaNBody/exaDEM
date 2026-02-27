@@ -140,14 +140,14 @@ inline void detection(Func& func,
       if (!func.skip(InteractionTypeId::VertexEdge)) {
         for (int i = thread.x; i < nea; i+= block.x) {
           if (filter_vertex_edge(PARAMETERS_SWAP_TRUE)) {
-            func(i, j, InteractionTypeId::VertexEdge, true);
+            func(j, i, InteractionTypeId::VertexEdge, true);
           }
         }  // thread.x
       }  // VertexEdge
       if (!func.skip(InteractionTypeId::VertexFace)) {
         for (int i = thread.x; i < nfa; i+= block.x) {
           if (filter_vertex_face(PARAMETERS_SWAP_TRUE)) {
-            func(i, j, InteractionTypeId::VertexFace, true);
+            func(j, i, InteractionTypeId::VertexFace, true);
           }
         }  // thread.x 
       }  // VertexFace
@@ -180,7 +180,7 @@ struct ApplyNbhFunc {
       ONIKA_HOST_DEVICE_FUNC inline bool skip(uint8_t i) { return false ; }
       ONIKA_HOST_DEVICE_FUNC void swap_ij() {}
       ONIKA_HOST_DEVICE_FUNC inline void operator() (
-          size_t i, size_t j, int InteractionType, bool swap) {
+          int i, int j, int InteractionType, bool swap) {
         counter[InteractionType]++;
       }
     };
@@ -252,7 +252,7 @@ struct ApplyClassifierFunc {  // Second pass
       ONIKA_HOST_DEVICE_FUNC inline void swap_ij() {}
       ONIKA_HOST_DEVICE_FUNC inline bool skip(uint8_t i) { return false; }
       ONIKA_HOST_DEVICE_FUNC inline void operator() (
-          size_t i, size_t j, int InteractionType, bool swap) {
+          int i, int j, int InteractionType, bool swap) {
         counter[InteractionType]++;
       }
     };
@@ -272,11 +272,24 @@ struct ApplyClassifierFunc {  // Second pass
           }
 
       ONIKA_HOST_DEVICE_FUNC
-          inline void operator() (size_t i, size_t j, int InteractionType, bool swap) {
+          inline void operator() (int i, int j, int InteractionType, bool swap) {
             item.pair.swap = swap;
             item.pair.pi.sub = i;
             item.pair.pj.sub = j;
+            auto& PJ = item.pair.pj;
+            PJ.sub = j;
             item.pair.type = InteractionType;
+            /*
+               printf("adder interaction %d at place %d = "
+               "idi: %llu idj: %llu, subi: %u, subj: %u, swap %d\n",
+               InteractionType,
+               prefix[InteractionType],
+               (unsigned long long)item.pair.pi.id,
+               (unsigned long long)item.pair.pj.id,
+               item.pair.pi.sub,
+               item.pair.pj.sub,
+               (int) item.pair.swap);
+               */
             data[InteractionType].set(prefix[InteractionType]++, item);
           }
 
@@ -334,7 +347,7 @@ struct ApplyClassifierFunc {  // Second pass
       BlockScan(temp_storage).ExclusiveSum(func.counter[typeID], adder.prefix[typeID]);
       ONIKA_CU_BLOCK_SYNC();
       adder.prefix[typeID] += sdata[typeID];
-      //printf("adder.prefix[%d] = %d\n", type, adder.prefix[type]);
+      //printf("adder.prefix[%d] = %d\n", typeID, adder.prefix[typeID]);
     }
     for(size_t pa = 0; pa < cell_a.size() ; pa++) {
       // load data relative to the particle a
@@ -360,9 +373,9 @@ struct ApplyClassifierFunc {  // Second pass
         adder.item.pair.pi.id = body_a.id;
         adder.item.pair.pi.p = pa;
         adder.item.pair.pi.cell = cell_id_a;
-        adder.item.pair.pj.id = body_b.id;
-        adder.item.pair.pj.p = pb;
-        adder.item.pair.pj.cell = cell_id_b;
+        adder.item.pair.pj.id = static_cast<uint64_t>(body_b.id);
+        adder.item.pair.pj.p = static_cast<uint16_t>(pb);
+        adder.item.pair.pj.cell = static_cast<size_t>(cell_id_b);
         detection(adder, rcut_inc, body_a, vertices_a,
                   shpa, aabb_body_a, obb_a,
                   body_b, vertices_b, shpb);

@@ -26,7 +26,7 @@ under the License.
 #include <exaDEM/color_log.hpp>
 
 namespace exaDEM {
-struct ParticleSubLocation {
+struct  ParticleSubLocation {
   uint64_t id;   /**< Id of the first particle */
   uint32_t cell; /**< Index of the cell of the first particle involved in the interaction. */
   uint16_t p;    /**< Index of the particle within its cell for the particle involved in the interaction. */

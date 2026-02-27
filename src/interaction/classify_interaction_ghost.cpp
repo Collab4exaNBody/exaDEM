@@ -67,7 +67,10 @@ class ClassificationInteractionGhost : public OperatorNode {
     InteractionBuffers buffer;
     std::vector<std::array<std::pair<size_t, size_t>, ntypes> > bounds;
     bounds.resize(n_threads);
-
+    std::array<size_t, ntypes> old_size;
+    for (int typeID = 0; typeID < ntypes; typeID++) {
+      old_size[typeID] = classifier.get_size(typeID);
+    }
 
     // Reset Interaction within the grid ghost layer
 #pragma omp parallel
@@ -98,7 +101,7 @@ class ClassificationInteractionGhost : public OperatorNode {
         for (size_t i = 0; i < threads; i++) {
           start += bounds[i][typeID].second;
         }
-        bound[typeID].first = start;
+        bound[typeID].first = start + old_size[typeID];
       }
 
 #   pragma omp barrier
