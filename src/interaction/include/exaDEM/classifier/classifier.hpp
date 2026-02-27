@@ -121,21 +121,29 @@ struct Classifier {
    * @return Reference to the CUDA memory-managed vector storing interactions of the specified type.
    */
   template <InteractionType IT>
-  auto& get_data(size_t id) {
-    int typed_id = get_typed_idx<IT>(id);
+  auto& get_data(size_t typeID) {
+    int typed_id = get_typed_idx<IT>(typeID);
     auto& data = get_container<IT>();
     if (typed_id >= int(data.size())) {
-      color_log::error("Classifier::get_data", "Invalid id in get_wave()");
+      std::string msg = "Invalid id in get_data:\n";
+      msg+="Type ID: " + std::to_string(typeID) + "\n";
+      msg+= "Typed ID: " + std::to_string(typed_id) + "\n";
+      msg+= "InteractionType: " + get_name<IT>();
+      color_log::error("Classifier::get_data", msg);
     }
     return data[typed_id];
   }
 
   template <InteractionType IT>
-  const auto& get_data(size_t id) const {
-    int typed_id = get_typed_idx<IT>(id);
+  const auto& get_data(size_t typeID) const {
+    int typed_id = get_typed_idx<IT>(typeID);
     auto& data = get_container<IT>();
     if (typed_id >= int(data.size())) {
-      color_log::error("Classifier::get_data", "Invalid id in get_wave()");
+      std::string msg = "Invalid id in get_data:\n";
+      msg+="Type ID: " + std::to_string(typeID) + "\n";
+      msg+= "Typed ID: " + std::to_string(typed_id) + "\n";
+      msg+= "InteractionType: " + get_name<IT>();
+      color_log::error("Classifier::get_data", msg);
     }
     return data[typed_id];
   }
@@ -152,6 +160,24 @@ struct Classifier {
     return func.value;
   }
 
+  void resize(int typeID, size_t size) {
+    auto resizer = [](auto& container, size_t s) -> void {
+      container.resize(s);
+    };
+    ClassifierContainerApplyFunc func = { resizer };
+    CDispatcher::dispatch(typeID, *this, func, size);
+  }
+
+  void copy(int typeID, size_t start, size_t size,
+            std::vector<PlaceholderInteraction>& vec) {
+    auto copier = [typeID](auto& container, size_t st, size_t si,
+                           std::vector<PlaceholderInteraction>& v) {
+      container.copy(st, si, v, typeID);
+    };
+    ClassifierContainerApplyFunc func = { copier};
+    CDispatcher::dispatch(typeID, *this, func, start, size, vec);
+  }
+
   /**
    * @brief Retrieves the pointer and size of the data stored in the CUDA memory-managed vector for a specific type.
    *
@@ -160,22 +186,24 @@ struct Classifier {
    */
 
   template <InteractionType IT>
-  std::pair<ClassifierContainer<IT>&, size_t> get_info(size_t id) {
-    int typed_id = get_typed_idx<IT>(id);
+  std::pair<ClassifierContainer<IT>&, size_t> get_info(size_t typeID) {
+    int typed_id = get_typed_idx<IT>(typeID);
     auto& data = get_container<IT>();
     if (typed_id >= int(data.size())) {
-      color_log::error("Classifier::get_info", "Invalid Type id");
+      std::string msg = "Invalid Type id: " + std::to_string(typeID); 
+      color_log::error("Classifier::get_info", msg);
     }
     const unsigned int data_size = data[typed_id].size();
     return std::pair<ClassifierContainer<IT>&, size_t>{data[typed_id], data_size};
   }
 
   template <InteractionType IT>
-  std::pair<const ClassifierContainer<IT>&, size_t> get_info(size_t id) const {
-    int typed_id = get_typed_idx<IT>(id);
+  std::pair<const ClassifierContainer<IT>&, size_t> get_info(size_t typeID) const {
+    int typed_id = get_typed_idx<IT>(typeID);
     auto& data = get_container<IT>();
     if (typed_id >= int(data.size())) {
-      color_log::error("Classifier::get_info", "Invalid Type id");
+      std::string msg = "Invalid Type id: " + std::to_string(typeID); 
+      color_log::error("Classifier::get_info", msg);
     }
     const unsigned int data_size = data[typed_id].size();
     return std::pair<const ClassifierContainer<IT>&, size_t>{data[typed_id], data_size};

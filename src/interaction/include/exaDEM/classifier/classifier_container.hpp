@@ -353,6 +353,15 @@ struct ClassifierContainerDispatcher
 using CDispatcher = ClassifierContainerDispatcher<InteractionType::ParticleParticle, InteractionType::ParticleDriver, InteractionType::InnerBond>;
 
 // bunch of functions used by the dispatcher
+template<typename Apply>
+struct ClassifierContainerApplyFunc {
+  Apply apply;
+  template<InteractionType IT, typename... Args>
+  void operator()(ClassifierContainer<IT>& container,
+                  Args&&... args) {
+    apply(container, std::forward<Args>(args)...);
+  } 
+};
 struct ClassifierContainerSizeFunc {
   size_t value = 0;
   template<InteractionType IT>
