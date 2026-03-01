@@ -116,6 +116,15 @@ drivers:
   - driver_vertices:
      force_host: true
 
+update_ghost_config:
+  verbose: true
+  update_ghost_config:
+    gpu_buffer_pack: true
+    async_buffer_pack: true
+    staging_buffer: true
+    serialize_pack_send: true
+    wait_all: false
+
 ######## simulation program description #################
 simulation:
   name: sim
@@ -123,6 +132,7 @@ simulation:
     - print_logo_banner
     - hw_device_init   # provides MPI_COMM_WORLD as a default communicator
     - global
+    - update_ghost_config
     - io_tree
     - drivers
     - domain

@@ -47,15 +47,15 @@ struct VertexField {
    * @param pid Particle index
    * @param vid Vertex index (within particle)
    */
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d operator()(int pid, int vid) {
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d operator()(int pid, int vid)
+#if defined(__GNUC__)
+  __attribute__((always_inline))
+#endif
+  {
     assert(vid < m_n_vertices);
-    Vec3d res;
     int i = pid + 3 * m_n_particles * vid;
     double* const __restrict__ data = onika::cuda::vector_data(m_vertices);
-    res.x = data[i];
-    res.y = data[i + m_n_particles];
-    res.z = data[i + 2 * m_n_particles];
-    return res;
+    return Vec3d{data[i], data[i + m_n_particles], data[i + 2 * m_n_particles]};
   }
 
   /**
@@ -63,16 +63,16 @@ struct VertexField {
    * @param pid Particle index
    * @param vid Vertex index (within particle)
    */
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d operator()(int pid, int vid) const {
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d operator()(int pid, int vid) const
+#if defined(__GNUC__)
+  __attribute__((always_inline))
+#endif
+  {
     assert(vid < m_n_vertices);
     assert(pid < m_n_particles);
-    Vec3d res;
     int i = pid + 3 * m_n_particles * vid;
     const double* __restrict__ data = onika::cuda::vector_data(m_vertices);
-    res.x = data[i];
-    res.y = data[i + m_n_particles];
-    res.z = data[i + 2 * m_n_particles];
-    return res;
+    return Vec3d{data[i], data[i + m_n_particles], data[i + 2 * m_n_particles]};
   }
 
   /**
@@ -101,11 +101,19 @@ struct ParticleVertexView {
   size_t pid;          /**< Particle ID */
   VertexField& buffer; /**< Reference to the vertex field buffer */
 
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d operator[](int vid) {
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d operator[](int vid) __attribute__((always_inline))
+#if defined(__GNUC__)
+  __attribute__((always_inline))
+#endif
+  {
     return buffer(pid, vid);
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline const Vec3d operator[](int vid) const {
+  ONIKA_HOST_DEVICE_FUNC inline const Vec3d operator[](int vid) const __attribute__((always_inline))
+#if defined(__GNUC__)
+  __attribute__((always_inline))
+#endif
+  {
     return buffer(pid, vid);
   }
 

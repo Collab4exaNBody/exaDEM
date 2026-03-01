@@ -20,7 +20,7 @@ io_tree:
 input_data:
   - init_rcb_grid
   - read_dump_particle_interaction:
-     filename: SpehreLinearForceMotionDir/CheckpointFiles/exadem_0002000000.dump
+     filename: regression_test_restart_file.dump
 
 global:
   simulation_dump_frequency: -1

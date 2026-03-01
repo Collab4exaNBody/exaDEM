@@ -32,7 +32,6 @@ under the License.
 #include <onika/soatl/field_tuple.h>
 #include <mpi.h>
 
-#include <exanb/mpi/update_ghost_utils.h>
 #include <exanb/mpi/ghosts_comm_scheme.h>
 #include <exanb/mpi/update_ghosts.h>
 #include <onika/mpi/data_types.h>
