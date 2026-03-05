@@ -189,7 +189,7 @@ struct Cylinder : public Cylinder_params, Driver_params {
     const double dn = radius - (rcut + d);
 
     if (dn > 0) {
-      return {false, 0.0, Vec3d(), Vec3d()};
+      return {false, dn, Vec3d(), Vec3d()};
     } else {
       // === compute contact normal
       const Vec3d n = dir / d;
