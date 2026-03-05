@@ -1,0 +1,100 @@
+includes:
+  - config_polyhedra.msp
+
+io_tree:
+  - io_config:
+     dir_name: "AddCubeDir"
+
+particle_regions:
+  - BOT:
+     bounds: [ [ 0. , 0. , 0. ] , [ 7. , 1. , 1. ] ]
+  - TOP:
+     bounds: [ [ 0. , 0. , 1. ] , [ 7. , 1. , 4. ] ]
+
+adder:
+  - add_xyz:
+     file: mini_sample.txt
+     shift: [0,0,2]
+  - add_xyz:
+     file: mini_sample.txt
+     shift: [0,0,3]
+     filter: [[0,0,3], [5,1,4]]
+  - set_fields:
+     polyhedra: true
+     type:              [     shape1 ,     shape2 ,      shape3 ]
+     random_quaternion: [       true ,       true ,        true ]
+     sigma_velocity:    [       0.01 ,       0.01 ,        0.01 ]
+     velocity:          [ [0,0,-0.1] , [0,0,-0.2] , [0,0,-0.05] ]
+     region: TOP
+
+input_data:
+  - init_rcb_grid
+  - add_sphere:
+     minskowski: 0.4
+     name: shape1
+  - add_cube:
+     length: 0.4
+     minskowski: 0.05
+     name: shape2
+  - add_rice:
+     length: 0.3
+     minskowski: 0.1
+     name: shape3
+  - lattice:
+     structure: SC
+     types: [ shape2 ]
+     size: [ 1. , 1. , 1. ]
+     region: BOT
+  - set_fields:
+     polyhedra: true
+     type:              [  shape2 ]
+     random_quaternion: [    true ]
+     sigma_velocity:    [     0.1 ]
+     velocity:          [ [0,0,0] ]     
+     region: BOT
+  - adder
+
+setup_drivers:
+  - register_surface:
+     id: 0
+     state:
+        normal: [0,0,1]
+        offset: -1
+     params:
+        motion_type: STATIONARY
+
+particle_write_paraview_generic:
+  - write_paraview_polyhedra
+  - write_conf_rockable
+
+compute_force:
+  - gravity_force
+  - contact_polyhedron:
+     config:
+        kn: 5000
+        kt: 5000
+        kr: 0.0
+        mu: 0.1
+        damp_rate: 0.87
+     config_driver:
+        kn: 5000
+        kt: 5000
+        kr: 0.0
+        mu: 0.1
+        damp_rate: 0.87
+
+domain:
+  cell_size: 1
+  periodic: [false, false, false]
+  grid_dims: [7, 1, 4]
+  bounds: [[0,0,0],[7, 1, 4]]
+  expandable: true
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 300000
+  simulation_log_frequency: 10000
+  simulation_paraview_frequency: 2500
+  dt: 0.0001 s 
+  rcut_inc: 0.1
+  enable_contact_network: true
