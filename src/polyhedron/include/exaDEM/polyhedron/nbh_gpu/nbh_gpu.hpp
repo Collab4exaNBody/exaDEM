@@ -128,6 +128,14 @@ inline void detection(Func& func,
     }  // if obb
   }  // end thread.x
 
+  for (int i = thread.x; i < nea; i+=block.x) {
+    for (int j = thread.y; j < neb; j+= block.y) {
+      if (filter_edge_edge(PARAMETERS_SWAP_FALSE)) {
+        func(i, j, InteractionTypeId::EdgeEdge, false);
+      }
+    }
+  }
+
   func.swap_ij();
 
   for (int j = thread.y; j < nvb; j+= block.y) {

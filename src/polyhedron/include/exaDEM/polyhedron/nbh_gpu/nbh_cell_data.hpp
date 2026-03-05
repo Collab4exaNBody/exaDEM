@@ -1,5 +1,6 @@
 #pragma once
 #include <exaDEM/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 
 namespace exaDEM {
 // Stores information about non-empty cells (GPU/CPU friendly)
@@ -94,15 +95,17 @@ template<bool ghost_only, bool active_interaction>
 void transfer_classifier_grid(size_t* cell_ptr,
                               CellInteractionInformation& info,
                               NbhCellStorage& classifier_helper,
+                              CellDriverStorage& classifier_helper_driver,
                               InteractionWrapperAccessor& iaccessor,
-                              GridCellParticleInteraction& ges) {
+                              GridCellParticleInteraction& ges,
+                              const int typeID_start = 0,
+                              const int typeID_end = InteractionTypeId::NTypes - 1) {
   // Number of non-empty cells to process
   size_t ncells = info.start_cell.size();
 
   // Parallel loop over non-empty cells
 #pragma omp parallel for
   for (size_t cell_idx = 0; cell_idx < ncells; cell_idx++) {
-
     // Skip if we only want ghost cells and this cell is not flagged
     if constexpr (ghost_only) {
       if (info.update_ghost[cell_idx] == 0) {
@@ -122,20 +125,24 @@ void transfer_classifier_grid(size_t* cell_ptr,
     size_t owner_cell = cell_ptr[cell_idx];
 
     // Compute number of interactions per type for this cell
-    auto& first_elem_per_type = classifier_helper.offset[first_interaction];
-    auto n_elem_per_type = classifier_helper.offset[last_interaction] 
+    auto first_elem_per_type = 
+        classifier_helper.offset[first_interaction]
+        + classifier_helper_driver.offset[cell_idx];
+    auto n_elem_per_type =
+        classifier_helper.offset[last_interaction] 
         + classifier_helper.size[last_interaction] 
-        - first_elem_per_type;
+        - first_elem_per_type
+        + classifier_helper_driver.size[cell_idx];
 
     // Total number of interactions in this cell
     size_t number_of_interactions = 0;
     if constexpr (!active_interaction) {
-      for (size_t typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
+      for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
         number_of_interactions += n_elem_per_type[typeID];
       }
     } else {
       CountActiveInteractionFunc counter;
-      for (size_t typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
+      for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
         int start = first_elem_per_type[typeID];
         int size = n_elem_per_type[typeID];
         IDispatcher::dispatch(typeID, iaccessor, counter, number_of_interactions, start, size);
@@ -157,7 +164,7 @@ void transfer_classifier_grid(size_t* cell_ptr,
 
     // Copy classified interactions into storage
     size_t shift = 0;
-    for (size_t typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
+    for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
       int start = first_elem_per_type[typeID];
       int size = n_elem_per_type[typeID];
       if (size>0) {
@@ -182,11 +189,11 @@ void transfer_classifier_grid(size_t* cell_ptr,
 
     // reindex info
     int info_offset = 0;
-    for(size_t i = 0 ; i < info_particles.size() ; i++) {
+    for (size_t i = 0 ; i < info_particles.size() ; i++) {
       auto& [_offset, _size, _pid] = info_particles[i];
       _offset = info_offset;
       _size = 0;
-      for(size_t j = info_offset; j < storage.m_data.size() ; j++) {
+      for (size_t j = info_offset; j < storage.m_data.size() ; j++) {
         if (!data_ptr[j].consistent()) {
           data_ptr[j].print();
           color_log::mpi_error("transfer_classifier_grid", "This interacion is illformed");

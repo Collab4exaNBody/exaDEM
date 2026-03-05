@@ -13,7 +13,9 @@ typedef onika::oarray_t<int,
 typedef onika::oarray_t<InteractionWrapper<ParticleParticle>,
         InteractionTypeId::NTypes> InteractionAccessor;
 typedef onika::oarray_t<InteractionWrapper<ParticleParticle>,
-        ParticleParticleSize> InteractionParticleAccessor;
+        InteractionTypeId::NTypesPP> InteractionParticleAccessor;
+typedef onika::oarray_t<InteractionWrapper<ParticleDriver>,
+        InteractionTypeId::NTypesParticleDriver> InteractionDriverleAccessor;
 
 inline InteractionTypePerCellCounter operator+(const InteractionTypePerCellCounter& a,
                                                const InteractionTypePerCellCounter& b) {

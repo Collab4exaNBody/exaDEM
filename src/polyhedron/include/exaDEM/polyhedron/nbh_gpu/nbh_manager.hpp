@@ -1,9 +1,12 @@
 #pragma once
 
+#include <exaDEM/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
+
 namespace exaDEM {
 struct NBHManager {
   CellInteractionInformation info_cell;
   NbhCellStorage info_pair_cell;
+  CellDriverStorage info_cell_driver;
 };
 
 inline void classify_interaction_grid(
@@ -16,11 +19,11 @@ inline void classify_interaction_grid(
   auto [cell_ptr, cell_size] = traversal.info();
 
   constexpr bool do_ghost_only = false;
-  constexpr bool do_active_interaction_only = false;//true;
+  constexpr bool do_active_interaction_only = true;
 
   transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
       cell_ptr, nbh_manager.info_cell, nbh_manager.info_pair_cell,
-      wrapper_accessor, ges);
+       nbh_manager.info_cell_driver, wrapper_accessor, ges);
 
 }
 }  // namespace exaDEM

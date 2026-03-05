@@ -62,7 +62,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     RShapeDriver& mesh, size_t cell_a, Func& add_contact, PlaceholderInteraction& item, const size_t n_particles,
     const double rVerlet, const ParticleTypeInt* __restrict__ type, const uint64_t* __restrict__ id,
     const double* __restrict__ rx, const double* __restrict__ ry, const double* __restrict__ rz, VertexField& vertices,
-    const double* __restrict__ homothety, const exanb::Quaternion* __restrict__ orient, shapes& shps) {
+    const double* __restrict__ homothety, const exanb::Quaternion* __restrict__ orient, const shape* shps) {
   using onika::cuda::vector_data;
   constexpr double dhomothety = 1.0;
 #define __particle__ vertices_i, hi, i, shpi
@@ -94,7 +94,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     pi.p = p;
     pi.id = id[p];
     auto ti = type[p];
-    const shape* shpi = shps[ti];
+    const shape* const shpi = &shps[ti];
     const size_t nv = shpi->get_number_of_vertices();
     const size_t ne = shpi->get_number_of_edges();
     const size_t nf = shpi->get_number_of_faces();
@@ -211,7 +211,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(DriverT& driver, Func&
                                                           const double rVerlet,
                                                           const ParticleTypeInt* __restrict__ type,
                                                           const uint64_t* __restrict__ id, VertexField& vertices,
-                                                          const double* __restrict__ homothety, shapes& shps) {
+                                                          const double* __restrict__ homothety, const shape* const shps) {
   constexpr int DRIVER_VERTEX_SUB_IDX = -1;  // Convention
   auto& pi = item.i();                       // particle i (id, cell id, particle position, sub vertex)
 
@@ -221,7 +221,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(DriverT& driver, Func&
     const double h = homothety[pid];
     ParticleVertexView vertex_view = {pid, vertices};
 
-    const shape* shp = shps[type[pid]];
+    const shape* const shp = &shps[type[pid]];
     assert(shp != nullptr);
     int num_vertices = shp->get_number_of_vertices();
     for (int vertex_index = 0; vertex_index < num_vertices; vertex_index++) {

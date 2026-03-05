@@ -66,12 +66,12 @@ class UnclassifyGPU : public OperatorNode {
   inline void execute() final {
     //lout << "unclassify active interaction on GridCellParticleInteraction" << std::endl;
     classify_interaction_grid(*ic, *traversal_real, *nbh_manager, *ges);
-	}
+  }
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(unclassify_gpu) {
-	OperatorNodeFactory::instance()->register_factory("unclassify_gpu",
-																										make_grid_variant_operator<UnclassifyGPU>);
+  OperatorNodeFactory::instance()->register_factory("unclassify_gpu",
+                                                    make_grid_variant_operator<UnclassifyGPU>);
 }
 }  // namespace exaDEM

@@ -20,7 +20,6 @@ under the License.
 namespace exaDEM {
 struct InteractionWrapperAccessor {
   InteractionWrapper<ParticleParticle>* particleparticle;
-//  InteractionWrapper<ParticleParticle>* particledriver;
   InteractionWrapper<ParticleDriver>* particledriver;
   InteractionWrapper<InnerBond>* innerbond;
 
@@ -40,7 +39,6 @@ struct InteractionWrapperStorage {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
   VectorT<InteractionWrapper<ParticleParticle>> particleparticle;
-//  VectorT<InteractionWrapper<ParticleParticle>> particledriver;
   VectorT<InteractionWrapper<ParticleDriver>> particledriver;
   VectorT<InteractionWrapper<InnerBond>> innerbond;
 
@@ -52,8 +50,6 @@ struct InteractionWrapperStorage {
     }
     particledriver.resize(InteractionTypeId::NTypesParticleDriver);
     for (size_t i = InteractionTypeId::FirstIdDriver ; i <= InteractionTypeId::LastIdDriver ; i++) {
-      //auto& c = classifier.get_data<InteractionType::ParticleParticle>(i);
-      //particledriver[i - InteractionTypeId::FirstIdDriver] = InteractionWrapper<InteractionType::ParticleParticle>(c);
       auto& c = classifier.get_data<InteractionType::ParticleDriver>(i);
       particledriver[i - InteractionTypeId::FirstIdDriver] = InteractionWrapper<InteractionType::ParticleDriver>(c);
     }
@@ -89,14 +85,10 @@ struct InteractionDispatcher
     ((get_typed(type) == static_cast<int>(Types)
       ? (func.template operator()<Types>(
               iwa.template get_typed_accessor<Types>(type),
-              //              args...), 0)
       std::forward<Args>(args)...), 0)
         : 0), ...);
   }
 };
 
-
-//using IDispatcher = InteractionDispatcher<InteractionType::ParticleParticle, InteractionType::InnerBond>;
-// using IDispatcher = InteractionDispatcher<InteractionType::ParticleParticle, InteractionType::ParticleParticle, InteractionType::InnerBond>;
 using IDispatcher = InteractionDispatcher<InteractionType::ParticleParticle, InteractionType::ParticleDriver, InteractionType::InnerBond>;
 }  // namespace exaDEM
