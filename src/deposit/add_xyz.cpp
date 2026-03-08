@@ -66,10 +66,10 @@ using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;
 
 template <typename GridT>
 class AddXYZ : public OperatorNode {
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT);
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(std::string, file, INPUT, REQUIRED);
   ADD_SLOT(Domain, domain, INPUT);
-  ADD_SLOT(GridT, grid, INPUT_OUTPUT);
   ADD_SLOT(AABB, filter, INPUT, OPTIONAL, DocString{"Filter particles."});
   ADD_SLOT(Vec3d, shift, INPUT, OPTIONAL, DocString{"shift the positions."});
   ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"rcut_max"});
@@ -106,7 +106,10 @@ class AddXYZ : public OperatorNode {
     AABB Filter;
     Vec3d shifter = *shift;
     auto& g = *grid;
+    auto& d = *domain;
     bool apply_filter = filter.has_value();
+    spin_mutex_array cell_locks;
+
     if (apply_filter) {
       Filter = *filter;
       enlarge(Filter, -(*rcut_max));  // reduce AABB
@@ -137,6 +140,8 @@ class AddXYZ : public OperatorNode {
     MPI_Comm_rank(*mpi, &rank);
     MPI_Comm_size(*mpi, &np);
 
+    g.rebuild_particle_offsets();
+
     // useful later
     std::string line;
     int n_particles = 0;
@@ -159,6 +164,7 @@ class AddXYZ : public OperatorNode {
     unsigned long long next_id = 0;
     const size_t n_cells = g.number_of_cells();
     auto cells = g.cells();
+    cell_locks.resize(n_cells);
 
 #   pragma omp parallel for schedule(dynamic) reduction(max:next_id)
     for(size_t cell_i=0; cell_i<n_cells; cell_i++) {
@@ -234,30 +240,46 @@ class AddXYZ : public OperatorNode {
     MPI_Bcast(particle_data.data(), n_particles * sizeof(ParticleTupleIO),
               MPI_BYTE, 0, MPI_COMM_WORLD);
 
+    auto dims = g.dimension();
+    long local_particles = 0;
+#   pragma omp parallel for reduction(+:local_particles)
     for (auto p : particle_data) {
       Vec3d r{p[field::rx], p[field::ry], p[field::rz]};
-      IJK loc = domain_periodic_location(*domain, r) - g.offset();  // grid.locate_cell(r);
-      if (g.contains(loc)) {
+      const IJK loc = g.locate_cell(r);
+
+      if (g.contains(loc) && is_inside(d.bounds() , r) && is_inside(g.grid_bounds(), r)) {
         p[field::rx] = r.x;
         p[field::ry] = r.y;
         p[field::rz] = r.z;
-        ParticleTuple t = p;
-#ifndef NDEBUG
-        if (!is_inside( g.cell_bounds(loc) , Vec3d{t[field::rx],t[field::ry],t[field::rz]} ) ) {
-          std::cout << "add_xyz: ERROR" << std::endl;
-        }
-#endif
-        g.cell(loc).push_back(t, g.cell_allocator());
+        ParticleTuple pt = p;
+        size_t cell_i = grid_ijk_to_index(dims, loc);
+        cell_locks[cell_i].lock();
+        cells[cell_i].push_back(pt, g.cell_allocator());
+        cell_locks[cell_i].unlock();
+        local_particles++;
       }
     }
-
 
     if (particle_data.size()>0) {
       color_log::highlight(operator_name(),
                            "Number of added particles: " +
                            std::to_string(particle_data.size()));
     }
+
+    // Some checks
+    long global_particles = 0;
+    MPI_Reduce(&local_particles, &global_particles, 1, MPI_LONG, MPI_SUM, 0, *mpi);
+
+    if(rank == 0 && global_particles != (long)particle_data.size()) {
+      color_log::error(operator_name(),
+                       "Number of added particle is " + 
+                       std::to_string(local_particles) +
+                       " instead of " +
+                       std::to_string(particle_data.size()));
+    }
+
     g.rebuild_particle_offsets();
+    assert(check_particles_inside_cell(*grid));
   }
 };
 
