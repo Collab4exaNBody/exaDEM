@@ -35,7 +35,6 @@ jobs:
       run: cmake --build ${{github.workspace}}/onika/build --target install --config ${{env.BUILD_TYPE}} -j 2 
       
     - name: Get ExaNBody
-#      run: git clone --depth 1 https://github.com/Collab4exaNBody/exaNBody.git         
       run: git clone --depth 1 https://github.com/Collab4exaNBody/exaNBody.git         
 #      run: git clone --depth 1 --branch v2.0.7 https://github.com/Collab4exaNBody/exaNBody.git         
     - name: Configure ExaNBody
