@@ -222,9 +222,6 @@ class AddXYZ : public OperatorNode {
           }
         }
         n_particles++;
-        std::cout << "Add: p: " << p
-            << " id: " << next_id
-            << " type: " << typeMap[type] << " " << type << std::endl;
         particle_data.push_back(ParticleTupleIO(p.x, p.y, p.z, next_id++, typeMap[type]));
       }
       if (n_filtered_particles>0) {
@@ -248,15 +245,14 @@ class AddXYZ : public OperatorNode {
       const IJK loc = g.locate_cell(r);
 
       if (g.contains(loc) && is_inside(d.bounds() , r) && is_inside(g.grid_bounds(), r)) {
-        p[field::rx] = r.x;
-        p[field::ry] = r.y;
-        p[field::rz] = r.z;
-        ParticleTuple pt = p;
         size_t cell_i = grid_ijk_to_index(dims, loc);
-        cell_locks[cell_i].lock();
-        cells[cell_i].push_back(pt, g.cell_allocator());
-        cell_locks[cell_i].unlock();
-        local_particles++;
+        if (!g.is_ghost_cell(cell_i)) {
+          ParticleTuple pt = p;
+          cell_locks[cell_i].lock();
+          cells[cell_i].push_back(pt, g.cell_allocator());
+          cell_locks[cell_i].unlock();
+          local_particles++;
+        }
       }
     }
 
@@ -273,7 +269,7 @@ class AddXYZ : public OperatorNode {
     if(rank == 0 && global_particles != (long)particle_data.size()) {
       color_log::error(operator_name(),
                        "Number of added particle is " + 
-                       std::to_string(local_particles) +
+                       std::to_string(global_particles) +
                        " instead of " +
                        std::to_string(particle_data.size()));
     }
