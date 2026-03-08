@@ -294,7 +294,7 @@ struct Ball : public Ball_params, Driver_params {
     }
 
     if (dn > 0) {
-      return {false, 0.0, Vec3d(), Vec3d()};
+      return {false, dn, Vec3d(), Vec3d()};
     } else {
       Vec3d contact_position = p - n * (rcut + 0.5 * dn);
       return {true, dn, n, contact_position};
