@@ -1,0 +1,74 @@
+includes:
+  - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "AddXYZDir"
+
+particle_regions:
+  - BOT:
+     bounds: [ [ 0. , 0. , 0. ] , [ 10. , 10. , 10. ] ]
+  - TOP:
+     bounds: [ [ 0. , 0. , 11. ] , [ 10. , 10. , 21. ] ]
+
+add_generated_particles:
+  - add_xyz:
+     file: input_deposit_xyz.xyz
+     shift: [0, 0, 11]
+     filter: [[0, 0, 11], [5,10,13]]
+  - set_fields:
+     polyhedra: false
+     type:            [ Sphere1 ]
+     radius :         [     0.2 ]
+     density :        [    0.02 ]
+     velocity :       [ [0,0,0] ]
+     sigma_velocity : [     0.1 ]
+     region: TOP
+
+input_data:
+  - particle_type:
+     type: [ Sphere1 ]
+  - read_xyz:
+     file: input_deposit_xyz.xyz
+     bounds_mode: DOMAIN
+  - set_fields:
+     polyhedra: false
+     type:            [    Sphere1 ]
+     radius :         [        0.4 ]
+     density :        [       0.02 ]
+     velocity :       [ [0,0,-0.5] ]
+     sigma_velocity : [        0.1 ]
+     region: BOT
+
+setup_drivers:
+  - register_surface:
+     id: 0
+     state:
+        normal: [0,0,1]
+        offset: -1
+     params:
+        motion_type: STATIONARY
+
+compute_force:
+  - gravity_force
+  - contact_singlemat_sphere_hooke_dmt:
+     symetric: true
+     config: { kn: 10000, kt: 10000, kr: 0.1,  mu: 0.2, damp_rate: 0.9, gamma: 10.} 
+     config_driver: { kn: 10000, kt: 8000, kr: 0.1,  mu: 0.5, damp_rate: 0.9, gamma: 10.} 
+
+domain:
+  cell_size: 1
+  periodic: [true, true, false]
+  grid_dims: [10, 10, 13]
+  bounds: [[0,0,0],[10, 10, 13]]
+  expandable: true
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 500000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 2500
+  simulation_generator_frequency: 10000
+  dt: 0.0001 s 
+  rcut_inc: 0.2
+  enable_contact_network: true

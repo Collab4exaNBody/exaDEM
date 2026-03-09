@@ -55,7 +55,6 @@ class UpdateInteractionGhost : public OperatorNode {
     InteractionGhostManager& manager = *interaction_ghost_manager;
     auto& g = *grid;
     auto cells = g.cells();
-
     // Reset Interaction within the grid ghost layer
 #pragma omp parallel for
     for (size_t i = 0; i < g.number_of_cells(); i++) {
