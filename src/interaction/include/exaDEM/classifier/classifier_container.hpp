@@ -135,10 +135,10 @@ struct ClassifierContainer {
   }
 
   // Some accessors
-  ONIKA_HOST_DEVICE_FUNC inline uint64_t particle_id_i(size_t idx) const {
+  inline uint64_t particle_id_i(size_t idx) const {
     return id_i[idx];
   }
-  ONIKA_HOST_DEVICE_FUNC inline uint64_t particle_id_j(size_t idx) const {
+  inline uint64_t particle_id_j(size_t idx) const {
     return id_j[idx];
   }
 
