@@ -121,7 +121,7 @@ update_ghost_config:
   update_ghost_config:
     gpu_buffer_pack: true
     async_buffer_pack: true
-    staging_buffer: true
+    staging_buffer: false
     serialize_pack_send: true
     wait_all: false
 
