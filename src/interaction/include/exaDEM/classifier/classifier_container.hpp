@@ -143,6 +143,7 @@ struct ClassifierContainer {
     return id_i[idx];
 #endif
   }
+
   ONIKA_HOST_DEVICE_FUNC inline uint64_t particle_id_j(size_t idx) const {
 #ifdef ONIKA_CUDA_VERSION
     auto* __restrict__ ptr = onika::cuda::vector_data(id_j);

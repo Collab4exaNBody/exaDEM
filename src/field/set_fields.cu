@@ -1,11 +1,11 @@
 /*
-   Licensed to the Apache Software Foundation (ASF) under one
-   or more contributor license agreements.  See the NOTICE file
-   distributed with this work for additional information
-   regarding copyright ownership.  The ASF licenses this file
-   to you under the Apache License, Version 2.0 (the
-   "License"); you may not use this file except in compliance
-   with the License.  You may obtain a copy of the License at
+	 Licensed to the Apache Software Foundation (ASF) under one
+	 or more contributor license agreements.  See the NOTICE file
+	 distributed with this work for additional information
+	 regarding copyright ownership.  The ASF licenses this file
+	 to you under the Apache License, Version 2.0 (the
+	 "License"); you may not use this file except in compliance
+	 with the License.  You may obtain a copy of the License at
 
 http://www.apache.org/licenses/LICENSE-2.0
 
@@ -33,161 +33,161 @@ under the License.
 namespace exaDEM {
 
 struct jammy {
-  jammy(double var) {
-    dist = std::normal_distribution<>(0, var);
-  }
+	jammy(double var) {
+		dist = std::normal_distribution<>(0, var);
+	}
 
-  inline int operator()(double& val) {
-    val += dist(seed);
-    seed();
-    return 0;
-  }
+	inline int operator()(double& val) {
+		val += dist(seed);
+		seed();
+		return 0;
+	}
 
-  inline int operator()(Vec3d& val) {
-    val.x += dist(seed);
-    seed();
-    val.y += dist(seed);
-    seed();
-    val.z += dist(seed);
-    seed();
-    return 0;
-  }
+	inline int operator()(Vec3d& val) {
+		val.x += dist(seed);
+		seed();
+		val.y += dist(seed);
+		seed();
+		val.z += dist(seed);
+		seed();
+		return 0;
+	}
 
-  std::normal_distribution<> dist;
-  std::default_random_engine seed;
+	std::normal_distribution<> dist;
+	std::default_random_engine seed;
 };
 
 struct field_manager {
-  bool set_t = false;  // type
-  bool set_d = false;  // density
-  bool set_v = false;  // velocity
-  bool set_rnd_v = false;
-  bool set_h = false;  // homothety
-  bool set_r = false;  // radius
-  bool set_q = false;  // quaternion
-  bool set_rnd_q = false;
-  bool set_i = true;  // inertia (should be to true)
-  bool set_ang_v = false;
-  bool set_rnd_ang_v = false;
+	bool set_t = false;  // type
+	bool set_d = false;  // density
+	bool set_v = false;  // velocity
+	bool set_rnd_v = false;
+	bool set_h = false;  // homothety
+	bool set_r = false;  // radius
+	bool set_q = false;  // quaternion
+	bool set_rnd_q = false;
+	bool set_i = true;  // inertia (should be to true)
+	bool set_ang_v = false;
+	bool set_rnd_ang_v = false;
 };
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_type>>
 class SetFields : public OperatorNode {
-  // fields : vx, vy, vz, mass, radius, anv, inertia, quat
-  using ComputeFields = FieldSet<field::_type, field::_homothety, field::_vx, field::_vy, field::_vz, field::_mass,
-                                 field::_radius, field::_vrot, field::_inertia, field::_orient>;
-  using ComputeRegionFields =
-      FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_homothety, field::_vx, field::_vy,
-               field::_vz, field::_mass, field::_radius, field::_vrot, field::_inertia, field::_orient>;
-  static constexpr ComputeFields compute_fields{};
-  static constexpr ComputeRegionFields compute_region_fields{};
+	// fields : vx, vy, vz, mass, radius, anv, inertia, quat
+	using ComputeFields = FieldSet<field::_type, field::_homothety, field::_vx, field::_vy, field::_vz, field::_mass,
+																 field::_radius, field::_vrot, field::_inertia, field::_orient>;
+	using ComputeRegionFields =
+			FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_type, field::_homothety, field::_vx, field::_vy,
+							 field::_vz, field::_mass, field::_radius, field::_vrot, field::_inertia, field::_orient>;
+	static constexpr ComputeFields compute_fields{};
+	static constexpr ComputeRegionFields compute_region_fields{};
 
-  ADD_SLOT(GridT, grid, INPUT_OUTPUT);
-  ADD_SLOT(std::vector<double>, density, INPUT, OPTIONAL,
-           DocString{"List of density values. If not defined, density is 1"});
-  ADD_SLOT(std::vector<double>, radius, INPUT, OPTIONAL,
-           DocString{"List of radius values. If not defined, radius is 0.5 for "
-                     "spheres, do not define it for polyhedra."});
-  ADD_SLOT(std::vector<double>, homothety, INPUT, OPTIONAL,
-           DocString{"List of homothty values [only used by polyhedra]. If not "
-                     "defined, homothety is 1."});
-  ADD_SLOT(std::vector<Vec3d>, velocity, INPUT, OPTIONAL,
-           DocString{"List of velocity values. If not defined, velocity is [0,0,0]."});
-  ADD_SLOT(std::vector<double>, sigma_velocity, INPUT, OPTIONAL,
-           DocString{"Standard deviation (sigma). If not defined, the normal "
-                     "distribution is not applied."});
-  ADD_SLOT(std::vector<Vec3d>, angular_velocity, INPUT, OPTIONAL,
-           DocString{"List of angular velocity values. If not defined, angular "
-                     "velocity is [0,0,0]."});
-  ADD_SLOT(std::vector<double>, sigma_angular_velocity, INPUT, OPTIONAL,
-           DocString{"Standard deviation (sigma). If not defined, the normal "
-                     "distribution is not applied."});
-  ADD_SLOT(std::vector<Quaternion>, quaternion, INPUT, OPTIONAL,
-           DocString{"List of orientations. If not defined, quaternion is [w = 1,0,0,0]"});
-  ADD_SLOT(std::vector<bool>, random_quaternion, INPUT, OPTIONAL,
-           DocString{"Choice if the orientation is random or not. If not "
-                     "defined, random is false."});
-  ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED);
-  ADD_SLOT(std::vector<std::string>, type, INPUT, REQUIRED, DocString{"Particle type names"});
+	ADD_SLOT(GridT, grid, INPUT_OUTPUT);
+	ADD_SLOT(std::vector<double>, density, INPUT, OPTIONAL,
+					 DocString{"List of density values. If not defined, density is 1"});
+	ADD_SLOT(std::vector<double>, radius, INPUT, OPTIONAL,
+					 DocString{"List of radius values. If not defined, radius is 0.5 for "
+										 "spheres, do not define it for polyhedra."});
+	ADD_SLOT(std::vector<double>, homothety, INPUT, OPTIONAL,
+					 DocString{"List of homothty values [only used by polyhedra]. If not "
+										 "defined, homothety is 1."});
+	ADD_SLOT(std::vector<Vec3d>, velocity, INPUT, OPTIONAL,
+					 DocString{"List of velocity values. If not defined, velocity is [0,0,0]."});
+	ADD_SLOT(std::vector<double>, sigma_velocity, INPUT, OPTIONAL,
+					 DocString{"Standard deviation (sigma). If not defined, the normal "
+										 "distribution is not applied."});
+	ADD_SLOT(std::vector<Vec3d>, angular_velocity, INPUT, OPTIONAL,
+					 DocString{"List of angular velocity values. If not defined, angular "
+										 "velocity is [0,0,0]."});
+	ADD_SLOT(std::vector<double>, sigma_angular_velocity, INPUT, OPTIONAL,
+					 DocString{"Standard deviation (sigma). If not defined, the normal "
+										 "distribution is not applied."});
+	ADD_SLOT(std::vector<Quaternion>, quaternion, INPUT, OPTIONAL,
+					 DocString{"List of orientations. If not defined, quaternion is [w = 1,0,0,0]"});
+	ADD_SLOT(std::vector<bool>, random_quaternion, INPUT, OPTIONAL,
+					 DocString{"Choice if the orientation is random or not. If not "
+										 "defined, random is false."});
+	ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED);
+	ADD_SLOT(std::vector<std::string>, type, INPUT, REQUIRED, DocString{"Particle type names"});
 
-  // outputs
-  ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0, DocString{"rcut_max"});
+	// outputs
+	ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0, DocString{"rcut_max"});
 
-  // others
-  ADD_SLOT(bool, polyhedra, INPUT, REQUIRED, DocString{"Define if the kind of particles is polyhedron or sphere."});
-  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
-  ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
-  ADD_SLOT(shapes, shapes_collection, INPUT, OPTIONAL, DocString{"Collection of shapes"});
+	// others
+	ADD_SLOT(bool, polyhedra, INPUT, REQUIRED, DocString{"Define if the kind of particles is polyhedron or sphere."});
+	ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+	ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
+	ADD_SLOT(shapes, shapes_collection, INPUT, OPTIONAL, DocString{"Collection of shapes"});
 
-  // -----------------------------------------------
-  // ----------- Operator documentation ------------
-  inline std::string documentation() const final {
-    return R"EOF(
-        This operator fills type id to all particles. 
+	// -----------------------------------------------
+	// ----------- Operator documentation ------------
+	inline std::string documentation() const final {
+		return R"EOF(
+				This operator fills type id to all particles. 
 
-        YAML examples:
+				YAML examples:
 
-          init_polyhedra: 
-            - set_fields:
-               polyhedra: true
-               type:              [ alpha3, Octahedron]
-               velocity:          [[0,0,0],    [0,0,0]]
-               sigma_velocity:    [    0.1,        0.1]
-               random_quaternion: [   true,       true]
+					init_polyhedra: 
+						- set_fields:
+							 polyhedra: true
+							 type:              [ alpha3, Octahedron]
+							 velocity:          [[0,0,0],    [0,0,0]]
+							 sigma_velocity:    [    0.1,        0.1]
+							 random_quaternion: [   true,       true]
 
-          init_spheres:
-            - set_fields:
-               polyhedra: false
-               radius:         [     0.5 ]
-               density:        [    0.02 ]
-               type:           [ Sphere1 ]
-               velocity:       [ [0,0,0] ]
-               sigma_velocity: [     0.1 ]
-               region: Region
-        )EOF";
-  }
+					init_spheres:
+						- set_fields:
+							 polyhedra: false
+							 radius:         [     0.5 ]
+							 density:        [    0.02 ]
+							 type:           [ Sphere1 ]
+							 velocity:       [ [0,0,0] ]
+							 sigma_velocity: [     0.1 ]
+							 region: Region
+				)EOF";
+	}
 
-  inline std::string operator_name() { return "set_fields"; }
+	inline std::string operator_name() { return "set_fields"; }
 
-  void check_slots() {
-    if (grid->number_of_cells() == 0) {
-      color_log::error(operator_name(),
-                       "The grid is not defined. Please define a grid before "
-                       "calling set_fields.");
-    }
+	void check_slots() {
+		if (grid->number_of_cells() == 0) {
+			color_log::error(operator_name(),
+											 "The grid is not defined. Please define a grid before "
+											 "calling set_fields.");
+		}
 
-    if (shapes_collection.has_value()) {
-      if (!(*polyhedra)) {
-        color_log::error(operator_name(), "Shapes are defined in sphere mode.");
-      }
-      size_t size_shps = shapes_collection->size();
-      if (size_shps == 0 && (*polyhedra)) {
-        color_log::error(operator_name(), "You are defining polyhedra without using shapes.");
-      }
-    }
-  }
+		if (shapes_collection.has_value()) {
+			if (!(*polyhedra)) {
+				color_log::error(operator_name(), "Shapes are defined in sphere mode.");
+			}
+			size_t size_shps = shapes_collection->size();
+			if (size_shps == 0 && (*polyhedra)) {
+				color_log::error(operator_name(), "You are defining polyhedra without using shapes.");
+			}
+		}
+	}
 
  public:
-  inline void execute() final {
-    check_slots();
+	inline void execute() final {
+		check_slots();
 
-    const auto& type_map = *particle_type_map;
-    const auto& types = *type;
+		const auto& type_map = *particle_type_map;
+		const auto& types = *type;
 
-    bool is_region = region.has_value();
+		bool is_region = region.has_value();
 
-    ParticleRegionCSGShallowCopy prcsg = {};
+		ParticleRegionCSGShallowCopy prcsg = {};
 
 		if (is_region) {
 			if (!particle_regions.has_value()) {
-			  fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
+				fatal_error() << "Region is defined, but particle_regions has no value" << std::endl;
 			}
 
 			if (region->m_nb_operands == 0) {
 				region->build_from_expression_string(particle_regions->data(), particle_regions->size());
 			}
 			prcsg = *region;
-    }
+		}
 
 		field_manager mat;  // multi-materials
 		mat.set_t = type.has_value();
@@ -207,7 +207,9 @@ class SetFields : public OperatorNode {
 			if (type_map.find(type_name) == type_map.end()) {
 				lout << "The type [" << type_name << "] is not defined" << std::endl;
 				lout << "Available types are = ";
-				for (auto& it : type_map) lout << it.first << " ";
+				for (auto& it : type_map) {
+					lout << it.first << " ";
+				}
 				lout << std::endl;
 				std::exit(EXIT_FAILURE);
 			}
@@ -367,6 +369,8 @@ class SetFields : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(set_fields) {
-	OperatorNodeFactory::instance()->register_factory("set_fields", make_grid_variant_operator<SetFields>);
+	OperatorNodeFactory::instance()->register_factory(
+		"set_fields",
+		make_grid_variant_operator<SetFields>);
 }
 }  // namespace exaDEM

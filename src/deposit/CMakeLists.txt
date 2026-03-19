@@ -14,26 +14,5 @@
 # kind, either express or implied.  see the license for the
 # specific language governing permissions and limitations
 # under the license.
-
-# ===================================
-# === exaDEM application package  ===
-# ===================================
-
-add_subdirectory(grid)
-add_subdirectory(shape)
-add_subdirectory(field)
-add_subdirectory(numericalscheme)
-add_subdirectory(driver)
-add_subdirectory(forcefield)
-add_subdirectory(interaction)
-add_subdirectory(analysis)
-add_subdirectory(io)
-add_subdirectory(sphere)
-add_subdirectory(polyhedron)
-add_subdirectory(deposit)
-add_subdirectory(experimental)
-
-if(USE_RSA)
-	add_subdirectory(rsa)
-endif()
-
+set(exadem_deposit_LINK_LIBRARIES exadem_shape exadem_grid)
+xnb_add_plugin(exadem_deposit ${CMAKE_CURRENT_SOURCE_DIR})

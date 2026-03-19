@@ -304,7 +304,7 @@ struct Surface : public Surface_params, Driver_params {
     double d = norm(surface_to_point);
     double dn = d - rcut;
     if (dn > 0) {
-      return {false, 0.0, Vec3d(), Vec3d()};
+      return {false, dn, Vec3d(), Vec3d()};
     } else {
       Vec3d n = surface_to_point / d;
       Vec3d contact_position = p - n * (rcut + 0.5 * dn);

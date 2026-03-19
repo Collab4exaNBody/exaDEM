@@ -44,7 +44,7 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
   using ComputeFields = FieldSet<>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED); 
   ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
   ADD_SLOT(Domain, domain, INPUT, REQUIRED);
   ADD_SLOT(exanb::GridChunkNeighbors, chunk_neighbors, INPUT, OPTIONAL, DocString{"Neighbor list"});
