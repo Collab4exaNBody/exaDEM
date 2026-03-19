@@ -294,10 +294,10 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 			get_last_id<InteractionType::InnerBond>()
 		);
 
-    auto& test = container.get_data<InteractionType::ParticleDriver>(5);
-   for (int i = 0 ; i < test.size() ; i++) {
-     //test[i].print();
-   }
+		//auto& test = container.get_data<InteractionType::ParticleDriver>(5);
+	 ///for (int i = 0 ; i < test.size() ; i++) {
+		 //test[i].print();
+	 //}
 #endif
 	}
 };

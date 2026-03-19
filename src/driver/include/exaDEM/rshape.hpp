@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
- */
+*/
 
 #pragma once
 #include <onika/math/basic_types.h>
@@ -41,15 +41,19 @@ constexpr Vec3d null = Vec3d{0, 0, 0};
  * @brief Struct representing a list of elements( vertex, edge, or face).
  */
 struct RShapeDriverListOfElements {
-  std::vector<int> vertices; /**< List of vertex indices. */
-  std::vector<int> edges;    /**< List of edge indices. */
-  std::vector<int> faces;    /**< List of face indices. */
+  //  std::vector<int> vertices; /**< List of vertex indices. */
+  //  std::vector<int> edges;    /**< List of edge indices. */
+  //  std::vector<int> faces;    /**< List of face indices. */
+  vector_t<int> vertices; /**< List of vertex indices. */
+  vector_t<int> edges;    /**< List of edge indices. */
+  vector_t<int> faces;    /**< List of face indices. */
   void clean() {
     vertices.clear();
     edges.clear();
     faces.clear();
   }
 };
+
 
 struct RShapeDriverParams {
   exanb::Vec3d center = null;                 /**< Center position of the R-Shape. */
@@ -66,7 +70,7 @@ struct RShapeDriverParams {
   exanb::Vec3d mom_axis;        /**< normal vector of the moment. */
 };
 }  // namespace exaDEM
- 
+
 namespace YAML {
 using exaDEM::MotionType;
 using exaDEM::RShapeDriverParams;
@@ -113,9 +117,9 @@ struct convert<RShapeDriverParams> {
 
 namespace exaDEM {
 const std::vector<MotionType> rshape_valid_motion_types = {
-    STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION,
-    LINEAR_COMPRESSIVE_MOTION, PARTICLE,
-    TABULATED, SHAKER, EXPRESSION};
+  STATIONARY, LINEAR_MOTION, LINEAR_FORCE_MOTION,
+  LINEAR_COMPRESSIVE_MOTION, PARTICLE,
+  TABULATED, SHAKER, EXPRESSION};
 
 using namespace exanb;
 /**
@@ -124,8 +128,9 @@ using namespace exanb;
 struct RShapeDriver : public RShapeDriverParams, Driver_params {
   shape shp;                 /**< Shape of the R-Shape. */
   vector_t<Vec3d> vertices;  /**< Collection of vertices (computed from shp, quat
-                                  and center). */
-  std::vector<RShapeDriverListOfElements> grid_indexes; /**< Grid indices of the R-Shape. */
+                               and center). */
+  vector_t<RShapeDriverListOfElements> grid_indexes; /**< Grid indices of the R-Shape. */
+  //  std::vector<RShapeDriverListOfElements> grid_indexes; /**< Grid indices of the R-Shape. */
   std::vector<omp_lock_t> grid_mutexes;       /**< Grid indices of the R-Shape. */
   /** We don't need to save these values */
   exanb::Vec3d acc = {0, 0, 0}; /**< Acceleration of the mesh */
@@ -429,6 +434,36 @@ struct RShapeDriver : public RShapeDriverParams, Driver_params {
     lout << "Faces    (Total/Max)   = " << nb_f << " / " << max_f << std::endl;
     lout << "=================================" << std::endl;
   }
+};
+
+class RShapeUtils {
+ public:
+  const Vec3d* vertices = nullptr;
+  const int* grid_id_vertices = nullptr; /**< List of vertex indices. */
+  const int* grid_id_edges = nullptr;    /**< List of edge indices. */
+  const int* grid_id_faces = nullptr;    /**< List of face indices. */
+
+  size_t rshape_nv = 0;
+  size_t rshape_ne = 0;
+  size_t rshape_nf = 0;
+
+  ONIKA_HOST_DEVICE_FUNC RShapeUtils(int cell_idx, const RShapeDriver& mesh) {
+    using onika::cuda::vector_data;
+    using onika::cuda::vector_size;
+
+    vertices = vector_data(mesh.vertices);
+    const RShapeDriverListOfElements* ptr = vector_data(mesh.grid_indexes);
+    const RShapeDriverListOfElements& list = ptr[cell_idx];
+    grid_id_vertices = vector_data(list.vertices);
+    grid_id_edges = vector_data(list.edges);
+    grid_id_faces = vector_data(list.faces);
+    rshape_nv = vector_size(list.vertices);
+    rshape_ne = vector_size(list.edges);
+    rshape_nf = vector_size(list.faces);
+  }
+
+ private:
+  RShapeUtils() {}
 };
 }  // namespace exaDEM
 
