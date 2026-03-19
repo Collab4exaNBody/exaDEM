@@ -234,7 +234,7 @@ static inline ParallelExecutionWrapper reduce_data(ParallelExecutionContext* exe
   double min_dn = 0;
 #pragma omp parallel for reduction(+ : n_act_interaction, n_tot_interaction) reduction(min : min_dn)
   for (uint64_t i = 0; i < size; i++) {
-    exaDEM::Interaction I = data(i);
+    auto I = data(i);
     // filter duplicate (mpi ghost)
     if (I.pair.ghost != InteractionPair::PartnerGhost) {
       const double& dn = func.dnp[i];

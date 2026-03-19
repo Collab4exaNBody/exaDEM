@@ -80,8 +80,12 @@ struct NbhCellStorage {
       using TSrc  = typename std::decay_t<decltype(src)>::value_type;
       static_assert(sizeof(TDest) == sizeof(TSrc), "Size mismatch in transfer");
       dest.resize(elems);
+#ifdef ONIKA_CUDA_VERSION 
       ONIKA_CU_MEMCPY_KIND(dest.data(), src.data(), elems * sizeof(TDest),
                            onikaMemcpyHostToDevice);
+#else
+      dest = src;
+#endif
     };
 
     // Transfer owner and partner cells

@@ -17,6 +17,7 @@ specific language governing permissions and limitations
 under the License.
 */
 
+#ifdef ONIKA_CUDA_VERSION
 #define DEBUG_NBH_GPU 1
 
 #include <onika/scg/operator.h>
@@ -308,3 +309,4 @@ ONIKA_AUTORUN_INIT(nbh_polyhedron_gpu) {
 																										make_grid_variant_operator<UpdateClassifierPolyhedronGPU>);
 }
 }  // namespace exaDEM
+#endif
