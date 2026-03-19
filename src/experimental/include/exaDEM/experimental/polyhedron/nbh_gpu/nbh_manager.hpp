@@ -1,6 +1,6 @@
 #pragma once
 
-#include <exaDEM/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 
 namespace exaDEM {
 struct NBHManager {

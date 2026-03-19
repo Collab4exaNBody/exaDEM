@@ -2,7 +2,7 @@
 
 #include <exaDEM/drivers.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
-#include <exaDEM/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 
 namespace exaDEM {
 struct CellDriverGPUAcessor {

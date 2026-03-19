@@ -36,11 +36,11 @@ under the License.
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/classifier/classifier_transfert.hpp>
-#include <exaDEM/polyhedron/nbh_gpu/nbh_utils.hpp>
-#include <exaDEM/polyhedron/nbh_gpu/nbh_storage.hpp>
-#include <exaDEM/polyhedron/nbh_gpu/nbh_cell_data.hpp>
-#include <exaDEM/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
-#include <exaDEM/polyhedron/nbh_gpu/nbh_manager.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_manager.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>

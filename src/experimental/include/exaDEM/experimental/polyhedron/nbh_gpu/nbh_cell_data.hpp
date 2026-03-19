@@ -1,6 +1,6 @@
 #pragma once
-#include <exaDEM/polyhedron/nbh_gpu/nbh_storage.hpp>
-#include <exaDEM/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 
 namespace exaDEM {
 // Stores information about non-empty cells (GPU/CPU friendly)

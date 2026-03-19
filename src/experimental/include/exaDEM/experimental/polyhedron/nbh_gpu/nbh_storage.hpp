@@ -1,6 +1,6 @@
 #pragma once
 
-#include <exaDEM/polyhedron/nbh_gpu/nbh_utils.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 
 namespace exaDEM {
 /**
