@@ -8,5 +8,3 @@ chunk_neighbors_impl:
 
 compress_data:
   - unclassify_gpu
-#  - stats_interactions
-#  - interaction_consistency_checker
