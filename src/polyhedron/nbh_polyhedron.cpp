@@ -188,22 +188,22 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
               item.pair.type = InteractionTypeId::VertexCylinder;
               Cylinder& driver = drvs.get_typed_driver<Cylinder>(drvs_idx);
               add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, h_a,
-                                     shps);
+                                     shps.data());
             } else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE) {
               item.pair.type = InteractionTypeId::VertexSurface;
               Surface& driver = drvs.get_typed_driver<Surface>(drvs_idx);
               add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, h_a,
-                                     shps);
+                                     shps.data());
             } else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL) {
               item.pair.type = InteractionTypeId::VertexBall;
               Ball& driver = drvs.get_typed_driver<Ball>(drvs_idx);
               add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, h_a,
-                                     shps);
+                                     shps.data());
             } else if (drvs.type(drvs_idx) == DRIVER_TYPE::RSHAPE) {
               RShapeDriver& driver = drvs.get_typed_driver<RShapeDriver>(drvs_idx);
               // driver.grid_indexes_summary();
               add_driver_interaction(driver, cell_a, add_contact, item, n_particles, rVerlet, t_a, id_a, rx_a, ry_a,
-                                     rz_a, vertex_cell_a, h_a, orient_a, shps);
+                                     rz_a, vertex_cell_a, h_a, orient_a, shps.data());
             }
           }
         }

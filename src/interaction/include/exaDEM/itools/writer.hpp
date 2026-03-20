@@ -34,13 +34,16 @@ template <typename GridT>
 std::stringstream create_buffer(GridT& grid, Classifier& ic) {
   std::stringstream stream;
   auto cells = grid.cells();
-  for (int i = 0; i < Classifier::types; i++) {
+  for (size_t i = 0; i < ic.number_of_waves(); i++) {
     size_t size = ic.get_size(i);
     InterationPairWrapper wrapper;
-    if (i < Classifier::typesPP)
+    if (get_typed(i) == 0) {
       wrapper.wrap(ic.get_data<ParticleParticle>(i));
-    else if (i == Classifier::InnerBondTypeId)
+    } else if (get_typed(i) == 1) {
+      wrapper.wrap(ic.get_data<ParticleDriver>(i));
+    } else if (get_typed(i) == 2) {
       wrapper.wrap(ic.get_data<InnerBond>(i));
+    }
     else {
       lout << "skip interaction type: " << i << std::endl;
       continue;
@@ -92,9 +95,9 @@ inline void write_file(std::stringstream& stream, std::string directory, std::st
   std::string subsubdirectory = subdirectory + "/" + filename;
   if (rank == 0) {
     namespace fs = std::filesystem;
-    fs::create_directory(directory);
-    fs::create_directory(subdirectory);
-    fs::create_directory(subsubdirectory);
+fs::create_directory(directory);
+fs::create_directory(subdirectory);
+fs::create_directory(subsubdirectory);
   }
   MPI_Barrier(MPI_COMM_WORLD);
   std::string name = subsubdirectory + "/" + filename + "_" + std::to_string(rank) + ".txt";

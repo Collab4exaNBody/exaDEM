@@ -61,10 +61,10 @@ class CheckConsistencyGridClassifier : public OperatorNode {
     auto& grid = *ges;
 
     struct InteractionCounter {
-      std::array<uint64_t, Classifier::types + 1> counts_by_type = {};
+      std::array<uint64_t, InteractionTypeId::NTypes + 1> counts_by_type = {};
     };
 
-    auto extract_data = [](InteractionCounter& input_counter, const auto& I) -> void {
+    auto extract_data = [](auto& I, InteractionCounter& input_counter) -> void {
       if (I.active()) {
         input_counter.counts_by_type[I.type()] += 1;
       }
@@ -75,15 +75,8 @@ class CheckConsistencyGridClassifier : public OperatorNode {
     // get data from classifier;
     // Note : Sequential
     // Classifier
-    for (int i = 0; i < Classifier::typesPP; i++) {
-      auto [data, size] = classifier.get_info<ParticleParticle>(i);
-      for (size_t j = 0; j < size; j++) {
-        auto I = data[j];
-        extract_data(classifier_side, I);
-      }
-    }
-    // Fragmentation, always active interaction
-    classifier_side.counts_by_type[Classifier::InnerBondTypeId] += classifier.get_size(Classifier::InnerBondTypeId);
+
+    for_all_interactions(classifier, extract_data, classifier_side);
 
     // GridCellParticleInteraction
     auto& ces = grid.m_data;
@@ -93,13 +86,13 @@ class CheckConsistencyGridClassifier : public OperatorNode {
       auto* const __restrict__ data_ptr = interactions.m_data.data();
       for (size_t it = 0; it < n_interactions_in_cell; it++) {
         const auto& I = data_ptr[it];
-        extract_data(grid_side, I);
+        extract_data(I, grid_side);
       }
     }
 
     // Verify values
     bool error = false;
-    for (int i = 0; i < Classifier::types; i++) {
+    for (int i = 0; i < InteractionTypeId::NTypes; i++) {
       if (grid_side.counts_by_type[i] != classifier_side.counts_by_type[i]) {
         std::string msg = "Mismatch in the number of interactions for type ";
         msg += std::to_string(i);

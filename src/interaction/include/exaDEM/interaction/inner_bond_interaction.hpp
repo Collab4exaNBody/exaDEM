@@ -147,4 +147,6 @@ struct InnerBondInteraction {
   }
 };
 
+static_assert(std::is_trivially_copyable_v<InnerBondInteraction>,
+              "Interaction must remain trivially copyable");
 }  // namespace exaDEM

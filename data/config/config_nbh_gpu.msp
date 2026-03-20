@@ -1,0 +1,10 @@
+chunk_neighbors_impl:
+  - nbh_polyhedron_gpu
+  - check_owner_partner_ghosts
+  - update_interaction_ghost
+  - classify_interaction_ghost
+  - unclassify_gpu
+  - check_owner_partner_ghosts
+
+compress_data:
+  - unclassify_gpu

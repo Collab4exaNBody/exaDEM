@@ -135,57 +135,82 @@ struct ClassifierContainer {
   }
 
   // Some accessors
-  inline uint64_t particle_id_i(size_t idx) const {
+  ONIKA_HOST_DEVICE_FUNC inline uint64_t particle_id_i(size_t idx) const {
+#ifdef ONIKA_CUDA_VERSION
+    auto* __restrict__ ptr = onika::cuda::vector_data(id_i);
+    return ptr[idx];
+#else
     return id_i[idx];
-  }
-  inline uint64_t particle_id_j(size_t idx) const {
-    return id_j[idx];
+#endif
   }
 
-  ONIKA_HOST_DEVICE_FUNC void set(size_t idx, exaDEM::PlaceholderInteraction& interaction) {
+  ONIKA_HOST_DEVICE_FUNC inline uint64_t particle_id_j(size_t idx) const {
+#ifdef ONIKA_CUDA_VERSION
+    auto* __restrict__ ptr = onika::cuda::vector_data(id_j);
+    return ptr[idx];
+#else
+    return id_j[idx];
+#endif
+  }
+
+  template<typename T>
+  ONIKA_HOST_DEVICE_FUNC
+  void setter(VectorT<T>& vec, size_t idx, const T& value) {
+#ifdef ONIKA_CUDA_VERSION
+    auto* __restrict__ ptr = onika::cuda::vector_data(vec);
+    ptr[idx] = value;
+#else
+    vec[idx] = value;
+#endif
+  }
+
+  ONIKA_HOST_DEVICE_FUNC void set(
+      size_t idx,
+      exaDEM::PlaceholderInteraction& interaction) {
     if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) {
       auto& I = interaction.as<Interaction>();
-      ft_x[idx] = I.friction.x;
-      ft_y[idx] = I.friction.y;
-      ft_z[idx] = I.friction.z;
+      setter(ft_x, idx, I.friction.x);
+      setter(ft_y, idx, I.friction.y);
+      setter(ft_z, idx, I.friction.z);
 
-      mom_x[idx] = I.moment.x;
-      mom_y[idx] = I.moment.y;
-      mom_z[idx] = I.moment.z;
+      setter(mom_x, idx, I.moment.x);
+      setter(mom_y, idx, I.moment.y);
+      setter(mom_z, idx, I.moment.z);
     }
 
     if constexpr (IT == InteractionType::InnerBond) {
       auto& I = interaction.as<InnerBondInteraction>();
-      ft_x[idx] = I.friction.x;
-      ft_y[idx] = I.friction.y;
-      ft_z[idx] = I.friction.z;
+      setter(ft_x, idx, I.friction.x);
+      setter(ft_y, idx, I.friction.y);
+      setter(ft_z, idx, I.friction.z);
 
-      en[idx] = I.en;
-      tds[idx] = I.tds;
-      et[idx] = I.et;
-      dn0[idx] = I.dn0;
-      weight[idx] = I.weight;
-      criterion[idx] = I.criterion;
-      unbroken[idx] = I.unbroken;
+      setter(en, idx, I.en);
+      setter(tds, idx, I.tds);
+      setter(et, idx, I.et);
+      setter(dn0, idx, I.dn0);
+      setter(weight, idx, I.weight);
+      setter(criterion, idx, I.criterion);
+      setter(unbroken, idx, I.unbroken);
     }
 
     auto& [pi, pj, _type, _swap, _ghost] = interaction.pair;
 
     assert(_type == type);
 
-    id_i[idx] = pi.id;
-    id_j[idx] = pj.id;
+    setter(id_i, idx, pi.id);
+    setter(id_j, idx, pj.id);
 
-    cell_i[idx] = pi.cell;
-    cell_j[idx] = pj.cell;
+    setter(cell_i, idx, pi.cell);
+    setter(cell_j, idx, pj.cell);
 
-    p_i[idx] = pi.p;
-    p_j[idx] = pj.p;
+    setter(p_i, idx, pi.p);
+    setter(p_j, idx, pj.p);
 
-    sub_i[idx] = pi.sub;
-    sub_j[idx] = pj.sub;
-    swap[idx] = _swap;
-    ghost[idx] = _ghost;
+    setter(sub_i, idx, pi.sub);
+    setter(sub_j, idx, pj.sub);
+
+    setter(swap, idx, _swap);
+    setter(ghost, idx, _ghost);
   }
 
   /**
@@ -196,7 +221,11 @@ struct ClassifierContainer {
     const size_t old_size = this->size();
     this->resize(old_size + new_elements);
 
-    type = w;
+    if (w != type) {
+      color_log::mpi_error("Classifier::insert",
+                           "Wrong interaction type Id: " + std::to_string(w) +
+                           ". It should be: " + std::to_string(type));
+    }
 
     for (size_t i = 0; i < new_elements; i++) {
       const size_t idx = old_size + i;
@@ -207,9 +236,12 @@ struct ClassifierContainer {
 
   void copy(size_t start, size_t size, std::vector<exaDEM::PlaceholderInteraction>& tmp, int w) {
     if (tmp.size() != size) {
-      color_log::error("Classifier::copy", "When resizing wave: " + std::to_string(w));
+      color_log::mpi_error("Classifier::copy", "When resizing wave: " + std::to_string(w));
+    } else if (w != type) {
+      color_log::mpi_error("Classifier::copy",
+			 "Wrong interaction type Id: " + std::to_string(w) +
+                           ". It should be: " + std::to_string(type));
     }
-    type = w;
 
     for (size_t i = 0; i < size; i++) {
       const size_t idx = start + i;
@@ -224,30 +256,30 @@ struct ClassifierContainer {
   ONIKA_HOST_DEVICE_FUNC auto operator[](uint64_t id) {
     using namespace onika::cuda;
     InteractionPair ip = {
-        // pi
-        {vector_data(id_i)[id], vector_data(cell_i)[id], vector_data(p_i)[id], vector_data(sub_i)[id]},
-        // pj
-        {vector_data(id_j)[id], vector_data(cell_j)[id], vector_data(p_j)[id], vector_data(sub_j)[id]},
-        // type, swap, ghost
-        type,
-        swap[id],
-        ghost[id]};
+      // pi
+      {vector_data(id_i)[id], vector_data(cell_i)[id], vector_data(p_i)[id], vector_data(sub_i)[id]},
+      // pj
+      {vector_data(id_j)[id], vector_data(cell_j)[id], vector_data(p_j)[id], vector_data(sub_j)[id]},
+      // type, swap, ghost
+      type,
+      vector_data(swap)[id],
+      vector_data(ghost)[id]};
 
     if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) {
       exaDEM::Interaction res{ip,
-                              {vector_data(ft_x)[id], vector_data(ft_y)[id], vector_data(ft_z)[id]},
-                              {vector_data(mom_x)[id], vector_data(mom_y)[id], vector_data(mom_z)[id]}};
+        {vector_data(ft_x)[id], vector_data(ft_y)[id], vector_data(ft_z)[id]},
+        {vector_data(mom_x)[id], vector_data(mom_y)[id], vector_data(mom_z)[id]}};
       return res;
     } else if constexpr (IT == InteractionType::InnerBond) {
       exaDEM::InnerBondInteraction res{ip,
-                                       {vector_data(ft_x)[id], vector_data(ft_y)[id], vector_data(ft_z)[id]},
-                                       vector_data(en)[id],
-                                       vector_data(tds)[id],
-                                       vector_data(et)[id],
-                                       vector_data(dn0)[id],
-                                       vector_data(weight)[id],
-                                       vector_data(criterion)[id],
-                                       vector_data(unbroken)[id]};
+        {vector_data(ft_x)[id], vector_data(ft_y)[id], vector_data(ft_z)[id]},
+        vector_data(en)[id],
+        vector_data(tds)[id],
+        vector_data(et)[id],
+        vector_data(dn0)[id],
+        vector_data(weight)[id],
+        vector_data(criterion)[id],
+        vector_data(unbroken)[id]};
       return res;
     }
   }
@@ -291,4 +323,72 @@ struct ClassifierContainer {
     onika::lout << " and it contains " << this->size() << " interactions." << std::endl;
   }
 };
+
+
+template<InteractionType IT, typename Func, typename... Args>
+void for_all_interactions(ClassifierContainer<IT>& container, Func& func, Args&&... args) {
+  size_t size = container.size();
+  for(size_t i = 0 ; i<size ; i++) {
+    auto I = container[i];  // I is built, not a ref
+    func(I, std::forward<Args>(args)...);
+  }
+}
+
+template<InteractionType... Types>
+struct ClassifierContainerDispatcher
+{
+  template<typename ClassifierT, typename Func, typename... Args>
+    static inline void dispatch(
+	int type,
+	ClassifierT& iwa,
+	Func& func,
+	Args&&... args)
+    {
+      ((get_typed(type) == static_cast<int>(Types)
+	? (func.template operator()<Types>(
+	    iwa.template get_data<Types>(type),
+	    std::forward<Args>(args)...), 0)
+	: 0), ...);
+    }
+};
+using CDispatcher = ClassifierContainerDispatcher<InteractionType::ParticleParticle, InteractionType::ParticleDriver, InteractionType::InnerBond>;
+
+// bunch of functions used by the dispatcher
+template<typename Apply>
+struct ClassifierContainerApplyFunc {
+  Apply apply;
+  template<InteractionType IT, typename... Args>
+  void operator()(ClassifierContainer<IT>& container,
+                  Args&&... args) {
+    apply(container, std::forward<Args>(args)...);
+  } 
+};
+struct ClassifierContainerSizeFunc {
+  size_t value = 0;
+  template<InteractionType IT>
+    void operator()(ClassifierContainer<IT>& container) {
+      value = container.size();
+    }
+};
+
+struct ClassifierContainerResizerFunc {
+  template<InteractionType IT>
+  void operator()(ClassifierContainer<IT>& container,
+                  size_t new_size) {
+    container.resize(new_size);
+  } 
+};
+
+struct ClassifierContainerCopierFunc {
+  template<InteractionType IT>
+    void operator()(ClassifierContainer<IT>& container,
+        std::vector<exaDEM::PlaceholderInteraction>& vec,
+	const size_t start,
+	const size_t size,
+        const int typeID) {
+      // std::cout << get_name<IT>() << std::endl;
+      container.copy(start, size, vec, typeID);
+    } 
+};
+
 }  // namespace exaDEM

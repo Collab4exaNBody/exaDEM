@@ -72,16 +72,17 @@ struct compute_stress_tensors {
   template <int Type, typename TMPLC>
   void iteration(Classifier& classifier, TMPLC* const __restrict__ cells) {
     static_assert(Type >= 0 && Type < NTypes);
-    auto [Ip, size] = classifier.get_info<ParticleParticle>(Type);
+    constexpr InteractionType IT = ConvertToIntertactionType<Type>();
+    auto [Ip, size] = classifier.get_info<IT>(Type);
     if (size > 0) {
       ParallelForOptions opts;
       opts.omp_scheduling = OMP_SCHED_STATIC;
       const auto [dnp, cpp, fnp, ftp] =
-          classifier.buffer_p(Type);          // get parameters: get forces (fn, ft) and contact positions
-                                              // (cp) computed into the contact force operators.
-      InteractionWrapper interactions(Ip);    // get data: interaction
-      compute_stress_tensor<Type, Sym> func;  // get kernel
-                                              // pack data, kernel, and interaction in a wrapper
+          classifier.buffer_p(Type);            // get parameters: get forces (fn, ft) and contact positions
+                                                // (cp) computed into the contact force operators.
+      InteractionWrapper<IT> interactions(Ip);  // get data: interaction
+      compute_stress_tensor<Type, Sym> func;    // get kernel
+                                                // pack data, kernel, and interaction in a wrapper
       WrapperForAll wrapper(interactions, func, cells, dnp, fnp, ftp, cpp);
       // launch kernel
       parallel_for(size, wrapper, oper->parallel_execution_context(), opts);
@@ -89,15 +90,15 @@ struct compute_stress_tensors {
   }
 
   template <int Type, typename... Args>
-  void loop(Args... args) {
-    iteration<Type>(args...);
-    if constexpr (Type - 1 >= 0) loop<Type - 1>(args...);
+  void loop(Args&&... args) {
+    iteration<Type>(std::forward<Args>(args)...);
+    if constexpr (Type - 1 >= 0) loop<Type - 1>(std::forward<Args>(args)...);
   }
 
   template <typename... Args>
   void operator()(Args&&... args) {
     static_assert(NTypes >= 1);
-    loop<NTypes - 1>(args...);
+    loop<NTypes - 1>(std::forward<Args>(args)...);
   }
 };
 
@@ -132,7 +133,7 @@ class StressTensor : public OperatorNode {
     Classifier& cf = *ic;
     // get kernel
     constexpr bool sym = true;
-    compute_stress_tensors<Classifier::typesPP, sym, StressTensor> runner = {this};
+    compute_stress_tensors<InteractionTypeId::NTypesPP, sym, StressTensor> runner = {this};
     runner(cf, cells);
   }
 };

@@ -17,6 +17,8 @@ under the License.
 
 #pragma once
 
+#include <cassert>
+
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/classifier/classifier_container.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
@@ -32,18 +34,14 @@ namespace exaDEM {
  */
 struct Classifier {
   using WavePP = ClassifierContainer<InteractionType::ParticleParticle>;
+  using WavePD = ClassifierContainer<InteractionType::ParticleDriver>;
   using WaveIB = ClassifierContainer<InteractionType::InnerBond>;
-  static constexpr int typesParticles = 4;                       // Particle / Particle + Particle / Driver
-  static constexpr int typesDirvers = 9;                         // Particle / Particle + Particle / Driver
-  static constexpr int typesPP = typesParticles + typesDirvers;  // 13 -- Particle / Particle + Particle / Driver
-  static constexpr int typesIB = 1;                              // Sticked Particles
-  static constexpr int types = typesPP + typesIB;
-  static constexpr int InnerBondTypeId = InteractionTypeId::InnerBond;
 
   // Members
-  std::vector<WavePP> waves;                         ///< Storage for interactions categorized by type.
+  std::vector<WavePP> m_particles;                     ///< Storage for interactions categorized by type.
+  std::vector<WavePD> m_drivers;                       ///< Storage for interactions categorized by type.
+  std::vector<WaveIB> m_innerbonds;                   ///< Used for fragmentation
   std::vector<itools::interaction_buffers> buffers;  ///< Storage for analysis. Empty if there is no analysis
-  WaveIB sticked_interaction;                        ///< Used for fragmentation
 
   /**
    * @brief Default constructor.
@@ -59,18 +57,61 @@ struct Classifier {
    * @brief Initializes the waves vector to hold interactions for each type.
    */
   void initialize() {
-    waves.resize(typesPP);
-    buffers.resize(types);
+    m_particles.resize(InteractionTypeId::NTypesPP);
+    m_drivers.resize(InteractionTypeId::NTypesParticleDriver);
+    m_innerbonds.resize(InteractionTypeId::NTypesInnerBond);
+    buffers.resize(InteractionTypeId::NTypes);
+    size_t typeId = 0;
+    for(; typeId <= get_last_id<InteractionType::ParticleParticle>() ; typeId++) {
+      int typed_id = get_typed_idx<InteractionType::ParticleParticle>(typeId);
+      m_particles[typed_id].type = typeId;
+    }
+    for(; typeId <= get_last_id<InteractionType::ParticleDriver>() ; typeId++) {
+      int typed_id = get_typed_idx<InteractionType::ParticleDriver>(typeId);
+      // lout << "typeID " << typeId << " typed id " << typed_id << std::endl;
+      m_drivers[typed_id].type = typeId;
+    }
+    for(; typeId <= get_last_id<InteractionType::InnerBond>() ; typeId++) {
+      int typed_id = get_typed_idx<InteractionType::InnerBond>(typeId);
+      m_innerbonds[typed_id].type = typeId;
+    }
   }
 
   /**
    * @brief Clears all stored interactions in the waves vector.
    */
-  void reset_waves() {
-    for (auto& wave : waves) {
-      wave.clear();
+  void reset_containers() {
+    for (auto& container : m_particles) {
+      container.clear();
     }
-    sticked_interaction.clear();
+    for (auto& container : m_drivers) {
+      container.clear();
+    }
+    for (auto& container : m_innerbonds) {
+      container.clear();
+    }
+  }
+
+  template<InteractionType IT>
+  auto& get_container() {
+    if constexpr (IT == InteractionType::ParticleParticle) {
+      return m_particles;
+    } else if constexpr (IT == InteractionType::ParticleDriver) {
+      return m_drivers;
+    } else if constexpr (IT == InteractionType::InnerBond) {
+      return m_innerbonds;
+    }
+  }
+
+  template<InteractionType IT>
+  const auto& get_container() const {
+    if constexpr (IT == InteractionType::ParticleParticle) {
+      return m_particles;
+    } else if constexpr (IT == InteractionType::ParticleDriver) {
+      return m_drivers;
+    } else if constexpr (IT == InteractionType::InnerBond) {
+      return m_innerbonds;
+    }
   }
 
   /**
@@ -80,48 +121,61 @@ struct Classifier {
    * @return Reference to the CUDA memory-managed vector storing interactions of the specified type.
    */
   template <InteractionType IT>
-  auto& get_data(size_t id) {
-    if constexpr (IT == ParticleParticle) {
-      if (id < types) {
-        return waves[id];
-      }
+  auto& get_data(size_t typeID) {
+    int typed_id = get_typed_idx<IT>(typeID);
+    auto& data = get_container<IT>();
+    if (typed_id >= int(data.size())) {
+      std::string msg = "Invalid id in get_data:\n";
+      msg+="Type ID: " + std::to_string(typeID) + "\n";
+      msg+= "Typed ID: " + std::to_string(typed_id) + "\n";
+      msg+= "InteractionType: " + get_name<IT>();
+      color_log::error("Classifier::get_data", msg);
     }
-    if constexpr (IT == InnerBond) {
-      if (id == InnerBondTypeId) {
-        return sticked_interaction;
-      }
-    }
-    color_log::error("Classifier::get_wave", "Invalid id in get_wave()");
-    std::exit(EXIT_FAILURE);
-  }
-
-  InteractionWrapper<InteractionType::InnerBond> get_sticked_interaction_wrapper() {
-    return get_data<InnerBond>(InnerBondTypeId);
+    return data[typed_id];
   }
 
   template <InteractionType IT>
-  const auto& get_data(size_t id) const {
-    if constexpr (IT == ParticleParticle) {
-      if (id < types) {
-        return waves[id];
-      }
+  const auto& get_data(size_t typeID) const {
+    int typed_id = get_typed_idx<IT>(typeID);
+    auto& data = get_container<IT>();
+    if (typed_id >= int(data.size())) {
+      std::string msg = "Invalid id in get_data:\n";
+      msg+="Type ID: " + std::to_string(typeID) + "\n";
+      msg+= "Typed ID: " + std::to_string(typed_id) + "\n";
+      msg+= "InteractionType: " + get_name<IT>();
+      color_log::error("Classifier::get_data", msg);
     }
-    if constexpr (IT == InnerBond) {
-      if (id == InnerBondTypeId) {
-        return sticked_interaction;
-      }
-    }
-    color_log::error("Classifier::get_wave", "Invalid id in get_wave()");
-    std::exit(EXIT_FAILURE);
+    return data[typed_id];
+  }
+
+  InteractionWrapper<InteractionType::InnerBond> get_sticked_interaction_wrapper() {
+    WaveIB& ib = get_data<InnerBond>(InteractionTypeId::FirstIdInnerBond);
+    assert(ib.size() == 1);
+    return InteractionWrapper<InteractionType::InnerBond>(ib);  // WARNING here
   }
 
   size_t get_size(size_t id) {
-    if (id < typesPP)
-      return waves[id].size();
-    else if (id == InnerBondTypeId)
-      return sticked_interaction.size();
-    color_log::error("Classifier::get_size", "Invalid id in get_size()");
-    std::exit(EXIT_FAILURE);
+    ClassifierContainerSizeFunc func;
+    CDispatcher::dispatch(id, *this, func);
+    return func.value;
+  }
+
+  void resize(int typeID, size_t size) {
+    auto resizer = [](auto& container, size_t s) -> void {
+      container.resize(s);
+    };
+    ClassifierContainerApplyFunc func = { resizer };
+    CDispatcher::dispatch(typeID, *this, func, size);
+  }
+
+  void copy(int typeID, size_t start, size_t size,
+            std::vector<PlaceholderInteraction>& vec) {
+    auto copier = [typeID](auto& container, size_t st, size_t si,
+                           std::vector<PlaceholderInteraction>& v) {
+      container.copy(st, si, v, typeID);
+    };
+    ClassifierContainerApplyFunc func = { copier};
+    CDispatcher::dispatch(typeID, *this, func, start, size, vec);
   }
 
   /**
@@ -132,42 +186,27 @@ struct Classifier {
    */
 
   template <InteractionType IT>
-  auto get_info(size_t id) {
-    if constexpr (IT == ParticleParticle) {
-      if (id < types) {
-        const unsigned int data_size = waves[id].size();
-        WavePP& data = waves[id];
-        return std::pair<WavePP&, size_t>{data, data_size};
-      }
+  std::pair<ClassifierContainer<IT>&, size_t> get_info(size_t typeID) {
+    int typed_id = get_typed_idx<IT>(typeID);
+    auto& data = get_container<IT>();
+    if (typed_id >= int(data.size())) {
+      std::string msg = "Invalid Type id: " + std::to_string(typeID); 
+      color_log::error("Classifier::get_info", msg);
     }
-    if constexpr (IT == InnerBond) {
-      if (id == InnerBondTypeId) {
-        const unsigned int data_size = sticked_interaction.size();
-        return std::pair<WaveIB&, size_t>{sticked_interaction, data_size};
-      }
-    }
-
-    color_log::error("Classifier::get_info", "Invalid id in get_info()");
-    std::exit(EXIT_FAILURE);
+    const unsigned int data_size = data[typed_id].size();
+    return std::pair<ClassifierContainer<IT>&, size_t>{data[typed_id], data_size};
   }
 
   template <InteractionType IT>
-  auto get_info(size_t id) const {
-    if constexpr (IT == ParticleParticle) {
-      if (id < types) {
-        const unsigned int data_size = waves[id].size();
-        const WavePP& data = waves[id];
-        return std::pair<const WavePP&, size_t>{data, data_size};
-      }
+  std::pair<const ClassifierContainer<IT>&, size_t> get_info(size_t typeID) const {
+    int typed_id = get_typed_idx<IT>(typeID);
+    auto& data = get_container<IT>();
+    if (typed_id >= int(data.size())) {
+      std::string msg = "Invalid Type id: " + std::to_string(typeID); 
+      color_log::error("Classifier::get_info", msg);
     }
-    if constexpr (IT == InnerBond) {
-      if (id == InnerBondTypeId) {
-        const unsigned int data_size = sticked_interaction.size();
-        return std::pair<const WaveIB&, size_t>{sticked_interaction, data_size};
-      }
-    }
-    color_log::error("Classifier::get_info", "Invalid id in get_info()");
-    std::exit(EXIT_FAILURE);
+    const unsigned int data_size = data[typed_id].size();
+    return std::pair<const ClassifierContainer<IT>&, size_t>{data[typed_id], data_size};
   }
 
   std::tuple<double*, Vec3d*, Vec3d*, Vec3d*> buffer_p(int id) {
@@ -189,21 +228,46 @@ struct Classifier {
    * @return Number of interaction types.
    */
   size_t number_of_waves() {
-    assert(types == typesPP + typesIB);
-    return types;
+    assert(types == InteractionTypeId::NTypes);
+    return m_particles.size() + m_drivers.size() + m_innerbonds.size();
   }
 
   size_t number_of_waves() const {
-    assert(types == typesPP + typesIB);
-    return types;
+    assert(types == InteractionTypeId::NTypes);
+    return m_particles.size() + m_drivers.size() + m_innerbonds.size();
   }
 
   // debug
   void display() {
-    for (auto& wave : waves) {
-      wave.display();
+    for (auto& container : m_particles) {
+      container.display();
     }
-    sticked_interaction.display();
+    for (auto& container : m_drivers) {
+      container.display();
+    }
+    for (auto& container : m_innerbonds) {
+      container.display();
+    }
   }
 };
+
+struct ForAllInteractionFunc {
+  template<InteractionType IT, typename Func, typename... Args>
+  void operator()(ClassifierContainer<IT>& container,
+                  Func& func, Args&&... args) {
+    for_all_interactions(container, func, std::forward<Args>(args)...);
+  }
+};
+
+template<typename Func, typename... Args>
+void for_all_interactions(Classifier& classifier,
+                          Func& func, Args&&... args) {
+  ForAllInteractionFunc functor;
+  for (size_t typeID = 0 ; typeID < classifier.number_of_waves() ; typeID++) {
+    CDispatcher::dispatch(typeID, classifier,
+                          functor, func,std::forward<Args>(args)...);
+  }
+}
 }  // namespace exaDEM
+
+#include <exaDEM/classifier/interaction_wrapper_accessor.hpp>
