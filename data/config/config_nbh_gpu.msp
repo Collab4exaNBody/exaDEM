@@ -7,8 +7,6 @@ chunk_neighbors_impl:
   - classify_interaction_ghost
   - unclassify_gpu
   - check_owner_partner_ghosts
-#  - check_owner_partner_ghosts
-#  - classify_interactions
 
 compress_data:
   - unclassify_gpu
