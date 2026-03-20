@@ -1,5 +1,3 @@
-#+chunk_neighbors_impl:
-#  - nbh_polyhedron_gpu
 chunk_neighbors_impl:
 #  - chunk_neighbors_contact
 #  - do_update_persistent_interactions_if_required
