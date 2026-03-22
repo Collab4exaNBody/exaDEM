@@ -1,0 +1,76 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "ImposeVelocityHoleDir"
+  
+input_data:
+  - particle_regions:
+      - CYL1:
+          quadric:
+            shape: cyly
+            transform:
+              - scale: [ 8, 1, 8 ]
+              - translate: [ 25.5 m , 0 , 25.5 m ]
+      - PLANE1:
+          quadric:
+            shape: { plane: [ 0 , 0 , -1 , 0 ] }
+            transform:
+              - translate: [ 0 , 0 , 10 m ]  
+  - domain:
+      cell_size: 2.0 m
+      grid_dims: [25,5,25]
+      bounds: [[0 m ,0 m,0 m],[50 m, 10 m, 50 m]]
+      xform: [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]
+      periodic: [true,true,false]
+      expandable: false
+  - init_rcb_grid
+  - particle_type:
+     type: [ Sphere1 ]
+  - lattice:
+     structure: SC
+     types: [ Sphere1 ]
+     size: [ 2.0 , 2.0 , 2.0 ]
+  - filter_particle:   
+     region: CYL1
+  - set_fields:
+     polyhedra: false
+     type:           [ Sphere1 ]
+     radius:         [     0.5 ]
+     density:        [    0.02 ]
+     velocity:       [ [0,0,0] ]
+     sigma_velocity: [     0.1 ]
+
+transverse_velocity_slab:
+  body:  [ set_velocity: { value: [ -13. m/s ,   0 , 0 ], region: not PLANE1 } ]
+
+compute_force:
+  - gravity_force  
+  - contact_sphere:
+     symetric: true
+     config: { kn: 1000, kt: 800, kr: 0, mu: 0.3, damp_rate: 0.9}
+  - transverse_velocity_slab
+
+domain:
+  cell_size: 2.0 m
+  periodic: [true, true, false]
+
+dump_data_xyz:
+  - timestep_file: "xyz_datas/dembis_%09d"
+  - write_xyz:
+      fields: [ velocity, radius ]
+      units: { velocity: "m/s", radius: "m" }
+
+iteration_dump_writer:
+  - dump_data_xyz
+
+global:
+  simulation_dump_frequency: 2000
+  simulation_paraview_frequency: 1000
+  simulation_end_iteration: 2000
+  simulation_log_frequency: 100
+  dt: 0.001 s 
+  rcut_inc: 0.4 m
