@@ -19,7 +19,7 @@ under the License.
 
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction.hpp>
-#include <exanb/grid_cell_particles/filter_region_particle.h>
+#include <exanb/grid_cell_particles/filter_particle_region.h>
 #include <exanb/core/make_grid_variant_operator.h>
 
 namespace exaDEM {
@@ -28,7 +28,7 @@ namespace exaDEM {
   {
     OperatorNodeFactory::instance()->register_factory(
       "filter_particle",
-      make_grid_variant_operator< FilterRegionParticle >
+      make_grid_variant_operator< FilterParticleRegion >
       );
   }
 }  // namespace exaDEM
