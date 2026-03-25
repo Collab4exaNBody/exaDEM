@@ -20,6 +20,7 @@ under the License.
 #pragma once
 
 #include <onika/parallel/parallel_for.h>
+#include <onika/cuda/uninitialized_place_holder.h>
 
 namespace exaDEM {
 using namespace onika::parallel;
