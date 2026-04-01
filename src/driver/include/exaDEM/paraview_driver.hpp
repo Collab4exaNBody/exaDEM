@@ -337,7 +337,7 @@ void write_cylinder_paraview(
 
   for (auto [id, center, normal, radius] : cylinders) {
     normalize(normal);
-    points.clean();
+    points.clear();
     double t_min = 1e30, t_max = -1e30;
     for (const auto& c : corners) {
       double t = dot(c - center, normal);
