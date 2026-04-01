@@ -77,12 +77,24 @@ struct CountIPDFunc {
           }
     };
 
-    size_t n_particles = cell.size();
+    /*size_t n_particles = cell.size();
     NbhDriverCounter func;
-    PlaceholderInteraction item;  // not used
+    PlaceholderInteraction item;*/  // not used
                                   // By default, if the interaction is between a particle and a driver
                                   // Data about the particle j is set to -1
                                   // Except for id_j that contains the driver id
+                                  
+size_t n_particles = cell.size();
+    NbhDriverCounter func;
+    PlaceholderInteraction item = {};
+    item.pair.swap = false;
+    item.pair.ghost = InteractionPair::NotGhost;
+    auto& pi_c = item.i();
+    auto& pd_c = item.driver();
+    pi_c.cell = cell_id;
+    pd_c.cell = static_cast<size_t>(-1);
+    pd_c.p = static_cast<uint16_t>(-1);
+                                  
     const auto* __restrict__ id = cell[field::id];
     const auto* __restrict__ h = cell[field::homothety];
     const auto* __restrict__ t = cell[field::type];
@@ -155,10 +167,19 @@ struct ClassifyIPDFunc {
     auto& cell = cells[cell_id];
     VertexField& vertex_cell = vertex_fields[cell_id];
     size_t n_particles = cell.size();
-    PlaceholderInteraction item;
+    /*PlaceholderInteraction item;
     auto& pi = item.i();       // particle i (id, cell id, particle position, sub vertex)
     auto& pd = item.driver();  // particle driver (id, cell id, particle position, sub vertex)
+    pi.cell = cell_id;*/
+PlaceholderInteraction item = {};
+    item.pair.swap = false;
+    item.pair.ghost = InteractionPair::NotGhost;
+    auto& pi = item.i();
+    auto& pd = item.driver();
     pi.cell = cell_id;
+    pd.cell = static_cast<size_t>(-1);
+    pd.p = static_cast<uint16_t>(-1);
+    
     // By default,  if the interaction is between a particle and a driver
     // Data about the particle j is set to -1
     // Except for id_j that contains the driver id

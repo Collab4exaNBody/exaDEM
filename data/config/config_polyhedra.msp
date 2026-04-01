@@ -9,12 +9,13 @@ evaluate_particle_displ:
     - vertex_displ_over
 
 chunk_neighbors_impl:
-  - chunk_neighbors_contact
+  #- chunk_neighbors_contact
   - do_update_persistent_interactions_if_required
-  - nbh_polyhedron
+  - nbh_polyhedron_gpu
   - update_interaction_ghost
 #  - check_owner_partner_ghosts
   - classify_interactions
+  - check_owner_partner_ghosts
 
 migrate_particles:
   - migrate_cell_particles_interaction

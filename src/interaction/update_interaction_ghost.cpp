@@ -65,7 +65,7 @@ class UpdateInteractionGhost : public OperatorNode {
       CellExtraDynamicDataStorageT<PlaceholderInteraction>& storage = interaction_cells[i];
       storage.initialize(n_particles);
     }
-
+    
     // MPI comms are done here
     manager.setup(*ghost_comm_scheme, *mpi, interaction_cells, g);
 

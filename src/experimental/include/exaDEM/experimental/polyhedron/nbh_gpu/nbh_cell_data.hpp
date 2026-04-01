@@ -113,7 +113,7 @@ void transfer_classifier_grid(size_t* cell_ptr,
       }
     }
 
-    if (info.number_of_pair_cells[cell_idx] == 0) {
+    /*if (info.number_of_pair_cells[cell_idx] == 0) {
       continue;
     }
 
@@ -132,7 +132,29 @@ void transfer_classifier_grid(size_t* cell_ptr,
         classifier_helper.offset[last_interaction] 
         + classifier_helper.size[last_interaction] 
         - first_elem_per_type
-        + classifier_helper_driver.size[cell_idx];
+        + classifier_helper_driver.size[cell_idx];*/
+        
+// Grid cell that owns this non-empty cell
+    size_t owner_cell = cell_ptr[cell_idx];
+
+    // Compute PP contribution
+    InteractionTypePerCellCounter pp_start;
+    InteractionTypePerCellCounter pp_end;
+    for (int k = 0; k < InteractionTypeId::NTypes; k++) {
+        pp_start[k] = 0;
+        pp_end[k] = 0;
+    }
+
+    if (info.number_of_pair_cells[cell_idx] > 0) {
+        size_t first_interaction = info.start_cell[cell_idx];
+        size_t last_interaction  = first_interaction + info.number_of_pair_cells[cell_idx] - 1;
+        pp_start = classifier_helper.offset[first_interaction];
+        pp_end   = classifier_helper.offset[last_interaction] 
+                 + classifier_helper.size[last_interaction];
+    }
+
+    auto first_elem_per_type = pp_start + classifier_helper_driver.offset[cell_idx];
+    auto n_elem_per_type = pp_end - pp_start + classifier_helper_driver.size[cell_idx];
 
     // Total number of interactions in this cell
     size_t number_of_interactions = 0;

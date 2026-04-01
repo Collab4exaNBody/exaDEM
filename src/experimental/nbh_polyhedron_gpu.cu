@@ -128,6 +128,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 		//
 		// lout << "Fill CPU data storage" << std::endl;
 		info_cell.resize(cell_size);
+		    std::memset(info_cell.update_ghost.data(), 0, cell_size * sizeof(uint8_t));
 		size_t shift = 0;
 		for(size_t i = 0 ; i < cell_size ; i++) {
 			info_cell.start_cell[i] = shift;
@@ -135,7 +136,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 			size_t cell_a = cell_ptr[i];
 			IJK loc_a = grid_index_to_ijk(dims, cell_a);
 
-			for (size_t j = 0; j < 26 ; j++) {
+			for (size_t j = 0; j < 27 ; j++) {
 				size_t cell_b = grid_ijk_to_index(
 						dims, loc_a + convert_offset_ijk(j));
 				if (cells[cell_b].size() > 0) {
@@ -209,6 +210,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 		// Recover it by history update on CPU
 		// project ghost / edge interactions
 		InteractionHistory history;
+
 		setup_history_clean_ges(cells, cell_ptr, cell_size,
 														*ges, history, st_history);
 
@@ -252,6 +254,9 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 		parallel_for(cell_size, classify_driver, parallel_execution_context("nbh_gpu::classify_driver"), opts);
 
 		ONIKA_CU_DEVICE_SYNCHRONIZE();
+		
+
+		
 		ACF filler = {
 			cells, accessor,
 			*rcut_inc, shps.data(),
@@ -261,23 +266,100 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 		auto pec2 = parallel_execution_context();
 		pec2->s_gpu_block_dims = {block_size_x, block_size_y, 1};  // enforce block size 
 		onika::parallel::block_parallel_for(parallel_range, filler, pec2, bopts);
+		
+		// === DEBUG PP SWAP/GHOST GPU ===
+    /*{
+      size_t total_swap = 0;
+      size_t total_ghost = 0;
+      size_t total_pp = 0;
+      for (int typeID = get_first_id<InteractionType::ParticleParticle>();
+           typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
+        size_t sz = new_size[typeID];
+        auto& w = classifier_interaction_accessor.get_typed_accessor<InteractionType::ParticleParticle>(typeID);
+        for (size_t i = 0; i < sz; i++) {
+          auto item = w(i);
+          total_pp++;
+          if (item.pair.swap) total_swap++;
+          if (item.pair.ghost != InteractionPair::NotGhost) total_ghost++;
+        }
+      }
+      lout << "[PP GPU] total=" << total_pp
+           << " swap=" << total_swap
+           << " ghost=" << total_ghost << std::endl;
+    }*/
 
-		UpdateHistoryFunc update_history = {
+		/*UpdateHistoryFunc update_history = {
 			history.start.data(),
 			history.size.data(),
 			history.data.data(), 
 			info_cell.start_cell.data(),
 			info_cell.number_of_pair_cells.data(),
 			accessor,
-			classifier_interaction_accessor};
+			classifier_interaction_accessor};*/
+			
+			
+		UpdateHistoryFunc update_history = {
+      history.start.data(),
+      history.size.data(),
+      history.data.data(), 
+      info_cell.start_cell.data(),
+      info_cell.number_of_pair_cells.data(),
+      accessor,
+      cell_driver_accessor,
+      classifier_interaction_accessor};
 
 		parallel_for(history.start.size(), update_history, parallel_execution_context(), opts);
+// === ADD PERSISTENT INTERACTIONS ===
+    {
+      std::vector<PlaceholderInteraction> unmatched_persistent;
+      for (size_t ci = 0; ci < cell_size; ci++) {
+        size_t hist_begin = history.start[ci];
+        size_t hist_end = hist_begin + history.size[ci];
+        for (size_t h = hist_begin; h < hist_end; h++) {
+          PlaceholderInteraction I = history.data[h];
+          auto type = I.type();
+          if (type < get_first_id<InteractionType::ParticleDriver>() ||
+              type > get_last_id<InteractionType::ParticleDriver>())
+            continue;
+          if (!I.persistent()) continue;
+          auto& wrapper = classifier_interaction_accessor.get_typed_accessor<InteractionType::ParticleDriver>(type);
+          int drv_offset = cell_driver_accessor.offset[ci][type];
+          int drv_size = cell_driver_accessor.size[ci][type];
+          bool found = false;
+          for (int k = drv_offset; k < drv_offset + drv_size; k++) {
+            if (wrapper.same(k, I)) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            unmatched_persistent.push_back(I);
+          }
+        }
+      }
+      if (!unmatched_persistent.empty()) {
+        lout << "[PERSISTENT] adding " << unmatched_persistent.size()
+             << " unmatched persistent driver interactions" << std::endl;
+        for (auto& I : unmatched_persistent) {
+          auto type = I.type();
+          auto& c = container.get_data<InteractionType::ParticleDriver>(type);
+          size_t old_size = c.size();
+          container.resize(type, old_size + 1);
+          InteractionWrapperStorage wrappers_tmp(container);
+          InteractionWrapperAccessor tmp_accessor = wrappers_tmp.accessor();
+          auto& w = tmp_accessor.get_typed_accessor<InteractionType::ParticleDriver>(type);
+          w.set(old_size, I);
+        }
+        InteractionWrapperStorage wrappers2(container);
+        classifier_interaction_accessor = wrappers2.accessor();
+      }
+    }
 
 
 		// Update edge area with OwnerGhost interactions
 		// We copy only Particle - Particle / InnerBond interactions:
 		//  - A Particle - Driver interaction can't be a ghost
-		constexpr bool do_ghost_only = true;  // should be true, but false is better for debugging
+		/*constexpr bool do_ghost_only = false;  // should be true, but false is better for debugging
 		constexpr bool do_active_interaction_only = false;
 		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
 			cell_ptr, info_cell,  info_cell_pair,
@@ -293,12 +375,51 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 			classifier_interaction_accessor, *ges,
 			get_first_id<InteractionType::InnerBond>(),
 			get_last_id<InteractionType::InnerBond>()
+		);*/
+		
+/*constexpr bool do_ghost_only = false;
+		constexpr bool do_active_interaction_only = false;
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
+			classifier_interaction_accessor, *ges,
+			get_first_id<InteractionType::ParticleParticle>(),
+			get_last_id<InteractionType::ParticleParticle>()
 		);
 
-		//auto& test = container.get_data<InteractionType::ParticleDriver>(5);
-	 ///for (int i = 0 ; i < test.size() ; i++) {
-		 //test[i].print();
-	 //}
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
+			classifier_interaction_accessor, *ges,
+			get_first_id<InteractionType::InnerBond>(),
+			get_last_id<InteractionType::InnerBond>()
+		);
+
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
+			classifier_interaction_accessor, *ges,
+			get_first_id<InteractionType::ParticleDriver>(),
+			get_last_id<InteractionType::ParticleDriver>()
+		);*/
+		
+		//CORRECTION
+		constexpr bool do_ghost_only = true;
+		constexpr bool do_active_interaction_only = true;
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
+			classifier_interaction_accessor, *ges
+		);
+		
+/*constexpr bool do_ghost_only = false;
+		constexpr bool do_active_interaction_only = false;
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
+			classifier_interaction_accessor, *ges
+		);*/		
+
 #endif
 	}
 };
