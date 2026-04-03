@@ -57,16 +57,18 @@ class ParaviewDriver : public OperatorNode {
 
     std::vector<info_ball> balls;
     std::vector<info_surface> surfaces;
+    std::vector<info_cylinder> cylinders;
     for (size_t id = mpi_rank; id < drivers->get_size(); id += mpi_size) {
       if (drivers->type(id) == DRIVER_TYPE::BALL) {
         exaDEM::Ball& ball = drivers->get_typed_driver<exaDEM::Ball>(id);
         balls.push_back({static_cast<int>(id), ball.center, ball.radius, ball.vel});
-      }
-      if (drivers->type(id) == DRIVER_TYPE::SURFACE) {
+      } else if (drivers->type(id) == DRIVER_TYPE::SURFACE) {
         exaDEM::Surface& surface = drivers->get_typed_driver<exaDEM::Surface>(id);
         surfaces.push_back({static_cast<int>(id), surface.normal, surface.offset, surface.vel});
-      }
-      if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
+      } else if (drivers->type(id) == DRIVER_TYPE::CYLINDER) {
+        exaDEM::Cylinder& cylinder = drivers->get_typed_driver<exaDEM::Cylinder>(id);
+        cylinders.push_back({static_cast<int>(id), cylinder.center, cylinder.get_normal(), cylinder.radius});
+      } else if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
         exaDEM::RShapeDriver& mesh = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
         mesh.shp.write_move_paraview(path, *timestep, mesh.center, mesh.quat);
       }
@@ -83,6 +85,12 @@ class ParaviewDriver : public OperatorNode {
       std::string driver_surface_name = "driver_surfaces_%010d.vtk";
       driver_surface_name = onika::format_string(driver_surface_name, *timestep);
       write_surfaces_paraview(*domain, surfaces, path, driver_surface_name);
+    }
+    if (cylinders.size() > 0) {
+      std::filesystem::path dir(path);
+      std::string driver_cylinder_name = "driver_cylinders_%010d.vtk";
+      driver_cylinder_name = onika::format_string(driver_cylinder_name, *timestep);
+      write_cylinder_paraview(*domain, cylinders, path, driver_cylinder_name);
     }
   }
 };
