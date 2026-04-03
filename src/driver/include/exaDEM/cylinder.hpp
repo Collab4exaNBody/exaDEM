@@ -141,6 +141,36 @@ struct Cylinder : public Cylinder_params, Driver_params {
   }
 
   /**
+   * @brief Compute a normal vector associated with the given axis.
+   *
+   * This function constructs two vectors in a plane orthogonal to the
+   * provided axis (via a crude projection method), then computes their
+   * cross product to obtain a normal vector.
+   *
+   * @note
+   * - This implementation is not optimized.
+   * - The method assumes the axis is aligned with Cartesian directions.
+   *   Behavior is undefined or incorrect for arbitrary (non-axis-aligned) vectors.
+   *
+   * @warning
+   * The projection used here is not mathematically rigorous for general cases.
+   * It may produce incorrect normals if `axis` is not aligned with (1,0,0),
+   * (0,1,0), or (0,0,1).
+   *
+   * @return Vec3d A normalized vector perpendicular to the constructed plane.
+   */
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d get_normal() {
+    Vec3d p1 = {1,1,1};
+    Vec3d p2 = {-1,-1,-1};
+    Vec3d p3 = {-1,1,1};
+    p3 = p3 * axis; // projection
+    p1 = p1 * axis - p3; // projection
+    p2 = p2 * axis - p3; // projection
+    Vec3d normal = exanb::cross(p1, p2);
+    return normal / exanb::norm(normal);
+  }
+
+  /**
    * @brief Filter function to check if a point is within a certain radius of the cylinder.
    * @param rcut The cut-off radius. Note: rcut = rverlet + r shape
    * @param vi The vector representing the point to check.
@@ -150,7 +180,7 @@ struct Cylinder : public Cylinder_params, Driver_params {
     const Vec3d proj = vi * axis;
 
     // === direction
-    const auto dir = proj - center;
+    const Vec3d dir = proj - center;
 
     // === interpenetration
     const double d = norm(dir);
