@@ -42,8 +42,11 @@ struct RandomizeRadiusFunctor {
       double min_radius = current_radius * (1.0 - relative_deviation);
       double max_radius = allow_exceed ? current_radius * (1.0 + relative_deviation) : current_radius;
 
-      if (r < min_radius) r = min_radius;
-      if (r > max_radius) r = max_radius;
+      if (r <= min_radius) { 
+        return min_radius;
+      } else if (r => max_radius) {
+        return max_radius;
+      }
       return r;
   }
 
