@@ -45,7 +45,6 @@ struct RandomizeRadiusFunctor {
       if (r < min_radius) r = min_radius;
       if (r > max_radius) r = max_radius;
       return r;
-    return r;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline
