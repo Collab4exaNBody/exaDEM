@@ -44,7 +44,7 @@ struct RandomizeRadiusFunctor {
 
       if (r <= min_radius) { 
         return min_radius;
-      } else if (r => max_radius) {
+      } else if (r >= max_radius) {
         return max_radius;
       }
       return r;
