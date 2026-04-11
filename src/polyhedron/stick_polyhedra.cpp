@@ -251,13 +251,21 @@ class StickPolyhedraOperator : public OperatorNode {
                   auto [vj, size_j] = shpj->get_face(j);
 
                   double surface_ratio = shpi->get_face_area(i) / shpj->get_face_area(j);
+                  //DEBUG
+                  //std::cout << "[DEBUG] Face area i=" << shpi->get_face_area(i)
+                  //          << " j=" << shpj->get_face_area(j)
+                  //          << " ratio=" << surface_ratio << std::endl;
                   if (surface_ratio > 1.01 || surface_ratio < 0.99) {
+                    // DEBUG  
+                    //std::cout << "[DEBUG] Reject: area ratio out of bounds (" << surface_ratio << ")" << std::endl;
+
                     continue;
                   }
                   if (size_j < 3) {
                     continue;
                   }
-
+                   //DEBUG
+                  //std::cout << "[DEBUG] Face sizes: size_i=" << size_i << " size_j=" << size_j << std::endl;
                   if (size_i != size_j) {
                     continue;
                   }
@@ -271,6 +279,8 @@ class StickPolyhedraOperator : public OperatorNode {
                   double dotij = exanb::norm(nij);
 
                   if (dotij > 1.e-10) {
+                      //DEBUG
+                        //std::cout << "[DEBUG] Reject: normals not aligned" << std::endl;
                     continue;
                   }
 

@@ -1,0 +1,22 @@
+site_name: Scripts ExaDEM Docs
+
+theme:
+  name: material
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: numpy
+            show_source: false
+
+nav:
+  - Home: index.md
+  - Geometry: geometry.md
+  - IO: io_utils.md
+  - Data_Utils: data_utils.md
+  - Data_Class: data_class.md
+  - Mass_properties: mass_properties.md
+  - topology: topology.md
