@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Union, Optional
 
 # ----------------------------
@@ -72,7 +72,7 @@ InteractionKey = Union[int, Tuple[int, int]]
 
 
 @dataclass
-class Interactions:
+class InteractionsParameters:
     """
     Interactions data class to store the interaction parameters between particles.
 
@@ -111,6 +111,10 @@ class Contact:
     pos_i: Tuple[float, float, float]
     pos_j: Tuple[float, float, float]
 
+@dataclass
+class Interactions:
+    parameters: InteractionsParameters
+    contacts: List[Contact] = field(default_factory=list)
 
 # --- GLOBAL ROCKABLE DATA ---
 @dataclass
@@ -123,7 +127,7 @@ class RockableData:
     params : Params
        simulation parameters
     interactions : Interactions
-        interaction parameters between particles
+        interaction parameters and contact data
     particles : List[Particle]
         list of particles in the system
     n_particles : int

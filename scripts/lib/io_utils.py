@@ -1,19 +1,19 @@
 from fileinput import filename
-
 from nr.date import parse_time
-
-import numpy as np
 from collections import defaultdict
+import numpy as np
+
 from lib.data_class import (
+    Contact,
     Particle,
     Params,
+    InteractionsParameters,
     Interactions,
     RockableData,
     CellsData,
     Shape,
     Shapes,
 )
-
 
 # ---------------------------------------------------------------------------
 # READ ROCKABLE CONF FILE (generic)
@@ -142,7 +142,10 @@ def read_rockable_file(filepath: str) -> RockableData:
 
     return RockableData(
         params=Params(param),
-        interactions=Interactions(interactions),
+        interactions=Interactions(
+            parameters=InteractionsParameters(interactions),
+            contacts=[],
+        ),
         particles=particles,
         n_particles=n_particles,
         stick_distance=stick_distance,
@@ -181,7 +184,7 @@ def write_rockable_file(filepath: str, data: RockableData):
                 f.write(f"{key} {val}\n")
 
         # --- INTERACTIONS ---
-        for key, table in data.interactions.tables.items():
+        for key, table in data.interactions.parameters.tables.items():
             for k, val in table.items():
                 if isinstance(k, tuple):
                     g1, g2 = k
@@ -211,13 +214,28 @@ def write_rockable_file(filepath: str, data: RockableData):
         if data.stick_distance is not None:
             f.write(f"stickVerticesInClusters {data.stick_distance}\n")
 
-from lib.data_class import RockableData, Particle, Params, Interactions
 
 # ---------------------------------------------------------------------------
 # READ INTERACTIONS FILE (generic)
 # ---------------------------------------------------------------------------
-def read_interactions(filename):
-    interactions = []
+def read_interactions(filename)-> list[Contact]:
+    '''
+    Read an interactions file and return a list of Contact objects representing the interactions between particles.
+    The function parses the interactions file, extracting the relevant data for each contact, and organizes it
+    into a list of Contact objects for use in simulations.
+    
+    Parameters
+    ----------
+    filename : str
+        path to the interactions file, with the following format:
+        i j type fx fy fz pos_i_x pos_i_y pos_i_z pos_j_x pos_j_y pos_j_z
+
+    Returns
+    ----------
+    list[Contact]
+        a list of Contact objects, each containing the properties of a contact between two particles, including the indices of the particles involved, the type of contact, the force vector, and the positions of the contact points on each particle.
+    '''
+    contacts = []
 
     with open(filename, 'r') as f:
         for line in f:
@@ -230,16 +248,19 @@ def read_interactions(filename):
             normal = np.array(list(map(float, data[9:12])))
             tangential = np.array(list(map(float, data[12:15])))
 
-            interactions.append({
-                "i": i,
-                "j": j,
-                "type": itype,
-                "force": normal + tangential,
-                "pos_i": np.array(list(map(float, data[15:18]))),
-                "pos_j": np.array(list(map(float, data[18:21]))),
-            })
+            contacts.append(
+                Contact(
+                    i=i,
+                    j=j,
+                    type=itype,
+                    force=normal + tangential,
+                    pos_i=np.array(list(map(float, data[15:18]))),
+                    pos_j=np.array(list(map(float, data[18:21]))),
 
-    return interactions
+                )
+            )
+
+    return contacts
 
 # ---------------------------------------------------------------------------
 # READ XYZ FILE (generic)
@@ -294,13 +315,15 @@ def read_xyzdem_snapshot(particle_file, interaction_file=None) -> RockableData:
             particles.append(p)
             clusters.setdefault(p.cluster, []).append(p)
 
-    interactions = {}
+    contacts = {}
     if interaction_file:
-        interactions = read_interactions(interaction_file)
+        contacts = read_interactions(interaction_file)
 
     return RockableData(
         params=Params({}),  # vide ici
-        interactions=Interactions({"raw": interactions}),
+        interactions=Interactions(
+            parameters=InteractionsParameters({}),
+            contacts=contacts),
         particles=particles,
         n_particles=len(particles),
         stick_distance=None,

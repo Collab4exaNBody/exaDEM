@@ -1,11 +1,15 @@
-from lib.data_class import Particle, Params, Interactions, RockableData, CellsData
+from lib.data_class import (
+    Particle, Params, InteractionsParameters,Interactions, 
+    RockableData, CellsData, Contact
+)
+from typing import Optional, List, Dict, Union, Tuple
 
 def make_rockable_data(    
-    params=None,
-    interactions=None,
-    particles=None,
-    stick_distance=None
-    ) -> RockableData:
+    params: Optional[Dict[str, Union[float, List[float], str]]] = None,
+    interactions: Optional[Dict[str, Dict]] = None,
+    particles: Optional[List[Particle]] = None,
+    stick_distance: Optional[float] = None,
+) -> RockableData:
     '''
 Create an empty RockableData object with default values.
 This can be used as a starting point for building a RockableData object with specific parameters
@@ -28,10 +32,13 @@ RockableData
     '''
     return RockableData(
         params=Params(values=params or {}),
-        interactions=Interactions(tables=interactions or {}),
+        interactions=Interactions(
+            parameters=InteractionsParameters(tables=interactions or {}),
+            contacts=[]
+        ),
         particles=particles or [],
         n_particles=len(particles) if particles else 0,
-        stick_distance=stick_distance
+        stick_distance=stick_distance,
     )
 
 def make_sticked_conf(cell_centers, shapefile, gap):
@@ -71,7 +78,7 @@ RockableData
     }
 
     # --- INTERACTIONS ---
-    data.interactions.tables = {
+    data.interactions.parameters.tables = {
         "density": {0: 0.006, 1: 0.006},
         "knContact": {(0, 0): 1e4, (0, 1): 1e4},
         "en2Contact": {(0, 0): 0.001, (0, 1): 0.001},

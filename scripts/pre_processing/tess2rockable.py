@@ -5,7 +5,7 @@ import numpy as np
 import itertools
 
 
-from lib.data_class import Particle, Params, Interactions, RockableData,CellsData, Shape, Shapes
+from lib.data_class import Particle, Params, InteractionsParameters, RockableData,CellsData, Shape, Shapes
 from lib.io_utils import read_tess, write_shp_file, write_sticked_conf, write_rockable_file
 from lib.geometry import intersect_planes, inside_all_planes, order_face_vertices, unique_points
 from lib.topology import count_interfaces,check_interfaces

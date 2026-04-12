@@ -44,14 +44,14 @@ def compare_data(d1: RockableData, d2: RockableData):
                     errors.append(f"{key} diff: {v1} vs {v2}")
 
     # --- interactions ---
-    for name, table in d1.interactions.tables.items():
-        if name not in d2.interactions.tables:
+    for name, table in d1.interactions.parameters.tables.items():
+        if name not in d2.interactions.parameters.tables:
             errors.append(f"Interaction missing: {name}")
             continue
 
-        for pair in d1.interactions.tables[name]:
-            v1 = d1.interactions.tables[name][pair]
-            v2 = d2.interactions.tables[name].get(pair)
+        for pair in d1.interactions.parameters.tables[name]:
+            v1 = d1.interactions.parameters.tables[name][pair]
+            v2 = d2.interactions.parameters.tables[name].get(pair)
 
             if v2 is None:
                 errors.append(f"{name}{pair} missing")
