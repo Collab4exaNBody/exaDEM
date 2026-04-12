@@ -38,8 +38,10 @@ Scripts ExaDEM Docs
   + [order\_face\_vertices](#lib.geometry.order_face_vertices)
   + [unique\_points](#lib.geometry.unique_points)
   + [io\_utils](#lib.io_utils)
+  + [read\_interactions](#lib.io_utils.read_interactions)
   + [read\_rockable\_file](#lib.io_utils.read_rockable_file)
   + [read\_tess](#lib.io_utils.read_tess)
+  + [read\_xyzdem\_snapshot](#lib.io_utils.read_xyzdem_snapshot)
   + [write\_rockable\_file](#lib.io_utils.write_rockable_file)
   + [write\_shp\_file](#lib.io_utils.write_shp_file)
   + [write\_sticked\_conf](#lib.io_utils.write_sticked_conf)
@@ -48,7 +50,8 @@ Scripts ExaDEM Docs
   + [make\_sticked\_conf](#lib.data_utils.make_sticked_conf)
   + [data\_class](#lib.data_class)
   + [CellsData](#lib.data_class.CellsData)
-  + [Interactions](#lib.data_class.Interactions)
+  + [Contact](#lib.data_class.Contact)
+  + [InteractionsParameters](#lib.data_class.InteractionsParameters)
   + [Params](#lib.data_class.Params)
   + [Particle](#lib.data_class.Particle)
   + [RockableData](#lib.data_class.RockableData)
@@ -83,8 +86,10 @@ Table of contents
 * [order\_face\_vertices](#lib.geometry.order_face_vertices)
 * [unique\_points](#lib.geometry.unique_points)
 * [io\_utils](#lib.io_utils)
+* [read\_interactions](#lib.io_utils.read_interactions)
 * [read\_rockable\_file](#lib.io_utils.read_rockable_file)
 * [read\_tess](#lib.io_utils.read_tess)
+* [read\_xyzdem\_snapshot](#lib.io_utils.read_xyzdem_snapshot)
 * [write\_rockable\_file](#lib.io_utils.write_rockable_file)
 * [write\_shp\_file](#lib.io_utils.write_shp_file)
 * [write\_sticked\_conf](#lib.io_utils.write_sticked_conf)
@@ -93,7 +98,8 @@ Table of contents
 * [make\_sticked\_conf](#lib.data_utils.make_sticked_conf)
 * [data\_class](#lib.data_class)
 * [CellsData](#lib.data_class.CellsData)
-* [Interactions](#lib.data_class.Interactions)
+* [Contact](#lib.data_class.Contact)
+* [InteractionsParameters](#lib.data_class.InteractionsParameters)
 * [Params](#lib.data_class.Params)
 * [Particle](#lib.data_class.Particle)
 * [RockableData](#lib.data_class.RockableData)
@@ -147,7 +153,7 @@ Parameters:
 | --- | --- | --- | --- |
 | `cell_centers` | `dict` | mapping cell ID to its center coordinates (x, y, z) | *required* |
 | `shapefile` | `str` | path to the shapefile containing the cell geometries (used for visualization and interaction definitions) | *required* |
-| `gap` | `float` | distance threshold for sticking particles together (should be >= 2\*radius of the particles) | *required* |
+| `gap` |  | distance threshold for sticking particles together (should be >= 2\*radius of the particles) | *required* |
 
 Returns:
 
@@ -267,6 +273,25 @@ Returns:
 | --- | --- |
 | `array of shape (n_unique, 3)` | coordinates of the unique points |
 
+`read_interactions(filename)`
+-----------------------------
+
+Read an interactions file and return a list of Contact objects representing the interactions between particles.
+The function parses the interactions file, extracting the relevant data for each contact, and organizes it
+into a list of Contact objects for use in simulations.
+
+Parameters:
+
+| Name | Type | Description | Default |
+| --- | --- | --- | --- |
+| `filename` | `str` | path to the interactions file, with the following format: i j type fx fy fz pos\_i\_x pos\_i\_y pos\_i\_z pos\_j\_x pos\_j\_y pos\_j\_z | *required* |
+
+Returns:
+
+| Type | Description |
+| --- | --- |
+| `list[Contact]` | a list of Contact objects, each containing the properties of a contact between two particles, including the indices of the particles involved, the type of contact, the force vector, and the positions of the contact points on each particle. |
+
 `read_rockable_file(filepath)`
 ------------------------------
 
@@ -306,6 +331,26 @@ Returns:
 | `faces` | `dict` | mapping face ID to its vertex indices [v0, v1, ...] |
 | `face_normals` | `dict` | mapping face ID to its plane coefficients (a, b, c, d) for the plane equation ax + by + cz + d = 0 |
 | `polyhedra` | `dict` | mapping polyhedron ID to its face indices [face\_id0, face\_id1, ...] |
+
+`read_xyzdem_snapshot(particle_file, interaction_file=None)`
+------------------------------------------------------------
+
+Read a DEM snapshot from a text file and return a structured RockableData object.
+The function parses the particle data from the given file, extracting the particle properties and optionally the
+interaction parameters from a separate file, and organizes the data into a RockableData object for use in simulations.
+
+Parameters:
+
+| Name | Type | Description | Default |
+| --- | --- | --- | --- |
+| `particle_file` | `str` | path to the text file containing the particle data, with the following format: n\_particles header line (ignored) name group cluster homothety pos\_x pos\_y pos\_z vel\_x vel\_y vel\_z acc\_x acc\_y acc\_z quat\_w quat\_x quat\_y quat\_z vrot\_x vrot\_y vrot\_z arot\_x arot\_y arot\_z pid | *required* |
+| `interaction_file` | `str` | path to the text file containing the interaction parameters, with a format that can be parsed by the read\_interactions function (default: None, meaning no interactions will be read) | `None` |
+
+Returns:
+
+| Type | Description |
+| --- | --- |
+| `RockableData` | a RockableData object containing the parameters, interactions and particles defined in the input files, structured as follows: RockableData(params=Params({...}), interactions=Interactions({...}), particles=[Particle(...)], n\_particles=int, stick\_distance=None, time=float or None) |
 
 `write_rockable_file(filepath, data)`
 -------------------------------------
@@ -377,7 +422,7 @@ Parameters:
 | --- | --- | --- | --- |
 | `cell_centers` | `dict` | mapping cell ID to its center coordinates (x, y, z) | *required* |
 | `shapefile` | `str` | path to the shapefile containing the cell geometries (used for visualization and interaction definitions) | *required* |
-| `gap` | `float` | distance threshold for sticking particles together (should be >= 2\*radius of the particles) | *required* |
+| `gap` |  | distance threshold for sticking particles together (should be >= 2\*radius of the particles) | *required* |
 
 Returns:
 
@@ -404,10 +449,28 @@ Attributes:
 | `radius` | `float` | radius of the particles (for stickVerticesInClusters) |
 | `gap` | `float` | gap to apply for the Minkowski erosion (should be >= 2\*radius) |
 
-`Interactions`
+`Contact`
 
 `dataclass`
----------------------------
+----------------------
+
+Contact data class to store the properties of a contact between two particles.
+
+Attributes:
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `i` | `int` | index of the first particle in the contact |
+| `j` | `int` | index of the second particle in the contact |
+| `type` | `int` | type of the contact |
+| `force` | `Tuple[float, float, float]` | force vector acting on the contact |
+| `pos_i` | `Tuple[float, float, float]` | position of the first particle in the contact |
+| `pos_j` | `Tuple[float, float, float]` | position of the second particle in the contact |
+
+`InteractionsParameters`
+
+`dataclass`
+-------------------------------------
 
 Interactions data class to store the interaction parameters between particles.
 
@@ -455,10 +518,11 @@ Attributes:
 | Name | Type | Description |
 | --- | --- | --- |
 | `params` | `Params` | simulation parameters |
-| `interactions` | `Interactions` | interaction parameters between particles |
+| `interactions` | `Interactions` | interaction parameters and contact data |
 | `particles` | `List[Particle]` | list of particles in the system |
 | `n_particles` | `int` | number of particles in the system |
 | `stick_distance` | `Optional[float]` | distance threshold for sticking particles together (if applicable) |
+| `time` | `Optional[float]` | current simulation time (can be used for time-dependent parameters or interactions) |
 
 `Shape`
 
