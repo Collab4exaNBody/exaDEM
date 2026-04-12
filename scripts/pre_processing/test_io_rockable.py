@@ -6,14 +6,14 @@ from data_class import RockableData
 
 
 # =========================
-# COMPARAISON FLOTTANTS
+# FLOAT COMPARISON
 # =========================
 def almost_equal(a, b, tol=1e-12):
     return abs(a - b) < tol
 
 
 # =========================
-# COMPARAISON STRUCTURE
+# STRUCTURE COMPARISON
 # =========================
 def compare_data(d1: RockableData, d2: RockableData):
     errors = []
@@ -90,43 +90,21 @@ def compare_data(d1: RockableData, d2: RockableData):
 
 
 # =========================
-# MAIN
+# TEST PYTHON IO ROCKABLE
 # =========================
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python test_io_rockable.py <input_file>")
-        sys.exit(1)
+def test_io_rockable_roundtrip(tmp_path):
+    '''
+    Test the round-trip of reading and writing a RockableData object to ensure that the IO functions are consistent. It reads a reference .txt file, writes it back, and then reads the generated file again to compare the two data structures. Any differences in the parameters, interactions, particles, or stick_distance will be reported as errors. The test will pass if no differences are found.   
+    '''
+    input_file = "test/data/io_rockable/input.conf"
+    assert os.path.exists(input_file), f"Missing file: {input_file}"
 
-    input_file = sys.argv[1]
+    output_file = tmp_path / "out.txt"
 
-    if not os.path.exists(input_file):
-        print(f"❌ File not found: {input_file}")
-        sys.exit(1)
-
-    # nom du fichier de sortie automatique
-    output_file = input_file.replace(".txt", "_out.txt")
-
-    print(f" Lecture : {input_file}")
     data1 = read_rockable_file(input_file)
-
-    print(f" Écriture : {output_file}")
     write_rockable_file(output_file, data1)
-
-    print(" Relecture du fichier généré")
     data2 = read_rockable_file(output_file)
 
-    print("🔍 Comparaison...")
     errors = compare_data(data1, data2)
 
-    if not errors:
-        print("✅ SUCCESS : fichiers équivalents")
-    else:
-        print(f"❌ {len(errors)} différences détectées :")
-        for e in errors[:20]:
-            print("  -", e)
-        if len(errors) > 20:
-            print("  ...")
-
-
-if __name__ == "__main__":
-    main()
+    assert errors == [], "Differences found:\n" + "\n".join(errors[:50])
