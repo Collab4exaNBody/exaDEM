@@ -63,10 +63,31 @@ class UnclassifyGPU : public OperatorNode {
        )EOF";
   }
 
-  inline void execute() final {
-    lout << "unclassify active interaction on GridCellParticleInteraction" << std::endl;
+inline void execute() final {
     classify_interaction_grid(*ic, *traversal_real, *nbh_manager, *ges);
 
+    // === DEBUG APRÈS UNCLASSIFY GPU ===
+    /*{
+      auto [cell_ptr, cell_size] = traversal_real->info();
+      size_t counts[InteractionTypeId::NTypes] = {};
+      size_t active_c[InteractionTypeId::NTypes] = {};
+      for (size_t ci = 0; ci < cell_size; ci++) {
+        size_t cell_idx = cell_ptr[ci];
+        auto& data = ges->m_data[cell_idx].m_data;
+        for (size_t k = 0; k < data.size(); k++) {
+          int type = data[k].type();
+          counts[type]++;
+          if (data[k].active()) active_c[type]++;
+        }
+      }
+      std::string names[] = {"VV","VE","VF","EE","VCyl","VS","VBall","VVd","VEd","VFd","EEd","EdV","FdV","Stick"};
+      lout << "[UNCL GPU APRÈS]";
+      for (int i = 0; i < InteractionTypeId::NTypes; i++) {
+        if (counts[i] > 0) lout << " " << names[i] << "=" << active_c[i] << "/" << counts[i];
+      }
+      lout << std::endl;
+      printf("\n\n\n\n");
+    }*/
   }
 };
 

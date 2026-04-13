@@ -267,26 +267,37 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 		pec2->s_gpu_block_dims = {block_size_x, block_size_y, 1};  // enforce block size 
 		onika::parallel::block_parallel_for(parallel_range, filler, pec2, bopts);
 		
-		// === DEBUG PP SWAP/GHOST GPU ===
-    /*{
-      size_t total_swap = 0;
-      size_t total_ghost = 0;
-      size_t total_pp = 0;
-      for (int typeID = get_first_id<InteractionType::ParticleParticle>();
-           typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
-        size_t sz = new_size[typeID];
-        auto& w = classifier_interaction_accessor.get_typed_accessor<InteractionType::ParticleParticle>(typeID);
-        for (size_t i = 0; i < sz; i++) {
-          auto item = w(i);
-          total_pp++;
-          if (item.pair.swap) total_swap++;
-          if (item.pair.ghost != InteractionPair::NotGhost) total_ghost++;
-        }
-      }
-      lout << "[PP GPU] total=" << total_pp
-           << " swap=" << total_swap
-           << " ghost=" << total_ghost << std::endl;
-    }*/
+ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		// === DEBUG GPU COUNTS ===
+		/*{
+			size_t counts[InteractionTypeId::NTypes] = {};
+			size_t active_c[InteractionTypeId::NTypes] = {};
+			for (int typeID = get_first_id<InteractionType::ParticleParticle>();
+			     typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
+				auto& w = classifier_interaction_accessor.get_typed_accessor<InteractionType::ParticleParticle>(typeID);
+				for (size_t i = 0; i < (size_t)new_size[typeID]; i++) {
+					counts[typeID]++;
+					if (w(i).active()) active_c[typeID]++;
+				}
+			}
+			for (int typeID = get_first_id<InteractionType::ParticleDriver>();
+			     typeID <= get_last_id<InteractionType::ParticleDriver>(); typeID++) {
+				auto& w = classifier_interaction_accessor.get_typed_accessor<InteractionType::ParticleDriver>(typeID);
+				size_t sz = info_cell_driver.offset.back()[typeID]
+				          + info_cell_driver.size.back()[typeID];
+				for (size_t i = 0; i < sz; i++) {
+					counts[typeID]++;
+					if (w(i).active()) active_c[typeID]++;
+				}
+			}
+			std::string names[] = {"VV","VE","VF","EE","VCyl","VS","VBall","VVd","VEd","VFd","EEd","EdV","FdV","Stick"};
+			lout << "[GPU NBH]";
+			for (int i = 0; i < InteractionTypeId::NTypes; i++) {
+				if (counts[i] > 0) lout << " " << names[i] << "=" << active_c[i] << "/" << counts[i];
+			}
+			lout << std::endl;
+		}*/
 
 		/*UpdateHistoryFunc update_history = {
 			history.start.data(),
@@ -404,12 +415,38 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 		);*/
 		
 		//CORRECTION
-		constexpr bool do_ghost_only = true;
+		/*constexpr bool do_ghost_only = true;
 		constexpr bool do_active_interaction_only = true;
 		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
 			cell_ptr, info_cell, info_cell_pair,
 			info_cell_driver,
 			classifier_interaction_accessor, *ges
+		);*/
+		
+		constexpr bool do_ghost_only = true;
+		constexpr bool do_active_interaction_only = false;
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only, false>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
+			classifier_interaction_accessor, *ges,
+			get_first_id<InteractionType::ParticleParticle>(),
+			get_last_id<InteractionType::ParticleParticle>()
+		);
+
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only, true>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
+			classifier_interaction_accessor, *ges,
+			get_first_id<InteractionType::InnerBond>(),
+			get_last_id<InteractionType::InnerBond>()
+		);
+
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only, true>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
+			classifier_interaction_accessor, *ges,
+			get_first_id<InteractionType::ParticleDriver>(),
+			get_last_id<InteractionType::ParticleDriver>()
 		);
 		
 /*constexpr bool do_ghost_only = false;

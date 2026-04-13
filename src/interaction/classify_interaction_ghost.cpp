@@ -121,6 +121,28 @@ class ClassificationInteractionGhost : public OperatorNode {
                               TmpBuff[typeID], start, size, typeID);
       }
     }
+    
+// === DEBUG CLASSIFY GHOST ===
+    /*{
+      size_t counts[InteractionTypeId::NTypes] = {};
+      size_t active_c[InteractionTypeId::NTypes] = {};
+      for (size_t i = 0; i < g.number_of_cells(); i++) {
+        if (!g.is_ghost_cell(i)) continue;
+        auto& data = interaction_cells[i].m_data;
+        for (size_t k = 0; k < data.size(); k++) {
+          int type = data[k].type();
+          counts[type]++;
+          if (data[k].active()) active_c[type]++;
+        }
+      }
+      std::string names[] = {"VV","VE","VF","EE","VCyl","VS","VBall","VVd","VEd","VFd","EEd","EdV","FdV","Stick"};
+      lout << "[CLASSIFY GHOST]";
+      for (int i = 0; i < InteractionTypeId::NTypes; i++) {
+        if (counts[i] > 0) lout << " " << names[i] << "=" << active_c[i] << "/" << counts[i] ;
+      }
+      lout << std::endl;
+    }*/
+    
   }
 };
 

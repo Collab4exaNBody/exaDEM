@@ -83,6 +83,8 @@ struct CopierActiveInteractionFunc {
   }
 };
 
+
+
 /**
  * @brief Transfer ghost interactions from classifier to grid storage.
  * @param info CellInteractionInformation storing start indices, number of pair cells, and ghost flags.
@@ -91,7 +93,8 @@ struct CopierActiveInteractionFunc {
  * @param ges GridCellParticleInteraction storage for the grid.
  * @param ghost_only If true, only transfers interactions flagged as ghost.
  */
-template<bool ghost_only, bool active_interaction>
+//template<bool ghost_only, bool active_interaction>
+template<bool ghost_only, bool active_interaction, bool append = false>
 void transfer_classifier_grid(size_t* cell_ptr,
                               CellInteractionInformation& info,
                               NbhCellStorage& classifier_helper,
@@ -176,7 +179,7 @@ void transfer_classifier_grid(size_t* cell_ptr,
     auto& info_particles = storage.m_info;
 
     // Resize storage to fit all interactions
-    storage.m_data.resize(number_of_interactions);
+    /*storage.m_data.resize(number_of_interactions);
 
     if (number_of_interactions == 0) {
       continue;
@@ -185,7 +188,26 @@ void transfer_classifier_grid(size_t* cell_ptr,
     PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
 
     // Copy classified interactions into storage
-    size_t shift = 0;
+    size_t shift = 0;*/
+    
+// Resize storage to fit all interactions
+    size_t old_size = 0;
+    if constexpr (append) {
+      old_size = storage.m_data.size();
+      storage.m_data.resize(old_size + number_of_interactions);
+    } else {
+      storage.m_data.resize(number_of_interactions);
+    }
+
+    if (number_of_interactions == 0) {
+      continue;
+    }
+
+    PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
+
+    // Copy classified interactions into storage
+    size_t shift = old_size;
+    
     for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
       int start = first_elem_per_type[typeID];
       int size = n_elem_per_type[typeID];
@@ -201,7 +223,9 @@ void transfer_classifier_grid(size_t* cell_ptr,
     }
 
     // Sanity check: copied all interactions
-    assert(shift == number_of_interactions);
+    //assert(shift == number_of_interactions);
+    assert(shift == old_size + number_of_interactions);
+
 
     // sorted according the particle position in the cell
     std::stable_sort(storage.m_data.begin(), storage.m_data.end(),

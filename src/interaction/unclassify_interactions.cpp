@@ -43,11 +43,33 @@ class UnclassifyInteractions : public OperatorNode {
         )EOF";
   }
 
-  inline void execute() final {
+inline void execute() final {
     if (!ic.has_value()) {
       return;
     }
     unclassify(*ic, *ges);
+
+    // === DEBUG APRÈS UNCLASSIFY CPU ===
+    /*{
+      auto& ces = ges->m_data;
+      size_t counts[InteractionTypeId::NTypes] = {};
+      size_t active_c[InteractionTypeId::NTypes] = {};
+      for (size_t i = 0; i < ces.size(); i++) {
+        auto& data = ces[i].m_data;
+        for (size_t k = 0; k < data.size(); k++) {
+          int type = data[k].type();
+          counts[type]++;
+          if (data[k].active()) active_c[type]++;
+        }
+      }
+      std::string names[] = {"VV","VE","VF","EE","VCyl","VS","VBall","VVd","VEd","VFd","EEd","EdV","FdV","Stick"};
+      lout << "[UNCL CPU APRÈS]";
+      for (int i = 0; i < InteractionTypeId::NTypes; i++) {
+        if (counts[i] > 0) lout << " " << names[i] << "=" << active_c[i] << "/" << counts[i];
+      }
+      lout << std::endl;
+      printf("\n\n\n\n");
+    }*/
   }
 };
 

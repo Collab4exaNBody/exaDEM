@@ -46,12 +46,35 @@ class ClassifyInteractions : public OperatorNode {
       )EOF";
   }
 
-  inline void execute() final {
+inline void execute() final {
     auto [cell_ptr, cell_size] = traversal_all->info();
     if (!ic.has_value()) {
       ic->initialize();
     }
+
     classify(*ic, *ges, cell_ptr, cell_size);
+
+    // === DEBUG CLASSIFY ===
+    /*{
+      size_t total[InteractionTypeId::NTypes] = {};
+      size_t ghost[InteractionTypeId::NTypes] = {};
+      auto& ces = ges->m_data;
+      for (size_t c = 0; c < cell_size; c++) {
+        auto& data = ces[cell_ptr[c]].m_data;
+        for (size_t k = 0; k < data.size(); k++) {
+          int type = data[k].type();
+          total[type]++;
+          if (data[k].pair.ghost != InteractionPair::NotGhost)
+            ghost[type]++;
+        }
+      }
+      std::string names[] = {"VV","VE","VF","EE","VCyl","VS","VBall","VVd","VEd","VFd","EEd","EdV","FdV","Stick"};
+      lout << "[CLASSIFY]";
+      for (int i = 0; i < InteractionTypeId::NTypes; i++) {
+        if (total[i] > 0) lout << " " << names[i] << "=" << total[i] << "(" << ghost[i]/2 << ")";
+      }
+      lout << std::endl;
+    }*/
   }
 };
 

@@ -384,54 +384,28 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
         assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
       }  // GRID_OMP_FOR_END
     }
-    
-    // === DEBUG CPU GES ===
-    {
-      size_t total=0, vs=0, vv=0, ve=0, vf=0, ee=0;
-      size_t vs_active=0;
+
+// === DEBUG CPU COUNTS ===
+    /*{
+      size_t counts[InteractionTypeId::NTypes] = {};
+      size_t active_c[InteractionTypeId::NTypes] = {};
       for (size_t ci = 0; ci < cell_size; ci++) {
         size_t cell_idx = cell_ptr[ci];
         auto& storage = interactions[cell_idx];
         for (size_t k = 0; k < storage.m_data.size(); k++) {
-          auto type = storage.m_data[k].type();
-          total++;
-          if (type == InteractionTypeId::VertexVertex) vv++;
-          else if (type == InteractionTypeId::VertexEdge) ve++;
-          else if (type == InteractionTypeId::VertexFace) vf++;
-          else if (type == InteractionTypeId::EdgeEdge) ee++;
-          else if (type == InteractionTypeId::VertexSurface) {
-            vs++;
-            if (storage.m_data[k].active()) vs_active++;
-          }
+          int type = storage.m_data[k].type();
+          bool act = storage.m_data[k].active();
+          counts[type]++;
+          if (act) active_c[type]++;
         }
       }
-      lout << "[CPU GES] total=" << total
-           << " VV=" << vv << " VE=" << ve
-           << " VF=" << vf << " EE=" << ee
-           << " VS=" << vs << " VS_active=" << vs_active << std::endl;
-    }
-    
-// === DEBUG PP SWAP/GHOST CPU ===
-    {
-      size_t total_swap = 0;
-      size_t total_ghost = 0;
-      size_t total_pp = 0;
-      for (size_t ci = 0; ci < cell_size; ci++) {
-        size_t cell_idx = cell_ptr[ci];
-        auto& storage = interactions[cell_idx];
-        for (size_t k = 0; k < storage.m_data.size(); k++) {
-          auto type = storage.m_data[k].type();
-          if (type <= InteractionTypeId::EdgeEdge) {
-            total_pp++;
-            if (storage.m_data[k].pair.swap) total_swap++;
-            if (storage.m_data[k].pair.ghost != InteractionPair::NotGhost) total_ghost++;
-          }
-        }
+      std::string names[] = {"VV","VE","VF","EE","VCyl","VS","VBall","VVd","VEd","VFd","EEd","EdV","FdV","Stick"};
+      lout << "[CPU NBH]";
+      for (int i = 0; i < InteractionTypeId::NTypes; i++) {
+        if (counts[i] > 0) lout << " " << names[i] << "=" << active_c[i] << "/" << counts[i];
       }
-      lout << "[PP CPU] total=" << total_pp
-           << " swap=" << total_swap
-           << " ghost=" << total_ghost << std::endl;
-    }
+      lout << std::endl;
+    }*/
     
   }
 };
