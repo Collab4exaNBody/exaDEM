@@ -1,11 +1,5 @@
-# Documentation scripts ExaDEM
+# API
 
-## TOP
+Documentation scripts ExaDEM
 
-::: lib.data_utils
-::: lib.geometry
-::: lib.io_utils
-::: lib.data_utils
-::: lib.data_class
-::: lib.mass_properties
-::: lib.topology
+
