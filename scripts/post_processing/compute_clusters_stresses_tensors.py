@@ -223,7 +223,9 @@ def main():
     python compute_clusters_stresses_tensors.py --density 2500
     """   
     )
-
+    
+    parser.add_argument("--dir", type=str, default=".",
+                    help="Directory containing simulation files (default=current directory)")
     parser.add_argument("--density", type=float, default=1.0,
                         help="Particle density (default=1.0)")
     args = parser.parse_args()
@@ -232,9 +234,9 @@ def main():
 
     # FILES
     # -------------------------
-    particle_files = sorted(glob.glob("*.xyz"))
-    #particle_files = sorted(glob.glob("dem_pos_vel_*.xyz"))
-
+    base_dir = args.dir
+    particle_files = sorted(glob.glob(os.path.join(base_dir, "*.xyz")))
+   
     # -------------------------
     # OUTPUT FILES
     # -------------------------
@@ -251,8 +253,11 @@ def main():
     for pf in particle_files:
 
         step = str(int(re.findall(r"(\d+)", pf)[-1]))
-        inter_file = f"InteractionOutputDir-{step}/InteractionOutputDir-{step}_0.txt"
-
+        inter_file = os.path.join(
+          base_dir,
+          f"InteractionOutputDir-{step}",
+          f"InteractionOutputDir-{step}_0.txt"
+     )
         if not os.path.exists(inter_file):
             continue
 
