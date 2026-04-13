@@ -28,8 +28,12 @@ Scripts ExaDEM Docs
   Table of contents
   + [TOP](#top)
   + [data\_utils](#lib.data_utils)
+  + [build\_clusters](#lib.data_utils.build_clusters)
+  + [build\_particle\_index](#lib.data_utils.build_particle_index)
   + [make\_rockable\_data](#lib.data_utils.make_rockable_data)
   + [make\_sticked\_conf](#lib.data_utils.make_sticked_conf)
+  + [parse\_time](#lib.data_utils.parse_time)
+  + [parse\_vec3](#lib.data_utils.parse_vec3)
   + [geometry](#lib.geometry)
   + [face\_area](#lib.geometry.face_area)
   + [face\_normal](#lib.geometry.face_normal)
@@ -44,10 +48,13 @@ Scripts ExaDEM Docs
   + [read\_xyzdem\_snapshot](#lib.io_utils.read_xyzdem_snapshot)
   + [write\_rockable\_file](#lib.io_utils.write_rockable_file)
   + [write\_shp\_file](#lib.io_utils.write_shp_file)
-  + [write\_sticked\_conf](#lib.io_utils.write_sticked_conf)
   + [data\_utils](#lib.data_utils)
+  + [build\_clusters](#lib.data_utils.build_clusters)
+  + [build\_particle\_index](#lib.data_utils.build_particle_index)
   + [make\_rockable\_data](#lib.data_utils.make_rockable_data)
   + [make\_sticked\_conf](#lib.data_utils.make_sticked_conf)
+  + [parse\_time](#lib.data_utils.parse_time)
+  + [parse\_vec3](#lib.data_utils.parse_vec3)
   + [data\_class](#lib.data_class)
   + [CellsData](#lib.data_class.CellsData)
   + [Contact](#lib.data_class.Contact)
@@ -76,8 +83,12 @@ Table of contents
 
 * [TOP](#top)
 * [data\_utils](#lib.data_utils)
+* [build\_clusters](#lib.data_utils.build_clusters)
+* [build\_particle\_index](#lib.data_utils.build_particle_index)
 * [make\_rockable\_data](#lib.data_utils.make_rockable_data)
 * [make\_sticked\_conf](#lib.data_utils.make_sticked_conf)
+* [parse\_time](#lib.data_utils.parse_time)
+* [parse\_vec3](#lib.data_utils.parse_vec3)
 * [geometry](#lib.geometry)
 * [face\_area](#lib.geometry.face_area)
 * [face\_normal](#lib.geometry.face_normal)
@@ -92,10 +103,13 @@ Table of contents
 * [read\_xyzdem\_snapshot](#lib.io_utils.read_xyzdem_snapshot)
 * [write\_rockable\_file](#lib.io_utils.write_rockable_file)
 * [write\_shp\_file](#lib.io_utils.write_shp_file)
-* [write\_sticked\_conf](#lib.io_utils.write_sticked_conf)
 * [data\_utils](#lib.data_utils)
+* [build\_clusters](#lib.data_utils.build_clusters)
+* [build\_particle\_index](#lib.data_utils.build_particle_index)
 * [make\_rockable\_data](#lib.data_utils.make_rockable_data)
 * [make\_sticked\_conf](#lib.data_utils.make_sticked_conf)
+* [parse\_time](#lib.data_utils.parse_time)
+* [parse\_vec3](#lib.data_utils.parse_vec3)
 * [data\_class](#lib.data_class)
 * [CellsData](#lib.data_class.CellsData)
 * [Contact](#lib.data_class.Contact)
@@ -119,6 +133,40 @@ Documentation scripts ExaDEM
 
 TOP
 ---
+
+`build_clusters(particles)`
+---------------------------
+
+Group particles by cluster id
+
+Parameters:
+
+| Name | Type | Description | Default |
+| --- | --- | --- | --- |
+| `particles` | `List[Particle]` | list of Particle objects to group | *required* |
+
+Returns:
+
+| Type | Description |
+| --- | --- |
+| `Dict[int, List[Particle]]` | dictionary mapping cluster id to list of Particle objects |
+
+`build_particle_index(particles)`
+---------------------------------
+
+Map particle id -> Particle
+
+Parameters:
+
+| Name | Type | Description | Default |
+| --- | --- | --- | --- |
+| `particles` | `List[Particle]` | list of Particle objects to index | *required* |
+
+Returns:
+
+| Type | Description |
+| --- | --- |
+| `Dict[int, Particle]` | dictionary mapping particle id to Particle object |
 
 `make_rockable_data(params=None, interactions=None, particles=None, stick_distance=None)`
 -----------------------------------------------------------------------------------------
@@ -160,6 +208,40 @@ Returns:
 | Type | Description |
 | --- | --- |
 | `RockableData` | a RockableData object with the parameters, interactions and particles defined for a sticked particle simulation |
+
+`parse_time(header_line)`
+-------------------------
+
+Parse the time from a header line in the ExaDEM output file.
+
+Parameters:
+
+| Name | Type | Description | Default |
+| --- | --- | --- | --- |
+| `header_line` | `str` | the header line containing the time information (e.g., "Time=0.001") | *required* |
+
+Returns:
+
+| Type | Description |
+| --- | --- |
+| `float` | the parsed time value, or None if the time information is not found in the header line |
+
+`parse_vec3(string)`
+--------------------
+
+Parse a string containing three float values into a tuple of three floats.
+
+Parameters:
+
+| Name | Type | Description | Default |
+| --- | --- | --- | --- |
+| `string` | `str` | the string containing the three float values (e.g., "(1.0, 2.0, 3.0)") | *required* |
+
+Returns:
+
+| Type | Description |
+| --- | --- |
+| `ndarray` | the parsed vector as a numpy array |
 
 `face_area(vertices, face)`
 ---------------------------
@@ -324,13 +406,9 @@ Parameters:
 
 Returns:
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `vertices` | `dict` | mapping vertex ID to its coordinates [x, y, z] |
-| `edges` | `dict` | mapping edge ID to its vertex indices (v0, v1) |
-| `faces` | `dict` | mapping face ID to its vertex indices [v0, v1, ...] |
-| `face_normals` | `dict` | mapping face ID to its plane coefficients (a, b, c, d) for the plane equation ax + by + cz + d = 0 |
-| `polyhedra` | `dict` | mapping polyhedron ID to its face indices [face\_id0, face\_id1, ...] |
+| Type | Description |
+| --- | --- |
+| `CellsData` | a structured data object containing the vertices, edges, faces, face normals, and polyhedra defined in the .tess file, organized as follows: CellsData(vertices={vertex\_id: [x, y, z], ...}, edges={edge\_id: (v0, v1), ...}, faces={face\_id: [v0, v1, ...], ...}, face\_normals={face\_id: (a, b, c, d), ...}, polyhedra={polyhedron\_id: [face\_id0, face\_id1, ...], ...}, radius=radius) |
 
 `read_xyzdem_snapshot(particle_file, interaction_file=None)`
 ------------------------------------------------------------
@@ -384,10 +462,39 @@ Returns:
 | --- | --- |
 | `None` | The function writes a shapefile in the format expected by Rockable, with sections for each cell containing its vertices, edges, faces, volume and inertia tensor. The Minkowski radius is included as a parameter for each cell. |
 
-`write_sticked_conf(filename, shapefile, cell_centers, gap)`
-------------------------------------------------------------
+`build_clusters(particles)`
+---------------------------
 
-write a Rockable configuration file for a simulation with sticked particles, based on the cell centers and a shapefile containing the cell geometries.
+Group particles by cluster id
+
+Parameters:
+
+| Name | Type | Description | Default |
+| --- | --- | --- | --- |
+| `particles` | `List[Particle]` | list of Particle objects to group | *required* |
+
+Returns:
+
+| Type | Description |
+| --- | --- |
+| `Dict[int, List[Particle]]` | dictionary mapping cluster id to list of Particle objects |
+
+`build_particle_index(particles)`
+---------------------------------
+
+Map particle id -> Particle
+
+Parameters:
+
+| Name | Type | Description | Default |
+| --- | --- | --- | --- |
+| `particles` | `List[Particle]` | list of Particle objects to index | *required* |
+
+Returns:
+
+| Type | Description |
+| --- | --- |
+| `Dict[int, Particle]` | dictionary mapping particle id to Particle object |
 
 `make_rockable_data(params=None, interactions=None, particles=None, stick_distance=None)`
 -----------------------------------------------------------------------------------------
@@ -429,6 +536,40 @@ Returns:
 | Type | Description |
 | --- | --- |
 | `RockableData` | a RockableData object with the parameters, interactions and particles defined for a sticked particle simulation |
+
+`parse_time(header_line)`
+-------------------------
+
+Parse the time from a header line in the ExaDEM output file.
+
+Parameters:
+
+| Name | Type | Description | Default |
+| --- | --- | --- | --- |
+| `header_line` | `str` | the header line containing the time information (e.g., "Time=0.001") | *required* |
+
+Returns:
+
+| Type | Description |
+| --- | --- |
+| `float` | the parsed time value, or None if the time information is not found in the header line |
+
+`parse_vec3(string)`
+--------------------
+
+Parse a string containing three float values into a tuple of three floats.
+
+Parameters:
+
+| Name | Type | Description | Default |
+| --- | --- | --- | --- |
+| `string` | `str` | the string containing the three float values (e.g., "(1.0, 2.0, 3.0)") | *required* |
+
+Returns:
+
+| Type | Description |
+| --- | --- |
+| `ndarray` | the parsed vector as a numpy array |
 
 `CellsData`
 
@@ -504,7 +645,7 @@ Attributes:
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `name` | `str` | name of the particle group : int group id of the particle (for interaction purposes) cluster : int cluster id of the particle (for clustering purposes) homothety : float homothety factor for scaling the particle  pos : Tuple[float,float,float] position of the particle in 3D space vel : Tuple[float,float,float] velocity of the particle in 3D space acc : Tuple[float,float,float] acceleration of the particle in 3D space  quat : Tuple[float,float,float,float] orientation of the particle as a quaternion vrot : Tuple[float,float,float] rotational velocity of the particle arot : Tuple[float,float,float] rotational acceleration of the particle |
+| `name` | `str` | name of the particle id : int unique identifier for the particle group : int group id of the particle (for interaction purposes) cluster : int cluster id of the particle (for clustering purposes) homothety : float homothety factor for scaling the particle  pos : Tuple[float,float,float] position of the particle in 3D space vel : Tuple[float,float,float] velocity of the particle in 3D space acc : Tuple[float,float,float] acceleration of the particle in 3D space  quat : Tuple[float,float,float,float] orientation of the particle as a quaternion vrot : Tuple[float,float,float] rotational velocity of the particle arot : Tuple[float,float,float] rotational acceleration of the particle mass : Optional[float] mass of the particle (can be None if not provided) volume : Optional[float] volume of the particle (can be None if not provided) |
 
 `RockableData`
 

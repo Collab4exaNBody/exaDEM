@@ -208,7 +208,7 @@ def compute_stress_tensor(cluster_particles, contacts, particle_index,density=1.
 def main():
     
     parser = argparse.ArgumentParser(
-    description="Compute stress tensors and wall forces from DEM simulation files (.xyz + interaction files)."
+    description="Compute stress tensors and wall forces from DEM simulation files (.xyz + interaction files).",
     epilog= """
     Usage: python compute_clusters_stresses_tensors.py --density 2500
     Input:
@@ -223,7 +223,7 @@ def main():
     python compute_clusters_stresses_tensors.py --density 2500
     """   
     )
-    
+
     parser.add_argument("--density", type=float, default=1.0,
                         help="Particle density (default=1.0)")
     args = parser.parse_args()
