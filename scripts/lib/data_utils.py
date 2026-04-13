@@ -1,9 +1,19 @@
+from collections import defaultdict
+import re
+import glob
 from lib.data_class import (
     Particle, Params, InteractionsParameters,Interactions, 
     RockableData, CellsData, Contact
 )
 from typing import Optional, List, Dict, Union, Tuple
 
+
+# ##############################################
+# -- DATA UTILITIES FOR EXADEM/ROCKABLE --
+# ##############################################
+
+# --- ROCKABLE DATA CREATION ---
+# -----------------------------------------------
 def make_rockable_data(    
     params: Optional[Dict[str, Union[float, List[float], str]]] = None,
     interactions: Optional[Dict[str, Dict]] = None,
@@ -41,6 +51,8 @@ RockableData
         stick_distance=stick_distance,
     )
 
+# --- STICKED PARTICLES CONFIGURATION ---
+# -----------------------------------------------
 def make_sticked_conf(cell_centers, shapefile, gap):
     '''
 Create a RockableData object with the parameters, interactions and particles needed for a simulation with sticked particles.
@@ -113,3 +125,77 @@ RockableData
     data.stick_distance  = 4 * gap
 
     return data
+
+# --- PARSING UTILITIES ---
+# -----------------------------------------------
+def parse_time(header_line):
+    '''
+    Parse the time from a header line in the ExaDEM output file.
+    
+    Parameters
+    ----------
+    header_line : str
+        the header line containing the time information (e.g., "Time=0.001")
+    
+    Returns
+    ----------
+    float
+        the parsed time value, or None if the time information is not found in the header line
+    '''
+    match = re.search(r"Time=([0-9.eE+-]+)", header_line)
+    return float(match.group(1)) if match else None
+
+
+def parse_vec3(string):
+    '''Parse a string containing three float values into a tuple of three floats.
+    
+    Parameters
+    ----------
+    string : str
+        the string containing the three float values (e.g., "(1.0, 2.0, 3.0)")
+
+    Returns
+    ----------
+    np.ndarray
+        the parsed vector as a numpy array
+    '''
+    string = string.strip().replace("(", "").replace(")", "")
+    return np.array([float(x) for x in string.split()])
+
+
+# --- PARTICLE INDEXING AND CLUSTERING ---
+# -----------------------------------------------
+
+def build_particle_index(particles):
+    """Map particle id -> Particle
+    
+    Parameters
+    ----------
+    particles : List[Particle]
+        list of Particle objects to index
+        
+    Returns
+    ----------
+    Dict[int, Particle]
+        dictionary mapping particle id to Particle object
+    """
+    return {p.id: p for p in particles}
+
+
+def build_clusters(particles):
+    """Group particles by cluster id
+    
+    Parameters
+    ----------
+    particles : List[Particle]
+        list of Particle objects to group
+        
+    Returns
+    ----------
+    Dict[int, List[Particle]]
+        dictionary mapping cluster id to list of Particle objects
+    """
+    clusters = defaultdict(list)
+    for p in particles:
+        clusters[p.cluster].append(p)
+    return clusters

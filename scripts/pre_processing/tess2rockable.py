@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
+import argparse
 import sys
 import numpy as np
 import itertools
 
 
 from lib.data_class import Particle, Params, InteractionsParameters, RockableData,CellsData, Shape, Shapes
-from lib.io_utils import read_tess, write_shp_file, write_sticked_conf, write_rockable_file
+from lib.io_utils import read_tess, write_shp_file, write_rockable_file
 from lib.geometry import intersect_planes, inside_all_planes, order_face_vertices, unique_points
 from lib.topology import count_interfaces,check_interfaces
 from lib.mass_properties import polyhedron_mass_properties_mc_fast
@@ -218,9 +219,6 @@ def compute_cells(cells_data: CellsData, gap) -> Shapes:
 #***************************
 
 def main():
-    if len(sys.argv) != 4:
-        print('Usage: python3 tess2rockable.py input.tess radius output.shp')
-        sys.exit(1)
     '''
     Main function to convert a Neper tessellation file to a Rockable configuration file.
         
@@ -239,9 +237,30 @@ def main():
         output file path for the generated Rockable configuration file with sticked particles
     '''
 
-    tess_file = sys.argv[1]
-    radius = float(sys.argv[2])
-    shp_file = sys.argv[3]
+    parser = argparse.ArgumentParser(
+        description="Convert a Neper tessellation file to a Rockable configuration file with sticked particles.",
+        epilog= """
+        Usage: python tess2rockable.py input.tess radius output.shp
+        Input:
+        - input.tess: Neper tessellation file containing the geometry and topology of the system
+        - radius: radius of the particles to be generated (for stickVerticesInClusters
+        Output:
+        - output.shp: output file path for the generated shapefile (to be used in the Rockable configuration)
+        - output_sticked.conf: output file path for the generated Rockable
+            configuration file with sticked particles
+        Example:
+        python tess2rockable.py input.tess 0.1 output.shp
+        """
+    )
+
+    parser.add_argument("tess_file", type=str, help="Input Neper tessellation file")
+    parser.add_argument("radius", type=float, help="Radius of the particles to be generated (for stickVerticesInClusters)")
+    parser.add_argument("shp_file", type=str, help="Output file path for the generated shapefile (to be used in the Rockable configuration)")
+    args = parser.parse_args()  
+
+    tess_file = args.tess_file
+    radius = args.radius
+    shp_file = args.shp_file
 
     gap= radius*2
 

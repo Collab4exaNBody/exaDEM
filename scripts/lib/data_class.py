@@ -1,12 +1,12 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Union, Optional
 
-# ----------------------------
-# -- ROCKABLE DATA CLASSES ---
-# ----------------------------
+# ###############################################
+# -- ROCKABLE DATA CLASSES --
+# ###############################################
 
-
-# --- PARTICLE ---
+# PARTICLE
+# -----------------------------------------------
 @dataclass
 class Particle:
     """
@@ -16,6 +16,8 @@ class Particle:
     ----------
        name : str
            name of the particle
+       id : int
+           unique identifier for the particle
        group : int
            group id of the particle (for interaction purposes)
        cluster : int
@@ -36,6 +38,10 @@ class Particle:
            rotational velocity of the particle
        arot : Tuple[float,float,float]
            rotational acceleration of the particle
+       mass : Optional[float]
+           mass of the particle (can be None if not provided)
+       volume : Optional[float]
+           volume of the particle (can be None if not provided)
     """
 
     name: str
@@ -51,8 +57,15 @@ class Particle:
     vrot: Tuple[float, float, float]
     arot: Tuple[float, float, float]
 
+    id: int = -1
+    mass: Optional[float] = None
+    volume: Optional[float] = None
+
+
 
 # --- PARAMS ---
+# -----------------------------------------------
+
 @dataclass
 class Params:
     """
@@ -68,8 +81,9 @@ class Params:
 
 
 # --- INTERACTIONS ---
-InteractionKey = Union[int, Tuple[int, int]]
+# -----------------------------------------------
 
+InteractionKey = Union[int, Tuple[int, int]]
 
 @dataclass
 class InteractionsParameters:
@@ -116,7 +130,10 @@ class Interactions:
     parameters: InteractionsParameters
     contacts: List[Contact] = field(default_factory=list)
 
+
 # --- GLOBAL ROCKABLE DATA ---
+# -----------------------------------------------
+
 @dataclass
 class RockableData:
     """
@@ -147,6 +164,8 @@ class RockableData:
 
 
 # --- SHAPE ---
+# -----------------------------------------------
+
 @dataclass
 class Shape:
     """
@@ -188,12 +207,13 @@ class Shapes:
     shapes: Dict[int, Shape]
 
 
-# ----------------------------
+# ##############################################
 # -- OTHER DATA CLASSES ---
-# ----------------------------
+# ##############################################
 
 
 # -- NEPER CELLS DATA ---
+# -----------------------------------------------
 @dataclass
 class CellsData:
     """
