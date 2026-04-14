@@ -252,9 +252,6 @@ class StickPolyhedraOperator : public OperatorNode {
 
                   double surface_ratio = shpi->get_face_area(i) / shpj->get_face_area(j);
                   if (surface_ratio > 1.01 || surface_ratio < 0.99) {
-                    // DEBUG  
-                    //std::cout << "[DEBUG] Reject: area ratio out of bounds (" << surface_ratio << ")" << std::endl;
-
                     continue;
                   }
                   if (size_j < 3) {
