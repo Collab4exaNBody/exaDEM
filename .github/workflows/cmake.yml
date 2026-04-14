@@ -18,6 +18,8 @@ jobs:
       run: sudo apt install libyaml-cpp-dev
     - name: Install
       run: sudo apt-get update && sudo apt-get install lcov
+    - name: Install Python test dependencies
+      run: pip install pytest      
 #    - uses: mpi4py/setup-mpi@v1
 #      with: 
 #        mpi: openmpi
