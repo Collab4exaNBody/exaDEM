@@ -90,7 +90,7 @@ add_subdirectory(src)
 # ===============================
 # === Add scripts for testing ===
 # ===============================
-add_subdirectory(script)
+add_subdirectory(scripts)
 
 ## Installation
 
