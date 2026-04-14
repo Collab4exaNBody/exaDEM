@@ -270,8 +270,6 @@ class StickPolyhedraOperator : public OperatorNode {
                   double dotij = exanb::norm(nij);
 
                   if (dotij > 1.e-10) {
-                      //DEBUG
-                        //std::cout << "[DEBUG] Reject: normals not aligned" << std::endl;
                     continue;
                   }
 
