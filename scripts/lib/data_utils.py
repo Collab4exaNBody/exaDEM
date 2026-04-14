@@ -55,22 +55,22 @@ RockableData
 # -----------------------------------------------
 def make_sticked_conf(cell_centers, shapefile, gap):
     '''
-Create a RockableData object with the parameters, interactions and particles needed for a simulation with sticked particles.
-The particles are created at the positions of the cell centers, and the interactions are defined to allow sticking between particles that are within a certain distance (stick_distance).
+    Create a RockableData object with the parameters, interactions and particles needed for a simulation with sticked particles.
+    The particles are created at the positions of the cell centers, and the interactions are defined to allow sticking between particles that are within a certain distance (stick_distance).
 
-Parameters
-----------
-cell_centers : dict 
-    mapping cell ID to its center coordinates (x, y, z)
-shapefile : str 
-    path to the shapefile containing the cell geometries (used for visualization and interaction definitions)
-gap: float 
-    distance threshold for sticking particles together (should be >= 2*radius of the particles)
+    Parameters
+    ----------
+    cell_centers : dict 
+        mapping cell ID to its center coordinates (x, y, z)
+    shapefile : str 
+        path to the shapefile containing the cell geometries (used for visualization and interaction definitions)
+    gap: float 
+        distance threshold for sticking particles together (should be >= 2*radius of the particles)
 
-Returns
-----------
-RockableData 
-    a RockableData object with the parameters, interactions and particles defined for a sticked particle simulation
+    Returns
+    ----------
+    RockableData 
+        a RockableData object with the parameters, interactions and particles defined for a sticked particle simulation
     '''
     data = make_rockable_data()
 
@@ -85,7 +85,7 @@ RockableData
         "dVerlet": 0.01,
         "gravity": [0, 0, -9.81],
         "forceLaw": "StickedLinks",
-        "periodicity": [0, 1, 0],
+        "periodicity": [0, 0, 0],
         "shapeFile": shapefile,
     }
 
@@ -117,8 +117,7 @@ RockableData
             vrot=(0, 0, 0),
             arot=(0, 0, 0),
         ))
-
-    
+ 
     data.n_particles = len(data.particles)
 
     # --- STICK ---
