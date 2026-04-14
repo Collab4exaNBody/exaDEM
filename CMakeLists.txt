@@ -87,6 +87,11 @@ endif()
 # ==========================================
 add_subdirectory(src)
 
+# ===============================
+# === Add scripts for testing ===
+# ===============================
+add_subdirectory(script)
+
 ## Installation
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/exaDEM DESTINATION include)
