@@ -257,8 +257,6 @@ class StickPolyhedraOperator : public OperatorNode {
                   if (size_j < 3) {
                     continue;
                   }
-                   //DEBUG
-                  //std::cout << "[DEBUG] Face sizes: size_i=" << size_i << " size_j=" << size_j << std::endl;
                   if (size_i != size_j) {
                     continue;
                   }
