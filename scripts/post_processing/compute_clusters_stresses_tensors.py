@@ -18,7 +18,7 @@ from lib.data_utils import build_particle_index, build_clusters
 # Physics
 # ==============================
 
-def compute_delta_z(particles):
+def compute_delta(particles):
     '''
     Compute the vertical extent of the particle assembly (delta_z) and the maximum and minimum z coordinates.
     
@@ -245,10 +245,11 @@ def main():
 
     # headers
     f_stress.write("#time id_cluster sxx syy szz sxy sxz syx syz szx szy\n")
-    f_wall.write("#time delta_x delta_y delta_z fx fy fz\n")
+    f_wall.write("#time delta_x delta_y delta_z esp_x esp_y esp_z Fx Fy Fz\n")
 
     forces = []
     deltas = []
+    L0 = None
 
     for pf in particle_files:
 
@@ -299,10 +300,18 @@ def main():
         Fy = 0.5 * (Fy_top + Fy_bottom)
         Fz = 0.5 * (Fz_top + Fz_bottom)
 
-        delta_x, delta_y, delta_z = compute_delta_z(particles)
+        delta_x, delta_y, delta_z = compute_delta(particles)
+        if L0 is None:
+           L0 = (delta_x, delta_y, delta_z)
+
+        Lx0, Ly0, Lz0 = L0
+
+        eps_x = (delta_x - Lx0) / Lx0
+        eps_y = (delta_y - Ly0) / Ly0
+        eps_z = (delta_z - Lz0) / Lz0
 
         f_wall.write(
-            f"{time} {delta_x} {delta_y} {delta_z} {Fx} {Fy} {Fz}\n"
+            f"{time} {delta_x} {delta_y} {delta_z} {eps_x} {eps_y} {eps_z} {Fx} {Fy} {Fz}\n"
         )
 
     # -------------------------
