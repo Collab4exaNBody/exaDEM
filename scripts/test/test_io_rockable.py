@@ -1,8 +1,8 @@
 import sys
 import os
 
-from io_utils import read_rockable_file, write_rockable_file
-from data_class import RockableData
+from lib.io_utils import read_rockable_file, write_rockable_file
+from lib.data_class import RockableData
 
 
 # =========================

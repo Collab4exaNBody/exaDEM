@@ -1,7 +1,7 @@
 import numpy as np
 from collections import defaultdict
-from .geometry import face_area, face_normal
-from data_class import Shapes, Shape, CellsData
+from lib.geometry import face_area, face_normal
+from lib.data_class import Shapes, Shape, CellsData
 
 
 def count_interfaces(polyhedra):

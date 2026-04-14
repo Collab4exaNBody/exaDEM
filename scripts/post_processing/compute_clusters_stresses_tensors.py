@@ -4,7 +4,6 @@ import numpy as np
 import glob
 import os
 import re
-import matplotlib.pyplot as plt
 import argparse
 
 
