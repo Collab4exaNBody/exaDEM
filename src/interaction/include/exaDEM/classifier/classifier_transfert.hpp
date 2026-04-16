@@ -105,21 +105,41 @@ struct UnclassifyFunc {
   template <InteractionType IT>
   void operator()(ClassifierContainer<IT>& container, GridCellParticleInteraction& ges) {
     using namespace onika::cuda;
-    auto& ces = ges.m_data;  // Reference to cells containing interactions
-                             // Parallel loop to process interactions within a wave
+    auto& ces = ges.m_data;
 # pragma omp for schedule(guided) nowait
     for (size_t it = 0; it < container.size(); it++) {
       auto item1 = container[it];
-      // Check if interaction in wave has non-zero friction and moment
-      if (item1.active())  // alway true if unclassify is called after compress
+      if (item1.active())
       {
         auto& celli = ces[item1.pair.owner().cell];
-        // auto &celli = ces[item1.pair.pi.cell];
         const unsigned int ni = vector_size(celli.m_data);
         PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
-        // Iterate through interactions in cell to find matching interaction
+
+        // Binary search 
+        // belonging to the same owner particle
+        uint16_t owner_p = item1.pair.owner().p;
+
+        // lower_bound
+        size_t lo = 0, hi = ni;
+        while (lo < hi) {
+          size_t mid = lo + (hi - lo) / 2;
+          if (data_i_ptr[mid].owner().p < owner_p) lo = mid + 1;
+          else hi = mid;
+        }
+        size_t start = lo;
+
+        // upper_bound
+        hi = ni;
+        while (lo < hi) {
+          size_t mid = lo + (hi - lo) / 2;
+          if (data_i_ptr[mid].owner().p <= owner_p) lo = mid + 1;
+          else hi = mid;
+        }
+        size_t end = lo;
+
+        // Linear search 
         bool find = false;
-        for (size_t it2 = 0; it2 < ni; it2++) {
+        for (size_t it2 = start; it2 < end; it2++) {
           auto& item2 = (data_i_ptr[it2]).convert<IT>();
           if (item1 == item2) {
             item2.update(item1);
