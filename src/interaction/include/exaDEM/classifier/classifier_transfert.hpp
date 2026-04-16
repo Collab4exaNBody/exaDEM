@@ -101,7 +101,7 @@ inline void classify(Classifier& classifier, GridCellParticleInteraction& ges, s
   }
 }
 
-struct UnclassifyFunc {
+/*struct UnclassifyFunc {
   template <InteractionType IT>
   void operator()(ClassifierContainer<IT>& container, GridCellParticleInteraction& ges) {
     using namespace onika::cuda;
@@ -120,6 +120,62 @@ struct UnclassifyFunc {
         // Iterate through interactions in cell to find matching interaction
         bool find = false;
         for (size_t it2 = 0; it2 < ni; it2++) {
+          auto& item2 = (data_i_ptr[it2]).convert<IT>();
+          if (item1 == item2) {
+            item2.update(item1);
+            find = true;
+            break;
+          }
+        }
+
+        if (!find) {
+          item1.print();
+          color_log::error("unclassify", "One active interaction has not been updated");
+        }
+      }
+    }
+  }
+};*/
+
+struct UnclassifyFunc {
+  template <InteractionType IT>
+  void operator()(ClassifierContainer<IT>& container, GridCellParticleInteraction& ges) {
+    using namespace onika::cuda;
+    auto& ces = ges.m_data;
+
+#   pragma omp for schedule(guided) nowait
+    for (size_t it = 0; it < container.size(); it++) {
+      auto item1 = container[it];
+      if (item1.active()) {
+        size_t cell_idx = item1.pair.owner().cell;
+        auto& celli = ces[cell_idx];
+        const unsigned int ni = vector_size(celli.m_data);
+        PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
+
+        // Recherche binaire sur owner().p pour trouver la plage
+        // de la particule propriétaire
+        uint16_t owner_p = item1.pair.owner().p;
+        
+        // lower_bound sur owner_p
+        size_t lo = 0, hi = ni;
+        while (lo < hi) {
+          size_t mid = lo + (hi - lo) / 2;
+          if (data_i_ptr[mid].owner().p < owner_p) lo = mid + 1;
+          else hi = mid;
+        }
+        // upper_bound sur owner_p
+        size_t start = lo;
+        hi = ni;
+        while (lo < hi) {
+          size_t mid = lo + (hi - lo) / 2;
+          if (data_i_ptr[mid].owner().p <= owner_p) lo = mid + 1;
+          else hi = mid;
+        }
+        size_t end = lo;
+
+        // Recherche linéaire uniquement dans la plage [start, end)
+        bool find = false;
+        for (size_t it2 = start; it2 < end; it2++) {
           auto& item2 = (data_i_ptr[it2]).convert<IT>();
           if (item1 == item2) {
             item2.update(item1);
