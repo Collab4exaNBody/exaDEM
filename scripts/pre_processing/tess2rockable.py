@@ -189,7 +189,7 @@ def compute_cells(cells_data: CellsData, gap) -> Shapes:
                 cell_edges.add(edge)
 
         volume, center_local, I = polyhedron_mass_properties_mc_fast(
-            eroded_vertices, eroded_faces, n_samples=5000
+            eroded_vertices, eroded_faces, n_samples=50000
         )
         eroded_vertices -= center_local
 

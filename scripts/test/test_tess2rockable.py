@@ -17,6 +17,21 @@ def read_file_lines(path):
         return [l.strip() for l in f if l.strip()]
 
 
+def try_parse_mixed_line(line):
+    tokens = line.split()
+    floats = []
+    non_floats = []
+
+    for t in tokens:
+        try:
+            floats.append(float(t))
+            non_floats.append(None)
+        except ValueError:
+            non_floats.append(t)
+
+    return floats, non_floats
+
+
 def compare_shp(file1, file2, tol=1e-6):
     lines1 = read_file_lines(file1)
     lines2 = read_file_lines(file2)
@@ -25,18 +40,54 @@ def compare_shp(file1, file2, tol=1e-6):
 
     for i, (l1, l2) in enumerate(zip(lines1, lines2)):
 
-        # Essayer de parser en float
-        try:
-            nums1 = list(map(float, l1.split()))
-            nums2 = list(map(float, l2.split()))
+        tokens1 = l1.split()
+        tokens2 = l2.split()
 
-            assert np.allclose(nums1, nums2, atol=tol), (
-                f"Ligne {i} différente (num):\n{nums1}\n{nums2}"
-            )
+        assert len(tokens1) == len(tokens2), (
+            f"Ligne {i} longueur différente:\n{l1}\n{l2}"
+        )
 
-        except ValueError:
-            # fallback texte si non numérique
-            assert l1 == l2, f"Ligne {i} différente (texte):\n{l1}\n{l2}"
+        for t1, t2 in zip(tokens1, tokens2):
+            try:
+                f1 = float(t1)
+                f2 = float(t2)
+
+                assert np.isclose(f1, f2, atol=tol), (
+                    f"Ligne {i} float différent:\n{f1} vs {f2}"
+                )
+
+            except ValueError:
+                assert t1 == t2, (
+                    f"Ligne {i} texte différent:\n{t1} vs {t2}"
+                )
+
+def compare_conf(file1, file2, tol=1e-6):
+    lines1 = [normalize_line(l) for l in read_file_lines(file1)]
+    lines2 = read_file_lines(file2)
+
+    assert len(lines1) == len(lines2), "Nombre de lignes différent"
+
+    for i, (l1, l2) in enumerate(zip(lines1, lines2)):
+        tokens1 = l1.split()
+        tokens2 = l2.split()
+
+        assert len(tokens1) == len(tokens2), (
+            f"Ligne {i} longueur différente:\n{l1}\n{l2}"
+        )
+
+        for t1, t2 in zip(tokens1, tokens2):
+            try:
+                f1 = float(t1)
+                f2 = float(t2)
+
+                assert np.isclose(f1, f2, atol=tol), (
+                    f"Ligne {i} float différent:\n{f1} vs {f2}"
+                )
+
+            except ValueError:
+                assert t1 == t2, (
+                    f"Ligne {i} texte différent:\n{t1} vs {t2}"
+                )
 
 # ----------------------------
 # Test principal
@@ -66,8 +117,6 @@ def test_tess2rockable_regression(tmp_path):
     print("Running command:", " ".join(cmd))
     result = subprocess.run(cmd, capture_output=True, text=True)
 
-
-    # Debug utile si ça casse
     if result.returncode != 0:
         print("STDOUT:\n", result.stdout)
         print("STDERR:\n", result.stderr)
@@ -80,8 +129,4 @@ def test_tess2rockable_regression(tmp_path):
 
     # --- compare SHP (tolérance float) ---
     compare_shp(out_shp, ref_shp)
-
-    conf_new = [normalize_line(l) for l in read_file_lines(out_conf)]
-    conf_ref = read_file_lines(ref_conf)
-
-    assert conf_new == conf_ref, "wrong .conf content"
+    compare_conf(out_conf, ref_conf)

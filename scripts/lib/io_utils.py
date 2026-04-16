@@ -521,5 +521,26 @@ def read_tess(filename, radius=0.0):
         radius=radius,
     )
 
+# ###############################################
+# -- IO CHECKING UTILITIES --
+# ###############################################
 
+def assert_files_close(file_new, file_ref, atol=1e-8, rtol=1e-8):
+    # Ignore automatiquement les lignes commençant par '#'
+    data_new = np.loadtxt(file_new, comments="#")
+    data_ref = np.loadtxt(file_ref, comments="#")
+
+    assert data_new.shape == data_ref.shape, (
+        f"Shape mismatch: {data_new.shape} != {data_ref.shape}"
+    )
+
+    if not np.allclose(data_new, data_ref, atol=atol, rtol=rtol):
+        diff = np.abs(data_new - data_ref)
+        max_idx = np.unravel_index(np.argmax(diff), diff.shape)
+
+        raise AssertionError(
+            f"Files differ beyond tolerance at index {max_idx}: "
+            f"{data_new[max_idx]} != {data_ref[max_idx]} "
+            f"(abs diff = {diff[max_idx]})"
+        )
 
