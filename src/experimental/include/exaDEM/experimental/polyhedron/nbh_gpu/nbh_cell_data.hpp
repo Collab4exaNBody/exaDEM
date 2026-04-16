@@ -91,7 +91,7 @@ struct CopierActiveInteractionFunc {
  * @param ges GridCellParticleInteraction storage for the grid.
  * @param ghost_only If true, only transfers interactions flagged as ghost.
  */
-template<bool ghost_only, bool active_interaction>
+template<bool ghost_only, bool active_interaction, bool append = false>
 void transfer_classifier_grid(size_t* cell_ptr,
                               CellInteractionInformation& info,
                               NbhCellStorage& classifier_helper,
@@ -113,26 +113,27 @@ void transfer_classifier_grid(size_t* cell_ptr,
       }
     }
 
-    if (info.number_of_pair_cells[cell_idx] == 0) {
-      continue;
-    }
-
-    // Indices of interactions for this cell in the classifier
-    size_t first_interaction = info.start_cell[cell_idx];
-    size_t last_interaction  = first_interaction + info.number_of_pair_cells[cell_idx] - 1;
-
     // Grid cell that owns this non-empty cell
     size_t owner_cell = cell_ptr[cell_idx];
 
-    // Compute number of interactions per type for this cell
-    auto first_elem_per_type = 
-        classifier_helper.offset[first_interaction]
-        + classifier_helper_driver.offset[cell_idx];
-    auto n_elem_per_type =
-        classifier_helper.offset[last_interaction] 
-        + classifier_helper.size[last_interaction] 
-        - first_elem_per_type
-        + classifier_helper_driver.size[cell_idx];
+    // Compute particle-particle contribution
+    InteractionTypePerCellCounter particle_pair_start;
+    InteractionTypePerCellCounter particle_pair_end;
+    for (int k = 0; k < InteractionTypeId::NTypes; k++) {
+        particle_pair_start[k] = 0;
+        particle_pair_end[k] = 0;
+    }
+
+    if (info.number_of_pair_cells[cell_idx] > 0) {
+        size_t first_interaction = info.start_cell[cell_idx];
+        size_t last_interaction  = first_interaction + info.number_of_pair_cells[cell_idx] - 1;
+        particle_pair_start = classifier_helper.offset[first_interaction];
+        particle_pair_end   = classifier_helper.offset[last_interaction] 
+                            + classifier_helper.size[last_interaction];
+    }
+
+    auto first_elem_per_type = particle_pair_start + classifier_helper_driver.offset[cell_idx];
+    auto n_elem_per_type = particle_pair_end - particle_pair_start + classifier_helper_driver.size[cell_idx];
 
     // Total number of interactions in this cell
     size_t number_of_interactions = 0;
@@ -154,7 +155,13 @@ void transfer_classifier_grid(size_t* cell_ptr,
     auto& info_particles = storage.m_info;
 
     // Resize storage to fit all interactions
-    storage.m_data.resize(number_of_interactions);
+    size_t old_size = 0;
+    if constexpr (append) {
+      old_size = storage.m_data.size();
+      storage.m_data.resize(old_size + number_of_interactions);
+    } else {
+      storage.m_data.resize(number_of_interactions);
+    }
 
     if (number_of_interactions == 0) {
       continue;
@@ -163,7 +170,7 @@ void transfer_classifier_grid(size_t* cell_ptr,
     PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
 
     // Copy classified interactions into storage
-    size_t shift = 0;
+    size_t shift = old_size;
     for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
       int start = first_elem_per_type[typeID];
       int size = n_elem_per_type[typeID];
@@ -179,7 +186,7 @@ void transfer_classifier_grid(size_t* cell_ptr,
     }
 
     // Sanity check: copied all interactions
-    assert(shift == number_of_interactions);
+    assert(shift == old_size + number_of_interactions);
 
     // sorted according the particle position in the cell
     std::stable_sort(storage.m_data.begin(), storage.m_data.end(),

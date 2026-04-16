@@ -135,7 +135,7 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 			size_t cell_a = cell_ptr[i];
 			IJK loc_a = grid_index_to_ijk(dims, cell_a);
 
-			for (size_t j = 0; j < 26 ; j++) {
+			for (size_t j = 0; j < 27 ; j++) {
 				size_t cell_b = grid_ijk_to_index(
 						dims, loc_a + convert_offset_ijk(j));
 				if (cells[cell_b].size() > 0) {
@@ -277,22 +277,30 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 		// Update edge area with OwnerGhost interactions
 		// We copy only Particle - Particle / InnerBond interactions:
 		//  - A Particle - Driver interaction can't be a ghost
-		constexpr bool do_ghost_only = true;  // should be true, but false is better for debugging
+		constexpr bool do_ghost_only = true;
 		constexpr bool do_active_interaction_only = false;
-		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
-			cell_ptr, info_cell,  info_cell_pair,
-      info_cell_driver,
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only, false>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
 			classifier_interaction_accessor, *ges,
 			get_first_id<InteractionType::ParticleParticle>(),
 			get_last_id<InteractionType::ParticleParticle>()
 		);
 
-		transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
-			cell_ptr, info_cell,  info_cell_pair,
-      info_cell_driver,
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only, true>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
 			classifier_interaction_accessor, *ges,
 			get_first_id<InteractionType::InnerBond>(),
 			get_last_id<InteractionType::InnerBond>()
+		);
+
+		transfer_classifier_grid<do_ghost_only, do_active_interaction_only, true>(
+			cell_ptr, info_cell, info_cell_pair,
+			info_cell_driver,
+			classifier_interaction_accessor, *ges,
+			get_first_id<InteractionType::ParticleDriver>(),
+			get_last_id<InteractionType::ParticleDriver>()
 		);
 
 		//auto& test = container.get_data<InteractionType::ParticleDriver>(5);
