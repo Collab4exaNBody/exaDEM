@@ -53,9 +53,10 @@ std::stringstream create_buffer(GridT& grid, Classifier& ic) {
 
     for (size_t idx = 0; idx < size; idx++) {
       double dn = dn_ptr[idx];
+      double f = exanb::norm(fn_ptr[idx]) + exanb::norm(ft_ptr[idx]);
       auto [i, j, type, swap, ghost] = wrapper(idx);
       /** filter empty interactions */
-      if (dn < 0 || type == InteractionTypeId::InnerBond) {
+      if (f != 0 || dn < 0 || type == InteractionTypeId::InnerBond) {
         /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
         if (ghost != InteractionPair::PartnerGhost) {
           stream << i.id << "," << j.id << ",";
