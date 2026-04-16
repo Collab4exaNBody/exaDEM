@@ -188,17 +188,18 @@ def compute_cells(cells_data: CellsData, gap) -> Shapes:
                 edge = tuple(sorted((v1, v2)))
                 cell_edges.add(edge)
 
-        volume, center, I = polyhedron_mass_properties_mc_fast(
+        volume, center_local, I = polyhedron_mass_properties_mc_fast(
             eroded_vertices, eroded_faces, n_samples=5000
         )
+        eroded_vertices -= center_local
 
-        center = cell_center
+        #center = cell_center
         cell_shapes[pid] = Shape(
             vertices=eroded_vertices,
             faces=eroded_faces,
             edges=list(cell_edges),
             volume=volume,
-            center=center,
+            center=center_local + cell_center,
             inertia_tensor=I
         )
 
