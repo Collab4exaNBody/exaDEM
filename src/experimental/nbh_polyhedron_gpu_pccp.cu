@@ -242,7 +242,6 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 		interaction_counts.resize(total_pp);
 		onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_prefix;
 		interaction_prefix.resize(total_pp);
-
 		InteractionTypePerCellCounter total_interactions;
 		for (int t = 0; t < InteractionTypeId::NTypes; t++) total_interactions[t] = 0;
 
@@ -255,11 +254,47 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 		      interaction_counts.data(), total_pp);
 		  ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-		  for (size_t i = 0; i < total_pp; i++) {
-		    for (int t = 0; t < 4; t++) {
-		      interaction_prefix[i][t] = total_interactions[t];
-		      total_interactions[t] += interaction_counts[i][t];
-		    }
+		  // GPU prefix sum per interaction type
+		  constexpr int N_PP = 4;
+		  onika::memory::CudaMMVector<int> type_counts[N_PP];
+		  onika::memory::CudaMMVector<int> type_prefix[N_PP];
+		  for (int t = 0; t < N_PP; t++) {
+		    type_counts[t].resize(total_pp);
+		    type_prefix[t].resize(total_pp);
+		  }
+
+		  int block_1d = 256;
+		  int grid_1d = (total_pp + block_1d - 1) / block_1d;
+
+		  ExtractInteractionCounts<<<grid_1d, block_1d>>>(
+		      interaction_counts.data(),
+		      type_counts[0].data(), type_counts[1].data(),
+		      type_counts[2].data(), type_counts[3].data(),
+		      total_pp);
+		  ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		  for (int t = 0; t < N_PP; t++) {
+		    void* d_tmp = nullptr;
+		    size_t tmp_bytes = 0;
+		    cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes,
+		        type_counts[t].data(), type_prefix[t].data(), total_pp);
+		    cudaMalloc(&d_tmp, tmp_bytes);
+		    cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes,
+		        type_counts[t].data(), type_prefix[t].data(), total_pp);
+		    cudaFree(d_tmp);
+		  }
+		  ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		  PackInteractionPrefix<<<grid_1d, block_1d>>>(
+		      interaction_prefix.data(),
+		      type_prefix[0].data(), type_prefix[1].data(),
+		      type_prefix[2].data(), type_prefix[3].data(),
+		      total_pp);
+		  ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		  for (int t = 0; t < N_PP; t++) {
+		    total_interactions[t] = type_prefix[t][total_pp - 1]
+		                         + type_counts[t][total_pp - 1];
 		  }
 		}
 

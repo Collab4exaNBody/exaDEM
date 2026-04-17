@@ -32,7 +32,8 @@ struct ParticlePairStorage {
 // 1 block = 1 cell pair, threads iterate particle pairs
 // ============================================================
 template<int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ void CountParticlePairsKernel(
+__global__ __launch_bounds__(64, 8)
+void CountParticlePairsKernel(
     TMPLC cells,
     size_t* __restrict__ owner_cells,
     size_t* __restrict__ partner_cells,
@@ -104,7 +105,8 @@ __global__ void CountParticlePairsKernel(
 // 1 block = 1 cell pair
 // ============================================================
 template<int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ void FillParticlePairsKernel(
+__global__ __launch_bounds__(64, 8)
+void FillParticlePairsKernel(
     TMPLC cells,
     size_t* __restrict__ owner_cells,
     size_t* __restrict__ partner_cells,
@@ -304,7 +306,8 @@ __global__ void CountInteractionsPPKernel(
 // 1 block = 1 particle pair (PCCP)
 // ============================================================
 template<int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ void FillInteractionsPPKernel(
+__global__ __launch_bounds__(64, 10) 
+void FillInteractionsPPKernel(
     TMPLC cells,
     VertexField* __restrict__ vertex_fields,
     const shape* __restrict__ shps,
@@ -562,6 +565,39 @@ inline void reconstruct_cell_pair_offsets(
       running[t] += info_cell_pair.size[cp][t];
     }
   }
+}
+
+// ============================================================
+// Helper kernels for GPU prefix sum
+// ============================================================
+__global__
+void ExtractInteractionCounts(
+    const InteractionTypePerCellCounter* __restrict__ counts,
+    int* __restrict__ vv, int* __restrict__ ve,
+    int* __restrict__ vf, int* __restrict__ ee,
+    size_t n)
+{
+  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= n) return;
+  vv[i] = counts[i][0];
+  ve[i] = counts[i][1];
+  vf[i] = counts[i][2];
+  ee[i] = counts[i][3];
+}
+
+__global__
+void PackInteractionPrefix(
+    InteractionTypePerCellCounter* __restrict__ prefix,
+    const int* __restrict__ vv, const int* __restrict__ ve,
+    const int* __restrict__ vf, const int* __restrict__ ee,
+    size_t n)
+{
+  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= n) return;
+  prefix[i][0] = vv[i];
+  prefix[i][1] = ve[i];
+  prefix[i][2] = vf[i];
+  prefix[i][3] = ee[i];
 }
 
 } // namespace exaDEM
