@@ -257,7 +257,6 @@ class StickPolyhedraOperator : public OperatorNode {
                   if (size_j < 3) {
                     continue;
                   }
-
                   if (size_i != size_j) {
                     continue;
                   }

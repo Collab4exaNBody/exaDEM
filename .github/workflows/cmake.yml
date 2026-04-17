@@ -18,9 +18,13 @@ jobs:
       run: sudo apt install libyaml-cpp-dev
     - name: Install
       run: sudo apt-get update && sudo apt-get install lcov
-#    - uses: mpi4py/setup-mpi@v1
-#      with: 
-#        mpi: openmpi
+    - name: Install Python test dependencies
+      run: pip install pytest
+    - name: Install Python dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install numpy pytest      
+
     - name: Install MPI
       run: sudo apt install mpich
       
