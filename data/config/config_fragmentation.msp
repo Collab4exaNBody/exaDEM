@@ -71,3 +71,4 @@ init_update_particle_neighbors:
 +chunk_neighbors_impl:
 #  - check_classifier_interaction_pair
   - update_interfaces
+  - stats_interactions
