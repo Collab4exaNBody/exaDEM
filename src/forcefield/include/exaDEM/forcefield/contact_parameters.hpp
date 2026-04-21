@@ -161,10 +161,6 @@ struct convert<ContactParams> {
       lerr << "kt is missing\n";
       return false;
     }
-    if (!node["kr"]) {
-      lerr << "kr is missing\n";
-      return false;
-    }
     if (!node["mu"]) {
       lerr << "mu is missing\n";
       return false;
@@ -182,7 +178,9 @@ struct convert<ContactParams> {
 
     v.kn = node["kn"].as<Quantity>().convert();
     v.kt = node["kt"].as<Quantity>().convert();
-    v.kr = node["kr"].as<Quantity>().convert();
+    if(node["kr"]) {
+      v.kr = node["kr"].as<Quantity>().convert();
+    }
     v.mu = node["mu"].as<Quantity>().convert();
     v.damp_rate = node["damp_rate"].as<Quantity>().convert();
 
