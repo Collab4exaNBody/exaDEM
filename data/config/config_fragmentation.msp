@@ -14,6 +14,10 @@ evaluate_interface_breakage:
   body:
     - apply_interface_fracture_criterion:
        display: true
+interface_updater:
+  condition: broken_interface
+  body:
+    - broken_interface_friction_updater
 
 displ_or_break:
   rebind: { in1: particle_displ, in2: broken_interface, result: particle_displ }
@@ -23,12 +27,12 @@ displ_or_break:
 evaluate_particle_displ:
   - evaluate_polyhedron_displ
   - evaluate_interface_breakage
+  - interface_updater
   - displ_or_break
 
 global: 
   apply_particle_sticking: false
   sticking_threshold: 2.e-05
-#  sticking_threshold: 2.e-05
 
 prepro_fragmentation:
   condition: apply_particle_sticking
@@ -69,6 +73,5 @@ init_update_particle_neighbors:
   - stats_interactions
 
 +chunk_neighbors_impl:
-#  - check_classifier_interaction_pair
   - update_interfaces
-  - stats_interactions
+#  - stats_interactions

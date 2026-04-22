@@ -34,7 +34,7 @@ inline void force_law_core(const double dn,
                            double& En,
                            Vec3d& tds,  // cummalative tangential displacement
                            double& Et,
-                           Vec3d& vft,  // tangential force between particle i and j
+                           Vec3d& ft,  // tangential force between particle i and j
                            const Vec3d& contact_position,
                            const Vec3d& pos_i,   // positions i
                            const Vec3d& vel_i,   // positions i
@@ -58,21 +58,21 @@ inline void force_law_core(const double dn,
   double fne = -ibp.kn * weight * (dn - dn0);
   double fnv = damp * vn;
   double fn = fne + fnv;
-  const Vec3d vfn = fn * n;
+  const Vec3d vfn = fn * n;  // vector fn
 
   // === Tangential force (friction)
-  const Vec3d ft = compute_tangential_force(dt, vn, n, vel);
-  tds += ft;
-  vft += weight * ibp.kt * ft;
+  const Vec3d ds = compute_tangential_force(dt, vn, n, vel);
+  tds += ds;
+  ft = weight * ibp.kt * tds;
 
   // === sum forces
-  f_i = vfn + vft;
+  f_i = vfn + ft;
 
   // === Compute energies
   if (fne > 0) {
-    En = 0;
+    En = 0;  // Compression
   } else {
-    En = 0.5 * weight * ibp.kn * (dn - dn0) * (dn - dn0);
+    En = 0.5 * weight * ibp.kn * (dn - dn0) * (dn - dn0);  // Tension
   }
   Et = 0.5 * weight * ibp.kt * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
 }

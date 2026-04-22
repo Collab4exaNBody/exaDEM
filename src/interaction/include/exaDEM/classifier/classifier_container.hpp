@@ -317,6 +317,16 @@ struct ClassifierContainer {
     }
   }
 
+  inline Vec3d load_ft(size_t id) {
+    return {ft_x[id], ft_y[id], ft_z[id]};
+  }
+
+  void store_ft(Vec3d&& value, size_t id) {
+    ft_x[id] = value.x;
+    ft_y[id] = value.y;
+    ft_z[id] = value.z;
+  }
+
   // debug
   void display() {
     onika::lout << "ClassifierContainer type is: " << type;

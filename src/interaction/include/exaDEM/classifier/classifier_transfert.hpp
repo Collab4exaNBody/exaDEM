@@ -123,7 +123,9 @@ struct UnclassifyFunc {
         size_t lo = 0, hi = ni;
         while (lo < hi) {
           size_t mid = lo + (hi - lo) / 2;
-          if (data_i_ptr[mid].owner().p < owner_p) lo = mid + 1;
+          if (data_i_ptr[mid].owner().p < owner_p) {
+            lo = mid + 1;
+          }
           else hi = mid;
         }
         size_t start = lo;
@@ -132,8 +134,11 @@ struct UnclassifyFunc {
         hi = ni;
         while (lo < hi) {
           size_t mid = lo + (hi - lo) / 2;
-          if (data_i_ptr[mid].owner().p <= owner_p) lo = mid + 1;
-          else hi = mid;
+          if (data_i_ptr[mid].owner().p <= owner_p) {
+            lo = mid + 1;
+          } else {
+            hi = mid;
+          }
         }
         size_t end = lo;
 
@@ -156,6 +161,42 @@ struct UnclassifyFunc {
     }
   }
 };
+
+template<> inline void UnclassifyFunc::operator()<InteractionType::InnerBond>(
+ClassifierContainer<InteractionType::InnerBond>& container, GridCellParticleInteraction& ges) {
+  using namespace onika::cuda;
+  auto& ces = ges.m_data;  // Reference to cells containing interactions
+                           // Parallel loop to process interactions within a wave
+# pragma omp for schedule(guided) nowait
+  for (size_t it = 0; it < container.size(); it++) {
+    auto item1 = container[it];
+    // Check if interaction in wave has non-zero friction and moment
+    auto& celli = ces[item1.pair.owner().cell];
+    const unsigned int ni = vector_size(celli.m_data);
+    PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
+    // Iterate through interactions in cell to find matching interaction
+    bool find = false;
+    for (size_t it2 = 0; it2 < ni; it2++) {
+      PlaceholderInteraction& item2 = data_i_ptr[it2];
+      if (item1.pair == item2.pair) {
+        find = true;
+        if(item1.persistent()) {
+          auto& view = item2.convert<InteractionType::InnerBond>();
+          view.update(item1);
+        } else {  // transform an innerbond interaction to a vertex-vertex interaction
+          auto& view = item2.convert<InteractionType::ParticleParticle>();
+          view = broke_interaction(item1);
+        }
+        break;
+      }
+    }
+
+    if (!find) {
+      item1.print();
+      color_log::error("unclassify", "One active interaction has not been updated");
+    }
+  }
+}
 
 /**
  * @brief Restores friction and moment data for interactions from categorized waves to cell interactions.

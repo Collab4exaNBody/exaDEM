@@ -295,16 +295,6 @@ class StickPolyhedraOperator : public OperatorNode {
                         break;
                       }
                     }
-                    /*
-                       if( vertex_not_found )
-                       {
-                       color_log::warning("stick_polyhedra", "It is impossible to glue sides "
-                       + std::to_string(i) + " and " + std::to_string(j)
-                       + " together; vertex " + std::to_string(ivf) + " cannot be bonded.");
-                       found = false;
-                       local.clear();
-                       break;
-                       }*/
                   }
                   if (local.size() <= 2) {
                     local.clear();

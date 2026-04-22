@@ -184,6 +184,16 @@ struct InteractionWrapper {
     unbroken[idx] = false;
   }
 
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d load_ft(size_t id) {
+    return {ft_x[id], ft_y[id], ft_z[id]};
+  }
+
+  ONIKA_HOST_DEVICE_FUNC void store_ft(Vec3d&& value, size_t id) {
+    ft_x[id] = value.x;
+    ft_y[id] = value.y;
+    ft_z[id] = value.z;
+  }
+
   ONIKA_HOST_DEVICE_FUNC
       inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) const {
         assert(type == item.pair.type);
