@@ -147,29 +147,6 @@ struct IOSimInteractionFunctor {
     if (I.pair.ghost != InteractionPair::PartnerGhost) {
       const double& dn = dnp[idx];
       local.n_tot_interaction += coef;
-      /*
-      printf("Dn %f\n"
-             "Interaction {\n"
-             "  type=%d\n"
-             "  pi: { id=%llu, cell=%u, p=%u, sub=%u }\n"
-             "  pj: { id=%llu, cell=%u, p=%u, sub=%u }\n"
-             "  swap: %d\n" 
-             "}\n",
-             dn,
-             I.pair.type,
-
-             (unsigned long long)I.pair.pi.id,
-             I.pair.pi.cell,
-             (unsigned int)I.pair.pi.p,
-             I.pair.pi.sub,
-
-             (unsigned long long)I.pair.pj.id,
-             I.pair.pj.cell,
-             (unsigned int)I.pair.pj.p,
-             I.pair.pj.sub,
-             (int)I.pair.swap
-            );
-      */
       if (dn < 0.0 || I.active()) {
         local.n_act_interaction += coef;
         local.min_dn = std::min(local.min_dn, dn);

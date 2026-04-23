@@ -146,6 +146,7 @@ simulation:
     - grid_post_processing
     - print_domain
     - print_drivers
+    - driver_extractor_summary
     - save_shapes
     - performance_adviser: { verbose: true }
     - init_epilog
