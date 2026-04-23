@@ -34,6 +34,8 @@ namespace exaDEM {
  * @return shape      Fully populated shape object.
  */
 inline shape read_shp(std::ifstream& input, bool big_shape = false) {
+  using exanb::Vec3d;
+  using exanb::Quaternion;
   shape shp;
   std::string key, line;
   std::vector<int> face_indices_buffer;
@@ -53,30 +55,7 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
                          "have been defined correctly. If so, replace n with y. Otherwise, you can use Rockable's "
                          "shapeSurvey to define these values (command “c”).");
       }
-    }
-    /*
-          else if (key == "obb.center") // === keys relative to the OBB
-          {
-            input >> shp.obb.center.x >> shp.obb.center.y >> shp.obb.center.z;
-          }
-          else if (key == "obb.extent")
-          {
-            input >> shp.obb.extent.x >> shp.obb.extent.y >> shp.obb.extent.z;
-          }
-          else if (key == "obb.e1")
-          {
-            input >> shp.obb.e1.x >> shp.obb.e1.y >> shp.obb.e1.z;
-          }
-          else if (key == "obb.e2")
-          {
-            input >> shp.obb.e2.x >> shp.obb.e2.y >> shp.obb.e2.z;
-          }
-          else if (key == "obb.e3")
-          {
-            input >> shp.obb.e3.x >> shp.obb.e3.y >> shp.obb.e3.z;
-          }
-    */
-    else if (key == "radius") {
+    } else if (key == "radius") {
       input >> shp.m_radius;
     } else if (key == "volume") {
       input >> shp.m_volume;
@@ -208,12 +187,12 @@ inline void read_shp(shapes& shps, const std::string file_name, bool big_shape =
  * @param file_name Path to the file (std::string_view for efficiency).
  * @return Map associating each shape name with its Vec3d position.
  */
-inline std::map<std::string, Vec3d> scan_shape_position(std::string_view file_name) {
-  std::map<std::string, Vec3d> res;
+inline std::map<std::string, exanb::Vec3d> scan_shape_position(std::string_view file_name) {
+  std::map<std::string, exanb::Vec3d> res;
   std::ifstream input(file_name.data());
   for (std::string line; getline(input, line);) {
     if (line == "<") {
-      Vec3d position = {0, 0, 0};  // default value
+      exanb::Vec3d position = {0, 0, 0};  // default value
       std::string type_name = "error";
       std::string key;
       // Read until closing '>'

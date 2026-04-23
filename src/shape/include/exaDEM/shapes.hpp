@@ -26,12 +26,9 @@ namespace exaDEM {
  * @brief Container for geometric shapes used in particle interactions.
  */
 struct shapes {
-  template <typename T>
-  using VectorT = onika::memory::CudaMMVector<T>;
-
-  VectorT<shape> m_data;        ///< Shape storage on GPU
-  int m_max_nv = 0;             ///< Maximum number of vertices among all shapes
-  bool m_use_obb_tree = false;  ///< Whether to enable OBB-tree acceleration
+  onika::memory::CudaMMVector<shape> m_data; ///< Shape storage on CPU/GPU
+  int m_max_nv = 0;                          ///< Maximum number of vertices among all shapes
+  bool m_use_obb_tree = false;               ///< Whether to enable OBB-tree acceleration
 
   /// @return pointer to device data (const)
   inline const shape* data() const { return onika::cuda::vector_data(m_data); }
@@ -122,7 +119,7 @@ struct shapes {
  * @param shps  Reference to the shape container.
  * @param shp   shape to register.
  */
-inline void register_shape(ParticleTypeMap& ptm, shapes& shps, shape& shp) {
+inline void register_shape(exanb::ParticleTypeMap& ptm, shapes& shps, shape& shp) {
   if (ptm.find(shp.m_name) != ptm.end()) {
     shp.m_name = shp.m_name + "X";
     color_log::warning(
@@ -141,7 +138,7 @@ inline void register_shape(ParticleTypeMap& ptm, shapes& shps, shape& shp) {
  * @param shps  Reference to the shape container.
  * @param shp   Vector of shapes to register.
  */
-inline void register_shapes(ParticleTypeMap& ptm, shapes& shps, std::vector<shape>& shp) {
+inline void register_shapes(exanb::ParticleTypeMap& ptm, shapes& shps, std::vector<shape>& shp) {
   for (auto& s : shp) {
     if (ptm.find(s.m_name) != ptm.end()) {
       s.m_name = s.m_name + "X";

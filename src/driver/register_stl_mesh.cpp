@@ -27,6 +27,7 @@ under the License.
 #include <exaDEM/stl_mesh_to_driver.hpp>
 
 namespace exaDEM {
+using namespace onika::scg;
 class RegisterRShapeDriver : public OperatorNode {
   const Driver_params default_params = Driver_params();
   static constexpr RShapeDriverFields default_rshape_fields = RShapeDriverFields();
@@ -138,7 +139,7 @@ class RegisterRShapeDriver : public OperatorNode {
     drivers->add_driver(*id, driver);
     exanb::lout << "========= STL Mesh ==============" << std::endl;
     exanb::lout << "Name     = " << *filename << std::endl;
-    lout << "=================================" << std::endl;
+    exanb::lout << "=================================" << std::endl;
   }
 };
 

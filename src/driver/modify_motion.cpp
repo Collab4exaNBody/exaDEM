@@ -26,6 +26,7 @@ under the License.
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
+using namespace onika::scg;
 class ModifyMotionBehavior : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});

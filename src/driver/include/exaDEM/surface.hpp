@@ -30,8 +30,8 @@ struct SurfaceFields {
   exanb::Vec3d normal = {0, 0, 1}; /**< Normal vector of the surface. */
   exanb::Vec3d center = {0, 0, 0}; /**< Center position of the surface. */
   /** optional */
-  Vec3d vel = {0, 0, 0};                                /**< Velocity of the surface. */
-  exanb::Vec3d vrot = Vec3d{0, 0, 0};                   /**< Angular velocity of the surface. */
+  exanb::Vec3d vel = {0, 0, 0};                                /**< Velocity of the surface. */
+  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};                   /**< Angular velocity of the surface. */
   double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the ball */
   double surface = -1;
   /** no need to dump them */
@@ -41,14 +41,9 @@ struct SurfaceFields {
 }  // namespace exaDEM
 
 namespace YAML {
-using exaDEM::MotionType;
-using exaDEM::SurfaceFields;
-using exanb::lerr;
-using onika::physics::Quantity;
-
 template <>
-struct convert<SurfaceFields> {
-  static bool decode(const Node& node, SurfaceFields& v) {
+struct convert<exaDEM::SurfaceFields> {
+  static bool decode(const Node& node, exaDEM::SurfaceFields& v) {
     if (!node.IsMap()) {
       return false;
     }
@@ -59,25 +54,25 @@ struct convert<SurfaceFields> {
       return false;
     }
     v.offset = node["offset"].as<Quantity>().convert();
-    v.normal = node["normal"].as<Vec3d>();
+    v.normal = node["normal"].as<exanb::Vec3d>();
     if (check(node, "vel")) {
-      v.vel = node["vel"].as<Vec3d>();
+      v.vel = node["vel"].as<exanb::Vec3d>();
     }
     if (check(node, "vrot")) {
-      v.vrot = node["vrot"].as<Vec3d>();
+      v.vrot = node["vrot"].as<exanb::Vec3d>();
     }
     if (check(node, "mass")) {
       v.mass = node["mass"].as<Quantity>().convert();
     }
     if (check(node, "surface")) {
-      v.surface = node["surface"].as<double>();
+      v.surface = node["surface"].as<Quantity>().convert();
     }
-    if (v.vrot != Vec3d{0, 0, 0}) {
+    if (v.vrot != exanb::Vec3d{0, 0, 0}) {
       if (!check_error(node, "center")) return false;
-      v.center = node["center"].as<Vec3d>();
+      v.center = node["center"].as<exanb::Vec3d>();
     } else {
       if (check(node, "center")) {
-        v.center = node["center"].as<Vec3d>();
+        v.center = node["center"].as<exanb::Vec3d>();
       } else {
         v.center = v.offset * v.normal;
       }
@@ -170,7 +165,7 @@ struct Surface {
       fields.center = exanb::dot(fields.center_proj - fields.center, fields.normal) * fields.normal + fields.center_proj;
       color_log::warning("register_surface",
                          "center is re-computed because it doesn't fit with offset, new center is: [" +
-                             std::to_string(fields.center) + "] and center_proj is: [" + std::to_string(fields.center_proj) + "]");
+                         std::to_string(fields.center) + "] and center_proj is: [" + std::to_string(fields.center_proj) + "]");
     }
 
     if (!motion.is_valid_motion_type(surface_valid_motion_types)) {
@@ -186,7 +181,7 @@ struct Surface {
         color_log::warning("register_surface",
                            "The motion vector of the surface has been adjusted to align with the normal vector, i.e. "
                            "the motion vecor[" +
-                               std::to_string(motion.motion_vector) + "] is now equal to [" + std::to_string(fields.normal) + "].");
+                           std::to_string(motion.motion_vector) + "] is now equal to [" + std::to_string(fields.normal) + "].");
         motion.motion_vector = fields.normal;
       }
     }
@@ -299,8 +294,8 @@ struct Surface {
    */
   ONIKA_HOST_DEVICE_FUNC
       inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& p) {
-        Vec3d proj = dot(p, fields.normal) * fields.normal;
-        Vec3d surface_to_point = -(fields.center_proj - proj);
+        exanb::Vec3d proj = dot(p, fields.normal) * fields.normal;
+        exanb::Vec3d surface_to_point = -(fields.center_proj - proj);
         double d = exanb::norm(surface_to_point);
         double dn = d - rcut;
         if (dn > 0) {

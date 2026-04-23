@@ -101,7 +101,7 @@ struct Driver_params  //: public Driver_expr
 {
   // Common motion stuff
   MotionType motion_type = STATIONARY;
-  Vec3d motion_vector = {0, 0, 0};
+  exanb::Vec3d motion_vector = {0, 0, 0};
   double motion_start_threshold = 0;
   double motion_end_threshold = 1e300;
 
@@ -112,22 +112,22 @@ struct Driver_params  //: public Driver_expr
   // Motion: Compression
   double sigma = 0;         /**< used for compressive force */
   double damprate = 0;      /**< used for compressive force */
-  Vec3d forces = {0, 0, 0}; /**< sum of the forces applied to the driver. */
+  exanb::Vec3d forces = {0, 0, 0}; /**< sum of the forces applied to the driver. */
   double weigth = 0;        /**< cumulated sum of particle weigth into the simulation or in the driver */
 
   // Motion: Tabulated
   std::vector<double> tab_time;
-  std::vector<Vec3d> tab_pos;
+  std::vector<exanb::Vec3d> tab_pos;
 
   // Motion: Shaker
   double omega = 0;
   double amplitude = 0;
-  Vec3d shaker_dir = Vec3d(0, 0, 1);
+  exanb::Vec3d shaker_dir = exanb::Vec3d(0, 0, 1);
 
   // Motion: Pendulum (re-use both shaker motion members omega and amplitude)
-  Vec3d pendulum_anchor_point;     /**< Fixed suspension point. */
-  Vec3d pendulum_initial_position; /**< Starting position of the pendulum mass. */
-  Vec3d pendulum_swing_dir;        /**< Direction defining the pendulum's oscillation plane. */
+  exanb::Vec3d pendulum_anchor_point;     /**< Fixed suspension point. */
+  exanb::Vec3d pendulum_initial_position; /**< Starting position of the pendulum mass. */
+  exanb::Vec3d pendulum_swing_dir;        /**< Direction defining the pendulum's oscillation plane. */
 
   // Motion: Expression
   Driver_expr expr;
@@ -181,7 +181,7 @@ struct Driver_params  //: public Driver_expr
   }
 
   // Getter
-  inline Vec3d sum_forces() {
+  inline exanb::Vec3d sum_forces() {
     if (motion_type == PARTICLE) {
       return forces;
     }
@@ -189,7 +189,7 @@ struct Driver_params  //: public Driver_expr
       forces = (exanb::dot(forces, motion_vector) + const_force) * motion_vector;
       return forces;
     }
-    return Vec3d{0, 0, 0};
+    return exanb::Vec3d{0, 0, 0};
   }
 
   // Checks
@@ -223,8 +223,8 @@ struct Driver_params  //: public Driver_expr
 
       if (is_shaker()) {
         if (exanb::dot(shaker_dir, shaker_dir) - 1 >= 1e-14) {
-          Vec3d old = shaker_dir;
-          exanb::_normalize(shaker_dir);
+          exanb::Vec3d old = shaker_dir;
+          _normalize(shaker_dir);
           color_log::warning("Driver_params::check_motion_coherence", "Your shaker_dir vector [" + std::to_string(old) +
                                                                           "} has been normalized to [" +
                                                                           std::to_string(shaker_dir) + "]");
@@ -237,8 +237,8 @@ struct Driver_params  //: public Driver_expr
                                std::to_string(pendulum_anchor_point) + "]");
         }
         if (exanb::dot(pendulum_swing_dir, pendulum_swing_dir) - 1 >= 1e-14) {
-          Vec3d old = pendulum_swing_dir;
-          exanb::_normalize(pendulum_swing_dir);
+          exanb::Vec3d old = pendulum_swing_dir;
+          _normalize(pendulum_swing_dir);
           color_log::warning("Driver_params::check_motion_coherence",
                              "Your pendulum_swing_dir vector [" + std::to_string(old) + "} has been normalized to [" +
                                  std::to_string(pendulum_swing_dir) + "]");
@@ -273,7 +273,7 @@ struct Driver_params  //: public Driver_expr
     }
     if (is_linear()) {
       // Check if motion vector is zero (invalid for linear motion)
-      if (motion_vector == Vec3d{0, 0, 0}) {
+      if (motion_vector == exanb::Vec3d{0, 0, 0}) {
         exanb::lout << ansi::yellow("Your motion type is a \"Linear Mode\" that requires a motion vector.") << std::endl;
         exanb::lout << ansi::yellow(
                     "Please, define motion vector by adding \"motion_vector: [1,0,0]. It is defined to [0,0,0] by "
@@ -283,8 +283,8 @@ struct Driver_params  //: public Driver_expr
       }
       // Normalize motion vector if its magnitude is not equal to 1
       if (dot(motion_vector, motion_vector) - 1 >= 1e-14) {
-        Vec3d old = motion_vector;
-        exanb::_normalize(motion_vector);
+        exanb::Vec3d old = motion_vector;
+        _normalize(motion_vector);
         color_log::warning("Driver_params::check_motion_coherence", "Your motion vector [" + std::to_string(old) +
                                                                         "} has been normalized to [" +
                                                                         std::to_string(motion_vector) + "]");
@@ -430,7 +430,7 @@ struct Driver_params  //: public Driver_expr
   }
 
   /* Tabulated motion routines */
-  Vec3d tab_to_position(double time) {
+  exanb::Vec3d tab_to_position(double time) {
     assert(time >= 0.0);
     auto ite = std::lower_bound(tab_time.begin(), tab_time.end(), time);
     if (ite == tab_time.end()) {
@@ -441,30 +441,30 @@ struct Driver_params  //: public Driver_expr
       assert(tab_time[idx_lower] >= time);
       if (idx_upper >= tab_time.size()) return tab_pos.back();
       double Dt = (time - tab_time[idx_lower]) / (tab_time[idx_upper] - tab_time[idx_lower]);
-      Vec3d P = (tab_pos[idx_upper] - tab_pos[idx_lower]) * Dt + tab_pos[idx_lower];
+      exanb::Vec3d P = (tab_pos[idx_upper] - tab_pos[idx_lower]) * Dt + tab_pos[idx_lower];
       return P;
     }
   }
 
-  Vec3d tab_to_velocity(double time) {
+  exanb::Vec3d tab_to_velocity(double time) {
     assert(time >= 0.0);
     auto ite = std::lower_bound(tab_time.begin(), tab_time.end(), time);
     if (ite == tab_time.end()) {
-      return Vec3d(0, 0, 0);  // stationnary
+      return exanb::Vec3d(0, 0, 0);  // stationnary
     } else {
       size_t idx_lower = ite - tab_time.begin() - 1;
       size_t idx_upper = idx_lower + 1;
       assert(tab_time[idx_lower] >= time);
-      if (idx_upper >= tab_time.size()) return Vec3d(0, 0, 0);
+      if (idx_upper >= tab_time.size()) return exanb::Vec3d(0, 0, 0);
       double Dt = tab_time[idx_upper] - tab_time[idx_lower];
       assert(Dt != 0.0);
-      Vec3d V = (tab_pos[idx_upper] - tab_pos[idx_lower]) / Dt;
+      exanb::Vec3d V = (tab_pos[idx_upper] - tab_pos[idx_lower]) / Dt;
       return V;
     }
   }
 
   /* Shaker routines */
-  Vec3d shaker_direction() {
+  exanb::Vec3d shaker_direction() {
     return shaker_dir;
   }
 
@@ -474,40 +474,40 @@ struct Driver_params  //: public Driver_expr
     return amplitude * sin(omega * time);
   }
 
-  Vec3d shaker_velocity(double time) {
+  exanb::Vec3d shaker_velocity(double time) {
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return amplitude * omega * cos(omega * time) * shaker_direction();
   }
 
   /* Pendulum routines */
-  Vec3d pendulum_direction() {
+  exanb::Vec3d pendulum_direction() {
     return pendulum_swing_dir;
   }
 
-  Vec3d pendulum_velocity(double time) {
+  exanb::Vec3d pendulum_velocity(double time) {
     return {0, 0, 0};
   }
 
-  std::pair<double, Vec3d> compute_offset_normal_pendulum_motion(double time) {
+  std::pair<double, exanb::Vec3d> compute_offset_normal_pendulum_motion(double time) {
     if (time < motion_start_threshold) {
       color_log::error("compute_normal_pendulum_motion",
                        "This call is ill-formed, please verify that time is superior to motion_start_threshold.");
     }
-    Vec3d v1 = pendulum_anchor_point;
-    Vec3d v2 = pendulum_initial_position;
-    Vec3d v3 = pendulum_initial_position + pendulum_direction() * pendulum_signal(time);
+    exanb::Vec3d v1 = pendulum_anchor_point;
+    exanb::Vec3d v2 = pendulum_initial_position;
+    exanb::Vec3d v3 = pendulum_initial_position + pendulum_direction() * pendulum_signal(time);
 
     // warning, if v2 = v3, we return an offset of  0 and the pendulum direction
     if (exanb::dot(v3, v2) < 1e-16) {
       return {0.0, pendulum_direction()};
     }
 
-    Vec3d v1v3 = v3 - v1;
+    exanb::Vec3d v1v3 = v3 - v1;
     v1v3 = v1v3 / exanb::norm(v1v3);
-    Vec3d project_v2_v1v3 = exanb::dot(v1v3, v2 - v1) * v1v3 + v1;
-    Vec3d dir_proj_v2_v2 = project_v2_v1v3 - v2;
-    Vec3d normal = dir_proj_v2_v2 / exanb::norm(dir_proj_v2_v2);
+    exanb::Vec3d project_v2_v1v3 = exanb::dot(v1v3, v2 - v1) * v1v3 + v1;
+    exanb::Vec3d dir_proj_v2_v2 = project_v2_v1v3 - v2;
+    exanb::Vec3d normal = dir_proj_v2_v2 / exanb::norm(dir_proj_v2_v2);
     double offset = exanb::dot(v1, normal);
     return {offset, normal};
   }
@@ -519,19 +519,19 @@ struct Driver_params  //: public Driver_expr
   }
  
   // Expression routines
-  Vec3d driver_expr_v(double time) {
+  exanb::Vec3d driver_expr_v(double time) {
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return expr.expr_v(time);
   }
 
-  Vec3d driver_expr_vrot(double time) {
+  exanb::Vec3d driver_expr_vrot(double time) {
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return expr.expr_vrot(time);
   }
 
-  Vec3d driver_expr_mom(double time) {
+  exanb::Vec3d driver_expr_mom(double time) {
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return expr.expr_mom(time);
@@ -540,13 +540,9 @@ struct Driver_params  //: public Driver_expr
 }  // namespace exaDEM
 
 namespace YAML {
-using exaDEM::Driver_params;
-using exaDEM::MotionType;
-using onika::physics::Quantity;
-
 template <>
-struct convert<Driver_params> {
-  static bool decode(const Node& node, Driver_params& v) {
+struct convert<exaDEM::Driver_params> {
+  static bool decode(const Node& node, exaDEM::Driver_params& v) {
     std::string function_name = "Driver_params::decode";
     if (!node.IsMap()) {
       return false;
@@ -563,18 +559,18 @@ struct convert<Driver_params> {
         color_log::error(function_name, "motion_vector is missing.", false);
         return false;
       }
-      v.motion_vector = node["motion_vector"].as<Vec3d>();
+      v.motion_vector = node["motion_vector"].as<exanb::Vec3d>();
 
-      if (v.motion_type == MotionType::LINEAR_MOTION) {
+      if (v.motion_type == exaDEM::MotionType::LINEAR_MOTION) {
         if (!node["const_vel"]) {
           color_log::error(function_name, "const_vel is missing.", false);
           return false;
         }
         if (node["const_vel"]) {
-          v.const_vel = node["const_vel"].as<double>();
+          v.const_vel = node["const_vel"].as<Quantity>().convert();
         }
       }
-      if (v.motion_type == MotionType::LINEAR_FORCE_MOTION) {
+      if (v.motion_type == exaDEM::MotionType::LINEAR_FORCE_MOTION) {
         if (!node["const_force"]) {
           color_log::error(function_name, "const_force is missing.", false);
           return false;
@@ -607,7 +603,7 @@ struct convert<Driver_params> {
         color_log::error(function_name, "position is missing.", false);
         return false;
       }
-      v.tab_pos = node["positions"].as<std::vector<Vec3d>>();
+      v.tab_pos = node["positions"].as<std::vector<exanb::Vec3d>>();
     }
 
     // Shaker && Pendulum
@@ -626,40 +622,40 @@ struct convert<Driver_params> {
       if (v.is_shaker()) {
         if (!node["shaker_dir"]) {
           color_log::warning("Driver_params::decode", "shaker_dir is missing, default is [0,0,1].");
-          v.shaker_dir = Vec3d{0, 0, 1};
+          v.shaker_dir = exanb::Vec3d{0, 0, 1};
         } else {
-          v.shaker_dir = node["shaker_dir"].as<Vec3d>();
+          v.shaker_dir = node["shaker_dir"].as<exanb::Vec3d>();
         }
       } else if (v.is_pendulum()) {
         if (!node["pendulum_anchor_point"]) {
           color_log::error(function_name, "pendulum_anchor_point is missing.", false);
           return false;
         }
-        v.pendulum_anchor_point = node["pendulum_anchor_point"].as<Vec3d>();
+        v.pendulum_anchor_point = node["pendulum_anchor_point"].as<exanb::Vec3d>();
         if (!node["pendulum_initial_position"]) {
           color_log::error(function_name, "pendulum_initial_position is missing.", false);
           return false;
         }
-        v.pendulum_initial_position = node["pendulum_initial_position"].as<Vec3d>();
+        v.pendulum_initial_position = node["pendulum_initial_position"].as<exanb::Vec3d>();
         if (!node["pendulum_swing_dir"]) {
           color_log::error(function_name, "pendulum_swing_dir is missing.", false);
           return false;
         }
-        v.pendulum_swing_dir = node["pendulum_swing_dir"].as<Vec3d>();
+        v.pendulum_swing_dir = node["pendulum_swing_dir"].as<exanb::Vec3d>();
       }
     } else if (v.is_expr()) {
       if (!node["expr"]) {
         color_log::error(function_name, "expr is missing while the motion type is set to EXPRESSION");
       }
-      v.expr = node["expr"].as<Driver_expr>();
+      v.expr = node["expr"].as<exaDEM::Driver_expr>();
     }
 
     if (node["motion_start_threshold"]) {
-      v.motion_start_threshold = node["motion_start_threshold"].as<double>();
+      v.motion_start_threshold = node["motion_start_threshold"].as<Quantity>().convert();
     }
 
     if (node["motion_end_threshold"]) {
-      v.motion_end_threshold = node["motion_end_threshold"].as<double>();
+      v.motion_end_threshold = node["motion_end_threshold"].as<Quantity>().convert();
     }
     return true;
   }

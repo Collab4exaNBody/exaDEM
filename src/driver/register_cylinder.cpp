@@ -23,9 +23,7 @@ under the License.
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
-
-using namespace exanb;
-
+using namespace onika::scg;
 class RegisterCylinder : public OperatorNode {
   const Driver_params default_params = Driver_params();
 

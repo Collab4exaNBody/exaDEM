@@ -102,7 +102,7 @@ struct Drivers {
     } else if (t == DRIVER_TYPE::RSHAPE) {
       return func(m_data.get_nth<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[idx].m_index]);
     }
-    fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
+    exanb::fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
     static Cylinder tmp;
     return func(tmp);
   }
@@ -122,7 +122,7 @@ struct Drivers {
     } else if (t == DRIVER_TYPE::RSHAPE) {
       return func(m_data.get_nth<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[idx].m_index]);
     }
-    fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
+    exanb::fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
     static Cylinder tmp;
     return func(tmp);
   }

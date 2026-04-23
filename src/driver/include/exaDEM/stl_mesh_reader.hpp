@@ -85,7 +85,7 @@ struct STLMeshReader {
         float z;
       };
       float3d normal, v1, v2, v3;
-      std::vector<Vec3d> vertices(3);
+      std::vector<exanb::Vec3d> vertices(3);
       for (uint32_t t = 0; t < nb_triangles; t++) {
         input.read((char*)&normal, sizeof(float3d));
         input.read((char*)&v1, sizeof(float3d));
@@ -103,8 +103,8 @@ struct STLMeshReader {
     } else {
       input.open(file_name.c_str());
       std::string first;
-      std::vector<Vec3d> vertices;
-      Vec3d vertex;
+      std::vector<exanb::Vec3d> vertices;
+      exanb::Vec3d vertex;
       for (std::string line; getline(input, line);) {
         input >> first;
         if (first == "outer") {

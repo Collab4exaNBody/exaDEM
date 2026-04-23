@@ -34,14 +34,9 @@ struct CylinderFields {
 }  // namespace exaDEM
 
 namespace YAML {
-using exaDEM::CylinderFields;
-using exaDEM::MotionType;
-using exanb::lerr;
-using onika::physics::Quantity;
-
 template <>
-struct convert<CylinderFields> {
-  static bool decode(const Node& node, CylinderFields& v) {
+struct convert<exaDEM::CylinderFields> {
+  static bool decode(const Node& node, exaDEM::CylinderFields& v) {
     if (!node.IsMap()) {
       return false;
     }
@@ -55,13 +50,13 @@ struct convert<CylinderFields> {
       return false;
     }
     v.radius = node["radius"].as<Quantity>().convert();
-    v.axis = node["axis"].as<Vec3d>();
-    v.center = node["center"].as<Vec3d>();
+    v.axis = node["axis"].as<exanb::Vec3d>();
+    v.center = node["center"].as<exanb::Vec3d>();
     if (check(node, "vel")) {
-      v.vel = node["vel"].as<Vec3d>();
+      v.vel = node["vel"].as<exanb::Vec3d>();
     }
     if (check(node, "vrot")) {
-      v.vrot = node["vrot"].as<Vec3d>();
+      v.vrot = node["vrot"].as<exanb::Vec3d>();
     }
     return true;
   }
@@ -141,7 +136,7 @@ struct Cylinder {
   ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double time, const double dt) {
     /** not implemented */
   }
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d get_vel() {
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d get_vel() {
     return fields.vel;
   }
 
@@ -162,7 +157,7 @@ struct Cylinder {
    * It may produce incorrect normals if `axis` is not aligned with (1,0,0),
    * (0,1,0), or (0,0,1).
    *
-   * @return Vec3d A normalized vector perpendicular to the constructed plane.
+   * @return exanb::Vec3d A normalized vector perpendicular to the constructed plane.
    */
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d get_normal() {
     exanb::Vec3d p1 = {1,1,1};
@@ -211,7 +206,7 @@ struct Cylinder {
    */
   // rcut = r shape
   ONIKA_HOST_DEVICE_FUNC
-      inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const Vec3d& pi) {
+      inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& pi) {
         // === project the vertex in the plan as the cylinder center
         const exanb::Vec3d proj = pi * fields.axis;
 

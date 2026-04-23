@@ -27,6 +27,7 @@ under the License.
 #include <exaDEM/reduce_rshape_driver.hpp>
 
 namespace exaDEM {
+using namespace onika::scg;
 template <typename T>
 using VectorT = onika::memory::CudaMMVector<T>;
 
@@ -77,20 +78,20 @@ struct DriverDisplOver {
 
   inline int operator()(exaDEM::Surface& a) {
     exaDEM::Surface& b = bcpd.get_typed_driver<exaDEM::Surface>(bd_idx);
-    Vec3d d = a.fields.center_proj - b.fields.center_proj;
+		exanb::Vec3d d = a.fields.center_proj - b.fields.center_proj;
 
     if (b.motion.motion_type == PENDULUM_MOTION) {
       // Utility function: compute the intersection between a line and a plane
-      auto intersect_line_plane = [](const Vec3d& plane_point,   // A point lying on the plane (pendulum anchor)
-                                     const Vec3d& plane_normal,  // Plane normal vector
-                                     const Vec3d& line_point,    // Starting point of the line (initial
+      auto intersect_line_plane = [](const exanb::Vec3d& plane_point,   // A point lying on the plane (pendulum anchor)
+                                     const exanb::Vec3d& plane_normal,  // Plane normal vector
+                                     const exanb::Vec3d& line_point,    // Starting point of the line (initial
                                                                  // pendulum position)
-                                     const Vec3d& line_dir       // Direction vector of the line
-                                     ) -> Vec3d {
+                                     const exanb::Vec3d& line_dir       // Direction vector of the line
+                                     ) -> exanb::Vec3d {
         // Ensure the line is not parallel to the plane
         assert(std::abs(exanb::dot(plane_normal, line_dir)) >= 1e-12);
         // Vector from line_point to plane_point
-        Vec3d delta = plane_point - line_point;
+        exanb::Vec3d delta = plane_point - line_point;
         // Scalar parameter t of the intersection
         double t = exanb::dot(delta, plane_normal) / exanb::dot(line_dir, plane_normal);
         // Intersection point
@@ -98,9 +99,9 @@ struct DriverDisplOver {
       };
 
       // Project the initial pendulum positions onto their respective planes
-      Vec3d proj_a =
+      exanb::Vec3d proj_a =
           intersect_line_plane(a.motion.pendulum_anchor_point, a.fields.normal, a.motion.pendulum_initial_position, a.motion.pendulum_direction());
-      Vec3d proj_b =
+      exanb::Vec3d proj_b =
           intersect_line_plane(b.motion.pendulum_anchor_point, b.fields.normal, b.motion.pendulum_initial_position, b.motion.pendulum_direction());
       d = proj_b - proj_a;
     }
@@ -114,7 +115,7 @@ struct DriverDisplOver {
 
   inline int operator()(exaDEM::Ball& a) {
     exaDEM::Ball& b = bcpd.get_typed_driver<exaDEM::Ball>(bd_idx);
-    Vec3d d = a.fields.center - b.fields.center;
+    exanb::Vec3d d = a.fields.center - b.fields.center;
     if (b.motion.is_compressive()) {
       if (exanb::dot(d, d) >= 1e-12) {
         color_log::error("driver_displ_over", "Ball with compressive motion type should not move");
@@ -145,7 +146,7 @@ struct DriverDisplOver {
 #ifdef ONIKA_CUDA_VERSION
     storage.reset();
     size_t size = a.shp.get_number_of_vertices();
-    const Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp.m_vertices);
+    const exanb::Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp.m_vertices);
     RShapeDriverDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.fields.center, a.fields.quat, b.fields.center, b.fields.quat};
     ReduceMaxRShapeDriverDisplacementFunctor func = {SVDFunc, storage.get_ptr()};
 
@@ -157,7 +158,7 @@ struct DriverDisplOver {
     int sum = 0;
     // check each vertex
     auto check_dist = [](exanb::Vec3d& v1, exanb::Vec3d& v2, double r2) -> bool {
-      Vec3d d = v1 - v2;
+      exanb::Vec3d d = v1 - v2;
       if (exanb::dot(d, d) >= r2) return true;
       return false;
     };
@@ -177,8 +178,8 @@ struct DriverDisplOver {
     constexpr double homothety = 1.0;
 #pragma omp parallel for reduction(+ : sum)
     for (size_t i = start; i < end; i++) {
-      Vec3d va = shp_a.get_vertex(i, a.fields.center, homothety, a.fields.quat);
-      Vec3d vb = shp_a.get_vertex(i, b.fields.center, homothety, b.fields.quat);
+      exanb::Vec3d va = shp_a.get_vertex(i, a.fields.center, homothety, a.fields.quat);
+      exanb::Vec3d vb = shp_a.get_vertex(i, b.fields.center, homothety, b.fields.quat);
       if (check_dist(va, vb, r2)) {
         sum++;
       }

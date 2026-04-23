@@ -25,8 +25,6 @@ under the License.
 #include <exaDEM/type/OBBtree.hpp>
 
 namespace exaDEM {
-using exanb::Vec3d;
-using exanb::Quaternion;
 ONIKA_HOST_DEVICE_FUNC inline vec3r conv_to_vec3r(const exanb::Vec3d& v) {
   return vec3r{v.x, v.y, v.z};
 }

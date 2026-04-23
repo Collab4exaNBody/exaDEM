@@ -48,9 +48,9 @@ struct RShapeDriverListOfElements {
 };
 
 struct RShapeDriverFields {
-  exanb::Vec3d center = Vec3d{0, 0, 0};       /**< Center position of the R-Shape. */
-  exanb::Vec3d vel = Vec3d{0, 0, 0};          /**< Velocity of the R-Shape. */
-  exanb::Vec3d vrot = Vec3d{0, 0, 0};         /**< Angular velocity of the R-Shape. */
+  exanb::Vec3d center = exanb::Vec3d{0, 0, 0};       /**< Center position of the R-Shape. */
+  exanb::Vec3d vel = exanb::Vec3d{0, 0, 0};          /**< Velocity of the R-Shape. */
+  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};         /**< Angular velocity of the R-Shape. */
   exanb::Quaternion quat = {1,0,0,0};         /**< Quaternion of the R-Shape. */
   exanb::Vec3d acc = {0, 0, 0};               /**< Acceleration of the mesh */
   double surface = -1;                        /**< Surface, used with linear_compression_motion. */
@@ -59,40 +59,35 @@ struct RShapeDriverFields {
   bool drive_by_mom = false;
   exanb::Vec3d applied_mom;             /**< Moment of the R-Shape. */
   exanb::Vec3d mom;                     /**< Moment of the R-Shape. */
-  exanb::Vec3d inertia = Vec3d{0,0,0};  /**< Inertia of the R-Shape. */
+  exanb::Vec3d inertia = exanb::Vec3d{0,0,0};  /**< Inertia of the R-Shape. */
   exanb::Vec3d mom_axis;                /**< normal vector of the moment. */
 };
 }  // namespace exaDEM
 
 namespace YAML {
-using exaDEM::MotionType;
-using exaDEM::RShapeDriverFields;
-using exanb::lerr;
-using onika::physics::Quantity;
-
 template <>
-struct convert<RShapeDriverFields> {
-  static bool decode(const Node& node, RShapeDriverFields& v) {
+struct convert<exaDEM::RShapeDriverFields> {
+  static bool decode(const Node& node, exaDEM::RShapeDriverFields& v) {
     if (!node.IsMap()) {
       return false;
     }
     if (check(node, "center")) {
-      v.center = node["center"].as<Vec3d>();
+      v.center = node["center"].as<exanb::Vec3d>();
     }
     if (check(node, "vel")) {
-      v.vel = node["vel"].as<Vec3d>();
+      v.vel = node["vel"].as<exanb::Vec3d>();
     }
     if (check(node, "vrot")) {
-      v.vrot = node["vrot"].as<Vec3d>();
+      v.vrot = node["vrot"].as<exanb::Vec3d>();
     }
     if (check(node, "mass")) {
-      v.mass = node["mass"].as<double>();
+      v.mass = node["mass"].as<Quantity>().convert();
     }
     if (check(node, "quat")) {
       v.quat = node["quat"].as<exanb::Quaternion>();
     }
     if (check(node, "surface")) {
-      v.surface = node["surface"].as<double>();
+      v.surface = node["surface"].as<Quantity>().convert();
     }
     if (check(node, "moment")) {
       v.applied_mom = node["moment"].as<exanb::Vec3d>();
@@ -102,7 +97,7 @@ struct convert<RShapeDriverFields> {
     if (check(node, "inertia")) {
       v.inertia = node["inertia"].as<exanb::Vec3d>();
     }
-    v.mom = Vec3d{0, 0, 0};
+    v.mom = exanb::Vec3d{0, 0, 0};
     return true;
   }
 };
@@ -117,7 +112,7 @@ struct RShapeDriver {
   RShapeDriverFields fields; /**< Contains specific driver parameters */
   Driver_params motion;                               /**< Contains motion type parameters */
   shape shp;                                          /**< Shape of the R-Shape. */
-  onika::memory::CudaMMVector<Vec3d> vertices;                           /**< Collection of vertices (computed from shp, quat, and center). */
+  onika::memory::CudaMMVector<exanb::Vec3d> vertices;                    /**< Collection of vertices (computed from shp, quat, and center). */
   onika::memory::CudaMMVector<RShapeDriverListOfElements> grid_indexes;  /**< Grid indices of the R-Shape. */
   std::vector<omp_lock_t> grid_mutexes;               /**< Grid indices of the R-Shape. */
   /** We don't need to save these values */
@@ -222,7 +217,7 @@ struct RShapeDriver {
     }
 
     if (need_moment()) {
-      if (fields.inertia == Vec3d{0,0,0}) {
+      if (fields.inertia == exanb::Vec3d{0,0,0}) {
         color_log::error("RShape::initialize",
                          "Inertia should be defined, either params, either in a shape file.");
       }
@@ -235,7 +230,7 @@ struct RShapeDriver {
       if (fields.mass != 0) {
         const double s = fields.surface;
         // compute acceleration
-        Vec3d tmp = (motion.forces - motion.sigma * s - (motion.damprate * fields.vel)) / (fields.mass * C);
+        exanb::Vec3d tmp = (motion.forces - motion.sigma * s - (motion.damprate * fields.vel)) / (fields.mass * C);
         // get acc into the motion vector axis
         fields.acc = exanb::dot(tmp, motion.motion_vector) * motion.motion_vector;
       }
@@ -251,7 +246,7 @@ struct RShapeDriver {
 
   inline void push_f_v(const double dt) {
     if (motion.is_stationary()) {
-      fields.vel = Vec3d{0, 0, 0};
+      fields.vel = exanb::Vec3d{0, 0, 0};
     } else {
       if (motion.is_force_motion()) {
         fields.vel += fields.acc * dt;
@@ -280,7 +275,7 @@ struct RShapeDriver {
 
       if (motion.motion_type == SHAKER) {
         fields.vel = motion.shaker_velocity(time + dt) * motion.shaker_direction();
-        fields.acc = Vec3d{0, 0, 0};  // reset acc
+        fields.acc = exanb::Vec3d{0, 0, 0};  // reset acc
       }
 
       if (motion.is_expr(time)) {
@@ -310,8 +305,8 @@ struct RShapeDriver {
         }
       }
 
-      Vec3d project_mom;
-      Vec3d arot;
+      exanb::Vec3d project_mom;
+      exanb::Vec3d arot;
 
       // do not use applied_mom direction if the motion type is PARTICLE
       if (motion.motion_type == MotionType::PARTICLE) {
@@ -328,7 +323,7 @@ struct RShapeDriver {
       fields.quat = fields.quat + dot(fields.quat, fields.vrot) * dt;
       fields.quat = normalize(fields.quat);
     }
-    ldbg << "Quat[rshape]: " << fields.quat.w << " " << fields.quat.x << " " << fields.quat.y << " " << fields.quat.z
+    exanb::ldbg << "Quat[rshape]: " << fields.quat.w << " " << fields.quat.x << " " << fields.quat.y << " " << fields.quat.z
         << std::endl;
   }
 
@@ -341,7 +336,7 @@ struct RShapeDriver {
   /**
    * @brief return driver velocity
    */
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d& get_vel() {
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& get_vel() {
     return fields.vel;
   }
 
@@ -369,7 +364,7 @@ struct RShapeDriver {
   }
 
   inline bool stationary() {
-    return motion.is_stationary() && (fields.vrot == Vec3d{0, 0, 0});
+    return motion.is_stationary() && (fields.vrot == exanb::Vec3d{0, 0, 0});
   }
 
   void dump_driver(int id, std::string path, std::stringstream& stream) {
@@ -432,7 +427,7 @@ struct RShapeDriver {
 
 class RShapeUtils {
  public:
-  const Vec3d* vertices = nullptr;
+  const exanb::Vec3d* vertices = nullptr;
   const int* grid_id_vertices = nullptr; /**< List of vertex indices. */
   const int* grid_id_edges = nullptr;    /**< List of edge indices. */
   const int* grid_id_faces = nullptr;    /**< List of face indices. */

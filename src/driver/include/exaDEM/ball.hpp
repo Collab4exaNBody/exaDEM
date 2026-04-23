@@ -26,8 +26,8 @@ namespace exaDEM {
 struct BallFields {
   double radius;                                        /**< Radius of the ball. */
   exanb::Vec3d center;                                  /**< Center position of the ball. */
-  exanb::Vec3d vel = Vec3d{0, 0, 0};                    /**< Velocity of the ball. */
-  exanb::Vec3d vrot = Vec3d{0, 0, 0};                   /**< Angular velocity of the ball. */
+  exanb::Vec3d vel = exanb::Vec3d{0, 0, 0};                    /**< Velocity of the ball. */
+  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};                   /**< Angular velocity of the ball. */
   double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the ball */
   double rv = 0;                                        /**< */
 
@@ -38,14 +38,9 @@ struct BallFields {
 }  // namespace exaDEM
 
 namespace YAML {
-using exaDEM::BallFields;
-using exaDEM::MotionType;
-using exanb::lerr;
-using onika::physics::Quantity;
-
 template <>
-struct convert<BallFields> {
-  static bool decode(const Node& node, BallFields& v) {
+struct convert<exaDEM::BallFields> {
+  static bool decode(const Node& node, exaDEM::BallFields& v) {
     if (!node.IsMap()) {
       return false;
     }
@@ -56,18 +51,18 @@ struct convert<BallFields> {
       return false;
     }
     v.radius = node["radius"].as<Quantity>().convert();
-    v.center = node["center"].as<Vec3d>();
+    v.center = node["center"].as<exanb::Vec3d>();
     if (check(node, "vel")) {
-      v.vel = node["vel"].as<Vec3d>();
+      v.vel = node["vel"].as<exanb::Vec3d>();
     }
     if (check(node, "vrot")) {
-      v.vrot = node["vrot"].as<Vec3d>();
+      v.vrot = node["vrot"].as<exanb::Vec3d>();
     }
     if (check(node, "rv")) {
-      v.rv = node["rv"].as<double>();
+      v.rv = node["rv"].as<Quantity>().convert();
     }
     if (check(node, "mass")) {
-      v.mass = node["mass"].as<double>();
+      v.mass = node["mass"].as<Quantity>().convert();
     }
     if (check(node, "density") && !check(node, "mass")) {
       const double pi = 4 * atan(1);
@@ -291,10 +286,10 @@ struct Ball {
    */
   ONIKA_HOST_DEVICE_FUNC
       inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& p) {
-        Vec3d point_to_center = fields.center - p;
+        exanb::Vec3d point_to_center = fields.center - p;
         double d = norm(point_to_center);
         double dn;
-        Vec3d n = point_to_center / d;
+        exanb::Vec3d n = point_to_center / d;
         if (d > fields.radius) {
           dn = d - fields.radius - rcut;
           n = (-1) * n;

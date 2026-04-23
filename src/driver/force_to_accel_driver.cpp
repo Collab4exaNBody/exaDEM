@@ -25,7 +25,7 @@ under the License.
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
-using namespace exanb;
+using namespace onika::scg;
 
 struct force_to_accel {
   const double dt;
@@ -46,7 +46,7 @@ struct force_to_accel {
 };
 
 struct gather_forces_moment {
-  inline std::tuple<bool, Vec3d, Vec3d> operator()(Ball& arg) {
+  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Ball& arg) {
     if (arg.motion.is_compressive() || arg.motion.is_force_motion()) {
       return {true, arg.motion.forces, {0, 0, 0}};
     } else {
@@ -66,7 +66,7 @@ struct gather_forces_moment {
     return {false, {0, 0, 0}, {0, 0, 0}};
   }
 
-  inline std::tuple<bool, Vec3d, Vec3d> operator()(RShapeDriver& arg) {
+  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(RShapeDriver& arg) {
     if (arg.motion.need_forces() || arg.need_moment()) {
       return {true, arg.motion.forces, arg.fields.mom};
     }
@@ -75,8 +75,8 @@ struct gather_forces_moment {
 };
 
 struct set_forces_moment {
-  Vec3d forces;
-  Vec3d moment;
+  exanb::Vec3d forces;
+  exanb::Vec3d moment;
 
   template <typename DriverT>
   inline void operator()(DriverT& arg) {
@@ -124,8 +124,8 @@ class ForceToAccelDriverFunctor : public OperatorNode {
       for (size_t i = 0; i < ids.size(); i++) {
         int id = ids[i];
         set_forces_moment func;
-        func.forces = Vec3d{unpack[i * 6], unpack[i * 6 + 1], unpack[i * 6 + 2]};
-        func.moment = Vec3d{unpack[i * 6 + 3], unpack[i * 6 + 4], unpack[i * 6 + 5]};
+        func.forces = exanb::Vec3d{unpack[i * 6], unpack[i * 6 + 1], unpack[i * 6 + 2]};
+        func.moment = exanb::Vec3d{unpack[i * 6 + 3], unpack[i * 6 + 4], unpack[i * 6 + 5]};
         drivers->apply(id, func);
       }
     }

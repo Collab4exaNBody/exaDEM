@@ -23,6 +23,7 @@ under the License.
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
+using namespace onika::scg;
 class RegisterBall : public OperatorNode {
   const Driver_params default_params = Driver_params();
 

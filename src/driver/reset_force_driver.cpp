@@ -23,6 +23,8 @@ under the License.
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
+using namespace onika::scg;
+using onika::lout;
 class ResetForceDriverFunctor : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
 

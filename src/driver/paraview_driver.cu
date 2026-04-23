@@ -27,9 +27,8 @@ under the License.
 #include <exaDEM/paraview_driver.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 class ParaviewDriver : public OperatorNode {
-  static constexpr Vec3d null = {0.0, 0.0, 0.0};
-
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(Domain, domain, INPUT, REQUIRED);
   ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});

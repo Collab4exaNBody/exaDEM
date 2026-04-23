@@ -22,8 +22,6 @@ under the License.
 #include <exaDEM/shape_detection.hpp>
 
 namespace exaDEM {
-using namespace exanb;
-
 //  template<typename Vec>
 inline OBB build_OBB(const std::span<vec3r> vec, double radius) {
   OBB obb;
@@ -113,7 +111,7 @@ inline OBB build_obb_from_shape(const shape& shp) {
 // #define OLD_VERSION;
 
 // general functon;
-inline OBB build_obb_vertex(const int index, const shape* shp, const Vec3d* v) {
+inline OBB build_obb_vertex(const int index, const shape* shp, const exanb::Vec3d* v) {
   const double ext = shp->m_radius;
   const vec3r vertex = conv_to_vec3r(v[index]);
   std::array<vec3r, 1> vbuf = {vertex};
@@ -121,28 +119,28 @@ inline OBB build_obb_vertex(const int index, const shape* shp, const Vec3d* v) {
   return res;
 }
 
-inline OBB build_obb_edge(const Vec3d& position, const int index, const shape* shp,
+inline OBB build_obb_edge(const exanb::Vec3d& position, const int index, const shape* shp,
                           const exanb::Quaternion& orientation) {
   const double ext = shp->m_radius;
   auto [first, second] = shp->get_edge(index);
-  const Vec3d vf = shp->get_vertex(first, position, 1.0, orientation);
-  const Vec3d vs = shp->get_vertex(second, position, 1.0, orientation);
+  const exanb::Vec3d vf = shp->get_vertex(first, position, 1.0, orientation);
+  const exanb::Vec3d vs = shp->get_vertex(second, position, 1.0, orientation);
   std::array<vec3r, 2> v = {conv_to_vec3r(vf), conv_to_vec3r(vs)};
   OBB res = build_OBB(v, ext);
   return res;
 }
 
-inline OBB build_obb_edge(const int index, const shape* shp, const Vec3d* v) {
+inline OBB build_obb_edge(const int index, const shape* shp, const exanb::Vec3d* v) {
   const double ext = shp->m_radius;
   auto [first, second] = shp->get_edge(index);
-  const Vec3d& vf = v[first];
-  const Vec3d& vs = v[second];
+  const exanb::Vec3d& vf = v[first];
+  const exanb::Vec3d& vs = v[second];
   std::array<vec3r, 2> vbuf = {conv_to_vec3r(vf), conv_to_vec3r(vs)};
   OBB res = build_OBB(vbuf, ext);
   return res;
 }
 
-inline OBB build_obb_face(const Vec3d& position, const int index, const shape* shp,
+inline OBB build_obb_face(const exanb::Vec3d& position, const int index, const shape* shp,
                           const exanb::Quaternion& orientation) {
   const double ext = shp->m_radius;
   const auto [data, nf] = shp->get_face(index);
@@ -154,7 +152,7 @@ inline OBB build_obb_face(const Vec3d& position, const int index, const shape* s
   return res;
 }
 
-inline OBB build_obb_face(const int index, const shape* shp, const Vec3d* const v, std::vector<vec3r>& vbuf) {
+inline OBB build_obb_face(const int index, const shape* shp, const exanb::Vec3d* const v, std::vector<vec3r>& vbuf) {
   const double ext = shp->m_radius;
   const auto [data, nf] = shp->get_face(index);
   vbuf.resize(nf);
@@ -165,50 +163,50 @@ inline OBB build_obb_face(const int index, const shape* shp, const Vec3d* const 
   return res;
 }
 
-inline void shape::pre_compute_obb_vertices(const Vec3d* const v) {
+inline void shape::pre_compute_obb_vertices(const exanb::Vec3d* const v) {
   // This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_face`
   const size_t size = this->get_number_of_vertices();
   m_obb_vertices.resize(size);
-
-  ldbg << "obb [vertices] = " << size << std::endl;
-
+  exanb::ldbg << "obb [vertices] = " << size << std::endl;
 #pragma omp parallel for schedule(static)
   for (size_t i = 0; i < size; i++) {
     m_obb_vertices[i] = build_obb_vertex(i, this, v);
   }
 }
 
-inline void shape::pre_compute_obb_edges(const Vec3d& particle_center, const exanb::Quaternion& particle_quat) {
+// Do not include in a OMP parallel region
+inline void shape::pre_compute_obb_edges(const exanb::Vec3d& particle_center, const exanb::Quaternion& particle_quat) {
   // This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_edge`
   const size_t size = this->get_number_of_edges();
   m_obb_edges.resize(size);
-
-  // const exanb::Vec3d vnull      = {0,0,0};
   const exanb::Vec3d center = particle_center;  // conv_to_Vec3d(this->obb.center) + particle_center;
-  ldbg << "obb [edges]    = " << size << std::endl;
+  exanb::ldbg << "obb [edges]    = " << size << std::endl;
 #pragma omp parallel for schedule(static)
   for (size_t i = 0; i < size; i++) {
     m_obb_edges[i] = build_obb_edge(center, i, this, particle_quat);
   }
 }
 
-inline void shape::pre_compute_obb_edges(const Vec3d* v) {
+
+// Do not include in a OMP parallel region
+inline void shape::pre_compute_obb_edges(const exanb::Vec3d* v) {
   // This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_edge`
   const size_t size = this->get_number_of_edges();
   m_obb_edges.resize(size);
-  ldbg << "obb [edges]    = " << size << std::endl;
+  exanb::ldbg << "obb [edges]    = " << size << std::endl;
 #pragma omp parallel for schedule(static)
   for (size_t i = 0; i < size; i++) {
     m_obb_edges[i] = build_obb_edge(i, this, v);
   }
 }
 
-inline void shape::pre_compute_obb_faces(const Vec3d& particle_center, const exanb::Quaternion& particle_quat) {
+// Do not include in a OMP parallel region
+inline void shape::pre_compute_obb_faces(const exanb::Vec3d& particle_center, const exanb::Quaternion& particle_quat) {
   // This function could be optimized by avoiding to use `position` and `orientation` in `build_obb_face`
   const size_t size = this->get_number_of_faces();
   m_obb_faces.resize(size);
   const exanb::Vec3d center = particle_center;  // conv_to_Vec3d(this->obb.center) + particle_center;
-  ldbg << "obb [faces]    = " << size << std::endl;
+  exanb::ldbg << "obb [faces]    = " << size << std::endl;
 
 #pragma omp parallel for schedule(static)
   for (size_t i = 0; i < size; i++) {
@@ -216,10 +214,11 @@ inline void shape::pre_compute_obb_faces(const Vec3d& particle_center, const exa
   }
 }
 
-inline void shape::pre_compute_obb_faces(const Vec3d* v) {
+// Do not include in a OMP parallel region
+inline void shape::pre_compute_obb_faces(const exanb::Vec3d* v) {
   const size_t size = this->get_number_of_faces();
   m_obb_faces.resize(size);
-  ldbg << "obb [faces]    = " << size << std::endl;
+  exanb::ldbg << "obb [faces]    = " << size << std::endl;
 
 #pragma omp parallel
   {
@@ -231,6 +230,7 @@ inline void shape::pre_compute_obb_faces(const Vec3d* v) {
   }
 }
 
+// Do not include in a OMP parallel region
 inline void shape::increase_obb(const double value) {
 #pragma omp parallel
   {
@@ -249,7 +249,8 @@ inline void shape::increase_obb(const double value) {
   }
 }
 
-inline void shape::compute_prepro_obb(Vec3d* scratch, const Vec3d& particle_center,
+// Do not include in a OMP parallel region
+inline void shape::compute_prepro_obb(exanb::Vec3d* scratch, const exanb::Vec3d& particle_center,
                                       const exanb::Quaternion& particle_quat) {
   const size_t nv = this->get_number_of_vertices();
 #pragma omp parallel for schedule(static)

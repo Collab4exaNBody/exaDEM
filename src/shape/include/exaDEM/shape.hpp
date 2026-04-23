@@ -1,5 +1,4 @@
 /*
-
    Licensed to the Apache Software Foundation (ASF) under one
    or more contributor license agreements.  See the NOTICE file
    distributed with this work for additional information
@@ -36,10 +35,6 @@ under the License.
 // #include <exaDEM/shape_printer.hpp>
 
 namespace exaDEM {
-using onika::ldbg;
-using onika::lout;
-using exanb::Vec3d;
-
 struct subBox {
   size_t isub;
   int nbPoints;
@@ -107,19 +102,19 @@ struct shape {
 
   /**
    * @brief Precompute OBBs for vertices using scratch memory.
-   * @param scratch Temporary array of Vec3d.
+   * @param scratch Temporary array of exanb::Vec3d.
    */
   inline void pre_compute_obb_vertices(const exanb::Vec3d* scratch);
 
   /**
    * @brief Precompute OBBs for edges using scratch memory.
-   * @param scratch Temporary array of Vec3d.
+   * @param scratch Temporary array of exanb::Vec3d.
    */
   inline void pre_compute_obb_edges(const exanb::Vec3d* scratch);
 
   /**
    * @brief Precompute OBBs for faces using scratch memory.
-   * @param scratch Temporary array of Vec3d.
+   * @param scratch Temporary array of exanb::Vec3d.
    */
   inline void pre_compute_obb_faces(const exanb::Vec3d* scratch);
 
@@ -132,7 +127,7 @@ struct shape {
   /**
    * @brief Compute all OBBs with scratch memory, particle center, and
    * orientation.
-   * @param scratch Temporary array of Vec3d.
+   * @param scratch Temporary array of exanb::Vec3d.
    * @param particle_center Center of the particle.
    * @param particle_quat Orientation of the particle.
    */
@@ -221,7 +216,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline exanb::Vec3d& get_vertex(int i) {
-    Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
+    exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
     return vertices[i];
   }
 
@@ -232,7 +227,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline const exanb::Vec3d& get_vertex(int i) const {
-    const Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
+    const exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
     return vertices[i];
   }
 
@@ -246,7 +241,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline exanb::Vec3d get_vertex(int i, const exanb::Vec3d& p, const double h, const exanb::Quaternion& orient) {
-    const Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
+    const exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
     return p + orient * (h * vertices[i]);
   }
 
@@ -260,7 +255,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline exanb::Vec3d get_vertex(int i, const exanb::Vec3d& p, const double h, const exanb::Quaternion& orient) const {
-    const Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
+    const exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
     return p + orient * (h * vertices[i]);
   }
 
@@ -497,7 +492,7 @@ struct shape {
   /**
    * @brief Apply a function to all vertices of the shape (non-const version).
    *
-   * @tparam Func Type of the function to apply. Should take a Vec3d reference
+   * @tparam Func Type of the function to apply. Should take a exanb::Vec3d reference
    * as first argument.
    * @tparam Args Additional arguments passed to the function
    * @param func Function to apply on each vertex
@@ -515,7 +510,7 @@ struct shape {
   /**
    * @brief Apply a function to all vertices of the shape (const version).
    *
-   * @tparam Func Type of the function to apply. Should take a Vec3d reference
+   * @tparam Func Type of the function to apply. Should take a exanb::Vec3d reference
    * as first argument.
    * @tparam Args Additional arguments passed to the function
    * @param func Function to apply on each vertex
@@ -655,13 +650,13 @@ struct shape {
 #pragma omp parallel for reduction(+ : surface)
     for (size_t face_idx = 0; face_idx < n_faces; face_idx++) {
       auto [vertices_ptr, face_size] = this->get_face(face_idx);
-      const Vec3d& v0 = m_vertices[vertices_ptr[0]];
+      const exanb::Vec3d& v0 = m_vertices[vertices_ptr[0]];
 
       if (face_size == 3) {
         for (int j = 1; j < face_size - 1; j++) {
           const size_t k = j + 1;
-          const Vec3d v1 = m_vertices[vertices_ptr[j]] - v0;
-          const Vec3d v2 = m_vertices[vertices_ptr[k]] - v0;
+          const exanb::Vec3d v1 = m_vertices[vertices_ptr[j]] - v0;
+          const exanb::Vec3d v2 = m_vertices[vertices_ptr[k]] - v0;
           surface += 0.5 * exanb::norm(exanb::cross(v1, v2));
         }
       }
@@ -681,13 +676,13 @@ struct shape {
     for (size_t face_idx = 0; face_idx < n_faces; face_idx++) {
       double surface = 0;
       auto [vertices_ptr, face_size] = this->get_face(face_idx);
-      const Vec3d& v0 = m_vertices[vertices_ptr[0]];
+      const exanb::Vec3d& v0 = m_vertices[vertices_ptr[0]];
 
       if (face_size >= 3) {
         for (int j = 1; j < face_size - 1; j++) {
           const size_t k = j + 1;
-          const Vec3d v1 = m_vertices[vertices_ptr[j]] - v0;
-          const Vec3d v2 = m_vertices[vertices_ptr[k]] - v0;
+          const exanb::Vec3d v1 = m_vertices[vertices_ptr[j]] - v0;
+          const exanb::Vec3d v2 = m_vertices[vertices_ptr[k]] - v0;
           surface += 0.5 * exanb::norm(exanb::cross(v1, v2));
  
         }
@@ -704,8 +699,8 @@ struct shape {
    *
    * @param shift The shift vector applied to each vertex.
    */
-  void shift_vertices(const Vec3d& shift) {
-    auto shift_vertex = [](Vec3d& vertex, const Vec3d& shift) {
+  void shift_vertices(const exanb::Vec3d& shift) {
+    auto shift_vertex = [](exanb::Vec3d& vertex, const exanb::Vec3d& shift) {
       vertex -= shift;
     };
     for_all_vertices(shift_vertex, shift);
@@ -803,10 +798,10 @@ struct shape {
   void print_vertices() {
     int vertex_idx = 0;
     auto printer = [&vertex_idx](exanb::Vec3d& v) {
-      lout << "Vertex[" << vertex_idx++ << "]: [" << v.x << "," << v.y << "," << v.z << "]" << std::endl;
+      exanb::lout << "Vertex[" << vertex_idx++ << "]: [" << v.x << "," << v.y << "," << v.z << "]" << std::endl;
     };
 
-    lout << "Number of vertices = " << this->get_number_of_vertices() << std::endl;
+    exanb::lout << "Number of vertices = " << this->get_number_of_vertices() << std::endl;
     for_all_vertices(printer);
   }
 
@@ -816,13 +811,13 @@ struct shape {
   void print_edges() {
     int edge_idx = 0;
     auto printer = [&edge_idx](int v0, int v1) {
-      lout << "Edge[" << edge_idx++ << "]: [" << v0 << "," << v1 << "]" << std::endl;
+      exanb::lout << "Edge[" << edge_idx++ << "]: [" << v0 << "," << v1 << "]" << std::endl;
     };
 
     if (this->get_number_of_edges() == 0) {
-      lout << "No edges" << std::endl;
+      exanb::lout << "No edges" << std::endl;
     } else {
-      lout << "Number of edges = " << this->get_number_of_edges() << std::endl;
+      exanb::lout << "Number of edges = " << this->get_number_of_edges() << std::endl;
       for_all_edges(printer);
     }
   }
@@ -833,18 +828,18 @@ struct shape {
   void print_faces() {
     int face_idx = 0;
     auto printer = [&face_idx](int n_vertices, int* vertex_indices) {
-      lout << "Face[" << face_idx++ << "]: ";
+      exanb::lout << "Face[" << face_idx++ << "]: ";
       for (int i = 0; i < n_vertices; i++) {
-        lout << vertex_indices[i];
-        if (i < n_vertices - 1) lout << ", ";
+        exanb::lout << vertex_indices[i];
+        if (i < n_vertices - 1) exanb::lout << ", ";
       }
-      lout << std::endl;
+      exanb::lout << std::endl;
     };
 
     if (this->get_number_of_faces() == 0) {
-      lout << "No faces" << std::endl;
+      exanb::lout << "No faces" << std::endl;
     } else {
-      lout << "Number of faces = " << this->get_number_of_faces() << std::endl;
+      exanb::lout << "Number of faces = " << this->get_number_of_faces() << std::endl;
       for_all_faces(printer);
     }
   }
@@ -854,22 +849,23 @@ struct shape {
    * vertices, edges, and faces.
    */
   inline void print() {
-    lout << std::endl;
-    lout << "======= Shape Configuration =====" << std::endl;
-    lout << "Shape Name        = " << this->m_name << std::endl;
-    lout << "Shape Radius      = " << this->m_radius << std::endl;
-    lout << "Shape I/m         = [" << this->m_inertia_on_mass << "]" << std::endl;
-    lout << "Shape Volume      = " << this->m_volume << std::endl;
+    exanb::lout << std::endl;
+    exanb::lout << "======= Shape Configuration =====" << std::endl;
+    exanb::lout << "Shape Name        = " << this->m_name << std::endl;
+    exanb::lout << "Shape Radius      = " << this->m_radius << std::endl;
+    exanb::lout << "Shape I/m         = [" << this->m_inertia_on_mass << "]" << std::endl;
+    exanb::lout << "Shape Volume      = " << this->m_volume << std::endl;
     print_vertices();
     print_edges();
     print_faces();
-    lout << "=================================" << std::endl << std::endl;
+    exanb::lout << "=================================" << std::endl << std::endl;
   }
 
   /**
    * @brief Export the shape to a Paraview-compatible VTK file.
    */
   inline void write_paraview() {
+    using exanb::ldbg;
     ldbg << " writting paraview for shape " << this->m_name << std::endl;
     std::string name = m_name + ".vtk";
     std::ofstream outFile(name);
@@ -921,9 +917,9 @@ struct shape {
    * @param center Translation vector of the shape.
    * @param quat Orientation quaternion of the shape.
    */
-  inline void write_move_paraview(std::string path, int timestep, Vec3d& center, Quaternion& quat) {
+  inline void write_move_paraview(std::string path, int timestep, exanb::Vec3d& center, exanb::Quaternion& quat) {
     std::string time = std::to_string(timestep);
-    ldbg << " writting paraview for shape " << this->m_name << " timestep: " << time << std::endl;
+    exanb::ldbg << " writting paraview for shape " << this->m_name << " timestep: " << time << std::endl;
     std::string name = path + m_name + "_" + time + ".vtk";
     std::ofstream outFile(name);
     if (!outFile) {

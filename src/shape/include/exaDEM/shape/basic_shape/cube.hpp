@@ -47,7 +47,7 @@ shape create_cube(std::string name, double length, double minskowski) {
   I += (8.0/15.0) * pi * std::pow(r, 5);
 
   // ---------- I / m ----------
-  shp.m_inertia_on_mass = I / shp.m_volume * Vec3d{1, 1, 1};
+  shp.m_inertia_on_mass = I / shp.m_volume * exanb::Vec3d{1, 1, 1};
 
   shp.add_vertex({-0.5, -0.5, -0.5});  // v0
   shp.add_vertex({ 0.5, -0.5, -0.5});  // v1
@@ -58,7 +58,7 @@ shape create_cube(std::string name, double length, double minskowski) {
   shp.add_vertex({ 0.5,  0.5,  0.5});  // v6
   shp.add_vertex({-0.5,  0.5,  0.5});  // v7
 
-  auto func = [c] (Vec3d& v) -> void {
+  auto func = [c] (exanb::Vec3d& v) -> void {
     v *= c;
   };
   shp.for_all_vertices(func);
@@ -86,8 +86,8 @@ shape create_cube(std::string name, double length, double minskowski) {
 
   shp.compute_face_areas();
   shp.obb = build_obb_from_shape(shp);
-  shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
-  shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
+  shp.pre_compute_obb_edges(exanb::Vec3d{0, 0, 0}, exanb::Quaternion{1, 0, 0, 0});
+  shp.pre_compute_obb_faces(exanb::Vec3d{0, 0, 0}, exanb::Quaternion{1, 0, 0, 0});
   return shp;
 } 
 }  // namespace shape
