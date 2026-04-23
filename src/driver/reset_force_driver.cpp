@@ -35,7 +35,7 @@ class ResetForceDriverFunctor : public OperatorNode {
 
   inline void execute() final {
     for (size_t id = 0; id < drivers->get_size(); id++) {
-      drivers->apply(id, [](auto& drv) { drv.forces = {0, 0, 0}; });
+      drivers->apply(id, [](auto& drv) { drv.motion.forces = {0, 0, 0}; });
     }
   }
 };

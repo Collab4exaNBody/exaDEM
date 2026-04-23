@@ -29,8 +29,6 @@ under the License.
 #include <exaDEM/expr.hpp>
 
 namespace exaDEM {
-using namespace exanb;
-
 enum MotionType {
   STATIONARY,                /**< Stationary state, with no motion. */
   LINEAR_MOTION,             /**< Linear movement type, straight-line motion. */
@@ -159,10 +157,6 @@ struct Driver_params  //: public Driver_expr
     return motion_type == EXPRESSION && is_motion_triggered(time);
   }
 
-  void set_params(Driver_params& in) {
-    (*this) = in;
-  }
-
   ONIKA_HOST_DEVICE_FUNC inline bool is_linear() const {
     return (motion_type == LINEAR_MOTION || motion_type == LINEAR_FORCE_MOTION ||
             motion_type == LINEAR_COMPRESSIVE_MOTION);
@@ -206,9 +200,9 @@ struct Driver_params  //: public Driver_expr
           "Driver_params::is_valid_motion_type",
           "This motion type [" + motion_type_to_string(motion_type) + "] is not possible, MotionType availables are: ");
       for (const auto& motion : valid_motion_types) {
-        lout << " " << ansi::yellow(motion_type_to_string(motion));
+        exanb::lout << " " << ansi::yellow(motion_type_to_string(motion));
       }
-      lout << std::endl;
+      exanb::lout << std::endl;
       return false;
     }
     return true;
@@ -280,8 +274,8 @@ struct Driver_params  //: public Driver_expr
     if (is_linear()) {
       // Check if motion vector is zero (invalid for linear motion)
       if (motion_vector == Vec3d{0, 0, 0}) {
-        lout << ansi::yellow("Your motion type is a \"Linear Mode\" that requires a motion vector.") << std::endl;
-        lout << ansi::yellow(
+        exanb::lout << ansi::yellow("Your motion type is a \"Linear Mode\" that requires a motion vector.") << std::endl;
+        exanb::lout << ansi::yellow(
                     "Please, define motion vector by adding \"motion_vector: [1,0,0]. It is defined to [0,0,0] by "
                     "default.")
              << std::endl;
@@ -347,48 +341,48 @@ struct Driver_params  //: public Driver_expr
   }
 
   void print_driver_params() const {
-    lout << "Motion type        : " << motion_type_to_string(motion_type) << std::endl;
+    exanb::lout << "Motion type        : " << motion_type_to_string(motion_type) << std::endl;
 
     if (is_tabulated()) {
       std::stringstream times;
       std::stringstream positions;
       tabulations_to_stream(times, positions);
-      lout << times.rdbuf() << std::endl;
-      lout << positions.rdbuf() << std::endl;
+      exanb::lout << times.rdbuf() << std::endl;
+      exanb::lout << positions.rdbuf() << std::endl;
     }
 
     if (!is_stationary()) {
       if (motion_start_threshold != 0 || motion_end_threshold != std::numeric_limits<double>::max()) {
         if (motion_end_threshold != std::numeric_limits<double>::max()) {
-          lout << "Motion duration    : [ " << motion_start_threshold << "s , " << motion_end_threshold << "s ]"
+          exanb::lout << "Motion duration    : [ " << motion_start_threshold << "s , " << motion_end_threshold << "s ]"
                << std::endl;
         } else {
-          lout << "Motion duration    : [ " << motion_start_threshold << "s ,  inf s )" << std::endl;
+          exanb::lout << "Motion duration    : [ " << motion_start_threshold << "s ,  inf s )" << std::endl;
         }
       }
       if (is_linear()) {
-        lout << "Motion vector      : " << motion_vector << std::endl;
+        exanb::lout << "Motion vector      : " << motion_vector << std::endl;
         if (motion_type == LINEAR_MOTION) {
-          lout << "Velocity (constant): " << const_vel << std::endl;
+          exanb::lout << "Velocity (constant): " << const_vel << std::endl;
         }
         if (motion_type == LINEAR_FORCE_MOTION) {
-          lout << "Force (constant)   : " << const_force << std::endl;
+          exanb::lout << "Force (constant)   : " << const_force << std::endl;
         }
       }
       if (is_compressive()) {
-        lout << "Sigma              : " << sigma << std::endl;
-        lout << "Damprate           : " << damprate << std::endl;
+        exanb::lout << "Sigma              : " << sigma << std::endl;
+        exanb::lout << "Damprate           : " << damprate << std::endl;
       }
     }
 
     if (is_shaker()) {
-      lout << "Shaker.Omega       : " << omega << std::endl;
-      lout << "Shaker.Amplitude   : " << amplitude << std::endl;
-      lout << "Shaker.Direction   : [" << shaker_dir << "]" << std::endl;
+      exanb::lout << "Shaker.Omega       : " << omega << std::endl;
+      exanb::lout << "Shaker.Amplitude   : " << amplitude << std::endl;
+      exanb::lout << "Shaker.Direction   : [" << shaker_dir << "]" << std::endl;
     }
 
     if (is_expr()) {
-      expr.expr_display(lout);
+      expr.expr_display(exanb::lout);
     }
   };
 

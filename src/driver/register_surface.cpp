@@ -28,7 +28,7 @@ class RegisterSurface : public OperatorNode {
 
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(size_t, id, INPUT, REQUIRED, DocString{"Driver index"});
-  ADD_SLOT(Surface_params, state, INPUT, REQUIRED,
+  ADD_SLOT(SurfaceFields, state, INPUT, REQUIRED,
            DocString{"Current Cylinder state, default is {offset: REQUIRED, normal: REQUIRED, vel: 0, vrot: [0,0,0], "
                      "suface: -1, center: "
                      "[0,0,0]}. You need to specify the offset, and the normal vector. You need to specify the center "

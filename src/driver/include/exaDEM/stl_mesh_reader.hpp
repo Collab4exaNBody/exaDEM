@@ -130,10 +130,6 @@ struct STLMeshReader {
         }
       }
     }
-    lout << "========= STL Mesh ==============" << std::endl;
-    lout << "Name     = " << file_name << std::endl;
-    ldbg << "Vertices = " << nv << std::endl;
-    ldbg << "Faces    = " << nf << std::endl;
   }
 };
 }  // namespace exaDEM

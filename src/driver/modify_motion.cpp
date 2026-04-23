@@ -87,7 +87,7 @@ class ModifyMotionBehavior : public OperatorNode {
     }
 
     auto set_motion_type = [&new_motion](auto& d) -> void {
-      d.set_params(new_motion);
+      d.motion = new_motion;
     };
     drvs.apply(*id, set_motion_type);
   }

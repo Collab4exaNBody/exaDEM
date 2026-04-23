@@ -327,7 +327,7 @@ class DumpReaderConfRockable : public OperatorNode {
       int next_id = drvs.get_size();
       for (int id = 0; id < manager.nDriven; id++) {
         Driver_params motion = Driver_params();
-        RShapeDriverParams state = RShapeDriverParams();
+        RShapeDriverFields state = RShapeDriverFields();
 
         auto& particle = manager.drivers[id];
         state.center = particle.pos;
@@ -338,7 +338,9 @@ class DumpReaderConfRockable : public OperatorNode {
 
         int type = particle.type;
         shape shp = *(manager.shps[type]);
-        RShapeDriver driver = {state, motion};
+        RShapeDriver driver;
+        driver.fields = state;
+        driver.motion = motion;
         driver.set_shape(shp);
         driver.initialize();
         drvs.add_driver(next_id + id, driver);

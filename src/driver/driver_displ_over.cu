@@ -77,9 +77,9 @@ struct DriverDisplOver {
 
   inline int operator()(exaDEM::Surface& a) {
     exaDEM::Surface& b = bcpd.get_typed_driver<exaDEM::Surface>(bd_idx);
-    Vec3d d = a.center_proj - b.center_proj;
+    Vec3d d = a.fields.center_proj - b.fields.center_proj;
 
-    if (b.motion_type == PENDULUM_MOTION) {
+    if (b.motion.motion_type == PENDULUM_MOTION) {
       // Utility function: compute the intersection between a line and a plane
       auto intersect_line_plane = [](const Vec3d& plane_point,   // A point lying on the plane (pendulum anchor)
                                      const Vec3d& plane_normal,  // Plane normal vector
@@ -99,9 +99,9 @@ struct DriverDisplOver {
 
       // Project the initial pendulum positions onto their respective planes
       Vec3d proj_a =
-          intersect_line_plane(a.pendulum_anchor_point, a.normal, a.pendulum_initial_position, a.pendulum_direction());
+          intersect_line_plane(a.motion.pendulum_anchor_point, a.fields.normal, a.motion.pendulum_initial_position, a.motion.pendulum_direction());
       Vec3d proj_b =
-          intersect_line_plane(b.pendulum_anchor_point, b.normal, b.pendulum_initial_position, b.pendulum_direction());
+          intersect_line_plane(b.motion.pendulum_anchor_point, b.fields.normal, b.motion.pendulum_initial_position, b.motion.pendulum_direction());
       d = proj_b - proj_a;
     }
 
@@ -114,12 +114,12 @@ struct DriverDisplOver {
 
   inline int operator()(exaDEM::Ball& a) {
     exaDEM::Ball& b = bcpd.get_typed_driver<exaDEM::Ball>(bd_idx);
-    Vec3d d = a.center - b.center;
-    if (b.is_compressive()) {
+    Vec3d d = a.fields.center - b.fields.center;
+    if (b.motion.is_compressive()) {
       if (exanb::dot(d, d) >= 1e-12) {
         color_log::error("driver_displ_over", "Ball with compressive motion type should not move");
       }
-      double r_diff = a.radius - b.radius;
+      double r_diff = a.fields.radius - b.fields.radius;
       if (r_diff * r_diff >= r2) {
         return 1;
       } else {
@@ -138,7 +138,7 @@ struct DriverDisplOver {
     using onika::cuda::vector_data;
     exaDEM::RShapeDriver& b = bcpd.get_typed_driver<exaDEM::RShapeDriver>(bd_idx);
 
-    if ((a.center == b.center) && (a.quat == b.quat)) {
+    if ((a.fields.center == b.fields.center) && (a.fields.quat == b.fields.quat)) {
       return 0;
     }
 
@@ -146,7 +146,7 @@ struct DriverDisplOver {
     storage.reset();
     size_t size = a.shp.get_number_of_vertices();
     const Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp.m_vertices);
-    RShapeDriverDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.center, a.quat, b.center, b.quat};
+    RShapeDriverDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.fields.center, a.fields.quat, b.fields.center, b.fields.quat};
     ReduceMaxRShapeDriverDisplacementFunctor func = {SVDFunc, storage.get_ptr()};
 
     ParallelForOptions opts;
@@ -156,7 +156,7 @@ struct DriverDisplOver {
 #else
     int sum = 0;
     // check each vertex
-    auto check_dist = [](Vec3d& v1, Vec3d& v2, double r2) -> bool {
+    auto check_dist = [](exanb::Vec3d& v1, exanb::Vec3d& v2, double r2) -> bool {
       Vec3d d = v1 - v2;
       if (exanb::dot(d, d) >= r2) return true;
       return false;
@@ -177,8 +177,8 @@ struct DriverDisplOver {
     constexpr double homothety = 1.0;
 #pragma omp parallel for reduction(+ : sum)
     for (size_t i = start; i < end; i++) {
-      Vec3d va = shp_a.get_vertex(i, a.center, homothety, a.quat);
-      Vec3d vb = shp_a.get_vertex(i, b.center, homothety, b.quat);
+      Vec3d va = shp_a.get_vertex(i, a.fields.center, homothety, a.fields.quat);
+      Vec3d vb = shp_a.get_vertex(i, b.fields.center, homothety, b.fields.quat);
       if (check_dist(va, vb, r2)) {
         sum++;
       }

@@ -92,9 +92,9 @@ class DumpWriterConfRockable : public OperatorNode {
           all_shapes.add_shape(D.shp);
         }
         sdriver << D.shp.m_name << " " << 0 /* group */ << " " << 0 /* cluster */ << " " << 1 /* homothety */ << " "
-                << D.center.x << " " << D.center.y << " " << D.center.z << " " << D.vel.x << " " << D.vel.y << " "
-                << D.vel.z << " " << D.acc.x << " " << D.acc.y << " " << D.acc.z << " " << D.quat.w << " " << D.quat.x
-                << " " << D.quat.y << " " << D.quat.z << " " << D.vrot.x << " " << D.vrot.y << " " << D.vrot.z << " "
+                << D.fields.center.x << " " << D.fields.center.y << " " << D.fields.center.z << " " << D.fields.vel.x << " " << D.fields.vel.y << " "
+                << D.fields.vel.z << " " << D.fields.acc.x << " " << D.fields.acc.y << " " << D.fields.acc.z << " " << D.fields.quat.w << " " << D.fields.quat.x
+                << " " << D.fields.quat.y << " " << D.fields.quat.z << " " << D.fields.vrot.x << " " << D.fields.vrot.y << " " << D.fields.vrot.z << " "
                 << 0 << " " << 0 << " " << 0; /* arot */
         sdriver << std::endl;
       }

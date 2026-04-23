@@ -31,7 +31,7 @@ class RegisterCylinder : public OperatorNode {
 
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
-  ADD_SLOT(Cylinder_params, state, INPUT, REQUIRED,
+  ADD_SLOT(CylinderFields, state, INPUT, REQUIRED,
            DocString{
                "Current cylinder state, default is {radius: REQUIRED, axis: REQUIRED, center: REQUIRED, vel: [0,0,0], "
                "vrot: [0,0,0], rv: 0, ra: 0}. You need to specify the radius and center"});

@@ -29,13 +29,13 @@ under the License.
 namespace exaDEM {
 class RegisterRShapeDriver : public OperatorNode {
   const Driver_params default_params = Driver_params();
-  static constexpr RShapeDriverParams default_rshape_params = RShapeDriverParams();
+  static constexpr RShapeDriverFields default_rshape_fields = RShapeDriverFields();
 
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
   ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"Input filename"});
   ADD_SLOT(
-      RShapeDriverParams, state, INPUT, default_rshape_params,
+      RShapeDriverFields, state, INPUT, default_rshape_fields,
       DocString{
           "Define the center, velocity, angular velocity and the orientatation. Default is: state: {center: [0,0,0], "
           "vel: [0,0,0], vrot: [0,0,0], quat: [1,0,0,0]}."});
@@ -93,7 +93,7 @@ class RegisterRShapeDriver : public OperatorNode {
       // not optimized
       bool big_shape = true;
       shp = read_shp(output_name, big_shape);
-      if(shp.get_Im() != null) {
+      if(shp.get_Im() != exanb::Vec3d{0,0,0}) {
         color_log::warning(operator_name(), "Override inertia using shape I/m");
         state->inertia = shp.get_Im() / state->mass;
       }
@@ -136,6 +136,8 @@ class RegisterRShapeDriver : public OperatorNode {
     driver.set_shape(shp);
     driver.initialize();
     drivers->add_driver(*id, driver);
+    exanb::lout << "========= STL Mesh ==============" << std::endl;
+    exanb::lout << "Name     = " << *filename << std::endl;
     lout << "=================================" << std::endl;
   }
 };

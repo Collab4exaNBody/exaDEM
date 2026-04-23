@@ -77,7 +77,7 @@ class UpdateGridRShapeOperator : public OperatorNode {
         }
 
         gsb.resize(mesh.shp.get_number_of_vertices());  // we just need to get the upper size.
-        mesh.shp.compute_prepro_obb(gsb.data(), mesh.center, mesh.quat);
+        mesh.shp.compute_prepro_obb(gsb.data(), mesh.fields.center, mesh.fields.quat);
         bool resize = grid_rshape.size() != n_cells;
         if (resize) {
           grid_rshape.resize(n_cells);

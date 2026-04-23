@@ -35,11 +35,11 @@ struct force_to_accel {
   inline void operator()(T& arg) {
     static_assert(get_type<T>() != DRIVER_TYPE::UNDEFINED);
     if constexpr (std::is_same_v<std::remove_cv_t<T>, Ball>) {
-      arg.weigth = mass;
+      arg.motion.weigth = mass;
       arg.f_ra(dt);
     }
     if constexpr (std::is_same_v<std::remove_cv_t<T>, Surface>) {
-      arg.weigth = mass;
+      arg.motion.weigth = mass;
     }
     arg.force_to_accel();
   }
@@ -47,26 +47,28 @@ struct force_to_accel {
 
 struct gather_forces_moment {
   inline std::tuple<bool, Vec3d, Vec3d> operator()(Ball& arg) {
-    if (arg.is_compressive() || arg.is_force_motion()) {
-      return {true, arg.forces, {0, 0, 0}};
+    if (arg.motion.is_compressive() || arg.motion.is_force_motion()) {
+      return {true, arg.motion.forces, {0, 0, 0}};
     } else {
       return {false, {0, 0, 0}, {0, 0, 0}};
     }
   }
 
-  inline std::tuple<bool, Vec3d, Vec3d> operator()(Surface& arg) {
-    if (arg.is_compressive() || arg.is_force_motion()) {
-      return {true, arg.forces, {0, 0, 0}};
+  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Surface& arg) {
+    if (arg.motion.is_compressive() || arg.motion.is_force_motion()) {
+      return {true, arg.motion.forces, {0, 0, 0}};
     } else {
       return {false, {0, 0, 0}, {0, 0, 0}};
     }
   }
 
-  inline std::tuple<bool, Vec3d, Vec3d> operator()(Cylinder& arg) { return {false, {0, 0, 0}, {0, 0, 0}}; }
+  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Cylinder& arg) {
+    return {false, {0, 0, 0}, {0, 0, 0}};
+  }
 
   inline std::tuple<bool, Vec3d, Vec3d> operator()(RShapeDriver& arg) {
-    if (arg.need_forces() || arg.need_moment()) {
-      return {true, arg.forces, arg.mom};
+    if (arg.motion.need_forces() || arg.need_moment()) {
+      return {true, arg.motion.forces, arg.fields.mom};
     }
     return {false, {0, 0, 0}, {0, 0, 0}};
   }
@@ -76,15 +78,12 @@ struct set_forces_moment {
   Vec3d forces;
   Vec3d moment;
 
-  inline void operator()(Ball& arg) { arg.forces = forces; }
-
-  inline void operator()(Surface& arg) { arg.forces = forces; }
-
-  inline void operator()(Cylinder& arg) { arg.forces = forces; }
-
-  inline void operator()(RShapeDriver& arg) {
-    arg.forces = forces;
-    arg.mom = moment;
+  template <typename DriverT>
+  inline void operator()(DriverT& arg) {
+    arg.motion.forces = forces;
+    if constexpr (std::is_same_v<std::decay_t<DriverT>, RShapeDriver>) {
+      arg.fields.mom = moment;
+    }
   }
 };
 

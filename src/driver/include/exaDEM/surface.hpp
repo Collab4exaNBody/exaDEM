@@ -24,7 +24,7 @@ under the License.
 #include <onika/physics/units.h>
 
 namespace exaDEM {
-struct Surface_params {
+struct SurfaceFields {
   /** Required */
   double offset = 0;               /**< Offset from the origin along the normal vector. */
   exanb::Vec3d normal = {0, 0, 1}; /**< Normal vector of the surface. */
@@ -42,13 +42,13 @@ struct Surface_params {
 
 namespace YAML {
 using exaDEM::MotionType;
-using exaDEM::Surface_params;
+using exaDEM::SurfaceFields;
 using exanb::lerr;
 using onika::physics::Quantity;
 
 template <>
-struct convert<Surface_params> {
-  static bool decode(const Node& node, Surface_params& v) {
+struct convert<SurfaceFields> {
+  static bool decode(const Node& node, SurfaceFields& v) {
     if (!node.IsMap()) {
       return false;
     }
@@ -88,19 +88,12 @@ struct convert<Surface_params> {
 }  // namespace YAML
 
 namespace exaDEM {
-const std::vector<MotionType> surface_valid_motion_types = {STATIONARY, LINEAR_MOTION, LINEAR_COMPRESSIVE_MOTION,
-                                                            SHAKER, PENDULUM_MOTION};
-
 /**
  * @brief Struct representing a surface in the exaDEM simulation.
  */
-struct Surface : public Surface_params, Driver_params {
-  /*
-     Surface(Surface_params& bp, Driver_params& dp) : Surface_params{bp}, Driver_params()
-     {
-     Driver_params::set_params(dp);
-     }
-   */
+struct Surface {
+  SurfaceFields fields;
+  Driver_params motion;
   /**
    * @brief Get the type of the driver (in this case, SURFACE).
    * @return The type of the driver.
@@ -113,17 +106,17 @@ struct Surface : public Surface_params, Driver_params {
    * @brief Print information about the surface.
    */
   inline void print() const {
-    lout << "Driver Type: Surface" << std::endl;
-    lout << "Offset: " << offset << std::endl;
-    lout << "Normal: " << normal << std::endl;
-    lout << "Center: " << center << std::endl;
-    lout << "Vel   : " << vel << std::endl;
-    lout << "AngVel: " << vrot << std::endl;
-    if (is_compressive()) {
-      lout << "Acceleration: " << acc << std::endl;
-      lout << "Surface Value [>0]: " << surface << std::endl;
+    exanb::lout << "Driver Type: Surface" << std::endl;
+    exanb::lout << "Offset: " << fields.offset << std::endl;
+    exanb::lout << "Normal: " << fields.normal << std::endl;
+    exanb::lout << "Center: " << fields.center << std::endl;
+    exanb::lout << "Vel   : " << fields.vel << std::endl;
+    exanb::lout << "AngVel: " << fields.vrot << std::endl;
+    if (motion.is_compressive()) {
+      exanb::lout << "Acceleration: " << fields.acc << std::endl;
+      exanb::lout << "Surface Value [>0]: " << fields.surface << std::endl;
     }
-    Driver_params::print_driver_params();
+    motion.print_driver_params();
   }
 
   /**
@@ -132,16 +125,14 @@ struct Surface : public Surface_params, Driver_params {
   inline void dump_driver(int id, std::stringstream& stream) {
     stream << "  - register_surface:" << std::endl;
     stream << "     id: " << id << std::endl;
-    stream << "     state: {offset: " << this->offset;
-    ;
-    stream << ", center: [" << this->center << "]";
-    stream << ", normal: [" << this->normal << "]";
-    ;
-    stream << ", vel: [" << this->vel << "]";
-    stream << ", vrot: [" << this->vrot << "]";
-    stream << ", surface: " << surface;
+    stream << "     state: {offset: " << fields.offset;
+    stream << ", center: [" << fields.center << "]";
+    stream << ", normal: [" << fields.normal << "]";
+    stream << ", vel: [" << fields.vel << "]";
+    stream << ", vrot: [" << fields.vrot << "]";
+    stream << ", surface: " << fields.surface;
     stream << "}" << std::endl;
-    Driver_params::dump_driver_params(stream);
+    motion.dump_driver_params(stream);
   }
 
   /**
@@ -149,17 +140,24 @@ struct Surface : public Surface_params, Driver_params {
    * @details Calculates the center position based on the normal and offset.
    */
   inline void initialize() {
-    center_proj = offset * normal;
+    const std::vector<MotionType> surface_valid_motion_types = {
+      STATIONARY,
+      LINEAR_MOTION,
+      LINEAR_COMPRESSIVE_MOTION,
+      SHAKER,
+      PENDULUM_MOTION};
 
-    if (motion_type == PENDULUM_MOTION) {
-      if (center != pendulum_anchor_point) {
+    fields.center_proj = fields.offset * fields.normal;
+
+    if (motion.motion_type == PENDULUM_MOTION) {
+      if (fields.center != motion.pendulum_anchor_point) {
         color_log::warning("register_surface", "Surface center should be equal to pendulum_anchor_point");
         color_log::warning("register_surface",
-                           "Surface center is update to [" + std::to_string(pendulum_anchor_point) + "]");
-        center = pendulum_anchor_point;
+                           "Surface center is update to [" + std::to_string(motion.pendulum_anchor_point) + "]");
+        fields.center = motion.pendulum_anchor_point;
       }
-      Vec3d axis = pendulum_anchor_point - pendulum_initial_position;
-      if (exanb::dot(axis, pendulum_swing_dir) >= 1e-14) {
+      exanb::Vec3d axis = motion.pendulum_anchor_point - motion.pendulum_initial_position;
+      if (exanb::dot(axis, motion.pendulum_swing_dir) >= 1e-14) {
         color_log::error("register_surface",
                          "The vector from pendulum_anchor_point to pendulum_initial_position must be orthogonal to "
                          "pendulum_swing_dir.");
@@ -167,33 +165,34 @@ struct Surface : public Surface_params, Driver_params {
     }
 
     // checks
-    if (exanb::dot(center - center_proj, normal) >= 1e-14) {
+    if (exanb::dot(fields.center - fields.center_proj, fields.normal) >= 1e-14) {
       color_log::warning("register_surface", "The Center point (surface) is not correctly defined");
-      center = exanb::dot(center_proj - center, normal) * normal + center_proj;
+      fields.center = exanb::dot(fields.center_proj - fields.center, fields.normal) * fields.normal + fields.center_proj;
       color_log::warning("register_surface",
                          "center is re-computed because it doesn't fit with offset, new center is: [" +
-                             std::to_string(center) + "] and center_proj is: [" + std::to_string(center_proj) + "]");
+                             std::to_string(fields.center) + "] and center_proj is: [" + std::to_string(fields.center_proj) + "]");
     }
 
-    if (!Driver_params::is_valid_motion_type(surface_valid_motion_types)) {
-      std::exit(EXIT_FAILURE);
-    } else if (!Driver_params::check_motion_coherence()) {
-      std::exit(EXIT_FAILURE);
-    } else if (mass <= 0.0) {
+    if (!motion.is_valid_motion_type(surface_valid_motion_types)) {
+      color_log::error("register_surface", "Invalid Motion Type.");
+    } else if (!motion.check_motion_coherence()) {
+      color_log::error("register_surface", "Invalid Coherency [Motion Type].");
+    } else if (fields.mass <= 0.0) {
       color_log::error("register_surface", "Please, define a positive mass.");
     }
-    if (is_linear()) {
+    if (motion.is_linear()) {
       // We do not accept that motion_vector is not equal to -normal for compression mode
-      if (normal != motion_vector && (normal != -motion_vector && !is_compressive())) {
+      if (fields.normal != motion.motion_vector && (fields.normal != -motion.motion_vector && !motion.is_compressive())) {
         color_log::warning("register_surface",
                            "The motion vector of the surface has been adjusted to align with the normal vector, i.e. "
                            "the motion vecor[" +
-                               std::to_string(motion_vector) + "] is now equal to [" + std::to_string(normal) + "].");
-        motion_vector = normal;
+                               std::to_string(motion.motion_vector) + "] is now equal to [" + std::to_string(fields.normal) + "].");
+        motion.motion_vector = fields.normal;
       }
     }
-    if (is_compressive()) {
-      if (surface <= 0) {
+
+    if (motion.is_compressive()) {
+      if (fields.surface <= 0) {
         color_log::error("register_surface",
                          "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify "
                          "surface: XX in the 'state' slot.");
@@ -202,31 +201,31 @@ struct Surface : public Surface_params, Driver_params {
   }
 
   void force_to_accel() {
-    if (is_compressive()) {
+    if (motion.is_compressive()) {
       constexpr double C = 0.5;
-      if (weigth != 0) {
-        const double s = surface;
+      if (motion.weigth != 0) {
+        const double s = fields.surface;
         // acc = (exanb::norm(forces) - sigma * s - (damprate * exanb::norm(vel)) ) / (weigth * C);
-        Vec3d tmp = (forces - sigma * s * this->motion_vector) / (weigth * C);
+        exanb::Vec3d tmp = (motion.forces - motion.sigma * s * motion.motion_vector) / (motion.weigth * C);
         // get acc into the motion vector axis
-        acc = exanb::dot(tmp, this->motion_vector);
+        fields.acc = exanb::dot(tmp, motion.motion_vector);
       } else {
-        acc = 0;
+        fields.acc = 0;
       }
     }
   }
 
   inline void push_f_v(const double dt) {
-    if (is_stationary()) {
-      vel = {0, 0, 0};
+    if (motion.is_stationary()) {
+      fields.vel = {0, 0, 0};
     } else {
-      if (is_compressive()) {
-        if (this->sigma != 0) {
-          vel += 0.5 * dt * acc * this->motion_vector;
+      if (motion.is_compressive()) {
+        if (motion.sigma != 0) {
+          fields.vel += 0.5 * dt * fields.acc * motion.motion_vector;
         }
       }
-      if (motion_type == LINEAR_MOTION) {
-        vel = this->const_vel * this->motion_vector;  // I prefere reset it
+      if (motion.motion_type == LINEAR_MOTION) {
+        fields.vel = motion.const_vel * motion.motion_vector;  // I prefere reset it
       }
     }
   }
@@ -234,8 +233,8 @@ struct Surface : public Surface_params, Driver_params {
   /**
    * @brief return driver velocity
    */
-  ONIKA_HOST_DEVICE_FUNC inline const Vec3d& get_vel() const {
-    return vel;
+  ONIKA_HOST_DEVICE_FUNC inline const exanb::Vec3d& get_vel() const {
+    return fields.vel;
   }
 
   /**
@@ -244,35 +243,35 @@ struct Surface : public Surface_params, Driver_params {
    * @param dt The time step.
    */
   inline void push_f_v_r(const double time, const double dt) {
-    if (!is_stationary()) {
-      if (motion_type == LINEAR_MOTION) {
-        assert(vel == this->const_vel * this->motion_vector);
+    if (!motion.is_stationary()) {
+      if (motion.motion_type == LINEAR_MOTION) {
+        assert(motion.vel == motion.const_vel * motion.motion_vector);
       }
 
-      if (motion_type == PENDULUM_MOTION) {
-        auto [O, N] = compute_offset_normal_pendulum_motion(time + dt);
-        normal = N;
-        offset = O;
-        vel = pendulum_velocity(time + dt);
-        center_proj = normal * offset;
+      if (motion.motion_type == PENDULUM_MOTION) {
+        auto [Offset, Normal] = motion.compute_offset_normal_pendulum_motion(time + dt);
+        fields.normal = Normal;
+        fields.offset = Offset;
+        fields.vel = motion.pendulum_velocity(time + dt);
+        fields.center_proj = fields.normal * fields.offset;
         return;
       }
 
-      double displ = dt * exanb::dot(vel, normal) + 0.5 * dt * dt * acc;
+      double displ = dt * exanb::dot(fields.vel, fields.normal) + 0.5 * dt * dt * fields.acc;
 
       /** The shaker motion changes the displacement behavior */
       /** the shaker direction vector is ignored, the normal vector is used */
-      if (motion_type == SHAKER) {
-        double signal_next = shaker_signal(time + dt);
-        double signal_current = shaker_signal(time);
-        const double angle_factor = exanb::dot(shaker_direction(), normal);
+      if (motion.motion_type == SHAKER) {
+        double signal_next = motion.shaker_signal(time + dt);
+        double signal_current = motion.shaker_signal(time);
+        const double angle_factor = exanb::dot(motion.shaker_direction(), fields.normal);
         displ = (signal_next - signal_current) * angle_factor;
-        vel = shaker_velocity(time + dt);
+        fields.vel = motion.shaker_velocity(time + dt);
       }
 
-      center += displ * normal;
-      offset += displ;
-      center_proj += displ * normal;
+      fields.center += displ * fields.normal;
+      fields.offset += displ;
+      fields.center_proj += displ * fields.normal;
     }
   }
 
@@ -283,8 +282,8 @@ struct Surface : public Surface_params, Driver_params {
    * @return True if the point is within the cut-off radius of the surface, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const exanb::Vec3d& p) {
-    Vec3d proj = dot(p, normal) * normal;
-    double d = norm(proj - center_proj);
+    exanb::Vec3d proj = dot(p, fields.normal) * fields.normal;
+    double d = norm(proj - fields.center_proj);
     return d <= rcut;
   }
 
@@ -298,19 +297,20 @@ struct Surface : public Surface_params, Driver_params {
    *         - The normal vector pointing from the collision point to the surface.
    *         - The contact position on the surface.
    */
-  ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d& p) {
-    Vec3d proj = dot(p, normal) * normal;
-    Vec3d surface_to_point = -(center_proj - proj);
-    double d = norm(surface_to_point);
-    double dn = d - rcut;
-    if (dn > 0) {
-      return {false, dn, Vec3d(), Vec3d()};
-    } else {
-      Vec3d n = surface_to_point / d;
-      Vec3d contact_position = p - n * (rcut + 0.5 * dn);
-      return {true, dn, n, contact_position};
-    }
-  }
+  ONIKA_HOST_DEVICE_FUNC
+      inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& p) {
+        Vec3d proj = dot(p, fields.normal) * fields.normal;
+        Vec3d surface_to_point = -(fields.center_proj - proj);
+        double d = exanb::norm(surface_to_point);
+        double dn = d - rcut;
+        if (dn > 0) {
+          return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
+        } else {
+          exanb::Vec3d n = surface_to_point / d;
+          exanb::Vec3d contact_position = p - n * (rcut + 0.5 * dn);
+          return {true, dn, n, contact_position};
+        }
+      }
 };
 }  // namespace exaDEM
 
@@ -319,9 +319,7 @@ namespace memory {
 template <>
 struct MemoryUsage<exaDEM::Surface> {
   static inline size_t memory_bytes(const exaDEM::Surface& obj) {
-    const exaDEM::Surface_params* cparms = &obj;
-    const exaDEM::Driver_params* dparms = &obj;
-    return onika::memory::memory_bytes(*cparms, *dparms);
+    return onika::memory::memory_bytes(obj);
   }
 };
 }  // namespace memory
