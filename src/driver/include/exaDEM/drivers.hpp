@@ -27,6 +27,11 @@ under the License.
 #include <exaDEM/undefined_driver.hpp>
 
 namespace exaDEM {
+template<typename FuncT>
+struct ApplyDriverFunctorTraits {
+  static constexpr bool use_motion = false;
+};
+
 struct Drivers {
   /**
    * @brief Alias template for a CUDA memory managed vector.
@@ -95,18 +100,33 @@ struct Drivers {
            m_type_index_cpu.size() == m_type_index.size());
     DRIVER_TYPE t = m_type_index_cpu[idx].m_type;
     assert(t != DRIVER_TYPE::UNDEFINED);
-    if (t == DRIVER_TYPE::CYLINDER) {
-      return func(m_data.get_nth<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[idx].m_index]);
-    } else if (t == DRIVER_TYPE::SURFACE) {
-      return func(m_data.get_nth<DRIVER_TYPE::SURFACE>()[m_type_index_cpu[idx].m_index]);
-    } else if (t == DRIVER_TYPE::BALL) {
-      return func(m_data.get_nth<DRIVER_TYPE::BALL>()[m_type_index_cpu[idx].m_index]);
-    } else if (t == DRIVER_TYPE::RSHAPE) {
-      return func(m_data.get_nth<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[idx].m_index]);
+    if constexpr (ApplyDriverFunctorTraits<FuncT>::use_motion) {
+      if (t == DRIVER_TYPE::CYLINDER) {
+        return func(m_data.get_nth<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[idx].m_index], m_motion[idx]);
+      } else if (t == DRIVER_TYPE::SURFACE) {
+        return func(m_data.get_nth<DRIVER_TYPE::SURFACE>()[m_type_index_cpu[idx].m_index], m_motion[idx]);
+      } else if (t == DRIVER_TYPE::BALL) {
+        return func(m_data.get_nth<DRIVER_TYPE::BALL>()[m_type_index_cpu[idx].m_index], m_motion[idx]);
+      } else if (t == DRIVER_TYPE::RSHAPE) {
+        return func(m_data.get_nth<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[idx].m_index], m_motion[idx]);
+      }
+      exanb::fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
+      static Cylinder tmp;
+      return func(tmp, m_motion[idx]);
+    } else {
+      if (t == DRIVER_TYPE::CYLINDER) {
+        return func(m_data.get_nth<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[idx].m_index]);
+      } else if (t == DRIVER_TYPE::SURFACE) {
+        return func(m_data.get_nth<DRIVER_TYPE::SURFACE>()[m_type_index_cpu[idx].m_index]);
+      } else if (t == DRIVER_TYPE::BALL) {
+        return func(m_data.get_nth<DRIVER_TYPE::BALL>()[m_type_index_cpu[idx].m_index]);
+      } else if (t == DRIVER_TYPE::RSHAPE) {
+        return func(m_data.get_nth<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[idx].m_index]);
+      }
+      exanb::fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
+      static Cylinder tmp;
+      return func(tmp);
     }
-    exanb::fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
-    static Cylinder tmp;
-    return func(tmp);
   }
 
   template <class FuncT>
@@ -185,10 +205,10 @@ struct Drivers {
    * @return The type of the driver at the specified index.
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline DRIVER_TYPE type(size_t idx) {
-    assert(idx < m_type_index.size());
-    return m_type_index[idx].m_type;
-  }
+      inline DRIVER_TYPE type(size_t idx) {
+        assert(idx < m_type_index.size());
+        return m_type_index[idx].m_type;
+      }
 
 
   /**
@@ -274,7 +294,7 @@ struct DriversGPUAccessor {
   size_t m_nb_drivers = 0;
   Drivers::DriverTypeAndIndex* const __restrict__ m_type_index = nullptr;
   onika::FlatTuple<Cylinder* __restrict__, Surface* __restrict__, Ball* __restrict__, RShapeDriver* __restrict__> m_data = {
-      nullptr, nullptr, nullptr, nullptr};
+    nullptr, nullptr, nullptr, nullptr};
   onika::FlatTuple<size_t, size_t, size_t, size_t> m_data_size = {0, 0, 0, 0};
 
   DriversGPUAccessor() = default;
@@ -282,11 +302,11 @@ struct DriversGPUAccessor {
   DriversGPUAccessor(DriversGPUAccessor&&) = default;
   inline DriversGPUAccessor(Drivers& drvs)
       : m_nb_drivers(drvs.m_type_index.size()),
-        m_type_index(drvs.m_type_index.data()),
-        m_data({drvs.m_data.get_nth<0>().data(), drvs.m_data.get_nth<1>().data(), drvs.m_data.get_nth<2>().data(),
-                drvs.m_data.get_nth<3>().data()}),
-        m_data_size({drvs.m_data.get_nth<0>().size(), drvs.m_data.get_nth<1>().size(), drvs.m_data.get_nth<2>().size(),
-                     drvs.m_data.get_nth<3>().size()}) {}
+      m_type_index(drvs.m_type_index.data()),
+      m_data({drvs.m_data.get_nth<0>().data(), drvs.m_data.get_nth<1>().data(), drvs.m_data.get_nth<2>().data(),
+             drvs.m_data.get_nth<3>().data()}),
+      m_data_size({drvs.m_data.get_nth<0>().size(), drvs.m_data.get_nth<1>().size(), drvs.m_data.get_nth<2>().size(),
+                  drvs.m_data.get_nth<3>().size()}) {}
 
   template <class T>
   ONIKA_HOST_DEVICE_FUNC inline T& get_typed_driver(const int idx) const {

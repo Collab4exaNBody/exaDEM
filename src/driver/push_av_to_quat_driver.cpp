@@ -1,13 +1,13 @@
 /*
-Licensed to the Apache Software Foundation (ASF) under one
-or more contributor license agreements.  See the NOTICE file
-distributed with this work for additional information
-regarding copyright ownership.  The ASF licenses this file
-to you under the Apache License, Version 2.0 (the
-"License"); you may not use this file except in compliance
-with the License.  You may obtain a copy of the License at
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
 
-  http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing,
 software distributed under the License is distributed on an
@@ -27,13 +27,17 @@ using namespace onika::scg;
 struct PushAVToQuatFunc {
   const double t;
   const double dt;
-  Driver_params& motion;
   template <typename T>
-  inline void operator()(T& drv) const {
-    if constexpr (std::is_same_v<std::remove_cv_t<T>, exaDEM::RShapeDriver>) {
+  inline void operator()(T& drv, const Driver_params& motion) const {
+    if constexpr (DriverProperty<T>::use_quaternion) {
       drv.push_av_to_quat(motion, t, dt);
     }
   }
+};
+
+template<>
+struct ApplyDriverFunctorTraits<PushAVToQuatFunc> {
+  static constexpr bool use_motion = true;
 };
 
 class PushAngularVelocityToQuaternionDriver : public OperatorNode {
@@ -55,8 +59,8 @@ class PushAngularVelocityToQuaternionDriver : public OperatorNode {
   inline void execute() final {
     double time = *physical_time;
     double incr_time = *dt;
+    PushAVToQuatFunc func = {time, incr_time};
     for (size_t id = 0; id < drivers->get_size(); id++) {
-      PushAVToQuatFunc func = {time, incr_time, drivers->get_motion(id)};
       drivers->apply(id, func);
     }
   }

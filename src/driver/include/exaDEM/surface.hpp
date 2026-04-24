@@ -90,6 +90,7 @@ namespace exaDEM {
 struct Surface {
   SurfaceFields fields;
   MotionType motion_type;
+
   /**
    * @brief Get the type of the driver (in this case, SURFACE).
    * @return The type of the driver.
@@ -307,6 +308,12 @@ struct Surface {
           return {true, dn, n, contact_position};
         }
       }
+};
+
+template<>
+struct DriverProperty<Surface> {
+  static constexpr bool use_moment = false;
+  static constexpr bool use_quaternion = false;
 };
 }  // namespace exaDEM
 

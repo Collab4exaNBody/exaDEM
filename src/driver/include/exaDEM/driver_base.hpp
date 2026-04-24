@@ -142,4 +142,10 @@ struct Driver {
   virtual bool filter(const double, const exanb::Vec3d&);
   virtual std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> dectector(const double, const exanb::Vec3d&);
 };
+
+template<typename DriverT>
+struct DriverProperty {
+  static constexpr bool use_moment = false;
+  static constexpr bool use_quaternion = false;
+};
 }  // namespace exaDEM

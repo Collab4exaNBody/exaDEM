@@ -419,6 +419,12 @@ struct RShapeDriver {
   }
 };
 
+template<>
+struct DriverProperty<RShapeDriver> {
+  static constexpr bool use_moment = true;
+  static constexpr bool use_quaternion = true;
+};
+
 class RShapeUtils {
  public:
   const exanb::Vec3d* vertices = nullptr;

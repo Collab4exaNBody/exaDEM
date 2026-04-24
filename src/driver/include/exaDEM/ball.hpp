@@ -307,6 +307,12 @@ struct Ball {
         }
       }
 };
+
+template<>
+struct DriverProperty<Ball> {
+  static constexpr bool use_moment = false;
+  static constexpr bool use_quaternion = false;
+};
 }  // namespace exaDEM
 
 namespace onika {

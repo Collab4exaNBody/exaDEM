@@ -27,13 +27,12 @@ under the License.
 namespace exaDEM {
 using namespace onika::scg;
 
-struct force_to_accel {
+struct ForceToAccelDriverFunc {
   const double dt;
   const double mass;
-  Driver_params& motion;
 
   template <class T>
-  inline void operator()(T& arg) {
+  inline void operator()(T& arg, Driver_params& motion) {
     static_assert(get_type<T>() != DRIVER_TYPE::UNDEFINED);
     if constexpr (std::is_same_v<std::remove_cv_t<T>, Ball>) {
       motion.weigth = mass;
@@ -46,9 +45,21 @@ struct force_to_accel {
   }
 };
 
-struct gather_forces_moment {
-  const Driver_params& motion;
-  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Ball& arg) {
+template<>
+struct ApplyDriverFunctorTraits<ForceToAccelDriverFunc> {
+  static constexpr bool use_motion = true;
+};
+
+struct GatherForcesMomentDriverFunc {
+  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Ball& arg, const Driver_params& motion) {
+    if (is_compressive(arg.motion_type) || is_force_motion(arg.motion_type)) {
+      return {true, arg.forces(), {0, 0, 0}};
+    } else {
+      return {false, {0, 0, 0}, {0, 0, 0}};
+    }
+  }
+
+  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Surface& arg, const Driver_params& motion) {
     if (is_compressive(arg.motion_type) || is_force_motion(arg.motion_type)) {
       return {true, arg.fields.forces, {0, 0, 0}};
     } else {
@@ -56,19 +67,11 @@ struct gather_forces_moment {
     }
   }
 
-  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Surface& arg) {
-    if (is_compressive(arg.motion_type) || is_force_motion(arg.motion_type)) {
-      return {true, arg.fields.forces, {0, 0, 0}};
-    } else {
-      return {false, {0, 0, 0}, {0, 0, 0}};
-    }
-  }
-
-  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Cylinder& arg) {
+  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Cylinder& arg, const Driver_params& motion) {
     return {false, {0, 0, 0}, {0, 0, 0}};
   }
 
-  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(RShapeDriver& arg) {
+  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(RShapeDriver& arg, const Driver_params& motion) {
     if (need_forces(arg.motion_type) || arg.need_moment()) {
       return {true, arg.fields.forces, arg.fields.mom};
     }
@@ -76,15 +79,20 @@ struct gather_forces_moment {
   }
 };
 
-struct set_forces_moment {
+template<>
+struct ApplyDriverFunctorTraits<GatherForcesMomentDriverFunc> {
+  static constexpr bool use_motion = true;
+};
+
+struct SetForcesMomentDriverFunc {
   exanb::Vec3d forces;
   exanb::Vec3d moment;
 
   template <typename DriverT>
   inline void operator()(DriverT& arg) {
-    arg.fields.forces = forces;
-    if constexpr (std::is_same_v<std::decay_t<DriverT>, RShapeDriver>) {
-      arg.fields.mom = moment;
+    arg.forces() = forces;
+    if constexpr (DriverProperty<DriverT>::use_moment) {
+      arg.moment() = moment;
     }
   }
 };
@@ -106,8 +114,8 @@ class ForceToAccelDriverFunctor : public OperatorNode {
     // we need to update forces if required
     std::vector<int> ids;      // id, forces
     std::vector<double> pack;  // id, forces
+    GatherForcesMomentDriverFunc reduce;
     for (size_t id = 0; id < drivers->get_size(); id++) {
-      gather_forces_moment reduce = {drivers->get_motion(id)};
       auto [update, forces, moment] = drivers->apply(id, reduce);
       if (update) {
         ids.push_back(id);
@@ -125,15 +133,15 @@ class ForceToAccelDriverFunctor : public OperatorNode {
       MPI_Allreduce(pack.data(), unpack.data(), pack.size(), MPI_DOUBLE, MPI_SUM, *mpi);
       for (size_t i = 0; i < ids.size(); i++) {
         int id = ids[i];
-        set_forces_moment func;
+        SetForcesMomentDriverFunc func;
         func.forces = exanb::Vec3d{unpack[i * 6], unpack[i * 6 + 1], unpack[i * 6 + 2]};
         func.moment = exanb::Vec3d{unpack[i * 6 + 3], unpack[i * 6 + 4], unpack[i * 6 + 5]};
         drivers->apply(id, func);
       }
     }
+    ForceToAccelDriverFunc update_f = {*dt, *system_mass};
     for (size_t id = 0; id < drivers->get_size(); id++) {
-      force_to_accel func = {*dt, *system_mass, drivers->get_motion(id)};
-      drivers->apply(id, func);
+      drivers->apply(id, update_f);
     }
   }
 };
