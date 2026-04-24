@@ -24,7 +24,7 @@ under the License.
 #include <onika/physics/units.h>
 
 namespace exaDEM {
-struct Cylinder_params {
+struct CylinderFields {
   double radius = -1;              /**< Radius of the cylinder. */
   exanb::Vec3d axis = {1, 0, 1};   /**< Axis direction of the cylinder. */
   exanb::Vec3d center = {0, 0, 0}; /**< Center position of the cylinder. */
@@ -34,14 +34,9 @@ struct Cylinder_params {
 }  // namespace exaDEM
 
 namespace YAML {
-using exaDEM::Cylinder_params;
-using exaDEM::MotionType;
-using exanb::lerr;
-using onika::physics::Quantity;
-
 template <>
-struct convert<Cylinder_params> {
-  static bool decode(const Node& node, Cylinder_params& v) {
+struct convert<exaDEM::CylinderFields> {
+  static bool decode(const Node& node, exaDEM::CylinderFields& v) {
     if (!node.IsMap()) {
       return false;
     }
@@ -55,13 +50,13 @@ struct convert<Cylinder_params> {
       return false;
     }
     v.radius = node["radius"].as<Quantity>().convert();
-    v.axis = node["axis"].as<Vec3d>();
-    v.center = node["center"].as<Vec3d>();
+    v.axis = node["axis"].as<exanb::Vec3d>();
+    v.center = node["center"].as<exanb::Vec3d>();
     if (check(node, "vel")) {
-      v.vel = node["vel"].as<Vec3d>();
+      v.vel = node["vel"].as<exanb::Vec3d>();
     }
     if (check(node, "vrot")) {
-      v.vrot = node["vrot"].as<Vec3d>();
+      v.vrot = node["vrot"].as<exanb::Vec3d>();
     }
     return true;
   }
@@ -69,12 +64,14 @@ struct convert<Cylinder_params> {
 }  // namespace YAML
 
 namespace exaDEM {
-const std::vector<MotionType> cylinder_valid_motion_types = {STATIONARY};
 
 /**
  * @brief Struct representing a cylinder in the exaDEM simulation.
  */
-struct Cylinder : public Cylinder_params, Driver_params {
+struct Cylinder {
+  CylinderFields fields;
+  Driver_params motion;
+
   /**
    * @brief Get the type of the driver (in this case, CYLINDER).
    * @return The type of the driver.
@@ -88,26 +85,29 @@ struct Cylinder : public Cylinder_params, Driver_params {
    * @details This function asserts that the radius of the cylinder is greater than 0.
    */
   inline void initialize() {
-    if (!Driver_params::is_valid_motion_type(cylinder_valid_motion_types)) {
+    const std::vector<MotionType> cylinder_valid_motion_types = {
+      STATIONARY};
+
+    if (!motion.is_valid_motion_type(cylinder_valid_motion_types)) {
       std::exit(EXIT_FAILURE);
-    } else if (!Driver_params::check_motion_coherence()) {
+    } else if (!motion.check_motion_coherence()) {
       std::exit(EXIT_FAILURE);
     }
-    assert(radius > 0);
-    center = axis * center;
+    assert(fields.radius > 0);
+    fields.center = fields.axis * fields.center;
   }
 
   /**
    * @brief Print information about the cylinder.
    */
   inline void print() const {
-    lout << "Driver Type: Cylinder" << std::endl;
-    lout << "Radius: " << radius << std::endl;
-    lout << "Axis  : " << axis << std::endl;
-    lout << "Center: " << center << std::endl;
-    lout << "Vel   : " << vel << std::endl;
-    lout << "AngVel: " << vrot << std::endl;
-    Driver_params::print_driver_params();
+    exanb::lout << "Driver Type: Cylinder" << std::endl;
+    exanb::lout << "Radius: " << fields.radius << std::endl;
+    exanb::lout << "Axis  : " << fields.axis << std::endl;
+    exanb::lout << "Center: " << fields.center << std::endl;
+    exanb::lout << "Vel   : " << fields.vel << std::endl;
+    exanb::lout << "AngVel: " << fields.vrot << std::endl;
+    motion.print_driver_params();
   }
 
   /**
@@ -116,12 +116,12 @@ struct Cylinder : public Cylinder_params, Driver_params {
   void dump_driver(int id, std::stringstream& stream) {
     stream << "  - register_cylinder:" << std::endl;
     stream << "     id: " << id << std::endl;
-    stream << "     state: { radius: " << this->radius;
-    stream << ",axis: [" << this->axis << "]";
-    stream << ",center: [" << this->center << "]";
-    stream << ",vel: [" << this->vel << "]";
-    stream << ",vrot: [" << this->vrot << "]}" << std::endl;
-    Driver_params::dump_driver_params(stream);
+    stream << "     state: { radius: " << fields.radius;
+    stream << ",axis: [" << fields.axis << "]";
+    stream << ",center: [" << fields.center << "]";
+    stream << ",vel: [" << fields.vel << "]";
+    stream << ",vrot: [" << fields.vrot << "]}" << std::endl;
+    motion.dump_driver_params(stream);
   }
 
   /**
@@ -136,8 +136,8 @@ struct Cylinder : public Cylinder_params, Driver_params {
   ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double time, const double dt) {
     /** not implemented */
   }
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d get_vel() {
-    return vel;
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d get_vel() {
+    return fields.vel;
   }
 
   /**
@@ -157,16 +157,16 @@ struct Cylinder : public Cylinder_params, Driver_params {
    * It may produce incorrect normals if `axis` is not aligned with (1,0,0),
    * (0,1,0), or (0,0,1).
    *
-   * @return Vec3d A normalized vector perpendicular to the constructed plane.
+   * @return exanb::Vec3d A normalized vector perpendicular to the constructed plane.
    */
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d get_normal() {
-    Vec3d p1 = {1,1,1};
-    Vec3d p2 = {-1,-1,-1};
-    Vec3d p3 = {-1,1,1};
-    p3 = p3 * axis; // projection
-    p1 = p1 * axis - p3; // projection
-    p2 = p2 * axis - p3; // projection
-    Vec3d normal = exanb::cross(p1, p2);
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d get_normal() {
+    exanb::Vec3d p1 = {1,1,1};
+    exanb::Vec3d p2 = {-1,-1,-1};
+    exanb::Vec3d p3 = {-1,1,1};
+    p3 = p3 * fields.axis; // projection
+    p1 = p1 * fields.axis - p3; // projection
+    p2 = p2 * fields.axis - p3; // projection
+    exanb::Vec3d normal = exanb::cross(p1, p2);
     return normal / exanb::norm(normal);
   }
 
@@ -176,15 +176,15 @@ struct Cylinder : public Cylinder_params, Driver_params {
    * @param vi The vector representing the point to check.
    * @return True if the point is within the cut-off radius of the cylinder, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const Vec3d& vi) {
-    const Vec3d proj = vi * axis;
+  ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const exanb::Vec3d& vi) {
+    const exanb::Vec3d proj = vi * fields.axis;
 
     // === direction
-    const Vec3d dir = proj - center;
+    const exanb::Vec3d dir = proj - fields.center;
 
     // === interpenetration
-    const double d = norm(dir);
-    const double dn = radius - (d + rcut);
+    const double d = exanb::norm(dir);
+    const double dn = fields.radius - (d + rcut);
     return dn <= 0;
   }
 
@@ -205,31 +205,32 @@ struct Cylinder : public Cylinder_params, Driver_params {
    *   - The contact point between the vertex and the cylinder.
    */
   // rcut = r shape
-  ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d& pi) {
-    // === project the vertex in the plan as the cylinder center
-    const Vec3d proj = pi * axis;
+  ONIKA_HOST_DEVICE_FUNC
+      inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& pi) {
+        // === project the vertex in the plan as the cylinder center
+        const exanb::Vec3d proj = pi * fields.axis;
 
-    // === direction
-    const Vec3d dir = center - proj;
+        // === direction
+        const exanb::Vec3d dir = fields.center - proj;
 
-    // === interpenetration
-    const double d = exanb::norm(dir);
+        // === interpenetration
+        const double d = exanb::norm(dir);
 
-    // === compute interpenetration
-    const double dn = radius - (rcut + d);
+        // === compute interpenetration
+        const double dn = fields.radius - (rcut + d);
 
-    if (dn > 0) {
-      return {false, dn, Vec3d(), Vec3d()};
-    } else {
-      // === compute contact normal
-      const Vec3d n = dir / d;
+        if (dn > 0) {
+          return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
+        } else {
+          // === compute contact normal
+          const exanb::Vec3d n = dir / d;
 
-      // === compute contact point
-      const Vec3d contact_position = pi - n * (rcut + 0.5 * dn);
+          // === compute contact point
+          const exanb::Vec3d contact_position = pi - n * (rcut + 0.5 * dn);
 
-      return {true, dn, n, contact_position};
-    }
-  }
+          return {true, dn, n, contact_position};
+        }
+      }
 };
 }  // namespace exaDEM
 
@@ -239,9 +240,7 @@ namespace memory {
 template <>
 struct MemoryUsage<exaDEM::Cylinder> {
   static inline size_t memory_bytes(const exaDEM::Cylinder& obj) {
-    const exaDEM::Cylinder_params* cparms = &obj;
-    const exaDEM::Driver_params* dparms = &obj;
-    return onika::memory::memory_bytes(*cparms, *dparms);
+    return onika::memory::memory_bytes(obj);
   }
 };
 

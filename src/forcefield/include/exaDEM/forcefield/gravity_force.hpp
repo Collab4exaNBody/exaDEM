@@ -28,8 +28,8 @@ struct GravityForceDriverFunctor {
   template <typename T>
   inline void operator()(T& drv) const {
     if constexpr (std::is_same_v<std::remove_cv_t<T>, exaDEM::RShapeDriver>) {
-      if(drv.motion_type == MotionType::PARTICLE) {
-        drv.forces += g * drv.mass;
+      if(drv.motion.motion_type == MotionType::PARTICLE) {
+        drv.motion.forces += g * drv.fields.mass;
       }
     }
   }

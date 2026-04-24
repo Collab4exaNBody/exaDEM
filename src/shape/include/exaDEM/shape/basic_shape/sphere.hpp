@@ -12,6 +12,8 @@ namespace basic_shape {
  * @param minskowski Minskowski radius
  */
 shape create_sphere(std::string name, double minskowski) {
+  using exanb::Vec3d;
+  using exanb::Quaternion;
   // rename
   const double r = minskowski;
   const double pi = M_PI;

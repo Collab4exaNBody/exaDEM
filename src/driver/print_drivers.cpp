@@ -23,6 +23,7 @@ under the License.
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
+using namespace onika::scg;
 class PrintDrivers : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
 
@@ -34,6 +35,7 @@ class PrintDrivers : public OperatorNode {
   }
 
   inline void execute() final {
+    using exanb::lout;
     auto& drvs = *drivers;
     lout << std::endl;
     lout << "==================== Driver Configuraions =======================" << std::endl;

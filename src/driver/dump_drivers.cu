@@ -28,7 +28,7 @@ under the License.
 #include <memory>
 
 namespace exaDEM {
-
+using namespace exanb;
 struct DumpDriverFunc {
   int* const id_ptr = nullptr;
   const std::string directory = "";
@@ -53,8 +53,6 @@ struct DumpDriverFunc {
 
 using namespace exanb;
 class DumpDriver : public OperatorNode {
-  static constexpr Vec3d null = {0.0, 0.0, 0.0};
-
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
   ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Main output directory."});

@@ -12,6 +12,8 @@ namespace basic_shape {
  * @param minskowski Minskowski radius
  */
 shape create_rice(std::string name, double length, double minskowski) {
+  using exanb::Vec3d;
+  using exanb::Quaternion;
   // rename
   const double c = length;
   const double r = minskowski;

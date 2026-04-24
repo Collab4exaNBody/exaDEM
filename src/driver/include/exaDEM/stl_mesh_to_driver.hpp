@@ -40,7 +40,7 @@ inline shape build_shape(STLMeshReader& mesh, std::string name) {
 # pragma omp parallel
   {
     // first get vertices
-    std::vector<Vec3d> v;
+    std::vector<exanb::Vec3d> v;
 #   pragma omp for
     for (int i = 0; i < n_faces; i++) {
       Face& face = mesh.get_data(i);
