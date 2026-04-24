@@ -136,9 +136,14 @@ struct Cylinder {
   ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
     /** not implemented */
   }
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d get_vel() {
-    return fields.vel;
-  }
+
+  /**
+   * Fields Getters
+   */
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields.center; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields.vel; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields.forces; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
 
   /**
    * @brief Compute a normal vector associated with the given axis.

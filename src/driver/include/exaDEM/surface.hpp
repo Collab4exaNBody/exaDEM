@@ -226,11 +226,12 @@ struct Surface {
   }
 
   /**
-   * @brief return driver velocity
+   * Fields Getters
    */
-  ONIKA_HOST_DEVICE_FUNC inline const exanb::Vec3d& get_vel() const {
-    return fields.vel;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields.center; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields.vel; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields.forces; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
 
   /**
    * @brief Update the position of the wall.

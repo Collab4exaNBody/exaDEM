@@ -277,7 +277,7 @@ struct ContactLawDriverFunc {
       contact_force_core<ContactLaw, CohesiveLaw>(
           dn, n, time, cp, meff, reff, item.friction, contact_position, r, v, f,
           item.moment, vrot,                              // particle i
-          driver.fields.center, driver.get_vel(), driver.fields.vrot);  // particle j
+          driver.position(), driver.velocity(), driver.angular_velocity());  // particle j
 
       // === For analysis
       fn = f - item.friction;
@@ -290,7 +290,7 @@ struct ContactLawDriverFunc {
 
       // only forces now
       if (need_forces(driver.motion_type)) {
-        lockAndAdd(driver.fields.forces, -f);
+        lockAndAdd(driver.forces(), -f);
       }
     } else {
       item.reset();
@@ -346,10 +346,10 @@ struct ContactLawRShapeDriverFunc {
     const double radius_i = cell[field::radius][p_i];
     // === driver j
     const auto& shp_d = driver.shp;
-    const Quaternion orient_d = driver.fields.quat;
+    const Quaternion orient_d = driver.orientation();
     constexpr double homothety_d = 1.0;
     auto [contact, dn, n, contact_position] =
-        detection(r_i, radius_i, driver.fields.center, homothety_d, sub_d, &shp_d, orient_d);
+        detection(r_i, radius_i, driver.position(), homothety_d, sub_d, &shp_d, orient_d);
     Vec3d fn = {0, 0, 0};
 
     // === types
@@ -373,7 +373,7 @@ struct ContactLawRShapeDriverFunc {
       Vec3d f = {0, 0, 0};
       contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item.friction, contact_position, r_i,
                                                   v_i, f, item.moment, vrot_i,                    // particle i
-                                                  driver.fields.center, driver.get_vel(), driver.fields.vrot);  // driver
+                                                  driver.position(), driver.velocity(), driver.angular_velocity());  // driver
 
       // === For analysis
       fn = f - item.friction;
@@ -386,10 +386,10 @@ struct ContactLawRShapeDriverFunc {
 
       // only forces now
       if (need_forces(driver.motion_type)) {
-        lockAndAdd(driver.fields.forces, -f);
+        lockAndAdd(driver.forces(), -f);
       }
       if (driver.need_moment()) {
-        lockAndAdd(driver.fields.mom, compute_moments(contact_position, driver.fields.center, -f, -item.moment));
+        lockAndAdd(driver.moment(), compute_moments(contact_position, driver.position(), -f, -item.moment));
       }
     } else {
       item.reset();

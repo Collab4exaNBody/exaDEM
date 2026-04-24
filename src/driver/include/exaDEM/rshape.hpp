@@ -216,7 +216,8 @@ struct RShapeDriver {
       }
     }
 
-    if (need_moment()) {
+    bool special_case = motion.expr.expr_use_mom;
+    if (need_moment() || special_case) {
       if (fields.inertia == exanb::Vec3d{0,0,0}) {
         color_log::error("RShape::initialize",
                          "Inertia should be defined, either params, either in a shape file.");
@@ -335,26 +336,20 @@ struct RShapeDriver {
       }
 
   /**
-   * @brief return driver velocity
+   * Fields Getters
    */
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& get_vel() {
-    return fields.vel;
-  }
-
-  /**
-   * @brief return driver orientatopn
-   */
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion& get_quat() {
-    return fields.quat;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields.center; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields.vel; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields.forces; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields.mom; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion& orientation() { return fields.quat; }
 
   /**
    * @brief return drive_by_mom
    */
   ONIKA_HOST_DEVICE_FUNC inline bool need_moment() const {
     if (fields.drive_by_mom) {
-      return true;
-    } else if (exaDEM::is_expr(motion_type)) {
       return true;
     } else if (motion_type == MotionType::PARTICLE) {
       return true;
