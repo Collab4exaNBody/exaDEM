@@ -30,33 +30,35 @@ using namespace onika::scg;
 struct force_to_accel {
   const double dt;
   const double mass;
+  Driver_params& motion;
 
   template <class T>
   inline void operator()(T& arg) {
     static_assert(get_type<T>() != DRIVER_TYPE::UNDEFINED);
     if constexpr (std::is_same_v<std::remove_cv_t<T>, Ball>) {
-      arg.motion.weigth = mass;
-      arg.f_ra(dt);
+      motion.weigth = mass;
+      arg.f_ra(motion, dt);
     }
     if constexpr (std::is_same_v<std::remove_cv_t<T>, Surface>) {
-      arg.motion.weigth = mass;
+      motion.weigth = mass;
     }
-    arg.force_to_accel();
+    arg.force_to_accel(motion);
   }
 };
 
 struct gather_forces_moment {
+  const Driver_params& motion;
   inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Ball& arg) {
-    if (arg.motion.is_compressive() || arg.motion.is_force_motion()) {
-      return {true, arg.motion.forces, {0, 0, 0}};
+    if (is_compressive(arg.motion_type) || is_force_motion(arg.motion_type)) {
+      return {true, arg.fields.forces, {0, 0, 0}};
     } else {
       return {false, {0, 0, 0}, {0, 0, 0}};
     }
   }
 
   inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Surface& arg) {
-    if (arg.motion.is_compressive() || arg.motion.is_force_motion()) {
-      return {true, arg.motion.forces, {0, 0, 0}};
+    if (is_compressive(arg.motion_type) || is_force_motion(arg.motion_type)) {
+      return {true, arg.fields.forces, {0, 0, 0}};
     } else {
       return {false, {0, 0, 0}, {0, 0, 0}};
     }
@@ -67,8 +69,8 @@ struct gather_forces_moment {
   }
 
   inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(RShapeDriver& arg) {
-    if (arg.motion.need_forces() || arg.need_moment()) {
-      return {true, arg.motion.forces, arg.fields.mom};
+    if (need_forces(arg.motion_type) || arg.need_moment()) {
+      return {true, arg.fields.forces, arg.fields.mom};
     }
     return {false, {0, 0, 0}, {0, 0, 0}};
   }
@@ -80,7 +82,7 @@ struct set_forces_moment {
 
   template <typename DriverT>
   inline void operator()(DriverT& arg) {
-    arg.motion.forces = forces;
+    arg.fields.forces = forces;
     if constexpr (std::is_same_v<std::decay_t<DriverT>, RShapeDriver>) {
       arg.fields.mom = moment;
     }
@@ -104,8 +106,8 @@ class ForceToAccelDriverFunctor : public OperatorNode {
     // we need to update forces if required
     std::vector<int> ids;      // id, forces
     std::vector<double> pack;  // id, forces
-    gather_forces_moment reduce;
     for (size_t id = 0; id < drivers->get_size(); id++) {
+      gather_forces_moment reduce = {drivers->get_motion(id)};
       auto [update, forces, moment] = drivers->apply(id, reduce);
       if (update) {
         ids.push_back(id);
@@ -129,8 +131,8 @@ class ForceToAccelDriverFunctor : public OperatorNode {
         drivers->apply(id, func);
       }
     }
-    force_to_accel func = {*dt, *system_mass};
     for (size_t id = 0; id < drivers->get_size(); id++) {
+      force_to_accel func = {*dt, *system_mass, drivers->get_motion(id)};
       drivers->apply(id, func);
     }
   }

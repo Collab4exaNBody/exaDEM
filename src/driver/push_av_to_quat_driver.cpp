@@ -27,10 +27,11 @@ using namespace onika::scg;
 struct PushAVToQuatFunc {
   const double t;
   const double dt;
+  Driver_params& motion;
   template <typename T>
   inline void operator()(T& drv) const {
     if constexpr (std::is_same_v<std::remove_cv_t<T>, exaDEM::RShapeDriver>) {
-      drv.push_av_to_quat(t, dt);
+      drv.push_av_to_quat(motion, t, dt);
     }
   }
 };
@@ -54,8 +55,8 @@ class PushAngularVelocityToQuaternionDriver : public OperatorNode {
   inline void execute() final {
     double time = *physical_time;
     double incr_time = *dt;
-    PushAVToQuatFunc func = {time, incr_time};
     for (size_t id = 0; id < drivers->get_size(); id++) {
+      PushAVToQuatFunc func = {time, incr_time, drivers->get_motion(id)};
       drivers->apply(id, func);
     }
   }

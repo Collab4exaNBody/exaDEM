@@ -40,9 +40,11 @@ struct Drivers {
     int m_index = -1;
   };
 
-  vector_t<DriverTypeAndIndex> m_type_index; /**< Vector storing the types of drivers. */
+  vector_t<DriverTypeAndIndex> m_type_index;        /**< Vector storing the types of drivers. */
   /** just a duplicate on CPU to avoid weird copies from GPU */
   std::vector<DriverTypeAndIndex> m_type_index_cpu; /**< Vector storing the types of drivers. */
+  //vector_t<Driver_params> m_motion; /**< Vector storing the motion drivers parameters. */
+  std::vector<Driver_params> m_motion;              /**< Vector storing the motion data drivers. */
   onika::FlatTuple<vector_t<Cylinder>, vector_t<Surface>, vector_t<Ball>, vector_t<RShapeDriver> > m_data;
 
   /**
@@ -138,7 +140,7 @@ struct Drivers {
    * is undefined, it will throw a static assertion error.
    */
   template <typename T>
-  inline void add_driver(const int idx, T& Driver) {
+  inline void add_driver(const int idx, T& Driver, Driver_params& motion) {
     constexpr DRIVER_TYPE t = get_type<T>();
     static_assert(t != DRIVER_TYPE::UNDEFINED);
     const int size = m_type_index.size();
@@ -151,6 +153,7 @@ struct Drivers {
     } else {  // allocate
       m_type_index.resize(idx + 1);
       m_type_index_cpu.resize(idx + 1);
+      m_motion.resize(idx + 1);
     }
     m_type_index[idx].m_type = t;
     m_type_index_cpu[idx].m_type = t;
@@ -158,6 +161,7 @@ struct Drivers {
     m_type_index[idx].m_index = driver_vec.size();
     m_type_index_cpu[idx].m_index = driver_vec.size();
     driver_vec.push_back(Driver);
+    m_motion[idx] = motion;
   }
 
   /**
@@ -166,6 +170,7 @@ struct Drivers {
   void clear() {
     m_type_index.clear();
     m_type_index_cpu.clear();
+    m_motion.clear();
     m_data.get_nth<DRIVER_TYPE::CYLINDER>().clear();
     m_data.get_nth<DRIVER_TYPE::SURFACE>().clear();
     m_data.get_nth<DRIVER_TYPE::BALL>().clear();
@@ -183,6 +188,18 @@ struct Drivers {
   inline DRIVER_TYPE type(size_t idx) {
     assert(idx < m_type_index.size());
     return m_type_index[idx].m_type;
+  }
+
+
+  /**
+   * @brief Returns the data related to the drvier motion of driver at the specified index.
+   * @param idx The index of the driver.
+   * @return The data related to the motion at the specified index.
+   */
+  inline Driver_params& get_motion(const int idx) {
+    assert(idx < m_motion.size());
+    assert(m_motion.size() == m_type_index.size());
+    return m_motion[idx];
   }
 
   /**
@@ -206,15 +223,27 @@ struct Drivers {
       auto t = m_type_index_cpu[i].m_type;
       if (t != DRIVER_TYPE::UNDEFINED) {
         exanb::lout << "Driver [" << i << "]:" << std::endl;
+        MotionType motion_type;
         if (t == DRIVER_TYPE::CYLINDER) {
-          m_data.get_nth_const<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[i].m_index].print();
+          auto& driver = m_data.get_nth_const<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[i].m_index];
+          driver.print();
+          motion_type = driver.motion_type;
         } else if (t == DRIVER_TYPE::SURFACE) {
-          m_data.get_nth_const<DRIVER_TYPE::SURFACE>()[m_type_index_cpu[i].m_index].print();
+          auto& driver = m_data.get_nth_const<DRIVER_TYPE::SURFACE>()[m_type_index_cpu[i].m_index];
+          driver.print();
+          motion_type = driver.motion_type;
         } else if (t == DRIVER_TYPE::BALL) {
-          m_data.get_nth_const<DRIVER_TYPE::BALL>()[m_type_index_cpu[i].m_index].print();
+          auto& driver = m_data.get_nth_const<DRIVER_TYPE::BALL>()[m_type_index_cpu[i].m_index];
+          driver.print();
+          motion_type = driver.motion_type;
         } else if (t == DRIVER_TYPE::RSHAPE) {
-          m_data.get_nth_const<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[i].m_index].print();
+          auto& driver = m_data.get_nth_const<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[i].m_index];
+          driver.print();
+          motion_type = driver.motion_type;
+        } else {
+          continue;
         }
+        m_motion[i].print_driver_params(motion_type);
       }
     }
   }

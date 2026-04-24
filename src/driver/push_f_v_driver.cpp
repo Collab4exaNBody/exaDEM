@@ -26,17 +26,18 @@ namespace exaDEM {
 using namespace onika::scg;
 struct PushForceVeloctyDriverFunc {
   const double dt;
+  const Driver_params& motion;
 
   inline void operator()(Ball& arg) const {
-    arg.push_f_v(dt);
+    arg.push_f_v(motion, dt);
   }
 
   inline void operator()(Surface& arg) const {
-    arg.push_f_v(dt);
+    arg.push_f_v(motion, dt);
   }
 
   inline void operator()(RShapeDriver& arg) const {
-    arg.push_f_v(dt);
+    arg.push_f_v(motion, dt);
   }
 
   inline void operator()(Cylinder&) const {
@@ -61,9 +62,10 @@ class PushAccelToVelocityDriver : public OperatorNode {
 
   inline void execute() final {
     const double t = *dt;
-    PushForceVeloctyDriverFunc func = {t};
+    auto& drvs = *drivers;
     for (size_t id = 0; id < drivers->get_size(); id++) {
-      drivers->apply(id, func);
+      PushForceVeloctyDriverFunc func = {t, drvs.get_motion(id)};
+      drvs.apply(id, func);
     }
   }
 };

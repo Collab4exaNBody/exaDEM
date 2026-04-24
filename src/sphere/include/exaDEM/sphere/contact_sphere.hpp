@@ -289,8 +289,8 @@ struct ContactLawDriverFunc {
       lockAndAdd(cell[field::fz][p], f.z);
 
       // only forces now
-      if (driver.motion.need_forces()) {
-        lockAndAdd(driver.motion.forces, -f);
+      if (need_forces(driver.motion_type)) {
+        lockAndAdd(driver.fields.forces, -f);
       }
     } else {
       item.reset();
@@ -385,8 +385,8 @@ struct ContactLawRShapeDriverFunc {
       lockAndAdd(cell[field::fz][p_i], f.z);
 
       // only forces now
-      if (driver.motion.need_forces()) {
-        lockAndAdd(driver.motion.forces, -f);
+      if (need_forces(driver.motion_type)) {
+        lockAndAdd(driver.fields.forces, -f);
       }
       if (driver.need_moment()) {
         lockAndAdd(driver.fields.mom, compute_moments(contact_position, driver.fields.center, -f, -item.moment));

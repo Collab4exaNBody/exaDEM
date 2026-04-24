@@ -289,8 +289,8 @@ struct ContactLawDriverFunc {
       lockAndAdd(cell[field::fy][p], f.y);
       lockAndAdd(cell[field::fz][p], f.z);
 
-      if (driver.motion.need_forces()) {
-        lockAndAdd(driver.motion.forces, -f);
+      if (need_forces(driver.motion_type)) {
+        lockAndAdd(driver.fields.forces, -f);
       }
     } else {
       item.reset();
@@ -395,8 +395,8 @@ struct ContactLawRShapeDriverFunc {
         lockAndAdd(cell[field::fx][pi.p], f.x);
         lockAndAdd(cell[field::fy][pi.p], f.y);
         lockAndAdd(cell[field::fz][pi.p], f.z);
-        if (driver.motion.need_forces()) {
-          lockAndAdd(driver.motion.forces, -f);
+        if (need_forces(driver.motion_type)) {
+          lockAndAdd(driver.fields.forces, -f);
         }
       }
 
@@ -415,8 +415,8 @@ struct ContactLawRShapeDriverFunc {
         lockAndAdd(cell[field::fy][pi.p], -f.y);
         lockAndAdd(cell[field::fz][pi.p], -f.z);
         item.friction = -item.friction;
-        if (driver.motion.need_forces()) {
-          lockAndAdd(driver.motion.forces, f);
+        if (need_forces(driver.motion_type)) {
+          lockAndAdd(driver.fields.forces, f);
         }
       }
     } else {

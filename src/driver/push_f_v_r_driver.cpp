@@ -28,10 +28,11 @@ using namespace exanb;
 struct PushFVRDriverFunc {
   double time;
   double delta_t;
+  Driver_params& motion;
   template<typename VectorT>
   void operator()(VectorT& driver) {
-    if (driver.motion.is_motion_triggered(time + delta_t)) {
-      driver.push_f_v_r(time, delta_t);
+    if (motion.is_motion_triggered(time + delta_t)) {
+      driver.push_f_v_r(motion, time, delta_t);
     }
   }
 };
@@ -49,9 +50,10 @@ class PushAccVelocityToPositionDriver : public OperatorNode {
   }
 
   inline void execute() final {
-    PushFVRDriverFunc func = {*physical_time, *dt};
+    auto& drvs = *drivers;
     for (size_t id = 0; id < drivers->get_size(); id++) {
-      drivers->apply(id, func);
+      PushFVRDriverFunc func = {*physical_time, *dt, drvs.get_motion(id)};
+      drvs.apply(id, func);
     }
   }
 };

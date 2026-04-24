@@ -133,10 +133,10 @@ class RegisterRShapeDriver : public OperatorNode {
     // shp.increase_obb(*rcut_inc);
     shp.increase_obb(shp.m_radius);
 
-    exaDEM::RShapeDriver driver = {*state, *params};
+    exaDEM::RShapeDriver driver = {*state, params->input_motion_type};
     driver.set_shape(shp);
-    driver.initialize();
-    drivers->add_driver(*id, driver);
+    driver.initialize(*params);
+    drivers->add_driver(*id, driver, *params);
     exanb::lout << "========= STL Mesh ==============" << std::endl;
     exanb::lout << "Name     = " << *filename << std::endl;
     exanb::lout << "=================================" << std::endl;

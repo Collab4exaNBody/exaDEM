@@ -32,6 +32,7 @@ struct SurfaceFields {
   /** optional */
   exanb::Vec3d vel = {0, 0, 0};                                /**< Velocity of the surface. */
   exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};                   /**< Angular velocity of the surface. */
+  exanb::Vec3d forces = {0, 0, 0}; /**< sum of the forces applied to the driver. */
   double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the ball */
   double surface = -1;
   /** no need to dump them */
@@ -88,7 +89,7 @@ namespace exaDEM {
  */
 struct Surface {
   SurfaceFields fields;
-  Driver_params motion;
+  MotionType motion_type;
   /**
    * @brief Get the type of the driver (in this case, SURFACE).
    * @return The type of the driver.
@@ -107,17 +108,16 @@ struct Surface {
     exanb::lout << "Center: " << fields.center << std::endl;
     exanb::lout << "Vel   : " << fields.vel << std::endl;
     exanb::lout << "AngVel: " << fields.vrot << std::endl;
-    if (motion.is_compressive()) {
+    if (is_compressive(motion_type)) {
       exanb::lout << "Acceleration: " << fields.acc << std::endl;
       exanb::lout << "Surface Value [>0]: " << fields.surface << std::endl;
     }
-    motion.print_driver_params();
   }
 
   /**
    * @brief Write surface data into a stream.
    */
-  inline void dump_driver(int id, std::stringstream& stream) {
+  inline void dump_driver(const Driver_params& motion, int id, std::stringstream& stream) {
     stream << "  - register_surface:" << std::endl;
     stream << "     id: " << id << std::endl;
     stream << "     state: {offset: " << fields.offset;
@@ -127,14 +127,14 @@ struct Surface {
     stream << ", vrot: [" << fields.vrot << "]";
     stream << ", surface: " << fields.surface;
     stream << "}" << std::endl;
-    motion.dump_driver_params(stream);
+    motion.dump_driver_params(motion_type, stream);
   }
 
   /**
    * @brief Initialize the surface.
    * @details Calculates the center position based on the normal and offset.
    */
-  inline void initialize() {
+  inline void initialize(Driver_params& motion) {
     const std::vector<MotionType> surface_valid_motion_types = {
       STATIONARY,
       LINEAR_MOTION,
@@ -144,7 +144,7 @@ struct Surface {
 
     fields.center_proj = fields.offset * fields.normal;
 
-    if (motion.motion_type == PENDULUM_MOTION) {
+    if (motion_type == PENDULUM_MOTION) {
       if (fields.center != motion.pendulum_anchor_point) {
         color_log::warning("register_surface", "Surface center should be equal to pendulum_anchor_point");
         color_log::warning("register_surface",
@@ -168,16 +168,16 @@ struct Surface {
                          std::to_string(fields.center) + "] and center_proj is: [" + std::to_string(fields.center_proj) + "]");
     }
 
-    if (!motion.is_valid_motion_type(surface_valid_motion_types)) {
+    if (!is_valid_motion_type(motion_type, surface_valid_motion_types)) {
       color_log::error("register_surface", "Invalid Motion Type.");
-    } else if (!motion.check_motion_coherence()) {
+    } else if (!motion.check_motion_coherence(motion_type)) {
       color_log::error("register_surface", "Invalid Coherency [Motion Type].");
     } else if (fields.mass <= 0.0) {
       color_log::error("register_surface", "Please, define a positive mass.");
     }
-    if (motion.is_linear()) {
+    if (is_linear(motion_type)) {
       // We do not accept that motion_vector is not equal to -normal for compression mode
-      if (fields.normal != motion.motion_vector && (fields.normal != -motion.motion_vector && !motion.is_compressive())) {
+      if (fields.normal != motion.motion_vector && (fields.normal != -motion.motion_vector && !is_compressive(motion_type))) {
         color_log::warning("register_surface",
                            "The motion vector of the surface has been adjusted to align with the normal vector, i.e. "
                            "the motion vecor[" +
@@ -186,7 +186,7 @@ struct Surface {
       }
     }
 
-    if (motion.is_compressive()) {
+    if (is_compressive(motion_type)) {
       if (fields.surface <= 0) {
         color_log::error("register_surface",
                          "The surface value must be positive for LINEAR_COMPRESSIVE_FORCE. You need to specify "
@@ -195,13 +195,13 @@ struct Surface {
     }
   }
 
-  void force_to_accel() {
-    if (motion.is_compressive()) {
+  void force_to_accel(const Driver_params& motion) {
+    if (is_compressive(motion_type)) {
       constexpr double C = 0.5;
       if (motion.weigth != 0) {
         const double s = fields.surface;
         // acc = (exanb::norm(forces) - sigma * s - (damprate * exanb::norm(vel)) ) / (weigth * C);
-        exanb::Vec3d tmp = (motion.forces - motion.sigma * s * motion.motion_vector) / (motion.weigth * C);
+        exanb::Vec3d tmp = (fields.forces - motion.sigma * s * motion.motion_vector) / (motion.weigth * C);
         // get acc into the motion vector axis
         fields.acc = exanb::dot(tmp, motion.motion_vector);
       } else {
@@ -210,16 +210,16 @@ struct Surface {
     }
   }
 
-  inline void push_f_v(const double dt) {
-    if (motion.is_stationary()) {
+  inline void push_f_v(const Driver_params& motion, const double dt) {
+    if (is_stationary(motion_type)) {
       fields.vel = {0, 0, 0};
     } else {
-      if (motion.is_compressive()) {
+      if (is_compressive(motion_type)) {
         if (motion.sigma != 0) {
           fields.vel += 0.5 * dt * fields.acc * motion.motion_vector;
         }
       }
-      if (motion.motion_type == LINEAR_MOTION) {
+      if (motion_type == LINEAR_MOTION) {
         fields.vel = motion.const_vel * motion.motion_vector;  // I prefere reset it
       }
     }
@@ -237,13 +237,13 @@ struct Surface {
    * @param time Current physical time.
    * @param dt The time step.
    */
-  inline void push_f_v_r(const double time, const double dt) {
-    if (!motion.is_stationary()) {
-      if (motion.motion_type == LINEAR_MOTION) {
+  inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
+    if (!is_stationary(motion_type)) {
+      if (motion_type == LINEAR_MOTION) {
         assert(motion.vel == motion.const_vel * motion.motion_vector);
       }
 
-      if (motion.motion_type == PENDULUM_MOTION) {
+      if (motion_type == PENDULUM_MOTION) {
         auto [Offset, Normal] = motion.compute_offset_normal_pendulum_motion(time + dt);
         fields.normal = Normal;
         fields.offset = Offset;
@@ -256,7 +256,7 @@ struct Surface {
 
       /** The shaker motion changes the displacement behavior */
       /** the shaker direction vector is ignored, the normal vector is used */
-      if (motion.motion_type == SHAKER) {
+      if (motion_type == SHAKER) {
         double signal_next = motion.shaker_signal(time + dt);
         double signal_current = motion.shaker_signal(time);
         const double angle_factor = exanb::dot(motion.shaker_direction(), fields.normal);
