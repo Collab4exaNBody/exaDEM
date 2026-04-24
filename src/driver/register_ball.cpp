@@ -23,13 +23,13 @@ under the License.
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
+using namespace onika::scg;
 class RegisterBall : public OperatorNode {
   const Driver_params default_params = Driver_params();
 
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(int, id, INPUT, REQUIRED, DocString{"Driver index"});
-  ADD_SLOT(
-      Ball_params, state, INPUT, REQUIRED,
+  ADD_SLOT(BallFields, state, INPUT, REQUIRED,
       DocString{
           "Current ball state, default is {radius: REQUIRED, center: REQUIRED, vel: [0,0,0], vrot: [0,0,0], rv: 0, "
           "ra: 0}. You need to specify the radius and center"});

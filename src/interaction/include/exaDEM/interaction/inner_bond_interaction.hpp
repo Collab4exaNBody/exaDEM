@@ -147,6 +147,29 @@ struct InnerBondInteraction {
   }
 };
 
+/**
+ * @brief Convert an active inner bond interaction into a vertex-vertex interaction.
+ *
+ * This function transforms an InnerBondInteraction into a generic Interaction
+ * of type Vertex-Vertex. The resulting interaction preserves the pair information
+ * and friction, while resetting the moment to zero.
+ *
+ * @param I The input inner bond interaction to convert.
+ * @return Interaction The resulting vertex-vertex interaction.
+ *
+ * @note Assumes that the interaction is already broken (unbroken == false).
+ */
+ONIKA_HOST_DEVICE_FUNC inline
+Interaction broke_interaction(const InnerBondInteraction& I) {
+  assert(unbroken == false);
+  Interaction res;
+  res.pair = I.pair;
+  res.pair.type = InteractionTypeId::VertexVertex;
+  res.friction = I.friction;
+  res.moment = exanb::Vec3d{0,0,0};
+  return res;
+}
+
 static_assert(std::is_trivially_copyable_v<InnerBondInteraction>,
               "Interaction must remain trivially copyable");
 }  // namespace exaDEM

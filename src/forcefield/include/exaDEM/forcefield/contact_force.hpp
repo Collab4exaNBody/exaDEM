@@ -196,10 +196,11 @@ ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
     double threshold_ft;
 
     // - Fit tangential force
-    if constexpr (!LawComboTraits<LawCombo>::cohesive)
+    if constexpr (!LawComboTraits<LawCombo>::cohesive) {
       threshold_ft = exaDEM::compute_threshold_ft(hkp.mu, hkp.kn, dn);
-    else
+    } else {
       threshold_ft = exaDEM::compute_threshold_ft_with_cohesive_force(hkp.mu, exanb::dot(fn, n), hkp.fc);
+    }
     exaDEM::fit_tangential_force(threshold_ft, ft);
   }
 

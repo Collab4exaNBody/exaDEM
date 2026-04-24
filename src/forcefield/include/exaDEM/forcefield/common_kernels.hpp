@@ -48,7 +48,8 @@ ONIKA_HOST_DEVICE_FUNC
 inline double normal_force(const double kn, const double damp, const double dn, const double vn) {
   const double fne = -kn * dn;   // elastic contact
   const double fnv = damp * vn;  // viscous damping
-  return fnv + fne;
+  //return fnv + fne;
+  return (fnv + fne > 0) ? fnv + fne : 0;
 }
 
 // === Normal force (elatic contact + viscous damping)

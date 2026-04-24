@@ -24,6 +24,7 @@ under the License.
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
+using namespace onika::scg;
 class InitDrivers : public OperatorNode {
   ADD_SLOT(Drivers, drivers, OUTPUT, DocString{"List of Drivers"});
 

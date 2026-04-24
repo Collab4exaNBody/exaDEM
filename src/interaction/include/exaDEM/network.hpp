@@ -29,6 +29,20 @@ under the License.
 
 namespace exaDEM
 {
+
+  struct NetworkForceType {
+    int ni = 0;
+    Vec3d fn = {0, 0, 0};
+    Vec3d ft = {0, 0, 0};
+
+    // Addition in place
+    void add(const Vec3d& _fn, const Vec3d& _ft) {
+      ni ++;
+      fn += _fn;
+      ft += _ft;
+    }
+  };
+
   /**
    * @brief Functor for contact network operations on a grid.
    *
@@ -39,16 +53,18 @@ namespace exaDEM
    */
   template <typename GridT> struct NetworkFunctor
   {
-    using IdType = std::pair<size_t, size_t>;     ///< Type for identifying particles.
-    using ForceType = double;                     ///< Type for representing forces (could be a vec3d).
-    using CoupleType = std::pair<IdType, IdType>; ///< Type for identifying couples of particles.
-    using StorageType = ForceType;                ///< Type for storing forces.
-    using KeyType = CoupleType;                   ///< Type used as keys in data storage.
+    using IdType = std::pair<size_t, size_t>;      ///< Type for identifying particles.
+    using ForceType = NetworkForceType;            ///< Type for representing forces (could be a vec3d).
+    using CoupleType = std::pair<IdType, IdType>;  ///< Type for identifying couples of particles.
+    using StorageType = ForceType;                 ///< Type for storing forces.
+    using KeyType = CoupleType;                    ///< Type used as keys in data storage.
 
     GridT& grid; ///< Pointer to the cells of the grid.
     std::stringstream pos; // store particle positions
     std::stringstream connect; // store interaction connections
-    std::stringstream val; // store force values
+    std::stringstream ni; // store number of interactions
+    std::stringstream fn; // store normal force values
+    std::stringstream ft; // store t force values
 
     // TODO optimize if later with another data storage
     std::map<KeyType, StorageType> network; ///< Stores network data, with keys defined by KeyType and values by StorageType.
@@ -56,8 +72,9 @@ namespace exaDEM
     NetworkFunctor(GridT &g) : grid(g) {}
 
     template<typename InteractionT>
-    void add(InteractionT& I, double value)
-    {
+    void add(InteractionT& I,
+             const Vec3d& fn,
+             const Vec3d& ft) {
       auto& pi = I.i();
       auto& pj = I.j();
       // === build contact network key
@@ -65,31 +82,29 @@ namespace exaDEM
       IdType j = {pj.cell, pj.p};
       KeyType key = {i, j};
       auto it = network.find(key);
-      if (it != network.end())
-      {
-        it->second += value;
-      }
-      else
-      {
-        network[key] = value;
+      if (it != network.end()) {
+        it->second.add(fn, ft);
+      } else {
+        network[key] = {1, fn, ft};
       }
     }
 
     template<typename Is, typename Data> 
-      void operator()(const size_t size, Is& interactions, Data& data)
-      {
-        Vec3d* fn = onika::cuda::vector_data(data.fn); 
-        Vec3d* ft = onika::cuda::vector_data(data.ft);
-        for(size_t i = 0; i < size ; i++)
-        {
-          const double f = exanb::norm(fn[i] + ft[i]);
-          if( f != 0)
-          {
-            auto I = interactions[i];
-            if (filter_duplicates(I)) add(I, f);
+    void operator()(const size_t size, Is& interactions, Data& data) {
+      Vec3d* fn = onika::cuda::vector_data(data.fn); 
+      Vec3d* ft = onika::cuda::vector_data(data.ft);
+      for(size_t i = 0; i < size ; i++) {
+        const Vec3d fni = fn[i];
+        const Vec3d fti = ft[i];
+        const double f = exanb::norm(fni+fti);
+        if( f != 0) {
+          auto I = interactions[i];
+          if (filter_duplicates(I)) {
+            add(I, fni, fti);
           }
-        } 
-      }
+        }
+      } 
+    }
 
     /**
      * @brief Creates an indirection array for particle indexes (cell_id, pos_id).
@@ -105,7 +120,11 @@ namespace exaDEM
         auto& [cell_j, p_j] = j;
         pos << " " << cells[cell_i][field::rx][p_i] << " " << cells[cell_i][field::ry][p_i] << " " << cells[cell_i][field::rz][p_i];
         pos << " " << cells[cell_j][field::rx][p_j] << " " << cells[cell_j][field::ry][p_j] << " " << cells[cell_j][field::rz][p_j];
-        val << " " << it.second << " " << it.second;
+        ni << " " << it.second.ni << " " << it.second.ni;
+        fn << " " << it.second.fn.x << " " << it.second.fn.y << " " << it.second.fn.z
+            << " " << it.second.fn.x << " " << it.second.fn.y << " " << it.second.fn.z;
+        ft << " " << it.second.ft.x << " " << it.second.ft.y << " " << it.second.ft.z
+            << " " << it.second.ft.x << " " << it.second.ft.y << " " << it.second.ft.z;
       }
     }
 
@@ -133,9 +152,17 @@ namespace exaDEM
       outFile << "  <PolyData>" << std::endl;
       outFile << "    <Piece NumberOfPoints=\"" << n_interactions*2 << "\" NumberOfLines=\"" << n_interactions << "\">" << std::endl;
       outFile << "    <PointData>" << std::endl;
-      outFile << "      <DataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+      outFile << "      <DataArray type=\"Int32\" Name=\"N\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
       if (n_interactions != 0)
-        outFile << val.rdbuf() << std::endl;
+        outFile << ni.rdbuf() << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "      <DataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+      if (n_interactions != 0)
+        outFile << fn.rdbuf() << std::endl;
+      outFile << "      </DataArray>" << std::endl;
+      outFile << "      <DataArray type=\"Float64\" Name=\"ft\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+      if (n_interactions != 0)
+        outFile << ft.rdbuf() << std::endl;
       outFile << "      </DataArray>" << std::endl;
       outFile << "    </PointData>" << std::endl;
       outFile << "    <Points>" << std::endl;
@@ -182,11 +209,13 @@ namespace exaDEM
       outFile << "<?xml version=\"1.0\"?>" << std::endl;
       outFile << "<VTKFile type=\"PPolyData\"> " << std::endl;
       outFile << "   <PPolyData GhostLevel=\"0\">" << std::endl;
-      outFile << "     <PPoints Scalar=\"fn\">" << std::endl;
+      outFile << "     <PPoints>" << std::endl;
       outFile << "       <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
       outFile << "     </PPoints> " << std::endl;
       outFile << "     <PPointData>" << std::endl;
-      outFile << "       <PDataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"1\"/>" << std::endl;
+      outFile << "       <PDataArray type=\"Int32\" Name=\"N\" NumberOfComponents=\"1\"/>" << std::endl;
+      outFile << "       <PDataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"3\"/>" << std::endl;
+      outFile << "       <PDataArray type=\"Float64\" Name=\"ft\" NumberOfComponents=\"3\"/>" << std::endl;
       outFile << "     </PPointData>" << std::endl;
       std::filesystem::path full_path(basename);
       std::string directory = full_path.filename().string();

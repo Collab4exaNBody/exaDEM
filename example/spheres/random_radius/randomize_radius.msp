@@ -1,0 +1,46 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+input_data:
+  - particle_type:
+     type: [ Sphere1 ]
+  - read_xyz:
+     file: input_file_rigid_surface.xyz
+  - set_fields:
+     polyhedra: false
+     type:            [ Sphere1 ]
+     radius :         [     0.5 ]
+     density :        [    0.02 ]
+     velocity :       [ [0,0,0] ]
+     sigma_velocity : [     0.1 ]
+  - randomize_radius:
+     relative_deviation: 0.3
+     allow_exceed: false
+
+
+setup_drivers:
+  - register_surface:
+     id: 0
+     state: {normal: [0,0,1], offset: -0.5}
+     params: { motion_type: STATIONARY }
+
+compute_force:
+  - gravity_force
+  - contact_singlemat_sphere_hooke_cohesive:
+     symetric: true
+     config: { dncut: 0.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.2, damp_rate: 0.9} 
+     config_driver: { dncut: 0.1 m , kn: 100000, kt: 80000, kr: 0.1, fc: 0.05, mu: 0.5, damp_rate: 0.9} 
+
+domain:
+  cell_size: 2.5 m
+  periodic: [false,false,false]
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 50
+  simulation_log_frequency: 10
+  simulation_paraview_frequency: 10
+  dt: 0.0001 s 
+  rcut_inc: 0.4 m

@@ -33,29 +33,53 @@ struct par_obb_helper {
   std::stringstream types;
 };
 
+/**
+ * @brief Helper for assembling parallel polygonal data (MPI / VTK).
+ */
 struct par_poly_helper {
-  bool mpi_rank;
-  int n_vertices = 0;
-  int n_lines = 0;
-  int n_faces = 0;
-  int n_polygons = 0;
-  uint64_t incr_offset = 0;
-  uint64_t incr_line_offset = 0;
-  std::stringstream vertices;
-  std::stringstream lines;
-  std::stringstream faces;
-  std::stringstream line_offsets;
-  std::stringstream tube_size;
-  std::stringstream offsets;
-  std::stringstream ids;
-  std::stringstream types;
-  std::stringstream velocities;
-  std::stringstream ranks;
+
+  bool mpi_rank;          ///< MPI rank flag
+  bool has_cluster;       ///< Cluster data available
+
+  int n_vertices = 0;     ///< Number of vertices
+  int n_lines = 0;        ///< Number of lines
+  int n_faces = 0;        ///< Number of faces
+  int n_polygons = 0;     ///< Number of polygons
+
+  uint64_t incr_offset = 0;       ///< Polygon connectivity offset
+  uint64_t incr_line_offset = 0;  ///< Line connectivity offset
+
+  std::stringstream vertices;     ///< Vertex coordinates
+  std::stringstream lines;        ///< Line connectivity
+  std::stringstream faces;        ///< Face connectivity
+  std::stringstream line_offsets; ///< Line offsets
+  std::stringstream tube_size;    ///< Tube size (visualization)
+  std::stringstream offsets;      ///< Polygon offsets
+  std::stringstream ids;          ///< IDs
+  std::stringstream types;        ///< Cell types
+  std::stringstream velocities;   ///< Velocity field
+  std::stringstream clusters;     ///< Cluster IDs
+  std::stringstream ranks;        ///< MPI ranks
 };
 
+/**
+ * @brief Build polyhedron data into stream buffers.
+ *
+ * @tparam has_field_cluster Enable cluster field output.
+ * @param pos      Position of the polyhedron.
+ * @param shp      Pointer to shape definition.
+ * @param orient   Orientation (quaternion).
+ * @param id       Element ID.
+ * @param type     Element type.
+ * @param vx,vy,vz Velocity components.
+ * @param h        Homoethety.
+ * @param cluster  Cluster ID (used if has_field_cluster).
+ * @param buffers  Output buffer helper.
+ */
+template<bool has_field_cluster>
 inline void build_buffer_polyhedron(const exanb::Vec3d& pos, const shape* shp, const exanb::Quaternion& orient,
                                     uint64_t id, uint16_t type, double vx, double vy, double vz, double h,
-                                    par_poly_helper& buffers) {
+                                    uint32_t cluster, par_poly_helper& buffers) {
   auto writer_v = [&buffers](const exanb::Vec3d& v, const exanb::Vec3d& p, const double& h,
                              const exanb::Quaternion& q) {
     exanb::Vec3d new_pos = p + q * (h * v);
@@ -63,14 +87,19 @@ inline void build_buffer_polyhedron(const exanb::Vec3d& pos, const shape* shp, c
   };
 
   auto writer_components = [&buffers](const exanb::Vec3d& v, uint64_t i, uint16_t t, double v_x, double v_y,
-                                      double v_z) {
+                                      double v_z, uint32_t c) {
     buffers.ids << " " << i;
     buffers.types << " " << t;
     buffers.velocities << " " << v_x << " " << v_y << " " << v_z;
+    if constexpr (has_field_cluster) {
+      buffers.clusters << " " << c;
+    }
   };
 
+  buffers.has_cluster = has_field_cluster;
+
   shp->for_all_vertices(writer_v, pos, h, orient);
-  shp->for_all_vertices(writer_components, id, type, vx, vy, vz);
+  shp->for_all_vertices(writer_components, id, type, vx, vy, vz, cluster);
 
   size_t n_faces = shp->get_number_of_faces();
   buffers.n_polygons += n_faces;
@@ -152,9 +181,9 @@ inline void build_buffer_obb(const exanb::Vec3d& pos, const uint64_t id, const u
   add_offset(2);                 // 5
   add_offset(2);                 // 6
   buffers.lines << " " << count  // 1
-                << " " << count + 1 << " " << count + 2 << " " << count + 3 << " " << count;
+      << " " << count + 1 << " " << count + 2 << " " << count + 3 << " " << count;
   buffers.lines << " " << count + 4  // 2
-                << " " << count + 5 << " " << count + 6 << " " << count + 7 << " " << count + 4;
+      << " " << count + 5 << " " << count + 6 << " " << count + 7 << " " << count + 4;
   buffers.lines << " " << count << " " << count + 4;      // 3
   buffers.lines << " " << count + 1 << " " << count + 5;  // 4
   buffers.lines << " " << count + 2 << " " << count + 6;  // 5
@@ -182,7 +211,7 @@ inline void write_vtp_polyhedron(std::string name, par_poly_helper& buffers) {
   outFile << "<VTKFile type=\"PolyData\">" << std::endl;
   outFile << "  <PolyData>" << std::endl;
   outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices << "\" NumberOfLines=\"" << buffers.n_lines
-          << "\" NumberOfPolys=\"" << buffers.n_polygons << "\">" << std::endl;
+      << "\" NumberOfPolys=\"" << buffers.n_polygons << "\">" << std::endl;
   outFile << "    <PointData>" << std::endl;
 
   /// PARTICLE FIELDS
@@ -193,20 +222,31 @@ inline void write_vtp_polyhedron(std::string name, par_poly_helper& buffers) {
   outFile << buffers.types.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
   outFile << "      <DataArray type=\"Float64\" Name=\"Velocity\"  NumberOfComponents=\"3\" format=\"ascii\">"
-          << std::endl;
+      << std::endl;
   outFile << buffers.velocities.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
-  if (buffers.mpi_rank)  // MPI  rank - optional
-  {
-    outFile << "      <DataArray type=\"Int32\" Name=\"MPI rank\"  NumberOfComponents=\"1\" format=\"ascii\">"
-            << std::endl;
-    if (buffers.n_vertices != 0) outFile << buffers.ranks.rdbuf() << std::endl;
+
+  if (buffers.has_cluster) {  // only for fragmentation
+    outFile << "      <DataArray type=\"Int32\" Name=\"Cluster\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+    if (buffers.n_vertices != 0) {
+      outFile << buffers.clusters.rdbuf() << std::endl;
+    }
+    outFile << "      </DataArray>" << std::endl;
+  }
+
+  if (buffers.mpi_rank) {  // MPI  rank - optional
+    outFile << "      <DataArray type=\"Int32\" Name=\"MPI rank\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+    if (buffers.n_vertices != 0) {
+      outFile << buffers.ranks.rdbuf() << std::endl;
+    }
     outFile << "      </DataArray>" << std::endl;
   }
   outFile << "    </PointData>" << std::endl;
   outFile << "    <Points>" << std::endl;
   outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-  if (buffers.n_vertices != 0) outFile << buffers.vertices.rdbuf() << std::endl;
+  if (buffers.n_vertices != 0) {
+    outFile << buffers.vertices.rdbuf() << std::endl;
+  }
   outFile << "      </DataArray>" << std::endl;
   outFile << "    </Points>" << std::endl;
   if (buffers.n_lines != 0) {
@@ -229,7 +269,9 @@ inline void write_vtp_polyhedron(std::string name, par_poly_helper& buffers) {
     outFile << buffers.faces.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
     outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
-    if (buffers.n_polygons != 0) outFile << buffers.offsets.rdbuf() << std::endl;
+    if (buffers.n_polygons != 0) {
+      outFile << buffers.offsets.rdbuf() << std::endl;
+    }
     outFile << "      </DataArray>" << std::endl;
     outFile << "    </Polys>" << std::endl;
   }
@@ -251,7 +293,7 @@ inline void write_vtp_obb(std::string name, par_obb_helper& buffers) {
   outFile << "<VTKFile type=\"PolyData\" version=\"1.0\" header_type=\"UInt64\">" << std::endl;
   outFile << "  <PolyData>" << std::endl;
   outFile << "    <Piece NumberOfPoints=\"" << n_obb * 8 << "\" NumberOfLines=\"" << n_obb * 6 << "\" NumberOfPolys=\""
-          << 0 << "\">" << std::endl;
+      << 0 << "\">" << std::endl;
   outFile << "    <PointData>" << std::endl;
   outFile << "      <DataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
   outFile << buffers.ids.rdbuf() << std::endl;
@@ -262,15 +304,21 @@ inline void write_vtp_obb(std::string name, par_obb_helper& buffers) {
   outFile << "    </PointData>" << std::endl;
   outFile << "    <Points>" << std::endl;
   outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-  if (n_obb != 0) outFile << buffers.corners.rdbuf() << std::endl;
+  if (n_obb != 0) {
+    outFile << buffers.corners.rdbuf() << std::endl;
+  }
   outFile << "      </DataArray>" << std::endl;
   outFile << "    </Points>" << std::endl;
   outFile << "    <Lines>" << std::endl;
   outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
-  if (n_obb != 0) outFile << buffers.lines.rdbuf() << std::endl;
+  if (n_obb != 0) {
+    outFile << buffers.lines.rdbuf() << std::endl;
+  }
   outFile << "      </DataArray>" << std::endl;
   outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
-  if (n_obb != 0) outFile << buffers.offsets.rdbuf() << std::endl;
+  if (n_obb != 0) {
+    outFile << buffers.offsets.rdbuf() << std::endl;
+  }
   outFile << "      </DataArray>" << std::endl;
   outFile << "    </Lines>" << std::endl;
   outFile << "    </Piece>" << std::endl;
@@ -293,6 +341,9 @@ inline void write_pvtp_polyhedron(std::string filename, size_t number_of_files, 
   outFile << "      <PDataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "      <PDataArray type=\"Int32\" Name=\"Type\"  NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "      <PDataArray type=\"Float64\" Name=\"Velocity\"  NumberOfComponents=\"3\"/>" << std::endl;
+  if (buffers.has_cluster) {
+    outFile << "      <PDataArray type=\"Int32\" Name=\"Cluster\"  NumberOfComponents=\"1\"/>" << std::endl;
+  }
   if (buffers.mpi_rank) {
     outFile << "      <PDataArray type=\"Int32\" Name=\"MPI rank\"  NumberOfComponents=\"1\"/>" << std::endl;
   }

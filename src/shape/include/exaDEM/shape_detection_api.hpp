@@ -30,28 +30,28 @@ namespace exaDEM {
 /*********/
 /* Utils */
 /*********/
-ONIKA_HOST_DEVICE_FUNC inline const Vec3d* get_ptr(const Vec3d* ptr) {
+ONIKA_HOST_DEVICE_FUNC inline const exanb::Vec3d* get_ptr(const exanb::Vec3d* ptr) {
   return ptr;
 }
 
 /********************/
 /* Vertex - Vertex  */
 /********************/
-ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex(const double rVerlet, const Vec3d& pi, const double radius,
-                                                        const Vec3d& pj, const int j, const double hj,
+ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex(const double rVerlet, const exanb::Vec3d& pi, const double radius,
+                                                        const exanb::Vec3d& pj, const int j, const double hj,
                                                         const shape* shpj, const exanb::Quaternion& oj) {
   // === compute vertex position
-  Vec3d vj = shpj->get_vertex(j, pj, hj, oj);
+  exanb::Vec3d vj = shpj->get_vertex(j, pj, hj, oj);
   return filter_vertex_vertex(rVerlet, pi, radius, vj, shpj->minskowski(hj));
 }
 
 ONIKA_HOST_DEVICE_FUNC
-inline bool filter_vertex_vertex(const double rVerlet, const Vec3d& pi, const double hi, const int i, const shape* shpi,
-                                 const exanb::Quaternion& oi, const Vec3d& pj, const double hj, const int j,
+inline bool filter_vertex_vertex(const double rVerlet, const exanb::Vec3d& pi, const double hi, const int i, const shape* shpi,
+                                 const exanb::Quaternion& oi, const exanb::Vec3d& pj, const double hj, const int j,
                                  const shape* shpj, const exanb::Quaternion& oj) {
   // === compute vertex position
-  Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
-  Vec3d vj = shpj->get_vertex(j, pj, hj, oj);
+  exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
+  exanb::Vec3d vj = shpj->get_vertex(j, pj, hj, oj);
   return filter_vertex_vertex(rVerlet, vi, shpi->minskowski(hi), vj, shpj->minskowski(hj));
 }
 
@@ -67,7 +67,7 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex(const double rVerlet, Ve
 }
 
 template <typename VecJ>
-ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex_v2(const double rVerlet, const Vec3d& pi, const double ri,
+ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex_v2(const double rVerlet, const exanb::Vec3d& pi, const double ri,
                                                            const VecJ& vaj, const double rj, const int j) {
   // === compute vertex position
   return filter_vertex_vertex(rVerlet, pi, ri, vaj[j], rj);
@@ -84,21 +84,21 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex_v2(const double rVerlet,
   return filter_vertex_vertex(rVerlet, vai[i], shpi->minskowski(hi), vaj[j], shpj->minskowski(hj));
 }
 
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex(const Vec3d& pi, const double hi, const int i,
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex(const exanb::Vec3d& pi, const double hi, const int i,
                                                               const shape* shpi, const exanb::Quaternion& oi,
-                                                              const Vec3d& pj, const double hj, const int j,
+                                                              const exanb::Vec3d& pj, const double hj, const int j,
                                                               const shape* shpj, const exanb::Quaternion& oj) {
   // === compute vertex position
-  Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
-  Vec3d vj = shpj->get_vertex(j, pj, hj, oj);
+  exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
+  exanb::Vec3d vj = shpj->get_vertex(j, pj, hj, oj);
   return detection_vertex_vertex_core(vi, shpi->minskowski(hi), vj, shpj->minskowski(hj));
 }
 
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex(const Vec3d& pi, const double radius, const Vec3d& pj,
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex(const exanb::Vec3d& pi, const double radius, const exanb::Vec3d& pj,
                                                               const double hj, const int j, const shape* shpj,
                                                               const exanb::Quaternion& oj) {
   // === compute vertex position
-  Vec3d vj = shpj->get_vertex(j, pj, hj, oj);
+  exanb::Vec3d vj = shpj->get_vertex(j, pj, hj, oj);
   return detection_vertex_vertex_core(pi, radius, vj, shpj->minskowski(hj));
 }
 
@@ -110,8 +110,8 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex(const VecI& vai, c
   assert(j < shpj->get_number_of_vertices());
 
   // === get vertex position
-  const Vec3d& vi = vai[i];
-  const Vec3d& vj = vaj[j];
+  const exanb::Vec3d& vi = vai[i];
+  const exanb::Vec3d& vj = vaj[j];
   return detection_vertex_vertex_core(vi, shpi->minskowski(hi), vj, shpj->minskowski(hj));
 }
 
@@ -121,32 +121,32 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex(const VecI& vai, c
 
 // API filter_vertex_edge
 ONIKA_HOST_DEVICE_FUNC
-inline bool filter_vertex_edge(const double rVerlet, const Vec3d& pi, const double hi, const int i, const shape* shpi,
-                               const exanb::Quaternion& oi, const Vec3d& pj, const double hj, const int j,
+inline bool filter_vertex_edge(const double rVerlet, const exanb::Vec3d& pi, const double hi, const int i, const shape* shpi,
+                               const exanb::Quaternion& oi, const exanb::Vec3d& pj, const double hj, const int j,
                                const shape* shpj, const exanb::Quaternion& oj) {
   // === compute vertice positions
   auto [first, second] = shpj->get_edge(j);
-  const Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
-  const Vec3d vf = shpj->get_vertex(first, pj, hj, oj);
-  const Vec3d vs = shpj->get_vertex(second, pj, hj, oj);
+  const exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
+  const exanb::Vec3d vf = shpj->get_vertex(first, pj, hj, oj);
+  const exanb::Vec3d vs = shpj->get_vertex(second, pj, hj, oj);
   double ri = shpi->minskowski(hi);
   double rj = shpj->minskowski(hj);
   return filter_vertex_edge_core(rVerlet, vi, ri, vf, vs, rj);
 }
 
-ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge(const double rVerlet, const Vec3d& pi, const double radius,
-                                                      const Vec3d& pj, const double hj, const int j, const shape* shpj,
+ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge(const double rVerlet, const exanb::Vec3d& pi, const double radius,
+                                                      const exanb::Vec3d& pj, const double hj, const int j, const shape* shpj,
                                                       const exanb::Quaternion& oj) {
   // === compute vertice positions
   auto [first, second] = shpj->get_edge(j);
-  const Vec3d vf = shpj->get_vertex(first, pj, hj, oj);
-  const Vec3d vs = shpj->get_vertex(second, pj, hj, oj);
+  const exanb::Vec3d vf = shpj->get_vertex(first, pj, hj, oj);
+  const exanb::Vec3d vs = shpj->get_vertex(second, pj, hj, oj);
   double rj = shpj->minskowski(hj);
   return filter_vertex_edge_core(rVerlet, pi, radius, vf, vs, rj);
 }
 
 template <typename VecJ>
-ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge(const double rVerlet, const Vec3d& vi, const double ri, VecJ& vaj,
+ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge(const double rVerlet, const exanb::Vec3d& vi, const double ri, VecJ& vaj,
                                                       const double hj, const int j, const shape* shpj) {
   assert(j < shpj->get_number_of_edges());
   auto [first, second] = shpj->get_edge(j);
@@ -168,28 +168,28 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge(const double rVerlet, cons
 }
 
 // API detection_vertex_edge
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_edge(const Vec3d& pi, const double hi, const int i,
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_edge(const exanb::Vec3d& pi, const double hi, const int i,
                                                             const shape* shpi, const exanb::Quaternion& oi,
-                                                            const Vec3d& pj, const double hj, const int j,
+                                                            const exanb::Vec3d& pj, const double hj, const int j,
                                                             const shape* shpj, const exanb::Quaternion& oj) {
   // === compute vertice positions
   auto [first, second] = shpj->get_edge(j);
-  const Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
-  const Vec3d vf = shpj->get_vertex(first, pj, hj, oj);
-  const Vec3d vs = shpj->get_vertex(second, pj, hj, oj);
+  const exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
+  const exanb::Vec3d vf = shpj->get_vertex(first, pj, hj, oj);
+  const exanb::Vec3d vs = shpj->get_vertex(second, pj, hj, oj);
   double ri = shpi->minskowski(hi);
   double rj = shpj->minskowski(hj);
   return detection_vertex_edge_core(vi, ri, vf, vs, rj);
 }
 
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_edge(const Vec3d& pi, const double radius, const Vec3d& pj,
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_edge(const exanb::Vec3d& pi, const double radius, const exanb::Vec3d& pj,
                                                             const double hj, const int j, const shape* shpj,
                                                             const exanb::Quaternion& oj) {
   assert(j < shpj->get_number_of_edges());
   // === compute vertice positions
   auto [first, second] = shpj->get_edge(j);
-  const Vec3d vf = shpj->get_vertex(first, pj, hj, oj);
-  const Vec3d vs = shpj->get_vertex(second, pj, hj, oj);
+  const exanb::Vec3d vf = shpj->get_vertex(first, pj, hj, oj);
+  const exanb::Vec3d vs = shpj->get_vertex(second, pj, hj, oj);
   double rj = shpj->minskowski(hj);
   return detection_vertex_edge_core(pi, radius, vf, vs, rj);
 }
@@ -221,7 +221,7 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(const double rVerlet, cons
 }
 
 template <typename VecJ>
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face(const Vec3d& vi, const double ri, VecJ& vaj,
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face(const exanb::Vec3d& vi, const double ri, VecJ& vaj,
                                                             const double hj, const int j, const shape* shpj) {
   assert(j < shpj->get_number_of_faces());
   return detection_vertex_face_core(vi, ri, vaj, hj, j, shpj);
@@ -256,37 +256,37 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_edge_edge(const double rVerlet, const 
 }
 
 ONIKA_HOST_DEVICE_FUNC
-inline bool filter_edge_edge(const double rVerlet, const Vec3d& pi, const double hi, const int i, const shape* shpi,
-                             const exanb::Quaternion& oi, const Vec3d& pj, const double hj, const int j,
+inline bool filter_edge_edge(const double rVerlet, const exanb::Vec3d& pi, const double hi, const int i, const shape* shpi,
+                             const exanb::Quaternion& oi, const exanb::Vec3d& pj, const double hj, const int j,
                              const shape* shpj, const exanb::Quaternion& oj) {
   double ri = shpi->minskowski(hi);
   double rj = shpj->minskowski(hj);
   // === compute vertices from shapes
   auto [fi, si] = shpi->get_edge(i);
-  const Vec3d vfi = shpi->get_vertex(fi, pi, hi, oi);
-  const Vec3d vsi = shpi->get_vertex(si, pi, hi, oi);
+  const exanb::Vec3d vfi = shpi->get_vertex(fi, pi, hi, oi);
+  const exanb::Vec3d vsi = shpi->get_vertex(si, pi, hi, oi);
 
   auto [fj, sj] = shpj->get_edge(j);
-  const Vec3d vfj = shpj->get_vertex(fj, pj, hj, oj);
-  const Vec3d vsj = shpj->get_vertex(sj, pj, hj, oj);
+  const exanb::Vec3d vfj = shpj->get_vertex(fj, pj, hj, oj);
+  const exanb::Vec3d vsj = shpj->get_vertex(sj, pj, hj, oj);
   return filter_edge_edge_core(rVerlet, vfi, vsi, ri, vfj, vsj, rj);
 }
 
 // API edge - edge
 ONIKA_HOST_DEVICE_FUNC
-inline contact detection_edge_edge(const Vec3d& pi, const double hi, const int i, const shape* shpi,
-                                   const exanb::Quaternion& oi, const Vec3d& pj, const double hj, const int j,
+inline contact detection_edge_edge(const exanb::Vec3d& pi, const double hi, const int i, const shape* shpi,
+                                   const exanb::Quaternion& oi, const exanb::Vec3d& pj, const double hj, const int j,
                                    const shape* shpj, const exanb::Quaternion& oj) {
   double ri = shpi->minskowski(hi);
   double rj = shpj->minskowski(hj);
   // === compute vertices from shapes
   auto [fi, si] = shpi->get_edge(i);
-  const Vec3d vfi = shpi->get_vertex(fi, pi, hi, oi);
-  const Vec3d vsi = shpi->get_vertex(si, pi, hj, oi);
+  const exanb::Vec3d vfi = shpi->get_vertex(fi, pi, hi, oi);
+  const exanb::Vec3d vsi = shpi->get_vertex(si, pi, hj, oi);
 
   auto [fj, sj] = shpj->get_edge(j);
-  const Vec3d vfj = shpj->get_vertex(fj, pj, hj, oj);
-  const Vec3d vsj = shpj->get_vertex(sj, pj, hj, oj);
+  const exanb::Vec3d vfj = shpj->get_vertex(fj, pj, hj, oj);
+  const exanb::Vec3d vsj = shpj->get_vertex(sj, pj, hj, oj);
   return detection_edge_edge_core(vfi, vsi, ri, vfj, vsj, rj);
 }
 
@@ -345,10 +345,10 @@ struct detect<3> {
 
 /** This part concerns detection between particles and “RShape drivers”.  **/
 #define __params__                                                                                         \
-  const VertexType &pi, const double hi, const int i, const shape *shpi, const Vec3d *pj, const double hj, \
+  const VertexType &pi, const double hi, const int i, const shape *shpi, const exanb::Vec3d *pj, const double hj, \
       const int j, const shape *shpj
 #define __params__sph__                                                                               \
-  const Vec3d &pi, const double ri, const Vec3d &pj, const double hj, const int j, const shape *shpj, \
+  const exanb::Vec3d &pi, const double ri, const exanb::Vec3d &pj, const double hj, const int j, const shape *shpj, \
       const exanb::Quaternion &oj
 #define __params__use__ pi, hi, i, shpi, pj, hj, j, shpj
 #define __params__use__inv__ pj, hj, j, shpj, pi, hi, i, shpi

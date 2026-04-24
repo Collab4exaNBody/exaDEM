@@ -49,10 +49,10 @@ For more details, see `CONTRIBUTING.md`. Main guidelines are:
 - Carlo Elia Doncecchi (CEA/DES)
 - Vincent Topin (CEA/DES)
 - Lhassan Amarsid (CEA/DES)
+- Paul Lafourcade (CEA/DAM)
 
 ### Contributors
 
-- Paul Lafourcade (CEA/DAM)
 - Vincent Richefeu (CNRS)
 
 ### Citation

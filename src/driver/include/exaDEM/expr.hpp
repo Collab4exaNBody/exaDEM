@@ -22,7 +22,6 @@ under the License.
 #include "tinyexpr.h"
 
 namespace exaDEM {
-using exanb::Vec3d;
 struct Driver_expr {
   bool expr_use_v = false;
   std::string expr_vx = "0";
@@ -37,9 +36,9 @@ struct Driver_expr {
   std::string expr_momy = "0";
   std::string expr_momz = "0";
 
-  Vec3d expr_v(double time) {
+  exanb::Vec3d expr_v(double time) {
     assert(expr_use_v);
-    Vec3d res;
+    exanb::Vec3d res;
     te_variable the_t[] = {{"t", &time}};
 
     int err;
@@ -53,9 +52,9 @@ struct Driver_expr {
     return res;
   }
 
-  Vec3d expr_vrot(double time) {
+  exanb::Vec3d expr_vrot(double time) {
     assert(expr_use_vrot);
-    Vec3d res;
+    exanb::Vec3d res;
     te_variable the_t[] = {{"t", &time}};
 
     int err;
@@ -69,9 +68,9 @@ struct Driver_expr {
     return res;
   }
 
-  Vec3d expr_mom(double time) {
+  exanb::Vec3d expr_mom(double time) {
     assert(expr_use_mom);
-    Vec3d res;
+    exanb::Vec3d res;
     te_variable the_t[] = {{"t", &time}};
 
     int err;
@@ -115,15 +114,11 @@ struct Driver_expr {
 }  // namespace exaDEM
 
 namespace YAML {
-using exaDEM::Driver_expr;
-using exanb::lerr;
-using exanb::lout;
-
 template <>
-struct convert<Driver_expr> {
-  static bool decode(const Node& node, Driver_expr& expr) {
+struct convert<exaDEM::Driver_expr> {
+  static bool decode(const Node& node, exaDEM::Driver_expr& expr) {
     if (!node.IsMap()) {
-      lout << "Please, define this driver motion as STATIONNARY" << std::endl;
+      exanb::lout << "Please, define this driver motion as STATIONNARY" << std::endl;
       return false;
     }
     if (node["vx"]) {

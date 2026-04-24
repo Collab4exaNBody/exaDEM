@@ -23,6 +23,7 @@ under the License.
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
+using namespace onika::scg;
 struct PushAVToQuatFunc {
   const double t;
   const double dt;

@@ -102,7 +102,7 @@ struct Drivers {
     } else if (t == DRIVER_TYPE::RSHAPE) {
       return func(m_data.get_nth<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[idx].m_index]);
     }
-    fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
+    exanb::fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
     static Cylinder tmp;
     return func(tmp);
   }
@@ -122,7 +122,7 @@ struct Drivers {
     } else if (t == DRIVER_TYPE::RSHAPE) {
       return func(m_data.get_nth<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[idx].m_index]);
     }
-    fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
+    exanb::fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
     static Cylinder tmp;
     return func(tmp);
   }
@@ -145,7 +145,7 @@ struct Drivers {
     if (idx < size) {  // reallocation
       DRIVER_TYPE current_type = type(idx);
       if (current_type != DRIVER_TYPE::UNDEFINED) {
-        lout << "You are currently removing a driver at index " << idx << std::endl;
+        exanb::lout << "You are currently removing a driver at index " << idx << std::endl;
         Driver.print();
       }
     } else {  // allocate
@@ -205,7 +205,7 @@ struct Drivers {
     for (size_t i = 0; i < this->get_size(); i++) {
       auto t = m_type_index_cpu[i].m_type;
       if (t != DRIVER_TYPE::UNDEFINED) {
-        lout << "Driver [" << i << "]:" << std::endl;
+        exanb::lout << "Driver [" << i << "]:" << std::endl;
         if (t == DRIVER_TYPE::CYLINDER) {
           m_data.get_nth_const<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[i].m_index].print();
         } else if (t == DRIVER_TYPE::SURFACE) {
@@ -232,10 +232,10 @@ struct Drivers {
     for (const auto& it : m_type_index_cpu) {
       ++Count[it.m_type];
     }
-    lout << "Drivers Stats" << std::endl;
-    lout << "Number of drivers: " << m_type_index_cpu.size() << std::endl;
+    exanb::lout << "Drivers Stats" << std::endl;
+    exanb::lout << "Number of drivers: " << m_type_index_cpu.size() << std::endl;
     for (size_t t = 0; t < DRIVER_TYPE_SIZE; t++) {
-      lout << "Number of " << print(DRIVER_TYPE(t)) << "s: " << Count[t] << std::endl;
+      exanb::lout << "Number of " << print(DRIVER_TYPE(t)) << "s: " << Count[t] << std::endl;
     }
   }
 };

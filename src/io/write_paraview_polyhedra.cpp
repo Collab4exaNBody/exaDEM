@@ -69,6 +69,8 @@ class WriteParaviewPolyhedraOperator : public OperatorNode {
   }
 
   inline void execute() final {
+    using ParticleTuple = decltype(grid->cells()[0][0]);
+    static constexpr bool has_field_cluster = ParticleTuple::has_field(field::cluster);
     // mpi stuff
     int rank, size;
     MPI_Comm_rank(*mpi, &rank);
@@ -89,27 +91,41 @@ class WriteParaviewPolyhedraOperator : public OperatorNode {
     LinearXForm xform;
     if (defbox) xform.m_matrix = domain->xform();
 
+    uint32_t* cluster = nullptr;
+
+    uint32_t cj = 0;  // default value, not used
+
     // fill string buffers
     for (size_t cell_a = 0; cell_a < n_cells; cell_a++) {
       if (grid->is_ghost_cell(cell_a)) {
         continue;
       }
-      const int n_particles = cells[cell_a].size();
-      auto* __restrict__ rx = cells[cell_a][field::rx];
-      auto* __restrict__ ry = cells[cell_a][field::ry];
-      auto* __restrict__ rz = cells[cell_a][field::rz];
-      auto* __restrict__ vx = cells[cell_a][field::vx];
-      auto* __restrict__ vy = cells[cell_a][field::vy];
-      auto* __restrict__ vz = cells[cell_a][field::vz];
-      auto* __restrict__ type = cells[cell_a][field::type];
-      auto* __restrict__ id = cells[cell_a][field::id];
-      auto* __restrict__ h = cells[cell_a][field::homothety];
-      auto* __restrict__ orient = cells[cell_a][field::orient];
+      auto& cell = cells[cell_a];
+      const int n_particles = cell.size();
+      auto* __restrict__ rx = cell[field::rx];
+      auto* __restrict__ ry = cell[field::ry];
+      auto* __restrict__ rz = cell[field::rz];
+      auto* __restrict__ vx = cell[field::vx];
+      auto* __restrict__ vy = cell[field::vy];
+      auto* __restrict__ vz = cell[field::vz];
+      auto* __restrict__ type = cell[field::type];
+      auto* __restrict__ id = cell[field::id];
+      auto* __restrict__ h = cell[field::homothety];
+      auto* __restrict__ orient = cell[field::orient];
+      if constexpr (has_field_cluster) {
+        cluster = cell[field::cluster];
+      }
       for (int j = 0; j < n_particles; j++) {
         exanb::Vec3d pos{rx[j], ry[j], rz[j]};
         if (defbox) pos = xform.transformCoord(pos);
         const shape* shp = shps[type[j]];
-        build_buffer_polyhedron(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], h[j], buffers);
+        if constexpr (has_field_cluster) {
+          cj = cluster[j];
+        }
+        build_buffer_polyhedron<has_field_cluster>(
+            pos, shp, orient[j], id[j], type[j],
+            vx[j], vy[j], vz[j],
+            h[j], cj, buffers);
       }
     };
 

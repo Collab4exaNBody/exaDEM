@@ -29,6 +29,7 @@ under the License.
 #include <exaDEM/shape/basic_shape/sphere.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 class AddShapeSphereOperator : public OperatorNode {
   ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
   ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT_OUTPUT);

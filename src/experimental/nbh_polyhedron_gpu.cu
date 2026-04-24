@@ -328,6 +328,9 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
         classifier_interaction_accessor = wrappers2.accessor();
       }
     }
+		// Update edge area with OwnerGhost interactions
+		// We copy only Particle - Particle / InnerBond interactions:
+		//  - A Particle - Driver interaction can't be a ghost
 
 		constexpr bool do_ghost_only = true;
 		constexpr bool do_active_interaction_only = false;

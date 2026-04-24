@@ -31,7 +31,7 @@ under the License.
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_stress>>
 class DivStressV : public OperatorNode {
-  using ComputeFieldType = FieldSet<field::_type, field::_stress>;
+  using ComputeFieldType = FieldSet<field::_type, field::_homothety, field::_stress>;
   using ComputeFieldRadius = FieldSet<field::_radius, field::_stress>;
   static constexpr ComputeFieldType compute_field_set_type{};
   static constexpr ComputeFieldRadius compute_field_set_radius{};
