@@ -115,7 +115,6 @@ struct RShapeDriver {
   shape shp;                 /**< Shape of the R-Shape. */
   onika::memory::CudaMMVector<exanb::Vec3d> vertices;                    /**< Collection of vertices (computed from shp, quat, and center). */
   onika::memory::CudaMMVector<RShapeDriverListOfElements> grid_indexes;  /**< Grid indices of the R-Shape. */
-  std::vector<omp_lock_t> grid_mutexes;               /**< Grid indices of the R-Shape. */
   /** We don't need to save these values */
 
   /**

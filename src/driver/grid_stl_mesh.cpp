@@ -63,11 +63,11 @@ class UpdateGridRShapeOperator : public OperatorNode {
     bool ForceResetRShapeGrid = *force_reset;
     auto& gsb = *grid_rshape_buffer;
 
+    std::vector<omp_lock_t> mutexes;
     for (size_t id = 0; id < drivers->get_size(); id++) {
       if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
         exaDEM::RShapeDriver& mesh = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
         auto& grid_rshape = mesh.grid_indexes;
-        auto& mutexes = mesh.grid_mutexes;
 
         if (!ForceResetRShapeGrid) {
           if (mesh.stationary() && grid_rshape.size() == n_cells) {
