@@ -70,7 +70,8 @@ struct DriverDisplOver {
   MPI_Comm& comm;                                                ///< MPI communicator
   Drivers& bcpd;                                                 ///< Backup drivers
   const size_t bd_idx;                                           ///< Backup driver index
-  Accumulator storage;                                           ///< Result accumulator
+  Driver_params& motion;                                         ///< Driver Motion reference
+	Accumulator storage;                                           ///< Result accumulator
 
   inline int operator()(exaDEM::Cylinder& a) {
     return 0;  // WARNING should not move
@@ -80,7 +81,7 @@ struct DriverDisplOver {
     exaDEM::Surface& b = bcpd.get_typed_driver<exaDEM::Surface>(bd_idx);
 		exanb::Vec3d d = a.fields.center_proj - b.fields.center_proj;
 
-    if (b.motion.motion_type == PENDULUM_MOTION) {
+    if (b.motion_type == PENDULUM_MOTION) {
       // Utility function: compute the intersection between a line and a plane
       auto intersect_line_plane = [](const exanb::Vec3d& plane_point,   // A point lying on the plane (pendulum anchor)
                                      const exanb::Vec3d& plane_normal,  // Plane normal vector
@@ -100,9 +101,9 @@ struct DriverDisplOver {
 
       // Project the initial pendulum positions onto their respective planes
       exanb::Vec3d proj_a =
-          intersect_line_plane(a.motion.pendulum_anchor_point, a.fields.normal, a.motion.pendulum_initial_position, a.motion.pendulum_direction());
+          intersect_line_plane(motion.pendulum_anchor_point, a.fields.normal, motion.pendulum_initial_position, motion.pendulum_direction());
       exanb::Vec3d proj_b =
-          intersect_line_plane(b.motion.pendulum_anchor_point, b.fields.normal, b.motion.pendulum_initial_position, b.motion.pendulum_direction());
+          intersect_line_plane(motion.pendulum_anchor_point, b.fields.normal, motion.pendulum_initial_position, motion.pendulum_direction());
       d = proj_b - proj_a;
     }
 
@@ -116,7 +117,7 @@ struct DriverDisplOver {
   inline int operator()(exaDEM::Ball& a) {
     exaDEM::Ball& b = bcpd.get_typed_driver<exaDEM::Ball>(bd_idx);
     exanb::Vec3d d = a.fields.center - b.fields.center;
-    if (b.motion.is_compressive()) {
+    if (is_compressive(a.motion_type)) {
       if (exanb::dot(d, d) >= 1e-12) {
         color_log::error("driver_displ_over", "Ball with compressive motion type should not move");
       }
@@ -233,7 +234,7 @@ class DriverDisplacementOver : public OperatorNode {
     };
 
     for (size_t i = 0; i < bcpd_size && local_drivers_displ == 0; i++) {
-      DriverDisplOver<decltype(pec_func)> func = {pec_func, max_dist2, comm, bcpd, i};
+      DriverDisplOver<decltype(pec_func)> func = {pec_func, max_dist2, comm, bcpd, i, drvs.get_motion(i)};
       local_drivers_displ += drvs.apply(i, func);
     }
 

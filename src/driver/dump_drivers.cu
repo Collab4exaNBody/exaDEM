@@ -33,21 +33,22 @@ struct DumpDriverFunc {
   int* const id_ptr = nullptr;
   const std::string directory = "";
   std::stringstream* const stream_ptr = nullptr;
+  const Driver_params& motion;
 
   inline void operator()(exaDEM::Surface& surface) const {
-    surface.dump_driver((*id_ptr)++, *stream_ptr);
+    surface.dump_driver(motion, (*id_ptr)++, *stream_ptr);
   }
 
   inline void operator()(exaDEM::Ball& ball) const {
-    ball.dump_driver((*id_ptr)++, *stream_ptr);
+    ball.dump_driver(motion, (*id_ptr)++, *stream_ptr);
   }
 
   inline void operator()(exaDEM::Cylinder& cylinder) const {
-    cylinder.dump_driver((*id_ptr)++, *stream_ptr);
+    cylinder.dump_driver(motion, (*id_ptr)++, *stream_ptr);
   }
 
   inline void operator()(exaDEM::RShapeDriver& rshape_param) const {
-    rshape_param.dump_driver((*id_ptr)++, directory, *stream_ptr);
+    rshape_param.dump_driver(motion, (*id_ptr)++, directory, *stream_ptr);
   }
 };
 
@@ -84,8 +85,8 @@ class DumpDriver : public OperatorNode {
     data_stream << std::setprecision(16);
 
     int id_count = 0;
-    DumpDriverFunc func = {&id_count, path, &data_stream};
     for (size_t i = 0; i < n_drivers; i++) {
+      DumpDriverFunc func = {&id_count, path, &data_stream, drvs.get_motion(i)};
       drvs.apply(i, func);
     }
     ldbg << id_count << " drivers have been dumped" << std::endl;
