@@ -340,10 +340,10 @@ class DumpReaderConfRockable : public OperatorNode {
         shape shp = *(manager.shps[type]);
         RShapeDriver driver;
         driver.fields = state;
-        driver.motion = motion;
+        driver.motion_type = MotionType::STATIONARY;
         driver.set_shape(shp);
-        driver.initialize();
-        drvs.add_driver(next_id + id, driver);
+        driver.initialize(motion);
+        drvs.add_driver(next_id + id, driver, motion);
       }
     }
   }
