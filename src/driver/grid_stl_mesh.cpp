@@ -35,6 +35,37 @@ under the License.
 
 namespace exaDEM {
 using namespace exanb;
+/**
+ * @brief Prints a summary of grid indices for the R-Shape.
+ * @details This function prints the number of elements in the grid indexes
+ * for vertices, edges, and faces.
+ */
+inline void grid_indexes_summary(onika::memory::CudaMMVector<RShapeDriverListOfElements>& grid_indexes) {
+  const size_t size = grid_indexes.size();
+  size_t nb_fill_cells(0), nb_v(0), nb_e(0), nb_f(0), max_v(0), max_e(0), max_f(0);
+
+#pragma omp parallel for reduction(+ : nb_fill_cells, nb_v, nb_e, nb_f) reduction(max : max_v, max_e, max_f)
+  for (size_t i = 0; i < size; i++) {
+    auto& list = grid_indexes[i];
+    if (list.vertices.size() == 0 && list.edges.size() == 0 && list.faces.size()) {
+      continue;
+    }
+    nb_fill_cells++;
+    nb_v += list.vertices.size();
+    nb_e += list.edges.size();
+    nb_f += list.faces.size();
+    max_v = std::max(max_v, list.vertices.size());
+    max_e = std::max(max_e, list.edges.size());
+    max_f = std::max(max_f, list.faces.size());
+  }
+
+  exanb::lout << "========= R-Shape Grid summary ==" << std::endl;
+  exanb::lout << "Number of emplty cells = " << nb_fill_cells << " / " << size << std::endl;
+  exanb::lout << "Vertices (Total/Max)   = " << nb_v << " / " << max_v << std::endl;
+  exanb::lout << "Edges    (Total/Max)   = " << nb_e << " / " << max_e << std::endl;
+  exanb::lout << "Faces    (Total/Max)   = " << nb_f << " / " << max_f << std::endl;
+  exanb::lout << "=================================" << std::endl;
+}
 
 template <class GridT>
 class UpdateGridRShapeOperator : public OperatorNode {
@@ -46,6 +77,7 @@ class UpdateGridRShapeOperator : public OperatorNode {
   ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"rcut_max"});
   ADD_SLOT(bool, force_reset, INPUT, REQUIRED, DocString{"Force to rebuild grid for rshape meshes."});
   ADD_SLOT(std::vector<Vec3d>, grid_rshape_buffer, PRIVATE);
+  ADD_SLOT(bool, summary, false, PRIVATE, DocString{"Display the grid summary"});
 
  public:
   inline std::string documentation() const final {
@@ -66,6 +98,7 @@ class UpdateGridRShapeOperator : public OperatorNode {
     std::vector<omp_lock_t> mutexes;
     for (size_t id = 0; id < drivers->get_size(); id++) {
       if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
+        mutexes.resize(n_cells);
         exaDEM::RShapeDriver& mesh = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
         auto& grid_rshape = mesh.grid_indexes;
 
@@ -81,7 +114,6 @@ class UpdateGridRShapeOperator : public OperatorNode {
         bool resize = grid_rshape.size() != n_cells;
         if (resize) {
           grid_rshape.resize(n_cells);
-          mutexes.resize(n_cells);
         }
 
         if (resize) {
@@ -180,6 +212,9 @@ class UpdateGridRShapeOperator : public OperatorNode {
               }
             }
           }
+        }
+        if (*summary) {
+          grid_indexes_summary(mesh.grid_indexes);
         }
       }
     }
