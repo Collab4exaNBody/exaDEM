@@ -58,26 +58,30 @@ foreach(model ${CONTACT_MODELS})
     # =========================
     # Generated registrations
     # =========================
+
+   if(model STREQUAL "NONE")
     set(REGISTRATIONS "
 OperatorNodeFactory::instance()->register_factory(\"${PREFIX}\",
   make_grid_variant_operator<${TEMPLATE_TYPE}>);
 OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke\",
   make_grid_variant_operator<${TEMPLATE_TYPE}>);
-OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_none\",
+	OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_none\",
   make_grid_variant_operator<${TEMPLATE_TYPE}>);
 ")
 
-    if(model STREQUAL "COHESIVE")
-      string(APPEND REGISTRATIONS "
+		elseif(model STREQUAL "COHESIVE")
+      set(REGISTRATIONS "
 OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_cohesive\",
   make_grid_variant_operator<${TEMPLATE_TYPE}>);
 ")
     elseif(model STREQUAL "DMT")
-      string(APPEND REGISTRATIONS "
+      set(REGISTRATIONS "
 OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_dmt\",
   make_grid_variant_operator<${TEMPLATE_TYPE}>);
 ")
     endif()
+    set(MODEL ${model})
+    set(MAT ${mat})
 
     # =========================
     # Output file
