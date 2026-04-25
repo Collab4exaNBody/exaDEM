@@ -340,31 +340,8 @@ template <class GridT>
 using CCMMPHDmtTmpl = ComputeContactClassifierPolyhedron<true, ContactLawType::Hooke, CohesiveLawType::DMT, GridT>;
 
 // === register factories ===
-ONIKA_AUTORUN_INIT(contact_force_polyhedron) {
-  OperatorNodeFactory::instance()->register_factory("contact_polyhedron", make_grid_variant_operator<CCSMPHNoneTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_singlemat_polyhedron",
-                                                    make_grid_variant_operator<CCSMPHNoneTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_polyhedron_single_mat",
-                                                    make_grid_variant_operator<CCSMPHNoneTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_singlemat_polyhedron_hooke",
-                                                    make_grid_variant_operator<CCSMPHNoneTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_singlemat_polyhedron_hooke_none",
-                                                    make_grid_variant_operator<CCSMPHNoneTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_singlemat_polyhedron_hooke_cohesive",
-                                                    make_grid_variant_operator<CCSMPHCohesiveTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_singlemat_polyhedron_hooke_dmt",
-                                                    make_grid_variant_operator<CCSMPHDmtTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_multimat_polyhedron",
-                                                    make_grid_variant_operator<CCMMPHNoneTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_polyhedron_multimat",
-                                                    make_grid_variant_operator<CCMMPHNoneTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_multimat_polyhedron_hooke",
-                                                    make_grid_variant_operator<CCMMPHNoneTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_multimat_polyhedron_hooke_none",
-                                                    make_grid_variant_operator<CCMMPHNoneTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_multimat_polyhedron_hooke_cohesive",
-                                                    make_grid_variant_operator<CCMMPHCohesiveTmpl>);
-  OperatorNodeFactory::instance()->register_factory("contact_multimat_polyhedron_hooke_dmt",
-                                                    make_grid_variant_operator<CCMMPHDmtTmpl>);
+ONIKA_AUTORUN_INIT(contact_force_polyhedron_@MODEL@_@MAT@)
+{
+  @REGISTRATIONS@
 }
 }  // namespace exaDEM
