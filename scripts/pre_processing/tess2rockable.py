@@ -10,7 +10,7 @@ from lib.data_class import Particle, Params, InteractionsParameters, RockableDat
 from lib.io_utils import read_tess, write_shp_file, write_rockable_file
 from lib.geometry import intersect_planes, inside_all_planes, order_face_vertices, unique_points
 from lib.topology import count_interfaces,check_interfaces
-from lib.mass_properties import polyhedron_mass_properties_mc_fast
+from lib.mass_properties import polyhedron_mass_properties
 from lib.data_utils import make_sticked_conf
 
 def get_local_face_normal(face_id, faces, vertices, face_normals, cell_center):
@@ -188,7 +188,7 @@ def compute_cells(cells_data: CellsData, gap) -> Shapes:
                 edge = tuple(sorted((v1, v2)))
                 cell_edges.add(edge)
 
-        volume, center_local, I = polyhedron_mass_properties_mc_fast(
+        volume, center_local, I = polyhedron_mass_properties(
             eroded_vertices, eroded_faces, n_samples=50000
         )
         eroded_vertices -= center_local
