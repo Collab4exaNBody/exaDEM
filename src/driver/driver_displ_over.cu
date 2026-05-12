@@ -151,8 +151,8 @@ struct DriverDisplOver {
     RShapeDriverDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.fields.center, a.fields.quat, b.fields.center, b.fields.quat};
     ReduceMaxRShapeDriverDisplacementFunctor func = {SVDFunc, storage.get_ptr()};
 
-    ParallelForOptions opts;
-    opts.omp_scheduling = OMP_SCHED_STATIC;
+    onika::parallel::ParallelForOptions opts;
+    opts.omp_scheduling = onika::parallel::OMP_SCHED_STATIC;
     parallel_for(size, func, m_parallel_execution_context(), opts);
     return storage.get();
 #else
