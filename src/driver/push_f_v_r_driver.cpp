@@ -45,6 +45,7 @@ class PushAccVelocityToPositionDriver : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(double, physical_time, INPUT, REQUIRED);
   ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
+  ADD_SLOT(double, dt_scale, INPUT , 1.0);
 
  public:
   inline std::string documentation() const final {
@@ -55,7 +56,8 @@ class PushAccVelocityToPositionDriver : public OperatorNode {
 
   inline void execute() final {
     auto& drvs = *drivers;
-    PushFVRDriverFunc func = {*physical_time, *dt};
+    double delta_t = (*dt) * (*dt_scale);
+    PushFVRDriverFunc func = {*physical_time, delta_t};
     for (size_t id = 0; id < drivers->get_size(); id++) {
       drvs.apply(id, func);
     }
