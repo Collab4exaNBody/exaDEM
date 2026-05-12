@@ -15,7 +15,7 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
- */
+*/
 
 #pragma once
 
@@ -27,80 +27,11 @@ under the License.
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/normalize.hpp>
 #include <exaDEM/expr.hpp>
+#include <exaDEM/motion_type.hpp>
 
 namespace exaDEM {
-enum MotionType {
-  STATIONARY,                /**< Stationary state, with no motion. */
-  LINEAR_MOTION,             /**< Linear movement type, straight-line motion. */
-  COMPRESSIVE_FORCE,         /**< Movement influenced by compressive forces. */
-  LINEAR_FORCE_MOTION,       /**< Linear motion type influenced by applied forces. */
-  PARTICLE,                  /**< General movement caused by applied forces. */
-  LINEAR_COMPRESSIVE_MOTION, /**< Linear movement combined with compressive forces. */
-  TABULATED,                 /**< Motion defined by precomputed or tabulated data. */
-  SHAKER,                    /**< Oscillatory or vibratory motion, typically mimicking a shaking mechanism. */
-  PENDULUM_MOTION,           /**< Oscillatory swinging around a suspension point (pendulum-like). */
-  EXPRESSION,
-  UNKNOWN
-};
-
-inline std::string motion_type_to_string(MotionType motion_type) {
-  switch (motion_type) {
-    case STATIONARY:
-      return "STATIONARY";
-    case LINEAR_MOTION:
-      return "LINEAR_MOTION";
-    case COMPRESSIVE_FORCE:
-      return "COMPRESSIVE_FORCE";
-    case LINEAR_FORCE_MOTION:
-      return "LINEAR_FORCE_MOTION";
-    case PARTICLE:
-      return "PARTICLE";
-    case LINEAR_COMPRESSIVE_MOTION:
-      return "LINEAR_COMPRESSIVE_MOTION";
-    case TABULATED:
-      return "TABULATED";
-    case SHAKER:
-      return "SHAKER";
-    case PENDULUM_MOTION:
-      return "PENDULUM_MOTION";
-    case EXPRESSION:
-      return "EXPRESSION";
-    default:
-      return "UNKNOWN";
-  }
-}
-
-inline MotionType string_to_motion_type(const std::string& str) {
-  if (str == "STATIONARY") {
-    return STATIONARY;
-  } else if (str == "LINEAR_MOTION") {
-    return LINEAR_MOTION;
-  } else if (str == "COMPRESSIVE_FORCE") {
-    return COMPRESSIVE_FORCE;
-  } else if (str == "LINEAR_FORCE_MOTION") {
-    return LINEAR_FORCE_MOTION;
-  } else if (str == "PARTICLE") {
-    return PARTICLE;
-  } else if (str == "LINEAR_COMPRESSIVE_MOTION") {
-    return LINEAR_COMPRESSIVE_MOTION;
-  } else if (str == "TABULATED") {
-    return TABULATED;
-  } else if (str == "SHAKER") {
-    return SHAKER;
-  } else if (str == "PENDULUM_MOTION") {
-    return PENDULUM_MOTION;
-  } else if (str == "EXPRESSION") {
-    return EXPRESSION;
-  }
-
-  // If the string doesn't match any valid MotionType, return a default value
-  return UNKNOWN;  // Or some other default action like throwing an exception or logging
-}
-
-struct Driver_params  //: public Driver_expr
-{
+struct Driver_params {
   // Common motion stuff
-  MotionType motion_type = STATIONARY;
   exanb::Vec3d motion_vector = {0, 0, 0};
   double motion_start_threshold = 0;
   double motion_end_threshold = 1e300;
@@ -112,7 +43,6 @@ struct Driver_params  //: public Driver_expr
   // Motion: Compression
   double sigma = 0;         /**< used for compressive force */
   double damprate = 0;      /**< used for compressive force */
-  exanb::Vec3d forces = {0, 0, 0}; /**< sum of the forces applied to the driver. */
   double weigth = 0;        /**< cumulated sum of particle weigth into the simulation or in the driver */
 
   // Motion: Tabulated
@@ -132,84 +62,52 @@ struct Driver_params  //: public Driver_expr
   // Motion: Expression
   Driver_expr expr;
 
-  inline bool is_stationary() const {
-    return motion_type == STATIONARY;
-  }
-
-  inline bool is_tabulated() const {
-    return motion_type == TABULATED;
-  }
-
-  inline bool is_shaker() const {
-    return motion_type == SHAKER;
-  }
-
-  inline bool is_pendulum() const {
-    return motion_type == PENDULUM_MOTION;
-  }
-
-  ONIKA_HOST_DEVICE_FUNC inline bool is_expr() const {
-    return motion_type == EXPRESSION;
-  }
-
-  ONIKA_HOST_DEVICE_FUNC inline bool is_expr(double time) const {
-    // do nothing if time < start or time > end;
-    return motion_type == EXPRESSION && is_motion_triggered(time);
-  }
-
-  ONIKA_HOST_DEVICE_FUNC inline bool is_linear() const {
-    return (motion_type == LINEAR_MOTION || motion_type == LINEAR_FORCE_MOTION ||
-            motion_type == LINEAR_COMPRESSIVE_MOTION);
-  }
-
-  ONIKA_HOST_DEVICE_FUNC inline bool is_compressive() const {
-    return (motion_type == COMPRESSIVE_FORCE || motion_type == LINEAR_COMPRESSIVE_MOTION);
-  }
-
-  ONIKA_HOST_DEVICE_FUNC inline bool is_force_motion() const {
-    return (motion_type == PARTICLE || motion_type == LINEAR_FORCE_MOTION);
-  }
-
-  ONIKA_HOST_DEVICE_FUNC inline bool need_forces() const {
-    // Need for LINEAR_FORCE_MOTION
-    // No need for STATIONARY
-    // No need for LINEAR_MOTION
-    // Need for PARTICLE
-    // Need for COMPRESSIVE_FORCE
-    // Need for LINEAR_COMPRESSIVE_MOTION
-    return is_compressive() || motion_type == PARTICLE || motion_type == LINEAR_FORCE_MOTION;
-  }
-
-  // Getter
-  inline exanb::Vec3d sum_forces() {
-    if (motion_type == PARTICLE) {
-      return forces;
-    }
-    if (motion_type == LINEAR_FORCE_MOTION) {
-      forces = (exanb::dot(forces, motion_vector) + const_force) * motion_vector;
-      return forces;
-    }
-    return exanb::Vec3d{0, 0, 0};
-  }
-
-  // Checks
-  inline bool is_valid_motion_type(const std::vector<MotionType>& valid_motion_types) const {
-    auto it = std::find(valid_motion_types.begin(), valid_motion_types.end(), motion_type);
-    if (it == valid_motion_types.end()) {
-      color_log::warning(
-          "Driver_params::is_valid_motion_type",
-          "This motion type [" + motion_type_to_string(motion_type) + "] is not possible, MotionType availables are: ");
-      for (const auto& motion : valid_motion_types) {
-        exanb::lout << " " << ansi::yellow(motion_type_to_string(motion));
+  // juste for YAML
+  MotionType input_motion_type = MotionType::STATIONARY;
+  ONIKA_HOST_DEVICE_FUNC
+      inline bool is_expr(MotionType motion_type, double time) const {
+        // do nothing if time < start or time > end;
+        return motion_type == MotionType::EXPRESSION && is_motion_triggered(time);
       }
-      exanb::lout << std::endl;
-      return false;
-    }
-    return true;
+
+  ONIKA_HOST_DEVICE_FUNC
+      inline void update_forces(MotionType motion_type, exanb::Vec3d& forces) const {
+        if (motion_type == LINEAR_FORCE_MOTION) {
+          forces = (exanb::dot(forces, motion_vector) + const_force) * motion_vector;
+        } else if (motion_type != MotionType::PARTICLE) {
+          forces = exanb::Vec3d{0, 0, 0};
+        }
+      }
+
+
+  ONIKA_HOST_DEVICE_FUNC bool is_motion_triggered(double time) const {
+    return ((time >= motion_start_threshold) && (time <= motion_end_threshold));
   }
 
-  bool check_motion_coherence() {
-    if (is_shaker() || is_pendulum()) {
+  ONIKA_HOST_DEVICE_FUNC bool is_motion_triggered(uint64_t timesteps, double dt) const {
+    const double time = timesteps * dt;
+    return is_motion_triggered(time);
+  }
+
+  void tabulations_to_stream(MotionType motion_type, std::stringstream& times, std::stringstream& positions) const {
+    if (is_tabulated(motion_type)) {
+      times << "time: [";
+      positions << "positions: [";
+
+      assert(tab_time.size() == tab_pos.size());
+      size_t last = tab_time.size() - 1;
+      for (size_t i = 0; i < last; i++) {
+        times << tab_time[i] << ",";
+        positions << "[ " << tab_pos[i] << " ],";
+      }
+      times << tab_time[last] << "]";
+      positions << "[ " << tab_pos[last] << " ]]";
+    }
+  }
+
+
+  bool check_motion_coherence(MotionType motion_type) {
+    if (is_shaker(motion_type) || is_pendulum(motion_type)) {
       if (amplitude <= 0.0) {
         color_log::warning("Driver_params::check_motion_coherence",
                            "The \"amplitude\" input slot is not defined correctly.");
@@ -221,31 +119,31 @@ struct Driver_params  //: public Driver_expr
         return false;
       }
 
-      if (is_shaker()) {
+      if (is_shaker(motion_type)) {
         if (exanb::dot(shaker_dir, shaker_dir) - 1 >= 1e-14) {
           exanb::Vec3d old = shaker_dir;
           _normalize(shaker_dir);
           color_log::warning("Driver_params::check_motion_coherence", "Your shaker_dir vector [" + std::to_string(old) +
-                                                                          "} has been normalized to [" +
-                                                                          std::to_string(shaker_dir) + "]");
+                             "} has been normalized to [" +
+                             std::to_string(shaker_dir) + "]");
         }
-      } else if (is_pendulum()) {
+      } else if (is_pendulum(motion_type)) {
         if (pendulum_anchor_point == pendulum_initial_position) {
           color_log::error("Driver_params::check_motion_coherence",
                            "The point defined in pendulum_anchor_point and the one in pendulum_initial_position are "
                            "the same. It is impossible to define a motion type PENDULUM_MOTION. Point: [" +
-                               std::to_string(pendulum_anchor_point) + "]");
+                           std::to_string(pendulum_anchor_point) + "]");
         }
         if (exanb::dot(pendulum_swing_dir, pendulum_swing_dir) - 1 >= 1e-14) {
           exanb::Vec3d old = pendulum_swing_dir;
           _normalize(pendulum_swing_dir);
           color_log::warning("Driver_params::check_motion_coherence",
                              "Your pendulum_swing_dir vector [" + std::to_string(old) + "} has been normalized to [" +
-                                 std::to_string(pendulum_swing_dir) + "]");
+                             std::to_string(pendulum_swing_dir) + "]");
         }
       }
     }
-    if (is_tabulated()) {
+    if (is_tabulated(motion_type)) {
       if (tab_time.size() == 0) {
         color_log::warning("Driver_params::check_motion_coherence",
                            "The \"time\" input slot is not defined while the tabulated motion is activated.");
@@ -271,14 +169,14 @@ struct Driver_params  //: public Driver_expr
         return false;
       }
     }
-    if (is_linear()) {
+    if (is_linear(motion_type)) {
       // Check if motion vector is zero (invalid for linear motion)
       if (motion_vector == exanb::Vec3d{0, 0, 0}) {
         exanb::lout << ansi::yellow("Your motion type is a \"Linear Mode\" that requires a motion vector.") << std::endl;
         exanb::lout << ansi::yellow(
-                    "Please, define motion vector by adding \"motion_vector: [1,0,0]. It is defined to [0,0,0] by "
-                    "default.")
-             << std::endl;
+            "Please, define motion vector by adding \"motion_vector: [1,0,0]. It is defined to [0,0,0] by "
+            "default.")
+            << std::endl;
         return false;
       }
       // Normalize motion vector if its magnitude is not equal to 1
@@ -286,8 +184,8 @@ struct Driver_params  //: public Driver_expr
         exanb::Vec3d old = motion_vector;
         _normalize(motion_vector);
         color_log::warning("Driver_params::check_motion_coherence", "Your motion vector [" + std::to_string(old) +
-                                                                        "} has been normalized to [" +
-                                                                        std::to_string(motion_vector) + "]");
+                           "} has been normalized to [" +
+                           std::to_string(motion_vector) + "]");
       }
       if (motion_type == LINEAR_MOTION && const_vel == 0) {
         color_log::warning("Driver_params::check_motion_coherence",
@@ -301,7 +199,7 @@ struct Driver_params  //: public Driver_expr
       }
     }
 
-    if (is_compressive()) {
+    if (is_compressive(motion_type)) {
       if (sigma == 0) {
         color_log::warning("Driver_params::check_motion_coherence",
                            "Sigma is to 0.0 while the compressive motion type is set to true.");
@@ -315,52 +213,27 @@ struct Driver_params  //: public Driver_expr
     return true;  // Return true if the motion is coherent
   }
 
-  ONIKA_HOST_DEVICE_FUNC bool is_motion_triggered(double time) const {
-    return ((time >= motion_start_threshold) && (time <= motion_end_threshold));
-  }
-
-  ONIKA_HOST_DEVICE_FUNC bool is_motion_triggered(uint64_t timesteps, double dt) const {
-    const double time = timesteps * dt;
-    return is_motion_triggered(time);
-  }
-
-  void tabulations_to_stream(std::stringstream& times, std::stringstream& positions) const {
-    if (is_tabulated()) {
-      times << "time: [";
-      positions << "positions: [";
-
-      assert(tab_time.size() == tab_pos.size());
-      size_t last = tab_time.size() - 1;
-      for (size_t i = 0; i < last; i++) {
-        times << tab_time[i] << ",";
-        positions << "[ " << tab_pos[i] << " ],";
-      }
-      times << tab_time[last] << "]";
-      positions << "[ " << tab_pos[last] << " ]]";
-    }
-  }
-
-  void print_driver_params() const {
+  void print_driver_params(MotionType motion_type) const {
     exanb::lout << "Motion type        : " << motion_type_to_string(motion_type) << std::endl;
 
-    if (is_tabulated()) {
+    if (is_tabulated(motion_type)) {
       std::stringstream times;
       std::stringstream positions;
-      tabulations_to_stream(times, positions);
+      tabulations_to_stream(motion_type, times, positions);
       exanb::lout << times.rdbuf() << std::endl;
       exanb::lout << positions.rdbuf() << std::endl;
     }
 
-    if (!is_stationary()) {
+    if (!is_stationary(motion_type)) {
       if (motion_start_threshold != 0 || motion_end_threshold != std::numeric_limits<double>::max()) {
         if (motion_end_threshold != std::numeric_limits<double>::max()) {
           exanb::lout << "Motion duration    : [ " << motion_start_threshold << "s , " << motion_end_threshold << "s ]"
-               << std::endl;
+              << std::endl;
         } else {
           exanb::lout << "Motion duration    : [ " << motion_start_threshold << "s ,  inf s )" << std::endl;
         }
       }
-      if (is_linear()) {
+      if (is_linear(motion_type)) {
         exanb::lout << "Motion vector      : " << motion_vector << std::endl;
         if (motion_type == LINEAR_MOTION) {
           exanb::lout << "Velocity (constant): " << const_vel << std::endl;
@@ -369,54 +242,54 @@ struct Driver_params  //: public Driver_expr
           exanb::lout << "Force (constant)   : " << const_force << std::endl;
         }
       }
-      if (is_compressive()) {
+      if (is_compressive(motion_type)) {
         exanb::lout << "Sigma              : " << sigma << std::endl;
         exanb::lout << "Damprate           : " << damprate << std::endl;
       }
     }
 
-    if (is_shaker()) {
+    if (is_shaker(motion_type)) {
       exanb::lout << "Shaker.Omega       : " << omega << std::endl;
       exanb::lout << "Shaker.Amplitude   : " << amplitude << std::endl;
       exanb::lout << "Shaker.Direction   : [" << shaker_dir << "]" << std::endl;
     }
 
-    if (is_expr()) {
+    if (exaDEM::is_expr(motion_type)) {
       expr.expr_display(exanb::lout);
     }
-  };
+  }
 
   /**
-   * @brief Write ball data into a stream.
+   * @brief Write Driver data into a stream.
    */
-  void dump_driver_params(std::stringstream& stream) {
+  void dump_driver_params(MotionType motion_type, std::stringstream& stream) const {
     stream << "     params: {";
     stream << " motion_type: " << motion_type_to_string(motion_type);
     stream << ", motion_vector: [" << motion_vector << "]";
     stream << ", motion_start_threshold: " << motion_start_threshold;
     stream << ", motion_end_threshold: " << motion_end_threshold;
-    if (motion_type == LINEAR_MOTION) {
+    if (motion_type == MotionType::LINEAR_MOTION) {
       stream << ", const_vel: " << const_vel;
     }
-    if (motion_type == LINEAR_FORCE_MOTION) {
+    if (motion_type == MotionType::LINEAR_FORCE_MOTION) {
       stream << ", const_force: " << const_force;
     }
-    if (is_compressive()) {
+    if (is_compressive(motion_type)) {
       stream << ", sigma: " << sigma;
       stream << ", damprate: " << damprate;
     }
-    if (motion_type == TABULATED) {
+    if (motion_type == MotionType::TABULATED) {
       std::stringstream times;
       std::stringstream positions;
-      tabulations_to_stream(times, positions);
+      tabulations_to_stream(motion_type, times, positions);
       stream << ", " << times.rdbuf() << ", " << positions.rdbuf();
     }
-    if (motion_type == SHAKER) {
+    if (motion_type == MotionType::SHAKER) {
       stream << ", omega: " << omega;
       stream << ", amplitude: " << amplitude;
       stream << ", shaker_dir: [" << shaker_dir << "]";
     }
-    if (motion_type == PENDULUM_MOTION) {
+    if (motion_type == MotionType::PENDULUM_MOTION) {
       stream << ", omega: " << omega;
       stream << ", amplitude: " << amplitude;
       stream << ", pendulum_anchor_point: [" << pendulum_anchor_point << "]";
@@ -424,13 +297,14 @@ struct Driver_params  //: public Driver_expr
       stream << ", pendulum_swing_dir: [" << pendulum_swing_dir << "]";
     }
 
-    if (is_expr()) expr.expr_dump(stream);
-
+    if (exaDEM::is_expr(motion_type)) {
+      expr.expr_dump(stream);
+    }
     stream << " }" << std::endl;
   }
 
   /* Tabulated motion routines */
-  exanb::Vec3d tab_to_position(double time) {
+  exanb::Vec3d tab_to_position(double time) const {
     assert(time >= 0.0);
     auto ite = std::lower_bound(tab_time.begin(), tab_time.end(), time);
     if (ite == tab_time.end()) {
@@ -446,7 +320,7 @@ struct Driver_params  //: public Driver_expr
     }
   }
 
-  exanb::Vec3d tab_to_velocity(double time) {
+  exanb::Vec3d tab_to_velocity(double time) const {
     assert(time >= 0.0);
     auto ite = std::lower_bound(tab_time.begin(), tab_time.end(), time);
     if (ite == tab_time.end()) {
@@ -464,32 +338,32 @@ struct Driver_params  //: public Driver_expr
   }
 
   /* Shaker routines */
-  exanb::Vec3d shaker_direction() {
+  exanb::Vec3d shaker_direction() const {
     return shaker_dir;
   }
 
-  double shaker_signal(double time) {
+  double shaker_signal(double time) const {
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return amplitude * sin(omega * time);
   }
 
-  exanb::Vec3d shaker_velocity(double time) {
+  exanb::Vec3d shaker_velocity(double time) const {
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return amplitude * omega * cos(omega * time) * shaker_direction();
   }
 
   /* Pendulum routines */
-  exanb::Vec3d pendulum_direction() {
+  exanb::Vec3d pendulum_direction() const {
     return pendulum_swing_dir;
   }
 
-  exanb::Vec3d pendulum_velocity(double time) {
+  exanb::Vec3d pendulum_velocity(double time) const {
     return {0, 0, 0};
   }
 
-  std::pair<double, exanb::Vec3d> compute_offset_normal_pendulum_motion(double time) {
+  std::pair<double, exanb::Vec3d> compute_offset_normal_pendulum_motion(double time) const {
     if (time < motion_start_threshold) {
       color_log::error("compute_normal_pendulum_motion",
                        "This call is ill-formed, please verify that time is superior to motion_start_threshold.");
@@ -512,26 +386,26 @@ struct Driver_params  //: public Driver_expr
     return {offset, normal};
   }
 
-  double pendulum_signal(double time) {
+  double pendulum_signal(double time) const {
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return amplitude * sin(omega * time);
   }
- 
+
   // Expression routines
-  exanb::Vec3d driver_expr_v(double time) {
+  exanb::Vec3d driver_expr_v(double time) const{
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return expr.expr_v(time);
   }
 
-  exanb::Vec3d driver_expr_vrot(double time) {
+  exanb::Vec3d driver_expr_vrot(double time) const {
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return expr.expr_vrot(time);
   }
 
-  exanb::Vec3d driver_expr_mom(double time) {
+  exanb::Vec3d driver_expr_mom(double time) const {
     assert(motion_start_threshold >= 0);
     time -= motion_start_threshold;
     return expr.expr_mom(time);
@@ -553,15 +427,15 @@ struct convert<exaDEM::Driver_params> {
     }
 
     v = {};
-    v.motion_type = exaDEM::string_to_motion_type(node["motion_type"].as<std::string>());
-    if (v.is_linear()) {
+    v.input_motion_type = exaDEM::string_to_motion_type(node["motion_type"].as<std::string>());
+    if (is_linear(v.input_motion_type)) {
       if (!node["motion_vector"]) {
         color_log::error(function_name, "motion_vector is missing.", false);
         return false;
       }
       v.motion_vector = node["motion_vector"].as<exanb::Vec3d>();
 
-      if (v.motion_type == exaDEM::MotionType::LINEAR_MOTION) {
+      if (v.input_motion_type == exaDEM::MotionType::LINEAR_MOTION) {
         if (!node["const_vel"]) {
           color_log::error(function_name, "const_vel is missing.", false);
           return false;
@@ -570,7 +444,7 @@ struct convert<exaDEM::Driver_params> {
           v.const_vel = node["const_vel"].as<Quantity>().convert();
         }
       }
-      if (v.motion_type == exaDEM::MotionType::LINEAR_FORCE_MOTION) {
+      if (v.input_motion_type == exaDEM::MotionType::LINEAR_FORCE_MOTION) {
         if (!node["const_force"]) {
           color_log::error(function_name, "const_force is missing.", false);
           return false;
@@ -580,7 +454,7 @@ struct convert<exaDEM::Driver_params> {
         }
       }
     }
-    if (v.is_compressive()) {
+    if (is_compressive(v.input_motion_type)) {
       if (!node["sigma"]) {
         color_log::error(function_name, "sigma is missing.", false);
         return false;
@@ -593,7 +467,7 @@ struct convert<exaDEM::Driver_params> {
       v.damprate = node["damprate"].as<double>();
     }
     // Tabulation
-    if (v.is_tabulated()) {
+    if (is_tabulated(v.input_motion_type)) {
       if (!node["time"]) {
         color_log::error(function_name, "time is missing.", false);
         return false;
@@ -607,26 +481,26 @@ struct convert<exaDEM::Driver_params> {
     }
 
     // Shaker && Pendulum
-    if (v.is_shaker() || v.is_pendulum()) {
+    if (is_shaker(v.input_motion_type) || is_pendulum(v.input_motion_type)) {
       if (!node["omega"]) {
         color_log::error(function_name, "omega is missing.", false);
         return false;
       }
-      v.omega = node["omega"].as<double>();
+      v.omega = node["omega"].as<Quantity>().convert();
       if (!node["amplitude"]) {
         color_log::error(function_name, "amplitude is missing.", false);
         return false;
       }
-      v.amplitude = node["amplitude"].as<double>();
+      v.amplitude = node["amplitude"].as<Quantity>().convert();
 
-      if (v.is_shaker()) {
+      if (is_shaker(v.input_motion_type)) {
         if (!node["shaker_dir"]) {
           color_log::warning("Driver_params::decode", "shaker_dir is missing, default is [0,0,1].");
           v.shaker_dir = exanb::Vec3d{0, 0, 1};
         } else {
           v.shaker_dir = node["shaker_dir"].as<exanb::Vec3d>();
         }
-      } else if (v.is_pendulum()) {
+      } else if (is_pendulum(v.input_motion_type)) {
         if (!node["pendulum_anchor_point"]) {
           color_log::error(function_name, "pendulum_anchor_point is missing.", false);
           return false;
@@ -643,7 +517,7 @@ struct convert<exaDEM::Driver_params> {
         }
         v.pendulum_swing_dir = node["pendulum_swing_dir"].as<exanb::Vec3d>();
       }
-    } else if (v.is_expr()) {
+    } else if (is_expr(v.input_motion_type)) {
       if (!node["expr"]) {
         color_log::error(function_name, "expr is missing while the motion type is set to EXPRESSION");
       }

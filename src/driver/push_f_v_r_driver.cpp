@@ -29,11 +29,16 @@ struct PushFVRDriverFunc {
   double time;
   double delta_t;
   template<typename VectorT>
-  void operator()(VectorT& driver) {
-    if (driver.motion.is_motion_triggered(time + delta_t)) {
-      driver.push_f_v_r(time, delta_t);
+  void operator()(VectorT& driver, const Driver_params& motion) {
+    if (motion.is_motion_triggered(time + delta_t)) {
+      driver.push_f_v_r(motion, time, delta_t);
     }
   }
+};
+
+template<>
+struct ApplyDriverFunctorTraits<PushFVRDriverFunc> {
+  static constexpr bool use_motion = true;
 };
 
 class PushAccVelocityToPositionDriver : public OperatorNode {
@@ -49,9 +54,10 @@ class PushAccVelocityToPositionDriver : public OperatorNode {
   }
 
   inline void execute() final {
+    auto& drvs = *drivers;
     PushFVRDriverFunc func = {*physical_time, *dt};
     for (size_t id = 0; id < drivers->get_size(); id++) {
-      drivers->apply(id, func);
+      drvs.apply(id, func);
     }
   }
 };

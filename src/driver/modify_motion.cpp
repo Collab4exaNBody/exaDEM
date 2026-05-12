@@ -76,20 +76,21 @@ class ModifyMotionBehavior : public OperatorNode {
 
     Driver_params& new_motion = *motion;
     Drivers& drvs = *drivers;
-
-    new_motion.check_motion_coherence();
+    MotionType motion_type = motion->input_motion_type;
+    new_motion.check_motion_coherence(motion_type);
     std::string msg = "Change the motion type of the driver: [" + std::to_string(*id);
     msg += "] to : [";
-    msg += motion_type_to_string(new_motion.motion_type);
+    msg += motion_type_to_string(motion_type);
     msg += "]";
     color_log::highlight(operator_name(), msg);
     if (*display) {
-      new_motion.print_driver_params();
+      new_motion.print_driver_params(motion_type);
     }
 
-    auto set_motion_type = [&new_motion](auto& d) -> void {
-      d.motion = new_motion;
+    auto set_motion_type = [motion_type](auto& d) -> void {
+      d.motion_type = motion_type;
     };
+    drvs.get_motion(*id) = new_motion;
     drvs.apply(*id, set_motion_type);
   }
 };

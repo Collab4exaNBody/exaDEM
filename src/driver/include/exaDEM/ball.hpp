@@ -28,6 +28,7 @@ struct BallFields {
   exanb::Vec3d center;                                  /**< Center position of the ball. */
   exanb::Vec3d vel = exanb::Vec3d{0, 0, 0};                    /**< Velocity of the ball. */
   exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};                   /**< Angular velocity of the ball. */
+  exanb::Vec3d forces = {0, 0, 0}; /**< sum of the forces applied to the driver. */
   double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the ball */
   double rv = 0;                                        /**< */
 
@@ -80,9 +81,9 @@ namespace exaDEM {
  */
 struct Ball {
   BallFields fields;
-  Driver_params motion;
+  MotionType motion_type;
 
-  Ball(BallFields& bp, Driver_params& dp) : fields(bp), motion(dp) {}
+  Ball(BallFields& bp, MotionType& mt) : fields(bp), motion_type(mt) {}
 
   /**
    * @brief Get the type of the driver (in this case, BALL).
@@ -101,50 +102,49 @@ struct Ball {
     exanb::lout << "Center: " << fields.center << std::endl;
     exanb::lout << "Vel   : " << fields.vel << std::endl;
     exanb::lout << "AngVel: " << fields.vrot << std::endl;
-    if (motion.is_compressive()) {
+    if (is_compressive(motion_type)) {
       exanb::lout << "Radius acceleration: " << fields.ra << std::endl;
       exanb::lout << "Radius velocity: " << fields.rv << std::endl;
     }
-    if (motion.is_force_motion()) {
+    if (is_force_motion(motion_type)) {
       exanb::lout << "Mass: " << fields.mass << std::endl;
     }
-    motion.print_driver_params();
   }
 
   /**
    * @brief Write ball data into a stream.
    */
-  void dump_driver(int id, std::stringstream& stream) {
+  void dump_driver(const Driver_params& motion, int id, std::stringstream& stream) {
     stream << "  - register_ball:" << std::endl;
     stream << "     id: " << id << std::endl;
     stream << "     state: { radius:" << fields.radius;
     stream << ",center: [" << fields.center << "]";
     stream << ",vel: [" << fields.vel << "]";
     stream << ",vrot: [" << fields.vrot << "]";
-    if (motion.is_compressive()) {
+    if (is_compressive(motion_type)) {
       stream << ",rv: " << fields.rv;
     }
-    if (motion.is_force_motion()) {
+    if (is_force_motion(motion_type)) {
       stream << ",mass: " << fields.mass;
     }
     stream << "}" << std::endl;
-    motion.dump_driver_params(stream);
+    motion.dump_driver_params(motion_type, stream);
   }
 
   /**
    * @brief Initialize the ball.
    * @details This function asserts that the radius of the ball is greater than 0.
    */
-  inline void initialize() {
+  inline void initialize(Driver_params& motion) {
     const std::vector<MotionType> ball_valid_motion_types = {
       STATIONARY,
       LINEAR_MOTION,
       COMPRESSIVE_FORCE,
       TABULATED};
 
-    if (!motion.is_valid_motion_type(ball_valid_motion_types)) {
+    if (!is_valid_motion_type(motion_type, ball_valid_motion_types)) {
       color_log::error("Ball::initialize", "Invalid Motion Type.");
-    } else if (!motion.check_motion_coherence()) {
+    } else if (!motion.check_motion_coherence(motion_type)) {
       color_log::error("Ball::initialize", "Invalid Motion.");
     } else if (fields.mass <= 0.0) {
       color_log::error("Ball::initialize", "Please, define a positive mass.");
@@ -156,34 +156,36 @@ struct Ball {
    * @brief Update the position of the ball.
    * @param dt The time step.
    */
-  inline void force_to_accel() {
-    if (motion.is_force_motion()) {
+  inline void force_to_accel(const Driver_params& motion) {
+    if (is_force_motion(motion_type)) {
       if (fields.mass >= 1e100) {
         color_log::warning("f_to_a", "The mass of the ball is set to " + std::to_string(fields.mass));
       }
-      fields.acc = motion.sum_forces() / fields.mass;
+      motion.update_forces(motion_type, fields.forces);  // update forces in function of the motion type
+      fields.acc = fields.forces / fields.mass;
     } else {
       fields.acc = {0, 0, 0};
     }
   }
 
   /**
-   * @brief return driver velocity
+   * Fields Getters
    */
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& get_vel() {
-    return fields.vel;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields.center; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields.vel; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields.forces; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
 
   /**
    * @brief Update the position of the ball.
    * @param dt The time step.
    */
-  inline void push_f_v_r(const double time, const double dt) {
-    if (motion.is_tabulated()) {
+  inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
+    if (is_tabulated(motion_type)) {
       fields.center = motion.tab_to_position(time);
       fields.vel = motion.tab_to_velocity(time);
-    } else if (!motion.is_stationary()) {
-      if (motion.is_compressive()) {
+    } else if (!is_stationary(motion_type)) {
+      if (is_compressive(motion_type)) {
         push_ra_rv_to_rad(dt);
       }
       fields.center = fields.center + dt * fields.vel;
@@ -194,28 +196,28 @@ struct Ball {
    * @brief Update the position of the ball.
    * @param dt The time step.
    */
-  inline void push_f_v(const double dt) {
-    if (motion.is_force_motion()) {
+  inline void push_f_v(const Driver_params& motion, const double dt) {
+    if (is_force_motion(motion_type)) {
       fields.vel = fields.acc * dt;
     }
 
-    if (motion.motion_type == LINEAR_MOTION) {
+    if (motion_type == LINEAR_MOTION) {
       fields.vel = motion.motion_vector * motion.const_vel;  // I prefere reset it
     }
 
-    if (motion.is_compressive()) {
-      if (motion.motion_type == COMPRESSIVE_FORCE) {
+    if (is_compressive(motion_type)) {
+      if (motion_type == COMPRESSIVE_FORCE) {
         fields.vel = {0, 0, 0};
       }
-      push_ra_to_rv(dt);
+      push_ra_to_rv(motion, dt);
     }
   }
   /**
    * @brief Update the "velocity raduis" of the ball.
    * @param t The time step.
    */
-  inline void push_ra_to_rv(const double dt) {
-    if (motion.is_compressive()) {
+  inline void push_ra_to_rv(const Driver_params& motion, const double dt) {
+    if (is_compressive(motion_type)) {
       if (motion.sigma != 0) {
         fields.rv += 0.5 * dt * fields.ra;
       }
@@ -227,7 +229,7 @@ struct Ball {
    * @param t The time step.
    */
   inline void push_ra_rv_to_rad(const double dt) {
-    if (motion.is_compressive()) {
+    if (is_compressive(motion_type)) {
       fields.radius += dt * fields.rv + 0.5 * dt * dt * fields.ra;
     }
   }
@@ -251,13 +253,13 @@ struct Ball {
    * @brief Update the "velocity radius" of the ball.
    * @param t The time step.
    */
-  inline void f_ra(const double dt) {
-    if (motion.is_compressive()) {
+  inline void f_ra(const Driver_params& motion, const double dt) {
+    if (is_compressive(motion_type)) {
       constexpr double C = 0.5;  // I don't remember why, ask Lhassan
       if (motion.weigth != 0) {
         const double s = surface();
         // forces and weigth are defined in Driver_params
-        fields.ra = (exanb::norm(motion.forces) - motion.sigma * s - (motion.damprate * fields.rv)) / (motion.weigth * C);
+        fields.ra = (exanb::norm(fields.forces) - motion.sigma * s - (motion.damprate * fields.rv)) / (motion.weigth * C);
       }
     }
   }
@@ -304,6 +306,12 @@ struct Ball {
           return {true, dn, n, contact_position};
         }
       }
+};
+
+template<>
+struct DriverProperty<Ball> {
+  static constexpr bool use_moment = false;
+  static constexpr bool use_quaternion = false;
 };
 }  // namespace exaDEM
 
