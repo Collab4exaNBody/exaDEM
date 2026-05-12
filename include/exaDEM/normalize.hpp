@@ -16,6 +16,7 @@
 */
 
 #pragma once
+#include <cmath>
 
 namespace exaDEM {
 /**
@@ -23,8 +24,8 @@ namespace exaDEM {
  * @param v The input vector.
  * @return The length of the vector.
  */
-inline double length(exanb::Vec3d& v) {
-  return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+ONIKA_HOST_DEVICE_FUNC inline double length(exanb::Vec3d& v) {
+  return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
 /**
@@ -32,15 +33,15 @@ inline double length(exanb::Vec3d& v) {
  * @param v The input vector.
  * @return The length of the vector.
  */
-inline double length(const exanb::Vec3d& v) {
-  return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+ONIKA_HOST_DEVICE_FUNC inline double length(const exanb::Vec3d& v) {
+  return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
 /**
  * @brief Normalize a 3D vector.
  * @param v The input vector to be normalized.
  */
-inline void _normalize(exanb::Vec3d& v) {
+ONIKA_HOST_DEVICE_FUNC inline void _normalize(exanb::Vec3d& v) {
   v = v / exanb::norm(v);
 }
 }  // namespace exanb
