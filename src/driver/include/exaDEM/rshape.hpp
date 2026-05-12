@@ -259,7 +259,7 @@ struct RShapeDriver {
 
       if (is_compressive(motion_type)) {
         if (motion.sigma != 0) {
-          fields.vel += 0.5 * dt * fields.acc;
+          fields.vel += dt * fields.acc;
         }
       }
     }

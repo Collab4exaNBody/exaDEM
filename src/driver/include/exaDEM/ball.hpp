@@ -219,7 +219,7 @@ struct Ball {
   inline void push_ra_to_rv(const Driver_params& motion, const double dt) {
     if (is_compressive(motion_type)) {
       if (motion.sigma != 0) {
-        fields.rv += 0.5 * dt * fields.ra;
+        fields.rv += dt * fields.ra;
       }
     }
   }

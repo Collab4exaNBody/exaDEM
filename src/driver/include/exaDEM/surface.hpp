@@ -217,7 +217,7 @@ struct Surface {
     } else {
       if (is_compressive(motion_type)) {
         if (motion.sigma != 0) {
-          fields.vel += 0.5 * dt * fields.acc * motion.motion_vector;
+          fields.vel += dt * fields.acc * motion.motion_vector;
         }
       }
       if (motion_type == LINEAR_MOTION) {
