@@ -18,6 +18,7 @@ under the License.
 */
 #pragma once
 #include <onika/math/basic_types.h>
+#include <exaDEM/normalize.hpp>
 #include <filesystem>
 #include <fstream>
 
@@ -30,9 +31,9 @@ namespace exaDEM {
 struct info_ball
 {
   int id;         /**< Unique identifier of the driver */
-  Vec3d center;   /**< Center position of the sphere */
+  exanb::Vec3d center;   /**< Center position of the sphere */
   double radius;  /**< Radius of the sphere */
-  Vec3d vel;      /**< Velocity of the sphere */
+  exanb::Vec3d vel;      /**< Velocity of the sphere */
 };
 
 /**
@@ -42,9 +43,9 @@ struct info_ball
 struct info_surface
 {
   int id;         /**< Unique identifier of the surface */
-  Vec3d normal;   /**< Unit normal vector defining the plane orientation */
+  exanb::Vec3d normal;   /**< Unit normal vector defining the plane orientation */
   double offset;  /**< Plane offset in equation n · x = offset */
-  Vec3d vel;      /**< Velocity of the surface */
+  exanb::Vec3d vel;      /**< Velocity of the surface */
 };
 
 /**
@@ -54,44 +55,44 @@ struct info_surface
 struct info_cylinder
 {
   int id;         /**< Unique identifier of the cylinder */
-  Vec3d center;   /**< A point on the cylinder axis */
-  Vec3d normal;   /**< Axis direction of the cylinder (should be unit length) */
+  exanb::Vec3d center;   /**< A point on the cylinder axis */
+  exanb::Vec3d normal;   /**< Axis direction of the cylinder (should be unit length) */
   double radius;  /**< Radius of the cylinder */
 };
 
-std::tuple<bool, bool, Vec3d> intersect(Vec3d& n,
-                                        double offset,
-                                        Vec3d& corner1,
-                                        Vec3d& corner2) {
-  Vec3d c1 = corner1 - offset * n;
-  Vec3d c2 = corner2 - offset * n;
-  Vec3d dist = c2 - c1;
+std::tuple<bool, bool, exanb::Vec3d> intersect(exanb::Vec3d& n,
+                                               double offset,
+                                               exanb::Vec3d& corner1,
+                                               exanb::Vec3d& corner2) {
+  exanb::Vec3d c1 = corner1 - offset * n;
+  exanb::Vec3d c2 = corner2 - offset * n;
+  exanb::Vec3d dist = c2 - c1;
   double norm_proj_dist = exanb::dot(n, dist);
   if (norm_proj_dist == 0) {
-    return {false, false, Vec3d{0, 0, 0}};
+    return {false, false, exanb::Vec3d{0, 0, 0}};
   }
   double t = -(exanb::dot(n, c1)) / norm_proj_dist;
   if (t < 0 || t > 1) {
-    return {false, false, Vec3d{0, 0, 0}};
+    return {false, false, exanb::Vec3d{0, 0, 0}};
   }
-  Vec3d point = c1 + t * dist + offset * n;
+  exanb::Vec3d point = c1 + t * dist + offset * n;
   return {true, false, point};
 }
 
-std::vector<Vec3d> compute_intersections(Domain& domain,
-                                         Vec3d& normal,
-                                         double offset) {
-  std::vector<Vec3d> points;
+std::vector<exanb::Vec3d> compute_intersections(exanb::Domain& domain,
+                                                exanb::Vec3d& normal,
+                                                double offset) {
+  std::vector<exanb::Vec3d> points;
   auto [inf, sup] = domain.bounds();
-  std::array<Vec3d, 8> corners = {
-    Vec3d{inf.x, inf.y, inf.z},  // Corner 0
-    Vec3d{sup.x, inf.y, inf.z},  // Corner 1
-    Vec3d{sup.x, sup.y, inf.z},  // Corner 2
-    Vec3d{inf.x, sup.y, inf.z},  // Corner 3
-    Vec3d{inf.x, inf.y, sup.z},  // Corner 4
-    Vec3d{sup.x, inf.y, sup.z},  // Corner 5
-    Vec3d{sup.x, sup.y, sup.z},  // Corner 6
-    Vec3d{inf.x, sup.y, sup.z}   // Corner 7
+  std::array<exanb::Vec3d, 8> corners = {
+    exanb::Vec3d{inf.x, inf.y, inf.z},  // Corner 0
+    exanb::Vec3d{sup.x, inf.y, inf.z},  // Corner 1
+    exanb::Vec3d{sup.x, sup.y, inf.z},  // Corner 2
+    exanb::Vec3d{inf.x, sup.y, inf.z},  // Corner 3
+    exanb::Vec3d{inf.x, inf.y, sup.z},  // Corner 4
+    exanb::Vec3d{sup.x, inf.y, sup.z},  // Corner 5
+    exanb::Vec3d{sup.x, sup.y, sup.z},  // Corner 6
+    exanb::Vec3d{inf.x, sup.y, sup.z}   // Corner 7
   };
 
   std::vector<std::pair<int, int>> edges = {
@@ -119,12 +120,12 @@ std::vector<Vec3d> compute_intersections(Domain& domain,
 
   int last_elem = points.size() - 1;
   for (int i = 0; i < last_elem; i++) {
-    Vec3d& pi = points[i];
+    exanb::Vec3d& pi = points[i];
     int to_swap = -666;
     double vdist = 1e32;
     for (size_t j = i + 1; j < points.size(); j++) {
-      Vec3d& pj = points[j];
-      Vec3d dist = pi - pj;
+      exanb::Vec3d& pj = points[j];
+      exanb::Vec3d dist = pi - pj;
       int n_component_null = 0;
       if (dist.x == 0) {
         n_component_null++;
@@ -158,7 +159,7 @@ std::vector<Vec3d> compute_intersections(Domain& domain,
   return points;
 }
 
-void write_surfaces_paraview(Domain& domain,
+void write_surfaces_paraview(exanb::Domain& domain,
                              std::vector<info_surface>& surfaces,
                              std::filesystem::path path,
                              std::string filename) {
@@ -194,10 +195,10 @@ void write_surfaces_paraview(Domain& domain,
 
   int count = 0;
   for (auto [id, normal, offset, vel] : surfaces) {
-    std::vector<Vec3d> list_of_vertices = compute_intersections(domain, normal, offset);
+    std::vector<exanb::Vec3d> list_of_vertices = compute_intersections(domain, normal, offset);
     polygons << list_of_vertices.size() << " ";
     for (size_t i = 0; i < list_of_vertices.size(); i++) {
-      Vec3d& v = list_of_vertices[i];
+      exanb::Vec3d& v = list_of_vertices[i];
       ids << id << std::endl;
       vertices << v.x << " " << v.y << " " << v.z << std::endl;
       vels << vel.x << " " << vel.y << " " << vel.z << std::endl;
@@ -288,7 +289,7 @@ void write_balls_paraview(std::vector<info_ball>& balls, std::filesystem::path p
  * @warning High resolutions may increase memory and I/O cost.
  */
 void write_cylinder_paraview(
-    Domain& domain,
+    exanb::Domain& domain,
     std::vector<info_cylinder>& cylinders,
     std::filesystem::path path,
     const std::string& filename,
@@ -316,7 +317,7 @@ void write_cylinder_paraview(
   int npoint = 0;
   int npoly = 0;
   int total_size = 0;
-  std::vector<Vec3d> points;
+  std::vector<exanb::Vec3d> points;
 
   // --- Header
   file << "# vtk DataFile Version 3.0\n";
@@ -324,7 +325,7 @@ void write_cylinder_paraview(
   file << "ASCII\n";
   file << "DATASET POLYDATA\n";
 
-  std::vector<Vec3d> corners = {
+  std::vector<exanb::Vec3d> corners = {
     {box.bmin.x, box.bmin.y, box.bmin.z},
     {box.bmin.x, box.bmin.y, box.bmax.z},
     {box.bmin.x, box.bmax.y, box.bmin.z},
@@ -336,7 +337,7 @@ void write_cylinder_paraview(
   };
 
   for (auto [id, center, normal, radius] : cylinders) {
-    normalize(normal);
+    _normalize(normal);
     points.clear();
     double t_min = 1e30, t_max = -1e30;
     for (const auto& c : corners) {
@@ -345,10 +346,10 @@ void write_cylinder_paraview(
       t_max = std::max(t_max, t);
     }
 
-    Vec3d tmp = (std::abs(normal.x) < 0.9) ? Vec3d{1,0,0} : Vec3d{0,1,0};
-    Vec3d u = exanb::cross(normal, tmp);
-    normalize(u);
-    Vec3d v = exanb::cross(normal, u);
+    exanb::Vec3d tmp = (std::abs(normal.x) < 0.9) ? exanb::Vec3d{1,0,0} : exanb::Vec3d{0,1,0};
+    exanb::Vec3d u = exanb::cross(normal, tmp);
+    _normalize(u);
+    exanb::Vec3d v = exanb::cross(normal, u);
 
 
     for (int i = 0; i < n_theta; ++i) {
@@ -357,12 +358,12 @@ void write_cylinder_paraview(
       for (int j = 0; j < n_t; ++j) {
         double t = t_min + (t_max - t_min) * j / (n_t - 1);
 
-        Vec3d p = center
+        exanb::Vec3d p = center
             + normal * t
             + u * (radius * std::cos(theta))
             + v * (radius * std::sin(theta));
 
-        if (is_inside(box, p)) {
+        if (exanb::is_inside(box, p)) {
           points.push_back(p);
         } else {
           points.push_back({NAN, NAN, NAN});  // masking

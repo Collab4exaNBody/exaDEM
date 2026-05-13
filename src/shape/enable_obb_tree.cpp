@@ -23,6 +23,7 @@ under the License.
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 class EnableOBBTree : public OperatorNode {
   ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, REQUIRED, DocString{"Collection of shapes"});
   ADD_SLOT(bool, verbosity, INPUT, false, PRIVATE);

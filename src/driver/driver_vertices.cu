@@ -68,8 +68,8 @@ class DriverVertices : public OperatorNode {
       ParallelForOptions opts;
       opts.omp_scheduling = OMP_SCHED_STATIC;
 
-      Vec3d rshape_center = mesh.center;
-      Quaternion rshape_quat = mesh.quat;
+      Vec3d rshape_center = mesh.fields.center;
+      Quaternion rshape_quat = mesh.fields.quat;
       Vec3d* ptr_rshape_vertices = onika::cuda::vector_data(mesh.vertices);
       Vec3d* ptr_shp_vertices = onika::cuda::vector_data(mesh.shp.m_vertices);
       WrapperRShapeDriverComputeVertices func = {rshape_center, rshape_quat, ptr_rshape_vertices, ptr_shp_vertices};

@@ -23,26 +23,21 @@ under the License.
 #include <onika/cuda/uninitialized_place_holder.h>
 
 namespace exaDEM {
-using namespace onika::parallel;
-using namespace exanb;
-template <typename T>
-using VectorT = onika::memory::CudaMMVector<T>;
-
 struct reduce_thread_block_t {};
 struct reduce_thread_local_t {};
 struct reduce_global_t {};
 struct RShapeDriverDisplacementFunctor {
   const double m_threshold_sqr = 0.0;
-  const Vec3d* vertices;
-  const Vec3d c_a;
-  const Quaternion q_a;
-  const Vec3d c_b;
-  const Quaternion q_b;
+  const exanb::Vec3d* vertices;
+  const exanb::Vec3d c_a;
+  const exanb::Quaternion q_a;
+  const exanb::Vec3d c_b;
+  const exanb::Quaternion q_b;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(int& count_over_dist2, uint64_t i, reduce_thread_local_t = {}) const {
-    const Vec3d v_a = c_a + q_a * vertices[i];
-    const Vec3d v_b = c_b + q_b * vertices[i];
-    const Vec3d dv = v_a - v_b;
+    const exanb::Vec3d v_a = c_a + q_a * vertices[i];
+    const exanb::Vec3d v_b = c_b + q_b * vertices[i];
+    const exanb::Vec3d dv = v_a - v_b;
     if (exanb::dot(dv, dv) >= m_threshold_sqr) {
       ++count_over_dist2;
     }

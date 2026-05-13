@@ -25,6 +25,22 @@ under the License.
 namespace exaDEM {
 using namespace exanb;
 
+struct PushFVRDriverFunc {
+  double time;
+  double delta_t;
+  template<typename VectorT>
+  void operator()(VectorT& driver, const Driver_params& motion) {
+    if (motion.is_motion_triggered(time + delta_t)) {
+      driver.push_f_v_r(motion, time, delta_t);
+    }
+  }
+};
+
+template<>
+struct ApplyDriverFunctorTraits<PushFVRDriverFunc> {
+  static constexpr bool use_motion = true;
+};
+
 class PushAccVelocityToPositionDriver : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(double, physical_time, INPUT, REQUIRED);
@@ -38,14 +54,10 @@ class PushAccVelocityToPositionDriver : public OperatorNode {
   }
 
   inline void execute() final {
-    const double time = *physical_time;
-    const double delta_t = *dt;
+    auto& drvs = *drivers;
+    PushFVRDriverFunc func = {*physical_time, *dt};
     for (size_t id = 0; id < drivers->get_size(); id++) {
-      drivers->apply(id, [time, delta_t](auto& drv) {
-        if (drv.is_motion_triggered(time + delta_t)) {
-          drv.push_f_v_r(time, delta_t);
-        }
-      });
+      drvs.apply(id, func);
     }
   }
 };

@@ -139,7 +139,13 @@ constexpr DRIVER_TYPE get_type<exaDEM::RShapeDriver>() {
 struct Driver {
   constexpr DRIVER_TYPE get_type();
   virtual void print();
-  virtual bool filter(const double, const Vec3d&);
-  virtual std::tuple<bool, double, Vec3d, Vec3d> dectector(const double, const Vec3d&);
+  virtual bool filter(const double, const exanb::Vec3d&);
+  virtual std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> dectector(const double, const exanb::Vec3d&);
+};
+
+template<typename DriverT>
+struct DriverProperty {
+  static constexpr bool use_moment = false;
+  static constexpr bool use_quaternion = false;
 };
 }  // namespace exaDEM

@@ -34,6 +34,10 @@ input_data:
      random_quaternion: [   false,    false ]
      sigma_velocity:    [     0.0,      0.0 ]
      velocity:          [ [0,0,0], [50,0,0] ]     
+  - multimat_contact_params:
+     default_config: { kn: 50000, kt: 50000, mu: 0.3, damp_rate: 0.87}
+  - drivers_contact_params:
+     default_config: { kn: 50000, kt: 50000, mu: 0.3, damp_rate: 0.87}
   - inner_bond_params:
      default_config: { kn: 5.e3, kt: 5.e3, damp_rate: 0.87, g: 2.e-2 } 
 
@@ -53,9 +57,7 @@ particle_write_paraview_generic:
 
 compute_force:
   - gravity_force
-  - contact_polyhedron:
-     config: { kn: 50000, kt: 50000, kr: 0.0, mu: 0.3, damp_rate: 0.87} 
-     config_driver: { kn: 50000, kt: 50000, kr: 0.0, mu: 0.3, damp_rate: 0.87} 
+  - contact_polyhedron_multimat
   - inner_bond_polyhedron
 
 domain:

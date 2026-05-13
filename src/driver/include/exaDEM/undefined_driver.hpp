@@ -20,7 +20,8 @@ under the License.
 #include <exaDEM/driver_base.hpp>
 
 namespace exaDEM {
-struct UndefinedDriver : public Ball_params, Driver_params {
+struct UndefinedDriver {
+  Driver_params motion;
   /**
    * @brief Get the type of the driver (in this case, UNDEFINED).
    * @return The type of the driver.
@@ -36,7 +37,7 @@ struct UndefinedDriver : public Ball_params, Driver_params {
    * @brief Print information about the undefined driver.
    */
   void print() {
-    lout << "Driver Type: UNDEFINED" << std::endl;
+    exanb::lout << "Driver Type: UNDEFINED" << std::endl;
   }
 };
 }  // namespace exaDEM
