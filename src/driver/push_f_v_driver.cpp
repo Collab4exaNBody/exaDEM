@@ -41,14 +41,17 @@ struct ApplyDriverFunctorTraits<PushForceVeloctyDriverFunc> {
 class PushAccelToVelocityDriver : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
-  ADD_SLOT(double , dt_scale , INPUT , 1.0);
+  ADD_SLOT(double, dt_scale, INPUT, 1.0);
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
           This operator updates driver centers using their velocities. Not that accelerations are not used.
 
-          YAML example [no option]:
+          Parameter:
+            - dt_scale [double]: apply a scale factor.
+
+          YAML example:
 
             - push_f_v_driver
         )EOF";
