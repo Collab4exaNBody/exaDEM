@@ -14,7 +14,7 @@ from lib.data_class import (
     Shape,
     Shapes,
 )
-from lib.data_utils import parse_time, parse_vec3
+from lib.data_utils import build_index_map, extract_field, parse_properties, parse_time, parse_vec3
 
 # ###############################################
 # -- IO UTILITIES FOR EXADEM --
@@ -46,7 +46,9 @@ def read_interactions(filename)-> list[Contact]:
             data = line.strip().split(",")
 
             i = int(data[0])
-            j = int(data[1])
+            j = int(data[1])            
+            si = int(data[2])
+            sj = int(data[3])
             itype = int(data[4])
 
             normal = np.array(list(map(float, data[9:12])))
@@ -56,8 +58,12 @@ def read_interactions(filename)-> list[Contact]:
                 Contact(
                     i=i,
                     j=j,
+                    si=si,
+                    sj=sj,
                     type=itype,
                     force=normal + tangential,
+                    fn=normal,
+                    ft=tangential,
                     pos_i=np.array(list(map(float, data[15:18]))),
                     pos_j=np.array(list(map(float, data[18:21]))),
 
@@ -97,25 +103,42 @@ def read_xyzdem_snapshot(particle_file, interaction_file=None) -> RockableData:
         n = int(f.readline())
         header = f.readline()
         time = parse_time(header)
+        props = parse_properties(header)
+        index_map = build_index_map(props)
 
         for line in f:
             data = line.split()
-            pid = int(data[-1])
+            
+            pid = extract_field(data, index_map, "id")
+            cluster = extract_field(data, index_map, "cluster")
+            pos = extract_field(data, index_map, "pos")
+            vel = extract_field(data, index_map, "vel")
+            force = extract_field(data, index_map, "force")
+            quat = extract_field(data, index_map, "orient")
+            vrot = extract_field(data, index_map, "vrot")
+            arot = extract_field(data, index_map, "arot")
+            stress = extract_field(data, index_map, "stress")
+            mass = extract_field(data, index_map, "mass")
+            I = extract_field(data, index_map, "I")
+
 
             p = Particle(
-                name=f"p{pid}",
+                name=f"p{pid}" if pid is not None else None,
                 id=pid,
                 group=0,
-                cluster=int(data[7]),
+                cluster=cluster if cluster is not None else None,
                 homothety=1.0,
-                pos=tuple(map(float, data[1:4])),
-                vel=tuple(map(float, data[4:7])),
-                acc=(0, 0, 0),
-                quat=(1, 0, 0, 0),
-                vrot=(0, 0, 0),
-                arot=(0, 0, 0),
-                mass=float(data[8]) if len(data) > 8 else None,
-            )
+                pos=tuple(pos) if pos else None,
+                vel=tuple(vel) if vel else None,
+                force=tuple(force) if force else None,
+                acc=tuple(force) if force else None,  
+                stress=tuple(stress) if stress else None,
+                quat=tuple(quat) if quat else None,
+                vrot=tuple(vrot) if vrot else None,
+                arot=tuple(arot) if arot else None,
+                I=tuple(I) if I else None,
+                mass=float(mass) if mass else None,
+                volume=None,)
 
             particles.append(p)
             clusters.setdefault(p.cluster, []).append(p)

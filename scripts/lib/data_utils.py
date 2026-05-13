@@ -143,6 +143,40 @@ def parse_time(header_line):
     '''
     match = re.search(r"Time=([0-9.eE+-]+)", header_line)
     return float(match.group(1)) if match else None
+    
+
+def parse_properties(header_line):
+    '''
+    Parse the properties from a header line in the ExaDEM output file.
+    Parameters
+    ----------
+    header_line : str
+        the header line containing the properties information (e.g., "Properties=pos:float:3:vel:float:3:acc:float:3")  
+    Returns
+    ----------
+    list of tuples
+        a list of tuples containing the property name, type and dimension (e.g., [("pos", "float", 3), ("vel", "float", 3), ("acc",
+        "float", 3)])
+    '''
+
+    import re
+    
+    match = re.search(r'Properties=([^ ]+)', header_line)
+    if not match:
+        raise ValueError("No Properties field found")
+
+    tokens = match.group(1).split(':')
+    
+    props = []
+    i = 0
+    while i < len(tokens):
+        name = tokens[i]
+        typ = tokens[i+1]
+        dim = int(tokens[i+2])
+        props.append((name, typ, dim))
+        i += 3
+
+    return props
 
 
 def parse_vec3(string):
@@ -198,3 +232,55 @@ def build_clusters(particles):
     for p in particles:
         clusters[p.cluster].append(p)
     return clusters
+
+
+def build_index_map(props):
+    '''
+    Build an index map from property names to their corresponding indices in the ExaDEM output file.
+    Parameters
+    ----------
+    props : list of tuples
+        a list of tuples containing the property name, type and dimension (e.g., [("pos", "float", 3), ("vel", "float", 3), ("acc",
+        "float", 3)])
+    Returns 
+    ----------
+    dict
+        a dictionary mapping property names to their corresponding index ranges in the ExaDEM output file (e.g., {"pos": (0, 3), "vel": (3, 6), "acc": (6, 9)})
+    '''
+    index_map = {}
+    current = 0
+
+    for name, typ, dim in props:
+        index_map[name] = (current, current + dim)
+        current += dim
+
+    return index_map
+
+def extract_field(data, index_map, field, cast=float):
+    '''
+    Extract a specific field from a line of data in the ExaDEM output file using the index map.
+    Parameters
+    ----------
+    data : list of str
+        the line of data from which to extract the field, split into a list of strings
+    index_map : dict
+        a dictionary mapping property names to their corresponding index ranges in the ExaDEM output file (e.g., {"pos": (0, 3), "vel": (3, 6), "acc": (6, 9)})
+    field : str
+        the name of the field to extract (e.g., "pos", "vel", "acc")    
+    cast : function
+        a function to cast the extracted values to the desired type (default is float)
+    Returns
+    ----------
+    list or single value
+        the extracted field values, cast to the desired type; returns a list if the field has multiple dimensions, or a single value if it has only one dimension; returns None if the field is not found in the index map
+    '''
+    if field not in index_map:
+        return None
+    
+    start, end = index_map[field]
+    values = data[start:end]
+
+    if cast:
+        values = list(map(cast, values))
+
+    return values if len(values) > 1 else values[0]
