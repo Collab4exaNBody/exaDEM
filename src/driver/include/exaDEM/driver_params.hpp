@@ -43,7 +43,7 @@ struct Driver_params {
   // Motion: Compression
   double sigma = 0;         /**< used for compressive force */
   double damprate = 0;      /**< used for compressive force */
-  double weigth = 0;        /**< cumulated sum of particle weigth into the simulation or in the driver */
+  double mass = 0;          /**< mass of the driver */
 
   // Motion: Tabulated
   std::vector<double> tab_time;
@@ -62,8 +62,9 @@ struct Driver_params {
   // Motion: Expression
   Driver_expr expr;
 
-  // juste for YAML
+  // Just for YAML
   MotionType input_motion_type = MotionType::STATIONARY;
+
   ONIKA_HOST_DEVICE_FUNC
       inline bool is_expr(MotionType motion_type, double time) const {
         // do nothing if time < start or time > end;

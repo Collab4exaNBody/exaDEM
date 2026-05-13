@@ -124,9 +124,6 @@ struct Cylinder {
     motion.dump_driver_params(motion_type, stream);
   }
 
-  /**
-   * @brief return driver velocity
-   */
   ONIKA_HOST_DEVICE_FUNC inline void force_to_accel(const Driver_params& motion) {
     /** not implemented */
   }

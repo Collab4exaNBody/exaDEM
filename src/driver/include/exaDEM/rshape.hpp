@@ -224,71 +224,116 @@ struct RShapeDriver {
     }
   }
 
+  /**
+   * @brief Converts net forces into acceleration, depending on the motion type.
+   *
+   * @param motion  Driver parameters: target stress σ, damping rate, motion vector, etc.
+   */
   inline void force_to_accel(const Driver_params& motion) {
     if (is_compressive(motion_type)) {
-      constexpr double C = 0.5;
+      // Compressive motion: only update acceleration when the particle has a non-zero mass.
+      // (Zero mass would cause a division by zero — silently skipped here.)
+      constexpr double C = 0.5;  // integration coefficient (Velocity Verlet half-step factor)
+
       if (fields.mass != 0) {
-        const double s = fields.surface;
-        // compute acceleration
-        exanb::Vec3d tmp = (fields.forces - motion.sigma * s - (motion.damprate * fields.vel)) / (fields.mass * C);
-        // get acc into the motion vector axis
+        const double surface = fields.surface;
+
+        // Force balance along the compression axis:
+        exanb::Vec3d tmp = (fields.forces - motion.sigma * surface - (motion.damprate * fields.vel))
+            / (fields.mass * C);
+
+        // Project acceleration onto the motion axis: only the component along
+        // motion_vector is physically meaningful for a uniaxial compression.
         fields.acc = exanb::dot(tmp, motion.motion_vector) * motion.motion_vector;
       }
+
     } else if (is_force_motion(motion_type)) {
+
+      // Force-driven motion: warn if mass looks uninitialised (sentinel value ≥ 1e100).
+      // A division by such a value would yield near-zero acceleration silently.
       if (fields.mass >= 1e100) {
-        color_log::warning("f_to_a", "The mass of the rshape is set to " + std::to_string(fields.mass));
+        color_log::warning("f_to_a",
+                           "The mass of the rshape is set to " + std::to_string(fields.mass));
+      } else if (fields.mass <= 0) {
+        color_log::error("rshape::force_to_accel",
+                         "The mass of the rshape is not defined correctly " + std::to_string(fields.mass));
       }
-      motion.update_forces(motion_type, fields.forces);  // update forces in function of the motion type
+
+      // Apply any motion-type-specific force corrections before computing acceleration.
+      motion.update_forces(motion_type, fields.forces);
+
+      // Newton's second law: a = F / m
       fields.acc = fields.forces / fields.mass;
+
     } else {
+      // Stationary, linear, shaker, etc.: kinematics are prescribed directly,
+      // so acceleration from forces is irrelevant — reset to zero.
       fields.acc = {0, 0, 0};
     }
   }
 
-  inline void push_f_v(const Driver_params& motion, const double dt) {
-    if (is_stationary(motion_type)) {
-      fields.vel = exanb::Vec3d{0, 0, 0};
-    } else {
-      if (is_force_motion(motion_type)) {
-        fields.vel += fields.acc * dt;
-      }
-
-      if (motion_type == MotionType::LINEAR_MOTION) {
-        fields.vel = motion.motion_vector * motion.const_vel;
-      }
-
-      if (is_compressive(motion_type)) {
-        if (motion.sigma != 0) {
-          fields.vel += 0.5 * dt * fields.acc;
-        }
-      }
-    }
-  }
-
+  /**
+   * @brief Updates particle position and velocity for the second half of a Velocity Verlet step.
+   * @param motion  Driver parameters (tabulated data, expression, shaker config, etc.).
+   * @param time    Current simulation time (used for tabulated/expression/shaker evaluations).
+   * @param dt      Raw time step (not pre-scaled, unlike push_f_v).
+   */
   inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
+
     if (is_tabulated(motion_type)) {
+      // Tabulated motion: bypass integration entirely and interpolate position
+      // and velocity directly from the pre-computed trajectory table.
       fields.center = motion.tab_to_position(time);
-      fields.vel = motion.tab_to_velocity(time);
+      fields.vel    = motion.tab_to_velocity(time);
     } else if (!is_stationary(motion_type)) {
-      if (motion_type == LINEAR_MOTION) {
-        assert(exanb::norm(fields.vel) == motion.const_vel);
+      // Only integrate non-stationary particles.
+      if (motion_type == MotionType::LINEAR_MOTION) {
+        // Sanity check: for purely linear motion the speed must remain constant.
+        [[maybe_unused]] constexpr double VEL_TOLERANCE = 1e-12;
+        assert(std::abs(exanb::norm(fields.vel) - motion.const_vel) < VEL_TOLERANCE);
       }
 
       if (motion_type == MotionType::SHAKER) {
+        // Shaker motion: recompute velocity from the waveform at (time + dt)
+        // and project it onto the shaker direction.
+        // Acceleration is reset to zero because the shaker imposes kinematics directly.
         fields.vel = motion.shaker_velocity(time + dt) * motion.shaker_direction();
-        fields.acc = exanb::Vec3d{0, 0, 0};  // reset acc
+        fields.acc = exanb::Vec3d{0, 0, 0};  // kinematic override: no residual acceleration
+      } else if (motion.is_expr(motion_type, time)) {
+        // Expression-driven motion: override velocity (and angular velocity if needed)
+        // with values evaluated from the user-defined mathematical expression.
+        if (motion.expr.expr_use_v) {
+          fields.vel = motion.driver_expr_v(time);       // linear velocity override
+        }
+        if (motion.expr.expr_use_vrot) {
+          fields.vrot = motion.driver_expr_vrot(time);   // angular velocity override
+        }
       }
 
-      if (motion.is_expr(motion_type, time)) {
-        if(motion.expr.expr_use_v) {
-          fields.vel = motion.driver_expr_v(time);
-        }
-        if(motion.expr.expr_use_vrot) {
-          fields.vrot = motion.driver_expr_vrot(time);
-        }
-      }
-
+      // Standard Velocity Verlet position update:
+      // Note: velocity may have been overridden above (shaker, expression).
       fields.center += dt * fields.vel + 0.5 * dt * dt * fields.acc;
+    }
+  }
+
+  /**
+   * @brief Updates particle velocity based on the driver motion type (velocity Verlet half-step).
+   * @param motion   Driver parameters describing the imposed motion (velocity vector,
+   *                 constant speed, target stress σ, etc.).
+   * @param delta_t  Effective time step already scaled by the integration factor
+   *                 (i.e. dt × dt_scale).
+   */
+  inline void push_f_v(const Driver_params& motion, const double delta_t) {
+    if (is_stationary(motion_type)) {
+      // Stationary particle: enforce zero velocity regardless of any accumulated acceleration.
+      fields.vel = exanb::Vec3d{0, 0, 0};
+    } else if (is_force_motion(motion_type)) {
+      fields.vel += delta_t * fields.acc;
+    } else if (motion_type == MotionType::LINEAR_MOTION) {
+      // Linear (kinematic) motion: override velocity with the prescribed constant velocity.
+      fields.vel = motion.motion_vector * motion.const_vel;
+    } else if (is_compressive(motion_type) && motion.sigma != 0) {
+      fields.vel += delta_t * fields.acc;
     }
   }
 
