@@ -24,20 +24,24 @@ under the License.
 #include <onika/physics/units.h>
 
 namespace exaDEM {
+// Data fields for a planar surface/wall driver
 struct SurfaceFields {
-  /** Required */
-  double offset = 0;               /**< Offset from the origin along the normal vector. */
-  exanb::Vec3d normal = {0, 0, 1}; /**< Normal vector of the surface. */
-  exanb::Vec3d center = {0, 0, 0}; /**< Center position of the surface. */
-  /** optional */
-  exanb::Vec3d vel = {0, 0, 0};                                /**< Velocity of the surface. */
-  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};                   /**< Angular velocity of the surface. */
-  exanb::Vec3d forces = {0, 0, 0}; /**< sum of the forces applied to the driver. */
-  double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the ball */
-  double surface = -1;
-  /** no need to dump them */
-  exanb::Vec3d center_proj; /**< Center position projected on the norm. */
-  double acc = 0;
+  /** Required geometry parameters */
+  double offset = 0;               /**< Offset distance from origin along the normal vector. */
+  exanb::Vec3d normal = {0, 0, 1}; /**< Normalized normal vector of the surface plane. */
+  exanb::Vec3d center = {0, 0, 0}; /**< Reference center position of the surface. */
+  
+  /** Optional motion parameters */
+  exanb::Vec3d vel = {0, 0, 0};                          /**< Linear velocity of the surface. */
+  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};             /**< Angular velocity (rotation) of the surface. */
+  exanb::Vec3d forces = {0, 0, 0};                       /**< Accumulated forces applied to the surface from interactions. */
+  exanb::Vec3d mom = {0, 0, 0};                          /**< Accumulated moments (torques) applied to the surface. */
+  double mass = std::numeric_limits<double>::max() / 4;  /**< Mass of the surface. */
+  double surface = -1;                                    /**< Contact surface area (for compressive motion). */
+  
+  /** Derived quantities (not persisted) */
+  exanb::Vec3d center_proj;  /**< Center position projected onto the normal (offset * normal). */
+  double acc = 0;            /**< Scalar acceleration along the normal direction. */
 };
 }  // namespace exaDEM
 
@@ -85,7 +89,11 @@ struct convert<exaDEM::SurfaceFields> {
 
 namespace exaDEM {
 /**
- * @brief Struct representing a surface in the exaDEM simulation.
+ * @brief Planar surface/wall driver for DEM simulations.
+ * 
+ * Represents a flat rigid surface (wall) defined by a normal vector and offset.
+ * Can move in various ways: stationary, linear motion, compressive force, shaker, or pendulum motion.
+ * The surface geometry is always planar (infinite plane).
  */
 struct Surface {
   SurfaceFields fields;
@@ -196,6 +204,10 @@ struct Surface {
     }
   }
 
+  /**
+   * @brief Convert accumulated forces to acceleration along the normal direction.
+   * @param motion Driver motion parameters and constraints.
+   */
   void force_to_accel(const Driver_params& motion) {
     if (is_compressive(motion_type)) {
       constexpr double C = 0.5;
@@ -211,6 +223,11 @@ struct Surface {
     }
   }
 
+  /**
+   * @brief Update surface velocity based on acceleration and motion type.
+   * @param motion Driver motion parameters.
+   * @param dt Time step.
+   */
   inline void push_f_v(const Driver_params& motion, const double dt) {
     if (is_stationary(motion_type)) {
       fields.vel = {0, 0, 0};
@@ -227,17 +244,24 @@ struct Surface {
   }
 
   /**
-   * Fields Getters
+   * @brief Field accessors for position, velocity, forces, and moments.
    */
+  // Position (center) getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields.center; }
+  // Linear velocity getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields.vel; }
+  // Accumulated forces getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields.forces; }
+  // Accumulated moment (torque) getter
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields.mom; }
+  // Angular velocity getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
 
   /**
-   * @brief Update the position of the wall.
-   * @param time Current physical time.
-   * @param dt The time step.
+   * @brief Update surface position using kinematic integration.
+   * @param motion Driver motion parameters.
+   * @param time Current simulation time.
+   * @param dt Time step.
    */
   inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
     if (!is_stationary(motion_type)) {
@@ -273,10 +297,10 @@ struct Surface {
   }
 
   /**
-   * @brief Filter function to check if a vertex is within a certain radius of the surface.
-   * @param rcut The cut-off radius.
+   * @brief Check if a point is close enough to the surface for potential interaction.
+   * @details Uses distance perpendicular to the surface (along normal direction).\n   * @param rcut The cut-off radius for interaction detection.
    * @param p The point to check.
-   * @return True if the point is within the cut-off radius of the surface, false otherwise.
+   * @return True if the point is within cut-off radius of the surface, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const exanb::Vec3d& p) {
     exanb::Vec3d proj = dot(p, fields.normal) * fields.normal;
@@ -285,14 +309,15 @@ struct Surface {
   }
 
   /**
-   * @brief Detects collision between a vertex and the surface.
-   * @param rcut The cut-off radius.
-   * @param p The point to check for collision.
+   * @brief Detect collision between a point and the surface plane.
+   * @details Computes penetration depth and contact information for particle-surface interaction.
+   * @param rcut The cut-off radius for collision detection.
+   * @param p The point (particle center) to check for collision.
    * @return A tuple containing:
-   *         - A boolean indicating whether a collision occurred.
-   *         - The penetration depth (negative if inside the surface).
-   *         - The normal vector pointing from the collision point to the surface.
-   *         - The contact position on the surface.
+   *         - bool: true if collision/contact is detected within cut-off radius.
+   *         - double: penetration depth (negative = on approaching side, positive = inside surface).
+   *         - Vec3d: surface normal vector at contact point.
+   *         - Vec3d: contact position on the surface plane.
    */
   ONIKA_HOST_DEVICE_FUNC
       inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& p) {

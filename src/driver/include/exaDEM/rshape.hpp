@@ -33,13 +33,13 @@ under the License.
 #include <filesystem>
 
 namespace exaDEM {
-/**
- * @brief Struct representing a list of elements( vertex, edge, or face).
- */
+// List of geometric elements (vertices, edges, faces) for a rigid shape
 struct RShapeDriverListOfElements {
-  onika::memory::CudaMMVector<int> vertices; /**< List of vertex indices. */
-  onika::memory::CudaMMVector<int> edges;    /**< List of edge indices. */
-  onika::memory::CudaMMVector<int> faces;    /**< List of face indices. */
+  onika::memory::CudaMMVector<int> vertices; /**< Indices of vertices in the shape. */
+  onika::memory::CudaMMVector<int> edges;    /**< Indices of edges in the shape. */
+  onika::memory::CudaMMVector<int> faces;    /**< Indices of faces in the shape. */
+  
+  // Clear all element lists
   void clean() {
     vertices.clear();
     edges.clear();
@@ -47,21 +47,22 @@ struct RShapeDriverListOfElements {
   }
 };
 
+// Data fields for a rigid shape driver (polyhedron or complex geometry)
 struct RShapeDriverFields {
-  exanb::Vec3d center = exanb::Vec3d{0, 0, 0};  /**< Center position of the R-Shape. */
-  exanb::Vec3d vel = exanb::Vec3d{0, 0, 0};     /**< Velocity of the R-Shape. */
-  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};    /**< Angular velocity of the R-Shape. */
-  exanb::Vec3d forces = exanb::Vec3d{0, 0, 0};  /**< sum of the forces applied to the driver. */
-  exanb::Quaternion quat = {1,0,0,0};           /**< Quaternion of the R-Shape. */
-  exanb::Vec3d acc = {0, 0, 0};                 /**< Acceleration of the mesh */
-  double surface = -1;                          /**< Surface, used with linear_compression_motion. */
-  double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the R-Shape */
-  // special mode to control the rotation by a moment
-  bool drive_by_mom = false;
-  exanb::Vec3d applied_mom;             /**< Moment of the R-Shape. */
-  exanb::Vec3d mom;                     /**< Moment of the R-Shape. */
-  exanb::Vec3d inertia = exanb::Vec3d{0,0,0};  /**< Inertia of the R-Shape. */
-  exanb::Vec3d mom_axis;                /**< normal vector of the moment. */
+  exanb::Vec3d center = exanb::Vec3d{0, 0, 0};  /**< Center position of the shape. */
+  exanb::Vec3d vel = exanb::Vec3d{0, 0, 0};     /**< Linear velocity of the shape. */
+  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};    /**< Angular velocity (rotation) of the shape. */
+  exanb::Vec3d forces = exanb::Vec3d{0, 0, 0};  /**< Accumulated forces applied to the shape from interactions. */
+  exanb::Quaternion quat = {1,0,0,0};           /**< Orientation quaternion of the shape. */
+  exanb::Vec3d acc = {0, 0, 0};                 /**< Linear acceleration of the shape. */
+  double surface = -1;                          /**< Contact surface area (for compressive motion). */
+  double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the shape. */
+  // Moment (torque) control mode
+  bool drive_by_mom = false;                    /**< Whether shape is driven by applied moment. */
+  exanb::Vec3d applied_mom;                     /**< Applied moment input (for moment-driven motion). */
+  exanb::Vec3d mom;                             /**< Accumulated moment from interactions. */
+  exanb::Vec3d inertia = exanb::Vec3d{0,0,0};   /**< Moment of inertia tensor components. */
+  exanb::Vec3d mom_axis;                        /**< Normalized axis along which moment is applied. */
 };
 }  // namespace exaDEM
 
@@ -107,7 +108,11 @@ struct convert<exaDEM::RShapeDriverFields> {
 namespace exaDEM {
 
 /**
- * @brief Struct representing a R-Shape in the exaDEM simulation.
+ * @brief Rigid shape (polyhedron/complex geometry) driver for DEM simulations.
+ * 
+ * Represents a complex rigid body defined by a set of vertices, edges, and faces.
+ * Supports various motion types and can be driven by forces or moments.
+ * Orientation is tracked using quaternions for rotation handling.
  */
 struct RShapeDriver {
   RShapeDriverFields fields; /**< Contains specific driver parameters */
@@ -126,7 +131,8 @@ struct RShapeDriver {
   }
 
   /**
-   * @brief Add RShapeDriver shape.
+   * @brief Set the geometric shape for this driver.
+   * @param s The shape object containing geometry definition.
    */
   void set_shape(shape& s) {
     shp = s;
@@ -224,6 +230,12 @@ struct RShapeDriver {
     }
   }
 
+  /**
+   * @brief Convert accumulated forces to acceleration.
+   * @details Updates acceleration based on forces and motion type.
+   *          Handles compressive motion (with surface and damping) and force-driven motion.
+   * @param motion Driver motion parameters and constraints.
+   */
   inline void force_to_accel(const Driver_params& motion) {
     if (is_compressive(motion_type)) {
       constexpr double C = 0.5;
@@ -245,6 +257,13 @@ struct RShapeDriver {
     }
   }
 
+  /**
+   * @brief Update linear velocity based on acceleration.
+   * @details Integrates acceleration to velocity, applies motion constraints
+   *          (stationary, linear motion, compressive).
+   * @param motion Driver motion parameters.
+   * @param dt Time step.
+   */
   inline void push_f_v(const Driver_params& motion, const double dt) {
     if (is_stationary(motion_type)) {
       fields.vel = exanb::Vec3d{0, 0, 0};
@@ -265,6 +284,13 @@ struct RShapeDriver {
     }
   }
 
+  /**
+   * @brief Update position and velocity using kinematic integration.
+   * @details Handles different motion types: tabulated, linear, shaker, and expression-based.
+   * @param motion Driver motion parameters.
+   * @param time Current simulation time.
+   * @param dt Time step.
+   */
   inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
     if (is_tabulated(motion_type)) {
       fields.center = motion.tab_to_position(time);
@@ -292,7 +318,8 @@ struct RShapeDriver {
     }
   }
 
-  // angular velocity
+  // Update angular velocity and orientation from accumulated moments
+  // Computes angular acceleration, updates angular velocity, and integrates to orientation quaternion
   inline void push_av_to_quat(const Driver_params& motion, double time, double dt) {
     if (need_moment()) {
       DriverPushToAngularAccelerationFunctor compute_arot = {};
@@ -328,6 +355,7 @@ struct RShapeDriver {
         << std::endl;
   }
 
+  // Compute rotated position of vertex i based on shape geometry, quaternion orientation, and center position
   ONIKA_HOST_DEVICE_FUNC
       inline void update_vertex(int i) {
         // homothety = 1.0
@@ -335,17 +363,24 @@ struct RShapeDriver {
       }
 
   /**
-   * Fields Getters
+   * @brief Field accessors for position, velocity, forces, moments, and orientation.
    */
+  // Position getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields.center; }
+  // Linear velocity getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields.vel; }
+  // Accumulated forces getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields.forces; }
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
+  // Accumulated moment (torque) getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields.mom; }
+  // Angular velocity getter
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
+  // Orientation (quaternion) getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion& orientation() { return fields.quat; }
 
   /**
-   * @brief return drive_by_mom
+   * @brief Check if moment-based rotation is enabled for this shape.
+   * @return true if shape is driven by applied moment, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC inline bool need_moment() const {
     if (fields.drive_by_mom) {

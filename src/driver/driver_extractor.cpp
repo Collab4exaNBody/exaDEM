@@ -16,21 +16,23 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
+
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
-#include <exaDEM/drivers.hpp>
 #include <exaDEM/driver_extractor.hpp>
 #include <exaDEM/driver_extractor_impl.hpp>
+#include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
-template<typename GridT>
+using namespace onika::scg;
 class DriverExtractorOp : public OperatorNode {
-
-  ADD_SLOT(double, physical_time, INPUT, REQUIRED);
   ADD_SLOT(DriverExtractor, driver_extractor, INPUT, DocString{"Extract specific data about drivers."});
+  ADD_SLOT(double, physical_time, INPUT, REQUIRED);
   ADD_SLOT(Drivers, drivers, INPUT, OPTIONAL, DocString{"List of Drivers"});
+  ADD_SLOT(std::string, dir_name, INPUT, "ExaDEMOutputDir", DocString{"Main output directory."});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
 
  public:
   inline std::string documentation() const final {
@@ -45,36 +47,48 @@ class DriverExtractorOp : public OperatorNode {
   }
 
   inline void execute() final {
+    using exanb::Vec3d;
     if (driver_extractor.has_value()) {
       auto& extractor = *driver_extractor;
       bool need_interaction = extractor.require_interaction();
 
-      std::string header = "time ";
-      for (auto& tracker : extractor.tracked_drivers) {
-        std::string _id = "_" + std::to_string(tracker.id);
-        for (auto& field : tracker.fields) {
-          header += extractor::to_cstring(field) + _id + " ";
+      int rank;
+      MPI_Comm_rank(*mpi, &rank);
+
+      if (rank == 0) {
+        std::string pathname = *dir_name + "/DriverExtractor";
+        std::string fullname = pathname + "/data.txt";
+        std::filesystem::create_directories(pathname);
+        std::fstream file(fullname, std::ios::out | std::ios::in | std::ios::app);
+        onika::ldbg << "Write file: " << fullname << std::endl;
+        // test if the file is empty
+        file.seekg(0, std::ios::end);
+        auto size = file.tellg();
+
+        // write header
+        if (size == 0) {
+          std::string header = "time ";
+          for (auto& tracker : extractor.tracked_drivers) {
+            std::string _id = "_" + std::to_string(tracker.id);
+            for (auto& field : tracker.fields) {
+              header += extractor::to_cstring(field) + _id + " ";
+            }
+          }
+          file << header << std::endl;
+          onika::ldbg << header << std::endl;
         }
-      }
-      lout << header << std::endl;
 
-      std::string line = std::to_string(*physical_time) + " "; 
-      auto& drvs = *drivers;
+        std::string line = std::to_string(*physical_time) + " ";
+        auto& drvs = *drivers;
 
-      for (auto& tracker : extractor.tracked_drivers) {
-        DriverExtractFunc func = {"", tracker};
-        drvs.apply(tracker.id, func);
-        line += func.stream;
-      }
+        for (auto& tracker : extractor.tracked_drivers) {
+          DriverExtractFunc func = {"", tracker};
+          drvs.apply(tracker.id, func);
+          line += func.stream;
+        }
 
-      lout << line << std::endl;
-
-      // specific implementation
-      if (need_interaction) {
-        // we compute moments and forces for every drivers
-        std::vector<Vec3d> forces(drvs.get_size(), 0);
-        std::vector<Vec3d> moments(drvs.get_size(), 0);
-
+        file << line << std::endl;
+        onika::ldbg << line << std::endl;
       }
     }
   }

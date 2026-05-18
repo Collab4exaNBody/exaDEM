@@ -1,0 +1,12 @@
+# in situ analyses
+
+trigger_driver_extractor:
+  rebind: { freq: simulation_driver_extractor_frequency , result: trigger_driver_extractor }
+  body:
+    - nth_timestep: { first: true }
+
+driver_extractor_if_triggered:
+  condition: trigger_driver_extractor
+  body:
+    - update_force_moment_driver
+    - driver_extractor

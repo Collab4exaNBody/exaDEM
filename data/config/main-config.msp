@@ -20,6 +20,7 @@ includes:
   - config_iteration_log.msp
   - config_start_iteration.msp
   - config_analyses.msp
+  - config_driver_extractor.msp
   - config_iteration_dump.msp
   - config_stress_tensor.msp
   - config_end_iteration.msp

@@ -16,40 +16,53 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+
+#include <exaDEM/atomic.h>
+#include <exanb/core/grid.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
-#include <exanb/core/grid.h>
-#include <exaDEM/traversal.hpp>
 #include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
+#include <exaDEM/driver_extractor.hpp>
+#include <exaDEM/drivers.hpp>
+#include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/traversal.hpp>
 
+// Functor to accumulate forces and moments from particle-driver interactions
 struct UpdateForceMomentDriverFunc {
-  Vec3d* forces;
-  Vec3d* moments;
-  Vec3d* fn;
-  Vec3d* ft;
+  exanb::Vec3d* fn;       // Normal forces pointer
+  exanb::Vec3d* ft;       // Tangential forces pointer
+  exanb::Vec3d* forces;   // Output: accumulated forces per driver (thread-safe)
+  exanb::Vec3d* moments;  // Output: accumulated moments per driver (thread-safe)
 
-  ONIKA_HOST_DEVICE_FUNC
-      inline void lockAndAdd(Vec3d& val, Vec3d&& add) {
-        ONIKA_CU_ATOMIC_ADD(val.x, add.x);
-        ONIKA_CU_ATOMIC_ADD(val.y, add.y);
-        ONIKA_CU_ATOMIC_ADD(val.z, add.z);
-      }
+  // Process each particle-driver interaction
+  template <typename InteractionT>
+  void operator()(size_t i, InteractionT& I) const {
+    auto id = I.partner().id;  // Driver ID
+    // Thread-safe addition of normal + tangential forces to the driver
+    exaDEM::lockAndAdd(forces[id], fn[i] + ft[i]);
+  }
+};
 
+// Functor to assign accumulated forces and moments to drivers
+struct SetForceMomentFunc {
+  exanb::Vec3d f;  // Forces exerced by the particles on the driver, to be applied with a negative sign on the driver.
+  exanb::Vec3d m;  // Moments exerced by the particles on the driver, to be applied with a negative sign on the driver.
 
-  template<typename InteractionT>
-  void operator() (size_t i, InteractionT& I) {
-    auto id = I.partner().id;
-    lockAndAdd(forces[id], fn[i], ft[i]);
+  // Apply forces and moments to a driver (Newton's 3rd law: negative sign)
+  template <typename DriverT>
+  void operator()(DriverT& drv) const {
+    drv.forces() = -f;  // Set force
+    drv.moment() = -m;  // Set moment
   }
 };
 
 namespace exaDEM {
+template <typename T>
+using vector_t = onika::memory::CudaMMVector<T>;
 class UpdateForceMomentDriverOp : public OperatorNode {
-
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(DriverExtractor, driver_extractor, INPUT, OPTIONAL, DocString{"Extract specific data about drivers."});
   ADD_SLOT(Drivers, drivers, INPUT, OPTIONAL, DocString{"List of Drivers"});
@@ -57,7 +70,12 @@ class UpdateForceMomentDriverOp : public OperatorNode {
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This operator copies interactions from GridCellParticleInteraction to the Interaction Classifier.
+        This operator accumulates forces and moments from particle-driver interactions 
+        and applies them to the corresponding drivers.
+
+        The operator iterates through all particle-driver interactions, accumulates the 
+        normal and tangential forces for each driver, and updates the driver's force and 
+        moment vectors.
 
         YAML example [no option]:
 
@@ -67,33 +85,39 @@ class UpdateForceMomentDriverOp : public OperatorNode {
 
   inline void execute() final {
     constexpr InteractionType IT = InteractionType::ParticleDriver;
-    using vector_t = onika::memory::CudaMMVector<T>;
     if (driver_extractor.has_value()) {
+      DriverExtractor& extractor = *driver_extractor;
       bool need_interaction = extractor.require_interaction();
-      if (need_interaction) {
-        // used to store data on CPU/GPU
-        vector_t<Vec3d> forces(drvs.get_size(), 0);
-        vector_t<Vec3d> moments(drvs.get_size(), 0);
-        // data are stored in data buffer within the (i)nteraction (c)lassifier
+      if (need_interaction && drivers.has_value()) {
+        auto& drvs = *drivers;
+        // Allocate temporary buffers (CPU/GPU agnostic) for accumulated forces and moments
+        vector_t<exanb::Vec3d> forces(drvs.get_size());
+        vector_t<exanb::Vec3d> moments(drvs.get_size());
+        // Get interaction classifier containing classified interactions
         auto& classifier = *ic;
 
-        for (int typeID = get_first_id<InteractionType::FirstIdDriver>() ;
-             typeID <= get_last_id<InteractionType::LastIdDriver>() ; typeID++) {
+        // Iterate through all driver interaction types
+        for (int typeID = InteractionTypeId::FirstIdDriver; typeID <= InteractionTypeId::LastIdDriver; typeID++) {
           if (classifier.get_size(typeID) != 0) {
-            // Setup Functor
+            // Extract force/moment data for this interaction type
             auto [dn, contact_position, fn, ft] = classifier.buffer_p(typeID);
-            UpdateForceMomentDriverFunc func = {forces.data(), moments.data(), fn, ft};
-            // Setup Interaciton
-            auto [data, size] = ic.get_info<IT>(type);
+            UpdateForceMomentDriverFunc func = {fn, ft, forces.data(), moments.data()};
+            // Get interactions of this type
+            auto [data, size] = classifier.get_info<IT>(typeID);
             InteractionWrapper<IT> interactions(data);
-            // Setup Options
+            // Configure parallel execution
             ParallelForOptions opts;
             opts.omp_scheduling = OMP_SCHED_STATIC;
             // Setup Wrapper
             WrapperForAll wrapper = {interactions, func};
-            // Launch Kernel
-            parallel_for(size, wrapper, parallel_execution_context, opts);
+            // Execute parallel accumulation of forces and moments
+            parallel_for(size, wrapper, parallel_execution_context(), opts);
           }
+        }
+        // Apply accumulated forces and moments to each driver
+        for (size_t i = 0; i < drvs.get_size(); i++) {
+          SetForceMomentFunc func = {forces[i], moments[i]};
+          drvs.apply(i, func);  // Apply functor to driver i
         }
       }
     }

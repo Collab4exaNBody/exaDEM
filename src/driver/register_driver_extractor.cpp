@@ -20,41 +20,62 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
-#include <exaDEM/drivers.hpp>
 #include <exaDEM/driver_extractor.hpp>
+#include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
+using namespace onika::scg;
+// Operator to register field extraction rules for drivers (trackers)
 class RegisterDriverExtractor : public OperatorNode {
-
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
-  ADD_SLOT(std::vector<extractor::Tracker>, trackers, INPUT,
-           REQUIRED, DocString{"List of trackers. format [{id: driver_id_1, fields: [field1, field2 ...],\
+  ADD_SLOT(std::vector<extractor::Tracker>, trackers, INPUT, REQUIRED,
+           DocString{"List of trackers. format [{id: driver_id_1, fields: [field1, field2 ...],\
            {id: driver_id_2, fields: [field1, field2, ...], ..."});
-  ADD_SLOT(DriverExtractor, driver_extractor, INPUT_OUTPUT, DriverExtractor{}, DocString{"Extract specific data about drivers."});
+  ADD_SLOT(DriverExtractor, driver_extractor, INPUT_OUTPUT, DriverExtractor{},
+           DocString{"Extract specific data about drivers."});
   ADD_SLOT(bool, verbosity, false, PRIVATE, DocString{"Display trackers."});
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This operator add a surface to the drivers list.
+        This operator registers field extraction rules for drivers using tracker specifications.
+        Each tracker defines which fields should be extracted from a specific driver.
+        
+        The operator validates each tracker against the available drivers and registers 
+        compatible trackers with the DriverExtractor.
+        
+        YAML example:
+          - register_driver_extractor:
+              trackers:
+                - id: 0
+                  fields: [fx, fz, rx]
+                - id: 1
+                  fields: [vy]
         )EOF";
   }
 
   inline void execute() final {
+    using exanb::lout;
     std::vector<extractor::Tracker>& Trackers = *trackers;
     if (*verbosity) {
-      lout << "Add tracker: " << std::endl;
+      lout << "Registering trackers for driver field extraction:" << std::endl;
     }
-    for(auto& tracker: Trackers) {
+
+    // Process each tracker specification
+    for (auto& tracker : Trackers) {
       std::string error_msg = "unknown";
+      // Validate tracker compatibility with available drivers
       if (!compatibility(tracker, *drivers, error_msg)) {
         lout << "The following tracker is not compatible" << std::endl;
         lout << "Reason: " << error_msg << std::endl;
         tracker.print();
       }
+
       if (*verbosity) {
         tracker.print();
       }
+
+      // Register the tracker with the DriverExtractor
       driver_extractor->add(tracker);
     }
   }
@@ -62,6 +83,7 @@ class RegisterDriverExtractor : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(register_driver_extractor) {
-  OperatorNodeFactory::instance()->register_factory("register_driver_extractor", make_simple_operator<RegisterDriverExtractor>);
+  OperatorNodeFactory::instance()->register_factory("register_driver_extractor",
+                                                    make_simple_operator<RegisterDriverExtractor>);
 }
 }  // namespace exaDEM

@@ -18,10 +18,14 @@ under the License.
 */
 #pragma once
 
+#include <onika/cuda/cuda.h>
+#include <onika/math/basic_types.h>
+
 namespace exaDEM {
-// not optimal
-template <typename TMPLC, typename ParticleLocation, typename FieldName>
-ONIKA_HOST_DEVICE_FUNC auto exadem_field_value(TMPLC* cells, ParticleLocation& loc, FieldName& fieldname) {
-  return cells[loc.cell][fieldname][loc.p];
+  ONIKA_HOST_DEVICE_FUNC
+      inline void lockAndAdd(exanb::Vec3d& val, const exanb::Vec3d&& add) {
+        ONIKA_CU_ATOMIC_ADD(val.x, add.x);
+        ONIKA_CU_ATOMIC_ADD(val.y, add.y);
+        ONIKA_CU_ATOMIC_ADD(val.z, add.z);
+      }
 }
-}  // namespace exaDEM
