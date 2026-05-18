@@ -42,7 +42,10 @@ namespace extractor {
   X(double, vrotz, "vrotz", 9) \
   X(double, fx, "fx", 10)      \
   X(double, fy, "fy", 11)      \
-  X(double, fz, "fz", 12)
+  X(double, fz, "fz", 12)      \
+  X(double, momx, "momx", 13)  \
+  X(double, momy, "momy", 14)  \
+  X(double, momz, "momz", 15)
 
 // Tuple type containing all extractable field types (driver properties that can be tracked)
 using FieldsData = std::tuple<
@@ -130,7 +133,8 @@ struct Tracker {
   bool require_interaction() {
     for (auto& field : fields) {
       if (field == extractor::Dictionnary::fx || field == extractor::Dictionnary::fy ||
-          field == extractor::Dictionnary::fz) {
+          field == extractor::Dictionnary::fz || field == extractor::Dictionnary::momx ||
+          field == extractor::Dictionnary::momy || field == extractor::Dictionnary::momz) {
         return true;
       }
     }

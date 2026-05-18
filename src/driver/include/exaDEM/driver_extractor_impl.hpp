@@ -26,6 +26,7 @@ struct DriverExtractFunc {
     const exanb::Vec3d vel = driver.velocity();           // Linear velocity
     const exanb::Vec3d vrot = driver.angular_velocity();  // Angular velocity
     const exanb::Vec3d force = driver.forces();           // Accumulated forces
+    const exanb::Vec3d moment = driver.moment();          // Accumulated moment
     // Driver type identifier
     if (field == Dictionnary::type) {
       stream += print(driver.get_type());
@@ -61,6 +62,14 @@ struct DriverExtractFunc {
       stream += std::to_string(force.y);
     } else if (field == Dictionnary::fz) {
       stream += std::to_string(force.z);
+    }
+    // Moment components (momx, momy, momz)
+    else if (field == Dictionnary::momx) {
+      stream += std::to_string(moment.x);
+    } else if (field == Dictionnary::momy) {
+      stream += std::to_string(moment.y);
+    } else if (field == Dictionnary::momz) {
+      stream += std::to_string(moment.z);
     }
   }
 };

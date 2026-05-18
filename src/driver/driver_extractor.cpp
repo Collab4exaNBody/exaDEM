@@ -28,7 +28,7 @@ under the License.
 namespace exaDEM {
 using namespace onika::scg;
 class DriverExtractorOp : public OperatorNode {
-  ADD_SLOT(DriverExtractor, driver_extractor, INPUT, DocString{"Extract specific data about drivers."});
+  ADD_SLOT(DriverExtractor, driver_extractor, INPUT, OPTIONAL, DocString{"Extract specific data about drivers."});
   ADD_SLOT(double, physical_time, INPUT, REQUIRED);
   ADD_SLOT(Drivers, drivers, INPUT, OPTIONAL, DocString{"List of Drivers"});
   ADD_SLOT(std::string, dir_name, INPUT, "ExaDEMOutputDir", DocString{"Main output directory."});
@@ -50,8 +50,6 @@ class DriverExtractorOp : public OperatorNode {
     using exanb::Vec3d;
     if (driver_extractor.has_value()) {
       auto& extractor = *driver_extractor;
-      bool need_interaction = extractor.require_interaction();
-
       int rank;
       MPI_Comm_rank(*mpi, &rank);
 

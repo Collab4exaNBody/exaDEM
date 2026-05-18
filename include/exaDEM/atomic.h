@@ -22,10 +22,17 @@ under the License.
 #include <onika/math/basic_types.h>
 
 namespace exaDEM {
-  ONIKA_HOST_DEVICE_FUNC
-      inline void lockAndAdd(exanb::Vec3d& val, const exanb::Vec3d&& add) {
-        ONIKA_CU_ATOMIC_ADD(val.x, add.x);
-        ONIKA_CU_ATOMIC_ADD(val.y, add.y);
-        ONIKA_CU_ATOMIC_ADD(val.z, add.z);
-      }
+ONIKA_HOST_DEVICE_FUNC
+inline void lockAndAdd(exanb::Vec3d& val, const exanb::Vec3d& add) {
+  ONIKA_CU_ATOMIC_ADD(val.x, add.x);
+  ONIKA_CU_ATOMIC_ADD(val.y, add.y);
+  ONIKA_CU_ATOMIC_ADD(val.z, add.z);
 }
+
+ONIKA_HOST_DEVICE_FUNC
+inline void lockAndAdd(exanb::Vec3d& val, const exanb::Vec3d&& add) {
+  ONIKA_CU_ATOMIC_ADD(val.x, add.x);
+  ONIKA_CU_ATOMIC_ADD(val.y, add.y);
+  ONIKA_CU_ATOMIC_ADD(val.z, add.z);
+}
+}  // namespace exaDEM
