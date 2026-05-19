@@ -166,8 +166,8 @@ struct Ball {
    */
   inline void force_to_accel(const Driver_params& motion) {
     if (is_force_motion(motion_type)) {
-      if (fields.mass >= 1e100) {
-        color_log::warning("f_to_a", "The mass of the ball is set to " + std::to_string(fields.mass));
+      if (fields.mass >= 1e100 || fields.mass <= 0) {
+        color_log::warning("Ball::force_to_accel", "The mass of the ball is set to " + std::to_string(fields.mass));
       }
       motion.update_forces(motion_type, fields.forces);  // update forces in function of the motion type
       fields.acc = fields.forces / fields.mass;
@@ -204,6 +204,7 @@ struct Ball {
     if (is_tabulated(motion_type)) {
       fields.center = motion.tab_to_position(time);
       fields.vel = motion.tab_to_velocity(time);
+
     } else if (!is_stationary(motion_type)) {
       if (is_compressive(motion_type)) {
         push_ra_rv_to_rad(dt);
@@ -222,7 +223,7 @@ struct Ball {
     }
 
     if (motion_type == LINEAR_MOTION) {
-      fields.vel = motion.motion_vector * motion.const_vel;  // I prefere reset it
+      fields.vel = motion.motion_vector * motion.const_vel;  // I prefer reset it
     }
 
     if (is_compressive(motion_type)) {
@@ -233,14 +234,12 @@ struct Ball {
     }
   }
   /**
-   * @brief Update the "velocity raduis" of the ball.
+   * @brief Update the "velocity radius" of the ball.
    * @param t The time step.
    */
   inline void push_ra_to_rv(const Driver_params& motion, const double dt) {
-    if (is_compressive(motion_type)) {
-      if (motion.sigma != 0) {
-        fields.rv += 0.5 * dt * fields.ra;
-      }
+    if (is_compressive(motion_type) && motion.sigma != 0) {
+      fields.rv += dt * fields.ra;
     }
   }
 
@@ -277,10 +276,10 @@ struct Ball {
   inline void f_ra(const Driver_params& motion, const double dt) {
     if (is_compressive(motion_type)) {
       constexpr double C = 0.5;  // I don't remember why, ask Lhassan
-      if (motion.weigth != 0) {
+      if (motion.mass != 0) {
         const double s = surface();
-        // forces and weigth are defined in Driver_params
-        fields.ra = (exanb::norm(fields.forces) - motion.sigma * s - (motion.damprate * fields.rv)) / (motion.weigth * C);
+        // forces and mass are defined in Driver_params
+        fields.ra = (exanb::norm(fields.forces) - motion.sigma * s - (motion.damprate * fields.rv)) / (motion.mass * C);
       }
     }
   }

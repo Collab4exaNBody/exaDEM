@@ -153,7 +153,7 @@ struct Surface {
 
     fields.center_proj = fields.offset * fields.normal;
 
-    if (motion_type == PENDULUM_MOTION) {
+    if (motion_type == MotionType::PENDULUM_MOTION) {
       if (fields.center != motion.pendulum_anchor_point) {
         color_log::warning("register_surface", "Surface center should be equal to pendulum_anchor_point");
         color_log::warning("register_surface",
@@ -209,16 +209,22 @@ struct Surface {
    * @param motion Driver motion parameters and constraints.
    */
   void force_to_accel(const Driver_params& motion) {
+
     if (is_compressive(motion_type)) {
       constexpr double C = 0.5;
-      if (motion.weigth != 0) {
-        const double s = fields.surface;
-        // acc = (exanb::norm(forces) - sigma * s - (damprate * exanb::norm(vel)) ) / (weigth * C);
-        exanb::Vec3d tmp = (fields.forces - motion.sigma * s * motion.motion_vector) / (motion.weigth * C);
-        // get acc into the motion vector axis
+
+      if (motion.mass != 0) {
+        const double contact_surface = fields.surface;
+
+        // Net force vector: F_contact - σ·S·n
+        exanb::Vec3d tmp = (fields.forces - motion.sigma * contact_surface * motion.motion_vector)
+            / (motion.mass * C);
+
+        // Project onto motion axis → scalar acceleration (Surface driver, unlike Vec3d in particle driver)
         fields.acc = exanb::dot(tmp, motion.motion_vector);
+
       } else {
-        fields.acc = 0;
+        fields.acc = 0;  // zero mass: reset to avoid stale values
       }
     }
   }
@@ -229,17 +235,69 @@ struct Surface {
    * @param dt Time step.
    */
   inline void push_f_v(const Driver_params& motion, const double dt) {
+
     if (is_stationary(motion_type)) {
+      // Stationary particle: enforce zero velocity regardless of any accumulated acceleration.
       fields.vel = {0, 0, 0};
-    } else {
-      if (is_compressive(motion_type)) {
-        if (motion.sigma != 0) {
-          fields.vel += 0.5 * dt * fields.acc * motion.motion_vector;
-        }
+
+    } else if (is_compressive(motion_type)) {
+      // Compressive (stress-controlled) motion: increment velocity only when a target stress
+      // sigma is defined (sigma == 0 means stress control is inactive / free boundary).
+      // The acceleration is projected onto the motion axis to ensure uniaxial compression.
+      if (motion.sigma != 0) {
+        fields.vel += (dt * fields.acc) * motion.motion_vector;
       }
-      if (motion_type == LINEAR_MOTION) {
-        fields.vel = motion.const_vel * motion.motion_vector;  // I prefere reset it
+
+    } else if (motion_type == MotionType::LINEAR_MOTION) {
+      // Linear (kinematic) motion: override velocity with the prescribed constant velocity.
+      // Reset instead of increment to avoid drift from previous integration steps.
+      fields.vel = motion.const_vel * motion.motion_vector;  // I prefer reset it
+    }
+  }
+
+  /**
+   * @brief Updates the position of the wall for the current time step.
+   * @param motion  Driver parameters (motion vector, shaker config, pendulum config, etc.).
+   * @param time    Current simulation time.
+   * @param dt      Raw time step.
+   */
+  inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
+
+    if (!is_stationary(motion_type)) {
+
+      if (motion_type == MotionType::LINEAR_MOTION) {
+        // Sanity check: for linear motion the velocity must match the prescribed
+        assert(exanb::norm(motion.vel - motion.const_vel * motion.motion_vector) < 1e-12);
       }
+
+      if (motion_type == MotionType::PENDULUM_MOTION) {
+        // Pendulum motion: fully recompute geometry and kinematics at (time + dt).
+        // Early return: standard Verlet displacement does not apply here.
+        auto [Offset, Normal] = motion.compute_offset_normal_pendulum_motion(time + dt);
+        fields.normal       = Normal;
+        fields.offset       = Offset;
+        fields.vel          = motion.pendulum_velocity(time + dt);
+        fields.center_proj  = fields.normal * fields.offset;
+        return;
+      }
+
+      // Default Velocity Verlet displacement along the wall normal:
+      // This may be overridden below for shaker motion.
+      double displ = dt * exanb::dot(fields.vel, fields.normal) + 0.5 * dt * dt * fields.acc;
+
+      if (motion_type == MotionType::SHAKER) {
+        // Shaker motion: displacement is driven by the waveform signal difference
+        const double signal_next    = motion.shaker_signal(time + dt);
+        const double signal_current = motion.shaker_signal(time);
+        const double angle_factor   = exanb::dot(motion.shaker_direction(), fields.normal);
+        displ      = (signal_next - signal_current) * angle_factor;
+        fields.vel = motion.shaker_velocity(time + dt);
+      }
+
+      // Apply displacement to wall position, offset, and projected center.
+      fields.center      += displ * fields.normal;
+      fields.offset      += displ;
+      fields.center_proj += displ * fields.normal;
     }
   }
 
@@ -256,45 +314,6 @@ struct Surface {
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields.mom; }
   // Angular velocity getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
-
-  /**
-   * @brief Update surface position using kinematic integration.
-   * @param motion Driver motion parameters.
-   * @param time Current simulation time.
-   * @param dt Time step.
-   */
-  inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
-    if (!is_stationary(motion_type)) {
-      if (motion_type == LINEAR_MOTION) {
-        assert(motion.vel == motion.const_vel * motion.motion_vector);
-      }
-
-      if (motion_type == PENDULUM_MOTION) {
-        auto [Offset, Normal] = motion.compute_offset_normal_pendulum_motion(time + dt);
-        fields.normal = Normal;
-        fields.offset = Offset;
-        fields.vel = motion.pendulum_velocity(time + dt);
-        fields.center_proj = fields.normal * fields.offset;
-        return;
-      }
-
-      double displ = dt * exanb::dot(fields.vel, fields.normal) + 0.5 * dt * dt * fields.acc;
-
-      /** The shaker motion changes the displacement behavior */
-      /** the shaker direction vector is ignored, the normal vector is used */
-      if (motion_type == SHAKER) {
-        double signal_next = motion.shaker_signal(time + dt);
-        double signal_current = motion.shaker_signal(time);
-        const double angle_factor = exanb::dot(motion.shaker_direction(), fields.normal);
-        displ = (signal_next - signal_current) * angle_factor;
-        fields.vel = motion.shaker_velocity(time + dt);
-      }
-
-      fields.center += displ * fields.normal;
-      fields.offset += displ;
-      fields.center_proj += displ * fields.normal;
-    }
-  }
 
   /**
    * @brief Check if a point is close enough to the surface for potential interaction.
@@ -337,7 +356,9 @@ struct Surface {
 
 template<>
 struct DriverProperty<Surface> {
+  /// No moment/torque computation required for surface drivers.
   static constexpr bool use_moment = false;
+  /// No quaternion orientation tracking required for surface drivers.
   static constexpr bool use_quaternion = false;
 };
 }  // namespace exaDEM
