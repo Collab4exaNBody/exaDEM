@@ -19,15 +19,16 @@ under the License.
 #pragma once
 
 #include <onika/flat_tuple.h>
+
 #include <exaDEM/ball.hpp>
 #include <exaDEM/cylinder.hpp>
 #include <exaDEM/driver_base.hpp>
-#include <exaDEM/surface.hpp>
 #include <exaDEM/rshape.hpp>
+#include <exaDEM/surface.hpp>
 #include <exaDEM/undefined_driver.hpp>
 
 namespace exaDEM {
-template<typename FuncT>
+template <typename FuncT>
 struct ApplyDriverFunctorTraits {
   static constexpr bool use_motion = false;
 };
@@ -48,17 +49,15 @@ struct Drivers {
   vector_t<DriverTypeAndIndex> m_type_index;        /**< Vector storing the types of drivers. */
   /** just a duplicate on CPU to avoid weird copies from GPU */
   std::vector<DriverTypeAndIndex> m_type_index_cpu; /**< Vector storing the types of drivers. */
-  //vector_t<Driver_params> m_motion; /**< Vector storing the motion drivers parameters. */
-  std::vector<Driver_params> m_motion;              /**< Vector storing the motion data drivers. */
+  // vector_t<Driver_params> m_motion; /**< Vector storing the motion drivers parameters. */
+  std::vector<Driver_params> m_motion; /**< Vector storing the motion data drivers. */
   onika::FlatTuple<vector_t<Cylinder>, vector_t<Surface>, vector_t<Ball>, vector_t<RShapeDriver> > m_data;
 
   /**
    * @brief Get the size of the Drivers collection.
    * @return The size of the Drivers collection.
    */
-  inline size_t get_size() const {
-    return m_type_index.size();
-  }
+  inline size_t get_size() const { return m_type_index.size(); }
 
   template <size_t driver_type>
   inline const auto& get_driver_vec() const {
@@ -293,8 +292,8 @@ struct Drivers {
 struct DriversGPUAccessor {
   size_t m_nb_drivers = 0;
   Drivers::DriverTypeAndIndex* const __restrict__ m_type_index = nullptr;
-  onika::FlatTuple<Cylinder* __restrict__, Surface* __restrict__, Ball* __restrict__, RShapeDriver* __restrict__> m_data = {
-    nullptr, nullptr, nullptr, nullptr};
+  onika::FlatTuple<Cylinder* __restrict__, Surface* __restrict__, Ball* __restrict__, RShapeDriver* __restrict__>
+      m_data = {nullptr, nullptr, nullptr, nullptr};
   onika::FlatTuple<size_t, size_t, size_t, size_t> m_data_size = {0, 0, 0, 0};
 
   DriversGPUAccessor() = default;

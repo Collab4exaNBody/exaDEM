@@ -16,28 +16,28 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
-#include <vector>
-#include <iomanip>
-#include <cstdlib>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
+#include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/domain.h>
 #include <exanb/core/xform.h>
+#include <mpi.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <onika/math/basic_types_stream.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
 #include <onika/string_utils.h>
 
-#include <mpi.h>
-#include <exaDEM/shapes.hpp>
+#include <cstdlib>
 #include <exaDEM/shape_printer.hpp>
+#include <exaDEM/shapes.hpp>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <vector>
 
 namespace exaDEM {
 using namespace exanb;
@@ -89,7 +89,9 @@ class WriteParaviewPolyhedraOperator : public OperatorNode {
 
     bool defbox = !domain->xform_is_identity();
     LinearXForm xform;
-    if (defbox) xform.m_matrix = domain->xform();
+    if (defbox) {
+      xform.m_matrix = domain->xform();
+    }
 
     uint32_t* cluster = nullptr;
 
@@ -122,10 +124,8 @@ class WriteParaviewPolyhedraOperator : public OperatorNode {
         if constexpr (has_field_cluster) {
           cj = cluster[j];
         }
-        build_buffer_polyhedron<has_field_cluster>(
-            pos, shp, orient[j], id[j], type[j],
-            vx[j], vy[j], vz[j],
-            h[j], cj, buffers);
+        build_buffer_polyhedron<has_field_cluster>(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], h[j], cj,
+                                                   buffers);
       }
     };
 

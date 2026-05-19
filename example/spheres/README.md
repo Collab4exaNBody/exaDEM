@@ -68,3 +68,10 @@ Available in the directory:
 - `mixer_57k_sph.msp`  
 - `mixer_3M_sph.msp`  
 - `mixer_29M_sph.msp`
+
+## Driver Extractor
+
+This example demonstrates the use of a driver extractor in a rotating drum simulation with side surfaces (driver-extractor.msp).
+The operator used to add trackers is: `register_driver_extractor`.
+To manage the frequency use: `simulation_driver_extractor_frequency: 10`.
+

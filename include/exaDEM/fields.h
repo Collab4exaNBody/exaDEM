@@ -1,14 +1,34 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
+
 #pragma once
 
-//#include <exanb/core/grid_fields.h>
+// #include <exanb/core/grid_fields.h>
 #ifndef XNB_HAS_GRID_FIELDS_DEFINTIONS
 #error Cannot be included outside of exanb/core/grid_fields.h
 #endif
 
 #include <onika/math/basic_types_def.h>
 #include <onika/math/quaternion.h>
-#include <cstdint>
 #include <onika/oarray.h>
+
+#include <cstdint>
 
 // DEM - reuse orient and angmom
 XNB_DECLARE_FIELD(double, mass, "particle mass");
@@ -17,27 +37,28 @@ XNB_DECLARE_FIELD(double, radius, "radius");
 XNB_DECLARE_FIELD(uint32_t, cluster, "cluster");
 XNB_DECLARE_FIELD(::exanb::Quaternion, orient, "angular position");
 XNB_DECLARE_FIELD(::exanb::Vec3d, mom, "moment");
-XNB_DECLARE_FIELD(::exanb::Vec3d, vrot, "angular velocity");     //
-XNB_DECLARE_FIELD(::exanb::Vec3d, arot, "angular acceleration"); //
+XNB_DECLARE_FIELD(::exanb::Vec3d, vrot, "angular velocity");      //
+XNB_DECLARE_FIELD(::exanb::Vec3d, arot, "angular acceleration");  //
 XNB_DECLARE_FIELD(::exanb::Vec3d, inertia, "inertia values (same value in the diagonal)");
-XNB_DECLARE_FIELD(::exanb::Mat3d, stress, "stress tensor"); //
+XNB_DECLARE_FIELD(::exanb::Mat3d, stress, "stress tensor");  //
 
-namespace exaDEM
-{
-  using namespace ::exanb;
+namespace exaDEM {
+using namespace ::exanb;
 
-  // DEM model field set
-  using DEMFieldSet = FieldSet<
-      // rx, ry and rz are added implicitly
-      field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type, field::_stress
-      >;
-  using FragmentationDEMFieldSet = FieldSet<
-      // rx, ry and rz are added implicitly
-      field::_cluster, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type, field::_stress
-      >;
-  
-  static inline constexpr exanb::FieldSets<DEMFieldSet, FragmentationDEMFieldSet> available_field_sets_v = {};
-}
+// DEM model field set
+using DEMFieldSet = FieldSet<
+    // rx, ry and rz are added implicitly
+    field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_mass, field::_homothety,
+    field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type,
+    field::_stress>;
+using FragmentationDEMFieldSet = FieldSet<
+    // rx, ry and rz are added implicitly
+    field::_cluster, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_mass,
+    field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia,
+    field::_id, field::_type, field::_stress>;
+
+static inline constexpr exanb::FieldSets<DEMFieldSet, FragmentationDEMFieldSet> available_field_sets_v = {};
+}  // namespace exaDEM
 
 #define HAS_POSITION_BACKUP_FIELDS false
 #define PositionBackupFieldX ::exanb::unused_field_id_v
@@ -49,6 +70,7 @@ namespace exaDEM
 #include <exanb/compute/math_functors.h>
 #include <onika/soatl/field_combiner.h>
 
-ONIKA_DECLARE_FIELD_COMBINER( exaDEM, VelocityNorm2Combiner , vnorm2 , exanb::Vec3Norm2Functor , exanb::field::_vx , exanb::field::_vy , exanb::field::_vz )
-ONIKA_DECLARE_FIELD_COMBINER( exaDEM, VelocityNormCombiner  , vnorm  , exanb::Vec3NormFunctor  , exanb::field::_vx , exanb::field::_vy , exanb::field::_vz )
-
+ONIKA_DECLARE_FIELD_COMBINER(exaDEM, VelocityNorm2Combiner, vnorm2, exanb::Vec3Norm2Functor, exanb::field::_vx,
+                             exanb::field::_vy, exanb::field::_vz)
+ONIKA_DECLARE_FIELD_COMBINER(exaDEM, VelocityNormCombiner, vnorm, exanb::Vec3NormFunctor, exanb::field::_vx,
+                             exanb::field::_vy, exanb::field::_vz)

@@ -13,6 +13,7 @@ global:
   simulation_dump_thermo_frequency: -1
   simulation_generator_frequency: -1
   simulation_analyses_frequency: -1
+  simulation_driver_extractor_frequency: 100 
   timestep: 0
   physical_time: 0.
   enable_domain_extension: true

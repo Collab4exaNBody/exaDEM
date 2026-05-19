@@ -23,18 +23,20 @@
 #include <exaDEM/driver_base.hpp>
 
 namespace exaDEM {
+// Data fields for a spherical driver (ball)
 struct BallFields {
   double radius;                                        /**< Radius of the ball. */
-  exanb::Vec3d center;                                  /**< Center position of the ball. */
-  exanb::Vec3d vel = exanb::Vec3d{0, 0, 0};                    /**< Velocity of the ball. */
-  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};                   /**< Angular velocity of the ball. */
-  exanb::Vec3d forces = {0, 0, 0}; /**< sum of the forces applied to the driver. */
-  double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the ball */
-  double rv = 0;                                        /**< */
+  exanb::Vec3d center;                                  /**< Center position of the ball in 3D space. */
+  exanb::Vec3d vel = exanb::Vec3d{0, 0, 0};             /**< Linear velocity of the ball. */
+  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};            /**< Angular velocity (rotation) of the ball. */
+  exanb::Vec3d forces = {0, 0, 0};                      /**< Accumulated forces applied to the ball from interactions. */
+  exanb::Vec3d mom = {0, 0, 0};                         /**< Accumulated moments (torques) applied to the ball. */
+  double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the ball (default: infinite/fixed). */
+  double rv = 0;                                        /**< Radius velocity for compressive/expanding motion. */
 
-  /** We don't need to save these values */
-  exanb::Vec3d acc = {0, 0, 0}; /**< Acceleration of the ball. */
-  double ra = 0;                /**< */
+  /** Derived quantities (not persisted) */
+  exanb::Vec3d acc = {0, 0, 0};                         /**< Linear acceleration of the ball. */
+  double ra = 0;                                        /**< Radius acceleration for compressive/expanding motion. */
 };
 }  // namespace exaDEM
 
@@ -77,7 +79,10 @@ struct convert<exaDEM::BallFields> {
 namespace exaDEM {
 
 /**
- * @brief Struct representing a ball in the exaDEM simulation.
+ * @brief Spherical driver (ball) for DEM simulations.
+ * 
+ * Represents a ball-shaped rigid body driver that can interact with particles.
+ * Supports various motion types: stationary, linear, compressive force, and tabulated motion.
  */
 struct Ball {
   BallFields fields;
@@ -153,13 +158,16 @@ struct Ball {
   }
 
   /**
-   * @brief Update the position of the ball.
-   * @param dt The time step.
+   * @brief Convert accumulated forces to acceleration.
+   * @details Updates acceleration based on forces and motion type.
+   *          For force-driven motion, acc = forces / mass.
+   *          For other motion types, acceleration is zero.
+   * @param motion Driver motion parameters and constraints.
    */
   inline void force_to_accel(const Driver_params& motion) {
     if (is_force_motion(motion_type)) {
-      if (fields.mass >= 1e100) {
-        color_log::warning("f_to_a", "The mass of the ball is set to " + std::to_string(fields.mass));
+      if (fields.mass >= 1e100 || fields.mass <= 0) {
+        color_log::warning("Ball::force_to_accel", "The mass of the ball is set to " + std::to_string(fields.mass));
       }
       motion.update_forces(motion_type, fields.forces);  // update forces in function of the motion type
       fields.acc = fields.forces / fields.mass;
@@ -169,16 +177,28 @@ struct Ball {
   }
 
   /**
-   * Fields Getters
+   * @brief Field accessors for position, velocity, forces, and rotation.
    */
+  // Position getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields.center; }
+  // Linear velocity getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields.vel; }
+  // Accumulated forces getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields.forces; }
+  // Accumulated moment (torque) getter
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields.mom; }
+  // Angular velocity getter
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
 
   /**
-   * @brief Update the position of the ball.
-   * @param dt The time step.
+   * @brief Update ball kinematics (position, velocity, radius).
+   * @details Handles different motion types:
+   *          - Tabulated: reads from motion tables
+   *          - Compressive: updates radius via rv and ra
+   *          - Others: updates position via dt * velocity
+   * @param motion Driver motion parameters
+   * @param time Current simulation time
+   * @param dt Time step
    */
   inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
     if (is_tabulated(motion_type)) {
@@ -202,7 +222,7 @@ struct Ball {
     }
 
     if (motion_type == LINEAR_MOTION) {
-      fields.vel = motion.motion_vector * motion.const_vel;  // I prefere reset it
+      fields.vel = motion.motion_vector * motion.const_vel;  // I prefer reset it
     }
 
     if (is_compressive(motion_type)) {
@@ -213,14 +233,12 @@ struct Ball {
     }
   }
   /**
-   * @brief Update the "velocity raduis" of the ball.
+   * @brief Update the "velocity radius" of the ball.
    * @param t The time step.
    */
   inline void push_ra_to_rv(const Driver_params& motion, const double dt) {
-    if (is_compressive(motion_type)) {
-      if (motion.sigma != 0) {
-        fields.rv += 0.5 * dt * fields.ra;
-      }
+    if (is_compressive(motion_type) && motion.sigma != 0) {
+      fields.rv += dt * fields.ra;
     }
   }
 
@@ -249,6 +267,7 @@ struct Ball {
     const double pi = 4 * atan(1);
     return 4 / 3 * pi * fields.radius * fields.radius * fields.radius;
   }
+  
   /**
    * @brief Update the "velocity radius" of the ball.
    * @param t The time step.
@@ -256,10 +275,10 @@ struct Ball {
   inline void f_ra(const Driver_params& motion, const double dt) {
     if (is_compressive(motion_type)) {
       constexpr double C = 0.5;  // I don't remember why, ask Lhassan
-      if (motion.weigth != 0) {
+      if (motion.mass != 0) {
         const double s = surface();
-        // forces and weigth are defined in Driver_params
-        fields.ra = (exanb::norm(fields.forces) - motion.sigma * s - (motion.damprate * fields.rv)) / (motion.weigth * C);
+        // forces and mass are defined in Driver_params
+        fields.ra = (exanb::norm(fields.forces) - motion.sigma * s - (motion.damprate * fields.rv)) / (motion.mass * C);
       }
     }
   }
