@@ -41,7 +41,7 @@ struct ComputeForceMomentDriverFunc {
 
   // Process each particle-driver interaction
   template <typename InteractionT>
-  void operator()(size_t i, InteractionT& I) const {
+  ONIKA_HOST_DEVICE_FUNC void operator()(size_t i, InteractionT& I) const {
     auto id = I.partner().id;  // Driver ID
     // Compute force + moment contribution from this interaction and add to driver (negative sign for Newton's 3rd law)
     // Thread-safe addition of normal + tangential forces to the driver
