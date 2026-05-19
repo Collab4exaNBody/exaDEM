@@ -22,6 +22,7 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
+
 #include <exaDEM/drivers.hpp>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/stl_mesh_to_driver.hpp>
@@ -57,9 +58,7 @@ class RegisterRShapeDriver : public OperatorNode {
         )EOF";
   }
 
-  inline std::string operator_name() {
-    return "register_stl_mesh/rshape";
-  }
+  inline std::string operator_name() { return "register_stl_mesh/rshape"; }
 
   inline void execute() final {
     std::string output_name = *filename;
@@ -94,7 +93,7 @@ class RegisterRShapeDriver : public OperatorNode {
       // not optimized
       bool big_shape = true;
       shp = read_shp(output_name, big_shape);
-      if(shp.get_Im() != exanb::Vec3d{0,0,0}) {
+      if (shp.get_Im() != exanb::Vec3d{0, 0, 0}) {
         color_log::warning(operator_name(), "Override inertia using shape I/m");
         state->inertia = shp.get_Im() / state->mass;
       }
@@ -106,11 +105,9 @@ class RegisterRShapeDriver : public OperatorNode {
         shp.write_paraview();  // replace
       } else {
         if (*scale <= 0.0) {
-          color_log::error(operator_name(),
-                           "Impossible to rescale the mesh, scale <= 0.0.");
+          color_log::error(operator_name(), "Impossible to rescale the mesh, scale <= 0.0.");
         } else if (*scale == 1.0) {
-          color_log::warning(operator_name(),
-                             "rescale mesh option is ignored, scale = 1.0.");
+          color_log::warning(operator_name(), "rescale mesh option is ignored, scale = 1.0.");
         }
       }
     }
@@ -119,8 +116,7 @@ class RegisterRShapeDriver : public OperatorNode {
       const exanb::Vec3d d = *deform;
 
       if (d.x <= 0.0 || d.y <= 0.0 || d.z <= 0.0) {
-        color_log::error(operator_name(),
-                         "Impossible to deform: factors must be strictly positive (x,y,z > 0).");
+        color_log::error(operator_name(), "Impossible to deform: factors must be strictly positive (x,y,z > 0).");
       }
 
       if (d.x != 1.0 || d.y != 1.0 || d.z != 1.0) {
@@ -134,7 +130,7 @@ class RegisterRShapeDriver : public OperatorNode {
     shp.increase_obb(shp.m_radius);
 
     exaDEM::RShapeDriver driver = {*state, params->input_motion_type};
-    driver.set_shape(shp);
+    driver.shp = shp;
     driver.initialize(*params);
     drivers->add_driver(*id, driver, *params);
     exanb::lout << "========= STL Mesh ==============" << std::endl;
@@ -148,4 +144,4 @@ ONIKA_AUTORUN_INIT(register_rshape_driver) {
   OperatorNodeFactory::instance()->register_factory("register_stl_mesh", make_simple_operator<RegisterRShapeDriver>);
   OperatorNodeFactory::instance()->register_factory("register_rshape", make_simple_operator<RegisterRShapeDriver>);
 }
-}  // namespace exaDEM:
+}  // namespace exaDEM
