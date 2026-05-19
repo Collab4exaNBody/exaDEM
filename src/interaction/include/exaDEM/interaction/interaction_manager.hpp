@@ -40,9 +40,9 @@ struct InteractionManager {
   void add_item(exaDEM::PlaceholderInteraction& I) {
     size_t p = I.owner().p;
     assert(p < list.size());
-    if (!skip_ignored_interactions(p, I)) {
+    //if (!skip_ignored_interactions(p, I)) {
       list[p].push_back(I);
-    }
+    //}
   }
 
   void add(std::vector<exaDEM::PlaceholderInteraction>& vec) {

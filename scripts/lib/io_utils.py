@@ -50,7 +50,7 @@ def read_interactions(filename)-> list[Contact]:
             si = int(data[2])
             sj = int(data[3])
             itype = int(data[4])
-
+            position = np.array(list(map(float, data[6:9])))
             normal = np.array(list(map(float, data[9:12])))
             tangential = np.array(list(map(float, data[12:15])))
 
@@ -61,6 +61,7 @@ def read_interactions(filename)-> list[Contact]:
                     si=si,
                     sj=sj,
                     type=itype,
+                    pos=position,
                     force=normal + tangential,
                     fn=normal,
                     ft=tangential,

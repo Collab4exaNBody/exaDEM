@@ -18,7 +18,7 @@ def read_tracked_contacts(filename):
         for line in f:
             line = line.strip()
 
-            # ignorer lignes vides ou commentaires
+            # void line or comment
             if not line or line.startswith("#"):
                 continue
 
@@ -96,9 +96,13 @@ def main():
     # }
 
     data = {
-        name: {"t": [], "fnx": [], "fny": [], "fnz": [], "ftx": [], "fty": [], "ftz": []}
+        #name: {"t": [], "fnx": [], "fny": [], "fnz": [], "ftx": [], "fty": [], "ftz": []}
+        name: {"t": [], "fnx": [], "fny": [], "fnz": [], "ftx": [], "fty": [], "ftz": [], "posx": [], "posy": [], "posz": [], 'type': []}
+
         for name in tracked.values()
     }
+
+    global_stats = {"t": [], "count": [], "sum_fn": [], "sum_ft": [], "mean_fn": [], "mean_ft": []}
 
     for inter_file in interaction_files:
 
@@ -106,6 +110,29 @@ def main():
         time = step * tstep
 
         contacts = read_interactions(inter_file)
+
+        # ── Global stats ──────────────────────────────────
+        sum_fn = np.zeros(3)
+        sum_ft = np.zeros(3)
+        count = 0
+
+        for c in contacts:
+
+            sum_fn += np.array(c.fn)
+            sum_ft += np.array(c.ft)
+            count += 1
+
+        mean_fn = sum_fn / count if count > 0 else np.zeros(3)
+        mean_ft = sum_ft / count if count > 0 else np.zeros(3)
+
+        global_stats["t"].append(time)
+        global_stats["count"].append(count)
+        global_stats["sum_fn"].append(sum_fn.copy())
+        global_stats["sum_ft"].append(sum_ft.copy())
+        global_stats["mean_fn"].append(mean_fn.copy())
+        global_stats["mean_ft"].append(mean_ft.copy())
+
+        # ── tracked contacts ──────────────────────────────────
 
         for c in contacts:
 
@@ -126,23 +153,38 @@ def main():
             data[name]["ftx"].append(c.ft[0])
             data[name]["fty"].append(c.ft[1])
             data[name]["ftz"].append(c.ft[2])
-
+            data[name]["posx"].append(c.pos[0])
+            data[name]["posy"].append(c.pos[1])
+            data[name]["posz"].append(c.pos[2])
+            data[name]["type"].append(c.type)
+            
     with open("debug_contacts.txt", "w") as f:
 
-        header = "time"
+        header = "time count"
+        header += " sum_fnx sum_fny sum_fnz sum_ftx sum_fty sum_ftz"
+        header += " mean_fnx mean_fny mean_fnz mean_ftx mean_fty mean_ftz"
         for name in data:
-            header += f" {name}_fnx {name}_fny {name}_fnz {name}_ftx {name}_fty {name}_ftz"
+            header += f" {name}_fnx {name}_fny {name}_fnz {name}_ftx {name}_fty {name}_ftz {name}_posx {name}_posy {name}_posz {name}_type"
         f.write(header + "\n")
 
-        n = min(len(data[name]["t"]) for name in data)#on ne garde que les temps communs à tous les contacts pour éviter les problèmes d'alignement des données, au cas où certains contacts n'existent pas à tous les pas de temps.
-        # n = len(data["c1"]["t"])
+        n = min(len(global_stats["t"]),
+            min(len(data[name]["t"]) for name in data))
 
         for i in range(n):
+            sfn  = global_stats["sum_fn"][i]
+            sft  = global_stats["sum_ft"][i]
+            mfn  = global_stats["mean_fn"][i]
+            mft  = global_stats["mean_ft"][i]
 
-            line = f"{data['c1']['t'][i]}"
+            line = (f"{global_stats['t'][i]}"
+                    f" {global_stats['count'][i]}"
+                    f" {sfn[0]} {sfn[1]} {sfn[2]}"
+                    f" {sft[0]} {sft[1]} {sft[2]}"
+                    f" {mfn[0]} {mfn[1]} {mfn[2]}"
+                    f" {mft[0]} {mft[1]} {mft[2]}")
 
             for name in data:
-                line += f" {data[name]['fnx'][i]} {data[name]['fny'][i]} {data[name]['fnz'][i]} {data[name]['ftx'][i]} {data[name]['fty'][i]} {data[name]['ftz'][i]}"
+                line += f" {data[name]['fnx'][i]} {data[name]['fny'][i]} {data[name]['fnz'][i]} {data[name]['ftx'][i]} {data[name]['fty'][i]} {data[name]['ftz'][i]} {data[name]['posx'][i]} {data[name]['posy'][i]} {data[name]['posz'][i]} {data[name]['type'][i]}"
 
             f.write(line + "\n")
 

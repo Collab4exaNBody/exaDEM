@@ -128,6 +128,8 @@ class Contact:
         subindex of the second particle in the contact (for non-spherical particles)
     type : int
         type of the contact
+    pos : Tuple[float, float, float]
+        position of the contact point in 3D space
     force : Tuple[float, float, float]
         force vector acting on the contact
     fn : Tuple[float, float, float]
@@ -144,6 +146,7 @@ class Contact:
     si: int
     sj: int
     type: int
+    pos: Tuple[float, float, float]
     force: Tuple[float, float, float]
     fn: Tuple[float, float, float]
     ft: Tuple[float, float, float]
