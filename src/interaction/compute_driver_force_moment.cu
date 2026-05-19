@@ -43,10 +43,10 @@ struct ComputeForceMomentDriverFunc {
   template <typename InteractionT>
   void operator()(size_t i, InteractionT& I) const {
     auto id = I.partner().id;  // Driver ID
+    // Compute force + moment contribution from this interaction and add to driver (negative sign for Newton's 3rd law)
     // Thread-safe addition of normal + tangential forces to the driver
     const exanb::Vec3d f = fn[i] + ft[i];  // Total force from this interaction
     exaDEM::lockAndAdd(forces[id], -f);
-    // Compute moment contribution from this interaction and add to driver (negative sign for Newton's 3rd law)
     const exanb::Vec3d Cd = (cp[i] - centers[id]);
     const exanb::Vec3d mom = exanb::cross(Cd, -f) + -I.moment;
     exaDEM::lockAndAdd(moments[id], mom);
