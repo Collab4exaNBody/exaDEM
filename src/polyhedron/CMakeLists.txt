@@ -17,14 +17,14 @@
 set(exadem_polyhedron_LINK_LIBRARIES exanbCompute exanbGridCellParticles exanbExtraStorage exadem_driver exadem_shape exadem_force_field exadem_grid exadem_interaction)
 
 set(CONTACT_MODELS
-    NONE
-    COHESIVE
-    DMT
+    none
+    cohesive
+    dmt
 )
 
 set(CONTACT_MATS
-    SINGLE
-    MULTI
+    single
+    multi
 )
 
 set(GENERATED_CU_FILES)
@@ -35,21 +35,21 @@ foreach(model ${CONTACT_MODELS})
     # =========================
     # Template type selection
     # =========================
-    if(mat STREQUAL "SINGLE")
-      if(model STREQUAL "NONE")
+    if(mat STREQUAL "single")
+      if(model STREQUAL "none")
         set(TEMPLATE_TYPE "CCSMPHNoneTmpl")
-      elseif(model STREQUAL "COHESIVE")
+      elseif(model STREQUAL "cohesive")
         set(TEMPLATE_TYPE "CCSMPHCohesiveTmpl")
-      elseif(model STREQUAL "DMT")
+      elseif(model STREQUAL "dmt")
         set(TEMPLATE_TYPE "CCSMPHDmtTmpl")
       endif()
       set(PREFIX "contact_singlemat_polyhedron")
-    else() # MULTI
-      if(model STREQUAL "NONE")
+    else() # multi
+      if(model STREQUAL "none")
         set(TEMPLATE_TYPE "CCMMPHNoneTmpl")
-      elseif(model STREQUAL "COHESIVE")
+      elseif(model STREQUAL "cohesive")
         set(TEMPLATE_TYPE "CCMMPHCohesiveTmpl")
-      elseif(model STREQUAL "DMT")
+      elseif(model STREQUAL "dmt")
         set(TEMPLATE_TYPE "CCMMPHDmtTmpl")
       endif()
       set(PREFIX "contact_multimat_polyhedron")
@@ -59,7 +59,7 @@ foreach(model ${CONTACT_MODELS})
     # Generated registrations
     # =========================
 
-   if(model STREQUAL "NONE")
+   if(model STREQUAL "none")
     set(REGISTRATIONS "
 OperatorNodeFactory::instance()->register_factory(\"${PREFIX}\",
   make_grid_variant_operator<${TEMPLATE_TYPE}>);
@@ -69,12 +69,12 @@ OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke\",
   make_grid_variant_operator<${TEMPLATE_TYPE}>);
 ")
 
-		elseif(model STREQUAL "COHESIVE")
+		elseif(model STREQUAL "cohesive")
       set(REGISTRATIONS "
 OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_cohesive\",
   make_grid_variant_operator<${TEMPLATE_TYPE}>);
 ")
-    elseif(model STREQUAL "DMT")
+    elseif(model STREQUAL "dmt")
       set(REGISTRATIONS "
 OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_dmt\",
   make_grid_variant_operator<${TEMPLATE_TYPE}>);
@@ -86,7 +86,7 @@ OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_dmt\",
     # =========================
     # Output file
     # =========================
-    set(OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/contact_force_${mat}_${model}.cu)
+    set(OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/contact_force_polyhedron_${mat}_${model}.cu)
 
 		message(STATUS "Generate: ${OUTPUT_FILE}")
     configure_file(
@@ -99,6 +99,24 @@ OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_dmt\",
 
   endforeach()
 endforeach()
+
+## Default Combinaison
+set(REGISTRATIONS "
+OperatorNodeFactory::instance()->register_factory(\"contact_polyhedron\",
+  make_grid_variant_operator<CCSMPHNoneTmpl>);
+")
+
+set(MODEL "default")
+set(MAT "combinaison")
+set(OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/contact_force_polyhedron.cu)
+message(STATUS "Generate: ${OUTPUT_FILE}")
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/contact_force_polyhedron.cu.in
+  ${OUTPUT_FILE}
+  @ONLY
+)
+
+list(APPEND GENERATED_CU_FILES ${OUTPUT_FILE})
 
 list(APPEND exadem_polyhedron_EXTERNAL_SRCS ${GENERATED_CU_FILES})
 xnb_add_plugin(exadem_polyhedron ${CMAKE_CURRENT_SOURCE_DIR})

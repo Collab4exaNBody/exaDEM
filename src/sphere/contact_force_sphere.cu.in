@@ -352,34 +352,8 @@ template <class GridT>
 using CCMMSHDmtTmpl = ComputeContactClassifierSphere<true, ContactLawType::Hooke, CohesiveLawType::DMT, GridT>;
 
 // === register factories ===
-ONIKA_AUTORUN_INIT(contact_force_sphere) {
-  OperatorNodeFactory::instance()->register_factory("contact_sphere", make_grid_variant_operator<CCSMSHNoneTmpl>);
-
-  OperatorNodeFactory::instance()->register_factory("contact_singlemat_sphere_hooke",
-                                                    make_grid_variant_operator<CCSMSHNoneTmpl>);
-
-  OperatorNodeFactory::instance()->register_factory("contact_singlemat_sphere_hooke_none",
-                                                    make_grid_variant_operator<CCSMSHNoneTmpl>);
-
-  OperatorNodeFactory::instance()->register_factory("contact_singlemat_sphere_hooke_dmt",
-                                                    make_grid_variant_operator<CCSMSHDmtTmpl>);
-
-  OperatorNodeFactory::instance()->register_factory("contact_singlemat_sphere_hooke_cohesive",
-                                                    make_grid_variant_operator<CCSMSHCohesiveTmpl>);
-
-  OperatorNodeFactory::instance()->register_factory("contact_multimat_sphere",
-                                                    make_grid_variant_operator<CCMMSHNoneTmpl>);
-
-  OperatorNodeFactory::instance()->register_factory("contact_multimat_sphere_hooke",
-                                                    make_grid_variant_operator<CCMMSHNoneTmpl>);
-
-  OperatorNodeFactory::instance()->register_factory("contact_multimat_sphere_hooke_none",
-                                                    make_grid_variant_operator<CCMMSHNoneTmpl>);
-
-  OperatorNodeFactory::instance()->register_factory("contact_multimat_sphere_hooke_cohesive",
-                                                    make_grid_variant_operator<CCMMSHCohesiveTmpl>);
-
-  OperatorNodeFactory::instance()->register_factory("contact_multimat_sphere_hooke_dmt",
-                                                    make_grid_variant_operator<CCMMSHDmtTmpl>);
+ONIKA_AUTORUN_INIT(contact_force_sphere_@MODEL@_@MAT@)  // see CMakeLists.txt
+{
+  @REGISTRATIONS@
 }
 }  // namespace exaDEM
