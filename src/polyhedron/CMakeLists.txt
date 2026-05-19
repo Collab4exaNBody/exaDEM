@@ -43,7 +43,7 @@ foreach(model ${CONTACT_MODELS})
       elseif(model STREQUAL "dmt")
         set(TEMPLATE_TYPE "CCSMPHDmtTmpl")
       endif()
-      set(PREFIX "contact_singlemat_polyhedron")
+      set(PREFIX "contact_polyhedron_singlemat")
     else() # multi
       if(model STREQUAL "none")
         set(TEMPLATE_TYPE "CCMMPHNoneTmpl")
@@ -52,7 +52,7 @@ foreach(model ${CONTACT_MODELS})
       elseif(model STREQUAL "dmt")
         set(TEMPLATE_TYPE "CCMMPHDmtTmpl")
       endif()
-      set(PREFIX "contact_multimat_polyhedron")
+      set(PREFIX "contact_polyhedron_multimat")
     endif()
 
     # =========================
