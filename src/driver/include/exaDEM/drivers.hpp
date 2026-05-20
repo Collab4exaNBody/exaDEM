@@ -46,7 +46,7 @@ struct Drivers {
     int m_index = -1;
   };
 
-  vector_t<DriverTypeAndIndex> m_type_index; /**< Vector storing the types of drivers. */
+  vector_t<DriverTypeAndIndex> m_type_index;        /**< Vector storing the types of drivers. */
   /** just a duplicate on CPU to avoid weird copies from GPU */
   std::vector<DriverTypeAndIndex> m_type_index_cpu; /**< Vector storing the types of drivers. */
   // vector_t<Driver_params> m_motion; /**< Vector storing the motion drivers parameters. */
@@ -204,10 +204,11 @@ struct Drivers {
    * @return The type of the driver at the specified index.
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline DRIVER_TYPE type(size_t idx) {
-    assert(idx < m_type_index.size());
-    return m_type_index[idx].m_type;
-  }
+      inline DRIVER_TYPE type(size_t idx) {
+        assert(idx < m_type_index.size());
+        return m_type_index[idx].m_type;
+      }
+
 
   /**
    * @brief Returns the data related to the drvier motion of driver at the specified index.
@@ -300,11 +301,11 @@ struct DriversGPUAccessor {
   DriversGPUAccessor(DriversGPUAccessor&&) = default;
   inline DriversGPUAccessor(Drivers& drvs)
       : m_nb_drivers(drvs.m_type_index.size()),
-        m_type_index(drvs.m_type_index.data()),
-        m_data({drvs.m_data.get_nth<0>().data(), drvs.m_data.get_nth<1>().data(), drvs.m_data.get_nth<2>().data(),
-                drvs.m_data.get_nth<3>().data()}),
-        m_data_size({drvs.m_data.get_nth<0>().size(), drvs.m_data.get_nth<1>().size(), drvs.m_data.get_nth<2>().size(),
-                     drvs.m_data.get_nth<3>().size()}) {}
+      m_type_index(drvs.m_type_index.data()),
+      m_data({drvs.m_data.get_nth<0>().data(), drvs.m_data.get_nth<1>().data(), drvs.m_data.get_nth<2>().data(),
+             drvs.m_data.get_nth<3>().data()}),
+      m_data_size({drvs.m_data.get_nth<0>().size(), drvs.m_data.get_nth<1>().size(), drvs.m_data.get_nth<2>().size(),
+                  drvs.m_data.get_nth<3>().size()}) {}
 
   template <class T>
   ONIKA_HOST_DEVICE_FUNC inline T& get_typed_driver(const int idx) const {

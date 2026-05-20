@@ -15,4 +15,109 @@
 # specific language governing permissions and limitations
 # under the license.
 set(exadem_sphere_LINK_LIBRARIES exanbGridCellParticles exadem_shape exadem_driver exadem_force_field exadem_grid exadem_interaction)
+
+set(CONTACT_MODELS
+    none
+    cohesive
+    dmt
+)
+
+set(CONTACT_MATS
+    singlemat
+    multimat
+)
+
+set(GENERATED_CU_FILES)
+
+foreach(model ${CONTACT_MODELS})
+  foreach(mat ${CONTACT_MATS})
+
+    # =========================
+    # Template type selection
+    # =========================
+    if(mat STREQUAL "singlemat")
+      if(model STREQUAL "none")
+        set(TEMPLATE_TYPE "CCSMSHNoneTmpl")
+      elseif(model STREQUAL "cohesive")
+        set(TEMPLATE_TYPE "CCSMSHCohesiveTmpl")
+      elseif(model STREQUAL "dmt")
+        set(TEMPLATE_TYPE "CCSMSHDmtTmpl")
+      endif()
+      set(PREFIX "contact_singlemat_sphere")
+    else() # multimat
+      if(model STREQUAL "none")
+        set(TEMPLATE_TYPE "CCMMSHNoneTmpl")
+      elseif(model STREQUAL "cohesive")
+        set(TEMPLATE_TYPE "CCMMSHCohesiveTmpl")
+      elseif(model STREQUAL "dmt")
+        set(TEMPLATE_TYPE "CCMMSHDmtTmpl")
+      endif()
+      set(PREFIX "contact_multimat_sphere")
+    endif()
+
+    # =========================
+    # Generated registrations
+    # =========================
+
+   if(model STREQUAL "none")
+    set(REGISTRATIONS "
+OperatorNodeFactory::instance()->register_factory(\"${PREFIX}\",
+  make_grid_variant_operator<${TEMPLATE_TYPE}>);
+OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke\",
+  make_grid_variant_operator<${TEMPLATE_TYPE}>);
+	OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_none\",
+  make_grid_variant_operator<${TEMPLATE_TYPE}>);
+")
+
+		elseif(model STREQUAL "cohesive")
+      set(REGISTRATIONS "
+OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_cohesive\",
+  make_grid_variant_operator<${TEMPLATE_TYPE}>);
+")
+    elseif(model STREQUAL "dmt")
+      set(REGISTRATIONS "
+OperatorNodeFactory::instance()->register_factory(\"${PREFIX}_hooke_dmt\",
+  make_grid_variant_operator<${TEMPLATE_TYPE}>);
+")
+    endif()
+    set(MODEL ${model})
+    set(MAT ${mat})
+
+    # =========================
+    # Output file
+    # =========================
+    set(OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/contact_force_sphere_${mat}_${model}.cu)
+
+		message(STATUS "Generate: ${OUTPUT_FILE}")
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/contact_force_sphere.cu.in
+      ${OUTPUT_FILE}
+      @ONLY
+    )
+
+    list(APPEND GENERATED_CU_FILES ${OUTPUT_FILE})
+
+  endforeach()
+endforeach()
+
+## Default Combinaison
+set(REGISTRATIONS "
+OperatorNodeFactory::instance()->register_factory(\"contact_sphere\",
+  make_grid_variant_operator<CCSMSHNoneTmpl>);
+")
+
+set(MODEL "default")
+set(MAT "combinaison")
+
+set(OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/contact_force_sphere.cu)
+message(STATUS "Generate: ${OUTPUT_FILE}")
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/contact_force_sphere.cu.in
+  ${OUTPUT_FILE}
+  @ONLY
+)
+
+list(APPEND GENERATED_CU_FILES ${OUTPUT_FILE})
+
+list(APPEND exadem_sphere_EXTERNAL_SRCS ${GENERATED_CU_FILES})
 xnb_add_plugin(exadem_sphere ${CMAKE_CURRENT_SOURCE_DIR})

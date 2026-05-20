@@ -139,6 +139,7 @@ struct Cylinder {
   ONIKA_HOST_DEVICE_FUNC inline void force_to_accel(const Driver_params& motion) {
     /** not implemented */
   }
+
   /**
    * @brief Update position and velocity (not implemented for cylinder).
    * @details Cylinder kinematics are not yet implemented.
@@ -148,6 +149,7 @@ struct Cylinder {
   ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const Driver_params& motion, const double dt) {
     /** not implemented */
   }
+
   /**
    * @brief Update position, velocity, and deformation (not implemented for cylinder).
    * @details Cylinder kinematics are not yet implemented.

@@ -57,7 +57,7 @@ particle_write_paraview_generic:
 
 compute_force:
   - gravity_force
-  - contact_polyhedron_multimat
+  - contact_multimat_polyhedron
   - inner_bond_polyhedron
 
 domain:

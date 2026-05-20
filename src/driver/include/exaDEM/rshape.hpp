@@ -354,6 +354,7 @@ struct RShapeDriver {
       DriverPushToAngularVelocityFunctor compute_vrot = {dt * 0.5};
       DriverPushToQuaternionFunctor compute_quat_vrot = {dt, dt * 0.5, dt * dt * 0.5};
 
+
       if (motion.is_expr(motion_type, time)) {
         if (motion.expr.expr_use_mom) {
           fields.applied_mom = motion.driver_expr_mom(time);
