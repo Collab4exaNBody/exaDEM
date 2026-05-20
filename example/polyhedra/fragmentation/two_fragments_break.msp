@@ -25,7 +25,7 @@ compute_force:
   - gravity_force:
      gravity: [0,0,-9.81]
   - contact_multimat_polyhedron
-	- inner_bond_polyhedron
+  - inner_bond_polyhedron
 
 setup_drivers:
   - register_surface:
