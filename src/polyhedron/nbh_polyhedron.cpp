@@ -124,16 +124,17 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
 
         manager.current_cell_id = cell_a;
         manager.current_cell_particles = n_particles;
-        const size_t data_size = storage.m_data.size();
-        PlaceholderInteraction* __restrict__ const data_ptr = storage.m_data.data();
 
         // identify ill-formed interactions and erase them.
         // safe guard to avoid processing ill-formed interactions.
         // temporary solution, ideally, ill-formed interactions should not be generated.
-        std::erase_if(storage.m_data, [](const auto& item) {
+        std::erase_if(storage.m_data, [](auto& item) {
           constexpr bool display_warnings = false;  // set to true to display warnings about ill-formed interactions
           return !item.template consistent<display_warnings>();
         });
+
+        const size_t data_size = storage.m_data.size();
+        PlaceholderInteraction* __restrict__ const data_ptr = storage.m_data.data();
 
         // Extract historical interactions from storage and move them in the manager
         // manager.hist is cleared before extracting history.
