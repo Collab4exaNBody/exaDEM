@@ -19,23 +19,31 @@ under the License.
 #pragma once
 
 #include <iostream>
-// #include <ostream>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_stream.h>
 #include <exaDEM/interaction/interaction_enum.hpp>
 #include <exaDEM/color_log.hpp>
 
 namespace exaDEM {
+/** @brief Structure representing the location of a particle in the simulation domain. */
 struct  ParticleSubLocation {
   uint64_t id;   /**< Id of the first particle */
   uint32_t cell; /**< Index of the cell of the first particle involved in the interaction. */
   uint16_t p;    /**< Index of the particle within its cell for the particle involved in the interaction. */
   uint32_t sub;  /**< Sub-particle index for the particle involved in the interaction. */
 
+  /** @brief Check if two particle sub-locations are equal.
+   * @param P The other particle sub-location to compare with.
+   * @return True if the sub-locations are equal, false otherwise.
+   */
   ONIKA_HOST_DEVICE_FUNC bool operator==(ParticleSubLocation& P) {
     return (id == P.id && cell == P.cell && p == P.p && sub == P.sub);
   }
 
+  /** @brief Check if two particle sub-locations are equal.
+   * @param P The other particle sub-location to compare with.
+   * @return True if the sub-locations are equal, false otherwise.
+   */
   ONIKA_HOST_DEVICE_FUNC bool operator==(const ParticleSubLocation& P) const {
     return (id == P.id && cell == P.cell && p == P.p && sub == P.sub);
   }
@@ -52,12 +60,15 @@ struct InteractionPair {
   // means that the interaction is linked to a particle that is in the current subdomain
   static constexpr uint8_t PartnerGhost = 2;
 
-  ParticleSubLocation pi;
-  ParticleSubLocation pj;
+  ParticleSubLocation pi;                       /**< Sub-location of the first particle in the interaction. */
+  ParticleSubLocation pj;                       /**< Sub-location of the second particle in the interaction. */
   uint16_t type = InteractionTypeId::Undefined; /**< Type of the interaction (e.g., contact type). */
-  uint8_t swap = false;
-  uint8_t ghost = NotGhost;
+  uint8_t swap = false;                         /**< Flag indicating whether the order of the particles is swapped (i.e., if true, pi and pj are swapped). */
+  uint8_t ghost = NotGhost;                     /**< Flag indicating the ghost status of the interaction (e.g., whether it involves ghost particles). */
 
+  /** @brief Get a reference to the owner particle sub-location.
+   * @return A reference to the owner particle sub-location.
+   */
   ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& owner() {
     if (!swap) {
       return pi;
@@ -65,6 +76,9 @@ struct InteractionPair {
     return pj;
   }
 
+  /** @brief Get a reference to the partner particle sub-location.
+   * @return A reference to the partner particle sub-location.
+   */
   ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& partner() {
     if (!swap) {
       return pj;
@@ -72,6 +86,9 @@ struct InteractionPair {
     return pi;
   }
 
+  /** @brief Get a reference to the owner particle sub-location.
+   * @return A reference to the owner particle sub-location.
+   */
   ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& owner() const {
     if (!swap) {
       return pi;
@@ -79,6 +96,9 @@ struct InteractionPair {
     return pj;
   }
 
+  /** @brief Get a reference to the partner particle sub-location.
+   * @return A reference to the partner particle sub-location.
+   */
   ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& partner() const {
     if (!swap) {
       return pj;
@@ -86,31 +106,55 @@ struct InteractionPair {
     return pi;
   }
 
+  /** @brief Check if the interaction is active.
+   * @return True if the interaction is active, false otherwise.
+   */
   ONIKA_HOST_DEVICE_FUNC inline bool active() {
     return ghost != PartnerGhost;
   }
 
+  /** @brief Check if the interaction is active.
+   * @return True if the interaction is active, false otherwise.
+   */
   ONIKA_HOST_DEVICE_FUNC inline bool active() const {
     return ghost != PartnerGhost;
   }
 
-  // used for debugging
-  // CPU only
+  /** @brief Check if the interaction is consistent by verifying the consistency of its InteractionPair.
+   * Used for debugging purposes to ensure that the interaction data is well-formed and does not contain invalid values.
+   * CPU only function, not intended to be called from device code.
+   * [return] True if the interaction is consistent, false otherwise.
+   */
+  template <bool DisplayWarnings = true>
   inline bool consistent() const {
+    std::string function_name = "InteractionPair::consistent()";
     bool res = true;
+    if (type >= InteractionTypeId::NTypes) {
+      if constexpr (DisplayWarnings) {
+        color_log::warning(function_name,
+                         "type is undefined: " + std::to_string(type));
+      }
+      res = false;
+    }
     if (owner() == partner()) {
-      color_log::warning("InteractionPair::consistent()",
+      if constexpr (DisplayWarnings) {
+        color_log::warning(function_name,
                          "owner ParticleSubLocation is equal to the partner()");
+      }
       res = false;
     }
     if (ghost > InteractionPair::PartnerGhost) {
-      color_log::warning("InteractionPair::consistent()",
-                         "ghost is undefined: " + std::to_string(ghost));
+      if constexpr (DisplayWarnings) {
+        color_log::warning(function_name,
+                           "ghost is undefined: " + std::to_string(ghost));
+      }
       res = false;
     }
     if (swap >= 2 /* not a boolean */) {
-      color_log::warning("InteractionPair::consistent()",
+      if constexpr (DisplayWarnings) {
+        color_log::warning(function_name,
                          "swap is undefined: " + std::to_string(swap));
+      }
       res = false;
     }
     return res;
@@ -144,8 +188,9 @@ struct InteractionPair {
   // Operators //
   ///////////////
 
-  /**
-   * @brief return true if particles id and particles sub id are equals.
+  /** @brief Check if two interaction pairs are equal.
+   * @param I The other interaction pair to compare with.
+   * @return True if the interaction pairs are equal, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool operator==(InteractionPair& I) {
     auto& me_pi = this->pi;
@@ -161,8 +206,9 @@ struct InteractionPair {
     }
   }
 
-  /**
-   * @brief return true if particles id and particles sub id are equals.
+  /** @brief Check if two interaction pairs are equal.
+   * @param I The other interaction pair to compare with.
+   * @return True if the interaction pairs are equal, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool operator==(const InteractionPair& I) const {
     auto& me_pi = this->pi;
@@ -178,6 +224,10 @@ struct InteractionPair {
     }
   }
 
+  /** @brief Check if an interaction pair is less than another.
+   * @param I The other interaction pair to compare with.
+   * @return True if this interaction pair is less than the other, false otherwise.
+   */
   ONIKA_HOST_DEVICE_FUNC bool operator<(const InteractionPair& I) const {
     const auto& a = owner();
     const auto& b = partner();
@@ -206,5 +256,5 @@ struct InteractionPair {
     }
     return b.sub < d.sub;
   }
-};
+};  
 }  // namespace exaDEM

@@ -180,6 +180,10 @@ ClassifierContainer<InteractionType::InnerBond>& container, GridCellParticleInte
       PlaceholderInteraction& item2 = data_i_ptr[it2];
       if (item1.pair == item2.pair) {
         find = true;
+        if (!item2.consistent()) {
+          item1.print();
+          color_log::error("unclassify", "One active interaction is illformed");
+        }
         if(item1.persistent()) {
           auto& view = item2.convert<InteractionType::InnerBond>();
           view.update(item1);

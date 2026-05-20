@@ -16,33 +16,29 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
-
+#include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/domain.h>
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
 
 #include <cassert>
-
-#include <exaDEM/traversal.hpp>
 #include <exaDEM/forcefield/inner_bond_parameters.hpp>
 #include <exaDEM/forcefield/multimat_parameters.hpp>
-#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/interaction/migration_test.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
-#include <exaDEM/shapes.hpp>
+#include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
-Vec3d normalize(Vec3d&& in) {
-  return in / exanb::norm(in);
-}
+Vec3d normalize(Vec3d&& in) { return in / exanb::norm(in); }
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_cluster>>
 class StickPolyhedraOperator : public OperatorNode {
@@ -276,9 +272,7 @@ class StickPolyhedraOperator : public OperatorNode {
                   // define the interface fracture criterion
                   // Et + En > 2.0 * area * g
                   item.as<InnerBondInteraction>().criterion =
-                      pi.id < pj.id ?
-                      2 * shpi->get_face_area(i, hi) * ibp.g:
-                      2 * shpj->get_face_area(j, hj) * ibp.g;
+                      pi.id < pj.id ? 2 * shpi->get_face_area(i, hi) * ibp.g : 2 * shpj->get_face_area(j, hj) * ibp.g;
 
                   found = true;
 
@@ -305,7 +299,7 @@ class StickPolyhedraOperator : public OperatorNode {
 
               // compute inner bond weight such as kn / kt are
               // imposed on a interface instead of a for each interaction
-              for (auto& it: local) {
+              for (auto& it : local) {
                 it.as<InnerBondInteraction>().weight = 1. / static_cast<double>(local.size());
               }
 
