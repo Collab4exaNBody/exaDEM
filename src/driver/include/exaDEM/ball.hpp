@@ -204,7 +204,6 @@ struct Ball {
     if (is_tabulated(motion_type)) {
       fields.center = motion.tab_to_position(time);
       fields.vel = motion.tab_to_velocity(time);
-
     } else if (!is_stationary(motion_type)) {
       if (is_compressive(motion_type)) {
         push_ra_rv_to_rad(dt);
