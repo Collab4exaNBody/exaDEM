@@ -15,17 +15,17 @@ input_data:
   - set_velocity:
      value: [0, 0, -1]
   - multimat_contact_params:
-     default_config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1e5, kt: 8e4, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.87}
+     default_config: { kn: 1e5, kt: 8e4, mu: 0.3, damp_rate: 0.87}
   - drivers_contact_params:
-     default_config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1e6, kt: 8e5, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.87}
+     default_config: { kn: 1e6, kt: 8e5, mu: 0.3, damp_rate: 0.87}
   - inner_bond_params:
      default_config: { kn: 1.e4, kt: 8.e3, damp_rate: 0.87, g: 2.e-7 } 
 
 compute_force:
   - gravity_force:
      gravity: [0,0,-9.81]
-  - contact_polyhedron_multimat
-  - inner_bond_polyhedron
+  - contact_multimat_polyhedron
+	- inner_bond_polyhedron
 
 setup_drivers:
   - register_surface:
