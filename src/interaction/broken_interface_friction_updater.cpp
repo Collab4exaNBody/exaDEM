@@ -16,18 +16,18 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+#include <exanb/core/grid.h>
+#include <exanb/core/make_grid_variant_operator.h>
 #include <mpi.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/make_grid_variant_operator.h>
 
-#include <exaDEM/interface/interface.hpp>
 #include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/forcefield/contact_parameters.hpp>
 #include <exaDEM/forcefield/contact_force.hpp>
+#include <exaDEM/forcefield/contact_parameters.hpp>
 #include <exaDEM/forcefield/multimat_parameters.hpp>
+#include <exaDEM/interface/interface.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
@@ -64,21 +64,29 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
     // No copy from GPU if the data has not been touuch by the GPU
 #pragma omp parallel for
     for (size_t i = 0; i < interfaces.size(); i++) {
+      // If the interface is broken, we need to update the friction of the interactions and break them
       if (interfaces.break_interface[i] == true) {
         auto [offset, size] = interfaces.data[i];
         auto type_a = cells[data_wrapper.cell_i[offset]][field::type][data_wrapper.p_i[offset]];
         auto type_b = cells[data_wrapper.cell_j[offset]][field::type][data_wrapper.p_j[offset]];
         for (size_t j = 0; j < size; j++) {
           size_t idx = j + offset;
-          data_wrapper.broke(idx);
+          data_wrapper.broke(idx);  // mark the interaction as broken.
+          // Note that broken interactions will be transformed in VertexVertex interactions by the unclassify operator.
+          // so we need to use the contact parameters of VertexVertex interactions.
           double ft = exanb::norm(ft_ptr[idx]);
           double mu = cp(type_a, type_b).mu;
+          // ft_threshold depends on the normal force.
           double ft_threshold = mu * exanb::norm(fn_ptr[idx]);
-          if( ft > ft_threshold && ft > 0 ) {
+
+          // If the friction is higher than the threshold.
+          // We need to reduce it to the threshold
+          if (ft > ft_threshold && ft > 0) {
             data_wrapper.store_ft(ft_ptr[idx] * ft_threshold / ft, idx);
           }
+          // If the normal force is zero, we need to set the friction to zero.
           if (dn_ptr[idx] > 0) {
-            data_wrapper.store_ft(Vec3d{0,0,0}, idx);
+            data_wrapper.store_ft(Vec3d{0, 0, 0}, idx);
           }
         }
       }

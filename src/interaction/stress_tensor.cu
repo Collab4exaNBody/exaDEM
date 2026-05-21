@@ -16,24 +16,38 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+
+// onika
 #include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+// order
+#include <onika/parallel/parallel_for.h>
+// exanb
+#include <exanb/core/concurent_add_contributions.h>
+#include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/concurent_add_contributions.h>
-#include <onika/parallel/parallel_for.h>
-
 #include <mpi.h>
+
+// exaDEM
+#include <exaDEM/atomic.h>
 
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
-#include <exaDEM/type/add_contribution_mat3d.hpp>
 
 namespace exaDEM {
 template <int type, bool sym>
 struct compute_stress_tensor {
+  /** @brief Compute the stress tensor for a given interaction
+   * @param idx The index of the interaction
+   * @param I The interaction for which to compute the stress tensor
+   * @param cells The grid cells containing the particles
+   * @param dnp The normal overlap for the interaction
+   * @param fnp The normal force for the interaction
+   * @param ftp The tangential force for the interaction
+   * @param cpp The contact point position for the interaction
+   */
   template <typename TMPLC>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t idx, Interaction& I, TMPLC* const __restrict__ cells,
                                                 const double* const __restrict__ dnp,
@@ -49,7 +63,7 @@ struct compute_stress_tensor {
       Vec3d fij = fnp[idx] + ftp[idx];
       Vec3d pos_i = {cell[field::rx][i.p], cell[field::ry][i.p], cell[field::rz][i.p]};
       Vec3d cij = cpp[idx] - pos_i;
-      exanb::mat3d_atomic_add_contribution(cell[field::stress][i.p], exanb::tensor(fij, cij));
+      exaDEM::mat3d_atomic_add_contribution(cell[field::stress][i.p], exanb::tensor(fij, cij));
 
       // polyhedron - polyhedron || sphere - sphere
       if constexpr (type <= 3 && sym == true) {
@@ -59,21 +73,33 @@ struct compute_stress_tensor {
         Vec3d fji = -fij;
         Vec3d pos_j = {cellj[field::rx][j.p], cellj[field::ry][j.p], cellj[field::rz][j.p]};
         Vec3d cji = cpp[idx] - pos_j;
-        exanb::mat3d_atomic_add_contribution(cellj[field::stress][j.p], exanb::tensor(fji, cji));
+        exaDEM::mat3d_atomic_add_contribution(cellj[field::stress][j.p], exanb::tensor(fji, cji));
       }
     }
   }
 };
 
+/** @brief Functor for computing stress tensors
+ * NTypes: number of interaction types
+ * Sym: whether the interaction is symmetric
+ * Op: the operator class that contains the parallel execution context
+ */
 template <int NTypes, bool Sym, typename Op>
 struct compute_stress_tensors {
-  Op* oper;
+  Op* oper;  //< the operator class that contains the parallel execution context
 
+  /** @brief Compute the stress tensor for all interactions of a given type
+   * @param classifier The classifier containing the interactions
+   * @param cells The grid cells containing the particles
+   * @tparam Type The interaction type for which to compute the stress tensor
+   * @tparam TMPLC The type of the grid cells
+   */
   template <int Type, typename TMPLC>
   void iteration(Classifier& classifier, TMPLC* const __restrict__ cells) {
     static_assert(Type >= 0 && Type < NTypes);
     constexpr InteractionType IT = ConvertToIntertactionType<Type>();
     auto [Ip, size] = classifier.get_info<IT>(Type);
+    // Skip if there are no interactions of this type
     if (size > 0) {
       ParallelForOptions opts;
       opts.omp_scheduling = OMP_SCHED_STATIC;
@@ -89,12 +115,21 @@ struct compute_stress_tensors {
     }
   }
 
+  /** @brief Loop over all interaction types
+   * @tparam Type The current interaction type
+   * @tparam Args The types of the arguments
+   * @param args The arguments
+   */
   template <int Type, typename... Args>
   void loop(Args&&... args) {
     iteration<Type>(std::forward<Args>(args)...);
     if constexpr (Type - 1 >= 0) loop<Type - 1>(std::forward<Args>(args)...);
   }
 
+  /** @brief Call the loop for all interaction types
+   * @tparam Args The types of the arguments
+   * @param args The arguments
+   */
   template <typename... Args>
   void operator()(Args&&... args) {
     static_assert(NTypes >= 1);
@@ -121,9 +156,12 @@ class StressTensor : public OperatorNode {
   }
 
   inline void execute() final {
+    constexpr bool sym = true;
+    // check if grid has cells
     if (grid->number_of_cells() == 0) {
       return;
     }
+    // check if interaction container is set
     if (!ic.has_value()) {
       return;
     }
@@ -132,7 +170,7 @@ class StressTensor : public OperatorNode {
     auto cells = grid->cells();
     Classifier& cf = *ic;
     // get kernel
-    constexpr bool sym = true;
+
     compute_stress_tensors<InteractionTypeId::NTypesPP, sym, StressTensor> runner = {this};
     runner(cf, cells);
   }

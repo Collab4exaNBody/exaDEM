@@ -18,15 +18,16 @@ under the License.
  */
 #pragma once
 
-#include <iostream>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_stream.h>
-#include <exaDEM/interaction/interaction_enum.hpp>
+
 #include <exaDEM/color_log.hpp>
+#include <exaDEM/interaction/interaction_enum.hpp>
+#include <iostream>
 
 namespace exaDEM {
 /** @brief Structure representing the location of a particle in the simulation domain. */
-struct  ParticleSubLocation {
+struct ParticleSubLocation {
   uint64_t id;   /**< Id of the first particle */
   uint32_t cell; /**< Index of the cell of the first particle involved in the interaction. */
   uint16_t p;    /**< Index of the particle within its cell for the particle involved in the interaction. */
@@ -63,8 +64,10 @@ struct InteractionPair {
   ParticleSubLocation pi;                       /**< Sub-location of the first particle in the interaction. */
   ParticleSubLocation pj;                       /**< Sub-location of the second particle in the interaction. */
   uint16_t type = InteractionTypeId::Undefined; /**< Type of the interaction (e.g., contact type). */
-  uint8_t swap = false;                         /**< Flag indicating whether the order of the particles is swapped (i.e., if true, pi and pj are swapped). */
-  uint8_t ghost = NotGhost;                     /**< Flag indicating the ghost status of the interaction (e.g., whether it involves ghost particles). */
+  uint8_t swap = false; /**< Flag indicating whether the order of the particles is swapped (i.e., if true, pi and pj are
+                           swapped). */
+  uint8_t ghost =
+      NotGhost; /**< Flag indicating the ghost status of the interaction (e.g., whether it involves ghost particles). */
 
   /** @brief Get a reference to the owner particle sub-location.
    * @return A reference to the owner particle sub-location.
@@ -109,16 +112,8 @@ struct InteractionPair {
   /** @brief Check if the interaction is active.
    * @return True if the interaction is active, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC inline bool active() {
-    return ghost != PartnerGhost;
-  }
-
-  /** @brief Check if the interaction is active.
-   * @return True if the interaction is active, false otherwise.
-   */
-  ONIKA_HOST_DEVICE_FUNC inline bool active() const {
-    return ghost != PartnerGhost;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline bool active() { return ghost != PartnerGhost; }
+  ONIKA_HOST_DEVICE_FUNC inline bool active() const { return ghost != PartnerGhost; }
 
   /** @brief Check if the interaction is consistent by verifying the consistency of its InteractionPair.
    * Used for debugging purposes to ensure that the interaction data is well-formed and does not contain invalid values.
@@ -131,29 +126,25 @@ struct InteractionPair {
     bool res = true;
     if (type >= InteractionTypeId::NTypes) {
       if constexpr (DisplayWarnings) {
-        color_log::warning(function_name,
-                         "type is undefined: " + std::to_string(type));
+        color_log::warning(function_name, "type is undefined: " + std::to_string(type));
       }
       res = false;
     }
     if (owner() == partner()) {
       if constexpr (DisplayWarnings) {
-        color_log::warning(function_name,
-                         "owner ParticleSubLocation is equal to the partner()");
+        color_log::warning(function_name, "owner ParticleSubLocation is equal to the partner()");
       }
       res = false;
     }
     if (ghost > InteractionPair::PartnerGhost) {
       if constexpr (DisplayWarnings) {
-        color_log::warning(function_name,
-                           "ghost is undefined: " + std::to_string(ghost));
+        color_log::warning(function_name, "ghost is undefined: " + std::to_string(ghost));
       }
       res = false;
     }
     if (swap >= 2 /* not a boolean */) {
       if constexpr (DisplayWarnings) {
-        color_log::warning(function_name,
-                         "swap is undefined: " + std::to_string(swap));
+        color_log::warning(function_name, "swap is undefined: " + std::to_string(swap));
       }
       res = false;
     }
@@ -256,5 +247,5 @@ struct InteractionPair {
     }
     return b.sub < d.sub;
   }
-};  
+};
 }  // namespace exaDEM

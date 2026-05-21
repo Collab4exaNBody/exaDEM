@@ -17,8 +17,9 @@ specific language governing permissions and limitations
 under the License.
 */
 #include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/interface/interface.hpp>
 
@@ -42,16 +43,53 @@ class UpdateInterfaces : public OperatorNode {
 
   inline void execute() final {
     auto& build_manager = *ibm;
-    rebuild_interface_Manager(build_manager, ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond));
+    auto& manager = *im;
+    ClassifierContainer<InteractionType::InnerBond>& interactions =
+        ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
+    build_manager.data.clear();
+    size_t n_interactions = interactions.size();
+
+    size_t loc = 0;
+    while (loc < n_interactions) {
+      // Here, we do not build interfaces that are managed by another MPI process (partner).
+      if (interactions.ghost[loc] == InteractionPair::PartnerGhost) {
+        loc++;
+        continue;
+      }
+
+      // Information about the particles managed by the first interaction is retrieved.
+      // The interactions that compose an interface are stored contiguously.
+      uint64_t idloci = interactions.particle_id_i(loc);
+      uint64_t idlocj = interactions.particle_id_j(loc);
+      size_t n = 1;
+      uint64_t idni = interactions.particle_id_i(loc + n);
+      uint64_t idnj = interactions.particle_id_j(loc + n);
+      n++;
+
+      // We locate the range of all interactions that make up the interface.
+      while (loc + n < n_interactions && idloci == idni && idlocj == idnj) {
+        idni = interactions.particle_id_i(loc + n);
+        idnj = interactions.particle_id_j(loc + n);
+        n++;
+      }
+      if (loc + n != n_interactions) {
+        n--;  // exclude the last element that failed the test
+      }
+      Interface interface = {loc, n};
+      build_manager.data.push_back(interface);
+      loc += n;
+    }
+    assert(loc == n_interactions);
 
     int n_interfaces = build_manager.data.size();
     int total_interfaces = 0;
     MPI_Reduce(&n_interfaces, &total_interfaces, 1, MPI_INT, MPI_SUM, 0, *mpi);
-    ldbg<< "Number of interfaces: " << total_interfaces << std::endl;
-    auto& manager = *im;
+    ldbg << "Number of interfaces: " << total_interfaces << std::endl;
+
     manager.resize(build_manager.data.size());
     std::memcpy(manager.data.data(), build_manager.data.data(), build_manager.data.size() * sizeof(Interface));
-    assert(check_interface_consistency(*ibm, ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond)));
+    assert(check_interface_consistency(build_manager,
+                                       ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond)));
   }
 };
 
