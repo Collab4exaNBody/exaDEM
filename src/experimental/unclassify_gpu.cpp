@@ -19,33 +19,30 @@ under the License.
 
 #define DEBUG_NBH_GPU 1
 
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
-
+#include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/domain.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
 
 #include <cassert>
-
-#include <exaDEM/traversal.hpp>
-#include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/interaction/interaction_manager.hpp>
-#include <exaDEM/interaction/migration_test.hpp>
-#include <exaDEM/classifier/classifier_transfert.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_manager.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
+#include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/interaction/interaction_manager.hpp>
+#include <exaDEM/interaction/migration_test.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class UnclassifyGPU : public OperatorNode {
-
   ADD_SLOT(Domain, domain, INPUT, REQUIRED);
   ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
@@ -64,14 +61,13 @@ class UnclassifyGPU : public OperatorNode {
   }
 
   inline void execute() final {
-    //lout << "unclassify active interaction on GridCellParticleInteraction" << std::endl;
+    // lout << "unclassify active interaction on GridCellParticleInteraction" << std::endl;
     classify_interaction_grid(*ic, *traversal_real, *nbh_manager, *ges);
   }
 };
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(unclassify_gpu) {
-  OperatorNodeFactory::instance()->register_factory("unclassify_gpu",
-                                                    make_grid_variant_operator<UnclassifyGPU>);
+  OperatorNodeFactory::instance()->register_factory("unclassify_gpu", make_grid_variant_operator<UnclassifyGPU>);
 }
 }  // namespace exaDEM
