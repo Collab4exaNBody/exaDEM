@@ -35,10 +35,10 @@ inline void classify(Classifier& classifier, GridCellParticleInteraction& ges, s
   constexpr int ntypes = InteractionTypeId::NTypes;
 
   classifier.reset_containers();  // Clear existing waves
-  auto& ces = ges.m_data;    // Reference to cells containing interactions
+  auto& ces = ges.m_data;         // Reference to cells containing interactions
 
   size_t n_threads;
-#  pragma omp parallel
+#pragma omp parallel
   {
     n_threads = omp_get_num_threads();
   }
@@ -46,13 +46,13 @@ inline void classify(Classifier& classifier, GridCellParticleInteraction& ges, s
   std::vector<std::array<std::pair<size_t, size_t>, ntypes> > bounds;
   bounds.resize(n_threads);
 
-# pragma omp parallel
+#pragma omp parallel
   {
     size_t threads = omp_get_thread_num();
     ///< Storage for interactions categorized by type.
     std::array<std::vector<exaDEM::PlaceholderInteraction>, ntypes> tmp;
 
-#   pragma omp for schedule(static) nowait
+#pragma omp for schedule(static) nowait
     for (size_t c = 0; c < size; c++) {
       auto& interactions = ces[idxs[c]];
       const unsigned int n_interactions_in_cell = interactions.m_data.size();
@@ -70,7 +70,7 @@ inline void classify(Classifier& classifier, GridCellParticleInteraction& ges, s
       bounds[threads][typeID].second = tmp[typeID].size();
     }
 
-#   pragma omp barrier
+#pragma omp barrier
 
     // All
     auto& bound = bounds[threads];
@@ -82,40 +82,39 @@ inline void classify(Classifier& classifier, GridCellParticleInteraction& ges, s
       bound[typeID].first = start;
     }
 
-#   pragma omp barrier
+#pragma omp barrier
     // Partial
-#   pragma omp for
+#pragma omp for
     for (int typeID = 0; typeID < ntypes; typeID++) {
       size_t size = bounds[n_threads - 1][typeID].first + bounds[n_threads - 1][typeID].second;
       classifier.resize(typeID, size);
     }
-#   pragma omp barrier
+#pragma omp barrier
 
     // All
     for (int typeID = 0; typeID < ntypes; typeID++) {
-      classifier.copy(typeID,
-                  bound[typeID].first,
-                  bound[typeID].second,
-                  tmp[typeID]);
+      classifier.copy(typeID, bound[typeID].first, bound[typeID].second, tmp[typeID]);
     }
   }
 }
 
+/** @brief Function to unclassify interactions */
 struct UnclassifyFunc {
   template <InteractionType IT>
   void operator()(ClassifierContainer<IT>& container, GridCellParticleInteraction& ges) {
     using namespace onika::cuda;
     auto& ces = ges.m_data;
-# pragma omp for schedule(guided) nowait
+#pragma omp for schedule(guided)
     for (size_t it = 0; it < container.size(); it++) {
       auto item1 = container[it];
-      if (item1.active())
-      {
+      // Only active interactions should be updated.
+      // If an interaction is not active, it means it has been removed / recomputed (nbh operators).
+      if (item1.active()) {
         auto& celli = ces[item1.pair.owner().cell];
         const unsigned int ni = vector_size(celli.m_data);
         PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
 
-        // Binary search 
+        // Binary search
         // belonging to the same owner particle
         uint16_t owner_p = item1.pair.owner().p;
 
@@ -125,8 +124,8 @@ struct UnclassifyFunc {
           size_t mid = lo + (hi - lo) / 2;
           if (data_i_ptr[mid].owner().p < owner_p) {
             lo = mid + 1;
-          }
-          else hi = mid;
+          } else
+            hi = mid;
         }
         size_t start = lo;
 
@@ -142,18 +141,21 @@ struct UnclassifyFunc {
         }
         size_t end = lo;
 
-        // Linear search 
-        bool find = false;
+        // Linear search
+        bool found = false;
         for (size_t it2 = start; it2 < end; it2++) {
           auto& item2 = (data_i_ptr[it2]).convert<IT>();
+          // Only one interaction should match.
           if (item1 == item2) {
             item2.update(item1);
-            find = true;
+            found = true;
             break;
           }
         }
 
-        if (!find) {
+        // If no matching interaction is found.
+        // This should not happen.
+        if (!found) {
           item1.print();
           color_log::error("unclassify", "One active interaction has not been updated");
         }
@@ -162,36 +164,53 @@ struct UnclassifyFunc {
   }
 };
 
-template<> inline void UnclassifyFunc::operator()<InteractionType::InnerBond>(
-ClassifierContainer<InteractionType::InnerBond>& container, GridCellParticleInteraction& ges) {
+template <>
+inline void UnclassifyFunc::operator()<InteractionType::InnerBond>(
+    ClassifierContainer<InteractionType::InnerBond>& container, GridCellParticleInteraction& ges) {
   using namespace onika::cuda;
   auto& ces = ges.m_data;  // Reference to cells containing interactions
                            // Parallel loop to process interactions within a wave
-# pragma omp for schedule(guided) nowait
+#pragma omp for schedule(guided) nowait
   for (size_t it = 0; it < container.size(); it++) {
     auto item1 = container[it];
+    // Check if the interaction is correctly formed before updating
+    if (!item1.pair.consistent()) {
+      item1.print();
+      color_log::error("unclassify", "One active interaction is illformed in the classified wave");
+    }
     // Check if interaction in wave has non-zero friction and moment
     auto& celli = ces[item1.pair.owner().cell];
     const unsigned int ni = vector_size(celli.m_data);
     PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
     // Iterate through interactions in cell to find matching interaction
-    bool find = false;
+    bool found = false;
     for (size_t it2 = 0; it2 < ni; it2++) {
       PlaceholderInteraction& item2 = data_i_ptr[it2];
+      // Only one interaction should match.
       if (item1.pair == item2.pair) {
-        find = true;
-        if(item1.persistent()) {
+        found = true;
+        // Check if the interaction is correctly formed before updating
+        if (!item2.consistent()) {
+          item1.print();
+          color_log::error("unclassify", "One active interaction is illformed");
+        }
+        // If the interaction is persistent, we can directly update it. Otherwise, we need to transform it back to a
+        // particle-particle interaction.
+        if (item1.persistent()) {
           auto& view = item2.convert<InteractionType::InnerBond>();
           view.update(item1);
         } else {  // transform an innerbond interaction to a vertex-vertex interaction
           auto& view = item2.convert<InteractionType::ParticleParticle>();
+          // item1 is an inner bond, broke_interaction transforms it to a vertex-vertex interaction.
           view = broke_interaction(item1);
         }
         break;
       }
     }
 
-    if (!find) {
+    // If no matching interaction is found.
+    // This should not happen, as all interactions in the wave should have a corresponding interaction in the cell data.
+    if (!found) {
       item1.print();
       color_log::error("unclassify", "One active interaction has not been updated");
     }

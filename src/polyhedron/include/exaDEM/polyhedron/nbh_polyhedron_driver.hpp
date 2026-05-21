@@ -19,6 +19,7 @@ under the License.
 #pragma once
 
 #include <exaDEM/drivers.hpp>
+#include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
 
@@ -205,12 +206,10 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
  * @param shps        Shape container indexed by particle type.
  */
 template <typename DriverT, typename Func>
-ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(DriverT& driver, Func& add_contact,
-                                                          PlaceholderInteraction& item, const size_t n_particles,
-                                                          const double rVerlet,
-                                                          const ParticleTypeInt* __restrict__ type,
-                                                          const uint64_t* __restrict__ id, VertexField& vertices,
-                                                          const double* __restrict__ homothety, const shape* const shps) {
+ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
+    DriverT& driver, Func& add_contact, PlaceholderInteraction& item, const size_t n_particles, const double rVerlet,
+    const ParticleTypeInt* __restrict__ type, const uint64_t* __restrict__ id, VertexField& vertices,
+    const double* __restrict__ homothety, const shape* const shps) {
   constexpr int DRIVER_VERTEX_SUB_IDX = -1;  // Convention
   auto& pi = item.i();                       // particle i (id, cell id, particle position, sub vertex)
 
