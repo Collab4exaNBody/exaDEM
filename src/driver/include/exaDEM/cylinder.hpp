@@ -24,12 +24,15 @@ under the License.
 #include <onika/physics/units.h>
 
 namespace exaDEM {
+// Data fields for a cylindrical driver
 struct CylinderFields {
   double radius = -1;              /**< Radius of the cylinder. */
-  exanb::Vec3d axis = {1, 0, 1};   /**< Axis direction of the cylinder. */
-  exanb::Vec3d center = {0, 0, 0}; /**< Center position of the cylinder. */
-  exanb::Vec3d vel = {0, 0, 0};    /**< Velocity of the cylinder. */
-  exanb::Vec3d vrot = {0, 0, 0};   /**< Angular velocity of the cylinder. */
+  exanb::Vec3d axis = {1, 0, 1};   /**< Normalized axis direction of the cylinder. */
+  exanb::Vec3d center = {0, 0, 0}; /**< Center position of the cylinder in 3D space. */
+  exanb::Vec3d vel = {0, 0, 0};    /**< Linear velocity of the cylinder. */
+  exanb::Vec3d vrot = {0, 0, 0};   /**< Angular velocity (rotation) of the cylinder. */
+  exanb::Vec3d forces = {0, 0, 0}; /**< Accumulated forces applied to the cylinder from interactions. */
+  exanb::Vec3d mom = {0, 0, 0};    /**< Accumulated moments (torques) applied to the cylinder. */
 };
 }  // namespace exaDEM
 
@@ -66,11 +69,15 @@ struct convert<exaDEM::CylinderFields> {
 namespace exaDEM {
 
 /**
- * @brief Struct representing a cylinder in the exaDEM simulation.
+ * @brief Cylindrical driver for DEM simulations.
+ * 
+ * Represents a cylinder-shaped rigid body driver that can interact with particles.
+ * Currently supports only stationary motion type. The cylinder is defined by a radius,
+ * an axis direction, and a center position.
  */
 struct Cylinder {
   CylinderFields fields;
-  Driver_params motion;
+  MotionType motion_type;
 
   /**
    * @brief Get the type of the driver (in this case, CYLINDER).
@@ -84,13 +91,13 @@ struct Cylinder {
    * @brief Initialize the cylinder.
    * @details This function asserts that the radius of the cylinder is greater than 0.
    */
-  inline void initialize() {
+  inline void initialize(Driver_params& motion) {
     const std::vector<MotionType> cylinder_valid_motion_types = {
       STATIONARY};
 
-    if (!motion.is_valid_motion_type(cylinder_valid_motion_types)) {
+    if (!is_valid_motion_type(motion_type, cylinder_valid_motion_types)) {
       std::exit(EXIT_FAILURE);
-    } else if (!motion.check_motion_coherence()) {
+    } else if (!motion.check_motion_coherence(motion_type)) {
       std::exit(EXIT_FAILURE);
     }
     assert(fields.radius > 0);
@@ -107,13 +114,12 @@ struct Cylinder {
     exanb::lout << "Center: " << fields.center << std::endl;
     exanb::lout << "Vel   : " << fields.vel << std::endl;
     exanb::lout << "AngVel: " << fields.vrot << std::endl;
-    motion.print_driver_params();
   }
 
   /**
    * @brief Write cylinder information into a stream.
    */
-  void dump_driver(int id, std::stringstream& stream) {
+  void dump_driver(const Driver_params& motion, int id, std::stringstream& stream) {
     stream << "  - register_cylinder:" << std::endl;
     stream << "     id: " << id << std::endl;
     stream << "     state: { radius: " << fields.radius;
@@ -121,24 +127,53 @@ struct Cylinder {
     stream << ",center: [" << fields.center << "]";
     stream << ",vel: [" << fields.vel << "]";
     stream << ",vrot: [" << fields.vrot << "]}" << std::endl;
-    motion.dump_driver_params(stream);
+    motion.dump_driver_params(motion_type, stream);
   }
 
   /**
-   * @brief return driver velocity
+   * @brief Return driver velocity (not implemented for cylinder).
+   * @details Cylinder motion dynamics are not yet implemented.
+   *          This placeholder maintains interface compatibility.
+   * @param motion Driver motion parameters.
    */
-  ONIKA_HOST_DEVICE_FUNC inline void force_to_accel() {
+  ONIKA_HOST_DEVICE_FUNC inline void force_to_accel(const Driver_params& motion) {
     /** not implemented */
   }
-  ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const double dt) {
+
+  /**
+   * @brief Update position and velocity (not implemented for cylinder).
+   * @details Cylinder kinematics are not yet implemented.
+   * @param motion Driver motion parameters.
+   * @param dt Time step.
+   */
+  ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const Driver_params& motion, const double dt) {
     /** not implemented */
   }
-  ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const double time, const double dt) {
+
+  /**
+   * @brief Update position, velocity, and deformation (not implemented for cylinder).
+   * @details Cylinder kinematics are not yet implemented.
+   * @param motion Driver motion parameters.
+   * @param time Current simulation time.
+   * @param dt Time step.
+   */
+  ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
     /** not implemented */
   }
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d get_vel() {
-    return fields.vel;
-  }
+
+  /**
+   * @brief Field accessors for position, velocity, forces, and rotation.
+   */
+  // Position getter
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields.center; }
+  // Linear velocity getter
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields.vel; }
+  // Accumulated forces getter
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields.forces; }
+  // Accumulated moment (torque) getter
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields.mom; }
+  // Angular velocity getter
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
 
   /**
    * @brief Compute a normal vector associated with the given axis.
@@ -232,7 +267,14 @@ struct Cylinder {
         }
       }
 };
+
+template<>
+struct DriverProperty<Cylinder> {
+  static constexpr bool use_moment = false;
+  static constexpr bool use_quaternion = false;
+};
 }  // namespace exaDEM
+
 
 namespace onika {
 namespace memory {

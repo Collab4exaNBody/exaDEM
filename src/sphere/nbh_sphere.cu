@@ -110,12 +110,27 @@ class UpdateContactInteractionSphere : public OperatorNode {
           continue;
         }
 
+        // identify ill-formed interactions and erase them.
+        // safe guard to avoid processing ill-formed interactions.
+        // temporary solution, ideally, ill-formed interactions should not be generated.        
+        std::erase_if(storage.m_data, [](const auto& item) {
+          constexpr bool display_warnings = false;  // set to true to display warnings about ill-formed interactions
+          return !item.template consistent<display_warnings>();
+        });
+        
         // Extract history before reset it
-        const size_t data_size = storage.m_data.size();
+        const size_t data_size = storage.m_data.size(); 
         PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
+
+        // Extract historical interactions from storage and move them in the manager
+        // manager.hist is cleared before extracting history.
         extract_history(manager.hist, data_ptr, data_size);
-        std::sort(manager.hist.begin(), manager.hist.end());
+        std::stable_sort(manager.hist.begin(), manager.hist.end());
         manager.reset(n_particles);
+
+        // Move persistent interactions in the InteractionManager
+        update_persistent_interactions(manager, storage);
+        manager.update_ignore_interaction();
 
         // Reset storage, interaction history was stored in the manager
         storage.initialize(n_particles);
@@ -138,7 +153,7 @@ class UpdateContactInteractionSphere : public OperatorNode {
           info_particles[it].pid = id_a[it];
         }
 
-        item.clear_placeholder();
+        item.clear_placeholder();  // reset the placeholder before filling it with new data
         auto& pi = item.i();       // particle i (id, cell, pos, sub)
         auto& pd = item.driver();  // particle driver (id, cell, pos, sub)
         pi.cell = cell_a;
@@ -153,6 +168,7 @@ class UpdateContactInteractionSphere : public OperatorNode {
           pd.cell = decltype(pd.cell)(-1);
           pd.p = decltype(pd.p)(-1);
 
+          // We loop over all the drivers to check if they are close enough to interact with the particles of the cell
           for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++) {
             pd.id = drvs_idx;  // we store the driver idx
             DRIVER_TYPE type = drvs.type(drvs_idx);
@@ -216,8 +232,8 @@ class UpdateContactInteractionSphere : public OperatorNode {
 
         item.pair.type = InteractionTypeId::VertexVertex;
 
-        if (sym) {
-          // Second, we add interactions between two spheres.
+        // We add interactions between spheres of the cell and spheres of the neighboring cells.
+        if (sym) {  // if symetric is true, we add interactions between two spheres only once.
           apply_cell_particle_neighbors(
               *grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
               [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b,
@@ -241,8 +257,7 @@ class UpdateContactInteractionSphere : public OperatorNode {
                 pj.cell = cell_b;
                 manager.add_item(item);
               });
-        } else {
-          // Second, we add interactions between two spheres.
+        } else {  // If symetric is false, we add interactions between two spheres twice, once for each order (A or i -> B or j and B or j -> A or i).
           apply_cell_particle_neighbors(
               *grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
               [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b,
@@ -272,11 +287,15 @@ class UpdateContactInteractionSphere : public OperatorNode {
               });
         }
 
+        // We update the interaction storage with the new interactions identified by the manager
         manager.update_extra_storage<true>(storage);
 
         assert(interaction_test::check_extra_interaction_storage_consistency(
             storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
 
+        // consistency check to identify ill-formed interactions.
+        // This check is important to ensure that the interaction data is well-formed and does not contain invalid values.
+        // 1e6 is an arbitrary large value.  
         assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
       }  // GRID_OMP_FOR_END
     }

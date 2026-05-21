@@ -36,7 +36,7 @@ struct Driver_expr {
   std::string expr_momy = "0";
   std::string expr_momz = "0";
 
-  exanb::Vec3d expr_v(double time) {
+  exanb::Vec3d expr_v(double time) const {
     assert(expr_use_v);
     exanb::Vec3d res;
     te_variable the_t[] = {{"t", &time}};
@@ -52,7 +52,7 @@ struct Driver_expr {
     return res;
   }
 
-  exanb::Vec3d expr_vrot(double time) {
+  exanb::Vec3d expr_vrot(double time) const {
     assert(expr_use_vrot);
     exanb::Vec3d res;
     te_variable the_t[] = {{"t", &time}};
@@ -68,7 +68,7 @@ struct Driver_expr {
     return res;
   }
 
-  exanb::Vec3d expr_mom(double time) {
+  exanb::Vec3d expr_mom(double time) const {
     assert(expr_use_mom);
     exanb::Vec3d res;
     te_variable the_t[] = {{"t", &time}};

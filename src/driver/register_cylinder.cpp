@@ -45,9 +45,9 @@ class RegisterCylinder : public OperatorNode {
 
   inline void execute() final {
     // proj center over axis
-    exaDEM::Cylinder driver{*state, *params};
-    driver.initialize();
-    drivers->add_driver(*id, driver);
+    exaDEM::Cylinder driver{*state, params->input_motion_type};
+    driver.initialize(*params);
+    drivers->add_driver(*id, driver, *params);
   }
 };
 

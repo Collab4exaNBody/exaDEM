@@ -27,43 +27,42 @@ using namespace onika::scg;
 struct PushForceVeloctyDriverFunc {
   const double dt;
 
-  inline void operator()(Ball& arg) const {
-    arg.push_f_v(dt);
+  template<typename DriverT>
+  inline void operator()(DriverT& arg, const Driver_params& motion) const {
+    arg.push_f_v(motion, dt);
   }
+};
 
-  inline void operator()(Surface& arg) const {
-    arg.push_f_v(dt);
-  }
-
-  inline void operator()(RShapeDriver& arg) const {
-    arg.push_f_v(dt);
-  }
-
-  inline void operator()(Cylinder&) const {
-    /** nothing */
-  }
+template<>
+struct ApplyDriverFunctorTraits<PushForceVeloctyDriverFunc> {
+  static constexpr bool use_motion = true;
 };
 
 class PushAccelToVelocityDriver : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
+  ADD_SLOT(double, dt_scale, INPUT, 1.0);
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
           This operator updates driver centers using their velocities. Not that accelerations are not used.
 
-          YAML example [no option]:
+          Parameter:
+            - dt_scale [double]: apply a scale factor.
+
+          YAML example:
 
             - push_f_v_driver
         )EOF";
   }
 
   inline void execute() final {
-    const double t = *dt;
-    PushForceVeloctyDriverFunc func = {t};
+    const double delta_t = (*dt) * (*dt_scale);
+    auto& drvs = *drivers;
+    PushForceVeloctyDriverFunc func = {delta_t};
     for (size_t id = 0; id < drivers->get_size(); id++) {
-      drivers->apply(id, func);
+      drvs.apply(id, func);
     }
   }
 };

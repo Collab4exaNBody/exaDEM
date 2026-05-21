@@ -16,27 +16,24 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
-
+#include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/domain.h>
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
 
 #include <cassert>
-
-#include <exaDEM/traversal.hpp>
-#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
-#include <exaDEM/shapes.hpp>
-#include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/polyhedron/nbh_polyhedron_driver.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
@@ -44,7 +41,7 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
   using ComputeFields = FieldSet<>;
   static constexpr ComputeFields compute_field_set{};
 
-  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED); 
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
   ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
   ADD_SLOT(Domain, domain, INPUT, REQUIRED);
   ADD_SLOT(exanb::GridChunkNeighbors, chunk_neighbors, INPUT, OPTIONAL, DocString{"Neighbor list"});
@@ -91,7 +88,7 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
     assert(interactions.size() == n_cells);
 
     if (!chunk_neighbors.has_value()) {
-#     pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static)
       for (size_t i = 0; i < n_cells; i++) {
         interactions[i].initialize(0);
       }
@@ -99,13 +96,13 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
     }
 
     auto [cell_ptr, cell_size] = traversal_real->info();
-#   pragma omp parallel
+#pragma omp parallel
     {
       // local storage per thread
       PlaceholderInteraction item;
       item.clear_placeholder();
       InteractionManager manager;
-#     pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic)
       for (size_t ci = 0; ci < cell_size; ci++) {
         // reinit item
         item.pair.ghost = InteractionPair::NotGhost;
@@ -125,13 +122,26 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
           continue;
         }
 
-        // Extract history before reset it
         manager.current_cell_id = cell_a;
         manager.current_cell_particles = n_particles;
+
+        // identify ill-formed interactions and erase them.
+        // safe guard to avoid processing ill-formed interactions.
+        // temporary solution, ideally, ill-formed interactions should not be generated.
+        std::erase_if(storage.m_data, [](auto& item) {
+          constexpr bool display_warnings = false;  // set to true to display warnings about ill-formed interactions
+          return !item.template consistent<display_warnings>();
+        });
+
         const size_t data_size = storage.m_data.size();
-        PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
+        PlaceholderInteraction* __restrict__ const data_ptr = storage.m_data.data();
+
+        // Extract historical interactions from storage and move them in the manager
+        // manager.hist is cleared before extracting history.
         extract_history(manager.hist, data_ptr, data_size);
         std::stable_sort(manager.hist.begin(), manager.hist.end());
+
+        // Reset the manager, it will be filled with new interactions and updated historical interactions.
         manager.reset(n_particles);
 
         // Move persistent interactions in the InteractionManager

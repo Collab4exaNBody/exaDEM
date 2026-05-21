@@ -20,31 +20,41 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
+#include <exaDEM/driver_extractor.hpp>
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
 using namespace onika::scg;
-using onika::lout;
-class ResetForceDriverFunctor : public OperatorNode {
-  ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
+class DriverExtractorSummary : public OperatorNode {
+  ADD_SLOT(DriverExtractor, driver_extractor, INPUT, DocString{"Extract specific data about drivers."});
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
-          This operator reset the forces of drivers.
+        This operator displays the driver extractor summary.
+
+        No parameter.
+        YAML example:
+
+          - driver_extractor_summary
         )EOF";
   }
 
   inline void execute() final {
-    for (size_t id = 0; id < drivers->get_size(); id++) {
-      drivers->apply(id, [](auto& drv) { drv.fields.forces = {0, 0, 0}; });
+    using exanb::lout;
+    if (driver_extractor.has_value()) {
+      lout << "======= Driver Extractor ========" << std::endl;
+      for (auto& it : driver_extractor->tracked_drivers) {
+        it.print();
+      }
+      lout << "=================================" << std::endl;
     }
   }
 };
 
 // === register factories ===
-ONIKA_AUTORUN_INIT(reset_force_driver) {
-  OperatorNodeFactory::instance()->register_factory("reset_force_driver",
-                                                    make_simple_operator<ResetForceDriverFunctor>);
+ONIKA_AUTORUN_INIT(driver_extractor_summary) {
+  OperatorNodeFactory::instance()->register_factory("driver_extractor_summary",
+                                                    make_simple_operator<DriverExtractorSummary>);
 }
 }  // namespace exaDEM

@@ -19,6 +19,7 @@ under the License.
 #pragma once
 
 #include <onika/math/basic_types.h>
+
 #include <exaDEM/forcefield/common_kernels.hpp>
 #include <exaDEM/forcefield/contact_parameters.hpp>
 
@@ -96,9 +97,7 @@ constexpr LawComboType makeLawCombo(ContactLawType c, CohesiveLawType h) {
 
 namespace exaDEM {
 
-ONIKA_HOST_DEVICE_FUNC inline void reset(Vec3d& in) {
-  in = Vec3d{0.0, 0.0, 0.0};
-}
+ONIKA_HOST_DEVICE_FUNC inline void reset(Vec3d& in) { in = Vec3d{0.0, 0.0, 0.0}; }
 
 /**
  * @brief Applies the DMT (Derjaguin–Muller–Toporov) adhesion force to a contact.

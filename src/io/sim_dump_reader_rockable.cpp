@@ -16,27 +16,26 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <mpi.h>
-#include <onika/file_utils.h>
-#include <onika/log.h>
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_factory.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/math/basic_types_stream.h>
-#include <onika/math/basic_types_yaml.h>
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/check_particles_inside_cell.h>
 #include <exanb/grid_cell_particles/particle_region.h>
+#include <mpi.h>
+#include <onika/file_utils.h>
+#include <onika/log.h>
+#include <onika/math/basic_types_stream.h>
+#include <onika/math/basic_types_yaml.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
 
+#include <algorithm>
 #include <chrono>
 #include <ctime>
 #include <exaDEM/drivers.hpp>
 #include <exaDEM/dump_rockable_api.hpp>
 #include <exaDEM/shapes.hpp>
 #include <numeric>
-#include <algorithm>
 #include <string>
 
 namespace exaDEM {
@@ -55,9 +54,7 @@ struct ParticleType {
     std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
     m_name[MAX_STR_LEN - 1] = '\0';
   }
-  inline std::string name() const {
-    return m_name;
-  }
+  inline std::string name() const { return m_name; }
 };
 
 using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;
@@ -181,15 +178,14 @@ class DumpReaderConfRockable : public OperatorNode {
       prcsg = *region;
       std::vector<rockable::Particle>& rockable_particles = manager.particles;
       uint64_t max_id = rockable_particles.size();
-      auto filter = [prcsg, max_id] (rockable::Particle& p) {
+      auto filter = [prcsg, max_id](rockable::Particle& p) {
         if (prcsg.contains(p.pos, max_id)) {
           return false;
-        } 
+        }
         return true;
       };
       std::erase_if(rockable_particles, filter);
     }
-
 
     if (rank == 0) {
       std::vector<rockable::Particle>& rockable_particles = manager.particles;
@@ -269,13 +265,13 @@ class DumpReaderConfRockable : public OperatorNode {
       lout << "Domain bounds    = " << domain->bounds() << std::endl;
       lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
       lout << "Periodicity      = [" << domain->periodic_boundary_x() << "," << domain->periodic_boundary_y() << ","
-          << domain->periodic_boundary_z() << "]" << std::endl;
+           << domain->periodic_boundary_z() << "]" << std::endl;
       lout << "Real size        = "
-          << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
-      << std::endl;
+           << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
+           << std::endl;
       lout << "Cell size        = " << domain->cell_size() << std::endl;
       lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension())
-          << " cells)" << std::endl;
+           << " cells)" << std::endl;
     }
     // send bounds and size_box values to all cores
     MPI_Bcast(&(*domain), sizeof(Domain), MPI_CHARACTER, 0, *mpi);
@@ -297,17 +293,17 @@ class DumpReaderConfRockable : public OperatorNode {
         p[field::rz] = r.z;
         ParticleTuple t = p;
         ldbg << "ID: " << t[field::id] << " pos " << "(" << t[field::rx] << "," << t[field::ry] << "," << t[field::rz]
-            << ")" << std::endl;
+             << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " vel " << "(" << t[field::vx] << "," << t[field::vy] << "," << t[field::vz]
-            << ")" << std::endl;
+             << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " acc " << "(" << t[field::fx] << "," << t[field::fy] << "," << t[field::fz]
-            << ")" << std::endl;
+             << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " quat " << t[field::orient].w << " " << t[field::orient].x << " "
-            << t[field::orient].y << " " << t[field::orient].z << std::endl;
+             << t[field::orient].y << " " << t[field::orient].z << std::endl;
         ldbg << "ID: " << t[field::id] << " vrot " << "(" << t[field::vrot].x << "," << t[field::vrot].y << ","
-            << t[field::vrot].z << ")" << std::endl;
+             << t[field::vrot].z << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " arot " << "(" << t[field::arot].x << "," << t[field::arot].y << ","
-            << t[field::arot].z << ")" << std::endl;
+             << t[field::arot].z << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " h " << t[field::homothety] << std::endl;
         ldbg << "ID: " << t[field::id] << " radius " << t[field::radius] << std::endl;
         ldbg << "ID: " << t[field::id] << " mass " << t[field::mass] << std::endl;
@@ -340,10 +336,10 @@ class DumpReaderConfRockable : public OperatorNode {
         shape shp = *(manager.shps[type]);
         RShapeDriver driver;
         driver.fields = state;
-        driver.motion = motion;
-        driver.set_shape(shp);
-        driver.initialize();
-        drvs.add_driver(next_id + id, driver);
+        driver.motion_type = MotionType::STATIONARY;
+        driver.shp = shp;
+        driver.initialize(motion);
+        drvs.add_driver(next_id + id, driver, motion);
       }
     }
   }

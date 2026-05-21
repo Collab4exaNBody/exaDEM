@@ -278,7 +278,7 @@ struct ContactLawDriverFunc {
       const double reff = shp.minskowski(h);
       contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction, contact_position, r, v, f,
                                                   item.moment, vrot,                              // particle i
-                                                  driver.fields.center, driver.get_vel(), driver.fields.vrot);  // particle j
+                                                  driver.position(), driver.velocity(), driver.angular_velocity());  // particle j
 
       // === for analysis
       fn = f - item.friction;
@@ -289,8 +289,8 @@ struct ContactLawDriverFunc {
       lockAndAdd(cell[field::fy][p], f.y);
       lockAndAdd(cell[field::fz][p], f.z);
 
-      if (driver.motion.need_forces()) {
-        lockAndAdd(driver.motion.forces, -f);
+      if (need_forces(driver.motion_type)) {
+        lockAndAdd(driver.forces(), -f);
       }
     } else {
       item.reset();
@@ -386,7 +386,7 @@ struct ContactLawRShapeDriverFunc {
       if constexpr (interaction_type <= 10 && interaction_type >= 7) {
         contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction, contact_position, r_i,
                                                     v_i, f, item.moment, vrot_i,              // particle i
-                                                    driver.fields.center, driver.fields.vel, driver.fields.vrot);  // particle driver
+                                                    driver.position(), driver.velocity(), driver.angular_velocity());  // particle driver
 
         // === used for analysis
         fn = f - item.friction;
@@ -395,16 +395,16 @@ struct ContactLawRShapeDriverFunc {
         lockAndAdd(cell[field::fx][pi.p], f.x);
         lockAndAdd(cell[field::fy][pi.p], f.y);
         lockAndAdd(cell[field::fz][pi.p], f.z);
-        if (driver.motion.need_forces()) {
-          lockAndAdd(driver.motion.forces, -f);
+        if (need_forces(driver.motion_type)) {
+          lockAndAdd(driver.forces(), -f);
         }
       }
 
       //  j to i
       if constexpr (interaction_type <= 12 && interaction_type >= 11) {
         contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction, contact_position,
-                                                    driver.fields.center, driver.get_vel(), f, item.moment,
-                                                    driver.fields.vrot, // particle j
+                                                    driver.position(), driver.velocity(), f, item.moment,
+                                                    driver.angular_velocity(), // particle j
                                                     r_i, v_i, vrot_i);  // particle i
 
         // === used for analysis
@@ -415,8 +415,8 @@ struct ContactLawRShapeDriverFunc {
         lockAndAdd(cell[field::fy][pi.p], -f.y);
         lockAndAdd(cell[field::fz][pi.p], -f.z);
         item.friction = -item.friction;
-        if (driver.motion.need_forces()) {
-          lockAndAdd(driver.motion.forces, f);
+        if (need_forces(driver.motion_type)) {
+          lockAndAdd(driver.forces(), f);
         }
       }
     } else {
