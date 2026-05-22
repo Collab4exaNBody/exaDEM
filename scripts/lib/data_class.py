@@ -14,9 +14,9 @@ class Particle:
 
     Attributes
     ----------
-       name : str
+       name : Optional[str]
            name of the particle
-       id : int
+       id : Optional[int]
            unique identifier for the particle
        group : int
            group id of the particle (for interaction purposes)
@@ -25,39 +25,52 @@ class Particle:
        homothety : float
            homothety factor for scaling the particle
 
-       pos : Tuple[float,float,float]
+       pos : Optional[Tuple[float,float,float]]
            position of the particle in 3D space
-       vel : Tuple[float,float,float]
+       vel : Optional[Tuple[float,float,float]]
            velocity of the particle in 3D space
-       acc : Tuple[float,float,float]
+       acc : Optional[Tuple[float,float,float]]
            acceleration of the particle in 3D space
 
-       quat : Tuple[float,float,float,float]
+       force : Optional[Tuple[float,float,float]]
+           total force acting on the particle
+       stress : Optional[Tuple[float,float,float,float,float,float]]
+           stress tensor components (sigma_xx, sigma_yy, sigma_zz, sigma_xy, sigma_xz, sigma_yz) for the particle (can be None if not provided)
+
+       quat : Optional[Tuple[float,float,float,float]]
            orientation of the particle as a quaternion
-       vrot : Tuple[float,float,float]
+       vrot : Optional[Tuple[float,float,float]]
            rotational velocity of the particle
-       arot : Tuple[float,float,float]
+       arot : Optional[Tuple[float,float,float]]
            rotational acceleration of the particle
+
+       I : Optional[Tuple[float,float,float]]
+           principal moments of inertia of the particle (can be None if not provided)
        mass : Optional[float]
            mass of the particle (can be None if not provided)
        volume : Optional[float]
            volume of the particle (can be None if not provided)
     """
 
-    name: str
-    group: int
-    cluster: int
-    homothety: float
+    name: Optional[str]=None
+    id: Optional[int]=None
+    group: int = 0
+    cluster: int = 0    
+    homothety: float = 1.0
 
-    pos: Tuple[float, float, float]
-    vel: Tuple[float, float, float]
-    acc: Tuple[float, float, float]
+    pos: Optional[Tuple[float, float, float]] = None
+    vel: Optional[Tuple[float, float, float]] = None
+    acc: Optional[Tuple[float, float, float]] = None
 
-    quat: Tuple[float, float, float, float]
-    vrot: Tuple[float, float, float]
-    arot: Tuple[float, float, float]
+    force: Optional[Tuple[float, float, float]] = None
 
-    id: int = -1
+
+    quat: Optional[Tuple[float, float, float, float]] = None
+    vrot: Optional[Tuple[float, float, float]] = None
+    arot: Optional[Tuple[float, float, float]] = None
+
+    stress: Optional[Tuple[float, float, float, float, float, float]] = None
+    I: Optional[Tuple[float, float, float]] = None
     mass: Optional[float] = None
     volume: Optional[float] = None
 
@@ -109,10 +122,22 @@ class Contact:
         index of the first particle in the contact
     j : int
         index of the second particle in the contact
+    si : int
+        subindex of the first particle in the contact (for non-spherical particles)
+    sj : int
+        subindex of the second particle in the contact (for non-spherical particles)
     type : int
         type of the contact
+    dn : double
+        normal overlap distance (positive if particles are overlapping, negative if they are separated)
+    pos : Tuple[float, float, float]
+        position of the contact point in 3D space
     force : Tuple[float, float, float]
         force vector acting on the contact
+    fn : Tuple[float, float, float]
+        normal force vector acting on the contact
+    ft : Tuple[float, float, float]
+        tangential force vector acting on the contact
     pos_i : Tuple[float, float, float]
         position of the first particle in the contact  
     pos_j : Tuple[float, float, float]
@@ -120,8 +145,14 @@ class Contact:
     '''
     i: int
     j: int
+    si: int
+    sj: int
     type: int
+    dn: float
+    pos: Tuple[float, float, float]
     force: Tuple[float, float, float]
+    fn: Tuple[float, float, float]
+    ft: Tuple[float, float, float]
     pos_i: Tuple[float, float, float]
     pos_j: Tuple[float, float, float]
 

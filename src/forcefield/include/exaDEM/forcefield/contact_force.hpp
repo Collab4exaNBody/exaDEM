@@ -174,6 +174,7 @@ ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
 
   // === Compute damping coefficient
   const double damp = compute_damp(hkp.damp_rate, hkp.kn, meff);
+  std::cout<<"damp : " << damp << std::endl;
 
   // === Relative velocity (j relative to i)
   auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
