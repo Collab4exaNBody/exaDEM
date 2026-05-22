@@ -19,214 +19,222 @@ under the License.
 #pragma once
 
 #include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
+#include <exaDEM/shapes.hpp>
 #include <exaDEM/type/contact.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 
-namespace exaDEM
-{
+namespace exaDEM {
+/** @brief Structure to store force information for each contact in the network. */
+struct NetworkForceType {
+  int ni = 0;            // number of interactions that compose the contact
+  Vec3d fn = {0, 0, 0};  // normal force (Sum)
+  Vec3d ft = {0, 0, 0};  // tangential force (Sum)
 
-  struct NetworkForceType {
-    int ni = 0;
-    Vec3d fn = {0, 0, 0};
-    Vec3d ft = {0, 0, 0};
+  // Addition in place
+  /** @brief Adds forces to the NetworkForceType
+   * @param _fn The normal force to add.
+   * @param _ft The tangential force to add.
+   */
+  void add(const Vec3d& _fn, const Vec3d& _ft) {
+    ni++;
+    fn += _fn;
+    ft += _ft;
+  }
+};
 
-    // Addition in place
-    void add(const Vec3d& _fn, const Vec3d& _ft) {
-      ni ++;
-      fn += _fn;
-      ft += _ft;
+/**
+ * @brief Functor for contact network operations on a grid.
+ *
+ * It can be used to perform various network-related operations on the grid,
+ * including displaying the contact network between polyhedra.
+ *
+ * @tparam GridT The type of the grid on which network operations will be performed.
+ */
+template <typename GridT>
+struct NetworkFunctor {
+  using IdType = std::pair<size_t, size_t>;      ///< Type for identifying particles.
+  using ForceType = NetworkForceType;            ///< Type for representing forces (could be a vec3d).
+  using CoupleType = std::pair<IdType, IdType>;  ///< Type for identifying couples of particles.
+  using StorageType = ForceType;                 ///< Type for storing forces.
+  using KeyType = CoupleType;                    ///< Type used as keys in data storage.
+
+  GridT& grid;                ///< Pointer to the cells of the grid.
+  std::stringstream pos;      // store particle positions
+  std::stringstream connect;  // store interaction connections
+  std::stringstream ni;       // store number of interactions
+  std::stringstream fn;       // store normal force values
+  std::stringstream ft;       // store tangential force values
+
+  // TODO optimize if later with another data storage
+  std::map<KeyType, StorageType>
+      network;  ///< Stores network data, with keys defined by KeyType and values by StorageType.
+
+  // Constructor
+  NetworkFunctor(GridT& g) : grid(g) {}
+
+  /** @brief Adds an interaction to the network.
+   * @param I The interaction to add.
+   * @param fn The normal force to add.
+   * @param ft The tangential force to add.
+   * @tparam InteractionT The type of the interaction being added.
+   */
+  template <typename InteractionT>
+  void add(const InteractionT& I, const Vec3d& fn, const Vec3d& ft) {
+    auto& pi = I.i();
+    auto& pj = I.j();
+    // === build contact network key
+    IdType i = {pi.cell, pi.p};
+    IdType j = {pj.cell, pj.p};
+    KeyType key = {i, j};
+    auto it = network.find(key);
+    if (it != network.end()) {
+      it->second.add(fn, ft);
+    } else {
+      network[key] = {1, fn, ft};
     }
-  };
+  }
+
+  /** @brief Operator for processing interactions.
+   * @param size The number of interactions to process.
+   * @param interactions The array of interactions.
+   * @param data The data structure containing force information.
+   * @tparam Is The type of the interactions array.
+   * @tparam Data The type of the data structure containing force information.
+   */
+  template <typename Is, typename Data>
+  void operator()(const size_t size, Is& interactions, Data& data) {
+    Vec3d* fn = onika::cuda::vector_data(data.fn);
+    Vec3d* ft = onika::cuda::vector_data(data.ft);
+    for (size_t i = 0; i < size; i++) {
+      const Vec3d fni = fn[i];
+      const Vec3d fti = ft[i];
+      const double f = exanb::norm(fni + fti);
+      if (f != 0) {
+        auto I = interactions[i];
+        if (filter_duplicates(I)) {
+          add(I, fni, fti);
+        }
+      }
+    }
+  }
 
   /**
-   * @brief Functor for contact network operations on a grid.
-   *
-   * It can be used to perform various network-related operations on the grid,
-   * including displaying the contact network between polyhedra.
-   *
-   * @tparam GridT The type of the grid on which network operations will be performed.
+   * @brief Creates an indirection array for particle indexes (cell_id, pos_id).
    */
-  template <typename GridT> struct NetworkFunctor
-  {
-    using IdType = std::pair<size_t, size_t>;      ///< Type for identifying particles.
-    using ForceType = NetworkForceType;            ///< Type for representing forces (could be a vec3d).
-    using CoupleType = std::pair<IdType, IdType>;  ///< Type for identifying couples of particles.
-    using StorageType = ForceType;                 ///< Type for storing forces.
-    using KeyType = CoupleType;                    ///< Type used as keys in data storage.
+  void fill_fn_at_point_data() {
+    auto* cells = grid.cells();
+    // Iterate over the network and fill the fn and ft values
+    // at the particle positions.
+    for (auto it : network) {
+      auto& [i, j] = it.first;
+      auto& [cell_i, p_i] = i;
+      auto& [cell_j, p_j] = j;
+      pos << " " << cells[cell_i][field::rx][p_i] << " " << cells[cell_i][field::ry][p_i] << " "
+          << cells[cell_i][field::rz][p_i];
+      pos << " " << cells[cell_j][field::rx][p_j] << " " << cells[cell_j][field::ry][p_j] << " "
+          << cells[cell_j][field::rz][p_j];
+      ni << " " << it.second.ni << " " << it.second.ni;
+      fn << " " << it.second.fn.x << " " << it.second.fn.y << " " << it.second.fn.z << " " << it.second.fn.x << " "
+         << it.second.fn.y << " " << it.second.fn.z;
+      ft << " " << it.second.ft.x << " " << it.second.ft.y << " " << it.second.ft.z << " " << it.second.ft.x << " "
+         << it.second.ft.y << " " << it.second.ft.z;
+    }
+  }
 
-    GridT& grid; ///< Pointer to the cells of the grid.
-    std::stringstream pos; // store particle positions
-    std::stringstream connect; // store interaction connections
-    std::stringstream ni; // store number of interactions
-    std::stringstream fn; // store normal force values
-    std::stringstream ft; // store t force values
-
-    // TODO optimize if later with another data storage
-    std::map<KeyType, StorageType> network; ///< Stores network data, with keys defined by KeyType and values by StorageType.
-
-    NetworkFunctor(GridT &g) : grid(g) {}
-
-    template<typename InteractionT>
-    void add(InteractionT& I,
-             const Vec3d& fn,
-             const Vec3d& ft) {
-      auto& pi = I.i();
-      auto& pj = I.j();
-      // === build contact network key
-      IdType i = {pi.cell, pi.p};
-      IdType j = {pj.cell, pj.p};
-      KeyType key = {i, j};
-      auto it = network.find(key);
-      if (it != network.end()) {
-        it->second.add(fn, ft);
-      } else {
-        network[key] = {1, fn, ft};
-      }
+  /**
+   * @brief Writes VTP (VTK PolyData) files.
+   *
+   * This function writes VTP (VTK PolyData) files using the provided data streams for position, connectivity, and
+   * value. It writes the data corresponding to the specified number of particles into the VTP file with the given name.
+   *
+   * @param name The name of the VTP file to write.
+   * @param n_particles The number of particles to write data for.
+   */
+  void write_vtp(std::string name) {
+    size_t n_interactions = network.size();
+    std::ofstream outFile(name);
+    if (!outFile) {
+      color_log::error("dump_network", "Impossible to create the output file: " + name, false);
+      return;
     }
 
-    template<typename Is, typename Data> 
-    void operator()(const size_t size, Is& interactions, Data& data) {
-      Vec3d* fn = onika::cuda::vector_data(data.fn); 
-      Vec3d* ft = onika::cuda::vector_data(data.ft);
-      for(size_t i = 0; i < size ; i++) {
-        const Vec3d fni = fn[i];
-        const Vec3d fti = ft[i];
-        const double f = exanb::norm(fni+fti);
-        if( f != 0) {
-          auto I = interactions[i];
-          if (filter_duplicates(I)) {
-            add(I, fni, fti);
-          }
-        }
-      } 
-    }
+    outFile << "<?xml version=\"1.0\"?>" << std::endl;
+    outFile << "<VTKFile type=\"PolyData\">" << std::endl;
+    outFile << "  <PolyData>" << std::endl;
+    outFile << "    <Piece NumberOfPoints=\"" << n_interactions * 2 << "\" NumberOfLines=\"" << n_interactions << "\">"
+            << std::endl;
+    outFile << "    <PointData>" << std::endl;
+    outFile << "      <DataArray type=\"Int32\" Name=\"N\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+    if (n_interactions != 0) outFile << ni.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "      <DataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+    if (n_interactions != 0) outFile << fn.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "      <DataArray type=\"Float64\" Name=\"ft\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+    if (n_interactions != 0) outFile << ft.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "    </PointData>" << std::endl;
+    outFile << "    <Points>" << std::endl;
+    outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+    if (n_interactions != 0) outFile << pos.rdbuf() << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "    </Points>" << std::endl;
+    outFile << "    <Lines>" << std::endl;
+    outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
+    for (size_t i = 0; i < 2 * n_interactions; i++) outFile << " " << i;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
+    for (size_t i = 1; i <= n_interactions; i++) outFile << " " << 2 * i;
+    outFile << std::endl;
+    outFile << "      </DataArray>" << std::endl;
+    outFile << "    </Lines>" << std::endl;
+    outFile << "    </Piece>" << std::endl;
+    outFile << "  </PolyData>" << std::endl;
+    outFile << "</VTKFile>" << std::endl;
+  }
 
-    /**
-     * @brief Creates an indirection array for particle indexes (cell_id, pos_id).
-     *
-     */
-    void fill_fn_at_point_data()
-    {
-      auto * cells = grid.cells();
-      for (auto it : network)
-      {
-        auto& [i, j] = it.first;
-        auto& [cell_i, p_i] = i;
-        auto& [cell_j, p_j] = j;
-        pos << " " << cells[cell_i][field::rx][p_i] << " " << cells[cell_i][field::ry][p_i] << " " << cells[cell_i][field::rz][p_i];
-        pos << " " << cells[cell_j][field::rx][p_j] << " " << cells[cell_j][field::ry][p_j] << " " << cells[cell_j][field::rz][p_j];
-        ni << " " << it.second.ni << " " << it.second.ni;
-        fn << " " << it.second.fn.x << " " << it.second.fn.y << " " << it.second.fn.z
-            << " " << it.second.fn.x << " " << it.second.fn.y << " " << it.second.fn.z;
-        ft << " " << it.second.ft.x << " " << it.second.ft.y << " " << it.second.ft.z
-            << " " << it.second.ft.x << " " << it.second.ft.y << " " << it.second.ft.z;
-      }
+  /**
+   * @brief Writes PVTP (Parallel VTK PolyData) files.
+   *
+   * This function writes PVTP (Parallel VTK PolyData) files with the specified base directory, base name, and number of
+   * files. It creates a series of PVTP files with the given base name and number of files, each containing metadata for
+   * parallel visualization.
+   *
+   * @param basedir The base directory where the PVTP files will be written.
+   * @param basename The base name for the PVTP files.
+   * @param number_of_files The number of PVTP files to create.
+   */
+  void write_pvtp(std::string basename, size_t number_of_files) {
+    std::string name = basename + ".pvtp";
+    std::ofstream outFile(name);
+    if (!outFile) {
+      color_log::error("dump_network", "Impossible to create the output file: " + name, false);
+      return;
     }
-
-    /**
-     * @brief Writes VTP (VTK PolyData) files.
-     *
-     * This function writes VTP (VTK PolyData) files using the provided data streams for position, connectivity, and value.
-     * It writes the data corresponding to the specified number of particles into the VTP file with the given name.
-     *
-     * @param name The name of the VTP file to write.
-     * @param n_particles The number of particles to write data for.
-     */
-    void write_vtp(std::string name)
-    {
-      size_t n_interactions = network.size();
-      std::ofstream outFile(name);
-      if (!outFile)
-      {
-        color_log::error("dump_network", "Impossible to create the output file: " + name, false);
-        return;
-      }
-
-      outFile << "<?xml version=\"1.0\"?>" << std::endl;
-      outFile << "<VTKFile type=\"PolyData\">" << std::endl;
-      outFile << "  <PolyData>" << std::endl;
-      outFile << "    <Piece NumberOfPoints=\"" << n_interactions*2 << "\" NumberOfLines=\"" << n_interactions << "\">" << std::endl;
-      outFile << "    <PointData>" << std::endl;
-      outFile << "      <DataArray type=\"Int32\" Name=\"N\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
-      if (n_interactions != 0)
-        outFile << ni.rdbuf() << std::endl;
-      outFile << "      </DataArray>" << std::endl;
-      outFile << "      <DataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-      if (n_interactions != 0)
-        outFile << fn.rdbuf() << std::endl;
-      outFile << "      </DataArray>" << std::endl;
-      outFile << "      <DataArray type=\"Float64\" Name=\"ft\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-      if (n_interactions != 0)
-        outFile << ft.rdbuf() << std::endl;
-      outFile << "      </DataArray>" << std::endl;
-      outFile << "    </PointData>" << std::endl;
-      outFile << "    <Points>" << std::endl;
-      outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-      if (n_interactions != 0)
-        outFile << pos.rdbuf() << std::endl;
-      outFile << "      </DataArray>" << std::endl;
-      outFile << "    </Points>" << std::endl;
-      outFile << "    <Lines>" << std::endl;
-      outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
-      for (size_t i = 0; i < 2*n_interactions; i++)
-        outFile << " " << i;
-      outFile << "      </DataArray>" << std::endl;
-      outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
-      for (size_t i = 1; i <= n_interactions; i++)
-        outFile << " " << 2 * i;
-      outFile << std::endl;
-      outFile << "      </DataArray>" << std::endl;
-      outFile << "    </Lines>" << std::endl;
-      outFile << "    </Piece>" << std::endl;
-      outFile << "  </PolyData>" << std::endl;
-      outFile << "</VTKFile>" << std::endl;
+    outFile << "<?xml version=\"1.0\"?>" << std::endl;
+    outFile << "<VTKFile type=\"PPolyData\"> " << std::endl;
+    outFile << "   <PPolyData GhostLevel=\"0\">" << std::endl;
+    outFile << "     <PPoints>" << std::endl;
+    outFile << "       <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
+    outFile << "     </PPoints> " << std::endl;
+    outFile << "     <PPointData>" << std::endl;
+    outFile << "       <PDataArray type=\"Int32\" Name=\"N\" NumberOfComponents=\"1\"/>" << std::endl;
+    outFile << "       <PDataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"3\"/>" << std::endl;
+    outFile << "       <PDataArray type=\"Float64\" Name=\"ft\" NumberOfComponents=\"3\"/>" << std::endl;
+    outFile << "     </PPointData>" << std::endl;
+    std::filesystem::path full_path(basename);
+    std::string directory = full_path.filename().string();
+    std::string subfile = directory + "/%06d.vtp";
+    for (size_t i = 0; i < number_of_files; i++) {
+      std::string file = onika::format_string(subfile, i);
+      outFile << "     <Piece Source=\"" << file << "\"/>" << std::endl;
     }
-
-    /**
-     * @brief Writes PVTP (Parallel VTK PolyData) files.
-     *
-     * This function writes PVTP (Parallel VTK PolyData) files with the specified base directory, base name, and number of files.
-     * It creates a series of PVTP files with the given base name and number of files, each containing metadata for parallel visualization.
-     *
-     * @param basedir The base directory where the PVTP files will be written.
-     * @param basename The base name for the PVTP files.
-     * @param number_of_files The number of PVTP files to create.
-     */
-    void write_pvtp(std::string basename, size_t number_of_files)
-    {
-      std::string name = basename + ".pvtp";
-      std::ofstream outFile(name);
-      if (!outFile)
-      {
-        color_log::error("dump_network", "Impossible to create the output file: " + name, false);
-        return;
-      }
-      outFile << "<?xml version=\"1.0\"?>" << std::endl;
-      outFile << "<VTKFile type=\"PPolyData\"> " << std::endl;
-      outFile << "   <PPolyData GhostLevel=\"0\">" << std::endl;
-      outFile << "     <PPoints>" << std::endl;
-      outFile << "       <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
-      outFile << "     </PPoints> " << std::endl;
-      outFile << "     <PPointData>" << std::endl;
-      outFile << "       <PDataArray type=\"Int32\" Name=\"N\" NumberOfComponents=\"1\"/>" << std::endl;
-      outFile << "       <PDataArray type=\"Float64\" Name=\"fn\" NumberOfComponents=\"3\"/>" << std::endl;
-      outFile << "       <PDataArray type=\"Float64\" Name=\"ft\" NumberOfComponents=\"3\"/>" << std::endl;
-      outFile << "     </PPointData>" << std::endl;
-      std::filesystem::path full_path(basename);
-      std::string directory = full_path.filename().string();
-      std::string subfile = directory + "/%06d.vtp";
-      for (size_t i = 0; i < number_of_files; i++)
-      {
-        std::string file = onika::format_string(subfile,  i);
-        outFile << "     <Piece Source=\"" << file << "\"/>" << std::endl;
-      }
-      outFile << "   </PPolyData>" << std::endl;
-      outFile << "</VTKFile>" << std::endl;
-    }
-  };
-} // namespace exaDEM
+    outFile << "   </PPolyData>" << std::endl;
+    outFile << "</VTKFile>" << std::endl;
+  }
+};
+}  // namespace exaDEM
