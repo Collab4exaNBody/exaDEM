@@ -19,11 +19,7 @@ under the License.
 #pragma once
 
 namespace exaDEM {
-enum InteractionType {
-  ParticleParticle,
-  ParticleDriver,
-  InnerBond
-};
+enum InteractionType { ParticleParticle, ParticleDriver, InnerBond };
 
 struct InteractionTypeId {
   // classic
@@ -40,7 +36,13 @@ struct InteractionTypeId {
   static constexpr int VertexCylinder = 4;
   static constexpr int VertexSurface = 5;
   static constexpr int VertexBall = 6;
-  static constexpr int FirstIdDriver = VertexCylinder;  
+  static constexpr int FirstIdDriver = VertexCylinder;
+  static constexpr int VertexRshapeDriverVertex = 7;
+  static constexpr int VertexRshapeDriverEdge = 8;
+  static constexpr int VertexRshapeDriverFace = 9;
+  static constexpr int EdgeRshapeDriverEdge = 10;
+  static constexpr int EdgeRshapeDriverVertex = 11;
+  static constexpr int FaceRshapeDriverVertex = 12;
   static constexpr int LastIdDriver = 12;
   static constexpr int NTypesParticleDriver = LastIdDriver - FirstIdDriver + 1;
   // fragmentation
@@ -54,8 +56,7 @@ struct InteractionTypeId {
   static constexpr int Undefined = 666;
 };
 
-ONIKA_HOST_DEVICE_FUNC inline
-int get_type_idx(int idx) {
+ONIKA_HOST_DEVICE_FUNC inline int get_type_idx(int idx) {
   static_assert(InteractionTypeId::LastIdParticle < InteractionTypeId::FirstIdDriver);
   static_assert(InteractionTypeId::LastIdDriver < InteractionTypeId::FirstIdInnerBond);
   if (idx <= InteractionTypeId::LastIdParticle) {
@@ -66,61 +67,64 @@ int get_type_idx(int idx) {
     return (idx - InteractionTypeId::FirstIdInnerBond);
   }
   return InteractionTypeId::Undefined;
-} 
+}
 
-template<InteractionType IT>
-ONIKA_HOST_DEVICE_FUNC inline
-int get_typed_idx(int idx) {
+template <InteractionType IT>
+ONIKA_HOST_DEVICE_FUNC inline int get_typed_idx(int idx) {
   if constexpr (IT == InteractionType::ParticleParticle) {
     return idx;
   } else if constexpr (IT == InteractionType::ParticleDriver) {
     return (idx - InteractionTypeId::FirstIdDriver);
-  } else if constexpr(IT == InteractionType::InnerBond) {
+  } else if constexpr (IT == InteractionType::InnerBond) {
     return (idx - InteractionTypeId::FirstIdInnerBond);
   }
-} 
+}
 
-ONIKA_HOST_DEVICE_FUNC inline
-int get_typed(int idx) {
-  if (idx >=InteractionTypeId::FirstIdParticle &&
-      idx <= InteractionTypeId::LastIdParticle) {
+ONIKA_HOST_DEVICE_FUNC inline int get_typed(int idx) {
+  if (idx >= InteractionTypeId::FirstIdParticle && idx <= InteractionTypeId::LastIdParticle) {
     return 0;
-  } else if (idx >= InteractionTypeId::FirstIdDriver &&
-      idx <= InteractionTypeId::LastIdDriver) {
+  } else if (idx >= InteractionTypeId::FirstIdDriver && idx <= InteractionTypeId::LastIdDriver) {
     return 1;
-  } else if (idx >= InteractionTypeId::FirstIdInnerBond &&
-      idx <= InteractionTypeId::LastIdInnerBond) {
+  } else if (idx >= InteractionTypeId::FirstIdInnerBond && idx <= InteractionTypeId::LastIdInnerBond) {
     return 2;
   }
   return 3;
 }
 
-template<InteractionType> constexpr int get_first_id();
+template <InteractionType>
+constexpr int get_first_id();
 
-template<> constexpr int get_first_id<InteractionType::ParticleParticle>() {
-return InteractionTypeId::FirstIdParticle;
-}
-
-template<> constexpr int get_first_id<InteractionType::ParticleDriver>() {
-return InteractionTypeId::FirstIdDriver;
-}
-template<> constexpr int get_first_id<InteractionType::InnerBond>() {
-return InteractionTypeId::FirstIdInnerBond;
+template <>
+constexpr int get_first_id<InteractionType::ParticleParticle>() {
+  return InteractionTypeId::FirstIdParticle;
 }
 
-template<InteractionType> constexpr int get_last_id();
-
-template<> constexpr int get_last_id<InteractionType::ParticleParticle>() {
-return InteractionTypeId::LastIdParticle;
+template <>
+constexpr int get_first_id<InteractionType::ParticleDriver>() {
+  return InteractionTypeId::FirstIdDriver;
 }
-template<> constexpr int get_last_id<InteractionType::ParticleDriver>() {
-return InteractionTypeId::LastIdDriver;
-}
-template<> constexpr int get_last_id<InteractionType::InnerBond>() {
-return InteractionTypeId::LastIdInnerBond;
+template <>
+constexpr int get_first_id<InteractionType::InnerBond>() {
+  return InteractionTypeId::FirstIdInnerBond;
 }
 
-template<int Type>
+template <InteractionType>
+constexpr int get_last_id();
+
+template <>
+constexpr int get_last_id<InteractionType::ParticleParticle>() {
+  return InteractionTypeId::LastIdParticle;
+}
+template <>
+constexpr int get_last_id<InteractionType::ParticleDriver>() {
+  return InteractionTypeId::LastIdDriver;
+}
+template <>
+constexpr int get_last_id<InteractionType::InnerBond>() {
+  return InteractionTypeId::LastIdInnerBond;
+}
+
+template <int Type>
 constexpr InteractionType ConvertToIntertactionType() {
   if constexpr (Type >= get_first_id<InteractionType::ParticleParticle>() &&
                 Type <= get_last_id<InteractionType::ParticleParticle>()) {
@@ -134,17 +138,18 @@ constexpr InteractionType ConvertToIntertactionType() {
   }
 }
 
-template<InteractionType IT> inline std::string get_name();
-template<> inline
-std::string get_name<InteractionType::ParticleParticle>() {
+template <InteractionType IT>
+inline std::string get_name();
+template <>
+inline std::string get_name<InteractionType::ParticleParticle>() {
   return "InteractionType::ParticleParticle";
 }
-template<> inline
-std::string get_name<InteractionType::ParticleDriver>() {
+template <>
+inline std::string get_name<InteractionType::ParticleDriver>() {
   return "InteractionType::ParticleDriver";
 }
-template<> inline
-std::string get_name<InteractionType::InnerBond>() {
+template <>
+inline std::string get_name<InteractionType::InnerBond>() {
   return "InteractionType::InnerBond";
 }
 }  // namespace exaDEM

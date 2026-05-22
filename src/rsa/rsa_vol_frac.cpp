@@ -15,38 +15,37 @@ specific language governing permissions and limitations
 under the License.
 */
 
-#include <onika/math/basic_types_yaml.h>
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
-#include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/grid.h>
-#include <onika/math/basic_types_stream.h>
-#include <onika/log.h>
-#include <onika/file_utils.h>
-
-#include <exanb/core/domain.h>
 #include <exanb/core/check_particles_inside_cell.h>
+#include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
+#include <exanb/core/make_grid_variant_operator.h>
+#include <exanb/core/particle_type_id.h>
 #include <exanb/core/simple_block_rcb.h>
 #include <exanb/grid_cell_particles/particle_region.h>
-#include <exanb/core/particle_type_id.h>
 #include <mpi.h>
+#include <onika/file_utils.h>
+#include <onika/log.h>
+#include <onika/math/basic_types_stream.h>
+#include <onika/math/basic_types_yaml.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
 
 #include <ctime>
-#include <string>
 #include <numeric>
+#include <string>
 
 // exaDEM stuff
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/shapes.hpp>
 
 // rsa_mpi stuff
-#include <rsa_data_storage.hxx>
-#include <rsa_random.hxx>
-#include <rsa_domain.hxx>
-#include <rsa_decoration.hxx>
 #include <operator_algorithm.hxx>
 #include <radius_generator.hxx>
+#include <rsa_data_storage.hxx>
+#include <rsa_decoration.hxx>
+#include <rsa_domain.hxx>
+#include <rsa_random.hxx>
 
 namespace exaDEM {
 struct ParticleType {
@@ -63,9 +62,7 @@ struct ParticleType {
     std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
     m_name[MAX_STR_LEN - 1] = '\0';
   }
-  inline std::string name() const {
-    return m_name;
-  }
+  inline std::string name() const { return m_name; }
 };
 
 using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;
@@ -354,11 +351,11 @@ class RSAVolFrac : public OperatorNode {
     lout << "Domain bounds    = " << domain->bounds() << std::endl;
     lout << "Domain size      = " << bounds_size(domain->bounds()) << std::endl;
     lout << "Real size        = "
-        << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
-    << std::endl;
+         << bounds_size(domain->bounds()) * Vec3d{domain->xform().m11, domain->xform().m22, domain->xform().m33}
+         << std::endl;
     lout << "Cell size        = " << domain->cell_size() << std::endl;
     lout << "Grid dimensions  = " << domain->grid_dimension() << " (" << grid_cell_count(domain->grid_dimension())
-        << " cells)" << std::endl;
+         << " cells)" << std::endl;
     lout << "=================================" << std::endl;
     grid->rebuild_particle_offsets();
   }

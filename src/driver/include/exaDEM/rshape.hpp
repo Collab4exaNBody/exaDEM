@@ -26,26 +26,13 @@ under the License.
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_numerical_scheme_kernel.hpp>
 // plugin shape
+#include <exaDEM/rshape_grid.hpp>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_reader.hpp>
 #include <exaDEM/shape_writer.hpp>
 #include <filesystem>
 
 namespace exaDEM {
-// List of geometric elements (vertices, edges, faces) for a rigid shape
-struct RShapeDriverListOfElements {
-  onika::memory::CudaMMVector<int> vertices; /**< Indices of vertices in the shape. */
-  onika::memory::CudaMMVector<int> edges;    /**< Indices of edges in the shape. */
-  onika::memory::CudaMMVector<int> faces;    /**< Indices of faces in the shape. */
-
-  // Clear all element lists
-  void clean() {
-    vertices.clear();
-    edges.clear();
-    faces.clear();
-  }
-};
-
 // Data fields for a rigid shape driver (polyhedron or complex geometry)
 struct RShapeDriverFields {
   exanb::Vec3d center = exanb::Vec3d{0, 0, 0}; /**< Center position of the shape. */
@@ -123,9 +110,8 @@ struct RShapeDriver {
   MotionType motion_type;    /**< Contains motion type parameters */
   shape shp;                 /**< Shape of the R-Shape. */
   onika::memory::CudaMMVector<exanb::Vec3d>
-      vertices; /**< Collection of vertices (computed from shp, quat, and center). */
-  onika::memory::CudaMMVector<RShapeDriverListOfElements> grid_indexes; /**< Grid indices of the R-Shape. */
-  /** We don't need to save these values */
+      vertices;                             /**< Collection of vertices (computed from shp, quat, and center). */
+  RShapeDriverGridCellIndexes grid_indexes; /**< Grid indexes for vertices, edges, and faces of the shape. */
 
   /**
    * @brief Get the type of the driver (in this case, RSHAPE).
@@ -133,8 +119,7 @@ struct RShapeDriver {
    */
   constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::RSHAPE; }
 
-  /**
-   * @brief Print information about the R-Shape.
+  /** @brief Print information about the R-Shape.
    */
   inline void print() const {
     exanb::lout << "Driver Type: R-Shape" << std::endl;
@@ -241,8 +226,8 @@ struct RShapeDriver {
         const double surface = fields.surface;
 
         // Force balance along the compression axis:
-        exanb::Vec3d tmp = (fields.forces - motion.sigma * surface - (motion.damprate * fields.vel))
-            / (fields.mass * C);
+        exanb::Vec3d tmp =
+            (fields.forces - motion.sigma * surface - (motion.damprate * fields.vel)) / (fields.mass * C);
 
         // Project acceleration onto the motion axis: only the component along
         // motion_vector is physically meaningful for a uniaxial compression.
@@ -250,12 +235,10 @@ struct RShapeDriver {
       }
 
     } else if (is_force_motion(motion_type)) {
-
       // Force-driven motion: warn if mass looks uninitialised (sentinel value ≥ 1e100).
       // A division by such a value would yield near-zero acceleration silently.
       if (fields.mass >= 1e100) {
-        color_log::warning("f_to_a",
-                           "The mass of the rshape is set to " + std::to_string(fields.mass));
+        color_log::warning("f_to_a", "The mass of the rshape is set to " + std::to_string(fields.mass));
       } else if (fields.mass <= 0) {
         color_log::error("rshape::force_to_accel",
                          "The mass of the rshape is not defined correctly " + std::to_string(fields.mass));
@@ -309,12 +292,11 @@ struct RShapeDriver {
    * @param dt Time step.
    */
   inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
-
     if (is_tabulated(motion_type)) {
       // Tabulated motion: bypass integration entirely and interpolate position
       // and velocity directly from the pre-computed trajectory table.
       fields.center = motion.tab_to_position(time);
-      fields.vel    = motion.tab_to_velocity(time);
+      fields.vel = motion.tab_to_velocity(time);
     } else if (!is_stationary(motion_type)) {
       // Only integrate non-stationary particles.
       if (motion_type == MotionType::LINEAR_MOTION) {
@@ -346,14 +328,17 @@ struct RShapeDriver {
     }
   }
 
-  // Update angular velocity and orientation from accumulated moments
-  // Computes angular acceleration, updates angular velocity, and integrates to orientation quaternion
+  /** @brief Update angular velocity and orientation based on accumulated moments.
+   * Computes angular acceleration, updates angular velocity, and integrates to orientation quaternion
+   * @param motion Driver motion parameters.
+   * @param time Current simulation time.
+   * @param dt Time step.
+   */
   inline void push_av_to_quat(const Driver_params& motion, double time, double dt) {
     if (need_moment()) {
       DriverPushToAngularAccelerationFunctor compute_arot = {};
       DriverPushToAngularVelocityFunctor compute_vrot = {dt * 0.5};
       DriverPushToQuaternionFunctor compute_quat_vrot = {dt, dt * 0.5, dt * dt * 0.5};
-
 
       if (motion.is_expr(motion_type, time)) {
         if (motion.expr.expr_use_mom) {
@@ -389,7 +374,9 @@ struct RShapeDriver {
                 << fields.quat.z << std::endl;
   }
 
-  // Compute rotated position of vertex i based on shape geometry, quaternion orientation, and center position
+  /** @brief Update the position of a vertex based on the shape geometry and orientation.
+   * @param i The index of the vertex to update.
+   */
   ONIKA_HOST_DEVICE_FUNC
   inline void update_vertex(int i) {
     // homothety = 1.0
@@ -431,6 +418,12 @@ struct RShapeDriver {
    */
   inline bool stationary() const { return is_stationary(motion_type) && (fields.vrot == exanb::Vec3d{0, 0, 0}); }
 
+  /** @brief Dump driver information to a stream.
+   * @param motion The motion parameters of the driver to include in the dump.
+   * @param id The identifier of the driver (for labeling in the output).
+   * @param path The directory path where the shape file should be written.
+   * @param stream The output stream to write the YAML information to.
+   */
   void dump_driver(const Driver_params& motion, int id, std::string path, std::stringstream& stream) {
     std::string filename = path + shp.m_name + ".shp";
     stream << "  - register_rshape:" << std::endl;
@@ -462,36 +455,6 @@ template <>
 struct DriverProperty<RShapeDriver> {
   static constexpr bool use_moment = true;
   static constexpr bool use_quaternion = true;
-};
-
-class RShapeUtils {
- public:
-  const exanb::Vec3d* vertices = nullptr;
-  const int* grid_id_vertices = nullptr; /**< List of vertex indices. */
-  const int* grid_id_edges = nullptr;    /**< List of edge indices. */
-  const int* grid_id_faces = nullptr;    /**< List of face indices. */
-
-  size_t rshape_nv = 0;
-  size_t rshape_ne = 0;
-  size_t rshape_nf = 0;
-
-  ONIKA_HOST_DEVICE_FUNC RShapeUtils(int cell_idx, const RShapeDriver& mesh) {
-    using onika::cuda::vector_data;
-    using onika::cuda::vector_size;
-
-    vertices = vector_data(mesh.vertices);
-    const RShapeDriverListOfElements* ptr = vector_data(mesh.grid_indexes);
-    const RShapeDriverListOfElements& list = ptr[cell_idx];
-    grid_id_vertices = vector_data(list.vertices);
-    grid_id_edges = vector_data(list.edges);
-    grid_id_faces = vector_data(list.faces);
-    rshape_nv = vector_size(list.vertices);
-    rshape_ne = vector_size(list.edges);
-    rshape_nf = vector_size(list.faces);
-  }
-
- private:
-  RShapeUtils() {}
 };
 }  // namespace exaDEM
 
