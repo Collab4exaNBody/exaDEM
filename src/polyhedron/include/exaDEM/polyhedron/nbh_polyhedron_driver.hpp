@@ -37,7 +37,7 @@ namespace exaDEM {
  *                (signature: void(size_t pid, Interaction&, int sub_i, int sub_j)).
  *
  * @param mesh        RShape driver containing geometry and precomputed OBBs.
- * @param cell_a      Index of the mesh grid cell to process (must be < mesh.grid_indexes.size()).
+ * @param cell_a      Index of the mesh grid cell to process (must be < driver.grid_indexes.size()).
  * @param add_contact Functor used to register detected contacts.
  * @param item        Reusable interaction object (fields are updated during processing).
  * @param n_particles Number of particles to process.
@@ -60,7 +60,7 @@ namespace exaDEM {
  */
 template <typename Func>
 ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
-    RShapeDriver& mesh, size_t cell_a, Func& add_contact, PlaceholderInteraction& item, const size_t n_particles,
+    RShapeDriver& driver, size_t cell_a, Func& add_contact, PlaceholderInteraction& item, const size_t n_particles,
     const double rVerlet, const ParticleTypeInt* __restrict__ type, const uint64_t* __restrict__ id,
     const double* __restrict__ rx, const double* __restrict__ ry, const double* __restrict__ rz, VertexField& vertices,
     const double* __restrict__ homothety, const exanb::Quaternion* __restrict__ orient, const shape* shps) {
@@ -68,17 +68,20 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
   using onika::cuda::vector_size;
   constexpr double dhomothety = 1.0;
 #define __particle__ vertices_i, hi, i, shpi
-#define __driver__ rutils.vertices, dhomothety, idx, &mesh.shp
-  assert(cell_a < mesh.grid_indexes.size());
+#define __driver__ dvertices, dhomothety, idx, &driver.shp
 
-  RShapeUtils rutils(cell_a, mesh);
+  // Get info from the rshape driver.
+  const Vec3d* dvertices = vector_data(driver.vertices);
+  const RShapeDriverCellAccessor grid_rshape_driver_accessor(cell_a, driver.grid_indexes);
 
-  if (rutils.rshape_nv == 0 && rutils.rshape_ne == 0 && rutils.rshape_nf == 0) {
+  // Fast exit if the grid cell does not contain any driver primitive (vertex, edge, face).
+  if (grid_rshape_driver_accessor.rshape_nv == 0 && grid_rshape_driver_accessor.rshape_ne == 0 &&
+      grid_rshape_driver_accessor.rshape_nf == 0) {
     return;
   }
 
   // Get OBBs from rshape mesh
-  auto& rshape_shp = mesh.shp;
+  auto& rshape_shp = driver.shp;
   OBB* __restrict__ rshape_obb_vertices = onika::cuda::vector_data(rshape_shp.m_obb_vertices);
   [[maybe_unused]] OBB* __restrict__ rshape_obb_edges = vector_data(rshape_shp.m_obb_edges);
   [[maybe_unused]] OBB* __restrict__ rshape_obb_faces = vector_data(rshape_shp.m_obb_faces);
@@ -115,27 +118,27 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
       obb_v_i.center = v;
       obb_v_i.enlarge(rVerlet + shpi->minskowski(hi));
 
-      // vertex - vertex
-      item.pair.type = 7;
+      // convention: 7 for vertex-vertex interaction between particle and rshape driver.
+      item.pair.type = InteractionTypeId::VertexRshapeDriverVertex;
       pi.sub = i;
-      for (size_t j = 0; j < rutils.rshape_nv; j++) {
-        size_t idx = rutils.grid_id_vertices[j];
+      for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_nv; j++) {
+        size_t idx = grid_rshape_driver_accessor.grid_id_vertices[j];
         if (filter_vertex_vertex_v2(rVerlet, __particle__, __driver__)) {
           add_contact(item, i, idx);
         }
       }
-      // vertex - edge
-      item.pair.type = 8;
-      for (size_t j = 0; j < rutils.rshape_ne; j++) {
-        size_t idx = rutils.grid_id_edges[j];
+      // convention: 8 for vertex-edge interaction between particle and rshape driver.
+      item.pair.type = InteractionTypeId::VertexRshapeDriverEdge;
+      for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_ne; j++) {
+        size_t idx = grid_rshape_driver_accessor.grid_id_edges[j];
         if (filter_vertex_edge(rVerlet, __particle__, __driver__)) {
           add_contact(item, i, idx);
         }
       }
-      // vertex - face
-      item.pair.type = 9;
-      for (size_t j = 0; j < rutils.rshape_nf; j++) {
-        size_t idx = rutils.grid_id_faces[j];
+      // convention: 9 for vertex-face interaction between particle and rshape driver.
+      item.pair.type = InteractionTypeId::VertexRshapeDriverFace;
+      for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_nf; j++) {
+        size_t idx = grid_rshape_driver_accessor.grid_id_faces[j];
         const OBB& obb_f_rshape_j = rshape_obb_faces[idx];
         if (obb_f_rshape_j.intersect(obb_v_i)) {
           if (filter_vertex_face(rVerlet, __particle__, __driver__)) {
@@ -146,33 +149,37 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     }
 
     for (size_t i = 0; i < ne; i++) {
-      item.pair.type = 10;
+      // convention: 10 for edge-edge interaction between particle and rshape driver.
+      item.pair.type = InteractionTypeId::EdgeRshapeDriverEdge;
       pi.sub = i;
-      // edge - edge
-      for (size_t j = 0; j < rutils.rshape_ne; j++) {
-        const size_t idx = rutils.grid_id_edges[j];
+      for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_ne; j++) {
+        const size_t idx = grid_rshape_driver_accessor.grid_id_edges[j];
         if (filter_edge_edge(rVerlet, __particle__, __driver__)) {
           add_contact(item, i, idx);
         }
       }
     }
 
-    for (size_t j = 0; j < rutils.rshape_nv; j++) {
-      const size_t idx = rutils.grid_id_vertices[j];
+    // Note:
+    // loop i = particle
+    // loop j = rshape driver
+    for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_nv; j++) {
+      const size_t idx = grid_rshape_driver_accessor.grid_id_vertices[j];
       // rejects vertices that are too far from the rshape mesh.
       const OBB& obb_v_rshape_j = rshape_obb_vertices[idx];
       if (!obb_v_rshape_j.intersect(obb_i)) {
         continue;
       }
-      item.pair.type = 11;
-      // edge - vertex
+      // convention: 11 for edge-vertex interaction between particle and rshape driver.
+      item.pair.type = InteractionTypeId::EdgeRshapeDriverVertex;
       for (size_t i = 0; i < ne; i++) {
         if (filter_vertex_edge(rVerlet, __driver__, __particle__)) {
           add_contact(item, i, idx);
         }
       }
-      // face vertex
-      item.pair.type = 12;
+
+      // convention: 12 for face-vertex interaction between particle and rshape driver.
+      item.pair.type = InteractionTypeId::FaceRshapeDriverVertex;
       for (size_t i = 0; i < nf; i++) {
         if (filter_vertex_face(rVerlet, __driver__, __particle__)) {
           add_contact(item, i, idx);
