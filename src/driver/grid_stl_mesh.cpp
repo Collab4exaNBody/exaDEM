@@ -112,9 +112,12 @@ class UpdateGridRShapeOperator : public OperatorNode {
 
     for (size_t id = 0; id < drivers->get_size(); id++) {
       if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
+        exaDEM::RShapeDriver& driver = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
+        gsb.resize(driver.shp.get_number_of_vertices());  // we just need to get the upper size.
+        driver.shp.compute_prepro_obb(gsb.data(), driver.fields.center, driver.fields.quat);
+
         mutexes.resize(n_cells);
         int total_n_vertices = 0, total_n_edges = 0, total_n_faces = 0;
-        exaDEM::RShapeDriver& driver = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
 
         if (!ForceResetRShapeGrid) {
           if (driver.stationary() && grid_rshape.size() == n_cells) {
@@ -123,12 +126,10 @@ class UpdateGridRShapeOperator : public OperatorNode {
           }
         }
 
-        gsb.resize(driver.shp.get_number_of_vertices());  // we just need to get the upper size.
-        driver.shp.compute_prepro_obb(gsb.data(), driver.fields.center, driver.fields.quat);
-
         bool resize = grid_rshape.size() != n_cells;
         if (resize) {
           grid_rshape.resize(n_cells);
+
 #pragma omp parallel for
           for (size_t i = 0; i < n_cells; i++) {
             omp_init_lock(&mutexes[i]);
@@ -148,7 +149,7 @@ class UpdateGridRShapeOperator : public OperatorNode {
 
 #pragma omp parallel
         {
-#pragma omp for nowait
+#pragma omp for reduction(+ : total_n_vertices) schedule(guided)
           for (size_t vid = 0; vid < obb_v.size(); vid++) {
             auto obb = obb_v[vid];
             obb.enlarge(Rmax);
@@ -176,7 +177,7 @@ class UpdateGridRShapeOperator : public OperatorNode {
           }
 
           // add edges
-#pragma omp for nowait
+#pragma omp for reduction(+ : total_n_edges) schedule(guided)
           for (size_t eid = 0; eid < obb_e.size(); eid++) {
             auto obb = obb_e[eid];
             obb.enlarge(Rmax);
@@ -203,7 +204,7 @@ class UpdateGridRShapeOperator : public OperatorNode {
             }
           }
 
-#pragma omp for nowait
+#pragma omp for reduction(+ : total_n_faces) schedule(guided)
           for (size_t fid = 0; fid < obb_f.size(); fid++) {
             auto obb = obb_f[fid];
             obb.enlarge(Rmax);
@@ -234,9 +235,17 @@ class UpdateGridRShapeOperator : public OperatorNode {
         // resize cell and data members.
         flat_grid_rshape.initialize(n_cells, total_n_vertices, total_n_edges, total_n_faces);
 
-#pragma omp parallel for schedule(guided)
+        // set offset first, then fill the grid indexes with the list of vertices, edges, and faces for each cell.
+        int offset = 0;
         for (size_t i = 0; i < n_cells; i++) {
-          auto& list = grid_rshape[i];
+          const RShapeDriverListOfElements& list = grid_rshape[i];
+          flat_grid_rshape.cells[i].offset = offset;
+          offset += list.vertices.size() + list.edges.size() + list.faces.size();
+        }
+
+        // #pragma omp parallel for schedule(guided)
+        for (size_t i = 0; i < n_cells; i++) {
+          const RShapeDriverListOfElements& list = grid_rshape[i];
           // fill the grid indexes with the list of vertices, edges, and faces for each cell.
           flat_grid_rshape.fill_cell(i, list.vertices, list.edges, list.faces);
         }

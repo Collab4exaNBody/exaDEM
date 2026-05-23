@@ -67,18 +67,35 @@ struct RShapeDriverGridCellIndexes {
    * @param indices_edges Pointer to the array of edge indices.
    * @param indices_faces Pointer to the array of face indices.
    */
-  inline void fill_cell(size_t cell_idx, std::span<int> indices_vertices, std::span<int> indices_edges,
-                        std::span<int> indices_faces) {
+  inline void fill_cell(size_t cell_idx, std::span<const int> indices_vertices, std::span<const int> indices_edges,
+                        std::span<const int> indices_faces) {
     assert(cell_idx < cells.size());
-    cells[cell_idx].offset = data.size();
-    cells[cell_idx].nvertices = indices_vertices.size();
-    cells[cell_idx].nedges = indices_edges.size();
-    cells[cell_idx].nfaces = indices_faces.size();
-    std::memcpy(data.data() + cells[cell_idx].offset, indices_vertices.data(), cells[cell_idx].nvertices * sizeof(int));
-    std::memcpy(data.data() + cells[cell_idx].offset + cells[cell_idx].nvertices, indices_edges.data(),
-                cells[cell_idx].nedges * sizeof(int));
-    std::memcpy(data.data() + cells[cell_idx].offset + cells[cell_idx].nvertices + cells[cell_idx].nedges,
-                indices_faces.data(), cells[cell_idx].nfaces * sizeof(int));
+    // offset is set by the caller, it is the responsibility of the caller to ensure that the offset is correct and that
+    // the data is not overwritten. cells[cell_idx].offset = offset;
+
+    RShapeDriverCellIndexes& cell = cells[cell_idx];
+
+    cell.nvertices = indices_vertices.size();
+    cell.nedges = indices_edges.size();
+    cell.nfaces = indices_faces.size();
+    std::memcpy(data.data() + cell.offset, indices_vertices.data(), cell.nvertices * sizeof(int));
+    std::memcpy(data.data() + cell.offset + cell.nvertices, indices_edges.data(), cell.nedges * sizeof(int));
+    std::memcpy(data.data() + cell.offset + cell.nvertices + cell.nedges, indices_faces.data(),
+                cell.nfaces * sizeof(int));
+
+#ifndef NDEBUG
+    if (cell_idx < cells.size() - 1) {
+      size_t next_offset = cells[cell_idx + 1].offset;
+      size_t current_offset = cell.offset;
+      size_t current_size = cell.nvertices + cell.nedges + cell.nfaces;
+      assert(current_offset + current_size == next_offset);
+    } else {
+      // for the last cell, we can only check that the offset + size does not exceed the total size of the data.
+      size_t current_offset = cell.offset;
+      size_t current_size = cell.nvertices + cell.nedges + cell.nfaces;
+      assert(current_offset + current_size == data.size());
+    }
+#endif
   }
 
   /** @brief Print debug information about the grid.

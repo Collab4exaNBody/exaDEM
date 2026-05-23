@@ -37,7 +37,7 @@ namespace exaDEM {
  *                (signature: void(size_t pid, Interaction&, int sub_i, int sub_j)).
  *
  * @param mesh        RShape driver containing geometry and precomputed OBBs.
- * @param cell_a      Index of the mesh grid cell to process (must be < mesh.grid_indexes.size()).
+ * @param cell_a      Index of the mesh grid cell to process (must be < driver.grid_indexes.size()).
  * @param add_contact Functor used to register detected contacts.
  * @param item        Reusable interaction object (fields are updated during processing).
  * @param n_particles Number of particles to process.
@@ -72,7 +72,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
 
   // Get info from the rshape driver.
   const Vec3d* dvertices = vector_data(driver.vertices);
-  RShapeDriverCellAccessor grid_rshape_driver_accessor(cell_a, driver.grid_indexes);
+  const RShapeDriverCellAccessor grid_rshape_driver_accessor(cell_a, driver.grid_indexes);
 
   // Fast exit if the grid cell does not contain any driver primitive (vertex, edge, face).
   if (grid_rshape_driver_accessor.rshape_nv == 0 && grid_rshape_driver_accessor.rshape_ne == 0 &&
