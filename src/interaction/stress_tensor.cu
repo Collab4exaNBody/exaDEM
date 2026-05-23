@@ -104,7 +104,7 @@ struct compute_stress_tensors {
       ParallelForOptions opts;
       opts.omp_scheduling = OMP_SCHED_STATIC;
       const auto [dnp, cpp, fnp, ftp] =
-          classifier.buffer_p(Type);            // get parameters: get forces (fn, ft) and contact positions
+          classifier.contact_state(Type);       // get parameters: get forces (fn, ft) and contact positions
                                                 // (cp) computed into the contact force operators.
       InteractionWrapper<IT> interactions(Ip);  // get data: interaction
       compute_stress_tensor<Type, Sym> func;    // get kernel

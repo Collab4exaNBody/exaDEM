@@ -109,9 +109,7 @@ class ComputeForceMomentDriverOp : public OperatorNode {
 
       for (size_t i = 0; i < drvs.get_size(); i++) {
         exanb::Vec3d center;
-        auto get_center = [&center] (auto& drv) {
-          center = drv.position();
-        };
+        auto get_center = [&center](auto& drv) { center = drv.position(); };
         // center will be set by the functor, which captures it by reference
         drvs.apply(i, get_center);  // Apply functor to driver i
         centers[i] = center;
@@ -121,7 +119,7 @@ class ComputeForceMomentDriverOp : public OperatorNode {
       for (int typeID = InteractionTypeId::FirstIdDriver; typeID <= InteractionTypeId::LastIdDriver; typeID++) {
         if (classifier.get_size(typeID) != 0) {
           // Extract force/moment data for this interaction type
-          auto [dn, contact_position, fn, ft] = classifier.buffer_p(typeID);
+          auto [dn, contact_position, fn, ft] = classifier.contact_state(typeID);
           ComputeForceMomentDriverFunc func = {centers.data(), contact_position, fn, ft, forces.data(), moments.data()};
           // Get interactions of this type
           auto [data, size] = classifier.get_info<IT>(typeID);

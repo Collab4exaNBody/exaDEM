@@ -22,10 +22,18 @@ under the License.
 #include <exanb/extra_storage/extra_storage_info.hpp>
 
 namespace exaDEM {
-
 namespace interaction_test {
 using UIntType = uint64_t;
 using InfoType = ExtraStorageInfo;
+
+/** @brief This function checks the consistency of the extra interaction storage by verifying that the particle ids in
+ * the interaction list match the particle ids in the info array.
+ * @param n_particles The number of particles in the cell.
+ * @param info_ptr A pointer to the info array that contains the offset, size, and id of the interactions for each
+ * particle in DynamicDataStorage.
+ * @param data_ptr A pointer to the interaction data array that contains the interactions for all particles in the cell.
+ * @return true if the interaction storage is consistent, false otherwise.
+ */
 inline bool check_extra_interaction_storage_consistency(int n_particles, InfoType* info_ptr,
                                                         PlaceholderInteraction* data_ptr) {
   for (int p = 0; p < n_particles; p++) {
