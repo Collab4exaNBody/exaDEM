@@ -17,6 +17,9 @@ under the License.
 
 #pragma once
 
+#include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/classifier/interaction_wrapper.hpp>
+
 namespace exaDEM {
 struct InteractionWrapperAccessor {
   InteractionWrapper<ParticleParticle>* particleparticle;
