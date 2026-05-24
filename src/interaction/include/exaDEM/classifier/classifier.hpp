@@ -90,6 +90,9 @@ struct Classifier {
     }
   }
 
+  /** @brief Retrieves the const vector of interactions for a specific type.
+   * @return Const reference to the vector storing interactions of the specified type.
+   */
   template <InteractionType IT>
   auto& get_container() {
     if constexpr (IT == InteractionType::ParticleParticle) {
@@ -101,6 +104,9 @@ struct Classifier {
     }
   }
 
+  /** @brief Retrieves the const vector of interactions for a specific type.
+   * @return Const reference to the vector storing interactions of the specified type.
+   */
   template <InteractionType IT>
   const auto& get_container() const {
     if constexpr (IT == InteractionType::ParticleParticle) {
@@ -113,10 +119,9 @@ struct Classifier {
   }
 
   /**
-   * @brief Retrieves the CUDA memory-managed vector of interactions for a specific type.
-   *
+   * @brief Retrieves the vector of interactions for a specific type.
    * @param id Type identifier for the interaction wave.
-   * @return Reference to the CUDA memory-managed vector storing interactions of the specified type.
+   * @return Reference to the vector storing interactions of the specified type.
    */
   template <InteractionType IT>
   auto& get_data(size_t typeID) {
@@ -132,6 +137,10 @@ struct Classifier {
     return data[typed_id];
   }
 
+  /** @brief Retrieves the data for a specific interaction type (const version).
+   * @param typeID Type identifier for the interaction type.
+   * @return Const reference to the data for the specified interaction type.
+   */
   template <InteractionType IT>
   const auto& get_data(size_t typeID) const {
     int typed_id = get_typed_idx<IT>(typeID);
@@ -146,24 +155,41 @@ struct Classifier {
     return data[typed_id];
   }
 
+  /** @brief Retrieves a wrapper for the sticked interaction of a specific type.
+   * @return Wrapper for the sticked interaction.
+   */
   InteractionWrapper<InteractionType::InnerBond> get_sticked_interaction_wrapper() {
     WaveIB& ib = get_data<InnerBond>(InteractionTypeId::FirstIdInnerBond);
     assert(ib.size() == 1);
     return InteractionWrapper<InteractionType::InnerBond>(ib);  // WARNING here
   }
 
+  /** @brief Retrieves the size of the container for a specific interaction type.
+   * @param id Type identifier for the interaction type.
+   * @return Size of the container for a specific interaction types.
+   */
   size_t get_size(size_t id) {
     ClassifierContainerSizeFunc func;
     CDispatcher::dispatch(id, *this, func);
     return func.value;
   }
 
+  /** @brief Resizes the container for a specific interaction type.
+   * @param typeID Type identifier for the interaction type.
+   * @param size New size for the container.
+   */
   void resize(int typeID, size_t size) {
     auto resizer = [](auto& container, size_t s) -> void { container.resize(s); };
     ClassifierContainerApplyFunc func = {resizer};
     CDispatcher::dispatch(typeID, *this, func, size);
   }
 
+  /** @brief Copies interactions of a specific type to a vector.
+   * @param typeID Type identifier for the interaction type.
+   * @param start Starting index for the copy operation.
+   * @param size Number of interactions to copy.
+   * @param vec Vector to store the copied interactions.
+   */
   void copy(int typeID, size_t start, size_t size, std::vector<PlaceholderInteraction>& vec) {
     auto copier = [typeID](auto& container, size_t st, size_t si, std::vector<PlaceholderInteraction>& v) {
       container.copy(st, si, v, typeID);
@@ -174,11 +200,9 @@ struct Classifier {
 
   /**
    * @brief Retrieves the pointer and size of the data stored in the CUDA memory-managed vector for a specific type.
-   *
    * @param id Type identifier for the interaction wave.
    * @return Pair containing the pointer to the interaction data and the size of the data.
    */
-
   template <InteractionType IT>
   std::pair<ClassifierContainer<IT>&, size_t> get_info(size_t typeID) {
     int typed_id = get_typed_idx<IT>(typeID);
@@ -191,6 +215,10 @@ struct Classifier {
     return std::pair<ClassifierContainer<IT>&, size_t>{data[typed_id], data_size};
   }
 
+  /** @brief Retrieves the pointer and size of the data stored vector for a specific type (const version).
+   * @param id Type identifier for the interaction type.
+   * @return Pair containing the pointer to the interaction data and the size of the data.
+   */
   template <InteractionType IT>
   std::pair<const ClassifierContainer<IT>&, size_t> get_info(size_t typeID) const {
     int typed_id = get_typed_idx<IT>(typeID);
@@ -203,16 +231,21 @@ struct Classifier {
     return std::pair<const ClassifierContainer<IT>&, size_t>{data[typed_id], data_size};
   }
 
+  /** @brief Retrieves the contact state buffers for a specific interaction type.
+   * @param id Type identifier for the interaction wave.
+   * @return Tuple containing pointers to the contact state buffers: overlap (dn), contact points, normal forces, and
+   * tangential forces.
+   */
   std::tuple<double*, Vec3d*, Vec3d*, Vec3d*> contact_state(int id) {
-    assert(id < types);
-    auto& analysis = m_contact_state[id];
+    assert(id < InteractionTypeId::NTypes);
+    auto& state = m_contact_state[id];
     // fit size if needed
     size_t size = get_size(id);
-    analysis.resize(size);
-    double* const __restrict__ dnp = onika::cuda::vector_data(analysis.dn);
-    Vec3d* const __restrict__ cpp = onika::cuda::vector_data(analysis.cp);
-    Vec3d* const __restrict__ fnp = onika::cuda::vector_data(analysis.fn);
-    Vec3d* const __restrict__ ftp = onika::cuda::vector_data(analysis.ft);
+    state.resize(size);
+    double* const __restrict__ dnp = onika::cuda::vector_data(state.dn);
+    Vec3d* const __restrict__ cpp = onika::cuda::vector_data(state.cp);
+    Vec3d* const __restrict__ fnp = onika::cuda::vector_data(state.fn);
+    Vec3d* const __restrict__ ftp = onika::cuda::vector_data(state.ft);
     return {dnp, cpp, fnp, ftp};
   }
 
@@ -221,15 +254,8 @@ struct Classifier {
    *
    * @return Number of interaction types.
    */
-  size_t number_of_waves() {
-    assert(types == InteractionTypeId::NTypes);
-    return m_particles.size() + m_drivers.size() + m_innerbonds.size();
-  }
-
-  size_t number_of_waves() const {
-    assert(types == InteractionTypeId::NTypes);
-    return m_particles.size() + m_drivers.size() + m_innerbonds.size();
-  }
+  size_t number_of_waves() { return m_particles.size() + m_drivers.size() + m_innerbonds.size(); }
+  size_t number_of_waves() const { return m_particles.size() + m_drivers.size() + m_innerbonds.size(); }
 
   // debug
   void display() {
@@ -245,6 +271,7 @@ struct Classifier {
   }
 };
 
+/** @brief Function object for applying a function to all interactions of a specific interaction type. */
 struct ForAllInteractionFunc {
   template <InteractionType IT, typename Func, typename... Args>
   void operator()(ClassifierContainer<IT>& container, Func& func, Args&&... args) {
@@ -252,6 +279,11 @@ struct ForAllInteractionFunc {
   }
 };
 
+/** @brief Applies a function to all interactions of a specific interaction type.
+ * @param classifier The classifier containing the interactions.
+ * @param func The function to apply to each interaction.
+ * @param args Additional arguments to pass to the function.
+ */
 template <typename Func, typename... Args>
 void for_all_interactions(Classifier& classifier, Func& func, Args&&... args) {
   ForAllInteractionFunc functor;

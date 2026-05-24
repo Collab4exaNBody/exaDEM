@@ -19,9 +19,10 @@ under the License.
 
 #pragma once
 #include <onika/math/basic_types.h>
+#include <onika/physics/units.h>
+
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_base.hpp>
-#include <onika/physics/units.h>
 
 namespace exaDEM {
 // Data fields for a planar surface/wall driver
@@ -30,18 +31,18 @@ struct SurfaceFields {
   double offset = 0;               /**< Offset distance from origin along the normal vector. */
   exanb::Vec3d normal = {0, 0, 1}; /**< Normalized normal vector of the surface plane. */
   exanb::Vec3d center = {0, 0, 0}; /**< Reference center position of the surface. */
-  
+
   /** Optional motion parameters */
-  exanb::Vec3d vel = {0, 0, 0};                          /**< Linear velocity of the surface. */
-  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0};             /**< Angular velocity (rotation) of the surface. */
-  exanb::Vec3d forces = {0, 0, 0};                       /**< Accumulated forces applied to the surface from interactions. */
-  exanb::Vec3d mom = {0, 0, 0};                          /**< Accumulated moments (torques) applied to the surface. */
-  double mass = std::numeric_limits<double>::max() / 4;  /**< Mass of the surface. */
-  double surface = -1;                                    /**< Contact surface area (for compressive motion). */
-  
+  exanb::Vec3d vel = {0, 0, 0};              /**< Linear velocity of the surface. */
+  exanb::Vec3d vrot = exanb::Vec3d{0, 0, 0}; /**< Angular velocity (rotation) of the surface. */
+  exanb::Vec3d forces = {0, 0, 0};           /**< Accumulated forces applied to the surface from interactions. */
+  exanb::Vec3d mom = {0, 0, 0};              /**< Accumulated moments (torques) applied to the surface. */
+  double mass = std::numeric_limits<double>::max() / 4; /**< Mass of the surface. */
+  double surface = -1;                                  /**< Contact surface area (for compressive motion). */
+
   /** Derived quantities (not persisted) */
-  exanb::Vec3d center_proj;  /**< Center position projected onto the normal (offset * normal). */
-  double acc = 0;            /**< Scalar acceleration along the normal direction. */
+  exanb::Vec3d center_proj; /**< Center position projected onto the normal (offset * normal). */
+  double acc = 0;           /**< Scalar acceleration along the normal direction. */
 };
 }  // namespace exaDEM
 
@@ -90,7 +91,7 @@ struct convert<exaDEM::SurfaceFields> {
 namespace exaDEM {
 /**
  * @brief Planar surface/wall driver for DEM simulations.
- * 
+ *
  * Represents a flat rigid surface (wall) defined by a normal vector and offset.
  * Can move in various ways: stationary, linear motion, compressive force, shaker, or pendulum motion.
  * The surface geometry is always planar (infinite plane).
@@ -103,9 +104,7 @@ struct Surface {
    * @brief Get the type of the driver (in this case, SURFACE).
    * @return The type of the driver.
    */
-  constexpr DRIVER_TYPE get_type() {
-    return DRIVER_TYPE::SURFACE;
-  }
+  constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::SURFACE; }
 
   /**
    * @brief Print information about the surface.
@@ -144,12 +143,8 @@ struct Surface {
    * @details Calculates the center position based on the normal and offset.
    */
   inline void initialize(Driver_params& motion) {
-    const std::vector<MotionType> surface_valid_motion_types = {
-      STATIONARY,
-      LINEAR_MOTION,
-      LINEAR_COMPRESSIVE_MOTION,
-      SHAKER,
-      PENDULUM_MOTION};
+    const std::vector<MotionType> surface_valid_motion_types = {STATIONARY, LINEAR_MOTION, LINEAR_COMPRESSIVE_MOTION,
+                                                                SHAKER, PENDULUM_MOTION};
 
     fields.center_proj = fields.offset * fields.normal;
 
@@ -171,10 +166,12 @@ struct Surface {
     // checks
     if (exanb::dot(fields.center - fields.center_proj, fields.normal) >= 1e-14) {
       color_log::warning("register_surface", "The Center point (surface) is not correctly defined");
-      fields.center = exanb::dot(fields.center_proj - fields.center, fields.normal) * fields.normal + fields.center_proj;
+      fields.center =
+          exanb::dot(fields.center_proj - fields.center, fields.normal) * fields.normal + fields.center_proj;
       color_log::warning("register_surface",
                          "center is re-computed because it doesn't fit with offset, new center is: [" +
-                         std::to_string(fields.center) + "] and center_proj is: [" + std::to_string(fields.center_proj) + "]");
+                             std::to_string(fields.center) + "] and center_proj is: [" +
+                             std::to_string(fields.center_proj) + "]");
     }
 
     if (!is_valid_motion_type(motion_type, surface_valid_motion_types)) {
@@ -186,11 +183,13 @@ struct Surface {
     }
     if (is_linear(motion_type)) {
       // We do not accept that motion_vector is not equal to -normal for compression mode
-      if (fields.normal != motion.motion_vector && (fields.normal != -motion.motion_vector && !is_compressive(motion_type))) {
+      if (fields.normal != motion.motion_vector &&
+          (fields.normal != -motion.motion_vector && !is_compressive(motion_type))) {
         color_log::warning("register_surface",
                            "The motion vector of the surface has been adjusted to align with the normal vector, i.e. "
                            "the motion vecor[" +
-                           std::to_string(motion.motion_vector) + "] is now equal to [" + std::to_string(fields.normal) + "].");
+                               std::to_string(motion.motion_vector) + "] is now equal to [" +
+                               std::to_string(fields.normal) + "].");
         motion.motion_vector = fields.normal;
       }
     }
@@ -209,7 +208,6 @@ struct Surface {
    * @param motion Driver motion parameters and constraints.
    */
   void force_to_accel(const Driver_params& motion) {
-
     if (is_compressive(motion_type)) {
       constexpr double C = 0.5;
 
@@ -217,8 +215,7 @@ struct Surface {
         const double contact_surface = fields.surface;
 
         // Net force vector: F_contact - σ·S·n
-        exanb::Vec3d tmp = (fields.forces - motion.sigma * contact_surface * motion.motion_vector)
-            / (motion.mass * C);
+        exanb::Vec3d tmp = (fields.forces - motion.sigma * contact_surface * motion.motion_vector) / (motion.mass * C);
 
         // Project onto motion axis → scalar acceleration (Surface driver, unlike Vec3d in particle driver)
         fields.acc = exanb::dot(tmp, motion.motion_vector);
@@ -235,7 +232,6 @@ struct Surface {
    * @param dt Time step.
    */
   inline void push_f_v(const Driver_params& motion, const double dt) {
-
     if (is_stationary(motion_type)) {
       // Stationary particle: enforce zero velocity regardless of any accumulated acceleration.
       fields.vel = {0, 0, 0};
@@ -262,22 +258,21 @@ struct Surface {
    * @param dt      Raw time step.
    */
   inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
-
     if (!is_stationary(motion_type)) {
-
       if (motion_type == MotionType::LINEAR_MOTION) {
         // Sanity check: for linear motion the velocity must match the prescribed
-        assert(exanb::norm(motion.vel - motion.const_vel * motion.motion_vector) < 1e-12);
+        // 1e-12 is an arbitrary small number to account for numerical precision issues.
+        assert(exanb::norm(fields.vel - motion.const_vel * motion.motion_vector) < 1e-12);
       }
 
       if (motion_type == MotionType::PENDULUM_MOTION) {
         // Pendulum motion: fully recompute geometry and kinematics at (time + dt).
         // Early return: standard Verlet displacement does not apply here.
         auto [Offset, Normal] = motion.compute_offset_normal_pendulum_motion(time + dt);
-        fields.normal       = Normal;
-        fields.offset       = Offset;
-        fields.vel          = motion.pendulum_velocity(time + dt);
-        fields.center_proj  = fields.normal * fields.offset;
+        fields.normal = Normal;
+        fields.offset = Offset;
+        fields.vel = motion.pendulum_velocity(time + dt);
+        fields.center_proj = fields.normal * fields.offset;
         return;
       }
 
@@ -287,16 +282,16 @@ struct Surface {
 
       if (motion_type == MotionType::SHAKER) {
         // Shaker motion: displacement is driven by the waveform signal difference
-        const double signal_next    = motion.shaker_signal(time + dt);
+        const double signal_next = motion.shaker_signal(time + dt);
         const double signal_current = motion.shaker_signal(time);
-        const double angle_factor   = exanb::dot(motion.shaker_direction(), fields.normal);
-        displ      = (signal_next - signal_current) * angle_factor;
+        const double angle_factor = exanb::dot(motion.shaker_direction(), fields.normal);
+        displ = (signal_next - signal_current) * angle_factor;
         fields.vel = motion.shaker_velocity(time + dt);
       }
 
       // Apply displacement to wall position, offset, and projected center.
-      fields.center      += displ * fields.normal;
-      fields.offset      += displ;
+      fields.center += displ * fields.normal;
+      fields.offset += displ;
       fields.center_proj += displ * fields.normal;
     }
   }
@@ -317,7 +312,8 @@ struct Surface {
 
   /**
    * @brief Check if a point is close enough to the surface for potential interaction.
-   * @details Uses distance perpendicular to the surface (along normal direction).\n   * @param rcut The cut-off radius for interaction detection.
+   * @details Uses distance perpendicular to the surface (along normal direction).\n   * @param rcut The cut-off radius
+   * for interaction detection.
    * @param p The point to check.
    * @return True if the point is within cut-off radius of the surface, false otherwise.
    */
@@ -339,22 +335,22 @@ struct Surface {
    *         - Vec3d: contact position on the surface plane.
    */
   ONIKA_HOST_DEVICE_FUNC
-      inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& p) {
-        exanb::Vec3d proj = dot(p, fields.normal) * fields.normal;
-        exanb::Vec3d surface_to_point = -(fields.center_proj - proj);
-        double d = exanb::norm(surface_to_point);
-        double dn = d - rcut;
-        if (dn > 0) {
-          return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
-        } else {
-          exanb::Vec3d n = surface_to_point / d;
-          exanb::Vec3d contact_position = p - n * (rcut + 0.5 * dn);
-          return {true, dn, n, contact_position};
-        }
-      }
+  inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& p) {
+    exanb::Vec3d proj = dot(p, fields.normal) * fields.normal;
+    exanb::Vec3d surface_to_point = -(fields.center_proj - proj);
+    double d = exanb::norm(surface_to_point);
+    double dn = d - rcut;
+    if (dn > 0) {
+      return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
+    } else {
+      exanb::Vec3d n = surface_to_point / d;
+      exanb::Vec3d contact_position = p - n * (rcut + 0.5 * dn);
+      return {true, dn, n, contact_position};
+    }
+  }
 };
 
-template<>
+template <>
 struct DriverProperty<Surface> {
   /// No moment/torque computation required for surface drivers.
   static constexpr bool use_moment = false;
@@ -367,9 +363,7 @@ namespace onika {
 namespace memory {
 template <>
 struct MemoryUsage<exaDEM::Surface> {
-  static inline size_t memory_bytes(const exaDEM::Surface& obj) {
-    return onika::memory::memory_bytes(obj);
-  }
+  static inline size_t memory_bytes(const exaDEM::Surface& obj) { return onika::memory::memory_bytes(obj); }
 };
 }  // namespace memory
 }  // namespace onika

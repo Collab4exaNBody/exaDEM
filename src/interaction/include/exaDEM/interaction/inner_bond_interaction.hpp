@@ -180,7 +180,7 @@ struct InnerBondInteraction {
  * @note Assumes that the interaction is already broken (unbroken == false).
  */
 ONIKA_HOST_DEVICE_FUNC inline Interaction broke_interaction(const InnerBondInteraction& I) {
-  assert(unbroken == false);
+  assert(I.unbroken == false);
   Interaction res;
   res.pair = I.pair;
   res.pair.type = InteractionTypeId::VertexVertex;

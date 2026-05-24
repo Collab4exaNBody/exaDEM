@@ -17,8 +17,8 @@ under the License.
 
 #pragma once
 
-#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/classifier/classifier_container.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 
 namespace exaDEM {
 struct InterationPairWrapper {
@@ -59,10 +59,10 @@ struct InterationPairWrapper {
   }
 
   ONIKA_HOST_DEVICE_FUNC
-      inline InteractionPair operator()(size_t i) {
-        return InteractionPair{ParticleSubLocation{id_i[i], cell_i[i], p_i[i], sub_i[i]},
-          ParticleSubLocation{id_j[i], cell_j[i], p_j[i], sub_j[i]}, m_type, m_swap[i], m_ghost[i]};
-      }
+  inline InteractionPair operator()(size_t i) {
+    return InteractionPair{ParticleSubLocation{id_i[i], cell_i[i], p_i[i], sub_i[i]},
+                           ParticleSubLocation{id_j[i], cell_j[i], p_j[i], sub_j[i]}, m_type, m_swap[i], m_ghost[i]};
+  }
 };
 
 template <InteractionType IT>
@@ -147,46 +147,37 @@ struct InteractionWrapper {
 
   ONIKA_HOST_DEVICE_FUNC inline auto operator()(const uint64_t idx) const {
     InteractionPair ip = {{id_i[idx], cell_i[idx], p_i[idx], sub_i[idx]},
-      {id_j[idx], cell_j[idx], p_j[idx], sub_j[idx]},
-      m_type,
-      m_swap[idx],
-      m_ghost[idx]};
+                          {id_j[idx], cell_j[idx], p_j[idx], sub_j[idx]},
+                          m_type,
+                          m_swap[idx],
+                          m_ghost[idx]};
 
     if constexpr (IT == ParticleParticle) {
       return Interaction{ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}};
     } else if constexpr (IT == ParticleDriver) {
       return Interaction{ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}};
     } else if constexpr (IT == InnerBond) {
-      return InnerBondInteraction{
-        ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, en[idx], tds[idx], et[idx], dn0[idx], weight[idx], criterion[idx], unbroken[idx]};
+      return InnerBondInteraction{ip,           {ft_x[idx], ft_y[idx], ft_z[idx]},
+                                  en[idx],      tds[idx],
+                                  et[idx],      dn0[idx],
+                                  weight[idx],  criterion[idx],
+                                  unbroken[idx]};
     } else {
       // static_assert(always_false<T>::value, "Unsupported interaction type");
     }
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline double& En(const uint64_t idx) const {
-    return en[idx];
-  }
+  ONIKA_HOST_DEVICE_FUNC inline double& En(const uint64_t idx) const { return en[idx]; }
 
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d& Tds(const uint64_t idx) const {
-    return tds[idx];
-  }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& Tds(const uint64_t idx) const { return tds[idx]; }
 
-  ONIKA_HOST_DEVICE_FUNC inline double& Et(const uint64_t idx) const {
-    return et[idx];
-  }
+  ONIKA_HOST_DEVICE_FUNC inline double& Et(const uint64_t idx) const { return et[idx]; }
 
-  ONIKA_HOST_DEVICE_FUNC inline double& Criterion(const uint64_t idx) const {
-    return criterion[idx];
-  }
+  ONIKA_HOST_DEVICE_FUNC inline double& Criterion(const uint64_t idx) const { return criterion[idx]; }
 
-  ONIKA_HOST_DEVICE_FUNC inline void broke(const uint64_t idx) const {
-    unbroken[idx] = false;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline void broke(const uint64_t idx) const { unbroken[idx] = false; }
 
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d load_ft(size_t id) {
-    return {ft_x[id], ft_y[id], ft_z[id]};
-  }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d load_ft(size_t id) { return {ft_x[id], ft_y[id], ft_z[id]}; }
 
   ONIKA_HOST_DEVICE_FUNC void store_ft(Vec3d&& value, size_t id) {
     ft_x[id] = value.x;
@@ -195,73 +186,72 @@ struct InteractionWrapper {
   }
 
   ONIKA_HOST_DEVICE_FUNC
-      inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) const {
-        assert(type == item.pair.type);
-        // --- particle ids
-        id_i[idx] = item.pair.pi.id;
-        id_j[idx] = item.pair.pj.id;
+  inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) const {
+    assert(m_type == item.pair.type);
+    // --- particle ids
+    id_i[idx] = item.pair.pi.id;
+    id_j[idx] = item.pair.pj.id;
 
-        // --- cell ids
-        cell_i[idx] = item.pair.pi.cell;
-        cell_j[idx] = item.pair.pj.cell;
+    // --- cell ids
+    cell_i[idx] = item.pair.pi.cell;
+    cell_j[idx] = item.pair.pj.cell;
 
-        // --- position in cell
-        p_i[idx] = item.pair.pi.p;
-        p_j[idx] = item.pair.pj.p;
+    // --- position in cell
+    p_i[idx] = item.pair.pi.p;
+    p_j[idx] = item.pair.pj.p;
 
-        // --- sub ids
-        sub_i[idx] = item.pair.pi.sub;
-        sub_j[idx] = item.pair.pj.sub;
+    // --- sub ids
+    sub_i[idx] = item.pair.pi.sub;
+    sub_j[idx] = item.pair.pj.sub;
 
-        // --- swap, ghost
-        m_swap[idx] = item.pair.swap;
-        m_ghost[idx] = item.pair.ghost;    
-      }
-
-  ONIKA_HOST_DEVICE_FUNC
-      inline InteractionPair pair(const uint64_t i) const {
-        return InteractionPair{ParticleSubLocation{id_i[i], cell_i[i], p_i[i], sub_i[i]},
-          ParticleSubLocation{id_j[i], cell_j[i], p_j[i], sub_j[i]}, m_type, m_swap[i], m_ghost[i]};
-      }
+    // --- swap, ghost
+    m_swap[idx] = item.pair.swap;
+    m_ghost[idx] = item.pair.ghost;
+  }
 
   ONIKA_HOST_DEVICE_FUNC
-      inline bool same(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
-        return item.pair == pair(idx);
-      }
-
-
-  ONIKA_HOST_DEVICE_FUNC
-      inline void update(const uint64_t idx, const exaDEM::Interaction& item) const {
-        ft_x[idx] = item.friction.x;
-        ft_y[idx] = item.friction.y;
-        ft_z[idx] = item.friction.z;
-
-        mom_x[idx] = item.moment.x;
-        mom_y[idx] = item.moment.y;
-        mom_z[idx] = item.moment.z;
-      }
+  inline InteractionPair pair(const uint64_t i) const {
+    return InteractionPair{ParticleSubLocation{id_i[i], cell_i[i], p_i[i], sub_i[i]},
+                           ParticleSubLocation{id_j[i], cell_j[i], p_j[i], sub_j[i]}, m_type, m_swap[i], m_ghost[i]};
+  }
 
   ONIKA_HOST_DEVICE_FUNC
-      inline void update(const uint64_t idx, const exaDEM::InnerBondInteraction& item) const {
-        ft_x[idx] = item.friction.x;
-        ft_y[idx] = item.friction.y;
-        ft_z[idx] = item.friction.z;
-        en[idx] = item.en;
-        tds[idx] = item.tds;
-        et[idx] = item.et;
-        dn0[idx] = item.dn0;
-        weight[idx] = item.weight;
-        criterion[idx] = item.criterion;
-        unbroken[idx] = item.unbroken;
-      }
+  inline bool same(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
+    return item.pair == pair(idx);
+  }
 
   ONIKA_HOST_DEVICE_FUNC
-      inline void update(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
-        if constexpr (IT == ParticleParticle) {
-          update(idx, item.as<Interaction>());
-        } else if constexpr (IT == InnerBond) {
-          update(idx, item.as<InnerBondInteraction>());
-        }
-      }
+  inline void update(const uint64_t idx, const exaDEM::Interaction& item) const {
+    ft_x[idx] = item.friction.x;
+    ft_y[idx] = item.friction.y;
+    ft_z[idx] = item.friction.z;
+
+    mom_x[idx] = item.moment.x;
+    mom_y[idx] = item.moment.y;
+    mom_z[idx] = item.moment.z;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline void update(const uint64_t idx, const exaDEM::InnerBondInteraction& item) const {
+    ft_x[idx] = item.friction.x;
+    ft_y[idx] = item.friction.y;
+    ft_z[idx] = item.friction.z;
+    en[idx] = item.en;
+    tds[idx] = item.tds;
+    et[idx] = item.et;
+    dn0[idx] = item.dn0;
+    weight[idx] = item.weight;
+    criterion[idx] = item.criterion;
+    unbroken[idx] = item.unbroken;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline void update(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
+    if constexpr (IT == ParticleParticle) {
+      update(idx, item.as<Interaction>());
+    } else if constexpr (IT == InnerBond) {
+      update(idx, item.as<InnerBondInteraction>());
+    }
+  }
 };
 }  // namespace exaDEM
