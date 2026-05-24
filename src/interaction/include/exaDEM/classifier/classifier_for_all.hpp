@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/block_parallel_for.h>
+#include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/parallel_for.h>
 
 namespace exaDEM {
@@ -68,7 +68,7 @@ struct AnalysisDataPacker {
    * and tangential forces from the classifier based on the interaction type.
    */
   AnalysisDataPacker(Classifier& ic, int type) {
-    auto [_dnp, _cpp, _fnp, _ftp] = ic.buffer_p(type);
+    auto [_dnp, _cpp, _fnp, _ftp] = ic.contact_state(type);
     dnp = _dnp;
     cpp = _cpp;
     fnp = _fnp;

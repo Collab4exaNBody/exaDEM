@@ -58,7 +58,7 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
     auto& interfaces = *im;
     const MultiMatContactParamsTAccessor<ContactParams> cp = multimat_cp->get_multimat_accessor();
     InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
-    auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic->buffer_p(InteractionTypeId::InnerBond);
+    auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic->contact_state(InteractionTypeId::InnerBond);
     auto cells = grid->cells();
 
     // No copy from GPU if the data has not been touuch by the GPU
