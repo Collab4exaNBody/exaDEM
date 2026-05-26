@@ -155,6 +155,9 @@ class UpdateContactInteractionSphere : public OperatorNode {
         auto& pi = item.i();       // particle i (id, cell, pos, sub)
         auto& pd = item.driver();  // particle driver (id, cell, pos, sub)
         pi.cell = cell_a;
+        pi.sub = 0;  // sub vertex is set to 0 by default. Not used for spheres, but can be used for sub-vertex of
+        // polyhedrons.
+        pd.sub = 0;
 
         // First, interaction between a sphere and a driver
         if (drivers.has_value()) {
@@ -250,9 +253,11 @@ class UpdateContactInteractionSphere : public OperatorNode {
                 // Add interactions
                 pi.id = id_a[p_a];
                 pi.p = p_a;
+                pi.sub = 0;
                 pj.id = id_nbh;
                 pj.p = p_b;
                 pj.cell = cell_b;
+                pj.sub = 0;
                 manager.add_item(item);
               });
         } else {  // If symetric is false, we add interactions between two spheres twice, once for each order (A or i ->
@@ -279,9 +284,11 @@ class UpdateContactInteractionSphere : public OperatorNode {
                 // Add interactions
                 pi.id = id_a[p_a];
                 pi.p = p_a;
+                pi.sub = 0;
                 pj.id = id_nbh;
                 pj.p = p_b;
                 pj.cell = cell_b;
+                pj.sub = 0;
                 manager.add_item(item);
               });
         }

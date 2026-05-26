@@ -40,9 +40,8 @@ inline bool check_extra_interaction_storage_consistency(int n_particles, InfoTyp
     auto [offset, size, id] = info_ptr[p];
     for (size_t i = offset; i < offset + size; i++) {
       auto& item = data_ptr[i];
-      if (item.pair.pi.id != id && item.pair.pj.id != id) {
-        std::cout << "info says particle id = " << id << " and the interaction is between the particle id "
-                  << item.pair.pi.id << " and the particle id " << item.pair.pj.id << std::endl;
+      if (!item.consistent()) {
+        item.print();
         return false;
       }
     }

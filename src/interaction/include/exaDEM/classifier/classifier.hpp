@@ -160,7 +160,7 @@ struct Classifier {
    */
   InteractionWrapper<InteractionType::InnerBond> get_sticked_interaction_wrapper() {
     WaveIB& ib = get_data<InnerBond>(InteractionTypeId::FirstIdInnerBond);
-    assert(ib.size() == 1);
+    assert(m_innerbonds.size() == InteractionTypeId::NTypesInnerBond);
     return InteractionWrapper<InteractionType::InnerBond>(ib);  // WARNING here
   }
 
