@@ -23,16 +23,42 @@ under the License.
 
 namespace exaDEM {
 ONIKA_HOST_DEVICE_FUNC
-inline void lockAndAdd(exanb::Vec3d& val, const exanb::Vec3d& add) {
+static void lockAndAdd(exanb::Vec3d& val, const exanb::Vec3d& add) {
   ONIKA_CU_ATOMIC_ADD(val.x, add.x);
   ONIKA_CU_ATOMIC_ADD(val.y, add.y);
   ONIKA_CU_ATOMIC_ADD(val.z, add.z);
 }
 
 ONIKA_HOST_DEVICE_FUNC
-inline void lockAndAdd(exanb::Vec3d& val, const exanb::Vec3d&& add) {
+static inline void lockAndAdd(exanb::Vec3d& val, const exanb::Vec3d&& add) {
   ONIKA_CU_ATOMIC_ADD(val.x, add.x);
   ONIKA_CU_ATOMIC_ADD(val.y, add.y);
   ONIKA_CU_ATOMIC_ADD(val.z, add.z);
+}
+
+ONIKA_HOST_DEVICE_FUNC
+static inline void mat3d_atomic_add_contribution(exanb::Mat3d& dst, const exanb::Mat3d& src) {
+  ONIKA_CU_ATOMIC_ADD(dst.m11, src.m11);
+  ONIKA_CU_ATOMIC_ADD(dst.m12, src.m12);
+  ONIKA_CU_ATOMIC_ADD(dst.m13, src.m13);
+  ONIKA_CU_ATOMIC_ADD(dst.m21, src.m21);
+  ONIKA_CU_ATOMIC_ADD(dst.m22, src.m22);
+  ONIKA_CU_ATOMIC_ADD(dst.m23, src.m23);
+  ONIKA_CU_ATOMIC_ADD(dst.m31, src.m31);
+  ONIKA_CU_ATOMIC_ADD(dst.m32, src.m32);
+  ONIKA_CU_ATOMIC_ADD(dst.m33, src.m33);
+}
+
+ONIKA_HOST_DEVICE_FUNC
+static inline void mat3d_atomic_add_block_contribution(exanb::Mat3d& dst, const exanb::Mat3d& src) {
+  ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m11, src.m11);
+  ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m12, src.m12);
+  ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m13, src.m13);
+  ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m21, src.m21);
+  ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m22, src.m22);
+  ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m23, src.m23);
+  ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m31, src.m31);
+  ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m32, src.m32);
+  ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m33, src.m33);
 }
 }  // namespace exaDEM

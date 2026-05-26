@@ -5,6 +5,8 @@
 #include <onika/parallel/block_parallel_for.h>
 #include <onika/parallel/parallel_for.h>
 #include <exaDEM/shapes.hpp>
+#include <exaDEM/classifier/interaction_wrapper.hpp>
+#include <exaDEM/classifier/interaction_wrapper_accessor.hpp>
 
 namespace exaDEM {
 static constexpr int ParticleParticleSize = 4;

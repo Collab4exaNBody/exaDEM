@@ -18,17 +18,20 @@
 #pragma once
 
 namespace exaDEM {
-namespace itools {
-struct interaction_buffers {
+/** @brief A struct to hold buffers for contact state data. */
+struct ContactState {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
-  VectorT<double> dn;
-  VectorT<Vec3d> cp;
-  VectorT<Vec3d> fn;
-  VectorT<Vec3d> ft;
+  VectorT<double> dn;  // overlap
+  VectorT<Vec3d> cp;   // contact point
+  VectorT<Vec3d> fn;   // normal force
+  VectorT<Vec3d> ft;   // tangential force
 
+  /** @brief Resize the buffers to the specified size.
+   * @param size The new size of the buffers.
+   */
   void resize(const size_t size) {
-    assert(size < 1e9);
+    assert(size < 1e9);  // arbitrary limit to catch bugs
     if (size == dn.size()) {
       return;
     }
@@ -46,5 +49,4 @@ struct interaction_buffers {
     }
   }
 };
-}  // namespace itools
 }  // namespace exaDEM

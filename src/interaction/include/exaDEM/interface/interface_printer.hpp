@@ -3,27 +3,30 @@
 #include <filesystem>
 
 namespace exaDEM {
+/** @brief Helper struct for creating Paraview-compatible interface files */
 struct paraview_interface_helper {
-  bool mpi_rank;
-
-  int n_vertices = 0;
-  int n_polygons = 0;
-  std::stringstream vertices;
-  std::stringstream offsets;
-  std::stringstream ranks;
-  std::stringstream ids;
-  //  std::stringstream sub_id;
-  std::stringstream connectivities;
-  std::stringstream fracturation;
-  std::stringstream en;
-  std::stringstream tds;
-  std::stringstream et;
+  bool mpi_rank;                     // Store MPI rank if needed
+  int n_vertices = 0;                // Number of vertices "in all interfaces"
+  int n_polygons = 0;                // Number of polygons "in all interfaces"
+  std::stringstream vertices;        // Stream to store vertex coordinates
+  std::stringstream offsets;         // Stream to store polygon offsets (number of vertices per polygon)
+  std::stringstream ranks;           // Stream to store MPI ranks (optional)
+  std::stringstream ids;             // Stream to store unique IDs for each vertex (optional)
+  std::stringstream connectivities;  // Stream to store polygon / face connectivity (vertex indices for each polygon)
+  std::stringstream fracturation;    // Stream to store fracturation rate of each vertex (optional)
+  std::stringstream en;              // Stream to store normal energy of each vertex (optional)
+  std::stringstream tds;             // Stream to store tangential displacement of each vertex (optional)
+  std::stringstream et;              // Stream to store tangential energy of each vertex (optional)
 };
 
+/** @brief Write a VTP file for interfaces
+ * @param name The name of the output file (should end with .vtp)
+ * @param buffers The helper struct containing the data to write
+ */
 inline void write_vtp_interface(std::string name, paraview_interface_helper& buffers) {
   std::ofstream outFile(name);
   if (!outFile) {
-    color_log::error("write_vtp_polyhedron", "Impossible to open the file: " + name, false);
+    color_log::error("write_vtp_interface", "Impossible to open the file: " + name, false);
     return;
   }
 
@@ -54,7 +57,9 @@ inline void write_vtp_interface(std::string name, paraview_interface_helper& buf
   outFile << buffers.en.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
 
-  outFile << "      <DataArray type=\"Float64\" Name=\"TangentialDisplacement\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+  outFile
+      << "      <DataArray type=\"Float64\" Name=\"TangentialDisplacement\"  NumberOfComponents=\"3\" format=\"ascii\">"
+      << std::endl;
   outFile << buffers.tds.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
 
@@ -81,11 +86,16 @@ inline void write_vtp_interface(std::string name, paraview_interface_helper& buf
   outFile << "</VTKFile>" << std::endl;
 }
 
+/** @brief Write a PVTP file for the interface
+ * @param filename The name of the output file (should end with .pvtp)
+ * @param number_of_files The number of VTP files to include
+ * @param buffers The helper struct containing the data to write
+ */
 inline void write_pvtp_interface(std::string filename, size_t number_of_files, paraview_interface_helper& buffers) {
   std::string name = filename + ".pvtp";
   std::ofstream outFile(name);
   if (!outFile) {
-    color_log::error("write_pvtp_polyhedron", "Impossible to open the file: " + name, false);
+    color_log::error("write_pvtp_interface", "Impossible to open the file: " + name, false);
     return;
   }
   outFile << "<?xml version=\"1.0\"?>" << std::endl;
@@ -99,7 +109,8 @@ inline void write_pvtp_interface(std::string filename, size_t number_of_files, p
   }
   outFile << "      <PDataArray type=\"Float64\" Name=\"Fracturation rate\"  NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "      <PDataArray type=\"Float64\" Name=\"En\"  NumberOfComponents=\"1\"/>" << std::endl;
-  outFile << "      <PDataArray type=\"Float64\" Name=\"TangentialDisplacement\"  NumberOfComponents=\"3\"/>" << std::endl;
+  outFile << "      <PDataArray type=\"Float64\" Name=\"TangentialDisplacement\"  NumberOfComponents=\"3\"/>"
+          << std::endl;
   outFile << "      <PDataArray type=\"Float64\" Name=\"Et\"  NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "    </PPointData>" << std::endl;
   outFile << "    <PPoints>" << std::endl;
@@ -119,12 +130,16 @@ inline void write_pvtp_interface(std::string filename, size_t number_of_files, p
   outFile << "</VTKFile>" << std::endl;
 }
 
-/*
- * Orders vertices to form a non-self-intersecting face.
+/** @brief Orders vertices to form a non-self-intersecting face.
+ * @param vertices The vector of vertices to order.
  * Note: This assumes the vertices are roughly coplanar.
+ * This function is used to order the vertices of the faces of the interfaces before writing them in VTP files, to
+ * ensure that the faces are correctly displayed in Paraview.
  */
 void order_face_vertices(std::vector<Vec3d>& vertices) {
-  if (vertices.size() < 3) return;
+  if (vertices.size() < 3) {
+    return;
+  }
 
   //  Calculate the Centroid
   Vec3d centroid = {0, 0, 0};
@@ -138,39 +153,38 @@ void order_face_vertices(std::vector<Vec3d>& vertices) {
   centroid.z /= vertices.size();
 
   Vec3d a = vertices[0] - centroid;
-  Vec3d normal = {0, 0, 1}; // Default value to prevent faillure
+  Vec3d normal = {0, 0, 1};  // Default value to prevent faillure
 
   Vec3d b = vertices[1] - centroid;
   normal = exanb::cross(a, b);
   normal = normal / exanb::norm(normal);
 
   Vec3d u = (vertices[0] - centroid);
-  u = u / exanb::norm(u); // Normalize u
-  Vec3d v = exanb::cross(normal, u); 
+  u = u / exanb::norm(u);  // Normalize u
+  Vec3d v = exanb::cross(normal, u);
 
   // Sort by polar angle around the centroid
-  std::sort(vertices.begin(), vertices.end(),
-            [centroid, u, v](const Vec3d& a, const Vec3d& b) {
-            Vec3d da = a - centroid;
-            Vec3d db = b - centroid;
+  std::sort(vertices.begin(), vertices.end(), [centroid, u, v](const Vec3d& a, const Vec3d& b) {
+    Vec3d da = a - centroid;
+    Vec3d db = b - centroid;
 
-            // Project on local plan to get 2D coordonates
-            double xA = exanb::dot(da, u);
-            double yA = exanb::dot(da, v);
+    // Project on local plan to get 2D coordonates
+    double xA = exanb::dot(da, u);
+    double yA = exanb::dot(da, v);
 
-            double xB = exanb::dot(db, u);
-            double yB = exanb::dot(db, v);
+    double xB = exanb::dot(db, u);
+    double yB = exanb::dot(db, v);
 
-            double angleA = std::atan2(yA, xA);
-            double angleB = std::atan2(yB, xB);
+    double angleA = std::atan2(yA, xA);
+    double angleB = std::atan2(yB, xB);
 
-            // Handle numerical error
-            if (std::abs(angleA - angleB) > 1e-9) {
-            return angleA < angleB;
-            }
+    // Handle numerical error
+    if (std::abs(angleA - angleB) > 1e-9) {
+      return angleA < angleB;
+    }
 
-            // Tie-breaker
-            return exanb::dot(da, da) < exanb::dot(db, db);
-            });
+    // Tie-breaker
+    return exanb::dot(da, da) < exanb::dot(db, db);
+  });
 }
 }  // namespace exaDEM

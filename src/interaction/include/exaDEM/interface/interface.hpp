@@ -17,45 +17,66 @@ under the License.
 
 #pragma once
 
-#include <exaDEM/interaction/placeholder_interaction.hpp>
-#include <exaDEM/classifier/interaction_wrapper.hpp>
 #include <mpi.h>
 
-namespace exaDEM {
-template <typename T>
-using vector_t = onika::memory::CudaMMVector<T>;
+#include <exaDEM/classifier/interaction_wrapper.hpp>
+#include <exaDEM/interaction/placeholder_interaction.hpp>
 
+namespace exaDEM {
+
+/** @brief A struct representing an interface composed of multiple interactions */
 struct Interface {
   // Important assumption: interactions are stored contiguously
   size_t loc;   // Location in the classifier
   size_t size;  // Number of interactions composed this interface
 };
 
-// Thread Local Storage
+// This struct is used to build interfaces on the CPU.
+// The data is then copied to the InterfaceManager that is used on the GPU.
+/** @brief Struct used to build interfaces on the CPU */
 struct InterfaceBuildManager {
-  std::vector<Interface> data;
+  std::vector<Interface> data;  // list of interfaces.
 };
 
+/** @brief Struct used to handle interfaces on the CPU/GPU */
 struct InterfaceManager {
-  vector_t<Interface> data;
-  vector_t<uint8_t> break_interface;  // warning on gpu
+  template <typename T>
+  using vector_t = onika::memory::CudaMMVector<T>;
+  vector_t<Interface> data;  // list of interfaces. Each interface is defined by its location in the classifier and its
+                             // size (number of interactions that compose the interface)
+  vector_t<uint8_t> break_interface;  // list of booleans that indicate if the interface is broken or not. 1 if the
+                                      // interface is broken, 0 otherwise.
+
+  /** @brief Resize the interface manager
+   * @param new_size The new size of the interface manager.
+   */
   void resize(size_t new_size) {
-    assert(new_size < 1e7);
+    assert(new_size < 1e8);  // 1e8 is an arbitrary value to avoid resizing the interface manager with a too large size.
+                             // This can be a sign of a bug.
     data.clear();
     data.resize(new_size);
     break_interface.resize(new_size);
     std::fill(break_interface.begin(), break_interface.end(), false);
   }
-  size_t size() {
-    return data.size();
-  }
+
+  /** @brief Get the size of the interface manager
+   * @return The size of the interface manager.
+   */
+  size_t size() { return data.size(); }
 };
 
+/** @brief Check the consistency of the interfaces
+ * @param interfaces The interface build manager
+ * @param interactions The interaction classifier
+ * @return True if the interfaces are consistent, false otherwise.
+ * warning: this function is not efficient, it is only used for debugging purposes.
+ */
 inline bool check_interface_consistency(InterfaceBuildManager& interfaces,
                                         ClassifierContainer<InteractionType::InnerBond>& interactions) {
-  int res = 0;
+  int res = 0;  // number of inconsistent interfaces;
 
-# pragma omp parallel for reduction(+ : res)
+  // disable openmp, this function is only used for debugging purposes.
+  // #pragma omp parallel for reduction(+ : res)
   for (size_t i = 0; i < interfaces.data.size(); i++) {
     auto [loc, size] = interfaces.data[i];
 
@@ -73,49 +94,11 @@ inline bool check_interface_consistency(InterfaceBuildManager& interfaces,
   if (res == 0) {
     return true;
   }
+
   color_log::warning("check_interface_consistency",
                      std::to_string(res) + " interface are not defined correctly.\n" +
                          "The interactions that compose the interface are not all defined between the same particles.");
   assert(res == 0);
   return false;
-}
-
-// CPU only
-inline void rebuild_interface_Manager(InterfaceBuildManager& interfaces,
-                                      ClassifierContainer<InteractionType::InnerBond>& interactions) {
-  interfaces.data.clear();
-  size_t n_interactions = interactions.size();
-
-  size_t loc = 0;
-  while (loc < n_interactions) {
-    // Here, we do not build interfaces that are managed by another MPI process (partner).
-    if (interactions.ghost[loc] == InteractionPair::PartnerGhost) {
-      loc++;
-      continue;
-    }
-
-    // Information about the particles managed by the first interaction is retrieved.
-    // The interactions that compose an interface are stored contiguously.
-    uint64_t idloci = interactions.particle_id_i(loc);
-    uint64_t idlocj = interactions.particle_id_j(loc);
-    size_t n = 1;
-    uint64_t idni = interactions.particle_id_i(loc + n);
-    uint64_t idnj = interactions.particle_id_j(loc + n);
-    n++;
-
-    // We locate the range of all interactions that make up the interface.
-    while (loc + n < n_interactions && idloci == idni && idlocj == idnj) {
-      idni = interactions.particle_id_i(loc + n);
-      idnj = interactions.particle_id_j(loc + n);
-      n++;
-    }
-    if (loc + n != n_interactions) {
-      n--;  // exclude the last element that failed the test
-    }
-    Interface interface = {loc, n};
-    interfaces.data.push_back(interface);
-    loc += n;
-  }
-  assert(loc == n_interactions);
 }
 }  // namespace exaDEM

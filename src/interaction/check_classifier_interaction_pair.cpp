@@ -26,12 +26,15 @@ under the License.
 
 namespace exaDEM {
 
-template<typename TMPLC>
+template <typename TMPLC>
 struct CheckClassifierInteractionPairFunc {
-  TMPLC cells;
-  std::string operator_name;
+  TMPLC cells;                // pointer to the grid cells.
+  std::string operator_name;  // name of the operator for logging purposes.
 
-  template<InteractionType IT>
+  /** @brief Operator for checking interaction pairs in the classifier.
+   * @param container The classifier container (list of interactions).
+   */
+  template <InteractionType IT>
   void operator()(ClassifierContainer<IT>& container) {
     for (size_t j = 0; j < container.size(); j++) {
       size_t cellId = container.cell_i[j];
@@ -39,27 +42,25 @@ struct CheckClassifierInteractionPairFunc {
       auto& cell = cells[cellId];
       if (particlePosition >= cell.size()) {
         color_log::warning(operator_name, "Details -> wave: " + std::to_string(container.type) +
-                           " position in the classifier: " + std::to_string(j) +
-                           " looking for the cell: " + std::to_string(cellId) +
-                           " at the position: " + std::to_string(particlePosition));
+                                              " position in the classifier: " + std::to_string(j) +
+                                              " looking for the cell: " + std::to_string(cellId) +
+                                              " at the position: " + std::to_string(particlePosition));
         color_log::error(operator_name,
                          "The first part of the interaction points to a location in "
                          "storage that does not exist or no longer exists.");
       }
-      if constexpr (IT == InteractionType::ParticleParticle ||
-                    IT == InteractionType::InnerBond) {
+      if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::InnerBond) {
         size_t cellId = container.cell_j[j];
         size_t particlePosition = container.p_j[j];
         auto& cell = cells[cellId];
         if (particlePosition >= cell.size()) {
           color_log::warning(operator_name, "Details -> wave: " + std::to_string(container.type) +
-                             " position in the classifier: " + std::to_string(j) +
-                             " looking for the cell: " + std::to_string(cellId) +
-                             " at the position: " + std::to_string(particlePosition));
+                                                " position in the classifier: " + std::to_string(j) +
+                                                " looking for the cell: " + std::to_string(cellId) +
+                                                " at the position: " + std::to_string(particlePosition));
           color_log::error(operator_name,
                            "The second part of the interaction points to a location in "
                            "storage that does not exist or no longer exists.");
-
         }
       }
     }
@@ -74,20 +75,22 @@ class CheckClassifierInteractionPair : public OperatorNode {
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This operator ... 
-
+        This operator checks the consistency of the interaction pairs in the classifier with the grid storage.
+        It checks that the particle positions (cell_id, pos_id) of the interactions in the
+        classifier correspond to valid locations in the grid.
         YAML example [no option]:
 
+          - check_classifier_interaction_pair
       )EOF";
   }
 
-  std::string operator_name() {
-    return "check_classifier_interaction_pair";
-  }
+  std::string operator_name() { return "check_classifier_interaction_pair"; }
 
   inline void execute() final {
     CheckClassifierInteractionPairFunc func = {grid->cells(), operator_name()};
-    for (size_t typeID = 0; typeID < ic->number_of_waves() ; typeID++) {
+
+    // Iterate over the waves of the classifier and apply the check function to each wave.
+    for (size_t typeID = 0; typeID < ic->number_of_waves(); typeID++) {
       CDispatcher::dispatch(typeID, *ic, func);
     }
     color_log::highlight(operator_name(),

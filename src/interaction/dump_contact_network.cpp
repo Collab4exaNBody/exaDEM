@@ -16,13 +16,13 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+#include <exanb/core/grid.h>
+#include <exanb/core/make_grid_variant_operator.h>
 #include <mpi.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 #include <onika/string_utils.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/make_grid_variant_operator.h>
 
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/classifier/classifier_for_all.hpp>
@@ -71,7 +71,7 @@ class ContactNetwork : public OperatorNode {
     for (size_t type = get_first_id<InteractionType::ParticleParticle>();
          type < get_last_id<InteractionType::ParticleParticle>(); type++) {  // skip drivers
       auto& interactions = classifier.get_data<InteractionType::ParticleParticle>(type);
-      auto& forces = classifier.buffers[type];
+      auto& forces = classifier.m_contact_state[type];
       const size_t n = interactions.size();
       manager(n, interactions, forces);
     }

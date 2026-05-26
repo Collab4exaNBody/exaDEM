@@ -17,20 +17,18 @@
 
 #pragma once
 
-#include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/itools/buffer.hpp>
-
+#include <exanb/compute/reduce_cell_particles.h>
+#include <exanb/core/grid_particle_field_accessor.h>
+#include <exanb/core/parallel_grid_algorithm.h>
 #include <onika/cuda/cuda.h>
 #include <onika/cuda/cuda_error.h>
 #include <onika/cuda/device_storage.h>
-#include <onika/soatl/field_id.h>
-#include <exanb/core/grid_particle_field_accessor.h>
-
-#include <exanb/core/parallel_grid_algorithm.h>
-#include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/block_parallel_for.h>
+#include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/parallel_for.h>
-#include <exanb/compute/reduce_cell_particles.h>
+#include <onika/soatl/field_id.h>
+
+#include <exaDEM/classifier/classifier.hpp>
 
 // mini macro here
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)

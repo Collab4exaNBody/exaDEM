@@ -17,12 +17,13 @@
 
 #pragma once
 
-#include <iomanip>
+#include <mpi.h>
+
+#include <exaDEM/classifier/classifier.hpp>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
-#include <mpi.h>
-#include <exaDEM/classifier/classifier.hpp>
 
 namespace exaDEM {
 
@@ -43,13 +44,12 @@ std::stringstream create_buffer(GridT& grid, Classifier& ic) {
       wrapper.wrap(ic.get_data<ParticleDriver>(i));
     } else if (get_typed(i) == 2) {
       wrapper.wrap(ic.get_data<InnerBond>(i));
-    }
-    else {
+    } else {
       lout << "skip interaction type: " << i << std::endl;
       continue;
     }
 
-    auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.buffer_p(i);
+    auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.contact_state(i);
 
     for (size_t idx = 0; idx < size; idx++) {
       double dn = dn_ptr[idx];
@@ -96,9 +96,9 @@ inline void write_file(std::stringstream& stream, std::string directory, std::st
   std::string subsubdirectory = subdirectory + "/" + filename;
   if (rank == 0) {
     namespace fs = std::filesystem;
-fs::create_directory(directory);
-fs::create_directory(subdirectory);
-fs::create_directory(subsubdirectory);
+    fs::create_directory(directory);
+    fs::create_directory(subdirectory);
+    fs::create_directory(subsubdirectory);
   }
   MPI_Barrier(MPI_COMM_WORLD);
   std::string name = subsubdirectory + "/" + filename + "_" + std::to_string(rank) + ".txt";
