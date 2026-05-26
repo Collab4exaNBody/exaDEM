@@ -491,44 +491,7 @@ void FillInteractionsPPKernel(
     }
   }
 }
-// ============================================================
-// Reconstruct per-cell-pair offsets from particle-pair data
-// Needed for UpdateHistoryFunc compatibility
-// ============================================================
-/*inline void reconstruct_cell_pair_offsets(
-    ParticlePairStorage& pp_storage,
-    InteractionTypePerCellCounter* count_per_pp, // [num_particle_pairs]
-    size_t num_particle_pairs,
-    size_t num_cell_pairs,
-    NbhCellStorage& info_cell_pair)
-{
-  // Reset offsets and sizes
-  for (size_t cp = 0; cp < num_cell_pairs; cp++) {
-    for (int t = 0; t < InteractionTypeId::NTypes; t++) {
-      info_cell_pair.offset[cp][t] = 0;
-      info_cell_pair.size[cp][t] = 0;
-    }
-  }
 
-  // Accumulate: for each particle pair, add its counts to its cell pair
-  for (size_t pp = 0; pp < num_particle_pairs; pp++) {
-    uint32_t cp = pp_storage.cell_pair_idx[pp];
-    for (int t = 0; t < 4; t++) {
-      info_cell_pair.size[cp][t] += count_per_pp[pp][t];
-    }
-  }
-
-  // Prefix sum per type across cell pairs to get offsets
-  InteractionTypePerCellCounter running;
-  for (int t = 0; t < InteractionTypeId::NTypes; t++) running[t] = 0;
-
-  for (size_t cp = 0; cp < num_cell_pairs; cp++) {
-    for (int t = 0; t < InteractionTypeId::NTypes; t++) {
-      info_cell_pair.offset[cp][t] = running[t];
-      running[t] += info_cell_pair.size[cp][t];
-    }
-  }
-}*/
 inline void reconstruct_cell_pair_offsets(
     ParticlePairStorage& pp_storage,
     InteractionTypePerCellCounter* count_per_pp,
