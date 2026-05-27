@@ -85,7 +85,6 @@ analyses:
 
 global:
   symetric: true
-  #simulation_dump_frequency: 1000
   simulation_end_iteration: 50000
   simulation_end_iteration: 1000
   simulation_log_frequency: 1000
