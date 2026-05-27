@@ -22,7 +22,6 @@ input_data:
   - drivers_contact_params:
      default_config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1.e5, kt: 8.e4, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 7.3975840075643506e-01}
   - inner_bond_params:
-     #default_config: { kn: 1.5e1, kt: 1.2e1, damp_rate: 0.001, g: 1.2e-1 }# ok mais ductile 
      default_config: { kn: 1e5, kt: 8e4, damp_rate: 7.3975840075643506e-01, g: 5.5e-8 } 
      verbosity: true
 
