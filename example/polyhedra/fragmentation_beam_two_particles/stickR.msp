@@ -33,9 +33,6 @@ setup_drivers:
      state: {center: [0.,0,-0.02], mass: 0.0038239}
      #state: {center: [0.,0,-0.02], mass: 0.006}
      params: { motion_type: STATIONARY }
-     #params: { motion_type: LINEAR_MOTION, motion_vector: [0,0,1], const_vel: 0.5 }
-     #params: { motion_type: LINEAR_MOTION, motion_vector: [0,0,1], const_vel: 0.2 }
-     #params: { motion_type: LINEAR_FORCE_MOTION, motion_vector: [0.,0.,1], const_force: 100. }
      filename: planDo.shp
      minskowski: 0.02 
 
