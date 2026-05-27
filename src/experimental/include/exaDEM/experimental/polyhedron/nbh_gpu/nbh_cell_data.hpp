@@ -83,8 +83,6 @@ struct CopierActiveInteractionFunc {
   }
 };
 
-
-
 /**
  * @brief Transfer ghost interactions from classifier to grid storage.
  * @param info CellInteractionInformation storing start indices, number of pair cells, and ghost flags.
@@ -155,7 +153,7 @@ void transfer_classifier_grid(size_t* cell_ptr,
     // Reference to storage for this grid cell
     auto& storage = ges.m_data[owner_cell];
     auto& info_particles = storage.m_info;
-    
+
     // Resize storage to fit all interactions
     size_t old_size = 0;
     if constexpr (append) {
@@ -173,7 +171,6 @@ void transfer_classifier_grid(size_t* cell_ptr,
 
     // Copy classified interactions into storage
     size_t shift = old_size;
-
     for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
       int start = first_elem_per_type[typeID];
       int size = n_elem_per_type[typeID];
@@ -188,6 +185,7 @@ void transfer_classifier_grid(size_t* cell_ptr,
       }
     }
 
+    // Sanity check: copied all interactions
     assert(shift == old_size + number_of_interactions);
 
     // sorted according the particle position in the cell
