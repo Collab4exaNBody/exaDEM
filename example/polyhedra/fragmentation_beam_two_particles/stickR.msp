@@ -78,11 +78,6 @@ domain:
   bounds: [[-2, -2, -2], [2, 2, 2]]
   expandable: true
 
-
-
-#iteration_dump_writer:
-#  - write_conf_rockable
-
 analyses:
   - timestep_file: "OutputRockableTestDir/ExaDEMAnalyses/dem_pos_vel_%09d.xyz"
   - write_xyz:
