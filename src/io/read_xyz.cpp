@@ -252,7 +252,7 @@ class ReadXYZ : public OperatorNode {
     lout << "============================" << std::endl;
 
     grid->rebuild_particle_offsets();
-    //vt assert(check_particles_inside_cell(*grid));
+    assert(check_particles_inside_cell(*grid));
   }
 };
 

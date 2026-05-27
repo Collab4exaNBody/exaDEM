@@ -275,7 +275,7 @@ class AddXYZ : public OperatorNode {
     }
 
     g.rebuild_particle_offsets();
-    //vt assert(check_particles_inside_cell(*grid));
+    assert(check_particles_inside_cell(*grid));
   }
 };
 
