@@ -48,10 +48,12 @@ under the License.
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_manager.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
+#include <cub/cub.cuh>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_pccp.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
-class UpdateClassifierPolyhedronGPU : public OperatorNode {
+class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
 	ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
 	ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
@@ -69,27 +71,24 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
  public:
 	inline std::string documentation() const final {
 		return R"EOF(
-				This function builds the list of interactions per particle (polyhedron). Interactions are between two particles or a particle and a driver. In this function, frictions and moments are updated if the interactions are still actived. Note that, a list of non-empty cells is built during this function.
+				This function builds the list of interactions per particle (polyhedron). Block-per-particle-pair (PCCP) version.
 
 				YAML example [no option]:
 
-					- nbh_polyhedron_gpu
-#include <exaDEM/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
+					- nbh_polyhedron_gpu_pccp
 			 )EOF";
 	}
 
 	inline void execute() final {
 		using namespace onika::parallel;
 #ifndef ONIKA_CUDA_VERSION
-		color_log::error("nbh_polyhedron_gpu", "This operator only work on GPU.\n"
+		color_log::error("nbh_polyhedron_gpu_pccp", "This operator only work on GPU.\n"
 										 "                     Please use nbh_polyhedron.");
 #else
 		constexpr int block_size_x = 8;
 		constexpr int block_size_y = 8;
 		auto& g = *grid;
 		const auto cells = g.cells();
-		using ACF = ApplyClassifierFunc<block_size_x, block_size_y, decltype(cells)>;
-		// lout << "Operator in progress" << std::endl;
 		const IJK dims = g.dimension();
 		const size_t n_cells = g.number_of_cells();
 		shapes& shps = *shapes_collection;
@@ -102,7 +101,6 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 			return this->parallel_execution_context();
 		};
 
-		//onikaStream_t&
 		onikaStream_t st_updateghost, st_history, st_particle, st_driver, st_innerbond;
 		ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_updateghost);
 		ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_history);
@@ -110,11 +108,9 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 		ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_driver);
 		ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_innerbond);
 
-		// CPU Stage : get cell a / cell b 
-		// Reset other fields (particle counters per type / skip)
 		NbhCellHostStorage CellInfoStorageHost;
 		CellInteractionInformation& info_cell = nbh_manager->info_cell;
-		// Sequential
+
 		auto convert_offset_ijk = [] (int offset) {
 			assert(offset < 27);
 			IJK res;
@@ -124,9 +120,8 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 			return res;
 		};
 
-		//
-		// lout << "Fill CPU data storage" << std::endl;
 		info_cell.resize(cell_size);
+		std::memset(info_cell.update_ghost.data(), 0, cell_size * sizeof(uint8_t));
 		size_t shift = 0;
 		for(size_t i = 0 ; i < cell_size ; i++) {
 			info_cell.start_cell[i] = shift;
@@ -145,37 +140,27 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 						CellInfoStorageHost.ghost.push_back(InteractionPair::OwnerGhost);
 					} else {
 						CellInfoStorageHost.ghost.push_back(InteractionPair::NotGhost);
-					}  // test ghost
+					}
 					incr++;
-				}  //  test cb.size > 0
-			}  // loop j
+				}
+			}
 			info_cell.number_of_pair_cells[i] = incr;
 			shift += incr;
-		}  // loop i
+		}
 		info_cell.prefetch_cpu(st_updateghost);
 		CellDriverStorage& info_cell_driver = nbh_manager->info_cell_driver;
 		info_cell_driver.resize(cell_size, get_exec_ctx);
 		auto cell_driver_accessor = info_cell_driver.accessor();
 
-		// copy to gpu here
 		NbhCellStorage& info_cell_pair = nbh_manager->info_pair_cell;
 		info_cell_pair.reset(CellInfoStorageHost, get_exec_ctx);
 
-		// define a wrapper function
 		NbhCellAccessor accessor(info_cell_pair);
 
 		ParallelForOptions opts;
 		opts.omp_scheduling = OMP_SCHED_GUIDED;
 		BlockParallelForOptions bopts;
 
-		// ****** First pass ******* //
-		// prepare ApplyNbhFunc
-		ApplyNbhFunc apply = {
-			cells, accessor,
-			*rcut_inc, shps.data(),
-			vertex_fields};
-
-		// CountNumberOfInteractionParticleDriverFunc = CountIPDFunc 
 		CountIPDFunc counter_driver = {
 			cells, cell_driver_accessor,
 			cell_ptr, *rcut_inc, shps.data(),
@@ -184,98 +169,238 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 		auto cell_pair_size = CellInfoStorageHost.owner_cell.size();
 		ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-		// Count the number of InteractionType::ParticleParticle interactions per cell_pair
-		auto pec1 = parallel_execution_context("nbh_gpu::apply");
-		pec1->s_gpu_block_dims = {block_size_x, block_size_y, 1};  // enforce block size 
-		ParallelExecutionSpace<3> parallel_range = {
-			 {0, 0, 0}, {static_cast<long>(cell_pair_size), 1, 1} };
-		block_parallel_for(parallel_range, apply, pec1, bopts);
-
-		// Launch Driver interaction counter
 		parallel_for(cell_size, counter_driver, parallel_execution_context("nbh_gpu::counter_driver,"), opts);
 		PrefixSumInteractionTypePerCellCounter func_prefix_driver {
 			cell_driver_accessor.offset, cell_driver_accessor.size, cell_size};
 
-		// fpd = func_prefix_driver
 		ParallelExecutionSpace<1> parallel_range_fpd = {
 			 {get_first_id<InteractionType::ParticleDriver>()},
 			 { get_last_id<InteractionType::ParticleDriver>() + 1}};
 
 		ONIKA_CU_DEVICE_SYNCHRONIZE();
-		//parallel_for(13, func_prefix_driver, parallel_execution_context("nbh_gpu::func_prefix_driver"), opts);
 		parallel_for(parallel_range_fpd, func_prefix_driver, parallel_execution_context("nbh_gpu::func_prefix_driver"), opts);
 
-		// Recover it by history update on CPU
-		// project ghost / edge interactions
 		InteractionHistory history;
+
 		setup_history_clean_ges(cells, cell_ptr, cell_size,
 														*ges, history, st_history);
 
-		// fill offset
-		PrefixSumInteractionTypePerCellCounter func_prefix = {
-			accessor.offset, accessor.size, cell_pair_size};
-		parallel_for(4, func_prefix, parallel_execution_context("nbh_gpu::func_prefix"), opts);
-
 		ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-#ifdef DEBUG_NBH_GPU
-		// debug_print(info_cell_pair.offset.back(), info_cell_pair.size.back());
-#endif
+		// ****** Build particle pairs (PCCP) ******* //
+		constexpr int pp_block_x = 8;
+		constexpr int pp_block_y = 8;
+		dim3 pp_block(pp_block_x, pp_block_y, 1);
 
-		// ****** Second pass ******* //
-		// prepare ApplyClassifierFunc
-		auto new_size = info_cell_pair.offset.back() + info_cell_pair.size.back();
-		InteractionParticleAccessor classifier_accessor;
-		for (int typeID = get_first_id<InteractionType::ParticleParticle>();
-				 typeID<= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
-				auto& c = container.get_data<ParticleParticle>(typeID);
-				c.resize(new_size[typeID]);
-				classifier_accessor[typeID] = InteractionWrapper(c); 
+		onika::memory::CudaMMVector<int> pp_counts;
+		pp_counts.resize(cell_pair_size);
+
+		CountParticlePairsKernel<pp_block_x, pp_block_y>
+		    <<<cell_pair_size, pp_block>>>(
+		    cells, accessor.owner_cell, accessor.partner_cell,
+		    accessor.ghost, *rcut_inc, shps.data(), vertex_fields,
+		    pp_counts.data(), cell_pair_size);
+		ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		onika::memory::CudaMMVector<int> pp_offsets;
+		pp_offsets.resize(cell_pair_size);
+		{
+		  void* d_tmp = nullptr;
+		  size_t tmp_bytes = 0;
+		  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes,
+		      pp_counts.data(), pp_offsets.data(), cell_pair_size);
+		  cudaMalloc(&d_tmp, tmp_bytes);
+		  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes,
+		      pp_counts.data(), pp_offsets.data(), cell_pair_size);
+		  cudaFree(d_tmp);
+		}
+		ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		size_t total_pp = 0;
+		if (cell_pair_size > 0)
+		  total_pp = pp_counts[cell_pair_size-1] + pp_offsets[cell_pair_size-1];
+
+		ParticlePairStorage pp_storage;
+		pp_storage.resize(total_pp);
+
+		if (total_pp > 0) {
+		  FillParticlePairsKernel<pp_block_x, pp_block_y>
+		      <<<cell_pair_size, pp_block>>>(
+		      cells, accessor.owner_cell, accessor.partner_cell,
+		      accessor.ghost, *rcut_inc, shps.data(), vertex_fields,
+		      pp_offsets.data(),
+		      pp_storage.cell_i.data(), pp_storage.cell_j.data(),
+		      pp_storage.p_i.data(), pp_storage.p_j.data(),
+		      pp_storage.ghost.data(), pp_storage.cell_pair_idx.data(),
+		      cell_pair_size);
+		  ONIKA_CU_DEVICE_SYNCHRONIZE();
 		}
 
+		// ****** Count interactions per particle pair (PCCP) ******* //
+		onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_counts;
+		interaction_counts.resize(total_pp);
+		onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_prefix;
+		interaction_prefix.resize(total_pp);
+		InteractionTypePerCellCounter total_interactions;
+		for (int typeID = 0; typeID < InteractionTypeId::NTypes; typeID++){ 
+	              total_interactions[typeID] = 0;
+	        }
+
+		if (total_pp > 0) {
+		  CountInteractionsPPKernel<pp_block_x, pp_block_y>
+		      <<<total_pp, pp_block>>>(
+		      cells, vertex_fields, shps.data(), *rcut_inc,
+		      pp_storage.cell_i.data(), pp_storage.cell_j.data(),
+		      pp_storage.p_i.data(), pp_storage.p_j.data(),
+		      interaction_counts.data(), total_pp);
+		  ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		  // GPU prefix sum per interaction type
+		  onika::memory::CudaMMVector<int> type_counts[InteractionTypeId::LastIdParticle];
+		  onika::memory::CudaMMVector<int> type_prefix[InteractionTypeId::LastIdParticle];
+		  for (int t = 0; t < InteractionTypeId::LastIdParticle; t++) {
+		    type_counts[t].resize(total_pp);
+		    type_prefix[t].resize(total_pp);
+		  }
+
+		  int block_1d = 256;
+		  int grid_1d = (total_pp + block_1d - 1) / block_1d;
+
+		  ExtractInteractionCounts<<<grid_1d, block_1d>>>(
+		      interaction_counts.data(),
+		      type_counts[0].data(), type_counts[1].data(),
+		      type_counts[2].data(), type_counts[3].data(),
+		      total_pp);
+		  ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		  for (int t = 0; t < InteractionTypeId::LastIdParticle; t++) {
+		    void* d_tmp = nullptr;
+		    size_t tmp_bytes = 0;
+		    cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes,
+		        type_counts[t].data(), type_prefix[t].data(), total_pp);
+		    cudaMalloc(&d_tmp, tmp_bytes);
+		    cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes,
+		        type_counts[t].data(), type_prefix[t].data(), total_pp);
+		    cudaFree(d_tmp);
+		  }
+		  ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		  PackInteractionPrefix<<<grid_1d, block_1d>>>(
+		      interaction_prefix.data(),
+		      type_prefix[0].data(), type_prefix[1].data(),
+		      type_prefix[2].data(), type_prefix[3].data(),
+		      total_pp);
+		  ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		  for (int t = 0; t < InteractionTypeId::LastIdParticle; t++) {
+		    total_interactions[t] = type_prefix[t][total_pp - 1]
+		                         + type_counts[t][total_pp - 1];
+		  }
+		}
+
+		// ****** Resize Classifier for PP ******* //
+		InteractionParticleAccessor classifier_accessor;
+		for (int typeID = get_first_id<InteractionType::ParticleParticle>();
+		     typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
+		  auto& c = container.get_data<ParticleParticle>(typeID);
+		  c.resize(total_interactions[typeID]);
+		  classifier_accessor[typeID] = InteractionWrapper(c);
+		}
+
+		// ****** Resize Classifier for Driver ******* //
 		for (int typeID = get_first_id<InteractionType::ParticleDriver>();
-				 typeID<= get_last_id<InteractionType::ParticleDriver>(); typeID++) {
-			size_t newsize = info_cell_driver.offset.back()[typeID]
-										 + info_cell_driver.size.back()[typeID];
-			container.resize(typeID, newsize);
+		     typeID <= get_last_id<InteractionType::ParticleDriver>(); typeID++) {
+		  size_t newsize = info_cell_driver.offset.back()[typeID]
+		                 + info_cell_driver.size.back()[typeID];
+		  container.resize(typeID, newsize);
 		}
 
 		InteractionWrapperStorage wrappers(container);
 		InteractionWrapperAccessor classifier_interaction_accessor = wrappers.accessor();
 
-		// ClassifyInteractionParticleDriverFunc = ClassifyIPDFunc 
+		// ****** Fill Classifier PP (PCCP) ******* //
+		if (total_pp > 0) {
+		  FillInteractionsPPKernel<pp_block_x, pp_block_y>
+		      <<<total_pp, pp_block>>>(
+		      cells, vertex_fields, shps.data(), *rcut_inc,
+		      pp_storage.cell_i.data(), pp_storage.cell_j.data(),
+		      pp_storage.p_i.data(), pp_storage.p_j.data(),
+		      pp_storage.ghost.data(),
+		      interaction_prefix.data(),
+		      classifier_accessor, total_pp);
+		  ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+		  reconstruct_cell_pair_offsets(pp_storage, interaction_counts.data(),
+		      total_pp, cell_pair_size, info_cell_pair);
+		}
+
 		ClassifyIPDFunc classify_driver = {
-			cells, cell_driver_accessor,
-			cell_ptr, *rcut_inc, shps.data(),
-			vertex_fields, drvs, classifier_interaction_accessor};
-		parallel_for(cell_size, classify_driver, parallel_execution_context("nbh_gpu::classify_driver"), opts);
+		  cells, cell_driver_accessor,
+		  cell_ptr, *rcut_inc, shps.data(),
+		  vertex_fields, drvs, classifier_interaction_accessor};
+		parallel_for(cell_size, classify_driver,
+		  parallel_execution_context("nbh_gpu::classify_driver"), opts);
 
 		ONIKA_CU_DEVICE_SYNCHRONIZE();
-		ACF filler = {
-			cells, accessor,
-			*rcut_inc, shps.data(),
-			vertex_fields, classifier_accessor};
-
-		// run ApplyClassifierFunc 
-		auto pec2 = parallel_execution_context();
-		pec2->s_gpu_block_dims = {block_size_x, block_size_y, 1};  // enforce block size 
-		onika::parallel::block_parallel_for(parallel_range, filler, pec2, bopts);
-
+		
 		UpdateHistoryFunc update_history = {
-			history.start.data(),
-			history.size.data(),
-			history.data.data(), 
-			info_cell.start_cell.data(),
-			info_cell.number_of_pair_cells.data(),
-			accessor,
-			classifier_interaction_accessor};
+      history.start.data(),
+      history.size.data(),
+      history.data.data(),
+      info_cell.start_cell.data(),
+      info_cell.number_of_pair_cells.data(),
+      accessor,
+      cell_driver_accessor,
+      classifier_interaction_accessor};
 
 		parallel_for(history.start.size(), update_history, parallel_execution_context(), opts);
 
+		// === ADD PERSISTENT INTERACTIONS ===
+    {
+      std::vector<PlaceholderInteraction> unmatched_persistent;
+      for (size_t ci = 0; ci < cell_size; ci++) {
+        size_t hist_begin = history.start[ci];
+        size_t hist_end = hist_begin + history.size[ci];
+        for (size_t h = hist_begin; h < hist_end; h++) {
+          PlaceholderInteraction I = history.data[h];
+          auto type = I.type();
+          if (type < get_first_id<InteractionType::ParticleDriver>() ||
+              type > get_last_id<InteractionType::ParticleDriver>())
+            continue;
+          if (!I.persistent()) continue;
+          auto& wrapper = classifier_interaction_accessor.get_typed_accessor<InteractionType::ParticleDriver>(type);
+          int drv_offset = cell_driver_accessor.offset[ci][type];
+          int drv_size = cell_driver_accessor.size[ci][type];
+          bool found = false;
+          for (int k = drv_offset; k < drv_offset + drv_size; k++) {
+            if (wrapper.same(k, I)) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            unmatched_persistent.push_back(I);
+          }
+        }
+      }
+      if (!unmatched_persistent.empty()) {
+        lout << "[PERSISTENT] adding " << unmatched_persistent.size()
+             << " unmatched persistent driver interactions" << std::endl;
+        for (auto& I : unmatched_persistent) {
+          auto type = I.type();
+          auto& c = container.get_data<InteractionType::ParticleDriver>(type);
+          size_t old_size = c.size();
+          container.resize(type, old_size + 1);
+          InteractionWrapperStorage wrappers_tmp(container);
+          InteractionWrapperAccessor tmp_accessor = wrappers_tmp.accessor();
+          auto& w = tmp_accessor.get_typed_accessor<InteractionType::ParticleDriver>(type);
+          w.set(old_size, I);
+        }
+        InteractionWrapperStorage wrappers2(container);
+        classifier_interaction_accessor = wrappers2.accessor();
+      }
+    }
 
-		// Update edge area with OwnerGhost interactions
-		// We copy only Particle - Particle / InnerBond interactions:
-		//  - A Particle - Driver interaction can't be a ghost
 		constexpr bool do_ghost_only = true;
 		constexpr bool do_active_interaction_only = false;
 		transfer_classifier_grid<do_ghost_only, do_active_interaction_only, false>(
@@ -302,18 +427,14 @@ class UpdateClassifierPolyhedronGPU : public OperatorNode {
 			get_last_id<InteractionType::ParticleDriver>()
 		);
 
-		//auto& test = container.get_data<InteractionType::ParticleDriver>(5);
-	 ///for (int i = 0 ; i < test.size() ; i++) {
-		 //test[i].print();
-	 //}
 #endif
 	}
 };
 
 // === register factories ===
-ONIKA_AUTORUN_INIT(nbh_polyhedron_gpu) {
+ONIKA_AUTORUN_INIT(nbh_polyhedron_gpu_pccp) {
 	OperatorNodeFactory::instance()->register_factory("nbh_polyhedron_gpu",
-																										make_grid_variant_operator<UpdateClassifierPolyhedronGPU>);
+																										make_grid_variant_operator<UpdateClassifierPolyhedronGPUPCCP>);
 }
 }  // namespace exaDEM
 #endif

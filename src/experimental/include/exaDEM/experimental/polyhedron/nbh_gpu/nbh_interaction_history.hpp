@@ -1,5 +1,6 @@
 #pragma once
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 
 namespace exaDEM {
 struct InteractionHistory {
@@ -116,23 +117,34 @@ struct UpdateHistoryFunc {
   size_t* __restrict__ start_cell;
   size_t* __restrict__ number_of_pair_cells;
   NbhCellAccessor accessor_shift;
+  CellDriverGPUAcessor driver_accessor;
   InteractionWrapperAccessor classifier_accessor;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(long idx) const {
     const UpdateHistoryImplFunc func;
     size_t begin = start[idx];
     size_t end = begin + size[idx];
-    size_t first_block_id = start_cell[idx];
-    size_t last_block_id = first_block_id + number_of_pair_cells[idx] -1;
-
-    auto& c_begin = accessor_shift.offset[first_block_id];
-    auto c_end = accessor_shift.offset[last_block_id] + accessor_shift.size[last_block_id];
 
     for (size_t i = begin ; i < end ; i++) {
       const PlaceholderInteraction& I = data[i];
       auto type = I.type();
-      int a = c_begin[type];
-      int b = c_end[type];
+      int a, b;
+      if (type >= get_first_id<InteractionType::ParticleDriver>()
+          && type <= get_last_id<InteractionType::ParticleDriver>()) {
+        a = driver_accessor.offset[idx][type];
+        b = a + driver_accessor.size[idx][type];
+      } else {
+        if (number_of_pair_cells[idx] > 0) {
+          size_t first_block_id = start_cell[idx];
+          size_t last_block_id = first_block_id + number_of_pair_cells[idx] - 1;
+          a = accessor_shift.offset[first_block_id][type];
+          b = accessor_shift.offset[last_block_id][type]
+            + accessor_shift.size[last_block_id][type];
+        } else {
+          a = 0;
+          b = 0;
+        }
+      }
       IDispatcher::dispatch(type, classifier_accessor, func, I, a, b);
     }
   }
