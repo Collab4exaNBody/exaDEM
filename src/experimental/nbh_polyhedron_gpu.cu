@@ -242,7 +242,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 		onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_prefix;
 		interaction_prefix.resize(total_pp);
 		InteractionTypePerCellCounter total_interactions;
-		for (int t = 0; t < InteractionTypeId::NTypes; t++) total_interactions[t] = 0;
+		for (int typeID = 0; typeID < InteractionTypeId::NTypes; typeID++){ 
+	              total_interactions[typeID] = 0;
+	        }
 
 		if (total_pp > 0) {
 		  CountInteractionsPPKernel<pp_block_x, pp_block_y>
@@ -254,10 +256,10 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 		  ONIKA_CU_DEVICE_SYNCHRONIZE();
 
 		  // GPU prefix sum per interaction type
-		  constexpr int N_PP = 4;
-		  onika::memory::CudaMMVector<int> type_counts[N_PP];
-		  onika::memory::CudaMMVector<int> type_prefix[N_PP];
-		  for (int t = 0; t < N_PP; t++) {
+		  constexpr int InteractionTypeId::LastIdParticle = 4;
+		  onika::memory::CudaMMVector<int> type_counts[InteractionTypeId::LastIdParticle];
+		  onika::memory::CudaMMVector<int> type_prefix[InteractionTypeId::LastIdParticle];
+		  for (int t = 0; t < InteractionTypeId::LastIdParticle; t++) {
 		    type_counts[t].resize(total_pp);
 		    type_prefix[t].resize(total_pp);
 		  }
@@ -272,7 +274,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 		      total_pp);
 		  ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-		  for (int t = 0; t < N_PP; t++) {
+		  for (int t = 0; t < InteractionTypeId::LastIdParticle; t++) {
 		    void* d_tmp = nullptr;
 		    size_t tmp_bytes = 0;
 		    cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes,
@@ -291,7 +293,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 		      total_pp);
 		  ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-		  for (int t = 0; t < N_PP; t++) {
+		  for (int t = 0; t < InteractionTypeId::LastIdParticle; t++) {
 		    total_interactions[t] = type_prefix[t][total_pp - 1]
 		                         + type_counts[t][total_pp - 1];
 		  }

@@ -69,7 +69,6 @@ compress_data:
   - unclassify_interactions
   - compress_interaction
   - interaction_consistency_checker
-  #- unclassify_gpu
 
 write_dump_particle_op: nop # defined in config_sphere.msp or polyhedra or fragmentation
 

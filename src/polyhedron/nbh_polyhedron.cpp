@@ -394,29 +394,6 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
         assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
       }  // GRID_OMP_FOR_END
     }
-
-// === DEBUG CPU COUNTS ===
-    /*{
-      size_t counts[InteractionTypeId::NTypes] = {};
-      size_t active_c[InteractionTypeId::NTypes] = {};
-      for (size_t ci = 0; ci < cell_size; ci++) {
-        size_t cell_idx = cell_ptr[ci];
-        auto& storage = interactions[cell_idx];
-        for (size_t k = 0; k < storage.m_data.size(); k++) {
-          int type = storage.m_data[k].type();
-          bool act = storage.m_data[k].active();
-          counts[type]++;
-          if (act) active_c[type]++;
-        }
-      }
-      std::string names[] = {"VV","VE","VF","EE","VCyl","VS","VBall","VVd","VEd","VFd","EEd","EdV","FdV","Stick"};
-      lout << "[CPU NBH]";
-      for (int i = 0; i < InteractionTypeId::NTypes; i++) {
-        if (counts[i] > 0) lout << " " << names[i] << "=" << active_c[i] << "/" << counts[i];
-      }
-      lout << std::endl;
-    }*/
-    
   }
 };
 
