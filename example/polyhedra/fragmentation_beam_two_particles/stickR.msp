@@ -49,12 +49,6 @@ compute_force:
   - inner_bond_polyhedron
 
 domain:
-#  cell_size: 1.25
-#  periodic: [false, false, false]
-#  grid_dims: [2, 2, 2]
-#  bounds: [[-1.25, -1.25, -1.25], [1.25, 1.25, 1.25]]
-#  expandable: true
-
   cell_size: 4
   periodic: [false, false, false]
   grid_dims: [1, 1, 1]
