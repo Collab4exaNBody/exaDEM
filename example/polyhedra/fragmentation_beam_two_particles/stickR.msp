@@ -83,23 +83,6 @@ analyses:
   - write_xyz:
      fields: [ id, velocity, fx, fy, fz, vrot, arot, cluster, mass ]
 
-#compute_volume: nop
-
-#global_stress_tensor:
-#  - avg_stress_tensor:
-#     volume: 0.5
-
-#dump_stress_tensor_if_triggered:
-#  condition: trigger_write_stress_tensor
-#  body:
-#    - compute_volume
-#    - global_stress_tensor
-#    - write_stress_tensor
-
-#- timestep_paraview_file: "ParaviewOutputFiles/contact_network_%010d"
-#- dump_contact_network
-#
-
 global:
   symetric: true
   #simulation_dump_frequency: 1000
