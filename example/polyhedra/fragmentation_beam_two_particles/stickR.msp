@@ -31,7 +31,6 @@ setup_drivers:
   - register_rshape:
      id: 0
      state: {center: [0.,0,-0.02], mass: 0.0038239}
-     #state: {center: [0.,0,-0.02], mass: 0.006}
      params: { motion_type: STATIONARY }
      filename: planDo.shp
      minskowski: 0.02 
