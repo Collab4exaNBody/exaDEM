@@ -265,7 +265,7 @@ def main():
 
     #gap= radius*2
     eps= radius *1.e-6
-    gap= radius-eps
+    gap= radius+eps
 
 
     print(f"Reading {tess_file}...")
