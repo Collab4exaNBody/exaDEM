@@ -7,7 +7,7 @@ io_tree:
 
 input_data:
   - read_conf_rockable:
-     filename: test.txt
+     filename: input_data_beam_two_particles.txt
      verbosity: false
      vtk: false
      bounds_mode: DOMAIN
