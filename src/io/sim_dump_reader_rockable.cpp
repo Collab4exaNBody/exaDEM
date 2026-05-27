@@ -16,11 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <exanb/core/domain.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/grid_cell_particles/particle_region.h>
+
 #include <mpi.h>
+// onika
 #include <onika/file_utils.h>
 #include <onika/log.h>
 #include <onika/math/basic_types_stream.h>
@@ -28,6 +26,14 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
+// exanb
+
+#include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
+#include <exanb/core/make_grid_variant_operator.h>
+#include <exanb/grid_cell_particles/particle_region.h>
+// exanb check
+#include <exanb/core/check_particles_inside_cell.h>
 
 #include <algorithm>
 #include <chrono>
@@ -39,13 +45,17 @@ under the License.
 #include <string>
 
 namespace exaDEM {
+/** @brief Structure representing a particle type. */
 struct ParticleType {
   static inline constexpr size_t MAX_STR_LEN = 16;
 
-  double m_mass = 1.0;
-  double m_radius = 1.0;
-  char m_name[MAX_STR_LEN] = {'\0'};
+  double m_mass = 1.0;                // mass of the particle type.
+  double m_radius = 1.0;              // radius of the particle type.
+  char m_name[MAX_STR_LEN] = {'\0'};  // name of the particle type.
 
+  /** @brief Sets the name of the particle type.
+   * @param s The name to set.
+   */
   inline void set_name(const std::string& s) {
     if (s.length() >= MAX_STR_LEN) {
       std::cerr << "Particle name too long : length=" << s.length() << ", max=" << (MAX_STR_LEN - 1) << "\n";
@@ -54,6 +64,9 @@ struct ParticleType {
     std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
     m_name[MAX_STR_LEN - 1] = '\0';
   }
+  /** @brief Retrieves the name of the particle type.
+   * @return The name of the particle type.
+   */
   inline std::string name() const { return m_name; }
 };
 

@@ -215,7 +215,7 @@ struct Drivers {
    * @return The data related to the motion at the specified index.
    */
   inline Driver_params& get_motion(const int idx) {
-    assert(idx < m_motion.size());
+    assert(idx < static_cast<int>(m_motion.size()));
     assert(m_motion.size() == m_type_index.size());
     return m_motion[idx];
   }

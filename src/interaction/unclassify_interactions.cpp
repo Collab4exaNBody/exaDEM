@@ -34,6 +34,7 @@ struct UnclassifyFunc {
 #pragma omp for schedule(guided) nowait
     for (size_t it = 0; it < container.size(); it++) {
       auto item1 = container[it];
+      assert(item1.pair.consistent());  // Check if the interaction is correctly formed before updating
       // Only active interactions should be updated.
       // If an interaction is not active, it means it has been removed / recomputed (nbh operators).
       if (item1.active()) {
@@ -72,6 +73,7 @@ struct UnclassifyFunc {
         bool found = false;
         for (size_t it2 = start; it2 < end; it2++) {
           auto& item2 = (data_i_ptr[it2]).convert<IT>();
+          assert(item2.pair.consistent());  // Check if the interaction is correctly formed before updating
           // Only one interaction should match.
           if (item1 == item2) {
             item2.update(item1);

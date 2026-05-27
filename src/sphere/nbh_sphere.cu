@@ -16,29 +16,27 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
-
+#include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/domain.h>
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
-
 #include <mpi.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
 
-#include <exaDEM/traversal.hpp>
 #include <exaDEM/drivers.hpp>
-#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
-#include <exaDEM/shapes.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
+#include <exaDEM/shapes.hpp>
 #include <exaDEM/sphere/nbh_sphere.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
 template <typename GridT>
@@ -102,9 +100,6 @@ class UpdateContactInteractionSphere : public OperatorNode {
         const unsigned int n_particles = cells[cell_a].size();
         CellExtraDynamicDataStorageT<PlaceholderInteraction>& storage = interactions[cell_a];
 
-        assert(interaction_test::check_extra_interaction_storage_consistency(
-            storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
-
         if (n_particles == 0) {
           storage.initialize(0);
           continue;
@@ -112,14 +107,17 @@ class UpdateContactInteractionSphere : public OperatorNode {
 
         // identify ill-formed interactions and erase them.
         // safe guard to avoid processing ill-formed interactions.
-        // temporary solution, ideally, ill-formed interactions should not be generated.        
+        // temporary solution, ideally, ill-formed interactions should not be generated.
         std::erase_if(storage.m_data, [](const auto& item) {
           constexpr bool display_warnings = false;  // set to true to display warnings about ill-formed interactions
           return !item.template consistent<display_warnings>();
         });
-        
+
+        assert(interaction_test::check_extra_interaction_storage_consistency(
+            storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
+
         // Extract history before reset it
-        const size_t data_size = storage.m_data.size(); 
+        const size_t data_size = storage.m_data.size();
         PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
 
         // Extract historical interactions from storage and move them in the manager
@@ -157,6 +155,9 @@ class UpdateContactInteractionSphere : public OperatorNode {
         auto& pi = item.i();       // particle i (id, cell, pos, sub)
         auto& pd = item.driver();  // particle driver (id, cell, pos, sub)
         pi.cell = cell_a;
+        pi.sub = 0;  // sub vertex is set to 0 by default. Not used for spheres, but can be used for sub-vertex of
+        // polyhedrons.
+        pd.sub = 0;
 
         // First, interaction between a sphere and a driver
         if (drivers.has_value()) {
@@ -252,12 +253,15 @@ class UpdateContactInteractionSphere : public OperatorNode {
                 // Add interactions
                 pi.id = id_a[p_a];
                 pi.p = p_a;
+                pi.sub = 0;
                 pj.id = id_nbh;
                 pj.p = p_b;
                 pj.cell = cell_b;
+                pj.sub = 0;
                 manager.add_item(item);
               });
-        } else {  // If symetric is false, we add interactions between two spheres twice, once for each order (A or i -> B or j and B or j -> A or i).
+        } else {  // If symetric is false, we add interactions between two spheres twice, once for each order (A or i ->
+                  // B or j and B or j -> A or i).
           apply_cell_particle_neighbors(
               *grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
               [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b,
@@ -280,9 +284,11 @@ class UpdateContactInteractionSphere : public OperatorNode {
                 // Add interactions
                 pi.id = id_a[p_a];
                 pi.p = p_a;
+                pi.sub = 0;
                 pj.id = id_nbh;
                 pj.p = p_b;
                 pj.cell = cell_b;
+                pj.sub = 0;
                 manager.add_item(item);
               });
         }
@@ -294,8 +300,8 @@ class UpdateContactInteractionSphere : public OperatorNode {
             storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
 
         // consistency check to identify ill-formed interactions.
-        // This check is important to ensure that the interaction data is well-formed and does not contain invalid values.
-        // 1e6 is an arbitrary large value.  
+        // This check is important to ensure that the interaction data is well-formed and does not contain invalid
+        // values. 1e6 is an arbitrary large value.
         assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
       }  // GRID_OMP_FOR_END
     }

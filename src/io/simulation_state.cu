@@ -47,6 +47,15 @@ using namespace exaDEM::itools;
 
 // used by the classifier dispatcher
 struct SimulationStateReducFunc {
+  /** @brief Reduces simulation I/O for a given classifier and symmetry flag.
+   * @param container The classifier containing interaction lists.
+   * @param coef The coefficient for the reduction.
+   * @param dnp overlap distance for the interactions.
+   * @param result The result of the reduction.
+   * @param pec The parallel execution context (onika).
+   * @tparam IT The interaction type.
+   * @param PEC The type of the parallel execution context.
+   */
   template <InteractionType IT, typename PEC>
   void operator()(ClassifierContainer<IT>& container, int coef, const double* const dnp, IOSimInteractionResult& result,
                   PEC& pec) {
@@ -79,6 +88,11 @@ struct SimulationStateNode : public OperatorNode {
 
   static constexpr FieldSet<field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass> reduce_field_set{};
 
+  /** @brief Reduces simulation I/O for a given classifier and symmetry flag.
+   * @param classifier The classifier containing interaction lists.
+   * @param symetric The symmetry flag.
+   * @return The reduced simulation I/O result.
+   */
   inline IOSimInteractionResult reduce_sim_io(Classifier& classifier, bool symetric) {
     IOSimInteractionResult res;
     VectorT<IOSimInteractionResult> results;
@@ -88,7 +102,7 @@ struct SimulationStateNode : public OperatorNode {
     {
       SimulationStateReducFunc func;
       for (int typeID = 0; typeID < types; typeID++) {
-        assert(typeID < classifier.m_contact_state.size());
+        assert(typeID < static_cast<int>(classifier.m_contact_state.size()));
         const auto& buffs = classifier.m_contact_state[typeID];  // get buffers for this interaction type
         const double* const dnp = onika::cuda::vector_data(buffs.dn);
         int coef = 1;
@@ -191,5 +205,4 @@ ONIKA_AUTORUN_INIT(simulation_state) {
   OperatorNodeFactory::instance()->register_factory("simulation_state",
                                                     make_grid_variant_operator<SimulationStateNode>);
 }
-
 }  // namespace exaDEM
