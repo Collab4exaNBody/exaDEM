@@ -1,0 +1,27 @@
+<
+name planDo
+radius 2e-02
+preCompDone y
+volume 0.637312
+I/m 1. 1. 1.
+obb.extent 2. 2. 2e-02 
+obb.center 0 0 0 
+obb.e1 1 0 0
+obb.e2 0 1 0
+obb.e3 0 0 1
+position 0 0 0
+nv 4
+-1.98 1.98 0
+1.98 1.98 0
+1.98 -1.98 0
+-1.98 -1.98 0
+ne 4
+0 1
+1 2
+2 3
+3 0
+nf 1
+4 0 1 2 3
+na 0
+>
+
