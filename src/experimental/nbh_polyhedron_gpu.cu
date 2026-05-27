@@ -256,7 +256,6 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 		  ONIKA_CU_DEVICE_SYNCHRONIZE();
 
 		  // GPU prefix sum per interaction type
-		  constexpr int InteractionTypeId::LastIdParticle = 4;
 		  onika::memory::CudaMMVector<int> type_counts[InteractionTypeId::LastIdParticle];
 		  onika::memory::CudaMMVector<int> type_prefix[InteractionTypeId::LastIdParticle];
 		  for (int t = 0; t < InteractionTypeId::LastIdParticle; t++) {
