@@ -44,7 +44,7 @@ setup_drivers:
 
 compute_force:
   - gravity_force:
-     gravity: [0,0, 0.0]
+     gravity: [0, 0, 0]
   - contact_multimat_polyhedron
   - inner_bond_polyhedron
 
@@ -56,24 +56,17 @@ domain:
   expandable: true
 
 analyses:
-  - timestep_file: "OutputRockableTestDir/ExaDEMAnalyses/dem_pos_vel_%09d.xyz"
+  - timestep_file: "OutputBeamTwoParticles/ExaDEMAnalyses/dem_pos_vel_%09d.xyz"
   - write_xyz:
      fields: [ id, velocity, fx, fy, fz, vrot, arot, cluster, mass ]
 
 global:
   symetric: true
-  simulation_end_iteration: 50000
+  simulation_end_iteration: 5000
   simulation_end_iteration: 1000
-  simulation_log_frequency: 1000
-  simulation_paraview_frequency: 20
-  analysis_dump_stress_tensor_frequency : -1
-  analysis_interaction_dump_frequency: 1
-  simulation_analyses_frequency: 1
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 1000
   apply_particle_sticking: true
   enable_contact_network: true
-
   sticking_threshold: 0.005
-  #sticking_threshold: 1.e-10
-  #rcut_inc: 0.0025
-  #rcut_inc: 0.005
-  rcut_inc: 0.00
+  rcut_inc: 0.1
