@@ -1,6 +1,5 @@
 t 0
 tmax 0.05
-#tmax 1000.e-06
 dt 1e-06
 interVerlet 0.0001
 interConf 0.0001
