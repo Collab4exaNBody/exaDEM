@@ -60,7 +60,6 @@ class UnclassifyGPU : public OperatorNode {
        )EOF";
   }
 
-
   inline void execute() final {
     // lout << "unclassify active interaction on GridCellParticleInteraction" << std::endl;
     classify_interaction_grid(*ic, *traversal_real, *nbh_manager, *ges);

@@ -121,7 +121,6 @@ class ClassificationInteractionGhost : public OperatorNode {
                               TmpBuff[typeID], start, size, typeID);
       }
     }
-    
   }
 };
 
