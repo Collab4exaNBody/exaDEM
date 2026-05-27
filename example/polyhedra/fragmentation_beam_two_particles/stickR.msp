@@ -41,18 +41,6 @@ setup_drivers:
      filename: planUp.shp
      minskowski: 0.02 
 
-#  - register_surface:
-#     id: 0
-#     state: {normal: [0,0,1], offset: -1.005, surface: 1}
-#     #params: { motion_type: STATIONARY }
-#     params: { motion_type: LINEAR_MOTION, motion_vector: [0,0,1], const_vel: 0.5 }
-#     #params: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [0,0,-1], sigma: 23, damprate: 0.999 }
-#  - register_surface:
-#     id: 1
-#     state: {normal: [0,0,1], offset: 1.005, surface: 1}
-#     params: { motion_type: LINEAR_MOTION, motion_vector: [0,0,-1], const_vel: 0.5 }
-#     #params: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [0,0,1], sigma: 10, damprate: 0.999 }
-#     #params: { motion_type: STATIONARY }
 
 compute_force:
   - gravity_force:
