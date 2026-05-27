@@ -3,7 +3,7 @@ includes:
 
 io_tree:
   - io_config:
-     dir_name: "OutputRockableTestDir"
+     dir_name: "OutputBeamTwoParticles"
 
 input_data:
   - read_conf_rockable:
