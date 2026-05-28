@@ -263,7 +263,9 @@ def main():
     radius = args.radius
     shp_file = args.shp_file
 
-    gap= radius*2
+    eps= radius *1.e-6
+    gap= radius+eps
+
 
     print(f"Reading {tess_file}...")
     Neper_cell_datas = read_tess(tess_file, radius=radius)
