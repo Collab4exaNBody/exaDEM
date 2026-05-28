@@ -5,17 +5,26 @@
 
 namespace exaDEM {
 
-// Storage for particle pairs (output of neighbor search)
+/**
+ * @brief Storage for particle pairs (output of neighbor search).
+ *
+ * Holds the cell and particle indices of each detected pair, along with
+ * the ghost tag and a back-reference to the originating cell pair.
+ */
 struct ParticlePairStorage {
   template<typename T> using VectorT = onika::memory::CudaMMVector<T>;
-  VectorT<uint32_t> cell_i;
-  VectorT<uint32_t> cell_j;
-  VectorT<uint16_t> p_i;
-  VectorT<uint16_t> p_j;
-  VectorT<uint8_t>  ghost;       // ghost tag per pair
-  VectorT<uint32_t> cell_pair_idx; // which cell-pair this came from
-  size_t size = 0;
+  VectorT<uint32_t> cell_i;        ///< Cell index of particle i
+  VectorT<uint32_t> cell_j;        ///< Cell index of particle j
+  VectorT<uint16_t> p_i;           ///< Index of particle i within its cell
+  VectorT<uint16_t> p_j;           ///< Index of particle j within its cell
+  VectorT<uint8_t>  ghost;         ///< Ghost tag per pair
+  VectorT<uint32_t> cell_pair_idx; ///< Index of the cell pair this particle pair came from
+  size_t size = 0;                 ///< Current number of stored particle pairs
 
+  /**
+   * @brief Resize all internal vectors to hold n particle pairs.
+   * @param n New number of particle pairs.
+   */
   void resize(size_t n) {
     cell_i.resize(n);
     cell_j.resize(n);
@@ -68,9 +77,6 @@ void CountParticlePairsKernel(
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
       auto body_b = load(cB, pb);
-
-      //if (body_a.id >= body_b.id && ghost_flags[idx] == 0)
-      //  continue;
       
 	if (body_a.id >= body_b.id)
           continue;

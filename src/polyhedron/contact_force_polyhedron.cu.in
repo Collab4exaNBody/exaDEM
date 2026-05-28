@@ -174,17 +174,6 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
 
     const double time = *dt;
     auto& classifier = *ic;
-    
-// === DEBUG CONTACT FORCE ===
-    /*{
-      std::string names[] = {"VV","VE","VF","EE","VCyl","VS","VBall","VVd","VEd","VFd","EEd","EdV","FdV","Stick"};
-      lout << "[CONTACT]";
-      for (int i = 0; i < InteractionTypeId::NTypes; i++) {
-        size_t sz = classifier.get_size(i);
-        if (sz > 0) lout << " " << names[i] << "=" << sz;
-      }
-      lout << std::endl;
-    }*/
 
     /** Contact force kernels */
     ContactLawDriverFunc<ContactLawT, CohesiveLawT, Cylinder> cyli;

@@ -76,13 +76,6 @@ struct CountIPDFunc {
             counter[item.type()]++;
           }
     };
-
-    /*size_t n_particles = cell.size();
-    NbhDriverCounter func;
-    PlaceholderInteraction item;*/  // not used
-                                  // By default, if the interaction is between a particle and a driver
-                                  // Data about the particle j is set to -1
-                                  // Except for id_j that contains the driver id
                                   
 size_t n_particles = cell.size();
     NbhDriverCounter func;
@@ -167,10 +160,7 @@ struct ClassifyIPDFunc {
     auto& cell = cells[cell_id];
     VertexField& vertex_cell = vertex_fields[cell_id];
     size_t n_particles = cell.size();
-    /*PlaceholderInteraction item;
-    auto& pi = item.i();       // particle i (id, cell id, particle position, sub vertex)
-    auto& pd = item.driver();  // particle driver (id, cell id, particle position, sub vertex)
-    pi.cell = cell_id;*/
+
 PlaceholderInteraction item = {};
     item.pair.swap = false;
     item.pair.ghost = InteractionPair::NotGhost;
