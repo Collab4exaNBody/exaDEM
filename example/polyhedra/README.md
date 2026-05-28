@@ -50,6 +50,10 @@ For more details, see the [README.md](aggregate/README.md)
 
 For more details, see the [README.md](samoyed/README.md)
 
+## Fragmentation
+
+- **Broken Ball** Broken ball A ball composed of two fragments is projected against a solid surface and breaks into two fragments: `fragmentation/two_fragments_break.msp`.
+- **Broken Beam** A Beam is compressed between two surfaces until it breaks into two fragments: `fragmentation/beam_two_fragments.msp`
 
 ## Analyses
 

@@ -97,7 +97,7 @@ constexpr LawComboType makeLawCombo(ContactLawType c, CohesiveLawType h) {
 
 namespace exaDEM {
 
-ONIKA_HOST_DEVICE_FUNC inline void reset(Vec3d& in) { in = Vec3d{0.0, 0.0, 0.0}; }
+ONIKA_HOST_DEVICE_FUNC inline void reset(Vec3d& in) {  in = Vec3d{0.0, 0.0, 0.0}; }
 
 /**
  * @brief Applies the DMT (Derjaguin–Muller–Toporov) adhesion force to a contact.
@@ -177,7 +177,7 @@ ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
 
   // === Relative velocity (j relative to i)
   auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
-
+  
   // === Compute relative velocity
   const double vn = exanb::dot(vel, n);
   Vec3d fn;  // normal force

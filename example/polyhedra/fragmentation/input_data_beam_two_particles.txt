@@ -1,0 +1,30 @@
+t 0
+tmax 0.05
+dt 1e-06
+interVerlet 0.0001
+interConf 0.0001
+DVerlet 1.
+dVerlet 0.005
+gravity 0 0 0.
+forceLaw StickedLinks
+periodicity 0 0 0
+shapeFile beam.shp
+density 0 0.006
+density 1 0.006
+knContact 0 0 100000.0
+knContact 0 1 100000.0
+en2Contact 0 0 0.001
+en2Contact 0 1 0.001
+ktContact 0 0 80000.0
+ktContact 0 1 80000.0
+muContact 0 0 0.00
+muContact 0 1 0.3
+knInnerBond 0 0 10000.0
+ktInnerBond 0 0 8000.0
+en2InnerBond 0 0 0.001
+powInnerBond 0 0 2.0
+GInnerBond 0 0 0.0002
+Particles 2
+Voronoi0 1 0 1 0.5271550728669372 0.5295183651601415 0.3650048616350498 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0
+Voronoi1 1 0 1 0.49074415654077763 0.47946878097871665 1.3518078068740267 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0
+stickVerticesInClusters 0.008

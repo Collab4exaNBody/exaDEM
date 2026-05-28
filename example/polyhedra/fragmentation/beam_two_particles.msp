@@ -1,0 +1,71 @@
+includes:
+  - config_fragmentation.msp
+
+io_tree:
+  - io_config:
+     dir_name: "OutputBeamTwoParticles"
+
+input_data:
+  - read_conf_rockable:
+     filename: input_data_beam_two_particles.txt
+     verbosity: false
+     vtk: false
+     bounds_mode: DOMAIN
+     bounds: [[-2, -2, -2], [2, 2, 2]]
+  - density_from_shape:
+     density: 0.006
+  - inertia_from_shape
+  - set_velocity:
+     value: [0.,0.0, 0.0]
+  - multimat_contact_params:
+     default_config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1.e5, kt: 8.e4, kr: 0.0, fc: 0.0, mu: 0.0, damp_rate: 7.3975840075643506e-01}
+  - drivers_contact_params:
+     default_config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1.e5, kt: 8.e4, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 7.3975840075643506e-01}
+  - inner_bond_params:
+     default_config: { kn: 1e5, kt: 8e4, damp_rate: 7.3975840075643506e-01, g: 5.5e-8 } 
+     verbosity: true
+
+setup_drivers:
+  - register_rshape:
+     id: 0
+     state: {center: [0.,0,-0.02], mass: 0.0038239}
+     params: { motion_type: STATIONARY }
+     filename: planDo.shp
+     minskowski: 0.02 
+
+  - register_rshape:
+     id: 1
+     state: {center: [0.,0,2.02], mass: 0.0038239}
+     params: { motion_type: LINEAR_FORCE_MOTION, motion_vector: [0,0,-1], const_force: 200.}
+     filename: planUp.shp
+     minskowski: 0.02 
+
+
+compute_force:
+  - gravity_force:
+     gravity: [0, 0, 0]
+  - contact_multimat_polyhedron
+  - inner_bond_polyhedron
+
+domain:
+  cell_size: 4
+  periodic: [false, false, false]
+  grid_dims: [1, 1, 1]
+  bounds: [[-2, -2, -2], [2, 2, 2]]
+  expandable: true
+
+analyses:
+  - timestep_file: "OutputBeamTwoParticles/ExaDEMAnalyses/dem_pos_vel_%09d.xyz"
+  - write_xyz:
+     fields: [ id, velocity, fx, fy, fz, vrot, arot, cluster, mass ]
+
+global:
+  symetric: true
+  simulation_end_iteration: 5000
+  simulation_end_iteration: 1000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 1000
+  apply_particle_sticking: true
+  enable_contact_network: true
+  sticking_threshold: 0.005
+  rcut_inc: 0.1
