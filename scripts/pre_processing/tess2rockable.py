@@ -263,7 +263,6 @@ def main():
     radius = args.radius
     shp_file = args.shp_file
 
-    #gap= radius*2
     eps= radius *1.e-6
     gap= radius+eps
 
