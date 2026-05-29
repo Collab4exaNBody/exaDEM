@@ -16,7 +16,6 @@ numerical_scheme_verlet_macro:
     - check_and_update_particles
     - reset_force_driver
     - reset_force_moment
-    - mpi_barrier
     - compute_force
     - freeze
     - update_stress_tensor
