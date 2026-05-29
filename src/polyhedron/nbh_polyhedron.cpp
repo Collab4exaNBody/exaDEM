@@ -394,6 +394,7 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
         assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
       }  // GRID_OMP_FOR_END
     }
+    
   }
 };
 
