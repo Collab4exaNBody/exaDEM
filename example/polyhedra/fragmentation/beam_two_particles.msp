@@ -68,4 +68,4 @@ global:
   apply_particle_sticking: true
   enable_contact_network: true
   sticking_threshold: 0.005
-  rcut_inc: 0.1
+  rcut_inc: 0.001  # do not put it to 0.1
