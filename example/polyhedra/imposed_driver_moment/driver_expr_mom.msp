@@ -11,7 +11,7 @@ setup_drivers:
   - register_stl_mesh:
      id: 0
      filename: pale2.stl
-     minskowski: 0.01
+     minkowski: 0.01
      binary: true
      state: 
         vrot: [0,0,0]

@@ -23,10 +23,10 @@ under the License.
 #include <onika/math/basic_types_operators.h>
 #include <onika/oarray.h>
 
+#include <exaDEM/normalize.hpp>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_prepro.hpp>
 #include <exaDEM/type/contact.hpp>
-#include <exaDEM/normalize.hpp>
 
 namespace exaDEM {
 
@@ -54,8 +54,8 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex(const double rVerlet, co
 
 // This function returns : if there is a contact, interpenetration value, normal
 // vector, and the contact position
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex_core(const exanb::Vec3d& pi, double ri, const exanb::Vec3d& pj,
-                                                                   double rj) {
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex_core(const exanb::Vec3d& pi, double ri,
+                                                                   const exanb::Vec3d& pj, double rj) {
   // sphero-polyhedron
   double R = ri + rj;
 
@@ -80,8 +80,9 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex_core(const exanb::
   return {dn < 0, dn, n, contact_position};
 }
 
-ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge_core(const double rVerlet, const exanb::Vec3d& vi, const double ri,
-                                                           const exanb::Vec3d& vf, const exanb::Vec3d& vs, const double rj) {
+ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge_core(const double rVerlet, const exanb::Vec3d& vi,
+                                                           const double ri, const exanb::Vec3d& vf,
+                                                           const exanb::Vec3d& vs, const double rj) {
   // === compute distances
   const exanb::Vec3d distfs = vs - vf;
   const exanb::Vec3d distfi = vi - vf;
@@ -118,8 +119,9 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge_core(const double rVerlet,
  *         - The normal vector of the contact.
  *         - The contact position.
  */
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_edge_core(const exanb::Vec3d& vi, const double ri, const exanb::Vec3d& vf,
-                                                                 const exanb::Vec3d& vs, const double rj) {
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_edge_core(const exanb::Vec3d& vi, const double ri,
+                                                                 const exanb::Vec3d& vf, const exanb::Vec3d& vs,
+                                                                 const double rj) {
   // === compute distances
   const exanb::Vec3d distfs = vs - vf;
   const exanb::Vec3d distfi = vi - vf;
@@ -146,10 +148,10 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_edge_core(const exanb::Ve
 }
 
 ONIKA_HOST_DEVICE_FUNC
-inline contact detection_vertex_face(const exanb::Vec3d& pi, const double radius, const exanb::Vec3d& pj, const double hj,
-                                     const int j, const shape* shpj, const exanb::Quaternion& oj) {
+inline contact detection_vertex_face(const exanb::Vec3d& pi, const double radius, const exanb::Vec3d& pj,
+                                     const double hj, const int j, const shape* shpj, const exanb::Quaternion& oj) {
   double ri = radius;
-  double rj = shpj->minskowski(hj);
+  double rj = shpj->minkowski(hj);
 
   // === compute vertices
   const exanb::Vec3d vi = pi;
@@ -221,7 +223,7 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face(const exanb::Vec3d& 
                                                             const shape* shpi, const exanb::Quaternion& oi,
                                                             const exanb::Vec3d& pj, const double hj, const int j,
                                                             const shape* shpj, const exanb::Quaternion& oj) {
-  double ri = shpi->minskowski(hi);
+  double ri = shpi->minkowski(hi);
   const exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
   return detection_vertex_face(vi, ri, pj, hj, j, shpj, oj);
 }
@@ -244,7 +246,7 @@ template <typename VertexType>
 ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(const double rVerlet, const exanb::Vec3d& vi, const double& ri,
                                                       const VertexType& vaj, const double hj, const int j,
                                                       const shape* shpj) {
-  double rj = shpj->minskowski(hj);
+  double rj = shpj->minkowski(hj);
   // === compute vertices
   auto [data, nf] = shpj->get_face(j);
   assert(nf >= 3);
@@ -308,10 +310,10 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(const double rVerlet, cons
 
 ONIKA_HOST_DEVICE_FUNC
 inline bool filter_vertex_face_core(const double rVerlet, const exanb::Vec3d& pi, const double hi, const int i,
-                                    const shape* shpi, const exanb::Quaternion& oi, const exanb::Vec3d& pj, const double hj,
-                                    const int j, const shape* shpj, const exanb::Quaternion& oj) {
-  double ri = shpi->minskowski(hi);
-  double rj = shpj->minskowski(hj);
+                                    const shape* shpi, const exanb::Quaternion& oi, const exanb::Vec3d& pj,
+                                    const double hj, const int j, const shape* shpj, const exanb::Quaternion& oj) {
+  double ri = shpi->minkowski(hi);
+  double rj = shpj->minkowski(hj);
 
   const exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
 
@@ -381,7 +383,7 @@ inline bool filter_vertex_face_core(const double rVerlet, const exanb::Vec3d& pi
 /**
  * @brief Detects vertex-face interactions and computes contact information.
  * @param vai The array of vertices of polyhedron i.
- * @param ri minskowski radiusThe index of the vertex.
+ * @param ri minkowski radiusThe index of the vertex.
  * @param vaj The array of vertices of polyhedron j.
  * @param j The index of the face.
  * @param shpj The shape associated with polyhedron j.
@@ -396,7 +398,7 @@ template <typename VertexType>
 ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face_core(const exanb::Vec3d& vi, const double ri,
                                                                  const VertexType& vaj, const double hj, const int j,
                                                                  const shape* shpj) {
-  double rj = shpj->minskowski(hj);
+  double rj = shpj->minkowski(hj);
 
   // === compute vertices
   auto [data, nf] = shpj->get_face(j);
@@ -463,8 +465,9 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face_core(const exanb::Ve
   return {ODD == 1, dn, n, contact_position};
 }
 
-ONIKA_HOST_DEVICE_FUNC inline bool filter_edge_edge_core(const double rVerlet, const exanb::Vec3d& vfi, const exanb::Vec3d& vsi,
-                                                         const double ri, const exanb::Vec3d& vfj, const exanb::Vec3d& vsj,
+ONIKA_HOST_DEVICE_FUNC inline bool filter_edge_edge_core(const double rVerlet, const exanb::Vec3d& vfi,
+                                                         const exanb::Vec3d& vsi, const double ri,
+                                                         const exanb::Vec3d& vfj, const exanb::Vec3d& vsj,
                                                          const double rj) {
 #define _EPSILON_VALUE_ 1.0e-12
   const double R = ri + rj + rVerlet;
@@ -515,8 +518,8 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_edge_edge_core(const double rVerlet, c
  *         - The contact position.
  */
 ONIKA_HOST_DEVICE_FUNC
-inline contact detection_edge_edge_core(const exanb::Vec3d& vfi, const exanb::Vec3d& vsi, const double ri, const exanb::Vec3d& vfj,
-                                        const exanb::Vec3d& vsj, const double rj) {
+inline contact detection_edge_edge_core(const exanb::Vec3d& vfi, const exanb::Vec3d& vsi, const double ri,
+                                        const exanb::Vec3d& vfj, const exanb::Vec3d& vsj, const double rj) {
 #define _EPSILON_VALUE_ 1.0e-12
   const double R = ri + rj;
 

@@ -12,7 +12,7 @@ setup_drivers:
   - register_stl_mesh:
      id: 0
      filename: pale2.stl
-     minskowski: 0.01
+     minkowski: 0.01
      binary: true
      state: { vrot: [0,0,0], center: [2.5,2.5,2], quat: [0,-0.707107,-0.707107,0] , mass: 49.0454, inertia: [77.238167282, 388.401803042, 344.515979122], moment: [0,0,1] } # vrot: rad.s-1 normalement 
 #     state: { vrot: [0,0,0], center: [2.5,2.5,2], quat: [0,-0.707107,-0.707107,0] , mass: 49.0454, inertia: [1.57483, 7.91923, 7.02443], moment: [0,0,1] } # vrot: rad.s-1 normalement 

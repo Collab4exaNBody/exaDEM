@@ -13,7 +13,7 @@ setup_drivers:
      id: 0
      filename: internal_mixer_from_chrono_dem.stl
      scale: 100
-     minskowski: 0.1
+     minkowski: 0.1
      binary: true
      state: { vrot: [0,0,0.25]} 
      params: { motion_type: STATIONARY }
@@ -21,7 +21,7 @@ setup_drivers:
      id: 1
      filename: external_mixer_from_chrono_dem.stl
      scale: 100
-     minskowski: 0.1
+     minkowski: 0.1
      binary: true
      state: { vrot: [0,0,0]} 
      params: { motion_type: STATIONARY }

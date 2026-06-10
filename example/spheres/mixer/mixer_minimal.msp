@@ -41,4 +41,3 @@ global:
   simulation_paraview_frequency: -1 
   dt: 0.001 
   rcut_inc: 2.5 m
-i

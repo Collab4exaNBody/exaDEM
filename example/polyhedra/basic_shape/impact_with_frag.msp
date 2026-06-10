@@ -15,9 +15,9 @@ input_data:
   - init_rcb_grid
   - add_cube:
      length: 0.48
-     minskowski: 0.01
+     minkowski: 0.01
   - add_sphere:
-     minskowski: 1.0
+     minkowski: 1.0
   - lattice:
      structure: SC
      types: [ cube ]

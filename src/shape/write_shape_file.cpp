@@ -16,19 +16,20 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
+#include <mpi.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <onika/math/basic_types_stream.h>
 #include <onika/memory/allocator.h>  // for ONIKA_ASSUME_ALIGNED macro
-#include <vector>
-#include <iomanip>
-#include <mpi.h>
-#include <filesystem>
-#include <exaDEM/shapes.hpp>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
 #include <exaDEM/shape_writer.hpp>
+#include <exaDEM/shapes.hpp>
+#include <filesystem>
+#include <iomanip>
+#include <vector>
 
 namespace exaDEM {
 using namespace exanb;

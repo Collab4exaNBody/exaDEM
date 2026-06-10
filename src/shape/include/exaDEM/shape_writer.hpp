@@ -17,11 +17,12 @@ specific language governing permissions and limitations
 under the License.
  */
 #pragma once
-#include <exaDEM/shapes.hpp>
 #include <exanb/core/particle_type_id.h>
+
 #include <cassert>
-#include <fstream>
+#include <exaDEM/shapes.hpp>
 #include <filesystem>
+#include <fstream>
 #include <regex>
 
 namespace exaDEM {

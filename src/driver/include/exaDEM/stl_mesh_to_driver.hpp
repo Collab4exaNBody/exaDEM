@@ -18,11 +18,18 @@ under the License.
  */
 #pragma once
 
-#include <vector>
-#include <exaDEM/stl_mesh_reader.hpp>
 #include <exaDEM/shape.hpp>
+#include <exaDEM/stl_mesh_reader.hpp>
+#include <vector>
 
 namespace exaDEM {
+
+/** @brief Build a shape from an STL mesh.
+ * @warning This function use OMP and should not be called in a parallel region.
+ * @param mesh The STL mesh to convert.
+ * @param name The name of the shape.
+ * @return The built shape.
+ */
 inline shape build_shape(STLMeshReader& mesh, std::string name) {
   shape shp;
   const int n_faces = mesh.m_data.size();
@@ -37,11 +44,11 @@ inline shape build_shape(STLMeshReader& mesh, std::string name) {
   shp_f.resize(1);
   shp_f[0] = n_faces;
 
-# pragma omp parallel
+#pragma omp parallel
   {
     // first get vertices
     std::vector<exanb::Vec3d> v;
-#   pragma omp for
+#pragma omp for
     for (int i = 0; i < n_faces; i++) {
       Face& face = mesh.get_data(i);
       v.insert(std::end(v), std::begin(face.vertices), std::end(face.vertices));
@@ -51,7 +58,7 @@ inline shape build_shape(STLMeshReader& mesh, std::string name) {
     v.erase(last, v.end());
     std::sort(v.begin(), v.end());
 
-#   pragma omp critical
+#pragma omp critical
     {
       shp_v.insert(std::end(shp_v), std::begin(v), std::end(v));
     }
@@ -63,13 +70,13 @@ inline shape build_shape(STLMeshReader& mesh, std::string name) {
     std::sort(shp_v.begin(), shp_v.end());
   }
 
-#  pragma omp parallel
+#pragma omp parallel
   {
     // first get vertices
     std::vector<size_t> idxs;
     std::vector<std::pair<size_t, size_t>> edges;
     std::vector<int> faces;
-#   pragma omp for
+#pragma omp for
     for (int i = 0; i < n_faces; i++) {
       Face& face = mesh.get_data(i);
       auto& v = face.vertices;
@@ -91,11 +98,11 @@ inline shape build_shape(STLMeshReader& mesh, std::string name) {
         edges.push_back({idxs[idx], second});
       }
     }
-#   pragma omp critical
+#pragma omp critical
     {
       tmp_e.insert(std::end(tmp_e), std::begin(edges), std::end(edges));
     }
-#   pragma omp critical
+#pragma omp critical
     {
       shp_f.insert(std::end(shp_f), std::begin(faces), std::end(faces));
     }

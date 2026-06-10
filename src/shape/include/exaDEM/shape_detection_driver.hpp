@@ -45,14 +45,14 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_driver(Driver& driver, const do
                                                         const exanb::Quaternion& oi) {
   filter_driver<Driver> filter = {driver};
   const exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
-  return filter(rcut + shpi->minskowski(hi), vi);
+  return filter(rcut + shpi->minkowski(hi), vi);
 }
 
 template <typename Driver, typename VertexType>
 ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_driver(Driver& driver, const double rcut, const VertexType& vertexes,
                                                         const double hi, const int i, const shape* shpi) {
   filter_driver<Driver> filter = {driver};
-  return filter(rcut + shpi->minskowski(hi), vertexes[i]);
+  return filter(rcut + shpi->minkowski(hi), vertexes[i]);
 }
 
 // -> First Filters
@@ -68,23 +68,23 @@ struct detector_driver {
 // API
 template <typename Driver>
 ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector_vertex_driver(
-    Driver& driver, const exanb::Vec3d& pi, const double hi, const int i, const shape* shpi, const exanb::Quaternion& oi) {
+    Driver& driver, const exanb::Vec3d& pi, const double hi, const int i, const shape* shpi,
+    const exanb::Quaternion& oi) {
   detector_driver<Driver> detector = {driver};
   const exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
-  return detector(shpi->minskowski(hi), vi);
+  return detector(shpi->minkowski(hi), vi);
 }
 
 template <typename Driver, typename VertexType>
 ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector_vertex_driver(
     Driver& driver, const VertexType& vertexes, const double hi, const int i, const shape* shpi) {
   detector_driver<Driver> detector = {driver};
-  return detector(shpi->minskowski(hi), vertexes[i]);
+  return detector(shpi->minkowski(hi), vertexes[i]);
 }
 
 template <typename Driver>
-ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector_vertex_driver(Driver& driver,
-                                                                                            const exanb::Vec3d& position,
-                                                                                            const double radius) {
+ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector_vertex_driver(
+    Driver& driver, const exanb::Vec3d& position, const double radius) {
   detector_driver<Driver> detector = {driver};
   return detector(radius, position);
 }

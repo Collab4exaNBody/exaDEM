@@ -9,13 +9,13 @@ namespace basic_shape {
 /**
  * @brief Return a shape of a cuboïde. 
  * @param name Shape name.
- * @param minskowski Minskowski radius
+ * @param minkowski Minkowski radius
  */
-shape create_sphere(std::string name, double minskowski) {
+shape create_sphere(std::string name, double minkowski) {
   using exanb::Vec3d;
   using exanb::Quaternion;
   // rename
-  const double r = minskowski;
+  const double r = minkowski;
   const double pi = M_PI;
   shape shp;
   shp.m_name = name;

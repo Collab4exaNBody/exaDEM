@@ -212,7 +212,7 @@ class OBBtree {
     fittedObb.e3 = f;
     fittedObb.extent = 0.5 * (maxim - minim);
 
-    fittedObb.enlarge(radius);  // Add the Minskowski radius
+    fittedObb.enlarge(radius);  // Add the Minkowski radius
 
     return fittedObb;
   }

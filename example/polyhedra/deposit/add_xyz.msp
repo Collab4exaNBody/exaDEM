@@ -30,15 +30,15 @@ adder:
 input_data:
   - init_rcb_grid
   - add_sphere:
-     minskowski: 0.4
+     minkowski: 0.4
      name: shape1
   - add_cube:
      length: 0.4
-     minskowski: 0.05
+     minkowski: 0.05
      name: shape2
   - add_rice:
      length: 0.3
-     minskowski: 0.1
+     minkowski: 0.1
      name: shape3
   - lattice:
      structure: SC

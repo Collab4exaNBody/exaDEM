@@ -43,7 +43,7 @@ class RegisterRShapeDriver : public OperatorNode {
           "vel: [0,0,0], vrot: [0,0,0], quat: [1,0,0,0]}."});
   ADD_SLOT(Driver_params, params, INPUT, default_params,
            DocString{"List of params, motion type, motion vectors .... Default is { motion_type: STATIONARY}."});
-  ADD_SLOT(double, minskowski, INPUT, REQUIRED, DocString{"Minskowski radius value"});
+  ADD_SLOT(double, minkowski, INPUT, REQUIRED, DocString{"Minkowski radius value"});
   ADD_SLOT(bool, binary, INPUT, false,
            DocString{"Binary mode, it only works if the shape is composed of triangles. Default is false."});
   ADD_SLOT(double, scale, INPUT, OPTIONAL, DocString{"Rescale your RShapeDriver"});
@@ -125,7 +125,7 @@ class RegisterRShapeDriver : public OperatorNode {
       }
     }
 
-    shp.m_radius = *minskowski;
+    shp.m_radius = *minkowski;
     // shp.increase_obb(*rcut_inc);
     shp.increase_obb(shp.m_radius);
 
