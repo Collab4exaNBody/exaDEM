@@ -46,7 +46,7 @@ setup_drivers:
      id: 0
      filename: exaDEM-Data/stl_files/mod_base.shp
      center: [0,0,-20] 
-     minskowski: 0.01
+     minkowski: 0.01
   - register_cylinder:
      id: 1
      state: {radius: 25, center: [0,0,0], axis: [1,1,0]}

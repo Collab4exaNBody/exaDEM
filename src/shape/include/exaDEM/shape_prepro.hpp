@@ -92,14 +92,14 @@ inline OBB build_OBB(const std::span<vec3r> vec, double radius) {
   obb.e3 = f;
   obb.extent = 0.5 * (maxim - minim);
 
-  obb.enlarge(radius);  // Add the Minskowski radius
+  obb.enlarge(radius);  // Add the Minkowski radius
   return obb;
 }
 
 inline OBB build_obb_from_shape(const shape& shp) {
   size_t nv = shp.get_number_of_vertices();
 
-  const double ext = shp.minskowski(1.0);
+  const double ext = shp.minkowski(1.0);
   std::vector<vec3r> vbuf;
   vbuf.resize(nv);
   for (size_t i = 0; i < nv; i++) {

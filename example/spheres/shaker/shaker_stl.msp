@@ -27,7 +27,7 @@ input_data:
 setup_drivers:
   - register_stl_mesh:
      id: 0
-     minskowski: 0.1
+     minkowski: 0.1
      filename: shaker.stl
      binary: true
      state: {center: [0,0,0] }

@@ -9,11 +9,11 @@ setup_drivers:
   - register_stl_mesh:
      id: 0
      filename: mesh.stl
-     minskowski: 0.001 m
+     minkowski: 0.001 m
   - register_stl_mesh:
      id: 1
      filename: cube.stl
-     minskowski: 0.001 m
+     minkowski: 0.001 m
 
 input_data:
   - reader1

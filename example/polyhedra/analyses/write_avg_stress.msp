@@ -22,7 +22,7 @@ setup_drivers:
   - register_stl_mesh:
      id: 0
      filename: box_avg_stress.stl
-     minskowski: 0.01
+     minkowski: 0.01
 
 compute_force:
   - gravity_force

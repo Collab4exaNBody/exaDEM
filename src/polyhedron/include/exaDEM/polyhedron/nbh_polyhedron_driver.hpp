@@ -116,7 +116,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
       vec3r v = conv_to_vec3r(vertices_i[i]);
       OBB obb_v_i;
       obb_v_i.center = v;
-      obb_v_i.enlarge(rVerlet + shpi->minskowski(hi));
+      obb_v_i.enlarge(rVerlet + shpi->minkowski(hi));
 
       // convention: 7 for vertex-vertex interaction between particle and rshape driver.
       item.pair.type = InteractionTypeId::VertexRshapeDriverVertex;

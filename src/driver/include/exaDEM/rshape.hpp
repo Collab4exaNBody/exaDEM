@@ -125,7 +125,7 @@ struct RShapeDriver {
     exanb::lout << "Driver Type: R-Shape" << std::endl;
     exanb::lout << "Name               = " << shp.m_name << std::endl;
     exanb::lout << "Center             = " << fields.center << std::endl;
-    exanb::lout << "Minskowski         = " << shp.minskowski() << std::endl;
+    exanb::lout << "Minkowski         = " << shp.minkowski() << std::endl;
     exanb::lout << "Velocity           = " << fields.vel << std::endl;
     exanb::lout << "Angular Velocity   = " << fields.vrot << std::endl;
     exanb::lout << "Orientation        = " << fields.quat.w << " " << fields.quat.x << " " << fields.quat.y << " "
@@ -429,7 +429,7 @@ struct RShapeDriver {
     stream << "  - register_rshape:" << std::endl;
     stream << "     id: " << id << std::endl;
     stream << "     filename: " << filename << std::endl;
-    stream << "     minskowski: " << shp.m_radius << std::endl;
+    stream << "     minkowski: " << shp.m_radius << std::endl;
     stream << "     state: {";
     stream << "center: [" << fields.center << "]";
     stream << ", vel: [" << fields.vel << "]";

@@ -41,7 +41,7 @@ setup_drivers:
      id: 0
      filename: cylinder.stl
 #     scale: 0.5
-     minskowski: 0.01 m
+     minkowski: 0.01 m
      state: { vrot: [0,0.25,0] }
      params: {motion_type: STATIONARY }
      binary: true

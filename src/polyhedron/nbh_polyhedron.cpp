@@ -319,7 +319,7 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                           auto vi = vertices_a[i];
                                           OBB obbvi;
                                           obbvi.center = {vi.x, vi.y, vi.z};
-                                          obbvi.enlarge(shp->minskowski(hi));
+                                          obbvi.enlarge(shp->minkowski(hi));
                                           if (obb_j.intersect(obbvi)) {
                                             item.pair.type = InteractionTypeId::VertexVertex;
                                             for (int j = 0; j < nv_nbh; j++) {
@@ -366,7 +366,7 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                           auto vj = vertices_b[j];
                                           OBB obbvj;
                                           obbvj.center = {vj.x, vj.y, vj.z};
-                                          obbvj.enlarge(shp_nbh->minskowski(h_nbh));
+                                          obbvj.enlarge(shp_nbh->minkowski(h_nbh));
 
                                           if (obb_i.intersect(obbvj)) {
                                             item.pair.type = InteractionTypeId::VertexEdge;

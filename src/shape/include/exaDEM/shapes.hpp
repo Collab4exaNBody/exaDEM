@@ -18,17 +18,18 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/shape.hpp>
 #include <exanb/core/particle_type_id.h>
+
+#include <exaDEM/shape.hpp>
 
 namespace exaDEM {
 /**
  * @brief Container for geometric shapes used in particle interactions.
  */
 struct shapes {
-  onika::memory::CudaMMVector<shape> m_data; ///< Shape storage on CPU/GPU
-  int m_max_nv = 0;                          ///< Maximum number of vertices among all shapes
-  bool m_use_obb_tree = false;               ///< Whether to enable OBB-tree acceleration
+  onika::memory::CudaMMVector<shape> m_data;  ///< Shape storage on CPU/GPU
+  int m_max_nv = 0;                           ///< Maximum number of vertices among all shapes
+  bool m_use_obb_tree = false;                ///< Whether to enable OBB-tree acceleration
 
   /// @return pointer to device data (const)
   inline const shape* data() const { return onika::cuda::vector_data(m_data); }
@@ -54,10 +55,10 @@ struct shapes {
    * @return pointer to the shape
    */
   ONIKA_HOST_DEVICE_FUNC
-      inline const shape* operator[](const uint32_t idx) const {
-        const shape* data = onika::cuda::vector_data(m_data);
-        return data + idx;
-      }
+  inline const shape* operator[](const uint32_t idx) const {
+    const shape* data = onika::cuda::vector_data(m_data);
+    return data + idx;
+  }
 
   /**
    * @brief Access shape by index (mutable)
@@ -65,10 +66,10 @@ struct shapes {
    * @return pointer to the shape
    */
   ONIKA_HOST_DEVICE_FUNC
-      inline shape* operator[](const uint32_t idx) {
-        shape* const data = onika::cuda::vector_data(m_data);
-        return data + idx;
-      }
+  inline shape* operator[](const uint32_t idx) {
+    shape* const data = onika::cuda::vector_data(m_data);
+    return data + idx;
+  }
 
   /**
    * @brief Access shape by name
@@ -76,14 +77,14 @@ struct shapes {
    * @return pointer to the shape, or nullptr if not found
    */
   ONIKA_HOST_DEVICE_FUNC
-      inline shape* operator[](const std::string name) {
-        for (auto& shp : this->m_data) {
-          if (shp.m_name == name) {
-            return &shp;
-          }
-        }
-        return nullptr;
+  inline shape* operator[](const std::string name) {
+    for (auto& shp : this->m_data) {
+      if (shp.m_name == name) {
+        return &shp;
       }
+    }
+    return nullptr;
+  }
 
   /**
    * @brief Add a new shape (copy)
@@ -122,14 +123,12 @@ struct shapes {
 inline void register_shape(exanb::ParticleTypeMap& ptm, shapes& shps, shape& shp) {
   if (ptm.find(shp.m_name) != ptm.end()) {
     shp.m_name = shp.m_name + "X";
-    color_log::warning(
-        "register_shape",
-        "This polyhedron name is already taken, exaDEM has renamed it to: " + shp.m_name);
+    color_log::warning("register_shape",
+                       "This polyhedron name is already taken, exaDEM has renamed it to: " + shp.m_name);
   }
   ptm[shp.m_name] = shps.size();
   shps.add_shape(&shp);
 }
-
 
 /**
  * @brief Registers a collection of shapes into the particle type map and shape container.
@@ -142,9 +141,8 @@ inline void register_shapes(exanb::ParticleTypeMap& ptm, shapes& shps, std::vect
   for (auto& s : shp) {
     if (ptm.find(s.m_name) != ptm.end()) {
       s.m_name = s.m_name + "X";
-      color_log::warning(
-          "register_shapes",
-          "This polyhedron name is already taken, exaDEM has renamed it to: " + s.m_name);
+      color_log::warning("register_shapes",
+                         "This polyhedron name is already taken, exaDEM has renamed it to: " + s.m_name);
     }
     ptm[s.m_name] = shps.size();
     shps.add_shape(&s);

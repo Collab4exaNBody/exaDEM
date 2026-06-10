@@ -8,7 +8,7 @@ setup_drivers:
      id: 0
      filename: piston_bas.stl
      scale: 0.5002
-     minskowski: 0.001
+     minkowski: 0.001
      state: { quat: [0,0,1,0]}
      params: { motion_type: STATIONARY }
   - register_cylinder:

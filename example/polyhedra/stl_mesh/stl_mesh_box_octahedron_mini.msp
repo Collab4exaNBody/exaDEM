@@ -11,7 +11,7 @@ setup_drivers:
   - register_stl_mesh:
      id: 0
      filename: box_for_octa.stl
-     minskowski: 0.01
+     minkowski: 0.01
 
 domain:
   cell_size: 1.5 m

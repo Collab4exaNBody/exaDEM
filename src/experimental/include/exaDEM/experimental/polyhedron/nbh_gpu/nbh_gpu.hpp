@@ -101,7 +101,7 @@ inline void detection(Func& func,
     // exclude possibilities with obb
     OBB obbvi;
     obbvi.center = {vi.x, vi.y, vi.z};
-    obbvi.enlarge(shpa.minskowski(a.homothety));
+    obbvi.enlarge(shpa.minkowski(a.homothety));
     if (obb_b.intersect(obbvi)) {
       if (!func.skip(InteractionTypeId::VertexVertex)) {
         for (int j = thread.y; j < nvb; j += block.y) {
@@ -141,7 +141,7 @@ inline void detection(Func& func,
     auto vbj = vertices_b[j];
     OBB obbvj;
     obbvj.center = {vbj.x, vbj.y, vbj.z};
-    obbvj.enlarge(shpb.minskowski(b.homothety));
+    obbvj.enlarge(shpb.minkowski(b.homothety));
 
     if (obb_a.intersect(obbvj)) {
       if (!func.skip(InteractionTypeId::VertexEdge)) {

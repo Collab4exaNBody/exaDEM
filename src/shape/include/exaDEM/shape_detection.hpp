@@ -18,6 +18,8 @@ under the License.
  */
 #pragma once
 
-// This file has been splitted
+// This file has been splitted into multiple headers.
+// Contains the core detection functions called by the API.
 #include <exaDEM/shape_detection_core.hpp>
+// Contains the API functions that wrap the core detection functions.
 #include <exaDEM/shape_detection_api.hpp>

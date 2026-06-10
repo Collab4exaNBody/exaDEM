@@ -174,8 +174,8 @@ struct ContactLawFunc {
       const Vec3d vj = get_v(cell_j, pj.p);
       const auto& m_i = cell_i[field::mass][pi.p];
       const auto& m_j = cell_j[field::mass][pj.p];
-      double rad_i = shp_i.minskowski(h_i);
-      double rad_j = shp_j.minskowski(h_j);
+      double rad_i = shp_i.minkowski(h_i);
+      double rad_j = shp_j.minkowski(h_j);
 
       const double meff = compute_effective_mass(m_i, m_j);
       const double reff = compute_effective_mass(rad_i, rad_j);
@@ -275,7 +275,7 @@ struct ContactLawDriverFunc {
       auto& mom = cell[field::mom][p];
       const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
       const double meff = cell[field::mass][p];
-      const double reff = shp.minskowski(h);
+      const double reff = shp.minkowski(h);
       contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction, contact_position, r, v, f,
                                                   item.moment, vrot,                              // particle i
                                                   driver.position(), driver.velocity(), driver.angular_velocity());  // particle j
@@ -380,7 +380,7 @@ struct ContactLawRShapeDriverFunc {
       auto& mom = cell[field::mom][pi.p];
       const Vec3d v_i = {cell[field::vx][pi.p], cell[field::vy][pi.p], cell[field::vz][pi.p]};
       const double meff = cell[field::mass][pi.p];
-      const double reff = compute_effective_radius(shp_i.minskowski(h_i), driver.shp.minskowski(rshape_homothety));
+      const double reff = compute_effective_radius(shp_i.minkowski(h_i), driver.shp.minkowski(rshape_homothety));
 
       // i to j
       if constexpr (interaction_type <= 10 && interaction_type >= 7) {

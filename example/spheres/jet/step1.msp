@@ -37,7 +37,7 @@ setup_drivers:
   - register_stl_mesh:
      id: 0
      filename: mesh.stl
-     minskowski: 0.001
+     minkowski: 0.001
 
 input_data:
   - particle_regions:

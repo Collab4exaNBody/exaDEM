@@ -47,7 +47,7 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const RShape
 
   exanb::Vec3d v = {rx, ry, rz};
   constexpr double dhomothety = 1.0;
-  double dradius = shp.minskowski(dhomothety);
+  double dradius = shp.minkowski(dhomothety);
   // vertex - vertex
   item.pair.type = InteractionTypeId::VertexRshapeDriverVertex;
   for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_nv; j++) {
