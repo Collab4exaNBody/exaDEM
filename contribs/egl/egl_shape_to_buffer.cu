@@ -41,12 +41,11 @@ namespace exaDEM
 
     inline void execute() override final
     {
-      std::abort();
-      std::cout << "egl_shape_to_buffer : nb shapes = " << shapes_collection->size() << std::endl;
+      ldbg << "egl_shape_to_buffer : nb shapes = " << shapes_collection->size() << std::endl;
       for(size_t i=0;i<shapes_collection->size();i++)
       {
         const auto & shp = * (*shapes_collection)[i];
-        std::cout << "converting shape "<< shp.m_name << "to OpenGL buffers" << std::endl;
+        ldbg << "converting shape "<< shp.m_name << "to OpenGL buffers" << std::endl;
 
         // create vertex buffer
         const std::string vertex_buffer = shp.m_name + "_vertices";
@@ -54,12 +53,12 @@ namespace exaDEM
         int vbuf_id = egl_render_manager->vertex_buffers_id( vertex_buffer );
         if( vbuf_id == -1 )
         {
-          std::cout << "EGL : create vertex buffer " << vertex_buffer <<std::endl;
+          ldbg << "EGL : create vertex buffer " << vertex_buffer <<std::endl;
           std::vector<GLint> vertex_attribs = { GL_FLOAT, 3 };
           vbuf_id = egl_render_manager->create_vertex_buffers( vertex_buffer , vcount , vertex_attribs );
         }
         GLVertexBuffers & glvbos = egl_render_manager->vertex_buffers(vbuf_id);
-        std::cout << "EGL : update vertex buffer " << vertex_buffer << " , nv="<< vcount << " , id="<<vbuf_id<<std::endl;
+        ldbg << "EGL : update vertex buffer " << vertex_buffer << " , nv="<< vcount << " , id="<<vbuf_id<<std::endl;
         glvbos.set_number_of_vertices( vcount );
         GLfloat * vdata = (GLfloat*) glvbos.host_map_write_only(0);
         for(long i=0;i<vcount;i++)
@@ -83,12 +82,12 @@ namespace exaDEM
         int ebuf_id = egl_render_manager->element_buffer_id( element_buffer );
         if( ebuf_id == -1 )
         {
-          std::cout << "EGL : create element buffer " << element_buffer <<std::endl;
+          ldbg << "EGL : create element buffer " << element_buffer <<std::endl;
           ebuf_id = egl_render_manager->create_element_buffer( element_buffer , tcount * 3 );
         }
         
         auto & ebuf = egl_render_manager->element_buffer(ebuf_id);
-        std::cout << "EGL : update element buffer " << element_buffer << " , triangles="<< tcount << " , id="<<ebuf_id<<std::endl;
+        ldbg << "EGL : update element buffer " << element_buffer << " , triangles="<< tcount << " , id="<<ebuf_id<<std::endl;
         auto * elptr = ebuf.map_buffer_write_only();
         long ti = 0;
         for(size_t j=0;j<n_faces;j++)

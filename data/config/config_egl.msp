@@ -1,0 +1,105 @@
+visualization_init:
+  - egl_init
+  - egl_shape_to_shader
+  - egl_create_surface:
+      surface: "ExaDEM Visualization"
+      width: 1024
+      height: 760
+  - egl_create_shader_program:
+      shader_program: "oriented_shape"
+      sources:
+        GL_VERTEX_SHADER: |
+          #version 460 core
+          #extension GL_ARB_shading_language_include : require
+          layout (location = 0) in vec3 aPos;
+          layout (location = 1) in vec4 aQuat;
+          out vec4 fDiffuseColor;
+          out vec4 vQuat;
+          void main()
+          {
+            gl_Position = vec4(aPos,1);
+            fDiffuseColor = vec4(1,0.6,0.3,1);
+            vQuat = aQuat;
+          }
+
+        GL_GEOMETRY_SHADER: |
+          #version 460 core
+          #extension GL_ARB_shading_language_include : require
+          #include <uniform/camera>
+          #include <dem/shapes>
+          layout (points) in;
+          layout (triangle_strip, max_vertices=DEM_SHAPE_FACES_MAX_VERTICES) out;
+          in vec4 vQuat[];
+          mat3 quaternion_to_matrix(vec4 q)
+          {
+            float qx=q.x, qy=q.y, qz=q.z, qw=q.w;
+            return mat3(
+              vec3( 1.0f - 2.0f*qy*qy - 2.0f*qz*qz , 2.0f*qx*qy - 2.0f*qz*qw , 2.0f*qx*qz + 2.0f*qy*qw )
+            , vec3( 2.0f*qx*qy + 2.0f*qz*qw , 1.0f - 2.0f*qx*qx - 2.0f*qz*qz , 2.0f*qy*qz - 2.0f*qx*qw )
+            , vec3( 2.0f*qx*qz - 2.0f*qy*qw, 2.0f*qy*qz + 2.0f*qx*qw, 1.0f - 2.0f*qx*qx - 2.0f*qy*qy ) );
+          }
+          void main()
+          {
+            mat4 mvp = camera.projection[0] * camera.modelview[0];
+            dem_shape_emit_faces( gl_in[0].gl_Position , mvp , quaternion_to_matrix(vQuat[0]), 0 );
+          }
+
+        GL_FRAGMENT_SHADER: |
+          #version 460 core
+          in vec4 fDiffuseColor;
+          layout (location = 0) out vec4 FragColor;
+          void main()
+          {
+            FragColor = vec4(1,1,1,1); //fDiffuseColor;
+          }
+
+      pipeline_config:
+        gl_enable:
+          - GL_DEPTH_TEST
+          - GL_BLEND
+          - GL_CULL_FACE
+        gl_disable:
+          - GL_ALPHA_TEST
+          - GL_STENCIL_TEST
+        alpha_func: GL_ALWAYS
+        alpha_func_ref: 0
+        blend_src: GL_SRC_ALPHA
+        blend_dst: GL_ONE_MINUS_SRC_ALPHA
+        stencil_mask: 0xFF
+        stencil_func: GL_ALWAYS
+        stencil_func_ref: 0
+        stencil_func_mask: 0xFF
+        stencil_op_sfail: GL_KEEP
+        stencil_op_dpfail: GL_KEEP
+        stencil_op_dppass: GL_KEEP
+  - egl_create_camera:
+      camera: "camera"
+      surface: "ExaDEM Visualization"
+      bond_shaders: [ oriented_shape ]
+      eye: [ 0 , 50 , 100 ]
+      look_at: [ 27 , 27 , 27 ]
+      near: 1.0
+      far: 1000.0
+
++first_iteration:
+  - visualization_init
+
++update_particles_full_body:
+  - egl_particles_noghost_elements: { elements: "noghost_particles" }
+
+dump_data_egl:
+  rebind: { sim_continue: compute_loop_continue }
+  body:
+    - egl_handle_events: { surface: "ExaDEM Visualization" , camera: "camera" }
+    - egl_start_frame: { surface: "ExaDEM Visualization" , camera: "camera" }
+    - egl_particles_to_vertex_buffer:
+        vertex_buffer: "particles"
+        vertex_attribs:
+          position: 0
+          orient: 1
+    - egl_draw: { vertex_buffer: "particles" , elements: "noghost_particles" , primitive: GL_POINTS , shader_program: "oriented_shape"  }
+    - egl_end_frame: { surface: "ExaDEM Visualization" }
+
+iteration_dump_writer: 
+  - dump_data_egl
+
