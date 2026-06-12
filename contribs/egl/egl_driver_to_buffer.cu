@@ -37,7 +37,7 @@ namespace exaDEM
     using IntVector = std::vector<int>;
     ADD_SLOT( Drivers          , drivers            , INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
     ADD_SLOT( EGLRenderManager , egl_render_manager , INPUT_OUTPUT );
-    ADD_SLOT( IntVector , egl_cuda_devices , INPUT_OUTPUT , IntVector{} )
+    ADD_SLOT( IntVector , egl_cuda_devices , INPUT_OUTPUT , IntVector{} );
 
   public:
     inline bool is_sink() const override final { return true; }
