@@ -26,6 +26,34 @@ under the License.
 #include <exaDEM/drivers.hpp>
 #include <exaDEM/shape.hpp>
 #include <EGLRender/egl_render_manager.h>
+#include <onika/parallel/parallel_for.h>
+
+namespace exaDEM
+{
+  struct GLCopyDriverVertices
+  {
+    const onika::math::Vec3d * __restrict__ m_shape_vertices = nullptr;
+    GLfloat * __restrict__ m_vertex_buffer = nullptr;
+    ONIKA_HOST_DEVICE_FUNC inline void operator () ( size_t i ) const
+    {
+      const auto v = m_shape_vertices[i];
+      m_vertex_buffer[i*3+0] = v.x;
+      m_vertex_buffer[i*3+1] = v.y;
+      m_vertex_buffer[i*3+2] = v.z;
+    }
+  };
+}
+
+namespace onika
+{
+  namespace parallel
+  {
+    template<> struct ParallelForFunctorTraits<exaDEM::GLCopyDriverVertices>
+    {
+      static inline constexpr bool CudaCompatible = true;
+    };
+  }
+}
 
 namespace exaDEM
 {
@@ -44,6 +72,7 @@ namespace exaDEM
 
     inline void execute() override final
     {
+      const bool runs_on_gpu = ( global_cuda_ctx()!=nullptr && global_cuda_ctx()->has_devices() );
       const int n_drivers = drivers->get_size();
       ldbg << "egl_driver_to_buffer : nb drivers = " << n_drivers << std::endl;
       long vcount = 0;
@@ -65,7 +94,7 @@ namespace exaDEM
       }
 
       ldbg << "total vertices = "<< vcount << ", total triangles = "<< tcount << std::endl;
-      
+
       // create vertex buffer
       const std::string vertex_buffer = "driver_vertices";
       int vbuf_id = egl_render_manager->vertex_buffers_id( vertex_buffer );
@@ -78,8 +107,10 @@ namespace exaDEM
       GLVertexBuffers & glvbos = egl_render_manager->vertex_buffers(vbuf_id);
       ldbg << "EGL : update vertex buffer " << vertex_buffer << " , nv="<< vcount << " , id="<<vbuf_id<<std::endl;
       glvbos.set_number_of_vertices( vcount );
-      GLfloat * vdata = (GLfloat*) glvbos.host_map_write_only(0);
-      
+      GLfloat * vdata = nullptr;
+      if( runs_on_gpu ) vdata = (GLfloat*) glvbos.gpu_map_write_only(0);
+      else vdata = (GLfloat*) glvbos.host_map_write_only(0);
+
       long vertidx = 0;
       for(int i=0;i<n_drivers;i++)
       {
@@ -88,17 +119,13 @@ namespace exaDEM
           const auto & drv = drivers->get_typed_driver<RShapeDriver>(i);
           const auto & shp = drv.shp;
           long dnv = shp.get_number_of_vertices();
-          for(long j=0;j<dnv;j++)
-          {
-            const auto v = drv.vertices[j];
-            vdata[vertidx*3+0] = v.x;
-            vdata[vertidx*3+1] = v.y;
-            vdata[vertidx*3+2] = v.z;
-            ++vertidx;
-          }
+          GLCopyDriverVertices func = { drv.vertices.data(), vdata + vertidx*3 };
+          onika::parallel::parallel_for( dnv, func, parallel_execution_context("glcpydrv") );
+          vertidx += dnv;
         }
       }
-      glvbos.host_unmap(0);
+      if( runs_on_gpu ) glvbos.gpu_unmap(0);
+      else glvbos.host_unmap(0);
       if( vertidx != vcount )
       {
         onika::fatal_error() << "inconsistent number of vertices"<<std::endl;
