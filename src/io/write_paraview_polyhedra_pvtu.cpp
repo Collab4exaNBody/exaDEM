@@ -37,14 +37,89 @@ under the License.
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <regex>
+#include <sstream>
+#include <utility>
 #include <vector>
 
 namespace exaDEM {
 using namespace exanb;
 
+// Maps a C++ type onto its VTK XML "type" attribute and number of components.
+template <typename T>
+struct vtk_type_info;
+
+template <>
+struct vtk_type_info<int32_t> {
+  static constexpr const char* name = "Int32";
+  static constexpr int ncomp = 1;
+};
+
+template <>
+struct vtk_type_info<int64_t> {
+  static constexpr const char* name = "Int64";
+  static constexpr int ncomp = 1;
+};
+
+template <>
+struct vtk_type_info<double> {
+  static constexpr const char* name = "Float64";
+  static constexpr int ncomp = 1;
+};
+
+template <>
+struct vtk_type_info<Vec3d> {
+  static constexpr const char* name = "Float64";
+  static constexpr int ncomp = 3;
+};
+
+template <>
+struct vtk_type_info<Mat3d> {
+  static constexpr const char* name = "Float64";
+  static constexpr int ncomp = 9;
+};
+
+inline void append_value(std::stringstream& out, int32_t v) { out << " " << v; }
+inline void append_value(std::stringstream& out, int64_t v) { out << " " << v; }
+inline void append_value(std::stringstream& out, double v) { out << " " << v; }
+inline void append_value(std::stringstream& out, const Vec3d& v) { out << " " << v.x << " " << v.y << " " << v.z; }
+inline void append_value(std::stringstream& out, const Mat3d& m) {
+  out << " " << m.m11 << " " << m.m12 << " " << m.m13 << " " << m.m21 << " " << m.m22 << " " << m.m23 << " " << m.m31
+      << " " << m.m32 << " " << m.m33;
+}
+
+// One projected cell data array: its output name, whether it is selected for output,
+// and the per-cell values accumulated so far.
+template <typename T>
+struct CellDataField {
+  std::string name;
+  bool write = false;
+  std::stringstream buffer;
+
+  explicit CellDataField(std::string field_name) : name(std::move(field_name)) {}
+
+  inline void append(const T& value) {
+    if (write) append_value(buffer, value);
+  }
+};
+
+template <typename T>
+inline void write_cell_data_array(std::ofstream& outFile, const CellDataField<T>& field) {
+  if (!field.write) return;
+  outFile << "        <DataArray type=\"" << vtk_type_info<T>::name << "\" Name=\"" << field.name
+          << "\" NumberOfComponents=\"" << vtk_type_info<T>::ncomp << "\" format=\"ascii\">" << std::endl;
+  outFile << field.buffer.rdbuf() << std::endl;
+  outFile << "        </DataArray>" << std::endl;
+}
+
+template <typename T>
+inline void write_pcell_data_array(std::ofstream& outFile, const CellDataField<T>& field) {
+  if (!field.write) return;
+  outFile << "      <PDataArray type=\"" << vtk_type_info<T>::name << "\" Name=\"" << field.name
+          << "\" NumberOfComponents=\"" << vtk_type_info<T>::ncomp << "\"/>" << std::endl;
+}
+
 struct par_vtu_poly_helper {
-  bool mpi_rank = false;
-  bool has_cluster = false;
   int n_vertices = 0;
   int n_cells = 0;
   int64_t connectivity_offset = 0;
@@ -54,21 +129,25 @@ struct par_vtu_poly_helper {
   std::stringstream offsets;
   std::stringstream faces;
   std::stringstream faceoffsets;
-  std::stringstream ids;
-  std::stringstream types;
-  std::stringstream velocities;
-  std::stringstream stress;
-  std::stringstream clusters;
-  std::stringstream ranks;
+
+  CellDataField<int64_t> id{"id"};
+  CellDataField<int32_t> type{"type"};
+  CellDataField<Vec3d> velocity{"velocity"};
+  CellDataField<Vec3d> vrot{"vrot"};
+  CellDataField<Vec3d> arot{"arot"};
+  CellDataField<double> mass{"mass"};
+  CellDataField<double> radius{"radius"};
+  CellDataField<Vec3d> inertia{"inertia"};
+  CellDataField<Mat3d> stress{"stress"};
+  CellDataField<int32_t> cluster{"cluster"};
+  CellDataField<int32_t> mpi_rank{"mpi_rank"};
 };
 
-template <bool has_field_cluster>
 inline void build_buffer_vtu_polyhedron(const exanb::Vec3d& pos, const shape* shp, const exanb::Quaternion& orient,
                                         uint64_t id, uint16_t type, double vx, double vy, double vz, double h,
-                                        exanb::Mat3d& stress, uint32_t cluster, int mpi_rank,
-                                        par_vtu_poly_helper& buffers) {
-  buffers.has_cluster = has_field_cluster;
-
+                                        const exanb::Vec3d& vrot, const exanb::Vec3d& arot, double mass, double radius,
+                                        const exanb::Vec3d& inertia, const exanb::Mat3d& stress, uint32_t cluster,
+                                        int mpi_rank, par_vtu_poly_helper& buffers) {
   const int vertex_base = buffers.n_vertices;
   const int n_vertices = shp->get_number_of_vertices();
 
@@ -103,18 +182,19 @@ inline void build_buffer_vtu_polyhedron(const exanb::Vec3d& pos, const shape* sh
   }
   buffers.faceoffsets << " " << buffers.face_offset;
 
-  // Write cell data (one entry per polyhedron, not per vertex)
-  buffers.ids << " " << id;
-  buffers.types << " " << type;
-  buffers.velocities << " " << vx << " " << vy << " " << vz;
-  buffers.stress << " " << stress.m11 << " " << stress.m12 << " " << stress.m13 << " " << stress.m21 << " "
-                 << stress.m22 << " " << stress.m23 << " " << stress.m31 << " " << stress.m32 << " " << stress.m33;
-  if constexpr (has_field_cluster) {
-    buffers.clusters << " " << cluster;
-  }
-  if (buffers.mpi_rank) {
-    buffers.ranks << " " << mpi_rank;
-  }
+  // Cell data (one entry per polyhedron, not per vertex). Each append() is a no-op
+  // unless the corresponding field was selected via the "fields" slot.
+  buffers.id.append(static_cast<int64_t>(id));
+  buffers.type.append(static_cast<int32_t>(type));
+  buffers.velocity.append(exanb::Vec3d{vx, vy, vz});
+  buffers.vrot.append(vrot);
+  buffers.arot.append(arot);
+  buffers.mass.append(mass);
+  buffers.radius.append(radius);
+  buffers.inertia.append(inertia);
+  buffers.stress.append(stress);
+  buffers.cluster.append(static_cast<int32_t>(cluster));
+  buffers.mpi_rank.append(static_cast<int32_t>(mpi_rank));
 
   buffers.n_cells += 1;
 }
@@ -139,32 +219,17 @@ inline void write_vtu_polyhedron(const std::string& name, par_vtu_poly_helper& b
   outFile << "        </DataArray>" << std::endl;
   outFile << "      </Points>" << std::endl;
   outFile << "      <CellData>" << std::endl;
-  outFile << "        <DataArray type=\"Int64\" Name=\"Id\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
-  outFile << buffers.ids.rdbuf() << std::endl;
-  outFile << "        </DataArray>" << std::endl;
-  outFile << "        <DataArray type=\"Int32\" Name=\"Type\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
-  outFile << buffers.types.rdbuf() << std::endl;
-  outFile << "        </DataArray>" << std::endl;
-  outFile << "        <DataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"3\" format=\"ascii\">"
-          << std::endl;
-  outFile << buffers.velocities.rdbuf() << std::endl;
-  outFile << "        </DataArray>" << std::endl;
-  outFile << "        <DataArray type=\"Float64\" Name=\"Stress\" NumberOfComponents=\"9\" format=\"ascii\">"
-          << std::endl;
-  outFile << buffers.stress.rdbuf() << std::endl;
-  outFile << "        </DataArray>" << std::endl;
-  if (buffers.has_cluster) {
-    outFile << "        <DataArray type=\"Int32\" Name=\"Cluster\" NumberOfComponents=\"1\" format=\"ascii\">"
-            << std::endl;
-    outFile << buffers.clusters.rdbuf() << std::endl;
-    outFile << "        </DataArray>" << std::endl;
-  }
-  if (buffers.mpi_rank) {
-    outFile << "        <DataArray type=\"Int32\" Name=\"MPI rank\" NumberOfComponents=\"1\" format=\"ascii\">"
-            << std::endl;
-    outFile << buffers.ranks.rdbuf() << std::endl;
-    outFile << "        </DataArray>" << std::endl;
-  }
+  write_cell_data_array(outFile, buffers.id);
+  write_cell_data_array(outFile, buffers.type);
+  write_cell_data_array(outFile, buffers.velocity);
+  write_cell_data_array(outFile, buffers.vrot);
+  write_cell_data_array(outFile, buffers.arot);
+  write_cell_data_array(outFile, buffers.mass);
+  write_cell_data_array(outFile, buffers.radius);
+  write_cell_data_array(outFile, buffers.inertia);
+  write_cell_data_array(outFile, buffers.stress);
+  write_cell_data_array(outFile, buffers.cluster);
+  write_cell_data_array(outFile, buffers.mpi_rank);
   outFile << "      </CellData>" << std::endl;
   outFile << "      <Cells>" << std::endl;
   outFile << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
@@ -191,8 +256,8 @@ inline void write_vtu_polyhedron(const std::string& name, par_vtu_poly_helper& b
   outFile << "</VTKFile>" << std::endl;
 }
 
-inline void write_pvtu_polyhedron(const std::string& filename, size_t number_of_files, bool has_cluster,
-                                  bool mpi_rank) {
+inline void write_pvtu_polyhedron(const std::string& filename, size_t number_of_files,
+                                  const par_vtu_poly_helper& buffers) {
   const std::string name = filename + ".pvtu";
   std::ofstream outFile(name);
   if (!outFile) {
@@ -209,16 +274,17 @@ inline void write_pvtu_polyhedron(const std::string& filename, size_t number_of_
   outFile << "      <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
   outFile << "    </PPoints>" << std::endl;
   outFile << "    <PCellData>" << std::endl;
-  outFile << "      <PDataArray type=\"Int64\" Name=\"Id\" NumberOfComponents=\"1\"/>" << std::endl;
-  outFile << "      <PDataArray type=\"Int32\" Name=\"Type\" NumberOfComponents=\"1\"/>" << std::endl;
-  outFile << "      <PDataArray type=\"Float64\" Name=\"Velocity\" NumberOfComponents=\"3\"/>" << std::endl;
-  outFile << "      <PDataArray type=\"Float64\" Name=\"Stress\" NumberOfComponents=\"9\"/>" << std::endl;
-  if (has_cluster) {
-    outFile << "      <PDataArray type=\"Int32\" Name=\"Cluster\" NumberOfComponents=\"1\"/>" << std::endl;
-  }
-  if (mpi_rank) {
-    outFile << "      <PDataArray type=\"Int32\" Name=\"MPI rank\" NumberOfComponents=\"1\"/>" << std::endl;
-  }
+  write_pcell_data_array(outFile, buffers.id);
+  write_pcell_data_array(outFile, buffers.type);
+  write_pcell_data_array(outFile, buffers.velocity);
+  write_pcell_data_array(outFile, buffers.vrot);
+  write_pcell_data_array(outFile, buffers.arot);
+  write_pcell_data_array(outFile, buffers.mass);
+  write_pcell_data_array(outFile, buffers.radius);
+  write_pcell_data_array(outFile, buffers.inertia);
+  write_pcell_data_array(outFile, buffers.stress);
+  write_pcell_data_array(outFile, buffers.cluster);
+  write_pcell_data_array(outFile, buffers.mpi_rank);
   outFile << "    </PCellData>" << std::endl;
   outFile << "    <PCells>" << std::endl;
   outFile << "      <PDataArray type=\"Int32\" Name=\"connectivity\" NumberOfComponents=\"1\"/>" << std::endl;
@@ -242,9 +308,12 @@ inline void write_pvtu_polyhedron(const std::string& filename, size_t number_of_
 template <class GridT, class = AssertGridHasFields<GridT>>
 class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
   using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_orient>;
+  using StringList = std::vector<std::string>;
   static constexpr ComputeFields compute_field_set{};
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(StringList, fields, INPUT, StringList({".*"}),
+           DocString{"List of regular expressions to select fields to project"});
   ADD_SLOT(Domain, domain, INPUT, REQUIRED);
   ADD_SLOT(std::string, filename, INPUT, "output");
   ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
@@ -253,14 +322,22 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
 
  public:
   inline std::string documentation() const final {
-    return R"EOF( 
+    return R"EOF(
       This operator writes parallel VTK unstructured grid files (.pvtu/.vtu) for polyhedral shapes.
+
+      The "fields" slot is a list of regular expressions selecting which cell data arrays
+      are projected. Available fields are: "id", "type", "velocity", "vrot",
+      "arot", "mass", "radius", "inertia", "stress", "cluster"
+      (if the cluster field is present) and "mpi_rank" (if mpi_rank is enabled).
+      By default (".*"), every available field is written, and the .pvtu file
+      only declares the fields that are actually selected.
 
       YAML example:
 
-        - write_paraview_polyhedra_pvtu2:
+        - write_paraview_polyhedra_pvtu:
            filename: "output_directory"
            mpi_rank: true
+           fields: ["id", "type", "velocity"]
                 )EOF";
   }
 
@@ -272,6 +349,14 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
     MPI_Comm_rank(*mpi, &rank);
     MPI_Comm_size(*mpi, &size);
 
+    // field selector function
+    const auto& flist = *fields;
+    auto field_selector = [&flist](const std::string& name) -> bool {
+      for (const auto& f : flist)
+        if (std::regex_match(name, std::regex(f))) return true;
+      return false;
+    };
+
     if (rank == 0) {
       std::filesystem::create_directories(*filename);
     }
@@ -280,8 +365,19 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
     auto& shps = *shapes_collection;
     const auto cells = grid->cells();
     const size_t n_cells = grid->number_of_cells();
+
     par_vtu_poly_helper buffers;
-    buffers.mpi_rank = *mpi_rank;
+    buffers.id.write = field_selector("id");
+    buffers.type.write = field_selector("type");
+    buffers.velocity.write = field_selector("velocity");
+    buffers.vrot.write = field_selector("vrot");
+    buffers.arot.write = field_selector("arot");
+    buffers.mass.write = field_selector("mass");
+    buffers.radius.write = field_selector("radius");
+    buffers.inertia.write = field_selector("inertia");
+    buffers.stress.write = field_selector("stress");
+    buffers.cluster.write = has_field_cluster && field_selector("cluster");
+    buffers.mpi_rank.write = *mpi_rank && field_selector("mpi_rank");
 
     bool defbox = !domain->xform_is_identity();
     LinearXForm xform;
@@ -308,6 +404,11 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
       auto* __restrict__ id = cell[field::id];
       auto* __restrict__ h = cell[field::homothety];
       auto* __restrict__ orient = cell[field::orient];
+      auto* __restrict__ vrot = cell[field::vrot];
+      auto* __restrict__ arot = cell[field::arot];
+      auto* __restrict__ mass = cell[field::mass];
+      auto* __restrict__ radius = cell[field::radius];
+      auto* __restrict__ inertia = cell[field::inertia];
       auto* __restrict__ stress = cell[field::stress];
       if constexpr (has_field_cluster) {
         cluster = cell[field::cluster];
@@ -320,13 +421,13 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
         if constexpr (has_field_cluster) {
           cj = cluster[j];
         }
-        build_buffer_vtu_polyhedron<has_field_cluster>(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], h[j],
-                                                       stress[j], cj, rank, buffers);
+        build_buffer_vtu_polyhedron(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], h[j], vrot[j], arot[j],
+                                    mass[j], radius[j], inertia[j], stress[j], cj, rank, buffers);
       }
     }
 
     if (rank == 0) {
-      write_pvtu_polyhedron(*filename, size, buffers.has_cluster, buffers.mpi_rank);
+      write_pvtu_polyhedron(*filename, size, buffers);
     }
 
     std::string file = *filename + "/%06d.vtu";
@@ -336,7 +437,7 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
 };
 
 ONIKA_AUTORUN_INIT(write_paraview_polyhedra_pvtu2) {
-  OperatorNodeFactory::instance()->register_factory("write_paraview_polyhedra_pvtu2",
+  OperatorNodeFactory::instance()->register_factory("write_paraview_polyhedra_pvtu",
                                                     make_grid_variant_operator<WriteParaviewPolyhedraPVTU2Operator>);
 }
 }  // namespace exaDEM
