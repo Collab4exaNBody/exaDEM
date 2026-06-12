@@ -10,6 +10,7 @@ struct InteractionHistory {
   VectorT<PlaceholderInteraction> data;
 
   void prefetch_gpu(onikaStream_t& st) {
+	  /*
     ONIKA_CU_MEM_PREFETCH(start.data(),
                           start.size() * sizeof(size_t),
                           0, st);
@@ -19,6 +20,7 @@ struct InteractionHistory {
     ONIKA_CU_MEM_PREFETCH(data.data(),
                           data.size() * sizeof(PlaceholderInteraction),
                           0, st);
+			  */
 
   }
 };

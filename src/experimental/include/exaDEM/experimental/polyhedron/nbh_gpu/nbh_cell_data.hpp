@@ -23,6 +23,7 @@ struct CellInteractionInformation {
   // Prefetch all vectors to CPU memory asynchronously
   void prefetch_cpu(onikaStream_t& st) {
 #ifdef ONIKA_CUDA_VERSION
+	 /*
     ONIKA_CU_MEM_PREFETCH(start_cell.data(),
                           start_cell.size() * sizeof(size_t),
                           cudaCpuDeviceId, st);
@@ -34,6 +35,7 @@ struct CellInteractionInformation {
     ONIKA_CU_MEM_PREFETCH(update_ghost.data(),
                           update_ghost.size() * sizeof(uint8_t),
                           cudaCpuDeviceId, st);
+			  */
 #endif
   }
 };

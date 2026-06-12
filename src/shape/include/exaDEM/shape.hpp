@@ -733,6 +733,7 @@ struct shape {
     for (size_t i = 0; i < vertices.size(); i++) msg += std::to_string(vertices[i]) + " ";
     msg += "]";
     color_log::error("shape::identify_face", msg);
+    return 0;
   }
 
   /// OBBTree Section

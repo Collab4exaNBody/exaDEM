@@ -78,12 +78,15 @@ add_generated_particles: nop
 ## redefined if config_fragmentation.msp is included.
 init_update_particle_neighbors: update_particle_neighbors
 
+particle_generator_epilog: nop
+
 particle_generator:
   condition: trigger_generator
   body:
     - message: { mesg: "The particle generator is triggered ...", endl: true} 
     - add_generated_particles
     - check_homothety  ## check all particles (on CPU)
+    - particle_generator_epilog
 
 parallel_update_particles:
   - migrate_particles
