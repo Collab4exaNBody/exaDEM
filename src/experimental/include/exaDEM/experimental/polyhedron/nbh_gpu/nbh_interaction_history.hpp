@@ -1,35 +1,25 @@
 #pragma once
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 
 namespace exaDEM {
 struct InteractionHistory {
-  template<typename T> using VectorT = onika::memory::CudaMMVector<T>;
+  template <typename T>
+  using VectorT = onika::memory::CudaMMVector<T>;
   VectorT<size_t> start;
   VectorT<size_t> size;
   VectorT<PlaceholderInteraction> data;
 
   void prefetch_gpu(onikaStream_t& st) {
-    ONIKA_CU_MEM_PREFETCH(start.data(),
-                          start.size() * sizeof(size_t),
-                          0, st);
-    ONIKA_CU_MEM_PREFETCH(size.data(),
-                          size.size() * sizeof(size_t),
-                          0, st);
-    ONIKA_CU_MEM_PREFETCH(data.data(),
-                          data.size() * sizeof(PlaceholderInteraction),
-                          0, st);
-
+    ONIKA_PREFETCH(start.data(), start.size() * sizeof(size_t), 0, st);
+    ONIKA_PREFETCH(size.data(), size.size() * sizeof(size_t), 0, st);
+    ONIKA_PREFETCH(data.data(), data.size() * sizeof(PlaceholderInteraction), 0, st);
   }
 };
 
-template<typename TMPLC>
-void setup_history_clean_ges(TMPLC& cells,
-                             size_t* idxs,
-                             size_t ncells,
-                             GridCellParticleInteraction& ges,
-                             InteractionHistory& history,
-                             onikaStream_t& st) {
+template <typename TMPLC>
+void setup_history_clean_ges(TMPLC& cells, size_t* idxs, size_t ncells, GridCellParticleInteraction& ges,
+                             InteractionHistory& history, onikaStream_t& st) {
   history.start.resize(ncells);
   history.size.resize(ncells);
 
@@ -48,7 +38,7 @@ void setup_history_clean_ges(TMPLC& cells,
     history.start[i] = sum;
   }
   */
-#pragma omp parallel for reduction(+: sum)
+#pragma omp parallel for reduction(+ : sum)
   for (size_t i = 0; i < ncells; ++i) {
     size_t cell_idx = idxs[i];
     sum += ges.m_data[cell_idx].m_data.size();
@@ -60,24 +50,23 @@ void setup_history_clean_ges(TMPLC& cells,
   }
 
   history.start[0] = 0;
-  for(size_t i = 1; i < ncells; ++i) {
-    history.start[i] = history.start[i-1] + history.size[i-1];
+  for (size_t i = 1; i < ncells; ++i) {
+    history.start[i] = history.start[i - 1] + history.size[i - 1];
   }
 
   history.data.resize(sum);
 
   PlaceholderInteraction* __restrict__ history_data_ptr = history.data.data();
   // reset storage for new data;
-# pragma omp parallel for
-  for(size_t i = 0 ; i < ncells ; i++) {
+#pragma omp parallel for
+  for (size_t i = 0; i < ncells; i++) {
     size_t cell_idx = idxs[i];
     auto& storage = ges.m_data[cell_idx];
     const size_t data_size = storage.m_data.size();
 
     if (data_size > 0) {
       PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
-      std::memcpy(history_data_ptr + history.start[i],
-                  data_ptr, data_size * sizeof(PlaceholderInteraction));
+      std::memcpy(history_data_ptr + history.start[i], data_ptr, data_size * sizeof(PlaceholderInteraction));
     }
 
     size_t n_particles = cells[cell_idx].size();
@@ -91,20 +80,16 @@ void setup_history_clean_ges(TMPLC& cells,
       info_particles[it].pid = id_a[it];
     }
   }
-  //history.prefetch_gpu(st);
+  // history.prefetch_gpu(st);
 }
 
 struct UpdateHistoryImplFunc {
-
-  template<InteractionType IT>
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(
-      InteractionWrapper<IT>& wrapper,
-      const PlaceholderInteraction& I,
-      int begin,
-      int end) const {
-    for (int j = begin ; j < end ; j++) {
+  template <InteractionType IT>
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(InteractionWrapper<IT>& wrapper, const PlaceholderInteraction& I,
+                                                int begin, int end) const {
+    for (int j = begin; j < end; j++) {
       if (wrapper.same(j, I)) {
-        wrapper.update(j,I);
+        wrapper.update(j, I);
       }
     }
   }
@@ -125,12 +110,12 @@ struct UpdateHistoryFunc {
     size_t begin = start[idx];
     size_t end = begin + size[idx];
 
-    for (size_t i = begin ; i < end ; i++) {
+    for (size_t i = begin; i < end; i++) {
       const PlaceholderInteraction& I = data[i];
       auto type = I.type();
       int a, b;
-      if (type >= get_first_id<InteractionType::ParticleDriver>()
-          && type <= get_last_id<InteractionType::ParticleDriver>()) {
+      if (type >= get_first_id<InteractionType::ParticleDriver>() &&
+          type <= get_last_id<InteractionType::ParticleDriver>()) {
         a = driver_accessor.offset[idx][type];
         b = a + driver_accessor.size[idx][type];
       } else {
@@ -138,8 +123,7 @@ struct UpdateHistoryFunc {
           size_t first_block_id = start_cell[idx];
           size_t last_block_id = first_block_id + number_of_pair_cells[idx] - 1;
           a = accessor_shift.offset[first_block_id][type];
-          b = accessor_shift.offset[last_block_id][type]
-            + accessor_shift.size[last_block_id][type];
+          b = accessor_shift.offset[last_block_id][type] + accessor_shift.size[last_block_id][type];
         } else {
           a = 0;
           b = 0;

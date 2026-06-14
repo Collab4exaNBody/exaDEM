@@ -1,7 +1,7 @@
 #pragma once
 #include <cub/cub.cuh>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 
 namespace exaDEM {
 
@@ -12,14 +12,15 @@ namespace exaDEM {
  * the ghost tag and a back-reference to the originating cell pair.
  */
 struct ParticlePairStorage {
-  template<typename T> using VectorT = onika::memory::CudaMMVector<T>;
-  VectorT<uint32_t> cell_i;        ///< Cell index of particle i
-  VectorT<uint32_t> cell_j;        ///< Cell index of particle j
-  VectorT<uint16_t> p_i;           ///< Index of particle i within its cell
-  VectorT<uint16_t> p_j;           ///< Index of particle j within its cell
-  VectorT<uint8_t>  ghost;         ///< Ghost tag per pair
-  VectorT<uint32_t> cell_pair_idx; ///< Index of the cell pair this particle pair came from
-  size_t size = 0;                 ///< Current number of stored particle pairs
+  template <typename T>
+  using VectorT = onika::memory::CudaMMVector<T>;
+  VectorT<uint32_t> cell_i;         ///< Cell index of particle i
+  VectorT<uint32_t> cell_j;         ///< Cell index of particle j
+  VectorT<uint16_t> p_i;            ///< Index of particle i within its cell
+  VectorT<uint16_t> p_j;            ///< Index of particle j within its cell
+  VectorT<uint8_t> ghost;           ///< Ghost tag per pair
+  VectorT<uint32_t> cell_pair_idx;  ///< Index of the cell pair this particle pair came from
+  size_t size = 0;                  ///< Current number of stored particle pairs
 
   /**
    * @brief Resize all internal vectors to hold n particle pairs.
@@ -40,19 +41,11 @@ struct ParticlePairStorage {
 // Stage 1: Count particle pairs per cell pair
 // 1 block = 1 cell pair, threads iterate particle pairs
 // ============================================================
-template<int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ __launch_bounds__(64, 8)
-void CountParticlePairsKernel(
-    TMPLC cells,
-    size_t* __restrict__ owner_cells,
-    size_t* __restrict__ partner_cells,
-    uint8_t* __restrict__ ghost_flags,
-    double rcut_inc,
-    const shape* __restrict__ shps,
-    VertexField* __restrict__ vertex_fields,
-    int* __restrict__ pair_counts,
-    size_t num_cell_pairs)
-{
+template <int BLOCKX, int BLOCKY, typename TMPLC>
+__global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(
+    TMPLC cells, size_t* __restrict__ owner_cells, size_t* __restrict__ partner_cells,
+    uint8_t* __restrict__ ghost_flags, double rcut_inc, const shape* __restrict__ shps,
+    VertexField* __restrict__ vertex_fields, int* __restrict__ pair_counts, size_t num_cell_pairs) {
   using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING, BLOCKY>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
@@ -72,22 +65,18 @@ void CountParticlePairsKernel(
     auto body_a = load(cA, pa);
     const auto& shpa = shps[body_a.type];
 
-    AABB aabb_a = {body_a.r - body_a.radius - rcut_inc,
-                   body_a.r + body_a.radius + rcut_inc};
+    AABB aabb_a = {body_a.r - body_a.radius - rcut_inc, body_a.r + body_a.radius + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
       auto body_b = load(cB, pb);
-      
-	if (body_a.id >= body_b.id)
-          continue;
 
-      if (!is_inside_threshold(aabb_a, body_b.r, body_b.radius))
-        continue;
+      if (body_a.id >= body_b.id) continue;
+
+      if (!is_inside_threshold(aabb_a, body_b.r, body_b.radius)) continue;
 
       Vec3d r = body_b.r - body_a.r;
       double rmax = body_a.radius + body_b.radius + rcut_inc;
-      if (exanb::dot(r, r) > rmax * rmax)
-        continue;
+      if (exanb::dot(r, r) > rmax * rmax) continue;
 
       // OBB test
       const auto& shpb = shps[body_b.type];
@@ -102,34 +91,22 @@ void CountParticlePairsKernel(
 
   int aggregate = BlockReduce(temp_storage).Sum(count);
   __syncthreads();
-  if (threadIdx.x == 0 && threadIdx.y == 0)
-    pair_counts[idx] = aggregate;
+  if (threadIdx.x == 0 && threadIdx.y == 0) pair_counts[idx] = aggregate;
 }
 
 // ============================================================
 // Stage 2: Fill particle pair arrays
 // 1 block = 1 cell pair
 // ============================================================
-template<int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ __launch_bounds__(64, 8)
-void FillParticlePairsKernel(
-    TMPLC cells,
-    size_t* __restrict__ owner_cells,
-    size_t* __restrict__ partner_cells,
-    uint8_t* __restrict__ ghost_flags,
-    double rcut_inc,
-    const shape* __restrict__ shps,
-    VertexField* __restrict__ vertex_fields,
-    int* __restrict__ pair_offsets,
+template <int BLOCKX, int BLOCKY, typename TMPLC>
+__global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
+    TMPLC cells, size_t* __restrict__ owner_cells, size_t* __restrict__ partner_cells,
+    uint8_t* __restrict__ ghost_flags, double rcut_inc, const shape* __restrict__ shps,
+    VertexField* __restrict__ vertex_fields, int* __restrict__ pair_offsets,
     // output
-    uint32_t* __restrict__ out_cell_i,
-    uint32_t* __restrict__ out_cell_j,
-    uint16_t* __restrict__ out_p_i,
-    uint16_t* __restrict__ out_p_j,
-    uint8_t*  __restrict__ out_ghost,
-    uint32_t* __restrict__ out_cell_pair_idx,
-    size_t num_cell_pairs)
-{
+    uint32_t* __restrict__ out_cell_i, uint32_t* __restrict__ out_cell_j, uint16_t* __restrict__ out_p_i,
+    uint16_t* __restrict__ out_p_j, uint8_t* __restrict__ out_ghost, uint32_t* __restrict__ out_cell_pair_idx,
+    size_t num_cell_pairs) {
   using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
   __shared__ typename BlockScan::TempStorage temp_storage;
 
@@ -150,13 +127,12 @@ void FillParticlePairsKernel(
   for (size_t pa = threadIdx.y; pa < nA; pa += blockDim.y) {
     auto body_a = load(cA, pa);
     const auto& shpa = shps[body_a.type];
-    AABB aabb_a = {body_a.r - body_a.radius - rcut_inc,
-                   body_a.r + body_a.radius + rcut_inc};
+    AABB aabb_a = {body_a.r - body_a.radius - rcut_inc, body_a.r + body_a.radius + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
       auto body_b = load(cB, pb);
-      //if (body_a.id >= body_b.id && ghost_flag == 0) continue;
-       if (body_a.id >= body_b.id) continue;
+      // if (body_a.id >= body_b.id && ghost_flag == 0) continue;
+      if (body_a.id >= body_b.id) continue;
       if (!is_inside_threshold(aabb_a, body_b.r, body_b.radius)) continue;
       Vec3d r = body_b.r - body_a.r;
       double rmax = body_a.radius + body_b.radius + rcut_inc;
@@ -179,13 +155,12 @@ void FillParticlePairsKernel(
   for (size_t pa = threadIdx.y; pa < nA; pa += blockDim.y) {
     auto body_a = load(cA, pa);
     const auto& shpa = shps[body_a.type];
-    AABB aabb_a = {body_a.r - body_a.radius - rcut_inc,
-                   body_a.r + body_a.radius + rcut_inc};
+    AABB aabb_a = {body_a.r - body_a.radius - rcut_inc, body_a.r + body_a.radius + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
       auto body_b = load(cB, pb);
-      //if (body_a.id >= body_b.id && ghost_flag == 0) continue;
-       if (body_a.id >= body_b.id) continue;
+      // if (body_a.id >= body_b.id && ghost_flag == 0) continue;
+      if (body_a.id >= body_b.id) continue;
       if (!is_inside_threshold(aabb_a, body_b.r, body_b.radius)) continue;
       Vec3d r = body_b.r - body_a.r;
       double rmax = body_a.radius + body_b.radius + rcut_inc;
@@ -212,19 +187,12 @@ void FillParticlePairsKernel(
 // Stage 3: Count interactions per particle pair
 // 1 block = 1 particle pair (PCCP)
 // ============================================================
-template<int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ void CountInteractionsPPKernel(
-    TMPLC cells,
-    VertexField* __restrict__ vertex_fields,
-    const shape* __restrict__ shps,
-    double rcut_inc,
-    uint32_t* __restrict__ pp_cell_i,
-    uint32_t* __restrict__ pp_cell_j,
-    uint16_t* __restrict__ pp_p_i,
-    uint16_t* __restrict__ pp_p_j,
-    InteractionTypePerCellCounter* __restrict__ count_data,
-    size_t num_pairs)
-{
+template <int BLOCKX, int BLOCKY, typename TMPLC>
+__global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__ vertex_fields,
+                                          const shape* __restrict__ shps, double rcut_inc,
+                                          uint32_t* __restrict__ pp_cell_i, uint32_t* __restrict__ pp_cell_j,
+                                          uint16_t* __restrict__ pp_p_i, uint16_t* __restrict__ pp_p_j,
+                                          InteractionTypePerCellCounter* __restrict__ count_data, size_t num_pairs) {
   using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING, BLOCKY>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
@@ -258,18 +226,16 @@ __global__ void CountInteractionsPPKernel(
 
   for (int i = threadIdx.y; i < nva; i += blockDim.y) {
     for (int j = threadIdx.x; j < nvb; j += blockDim.x) {
-      if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                               vertices_b, body_b.homothety, j, &shpb))
+      if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+                               &shpb))
         countVV++;
     }
     for (int j = threadIdx.x; j < neb; j += blockDim.x) {
-      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                             vertices_b, body_b.homothety, j, &shpb))
+      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
         countVE++;
     }
     for (int j = threadIdx.x; j < nfb; j += blockDim.x) {
-      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                             vertices_b, body_b.homothety, j, &shpb))
+      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
         countVF++;
     }
   }
@@ -277,8 +243,7 @@ __global__ void CountInteractionsPPKernel(
   // Edge-Edge
   for (int i = threadIdx.y; i < nea; i += blockDim.y) {
     for (int j = threadIdx.x; j < neb; j += blockDim.x) {
-      if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                           vertices_b, body_b.homothety, j, &shpb))
+      if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
         countEE++;
     }
   }
@@ -286,13 +251,11 @@ __global__ void CountInteractionsPPKernel(
   // B→A: reverse VE, VF
   for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
     for (int i = threadIdx.x; i < nea; i += blockDim.x) {
-      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety, j, &shpb,
-                             vertices_a, body_a.homothety, i, &shpa))
+      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i, &shpa))
         countVE++;
     }
     for (int i = threadIdx.x; i < nfa; i += blockDim.x) {
-      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety, j, &shpb,
-                             vertices_a, body_a.homothety, i, &shpa))
+      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i, &shpa))
         countVF++;
     }
   }
@@ -302,8 +265,7 @@ __global__ void CountInteractionsPPKernel(
   for (int t = 0; t < 4; t++) {
     int agg = BlockReduce(temp_storage).Sum(types[t]);
     __syncthreads();
-    if (threadIdx.x == 0 && threadIdx.y == 0)
-      count_data[idx][t] = agg;
+    if (threadIdx.x == 0 && threadIdx.y == 0) count_data[idx][t] = agg;
   }
 }
 
@@ -311,22 +273,13 @@ __global__ void CountInteractionsPPKernel(
 // Stage 4: Fill Classifier per particle pair
 // 1 block = 1 particle pair (PCCP)
 // ============================================================
-template<int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ __launch_bounds__(64, 10) 
-void FillInteractionsPPKernel(
-    TMPLC cells,
-    VertexField* __restrict__ vertex_fields,
-    const shape* __restrict__ shps,
-    double rcut_inc,
-    uint32_t* __restrict__ pp_cell_i,
-    uint32_t* __restrict__ pp_cell_j,
-    uint16_t* __restrict__ pp_p_i,
-    uint16_t* __restrict__ pp_p_j,
-    uint8_t*  __restrict__ pp_ghost,
-    InteractionTypePerCellCounter* __restrict__ prefix_data,
-    InteractionParticleAccessor interactions,
-    size_t num_pairs)
-{
+template <int BLOCKX, int BLOCKY, typename TMPLC>
+__global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
+    TMPLC cells, VertexField* __restrict__ vertex_fields, const shape* __restrict__ shps, double rcut_inc,
+    uint32_t* __restrict__ pp_cell_i, uint32_t* __restrict__ pp_cell_j, uint16_t* __restrict__ pp_p_i,
+    uint16_t* __restrict__ pp_p_j, uint8_t* __restrict__ pp_ghost,
+    InteractionTypePerCellCounter* __restrict__ prefix_data, InteractionParticleAccessor interactions,
+    size_t num_pairs) {
   using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
   __shared__ typename BlockScan::TempStorage temp_storage;
 
@@ -353,36 +306,37 @@ void FillInteractionsPPKernel(
   const int neb = shpb.get_number_of_edges();
   const int nfb = shpb.get_number_of_faces();
 
-// Count pass with directional counters
-  int count1 = 0; // VV A→B
-  int count2 = 0; // VE A→B
-  int count3 = 0; // VF A→B
-  int count4 = 0; // EE
-  int count5 = 0; // VE B→A
-  int count6 = 0; // VF B→A
+  // Count pass with directional counters
+  int count1 = 0;  // VV A→B
+  int count2 = 0;  // VE A→B
+  int count3 = 0;  // VF A→B
+  int count4 = 0;  // EE
+  int count5 = 0;  // VE B→A
+  int count6 = 0;  // VF B→A
 
   for (int i = threadIdx.y; i < nva; i += blockDim.y) {
     for (int j = threadIdx.x; j < nvb; j += blockDim.x)
-      if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                               vertices_b, body_b.homothety, j, &shpb)) count1++;
+      if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+                               &shpb))
+        count1++;
     for (int j = threadIdx.x; j < neb; j += blockDim.x)
-      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                             vertices_b, body_b.homothety, j, &shpb)) count2++;
+      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
+        count2++;
     for (int j = threadIdx.x; j < nfb; j += blockDim.x)
-      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                             vertices_b, body_b.homothety, j, &shpb)) count3++;
+      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
+        count3++;
   }
   for (int i = threadIdx.y; i < nea; i += blockDim.y)
     for (int j = threadIdx.x; j < neb; j += blockDim.x)
-      if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                           vertices_b, body_b.homothety, j, &shpb)) count4++;
+      if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
+        count4++;
   for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
     for (int i = threadIdx.x; i < nea; i += blockDim.x)
-      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety, j, &shpb,
-                             vertices_a, body_a.homothety, i, &shpa)) count5++;
+      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i, &shpa))
+        count5++;
     for (int i = threadIdx.x; i < nfa; i += blockDim.x)
-      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety, j, &shpb,
-                             vertices_a, body_a.homothety, i, &shpa)) count6++;
+      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i, &shpa))
+        count6++;
   }
 
   // BlockScan for prefix per type
@@ -411,8 +365,8 @@ void FillInteractionsPPKernel(
     for (int i = threadIdx.y; i < nva; i += blockDim.y) {
       if (count1 > 0) {
         for (int j = threadIdx.x; j < nvb; j += blockDim.x) {
-          if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                                   vertices_b, body_b.homothety, j, &shpb)) {
+          if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+                                   &shpb)) {
             item.pair.pi.sub = i;
             item.pair.pj.sub = j;
             item.pair.type = InteractionTypeId::VertexVertex;
@@ -423,8 +377,8 @@ void FillInteractionsPPKernel(
       }
       if (count2 > 0) {
         for (int j = threadIdx.x; j < neb; j += blockDim.x) {
-          if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                                 vertices_b, body_b.homothety, j, &shpb)) {
+          if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+                                 &shpb)) {
             item.pair.pi.sub = i;
             item.pair.pj.sub = j;
             item.pair.type = InteractionTypeId::VertexEdge;
@@ -435,8 +389,8 @@ void FillInteractionsPPKernel(
       }
       if (count3 > 0) {
         for (int j = threadIdx.x; j < nfb; j += blockDim.x) {
-          if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                                 vertices_b, body_b.homothety, j, &shpb)) {
+          if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+                                 &shpb)) {
             item.pair.pi.sub = i;
             item.pair.pj.sub = j;
             item.pair.type = InteractionTypeId::VertexFace;
@@ -452,8 +406,8 @@ void FillInteractionsPPKernel(
   if (count4 > 0) {
     for (int i = threadIdx.y; i < nea; i += blockDim.y) {
       for (int j = threadIdx.x; j < neb; j += blockDim.x) {
-        if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa,
-                             vertices_b, body_b.homothety, j, &shpb)) {
+        if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+                             &shpb)) {
           item.pair.pi.sub = i;
           item.pair.pj.sub = j;
           item.pair.type = InteractionTypeId::EdgeEdge;
@@ -474,8 +428,8 @@ void FillInteractionsPPKernel(
     for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
       if (count5 > 0) {
         for (int i = threadIdx.x; i < nea; i += blockDim.x) {
-          if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety, j, &shpb,
-                                 vertices_a, body_a.homothety, i, &shpa)) {
+          if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i,
+                                 &shpa)) {
             item.pair.pi.sub = j;
             item.pair.pj.sub = i;
             item.pair.type = InteractionTypeId::VertexEdge;
@@ -485,8 +439,8 @@ void FillInteractionsPPKernel(
       }
       if (count6 > 0) {
         for (int i = threadIdx.x; i < nfa; i += blockDim.x) {
-          if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety, j, &shpb,
-                                 vertices_a, body_a.homothety, i, &shpa)) {
+          if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i,
+                                 &shpa)) {
             item.pair.pi.sub = j;
             item.pair.pj.sub = i;
             item.pair.type = InteractionTypeId::VertexFace;
@@ -498,15 +452,11 @@ void FillInteractionsPPKernel(
   }
 }
 
-inline void reconstruct_cell_pair_offsets(
-    ParticlePairStorage& pp_storage,
-    InteractionTypePerCellCounter* count_per_pp,
-    size_t num_particle_pairs,
-    size_t num_cell_pairs,
-    NbhCellStorage& info_cell_pair)
-{
-  // Reset (parallel)
-  #pragma omp parallel for
+inline void reconstruct_cell_pair_offsets(ParticlePairStorage& pp_storage, InteractionTypePerCellCounter* count_per_pp,
+                                          size_t num_particle_pairs, size_t num_cell_pairs,
+                                          NbhCellStorage& info_cell_pair) {
+// Reset (parallel)
+#pragma omp parallel for
   for (size_t cp = 0; cp < num_cell_pairs; cp++) {
     for (int t = 0; t < InteractionTypeId::NTypes; t++) {
       info_cell_pair.offset[cp][t] = 0;
@@ -514,12 +464,12 @@ inline void reconstruct_cell_pair_offsets(
     }
   }
 
-  // Accumulate (parallel with atomics)
-  #pragma omp parallel for
+// Accumulate (parallel with atomics)
+#pragma omp parallel for
   for (size_t pp = 0; pp < num_particle_pairs; pp++) {
     uint32_t cp = pp_storage.cell_pair_idx[pp];
     for (int t = 0; t < 4; t++) {
-      #pragma omp atomic
+#pragma omp atomic
       info_cell_pair.size[cp][t] += count_per_pp[pp][t];
     }
   }
@@ -539,13 +489,8 @@ inline void reconstruct_cell_pair_offsets(
 // ============================================================
 // Helper kernels for GPU prefix sum
 // ============================================================
-__global__
-void ExtractInteractionCounts(
-    const InteractionTypePerCellCounter* __restrict__ counts,
-    int* __restrict__ vv, int* __restrict__ ve,
-    int* __restrict__ vf, int* __restrict__ ee,
-    size_t n)
-{
+__global__ void ExtractInteractionCounts(const InteractionTypePerCellCounter* __restrict__ counts, int* __restrict__ vv,
+                                         int* __restrict__ ve, int* __restrict__ vf, int* __restrict__ ee, size_t n) {
   size_t i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i >= n) return;
   vv[i] = counts[i][0];
@@ -554,13 +499,9 @@ void ExtractInteractionCounts(
   ee[i] = counts[i][3];
 }
 
-__global__
-void PackInteractionPrefix(
-    InteractionTypePerCellCounter* __restrict__ prefix,
-    const int* __restrict__ vv, const int* __restrict__ ve,
-    const int* __restrict__ vf, const int* __restrict__ ee,
-    size_t n)
-{
+__global__ void PackInteractionPrefix(InteractionTypePerCellCounter* __restrict__ prefix, const int* __restrict__ vv,
+                                      const int* __restrict__ ve, const int* __restrict__ vf,
+                                      const int* __restrict__ ee, size_t n) {
   size_t i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i >= n) return;
   prefix[i][0] = vv[i];
@@ -569,4 +510,4 @@ void PackInteractionPrefix(
   prefix[i][3] = ee[i];
 }
 
-} // namespace exaDEM
+}  // namespace exaDEM

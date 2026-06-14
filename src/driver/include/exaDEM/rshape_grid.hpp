@@ -30,11 +30,11 @@ struct RShapeDriverCellIndexes {
   size_t nfaces;    /**< Number of faces in the grid cell. */
 };
 
-// List of geometric elements (vertices, edges, faces) projected on the grid for a R-Shape driver.
+/** @brief List of geometric elements (vertices, edges, faces) projected on the grid for a R-Shape driver. */
 struct RShapeDriverGridCellIndexes {
   onika::memory::CudaMMVector<RShapeDriverCellIndexes>
-      cells;  // List of grid cells with their respective counts of vertices, edges, and faces.
-  onika::memory::CudaMMVector<int> data;  // List of vertex, edge, and face indices for all grid cells.
+      cells; /**< List of grid cells with their respective counts of vertices, edges, and faces. */
+  onika::memory::CudaMMVector<int> data; /**< List of vertex, edge, and face indices for all grid cells. */
 
   /** @brief Reset the grid.
    */
@@ -60,12 +60,9 @@ struct RShapeDriverGridCellIndexes {
 
   /** @brief Fill a grid cell with the given element indices.
    * @param cell_idx The index of the grid cell to fill.
-   * @param nvertices The number of vertices in the grid cell.
-   * @param nedges The number of edges in the grid cell.
-   * @param nfaces The number of faces in the grid cell.
-   * @param indices_vertices Pointer to the array of vertex indices.
-   * @param indices_edges Pointer to the array of edge indices.
-   * @param indices_faces Pointer to the array of face indices.
+   * @param indices_vertices Span of vertex indices for the grid cell.
+   * @param indices_edges Span of edge indices for the grid cell.
+   * @param indices_faces Span of face indices for the grid cell.
    */
   inline void fill_cell(size_t cell_idx, std::span<const int> indices_vertices, std::span<const int> indices_edges,
                         std::span<const int> indices_faces) {
@@ -115,17 +112,21 @@ struct RShapeDriverGridCellIndexes {
  */
 struct RShapeDriverCellAccessor {
  public:
-  const int* grid_id_vertices;  // List of vertex indices.
-  const int* grid_id_edges;     // List of edge indices.
-  const int* grid_id_faces;     // List of face indices.
-  size_t rshape_nv;             // Number of vertices in the grid cell.
-  size_t rshape_ne;             // Number of edges in the grid cell.
-  size_t rshape_nf;             // Number of faces in the grid cell.
+  const int* grid_id_vertices; /**< List of vertex indices. */
+  const int* grid_id_edges;    /**< List of edge indices. */
+  const int* grid_id_faces;    /**< List of face indices. */
+  size_t rshape_nv;            /**< Number of vertices in the grid cell. */
+  size_t rshape_ne;            /**< Number of edges in the grid cell. */
+  size_t rshape_nf;            /**< Number of faces in the grid cell. */
 
+  /** @brief Build an accessor to the vertex, edge, and face indices of a given grid cell.
+   * @param cell_idx Index of the grid cell to access.
+   * @param grid_rshape Grid storing the geometric elements projected for the R-Shape driver.
+   */
   ONIKA_HOST_DEVICE_FUNC RShapeDriverCellAccessor(size_t cell_idx, const RShapeDriverGridCellIndexes& grid_rshape) {
     using onika::cuda::vector_data;
 
-    const RShapeDriverCellIndexes& cell_info = grid_rshape.cells[cell_idx];
+    const RShapeDriverCellIndexes& cell_info = vector_data(grid_rshape.cells)[cell_idx];
     const int* data_ptr = vector_data(grid_rshape.data);
     grid_id_vertices = data_ptr + cell_info.offset;
     grid_id_edges = grid_id_vertices + cell_info.nvertices;
@@ -136,6 +137,7 @@ struct RShapeDriverCellAccessor {
   }
 
  private:
+  /** @brief Default constructor disabled; an accessor must always be bound to a grid cell. */
   RShapeDriverCellAccessor() {}
 };
 }  // namespace exaDEM

@@ -52,14 +52,14 @@ class UnclassifyGPU : public OperatorNode {
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This function
+        This operator transfers the active interactions held by the GPU interaction Classifier (ic)
+        back into the GridCellParticleInteraction storage (ges).
 
         YAML example [no option]:
 
           - unclassify_gpu
        )EOF";
   }
-
 
   inline void execute() final {
     // lout << "unclassify active interaction on GridCellParticleInteraction" << std::endl;
