@@ -15,13 +15,11 @@ specific language governing permissions and limitations
 under the License.
 */
 
-
 #pragma once
 
-#include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/block_parallel_for.h>
+#include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/parallel_for.h>
-
 
 namespace exaDEM {
 using namespace onika::parallel;
@@ -50,7 +48,6 @@ struct NeighborRunner {
   NeighborRunner(const size_t* const cells, const IJK& d, Func& f, Args... args)
       : cell_idx(cells), dims(d), func(f), params(std::tuple<Args...>(args...)) {}
 
-
   IJK convert_offset_ijk(int offset) const {
     assert(offset < 27);
     IJK res;
@@ -68,11 +65,10 @@ struct NeighborRunner {
   }
 
   template <size_t... Is>
-  ONIKA_HOST_DEVICE_FUNC inline void apply(onikaInt3_t& block,
-                                           tuple_helper::index<Is...> indexes) const {
+  ONIKA_HOST_DEVICE_FUNC inline void apply(onikaInt3_t& block, tuple_helper::index<Is...> indexes) const {
     assert(block.z == 1);
     auto [cell_a, cell_b] = nbh_runner_decode_block(block);
-    func(cell_a, cell_b, std::get<Is>(params)...); 
+    func(cell_a, cell_b, std::get<Is>(params)...);
   }
 
   /**
@@ -92,16 +88,14 @@ struct NeighborRunnerFunctorTraits {
 };
 }  // namespace exaDEM
 
-
-
 namespace onika {
 namespace parallel {
 
 template <typename Func, typename... Args>
 struct ParallelForFunctorTraits<exaDEM::NeighborRunner<Func, Args...>> {
-  static inline constexpr bool RequiresBlockSynchronousCall = exaDEM::NeighborRunnerFunctorTraits<Func>::RequiresBlockSynchronousCall;
+  static inline constexpr bool RequiresBlockSynchronousCall =
+      exaDEM::NeighborRunnerFunctorTraits<Func>::RequiresBlockSynchronousCall;
   static inline constexpr bool CudaCompatible = exaDEM::NeighborRunnerFunctorTraits<Func>::CudaCompatible;
 };
 }  // namespace parallel
 }  // namespace onika
-
