@@ -77,17 +77,18 @@ visualization_init:
           #version 460 core
           #extension GL_ARB_shading_language_include : require
           layout (location = 0) in vec3 aPos;
-          layout (location = 1) in vec4 aQuat;
-          layout (location = 2) in float aHomothety;
-          out vec4 vDiffuseColor;
+          layout (location = 1) in float aHomothety;
+          layout (location = 2) in vec4 aQuat;
+          layout (location = 3) in mat3 aStress;
           out vec4 vQuat;
           out float vHomothety;
+          out float vStress;
           void main()
           {
             gl_Position = vec4(aPos,1);
-            vDiffuseColor = vec4(1,0.8,0.6,1);
             vQuat = aQuat;
             vHomothety = aHomothety;
+            vStress = sqrt( dot(aStress[0],aStress[0]) + dot(aStress[1],aStress[1]) + dot(aStress[2],aStress[2]) );
           }
 
         GL_GEOMETRY_SHADER: |
@@ -95,17 +96,19 @@ visualization_init:
           #extension GL_ARB_shading_language_include : require
           #include <uniform/camera>
           #include <math/quaternion>
+          #include <color/scalar_color_map>
           out vec4 fDiffuseColor;
           #include <dem/shapes>
           layout (points) in;
           layout (triangle_strip, max_vertices=DEM_SHAPE_MAX_VERTICES) out;
           in vec4 vQuat[];
-          in vec4 vDiffuseColor[];
           in float vHomothety[];
+          in float vStress[];
           void main()
           {
+            vec4 color = scalar_pv_colormap( vStress[0], 0.0 , 100.0 );
             mat3 S = mat3( vec3(vHomothety[0],0,0) , vec3(0,vHomothety[0],0) , vec3(0,0,vHomothety[0]) );
-            dem_shape_emit_faces( gl_in[0].gl_Position , camera.projection[0], camera.modelview[0] , quaternion_to_matrix(vQuat[0]) * S, 0 , vDiffuseColor[0], vec3(1,1,1) );
+            dem_shape_emit_faces( gl_in[0].gl_Position , camera.projection[0], camera.modelview[0] , quaternion_to_matrix(vQuat[0]) * S, 0 , color, vec3(1,1,1) );
           }
 
         GL_FRAGMENT_SHADER: |
@@ -155,8 +158,9 @@ egl_particles_to_vertex_buffer:
   vertex_buffer: "particles"
   vertex_attribs:
     position: 0
-    orient: 1
-    homothety: 2
+    homothety: 1
+    orient: 2
+    stress: 3
 
 +update_particles_full_body:
   - egl_particles_noghost_elements: { elements: "noghost_particles" }
