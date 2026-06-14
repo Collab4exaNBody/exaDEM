@@ -2,7 +2,7 @@
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 
-static inline cudaError_t ONIKA_PREFETCH(const void* ptr, size_t size, int device, cudaStream_t stream) {
+static inline onikaError_t ONIKA_PREFETCH(const void* ptr, size_t size, int device, cudaStream_t stream) {
 #if CUDART_VERSION >= 13000
   cudaMemLocation loc = {(device == cudaCpuDeviceId) ? cudaMemLocationTypeHost : cudaMemLocationTypeDevice,
                          (device == cudaCpuDeviceId) ? 0 : device};
