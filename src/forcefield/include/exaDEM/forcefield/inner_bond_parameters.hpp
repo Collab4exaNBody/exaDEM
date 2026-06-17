@@ -18,9 +18,11 @@ under the License.
 */
 #pragma once
 
-#include <yaml-cpp/yaml.h>
-#include <onika/string_utils.h>
 #include <onika/physics/units.h>
+#include <onika/string_utils.h>
+#include <yaml-cpp/yaml.h>
+
+#include <exaDEM/interface/rupture_criterion.hpp>
 
 namespace exaDEM {
 using onika::lout;
@@ -32,7 +34,12 @@ struct InnerBondParams {
   double kn = 0.0; /**< Normal stiffness coefficient (force per unit displacement in the normal direction). */
   double kt = 0.0; /**< Tangential stiffness coefficient (force per unit displacement in the tangential direction). */
   double damp_rate = 0.0;
-  double g = 0.0;
+  /** Rupture mode for the fracture criterion. Set to MixedMode when the user provides "g" in the input file,
+   * SeparateModes when the user provides "gn" and "gt" instead. */
+  RuptureMode mode = RuptureMode::None;
+  double gn = 0.0; /**< MixedMode: combined fracture energy release rate (g). SeparateModes: normal fracture energy
+                      release rate. */
+  double gt = 0.0; /**< SeparateModes only: tangential fracture energy release rate. */
 };
 
 /**
@@ -43,7 +50,8 @@ struct InnerBondParams {
  * @return true if all fields of both instances are equal; false otherwise.
  */
 inline bool operator==(InnerBondParams& a, InnerBondParams& b) {
-  return (a.kn == b.kn) && (a.kt == b.kt) && (a.damp_rate == b.damp_rate) && (a.g == b.g);
+  return (a.kn == b.kn) && (a.kt == b.kt) && (a.damp_rate == b.damp_rate) && (a.mode == b.mode) && (a.gn == b.gn) &&
+         (a.gt == b.gt);
 }
 
 /**
@@ -63,9 +71,15 @@ inline void display_end_table();
  */
 template <>
 inline void display_header<InnerBondParams>() {
-  lout << "===============================================================================" << std::endl;
-  lout << "|        typeA |        typeB |        kn |        kt | damp_rate |         g |" << std::endl;
-  lout << "-------------------------------------------------------------------------------" << std::endl;
+  lout << "=========================================================================================================="
+       << std::endl;
+  lout << "|        typeA |        typeB |        kn |        kt | damp_rate |  mode : Mixed |         g |         X |"
+       << std::endl;
+  lout << "|              |              |           |           |           |     Seperated |        gn |        gt |"
+       << std::endl;
+
+  lout << "----------------------------------------------------------------------------------------------------------"
+       << std::endl;
 }
 
 /**
@@ -73,15 +87,16 @@ inline void display_header<InnerBondParams>() {
  */
 template <>
 inline void display_end_table<InnerBondParams>() {
-  lout << "===============================================================================" << std::endl;
+  lout << "=========================================================================================================="
+       << std::endl;
 }
 
 /**
  * @brief Formats the contact parameters into a single table row string.
  */
 inline std::string display(InnerBondParams& params) {
-  std::string line =
-      onika::format_string(" %.3e | %.3e | %.3e | %.3e |", params.kn, params.kt, params.damp_rate, params.g);
+  std::string line = onika::format_string(" %.3e | %.3e | %.3e | %13s | %.3e | %.3e |", params.kn, params.kt,
+                                          params.damp_rate, exaDEM::display(params.mode), params.gn, params.gt);
   return line;
 }
 
@@ -107,8 +122,8 @@ inline void display_multimat(std::string typeA, std::string typeB, InnerBondPara
  */
 template <typename STREAM>
 void streaming(STREAM& stream, InnerBondParams& params) {
-  stream << "{ kn: " << params.kn << ", kt: " << params.kt << ", damp_rate: " << params.damp_rate << ", g: " << params.g
-         << " }";
+  stream << "{ kn: " << params.kn << ", kt: " << params.kt << ", damp_rate: " << params.damp_rate
+         << ", mode: " << exaDEM::display(params.mode) << ", gn: " << params.gn << ", gt: " << params.gt << " }";
 }
 }  // namespace exaDEM
 
@@ -137,15 +152,31 @@ struct convert<InnerBondParams> {
       lerr << "en is missing\n";
       return false;
     }
-    if (!node["g"]) {
-      lerr << "g is missing\n";
-      return false;
-    }
 
     v.kn = node["kn"].as<Quantity>().convert();
     v.kt = node["kt"].as<Quantity>().convert();
     v.damp_rate = node["damp_rate"].as<Quantity>().convert();
-    v.g = node["g"].as<Quantity>().convert();
+
+    if (node["g"]) {
+      if (node["gn"] || node["gt"]) {
+        lerr << "Please, define only g (remove gt or gn).\n";
+        return false;
+      }
+      // MixedMode: a single fracture criterion is used (En + Et > 2 * area * g). Stored in gn, gt is unused.
+      v.mode = exaDEM::RuptureMode::MixedMode;
+      v.gn = node["g"].as<Quantity>().convert();
+      v.gt = 0.0;
+    } else if (node["gn"] && node["gt"]) {
+      // SeparateModes: normal and tangential fracture criteria are checked independently.
+      v.mode = exaDEM::RuptureMode::SeparateModes;
+      v.gn = node["gn"].as<Quantity>().convert();
+      v.gt = node["gt"].as<Quantity>().convert();
+    }
+
+    if (v.mode == exaDEM::RuptureMode::None) {
+      lerr << "g or (gn and gt) is missing\n";
+      return false;
+    }
 
     return true;
   }
