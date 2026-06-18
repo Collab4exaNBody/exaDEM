@@ -181,7 +181,8 @@ struct WrapperForAll {
    */
   template <size_t... Is>
   ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const {
-    exaDEM::Interaction item = data(i);
+    // exaDEM::Interaction item = data(i);
+    auto item = data(i);
     kernel(i, item, std::get<Is>(params)...);
   }
 
