@@ -79,7 +79,7 @@ visualization_init:
           layout (location = 0) in vec3 aPos;
           layout (location = 1) in float aHomothety;
           layout (location = 2) in vec4 aQuat;
-          layout (location = 3) in mat3 aStress;
+          layout (location = 3) in float aStressNorm;
           out vec4 vQuat;
           out float vHomothety;
           out float vStress;
@@ -88,7 +88,7 @@ visualization_init:
             gl_Position = vec4(aPos,1);
             vQuat = aQuat;
             vHomothety = aHomothety;
-            vStress = sqrt( dot(aStress[0],aStress[0]) + dot(aStress[1],aStress[1]) + dot(aStress[2],aStress[2]) );
+            vStress = aStressNorm;
           }
 
         GL_GEOMETRY_SHADER: |
@@ -106,7 +106,7 @@ visualization_init:
           in float vStress[];
           void main()
           {
-            vec4 color = scalar_pv_colormap( vStress[0], 0.0 , 100.0 );
+            vec4 color = scalar_pv_colormap( vStress[0], 0.0 , 1.0 );
             mat3 S = mat3( vec3(vHomothety[0],0,0) , vec3(0,vHomothety[0],0) , vec3(0,0,vHomothety[0]) );
             dem_shape_emit_faces( gl_in[0].gl_Position , camera.projection[0], camera.modelview[0] , quaternion_to_matrix(vQuat[0]) * S, 0 , color, vec3(1,1,1) );
           }
@@ -160,7 +160,7 @@ egl_particles_to_vertex_buffer:
     position: 0
     homothety: 1
     orient: 2
-    stress: 3
+    stressNorm: 3
 
 +update_particles_full_body:
   - egl_particles_noghost_elements: { elements: "noghost_particles" }
@@ -173,6 +173,8 @@ viz_data_egl:
     - egl_particles_to_vertex_buffer
     - egl_draw: { vertex_buffer: "particles" , elements: "noghost_particles" , primitive: GL_POINTS , shader_program: "oriented_shape"  }
     - egl_draw: { vertex_buffer: "driver_vertices" , elements: "driver_triangles" , primitive: GL_TRIANGLES , shader_program: "driver_surface"  }
+#    - timestep_file: "gl/frame_%09d"
+#    - egl_write_frame: { surface: "ExaDEM Visualization" }
     - egl_end_frame: { surface: "ExaDEM Visualization" }
 
 iteration_dump_writer: viz_data_egl
