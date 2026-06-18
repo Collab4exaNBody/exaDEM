@@ -9,11 +9,17 @@ evaluate_polyhedron_displ:
   body: 
     - vertex_displ_over
 
+trigger_dump_broken_interface:
+  condition: broken_interface AND dump_broken_interface 
+  body:
+    - store_broken_interface
+
 evaluate_interface_breakage:
   rebind: { result: broken_interface }
   body:
     - apply_interface_fracture_criterion:
        display: true
+
 interface_updater:
   condition: broken_interface
   body:
@@ -27,6 +33,7 @@ displ_or_break:
 evaluate_particle_displ:
   - evaluate_polyhedron_displ
   - evaluate_interface_breakage
+  - trigger_dump_broken_interface
   - interface_updater
   - displ_or_break
 
