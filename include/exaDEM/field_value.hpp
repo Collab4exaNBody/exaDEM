@@ -24,4 +24,11 @@ template <typename TMPLC, typename ParticleLocation, typename FieldName>
 ONIKA_HOST_DEVICE_FUNC auto exadem_field_value(TMPLC* cells, ParticleLocation& loc, FieldName& fieldname) {
   return cells[loc.cell][fieldname][loc.p];
 }
+
+template <typename TMPLC, typename ParticleLocation>
+ONIKA_HOST_DEVICE_FUNC exanb::Vec3d exadem_field_center(TMPLC* cells, ParticleLocation& loc) {
+  auto& cell = cells[loc.cell];
+
+  return Vec3d{cell[field::rx][loc.p], cell[field::ry][loc.p], cell[field::rz][loc.p]};
+}
 }  // namespace exaDEM
