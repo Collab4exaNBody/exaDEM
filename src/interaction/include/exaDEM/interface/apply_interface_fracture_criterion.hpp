@@ -21,20 +21,34 @@ struct ApplyInterfaceFractureCriterionFunc {
     auto& [offset, size] = interface[i];
     double En = 0.0;
     double Et = 0.0;
-    // Criterion is stored in the interaction that compose the interface.
-    // We can take the criterion of the first interaction
-    // since all interactions that compose the interface have the same criterion.
-    double criterion = interaction.Criterion(offset);
+
     // Sum of the normal and tangential energy of the interactions that compose the interface
     for (size_t j = offset; j < offset + size; j++) {
       En += interaction.En(j);
       Et += interaction.Et(j);
     }
 
-    // Criterion formula: En + Et > 2 * area * g
+    // Criterion is stored in the interaction that compose the interface.
+    // We can take the criterion of the first interaction
+    // since all interactions that compose the interface have the same criterion.
+
+    // Criterion formula: En or Et > 2 * area * g_{n or t}
     // g is defined by the input parameters.
-    if ((En + Et) > criterion) {
-      break_interface[i] = true;
+    RuptureMode mode = interaction.rupture_mode(offset);
+    if (mode == RuptureMode::MixedMode) {
+      double criterion = interaction.mixed_criterion(offset);
+      if (En + Et > criterion) {  // cs = sum
+        break_interface[i] = true;
+      }
+    }
+    if (mode == RuptureMode::SeparateModes) {
+      double cn = interaction.normal_criterion(offset);
+      double ct = interaction.tangential_criterion(offset);
+      if (En > cn) {
+        break_interface[i] = true;
+      } else if (Et > ct) {
+        break_interface[i] = true;
+      }
     }
   }
 };

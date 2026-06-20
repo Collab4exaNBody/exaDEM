@@ -29,6 +29,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/interface/interface.hpp>
@@ -97,7 +98,9 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
     for (size_t i = 0; i < number_of_interfaces; i++) {
       auto& interface = interfaces.data[i];
 
-      double E = 0;
+      double En = 0;
+      double Et = 0;
+      RuptureCriteria criterion;
 
       vertices.resize(interface.size);
       for (size_t j = interface.loc; j < interface.loc + interface.size; j++) {
@@ -117,8 +120,15 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
                     << interaction.tds.z << " ";
         buffers.et << interaction.et << " ";
         buffers.en << interaction.en << " ";
-        E += (interaction.en + interaction.et) / interaction.criterion;
+        En += interaction.en;
+        Et += interaction.et;
+        criterion = interaction.criterion;  // same criterion for every interaction of the interface
       }
+
+      // All interactions composing the interface share the same criterion.
+      double E = criterion.mode == RuptureMode::MixedMode
+                     ? (En + Et) / criterion.criterion()
+                     : std::max(En / criterion.normal_criterion(), Et / criterion.tangential_criterion());
 
       order_face_vertices(vertices);
 

@@ -22,6 +22,7 @@ under the License.
 #include <onika/math/basic_types_stream.h>
 
 #include <exaDEM/interaction/interaction_pair.hpp>
+#include <exaDEM/interface/rupture_criterion.hpp>
 #include <iostream>
 
 namespace exaDEM {
@@ -38,8 +39,10 @@ struct InnerBondInteraction {
   exanb::Vec3d tds;                  /**< Tangential displacement vector associated with the interaction. */
   double et;                         /**< Tangential energy associated with the interaction. */
   double dn0;                        /**< Initial normal overlap associated with the interaction. */
-  double weight = 1.0;     /**< Weight associated with the interaction, used for scaling forces and moments. */
-  double criterion;        /**< Criterion value associated with the interaction, used for determining bond breakage. */
+  double weight = 1.0; /**< Weight associated with the interaction, used for scaling forces and moments. */
+  RuptureCriteria
+      criterion; /**< Criterion value associated with the interaction, used for determining bond breakage. */
+
   uint8_t unbroken = true; /**< Flag indicating whether the bond is unbroken (true) or broken (false). */
 
   /** @brief Get the first particle location.
@@ -81,7 +84,7 @@ struct InnerBondInteraction {
     tds = exanb::Vec3d{0, 0, 0};
     et = 0;
     unbroken = true;
-    // weight and criterion are not reset
+    // weight and criteria are not reset
   }
 
   /** @brief Checks if the interaction is active.
