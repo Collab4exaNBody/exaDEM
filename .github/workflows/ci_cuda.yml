@@ -1,0 +1,85 @@
+name: CMake CUDA
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+  CUDA_ARCH: 80
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Build inside an NVIDIA CUDA "devel" image so nvcc and the CUDA headers/
+    # libs are available. As with the HIP build, compiling for a given
+    # CUDA_ARCH does not require an NVIDIA GPU on the runner — only the
+    # toolkit and an explicit CMAKE_CUDA_ARCHITECTURES.
+    container:
+      image: nvidia/cuda:12.4.1-devel-ubuntu22.04
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    # Containers run as root, so no "sudo" is needed (and it isn't installed
+    # in the nvidia/cuda image).
+    - name: Install build dependencies (yaml-cpp, lcov, MPI)
+      run: |
+        apt-get update
+        apt-get install -y libyaml-cpp-dev lcov mpich
+
+    # Ubuntu 22.04's apt CMake (3.22) is older than onika's
+    # cmake_minimum_required (3.26). Pull a recent matching cmake/ccmake
+    # from Kitware's official apt repo, same as the HIP workflow.
+    - name: Install recent CMake (Kitware apt repo)
+      run: |
+        apt-get install -y wget gpg
+        wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc \
+          | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
+        echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ jammy main" \
+          | tee /etc/apt/sources.list.d/kitware.list
+        apt-get update
+        apt-get install -y cmake
+        cmake --version
+
+    - name: Locate nvcc
+      id: nvcc
+      run: |
+        command -v nvcc
+        echo "path=$(command -v nvcc)" >> "$GITHUB_OUTPUT"
+
+    - name: Configure Onika (CUDA enabled, target sm_${{env.CUDA_ARCH}})
+      run: |
+        cmake -B ${{github.workspace}}/build \
+              -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+              -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install-cuda \
+              -DONIKA_BUILD_CUDA=ON \
+              -DCMAKE_CUDA_COMPILER=${{steps.nvcc.outputs.path}} \
+              -DCMAKE_CUDA_ARCHITECTURES=${{env.CUDA_ARCH}}
+
+    - name: Build Onika
+      run: cmake --build ${{github.workspace}}/build --target install --config ${{env.BUILD_TYPE}} -j 4
+
+    - name: Get ExaNBody
+      run: git clone --depth 1 https://github.com/Collab4exaNBody/exaNBody.git
+#      run: git clone --depth 1 --branch v2.0.9 https://github.com/Collab4exaNBody/exaNBody.git         
+    - name: Configure ExaNBody
+      run: cmake -B ${{github.workspace}}/exaNBody/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -Donika_DIR=${{github.workspace}}/onika/install -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/exaNBody/install
+      working-directory: ${{github.workspace}}/exaNBody
+    - name: Build ExaNBody
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/exaNBody/build --target install --config ${{env.BUILD_TYPE}} -j 2
+
+    - name: Configure CMake
+      run: cmake -DCMAKE_CXX_FLAGS="--coverage -g" -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DexaNBody_DIR=${{github.workspace}}/exaNBody/install
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -j 2
+
