@@ -23,6 +23,10 @@ jobs:
       image: nvidia/cuda:12.4.1-devel-ubuntu22.04
 
     steps:
+    - name: Install git in container
+      run: |
+        apt-get update
+        apt-get install -y git
     - uses: actions/checkout@v4
       with:
         persist-credentials: false
