@@ -25,6 +25,7 @@ under the License.
 #include <onika/math/basic_types.h>
 #include <onika/memory/allocator.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <exaDEM/basic_types.hpp>
@@ -706,35 +707,50 @@ struct shape {
   }
 
   // CPU
-  // could be optimized without sort ...
   /**
    * @brief Finds the face matching a given set of vertex IDs.
-   * @param vertices Vertex IDs to identify (modified by sort).
+   * @param vertices Vertex IDs to identify.
+   * @param allow_partial_match If true, also accept a face that is a superset of vertices.
    * @return Matching face ID.
    */
-  uint16_t identify_face(std::span<int> vertices) const {
-    std::vector<int> input(vertices.begin(), vertices.end());
-    std::sort(input.begin(), input.end());
-
-    const auto n_vertices = vertices.size();
+  uint16_t identify_face(std::span<int> vertices, bool allow_partial_match = true) const {
+    const auto n_vertices = static_cast<int>(vertices.size());
     const auto n_faces = get_number_of_faces();
+
     for (uint16_t fid = 0; fid < n_faces; ++fid) {
       auto [data, size] = get_face(fid);
-      if (size != static_cast<int>(n_vertices)) {
+      if (size != n_vertices) {
         continue;
       }
 
-      std::vector<int> face(data, data + size);
-      std::sort(face.begin(), face.end());
-
-      if (input == face) {
+      if (std::is_permutation(data, data + size, vertices.begin(), vertices.end())) {
         return fid;
+      }
+    }
+
+    if (allow_partial_match) {
+      // Looking for partial correspondence.
+      for (uint16_t fid = 0; fid < n_faces; ++fid) {
+        auto [data, size] = get_face(fid);
+        if (size < n_vertices) {
+          continue;
+        }
+
+        const bool is_subset = std::all_of(vertices.begin(), vertices.end(), [data, size](int v) {
+          return std::find(data, data + size, v) != data + size;
+        });
+
+        if (is_subset) {
+          return fid;
+        }
       }
     }
 
     std::string msg = "Impossible to identify a face in shape: " + m_name + ".\n";
     msg += "Vertices ID are: [ ";
-    for (size_t i = 0; i < n_vertices; i++) msg += std::to_string(vertices[i]) + " ";
+    for (int i = 0; i < n_vertices; i++) {
+      msg += std::to_string(vertices[i]) + " ";
+    }
     msg += "]";
     color_log::error("shape::identify_face", msg);
     return std::numeric_limits<uint16_t>::max();

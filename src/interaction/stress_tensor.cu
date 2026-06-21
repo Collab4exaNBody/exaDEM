@@ -67,7 +67,7 @@ struct ComputeStressTensorFunc {
       exaDEM::mat3d_atomic_add_contribution(cell[field::stress][i.p], exanb::tensor(fij, cij));
 
       // polyhedron - polyhedron || sphere - sphere
-      if constexpr (type <= 3 && sym == true || is_innerbond) {
+      if constexpr ((type <= 3 && sym == true) || is_innerbond) {
         auto& j = I.j();  // id for particle id, cell for cell id, p for
                           // position, sub for vertex id
         auto& cellj = cells[j.cell];

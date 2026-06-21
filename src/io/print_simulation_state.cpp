@@ -16,15 +16,15 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
+#include <mpi.h>
 #include <onika/log.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
 #include <onika/string_utils.h>
 
-#include <exaDEM/interface/interface.hpp>
 #include <exaDEM/dem_simulation_state.hpp>
-#include <mpi.h>
+#include <exaDEM/interface/interface.hpp>
 #include <filesystem>  // C++17
 
 namespace exaDEM {
@@ -56,9 +56,7 @@ class PrintSimulationStateNode : public OperatorNode {
   ADD_SLOT(InterfaceManager, im, INPUT, OPTIONAL, DocString{"List of interfaces"});
 
  public:
-  inline bool is_sink() const final {
-    return true;
-  }
+  inline bool is_sink() const final { return true; }
 
   inline void execute() final {
     static std::string header =
@@ -68,7 +66,6 @@ class PrintSimulationStateNode : public OperatorNode {
     if (im.has_value()) {  // fragmentation
       header += "    Interfaces";
     }
-
 
     bool lb_flag = (*lb_counter) > 0;
     long move_count = *move_counter;
