@@ -18,10 +18,13 @@ under the License.
 */
 #pragma once
 
+// onika
+#include <onika/flat_tuple.h>
 #include <onika/math/basic_types.h>
+
+// exaNBody
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/grid_cell_particles/particle_region.h>
-#include <onika/flat_tuple.h>
 
 namespace exaDEM {
 
@@ -65,7 +68,7 @@ ONIKA_HOST_DEVICE_FUNC static inline void setter(const Tuple& values, Arg& arg, 
  */
 template <typename... Ts>
 struct SetFunctor {
-  onika::FlatTuple<Ts...> m_default_values; /**< Flat tuple of default values of types Ts. */
+  onika::FlatTuple<Ts...> default_values_; /**< Flat tuple of default values of types Ts. */
 
   /**
    * @brief Functor operator for setting values.
@@ -79,7 +82,7 @@ struct SetFunctor {
   template <typename... Args>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(Args&... args) const {
     static constexpr int first = 0;
-    setter<first>(m_default_values, args...);
+    setter<first>(default_values_, args...);
   }
 };
 
@@ -94,8 +97,8 @@ struct SetFunctor {
  */
 template <typename... Ts>
 struct SetRegionFunctor {
-  const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
-  onika::FlatTuple<Ts...> m_default_values;  /**< Flat tuple of default values of types Ts. */
+  const ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
+  onika::FlatTuple<Ts...> default_values_;    /**< Flat tuple of default values of types Ts. */
 
   /**
    * @brief Functor operator for setting values.
@@ -110,9 +113,9 @@ struct SetRegionFunctor {
   ONIKA_HOST_DEVICE_FUNC inline void operator()(double rx, double ry, double rz, const uint64_t id,
                                                 Args&... args) const {
     Vec3d r = {rx, ry, rz};
-    if (region.contains(r, id)) {
+    if (region_.contains(r, id)) {
       static constexpr int first = 0;
-      setter<first>(m_default_values, args...);
+      setter<first>(default_values_, args...);
     }
   }
 };
@@ -125,8 +128,8 @@ struct SetRegionFunctor {
  */
 template <typename Func, typename... Ts>
 struct SetFunctorWithProcessing {
-  mutable Func m_processing;                /**< Functor with processing. */
-  onika::FlatTuple<Ts...> m_default_values; /**< Flat tuple of default values of types Ts. */
+  mutable Func processing_;                /**< Functor with processing. */
+  onika::FlatTuple<Ts...> default_values_; /**< Flat tuple of default values of types Ts. */
 
   /**
    * @brief Functor operator with a processing function.
@@ -137,7 +140,7 @@ struct SetFunctorWithProcessing {
   template <typename... Args>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(Args&... args) const {
     static constexpr int first = 0;
-    setter<first>(m_default_values, m_processing(args)...);
+    setter<first>(default_values_, processing_(args)...);
   }
 };
 
@@ -149,9 +152,9 @@ struct SetFunctorWithProcessing {
  */
 template <typename Func, typename... Ts>
 struct SetRegionFunctorWithProcessing {
-  const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
-  mutable Func m_processing;                 /**< Functor with processing. */
-  onika::FlatTuple<Ts...> m_default_values;  /**< Flat tuple of default values of types Ts. */
+  const ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
+  mutable Func processing_;                   /**< Functor with processing. */
+  onika::FlatTuple<Ts...> default_values_;    /**< Flat tuple of default values of types Ts. */
 
   /**
    * @brief Functor operator with a processing function.
@@ -167,9 +170,9 @@ struct SetRegionFunctorWithProcessing {
   ONIKA_HOST_DEVICE_FUNC inline void operator()(double rx, double ry, double rz, const uint64_t id,
                                                 Args&... args) const {
     Vec3d r = {rx, ry, rz};
-    if (region.contains(r, id)) {
+    if (region_.contains(r, id)) {
       static constexpr int first = 0;
-      setter<first>(m_default_values, m_processing(args)...);
+      setter<first>(default_values_, processing_(args)...);
     }
   }
 };
@@ -180,9 +183,9 @@ struct SetRegionFunctorWithProcessing {
  */
 template <typename Func>
 struct GenSetFunctor {
-  mutable Func m_gen; /**< functor used to generate value. */
+  mutable Func gen_; /**< functor used to generate value. */
 
-  // this function is only used to apply m_gen on parametes, note that m_gen can't return void.
+  // this function is only used to apply gen_ on parametes, note that gen_ can't return void.
   template <typename... Args>
   void do_nothing(Args... args) const {}
 
@@ -194,7 +197,7 @@ struct GenSetFunctor {
    */
   template <typename... Args>
   inline void operator()(Args&... args) const {
-    do_nothing(m_gen(args)...);
+    do_nothing(gen_(args)...);
   }
 };
 
@@ -204,10 +207,10 @@ struct GenSetFunctor {
  */
 template <typename Func>
 struct GenSetRegionFunctor {
-  const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
-  mutable Func m_gen;                        /**< functor used to generate value. */
+  const ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
+  mutable Func gen_;                          /**< functor used to generate value. */
 
-  // this function is only used to apply m_gen on parametes, note that m_gen can't return void.
+  // this function is only used to apply gen_ on parametes, note that gen_ can't return void.
   template <typename... Args>
   void do_nothing(Args... args) const {}
 
@@ -220,8 +223,8 @@ struct GenSetRegionFunctor {
   template <typename... Args>
   inline void operator()(double rx, double ry, double rz, const uint64_t id, Args&... args) const {
     Vec3d r = {rx, ry, rz};
-    if (region.contains(r, id)) {
-      do_nothing(m_gen(args)...);
+    if (region_.contains(r, id)) {
+      do_nothing(gen_(args)...);
     }
   }
 };
@@ -232,8 +235,8 @@ struct GenSetRegionFunctor {
  */
 template <typename... Ts>
 struct FilteredSetFunctor {
-  uint32_t filtered_type;                   /**< The filtered type. */
-  onika::FlatTuple<Ts...> m_default_values; /**< Flat tuple of default values of types Ts. */
+  uint32_t filtered_type_;                 /**< The filtered type. */
+  onika::FlatTuple<Ts...> default_values_; /**< Flat tuple of default values of types Ts. */
 
   /**
    * @brief Functor operator for filtered set operations.
@@ -243,9 +246,9 @@ struct FilteredSetFunctor {
    */
   template <typename... Args>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint32_t type, Args&... args) const {
-    if (type == filtered_type) {
+    if (type == filtered_type_) {
       constexpr int first = 0;
-      setter<first>(m_default_values, args...);
+      setter<first>(default_values_, args...);
     }
   }
 };
@@ -257,9 +260,9 @@ struct FilteredSetFunctor {
  */
 template <typename... Ts>
 struct FilteredSetRegionFunctor {
-  const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
-  uint32_t filtered_type;                    /**< The filtered type. */
-  onika::FlatTuple<Ts...> m_default_values;  /**< Flat tuple of default values of types Ts. */
+  const ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
+  uint32_t filtered_type_;                    /**< The filtered type. */
+  onika::FlatTuple<Ts...> default_values_;    /**< Flat tuple of default values of types Ts. */
 
   /**
    * @brief Functor operator for filtered set operations.
@@ -274,11 +277,11 @@ struct FilteredSetRegionFunctor {
   template <typename... Args>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(double rx, double ry, double rz, const uint64_t id, uint32_t type,
                                                 Args&... args) const {
-    if (type == filtered_type) {
+    if (type == filtered_type_) {
       Vec3d r = {rx, ry, rz};
-      if (region.contains(r, id)) {
+      if (region_.contains(r, id)) {
         constexpr int first = 0;
-        setter<first>(m_default_values, args...);
+        setter<first>(default_values_, args...);
       }
     }
   }

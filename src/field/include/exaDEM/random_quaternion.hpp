@@ -18,22 +18,20 @@ under the License.
 */
 #pragma once
 
-#include <onika/math/basic_types.h>
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/grid_cell_particles/particle_region.h>
+#include <onika/math/basic_types.h>
 #include <onika/math/quaternion_operators.h>
 
 namespace exaDEM {
 struct RandomQuaternionFunctor {
-  const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
+  const ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
 
-  inline void operator()(exanb::Quaternion& q) const {
-    randomize(q);
-  }
+  inline void operator()(exanb::Quaternion& q) const { randomize(q); }
 
   inline void operator()(double rx, double ry, double rz, const uint64_t id, exanb::Quaternion& q) const {
     Vec3d r = {rx, ry, rz};
-    if (region.contains(r, id)) {
+    if (region_.contains(r, id)) {
       randomize(q);
     }
   }
