@@ -32,7 +32,7 @@ namespace exaDEM {
  */
 inline shape build_shape(STLMeshReader& mesh, std::string name) {
   shape shp;
-  const int n_faces = mesh.m_data.size();
+  const int n_faces = mesh.data_.size();
   std::vector<int> idx;
   auto& shp_v = shp.vertices_;
   auto& shp_e = shp.edges_;
@@ -51,7 +51,7 @@ inline shape build_shape(STLMeshReader& mesh, std::string name) {
 #pragma omp for
     for (int i = 0; i < n_faces; i++) {
       Face& face = mesh.get_data(i);
-      v.insert(std::end(v), std::begin(face.vertices), std::end(face.vertices));
+      v.insert(std::end(v), std::begin(face.vertices_), std::end(face.vertices_));
     }
 
     auto last = std::unique(v.begin(), v.end());
@@ -79,7 +79,7 @@ inline shape build_shape(STLMeshReader& mesh, std::string name) {
 #pragma omp for
     for (int i = 0; i < n_faces; i++) {
       Face& face = mesh.get_data(i);
-      auto& v = face.vertices;
+      auto& v = face.vertices_;
       idxs.resize(v.size());
       for (size_t idx = 0; idx < v.size(); idx++) {
         auto it = std::lower_bound(std::begin(shp_v), std::end(shp_v), v[idx]);

@@ -30,25 +30,25 @@ under the License.
 namespace exaDEM {
 using namespace exanb;
 struct DumpDriverFunc {
-  int* const id_ptr = nullptr;
-  const std::string directory = "";
-  std::stringstream* const stream_ptr = nullptr;
-  const Driver_params& motion;
+  int* const id_ptr_ = nullptr;
+  const std::string directory_ = "";
+  std::stringstream* const stream_ptr_ = nullptr;
+  const Driver_params& motion_;
 
   inline void operator()(exaDEM::Surface& surface) const {
-    surface.dump_driver(motion, (*id_ptr)++, *stream_ptr);
+    surface.dump_driver(motion_, (*id_ptr_)++, *stream_ptr_);
   }
 
   inline void operator()(exaDEM::Ball& ball) const {
-    ball.dump_driver(motion, (*id_ptr)++, *stream_ptr);
+    ball.dump_driver(motion_, (*id_ptr_)++, *stream_ptr_);
   }
 
   inline void operator()(exaDEM::Cylinder& cylinder) const {
-    cylinder.dump_driver(motion, (*id_ptr)++, *stream_ptr);
+    cylinder.dump_driver(motion_, (*id_ptr_)++, *stream_ptr_);
   }
 
   inline void operator()(exaDEM::RShapeDriver& rshape_param) const {
-    rshape_param.dump_driver(motion, (*id_ptr)++, directory, *stream_ptr);
+    rshape_param.dump_driver(motion_, (*id_ptr_)++, directory_, *stream_ptr_);
   }
 };
 

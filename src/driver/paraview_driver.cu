@@ -60,16 +60,16 @@ class ParaviewDriver : public OperatorNode {
     for (size_t id = mpi_rank; id < drivers->get_size(); id += mpi_size) {
       if (drivers->type(id) == DRIVER_TYPE::BALL) {
         exaDEM::Ball& ball = drivers->get_typed_driver<exaDEM::Ball>(id);
-        balls.push_back({static_cast<int>(id), ball.fields.center, ball.fields.radius, ball.fields.vel});
+        balls.push_back({static_cast<int>(id), ball.fields_.center_, ball.fields_.radius_, ball.fields_.vel_});
       } else if (drivers->type(id) == DRIVER_TYPE::SURFACE) {
         exaDEM::Surface& surface = drivers->get_typed_driver<exaDEM::Surface>(id);
-        surfaces.push_back({static_cast<int>(id), surface.fields.normal, surface.fields.offset, surface.fields.vel});
+        surfaces.push_back({static_cast<int>(id), surface.fields_.normal_, surface.fields_.offset_, surface.fields_.vel_});
       } else if (drivers->type(id) == DRIVER_TYPE::CYLINDER) {
         exaDEM::Cylinder& cylinder = drivers->get_typed_driver<exaDEM::Cylinder>(id);
-        cylinders.push_back({static_cast<int>(id), cylinder.fields.center, cylinder.get_normal(), cylinder.fields.radius});
+        cylinders.push_back({static_cast<int>(id), cylinder.fields_.center_, cylinder.get_normal(), cylinder.fields_.radius_});
       } else if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
         exaDEM::RShapeDriver& mesh = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
-        mesh.shp.write_move_paraview(path, *timestep, mesh.fields.center, mesh.fields.quat);
+        mesh.shp_.write_move_paraview(path, *timestep, mesh.fields_.center_, mesh.fields_.quat_);
       }
     }
 

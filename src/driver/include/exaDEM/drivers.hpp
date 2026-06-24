@@ -42,85 +42,85 @@ struct Drivers {
   using vector_t = onika::memory::CudaMMVector<T>;
 
   struct DriverTypeAndIndex {
-    DRIVER_TYPE m_type = DRIVER_TYPE::UNDEFINED;
-    int m_index = -1;
+    DRIVER_TYPE type_ = DRIVER_TYPE::UNDEFINED;
+    int index_ = -1;
   };
 
-  vector_t<DriverTypeAndIndex> m_type_index; /**< Vector storing the types of drivers. */
+  vector_t<DriverTypeAndIndex> type_index_; /**< Vector storing the types of drivers. */
   /** just a duplicate on CPU to avoid weird copies from GPU */
-  std::vector<DriverTypeAndIndex> m_type_index_cpu; /**< Vector storing the types of drivers. */
-  // vector_t<Driver_params> m_motion; /**< Vector storing the motion drivers parameters. */
-  std::vector<Driver_params> m_motion; /**< Vector storing the motion data drivers. */
-  onika::FlatTuple<vector_t<Cylinder>, vector_t<Surface>, vector_t<Ball>, vector_t<RShapeDriver> > m_data;
+  std::vector<DriverTypeAndIndex> type_index_cpu_; /**< Vector storing the types of drivers. */
+  // vector_t<Driver_params> motion_; /**< Vector storing the motion drivers parameters. */
+  std::vector<Driver_params> motion_; /**< Vector storing the motion data drivers. */
+  onika::FlatTuple<vector_t<Cylinder>, vector_t<Surface>, vector_t<Ball>, vector_t<RShapeDriver> > data_;
 
   /**
    * @brief Get the size of the Drivers collection.
    * @return The size of the Drivers collection.
    */
-  inline size_t get_size() const { return m_type_index.size(); }
+  inline size_t get_size() const { return type_index_.size(); }
 
   template <size_t driver_type>
   inline const auto& get_driver_vec() const {
     static_assert(driver_type != DRIVER_TYPE::UNDEFINED);
-    return m_data.get_nth_const<driver_type>();
+    return data_.get_nth_const<driver_type>();
   }
 
   template <size_t driver_type>
   inline auto& get_driver_vec() {
     static_assert(driver_type != DRIVER_TYPE::UNDEFINED);
-    return m_data.get_nth<driver_type>();
+    return data_.get_nth<driver_type>();
   }
 
   template <class T>
   inline const T& get_typed_driver(const int idx) const {
     constexpr DRIVER_TYPE t = get_type<T>();
     static_assert(t != DRIVER_TYPE::UNDEFINED);
-    const auto& driver_vec = m_data.get_nth_const<t>();
-    assert(idx >= 0 && idx < m_type_index.size());
-    assert(m_type_index[idx].m_type == t);
-    assert(m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < driver_vec.size());
-    return driver_vec[m_type_index[idx].m_index];
+    const auto& driver_vec = data_.get_nth_const<t>();
+    assert(idx >= 0 && idx < type_index_.size());
+    assert(type_index_[idx].type_ == t);
+    assert(type_index_[idx].index_ >= 0 && type_index_[idx].index_ < driver_vec.size());
+    return driver_vec[type_index_[idx].index_];
   }
 
   template <class T>
   inline T& get_typed_driver(const int idx) {
     constexpr DRIVER_TYPE t = get_type<T>();
     static_assert(t != DRIVER_TYPE::UNDEFINED);
-    auto& driver_vec = m_data.get_nth<t>();
-    assert(idx >= 0 && idx < static_cast<int>(m_type_index.size()));
-    assert(m_type_index[idx].m_type == t);
-    assert(m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < static_cast<int>(driver_vec.size()));
-    return driver_vec[m_type_index[idx].m_index];
+    auto& driver_vec = data_.get_nth<t>();
+    assert(idx >= 0 && idx < static_cast<int>(type_index_.size()));
+    assert(type_index_[idx].type_ == t);
+    assert(type_index_[idx].index_ >= 0 && type_index_[idx].index_ < static_cast<int>(driver_vec.size()));
+    return driver_vec[type_index_[idx].index_];
   }
 
   template <class FuncT>
   inline auto apply(int idx, FuncT& func) {
-    assert(idx >= 0 && idx < static_cast<int>(m_type_index_cpu.size()) &&
-           m_type_index_cpu.size() == m_type_index.size());
-    DRIVER_TYPE t = m_type_index_cpu[idx].m_type;
+    assert(idx >= 0 && idx < static_cast<int>(type_index_cpu_.size()) &&
+           type_index_cpu_.size() == type_index_.size());
+    DRIVER_TYPE t = type_index_cpu_[idx].type_;
     assert(t != DRIVER_TYPE::UNDEFINED);
     if constexpr (ApplyDriverFunctorTraits<FuncT>::use_motion) {
       if (t == DRIVER_TYPE::CYLINDER) {
-        return func(m_data.get_nth<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[idx].m_index], m_motion[idx]);
+        return func(data_.get_nth<DRIVER_TYPE::CYLINDER>()[type_index_cpu_[idx].index_], motion_[idx]);
       } else if (t == DRIVER_TYPE::SURFACE) {
-        return func(m_data.get_nth<DRIVER_TYPE::SURFACE>()[m_type_index_cpu[idx].m_index], m_motion[idx]);
+        return func(data_.get_nth<DRIVER_TYPE::SURFACE>()[type_index_cpu_[idx].index_], motion_[idx]);
       } else if (t == DRIVER_TYPE::BALL) {
-        return func(m_data.get_nth<DRIVER_TYPE::BALL>()[m_type_index_cpu[idx].m_index], m_motion[idx]);
+        return func(data_.get_nth<DRIVER_TYPE::BALL>()[type_index_cpu_[idx].index_], motion_[idx]);
       } else if (t == DRIVER_TYPE::RSHAPE) {
-        return func(m_data.get_nth<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[idx].m_index], m_motion[idx]);
+        return func(data_.get_nth<DRIVER_TYPE::RSHAPE>()[type_index_cpu_[idx].index_], motion_[idx]);
       }
       exanb::fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
       static Cylinder tmp;
-      return func(tmp, m_motion[idx]);
+      return func(tmp, motion_[idx]);
     } else {
       if (t == DRIVER_TYPE::CYLINDER) {
-        return func(m_data.get_nth<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[idx].m_index]);
+        return func(data_.get_nth<DRIVER_TYPE::CYLINDER>()[type_index_cpu_[idx].index_]);
       } else if (t == DRIVER_TYPE::SURFACE) {
-        return func(m_data.get_nth<DRIVER_TYPE::SURFACE>()[m_type_index_cpu[idx].m_index]);
+        return func(data_.get_nth<DRIVER_TYPE::SURFACE>()[type_index_cpu_[idx].index_]);
       } else if (t == DRIVER_TYPE::BALL) {
-        return func(m_data.get_nth<DRIVER_TYPE::BALL>()[m_type_index_cpu[idx].m_index]);
+        return func(data_.get_nth<DRIVER_TYPE::BALL>()[type_index_cpu_[idx].index_]);
       } else if (t == DRIVER_TYPE::RSHAPE) {
-        return func(m_data.get_nth<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[idx].m_index]);
+        return func(data_.get_nth<DRIVER_TYPE::RSHAPE>()[type_index_cpu_[idx].index_]);
       }
       exanb::fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
       static Cylinder tmp;
@@ -130,18 +130,18 @@ struct Drivers {
 
   template <class FuncT>
   inline auto apply(const int idx, const FuncT& func) {
-    assert(idx >= 0 && idx < static_cast<int>(m_type_index_cpu.size()) &&
-           m_type_index_cpu.size() == m_type_index.size());
-    DRIVER_TYPE t = m_type_index_cpu[idx].m_type;
+    assert(idx >= 0 && idx < static_cast<int>(type_index_cpu_.size()) &&
+           type_index_cpu_.size() == type_index_.size());
+    DRIVER_TYPE t = type_index_cpu_[idx].type_;
     assert(t != DRIVER_TYPE::UNDEFINED);
     if (t == DRIVER_TYPE::CYLINDER) {
-      return func(m_data.get_nth<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[idx].m_index]);
+      return func(data_.get_nth<DRIVER_TYPE::CYLINDER>()[type_index_cpu_[idx].index_]);
     } else if (t == DRIVER_TYPE::SURFACE) {
-      return func(m_data.get_nth<DRIVER_TYPE::SURFACE>()[m_type_index_cpu[idx].m_index]);
+      return func(data_.get_nth<DRIVER_TYPE::SURFACE>()[type_index_cpu_[idx].index_]);
     } else if (t == DRIVER_TYPE::BALL) {
-      return func(m_data.get_nth<DRIVER_TYPE::BALL>()[m_type_index_cpu[idx].m_index]);
+      return func(data_.get_nth<DRIVER_TYPE::BALL>()[type_index_cpu_[idx].index_]);
     } else if (t == DRIVER_TYPE::RSHAPE) {
-      return func(m_data.get_nth<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[idx].m_index]);
+      return func(data_.get_nth<DRIVER_TYPE::RSHAPE>()[type_index_cpu_[idx].index_]);
     }
     exanb::fatal_error() << "Internal error: unsupported driver type encountered" << std::endl;
     static Cylinder tmp;
@@ -162,7 +162,7 @@ struct Drivers {
   inline void add_driver(const int idx, T& Driver, Driver_params& motion) {
     constexpr DRIVER_TYPE t = get_type<T>();
     static_assert(t != DRIVER_TYPE::UNDEFINED);
-    const int size = m_type_index.size();
+    const int size = type_index_.size();
     if (idx < size) {  // reallocation
       DRIVER_TYPE current_type = type(idx);
       if (current_type != DRIVER_TYPE::UNDEFINED) {
@@ -170,30 +170,30 @@ struct Drivers {
         Driver.print();
       }
     } else {  // allocate
-      m_type_index.resize(idx + 1);
-      m_type_index_cpu.resize(idx + 1);
-      m_motion.resize(idx + 1);
+      type_index_.resize(idx + 1);
+      type_index_cpu_.resize(idx + 1);
+      motion_.resize(idx + 1);
     }
-    m_type_index[idx].m_type = t;
-    m_type_index_cpu[idx].m_type = t;
+    type_index_[idx].type_ = t;
+    type_index_cpu_[idx].type_ = t;
     auto& driver_vec = get_driver_vec<t>();
-    m_type_index[idx].m_index = driver_vec.size();
-    m_type_index_cpu[idx].m_index = driver_vec.size();
+    type_index_[idx].index_ = driver_vec.size();
+    type_index_cpu_[idx].index_ = driver_vec.size();
     driver_vec.push_back(Driver);
-    m_motion[idx] = motion;
+    motion_[idx] = motion;
   }
 
   /**
    * @brief Clears the Drivers collection, removing all drivers.
    */
   void clear() {
-    m_type_index.clear();
-    m_type_index_cpu.clear();
-    m_motion.clear();
-    m_data.get_nth<DRIVER_TYPE::CYLINDER>().clear();
-    m_data.get_nth<DRIVER_TYPE::SURFACE>().clear();
-    m_data.get_nth<DRIVER_TYPE::BALL>().clear();
-    m_data.get_nth<DRIVER_TYPE::RSHAPE>().clear();
+    type_index_.clear();
+    type_index_cpu_.clear();
+    motion_.clear();
+    data_.get_nth<DRIVER_TYPE::CYLINDER>().clear();
+    data_.get_nth<DRIVER_TYPE::SURFACE>().clear();
+    data_.get_nth<DRIVER_TYPE::BALL>().clear();
+    data_.get_nth<DRIVER_TYPE::RSHAPE>().clear();
   }
 
   // Accessors
@@ -205,8 +205,8 @@ struct Drivers {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline DRIVER_TYPE type(size_t idx) {
-    assert(idx < m_type_index.size());
-    return m_type_index[idx].m_type;
+    assert(idx < type_index_.size());
+    return type_index_[idx].type_;
   }
 
   /**
@@ -215,9 +215,9 @@ struct Drivers {
    * @return The data related to the motion at the specified index.
    */
   inline Driver_params& get_motion(const int idx) {
-    assert(idx < static_cast<int>(m_motion.size()));
-    assert(m_motion.size() == m_type_index.size());
-    return m_motion[idx];
+    assert(idx < static_cast<int>(motion_.size()));
+    assert(motion_.size() == type_index_.size());
+    return motion_[idx];
   }
 
   /**
@@ -225,8 +225,8 @@ struct Drivers {
    * @return True if all drivers are well-defined, false otherwise.
    */
   inline bool well_defined() const {
-    for (const auto& it : m_type_index) {
-      if (it.m_type == DRIVER_TYPE::UNDEFINED) {
+    for (const auto& it : type_index_) {
+      if (it.type_ == DRIVER_TYPE::UNDEFINED) {
         return false;
       }
     }
@@ -238,30 +238,30 @@ struct Drivers {
    */
   inline void print_drivers() const {
     for (size_t i = 0; i < this->get_size(); i++) {
-      auto t = m_type_index_cpu[i].m_type;
+      auto t = type_index_cpu_[i].type_;
       if (t != DRIVER_TYPE::UNDEFINED) {
         exanb::lout << "Driver [" << i << "]:" << std::endl;
         MotionType motion_type;
         if (t == DRIVER_TYPE::CYLINDER) {
-          auto& driver = m_data.get_nth_const<DRIVER_TYPE::CYLINDER>()[m_type_index_cpu[i].m_index];
+          auto& driver = data_.get_nth_const<DRIVER_TYPE::CYLINDER>()[type_index_cpu_[i].index_];
           driver.print();
-          motion_type = driver.motion_type;
+          motion_type = driver.motion_type_;
         } else if (t == DRIVER_TYPE::SURFACE) {
-          auto& driver = m_data.get_nth_const<DRIVER_TYPE::SURFACE>()[m_type_index_cpu[i].m_index];
+          auto& driver = data_.get_nth_const<DRIVER_TYPE::SURFACE>()[type_index_cpu_[i].index_];
           driver.print();
-          motion_type = driver.motion_type;
+          motion_type = driver.motion_type_;
         } else if (t == DRIVER_TYPE::BALL) {
-          auto& driver = m_data.get_nth_const<DRIVER_TYPE::BALL>()[m_type_index_cpu[i].m_index];
+          auto& driver = data_.get_nth_const<DRIVER_TYPE::BALL>()[type_index_cpu_[i].index_];
           driver.print();
-          motion_type = driver.motion_type;
+          motion_type = driver.motion_type_;
         } else if (t == DRIVER_TYPE::RSHAPE) {
-          auto& driver = m_data.get_nth_const<DRIVER_TYPE::RSHAPE>()[m_type_index_cpu[i].m_index];
+          auto& driver = data_.get_nth_const<DRIVER_TYPE::RSHAPE>()[type_index_cpu_[i].index_];
           driver.print();
-          motion_type = driver.motion_type;
+          motion_type = driver.motion_type_;
         } else {
           continue;
         }
-        m_motion[i].print_driver_params(motion_type);
+        motion_[i].print_driver_params(motion_type);
       }
     }
   }
@@ -276,11 +276,11 @@ struct Drivers {
     for (auto& it : Count) {
       it = 0;
     }
-    for (const auto& it : m_type_index_cpu) {
-      ++Count[it.m_type];
+    for (const auto& it : type_index_cpu_) {
+      ++Count[it.type_];
     }
     exanb::lout << "Drivers Stats" << std::endl;
-    exanb::lout << "Number of drivers: " << m_type_index_cpu.size() << std::endl;
+    exanb::lout << "Number of drivers: " << type_index_cpu_.size() << std::endl;
     for (size_t t = 0; t < DRIVER_TYPE_SIZE; t++) {
       exanb::lout << "Number of " << print(DRIVER_TYPE(t)) << "s: " << Count[t] << std::endl;
     }
@@ -289,33 +289,33 @@ struct Drivers {
 
 // read only proxy for drivers list
 struct DriversGPUAccessor {
-  size_t m_nb_drivers = 0;
-  Drivers::DriverTypeAndIndex* const __restrict__ m_type_index = nullptr;
+  size_t nb_drivers_ = 0;
+  Drivers::DriverTypeAndIndex* const __restrict__ type_index_ = nullptr;
   onika::FlatTuple<Cylinder* __restrict__, Surface* __restrict__, Ball* __restrict__, RShapeDriver* __restrict__>
-      m_data = {nullptr, nullptr, nullptr, nullptr};
-  onika::FlatTuple<size_t, size_t, size_t, size_t> m_data_size = {0, 0, 0, 0};
+      data_ = {nullptr, nullptr, nullptr, nullptr};
+  onika::FlatTuple<size_t, size_t, size_t, size_t> data_size_ = {0, 0, 0, 0};
 
   DriversGPUAccessor() = default;
   DriversGPUAccessor(const DriversGPUAccessor&) = default;
   DriversGPUAccessor(DriversGPUAccessor&&) = default;
   inline DriversGPUAccessor(Drivers& drvs)
-      : m_nb_drivers(drvs.m_type_index.size()),
-        m_type_index(drvs.m_type_index.data()),
-        m_data({drvs.m_data.get_nth<0>().data(), drvs.m_data.get_nth<1>().data(), drvs.m_data.get_nth<2>().data(),
-                drvs.m_data.get_nth<3>().data()}),
-        m_data_size({drvs.m_data.get_nth<0>().size(), drvs.m_data.get_nth<1>().size(), drvs.m_data.get_nth<2>().size(),
-                     drvs.m_data.get_nth<3>().size()}) {}
+      : nb_drivers_(drvs.type_index_.size()),
+        type_index_(drvs.type_index_.data()),
+        data_({drvs.data_.get_nth<0>().data(), drvs.data_.get_nth<1>().data(), drvs.data_.get_nth<2>().data(),
+                drvs.data_.get_nth<3>().data()}),
+        data_size_({drvs.data_.get_nth<0>().size(), drvs.data_.get_nth<1>().size(), drvs.data_.get_nth<2>().size(),
+                     drvs.data_.get_nth<3>().size()}) {}
 
   template <class T>
   ONIKA_HOST_DEVICE_FUNC inline T& get_typed_driver(const int idx) const {
     constexpr DRIVER_TYPE t = get_type<T>();
     static_assert(t != DRIVER_TYPE::UNDEFINED);
-    auto* __restrict__ driver_vec = m_data.get_nth_const<t>();
-    [[maybe_unused]] const size_t driver_vec_size = m_data_size.get_nth_const<t>();
-    assert(idx >= 0 && idx < static_cast<int>(m_nb_drivers));
-    assert(m_type_index[idx].m_type == t);
-    assert(m_type_index[idx].m_index >= 0 && m_type_index[idx].m_index < static_cast<int>(driver_vec_size));
-    return driver_vec[m_type_index[idx].m_index];
+    auto* __restrict__ driver_vec = data_.get_nth_const<t>();
+    [[maybe_unused]] const size_t driver_vec_size = data_size_.get_nth_const<t>();
+    assert(idx >= 0 && idx < static_cast<int>(nb_drivers_));
+    assert(type_index_[idx].type_ == t);
+    assert(type_index_[idx].index_ >= 0 && type_index_[idx].index_ < static_cast<int>(driver_vec_size));
+    return driver_vec[type_index_[idx].index_];
   }
 };
 }  // namespace exaDEM

@@ -289,7 +289,7 @@ struct ContactLawDriverFunc {
       lockAndAdd(cell[field::fz][p], f.z);
 
       // only forces now
-      if (need_forces(driver.motion_type)) {
+      if (need_forces(driver.motion_type_)) {
         lockAndAdd(driver.forces(), -f);
       }
     } else {
@@ -345,7 +345,7 @@ struct ContactLawRShapeDriverFunc {
     const Vec3d& vrot_i = cell[field::vrot][p_i];
     const double radius_i = cell[field::radius][p_i];
     // === driver j
-    const auto& shp_d = driver.shp;
+    const auto& shp_d = driver.shp_;
     const Quaternion orient_d = driver.orientation();
     constexpr double homothety_d = 1.0;
     auto [contact, dn, n, contact_position] =
@@ -385,7 +385,7 @@ struct ContactLawRShapeDriverFunc {
       lockAndAdd(cell[field::fz][p_i], f.z);
 
       // only forces now
-      if (need_forces(driver.motion_type)) {
+      if (need_forces(driver.motion_type_)) {
         lockAndAdd(driver.forces(), -f);
       }
       if (driver.need_moment()) {

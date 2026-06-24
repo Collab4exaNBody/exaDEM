@@ -46,16 +46,16 @@ inline void grid_indexes_summary(std::span<const RShapeDriverCellIndexes> cell_i
 #pragma omp parallel for reduction(+ : nb_fill_cells, nb_v, nb_e, nb_f) reduction(max : max_v, max_e, max_f)
   for (size_t i = 0; i < size; i++) {
     const RShapeDriverCellIndexes& cell = cell_indexes[i];
-    if (cell.nvertices == 0 && cell.nedges == 0 && cell.nfaces == 0) {
+    if (cell.nvertices_ == 0 && cell.nedges_ == 0 && cell.nfaces_ == 0) {
       continue;
     }
     nb_fill_cells++;
-    nb_v += cell.nvertices;
-    nb_e += cell.nedges;
-    nb_f += cell.nfaces;
-    max_v = std::max(max_v, cell.nvertices);
-    max_e = std::max(max_e, cell.nedges);
-    max_f = std::max(max_f, cell.nfaces);
+    nb_v += cell.nvertices_;
+    nb_e += cell.nedges_;
+    nb_f += cell.nfaces_;
+    max_v = std::max(max_v, cell.nvertices_);
+    max_e = std::max(max_e, cell.nedges_);
+    max_f = std::max(max_f, cell.nfaces_);
   }
 
   exanb::lout << "========= R-Shape Grid summary ==" << std::endl;
@@ -88,15 +88,15 @@ class UpdateGridRShapeOperator : public OperatorNode {
 
   inline void execute() final {
     struct RShapeDriverListOfElements {
-      std::vector<int> vertices; /**< Indices of vertices in the shape. */
-      std::vector<int> edges;    /**< Indices of edges in the shape. */
-      std::vector<int> faces;    /**< Indices of faces in the shape. */
+      std::vector<int> vertices_; /**< Indices of vertices in the shape. */
+      std::vector<int> edges_;    /**< Indices of edges in the shape. */
+      std::vector<int> faces_;    /**< Indices of faces in the shape. */
 
       // Clear all element lists
       void clean() {
-        vertices.clear();
-        edges.clear();
-        faces.clear();
+        vertices_.clear();
+        edges_.clear();
+        faces_.clear();
       }
     };
 
@@ -113,8 +113,8 @@ class UpdateGridRShapeOperator : public OperatorNode {
     for (size_t id = 0; id < drivers->get_size(); id++) {
       if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
         exaDEM::RShapeDriver& driver = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
-        gsb.resize(driver.shp.get_number_of_vertices());  // we just need to get the upper size.
-        driver.shp.compute_prepro_obb(gsb.data(), driver.fields.center, driver.fields.quat);
+        gsb.resize(driver.shp_.get_number_of_vertices());  // we just need to get the upper size.
+        driver.shp_.compute_prepro_obb(gsb.data(), driver.fields_.center_, driver.fields_.quat_);
 
         mutexes.resize(n_cells);
         int total_n_vertices = 0, total_n_edges = 0, total_n_faces = 0;
@@ -143,9 +143,9 @@ class UpdateGridRShapeOperator : public OperatorNode {
           grid_rshape[i].clean();
         }
 
-        auto& obb_v = driver.shp.obb_vertices_;
-        auto& obb_e = driver.shp.obb_edges_;
-        auto& obb_f = driver.shp.obb_faces_;
+        auto& obb_v = driver.shp_.obb_vertices_;
+        auto& obb_e = driver.shp_.obb_edges_;
+        auto& obb_f = driver.shp_.obb_faces_;
 
 #pragma omp parallel
         {
@@ -166,7 +166,7 @@ class UpdateGridRShapeOperator : public OperatorNode {
                     if (obb.intersect(cell_obb)) {
                       size_t cell_next_id = grid_ijk_to_index(dims, next);
                       omp_set_lock(&mutexes[cell_next_id]);
-                      grid_rshape[cell_next_id].vertices.push_back(vid);
+                      grid_rshape[cell_next_id].vertices_.push_back(vid);
                       total_n_vertices++;
                       omp_unset_lock(&mutexes[cell_next_id]);
                     }
@@ -194,7 +194,7 @@ class UpdateGridRShapeOperator : public OperatorNode {
                     if (obb.intersect(cell_obb)) {
                       size_t cell_next_id = grid_ijk_to_index(dims, next);
                       omp_set_lock(&mutexes[cell_next_id]);
-                      grid_rshape[cell_next_id].edges.push_back(eid);
+                      grid_rshape[cell_next_id].edges_.push_back(eid);
                       total_n_edges++;
                       omp_unset_lock(&mutexes[cell_next_id]);
                     }
@@ -221,7 +221,7 @@ class UpdateGridRShapeOperator : public OperatorNode {
                     if (obb.intersect(cell_obb)) {
                       size_t cell_next_id = grid_ijk_to_index(dims, next);
                       omp_set_lock(&mutexes[cell_next_id]);
-                      grid_rshape[cell_next_id].faces.push_back(fid);
+                      grid_rshape[cell_next_id].faces_.push_back(fid);
                       total_n_faces++;
                       omp_unset_lock(&mutexes[cell_next_id]);
                     }
@@ -231,7 +231,7 @@ class UpdateGridRShapeOperator : public OperatorNode {
             }
           }
         }
-        RShapeDriverGridCellIndexes& flat_grid_rshape = driver.grid_indexes;
+        RShapeDriverGridCellIndexes& flat_grid_rshape = driver.grid_indexes_;
         // resize cell and data members.
         flat_grid_rshape.initialize(n_cells, total_n_vertices, total_n_edges, total_n_faces);
 
@@ -239,20 +239,20 @@ class UpdateGridRShapeOperator : public OperatorNode {
         int offset = 0;
         for (size_t i = 0; i < n_cells; i++) {
           const RShapeDriverListOfElements& list = grid_rshape[i];
-          flat_grid_rshape.cells[i].offset = offset;
-          offset += list.vertices.size() + list.edges.size() + list.faces.size();
+          flat_grid_rshape.cells_[i].offset_ = offset;
+          offset += list.vertices_.size() + list.edges_.size() + list.faces_.size();
         }
 
         // #pragma omp parallel for schedule(guided)
         for (size_t i = 0; i < n_cells; i++) {
           const RShapeDriverListOfElements& list = grid_rshape[i];
           // fill the grid indexes with the list of vertices, edges, and faces for each cell.
-          flat_grid_rshape.fill_cell(i, list.vertices, list.edges, list.faces);
+          flat_grid_rshape.fill_cell(i, list.vertices_, list.edges_, list.faces_);
         }
 
         // display summary of the grid indexes if requested.
         if (*summary) {
-          grid_indexes_summary(flat_grid_rshape.cells);
+          grid_indexes_summary(flat_grid_rshape.cells_);
         }
       }
     }

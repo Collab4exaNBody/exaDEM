@@ -26,12 +26,12 @@ namespace exaDEM {
 using namespace exanb;
 
 struct PushFVRDriverFunc {
-  double time;
-  double delta_t;
+  double time_;
+  double delta_t_;
   template<typename VectorT>
   void operator()(VectorT& driver, const Driver_params& motion) {
-    if (motion.is_motion_triggered(time + delta_t)) {
-      driver.push_f_v_r(motion, time, delta_t);
+    if (motion.is_motion_triggered(time_ + delta_t_)) {
+      driver.push_f_v_r(motion, time_, delta_t_);
     }
   }
 };

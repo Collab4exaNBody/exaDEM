@@ -339,18 +339,18 @@ class DumpReaderConfRockable : public OperatorNode {
         RShapeDriverFields state = RShapeDriverFields();
 
         auto& particle = manager.drivers[id];
-        state.center = particle.pos;
-        state.vel = particle.pos;  // will be reset by the motion type
+        state.center_ = particle.pos;
+        state.vel_ = particle.pos;  // will be reset by the motion type
                                    // will move evant with the STATIONARY motion type
-        state.vrot = particle.vrot;
-        state.quat = particle.Q;
+        state.vrot_ = particle.vrot;
+        state.quat_ = particle.Q;
 
         int type = particle.type;
         shape shp = *(manager.shps[type]);
         RShapeDriver driver;
-        driver.fields = state;
-        driver.motion_type = MotionType::STATIONARY;
-        driver.shp = shp;
+        driver.fields_ = state;
+        driver.motion_type_ = MotionType::STATIONARY;
+        driver.shp_ = shp;
         driver.initialize(motion);
         drvs.add_driver(next_id + id, driver, motion);
       }

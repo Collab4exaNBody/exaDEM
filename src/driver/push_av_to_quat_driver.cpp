@@ -25,12 +25,12 @@ under the License.
 namespace exaDEM {
 using namespace onika::scg;
 struct PushAVToQuatFunc {
-  const double t;
-  const double dt;
+  const double t_;
+  const double dt_;
   template <typename T>
   inline void operator()(T& drv, const Driver_params& motion) const {
     if constexpr (DriverProperty<T>::use_quaternion) {
-      drv.push_av_to_quat(motion, t, dt);
+      drv.push_av_to_quat(motion, t_, dt_);
     }
   }
 };

@@ -40,19 +40,19 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const RShape
   pi.sub_ = 0;      // convention: not used for spherical particles.
 
   // Get info from the rshape driver.
-  const Vec3d* dvertices = vector_data(driver.vertices);
+  const Vec3d* dvertices = vector_data(driver.vertices_);
   // grid of projected vertices, edges, and faces for the rshape driver.
-  RShapeDriverCellAccessor grid_rshape_driver_accessor(cell, driver.grid_indexes);
-  auto& shp = driver.shp;
+  RShapeDriverCellAccessor grid_rshape_driver_accessor(cell, driver.grid_indexes_);
+  auto& shp = driver.shp_;
 
   exanb::Vec3d v = {rx, ry, rz};
   constexpr double dhomothety = 1.0;
   double dradius = shp.minkowski(dhomothety);
   // vertex - vertex
   item.pair_.type_ = InteractionTypeId::VertexRshapeDriverVertex;
-  for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_nv; j++) {
+  for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_nv_; j++) {
     // driver sub is the vertex index in the rshape vertices array.
-    size_t didx = grid_rshape_driver_accessor.grid_id_vertices[j];
+    size_t didx = grid_rshape_driver_accessor.grid_id_vertices_[j];
     if (filter_vertex_vertex_v2(rVerletMax, v, radius, dvertices, dradius, didx)) {
       pd.sub_ = didx;
       res.push_back(item);
@@ -60,9 +60,9 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const RShape
   }
   // vertex - edge
   item.pair_.type_ = InteractionTypeId::VertexRshapeDriverEdge;
-  for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_ne; j++) {
+  for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_ne_; j++) {
     // driver sub is the edge index in the rshape edges array.
-    size_t didx = grid_rshape_driver_accessor.grid_id_edges[j];
+    size_t didx = grid_rshape_driver_accessor.grid_id_edges_[j];
     if (filter_vertex_edge(rVerletMax, v, radius, dvertices, dhomothety, didx, &shp)) {
       pd.sub_ = didx;
       res.push_back(item);
@@ -70,9 +70,9 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const RShape
   }
   // vertex - face
   item.pair_.type_ = InteractionTypeId::VertexRshapeDriverFace;
-  for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_nf; j++) {
+  for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_nf_; j++) {
     // driver sub is the face index in the rshape faces array.
-    size_t didx = grid_rshape_driver_accessor.grid_id_faces[j];
+    size_t didx = grid_rshape_driver_accessor.grid_id_faces_[j];
     if (filter_vertex_face(rVerletMax, v, radius, dvertices, dhomothety, didx, &shp)) {
       pd.sub_ = didx;
       res.push_back(item);

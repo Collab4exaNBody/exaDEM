@@ -289,7 +289,7 @@ struct ContactLawDriverFunc {
       lockAndAdd(cell[field::fy][p], f.y);
       lockAndAdd(cell[field::fz][p], f.z);
 
-      if (need_forces(driver.motion_type)) {
+      if (need_forces(driver.motion_type_)) {
         lockAndAdd(driver.forces(), -f);
       }
     } else {
@@ -347,7 +347,7 @@ struct ContactLawRShapeDriverFunc {
     // get shapes
     const auto type = cell[field::type][pi.p_];
     const auto& shp_i = shps[type];
-    const auto& shp_d = driver.shp;
+    const auto& shp_d = driver.shp_;
 
     // === positions
     const Vec3d r_i = {cell[field::rx][pi.p_], cell[field::ry][pi.p_], cell[field::rz][pi.p_]};
@@ -358,7 +358,7 @@ struct ContactLawRShapeDriverFunc {
     const auto& h_i = cell[field::homothety][pi.p_];
 
     // RShape driver Vertices
-    const Vec3d* const rshape_vertices = onika::cuda::vector_data(driver.vertices);
+    const Vec3d* const rshape_vertices = onika::cuda::vector_data(driver.vertices_);
     constexpr double rshape_homothety = 1.0;
     // === detection
     auto [contact, dn, n, contact_position] =
@@ -380,7 +380,7 @@ struct ContactLawRShapeDriverFunc {
       auto& mom = cell[field::mom][pi.p_];
       const Vec3d v_i = {cell[field::vx][pi.p_], cell[field::vy][pi.p_], cell[field::vz][pi.p_]};
       const double meff = cell[field::mass][pi.p_];
-      const double reff = compute_effective_radius(shp_i.minkowski(h_i), driver.shp.minkowski(rshape_homothety));
+      const double reff = compute_effective_radius(shp_i.minkowski(h_i), driver.shp_.minkowski(rshape_homothety));
 
       // i to j
       if constexpr (interaction_type <= 10 && interaction_type >= 7) {
@@ -395,7 +395,7 @@ struct ContactLawRShapeDriverFunc {
         lockAndAdd(cell[field::fx][pi.p_], f.x);
         lockAndAdd(cell[field::fy][pi.p_], f.y);
         lockAndAdd(cell[field::fz][pi.p_], f.z);
-        if (need_forces(driver.motion_type)) {
+        if (need_forces(driver.motion_type_)) {
           lockAndAdd(driver.forces(), -f);
         }
       }
@@ -415,7 +415,7 @@ struct ContactLawRShapeDriverFunc {
         lockAndAdd(cell[field::fy][pi.p_], -f.y);
         lockAndAdd(cell[field::fz][pi.p_], -f.z);
         item.friction_ = -item.friction_;
-        if (need_forces(driver.motion_type)) {
+        if (need_forces(driver.motion_type_)) {
           lockAndAdd(driver.forces(), f);
         }
       }

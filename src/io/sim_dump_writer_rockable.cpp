@@ -88,13 +88,13 @@ class DumpWriterConfRockable : public OperatorNode {
       if (drvs.type(did) == DRIVER_TYPE::RSHAPE) {
         n_drivers++;
         RShapeDriver& D = drvs.get_typed_driver<RShapeDriver>(did);
-        if (!all_shapes.contains(D.shp)) {  // add shape
-          all_shapes.add_shape(D.shp);
+        if (!all_shapes.contains(D.shp_)) {  // add shape
+          all_shapes.add_shape(D.shp_);
         }
-        sdriver << D.shp.name_ << " " << 0 /* group */ << " " << 0 /* cluster */ << " " << 1 /* homothety */ << " "
-                << D.fields.center.x << " " << D.fields.center.y << " " << D.fields.center.z << " " << D.fields.vel.x << " " << D.fields.vel.y << " "
-                << D.fields.vel.z << " " << D.fields.acc.x << " " << D.fields.acc.y << " " << D.fields.acc.z << " " << D.fields.quat.w << " " << D.fields.quat.x
-                << " " << D.fields.quat.y << " " << D.fields.quat.z << " " << D.fields.vrot.x << " " << D.fields.vrot.y << " " << D.fields.vrot.z << " "
+        sdriver << D.shp_.name_ << " " << 0 /* group */ << " " << 0 /* cluster */ << " " << 1 /* homothety */ << " "
+                << D.fields_.center_.x << " " << D.fields_.center_.y << " " << D.fields_.center_.z << " " << D.fields_.vel_.x << " " << D.fields_.vel_.y << " "
+                << D.fields_.vel_.z << " " << D.fields_.acc_.x << " " << D.fields_.acc_.y << " " << D.fields_.acc_.z << " " << D.fields_.quat_.w << " " << D.fields_.quat_.x
+                << " " << D.fields_.quat_.y << " " << D.fields_.quat_.z << " " << D.fields_.vrot_.x << " " << D.fields_.vrot_.y << " " << D.fields_.vrot_.z << " "
                 << 0 << " " << 0 << " " << 0; /* arot */
         sdriver << std::endl;
       }

@@ -32,12 +32,12 @@ under the License.
 namespace exaDEM {
 using namespace exanb;
 struct WrapperRShapeDriverComputeVertices {
-  Vec3d center;
-  Quaternion quat;
-  Vec3d* rshape_vertices;
-  const Vec3d* shp_vertices;
+  Vec3d center_;
+  Quaternion quat_;
+  Vec3d* rshape_vertices_;
+  const Vec3d* shp_vertices_;
   ONIKA_HOST_DEVICE_FUNC
-  void operator()(int idx) const { rshape_vertices[idx] = center + quat * shp_vertices[idx]; }
+  void operator()(int idx) const { rshape_vertices_[idx] = center_ + quat_ * shp_vertices_[idx]; }
 };
 }  // namespace exaDEM
 
@@ -56,9 +56,9 @@ using namespace onika::parallel;
 class DriverVertices : public OperatorNode {
   template <class ParallelExcutionContextFuncT>
   struct DriverComputeVerticesFunc {
-    ParallelExcutionContextFuncT m_parallel_execution_context;
+    ParallelExcutionContextFuncT parallel_execution_context_;
     inline void operator()(exaDEM::RShapeDriver& mesh) const {
-      const size_t size = mesh.shp.get_number_of_vertices();
+      const size_t size = mesh.shp_.get_number_of_vertices();
       if (mesh.stationary()) {
         return;
       }
@@ -66,12 +66,12 @@ class DriverVertices : public OperatorNode {
       ParallelForOptions opts;
       opts.omp_scheduling = OMP_SCHED_STATIC;
 
-      Vec3d rshape_center = mesh.fields.center;
-      Quaternion rshape_quat = mesh.fields.quat;
-      Vec3d* ptr_rshape_vertices = onika::cuda::vector_data(mesh.vertices);
-      Vec3d* ptr_shp_vertices = onika::cuda::vector_data(mesh.shp.vertices_);
+      Vec3d rshape_center = mesh.fields_.center_;
+      Quaternion rshape_quat = mesh.fields_.quat_;
+      Vec3d* ptr_rshape_vertices = onika::cuda::vector_data(mesh.vertices_);
+      Vec3d* ptr_shp_vertices = onika::cuda::vector_data(mesh.shp_.vertices_);
       WrapperRShapeDriverComputeVertices func = {rshape_center, rshape_quat, ptr_rshape_vertices, ptr_shp_vertices};
-      parallel_for(size, func, m_parallel_execution_context(), opts);
+      parallel_for(size, func, parallel_execution_context_(), opts);
     }
 
     template <class OtherDriverType>

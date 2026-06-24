@@ -92,8 +92,8 @@ struct CountIPDFunc {
     const auto* __restrict__ ry = cell[field::ry];
     const auto* __restrict__ rz = cell[field::rz];
     const auto* __restrict__ quat = cell[field::orient];
-    for (size_t drvs_idx = 0; drvs_idx < drvs.m_nb_drivers; drvs_idx++) {
-      DRIVER_TYPE drv_type = drvs.m_type_index[drvs_idx].m_type;
+    for (size_t drvs_idx = 0; drvs_idx < drvs.nb_drivers_; drvs_idx++) {
+      DRIVER_TYPE drv_type = drvs.type_index_[drvs_idx].type_;
       if (drv_type == DRIVER_TYPE::CYLINDER) {
         item.pair_.type_ = InteractionTypeId::VertexCylinder;
         Cylinder& driver = drvs.get_typed_driver<Cylinder>(drvs_idx);
@@ -173,8 +173,8 @@ struct ClassifyIPDFunc {
     const auto* __restrict__ ry = cell[field::ry];
     const auto* __restrict__ rz = cell[field::rz];
     const auto* __restrict__ quat = cell[field::orient];
-    for (size_t drvs_idx = 0; drvs_idx < drvs.m_nb_drivers; drvs_idx++) {
-      DRIVER_TYPE drv_type = drvs.m_type_index[drvs_idx].m_type;
+    for (size_t drvs_idx = 0; drvs_idx < drvs.nb_drivers_; drvs_idx++) {
+      DRIVER_TYPE drv_type = drvs.type_index_[drvs_idx].type_;
       pd.id_ = drvs_idx;  // we store the driver idx
       if (drv_type == DRIVER_TYPE::CYLINDER) {
         item.pair_.type_ = InteractionTypeId::VertexCylinder;

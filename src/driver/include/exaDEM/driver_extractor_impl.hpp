@@ -9,7 +9,7 @@ struct DriverExtractFunc {
   // Extract all fields specified in tracker and append to stream
   template <typename DriverT>
   inline void operator()(DriverT& driver) {
-    for (auto& field : tracker.fields) {
+    for (auto& field : tracker.fields_) {
       extract(field, driver);
       stream += " ";
     }

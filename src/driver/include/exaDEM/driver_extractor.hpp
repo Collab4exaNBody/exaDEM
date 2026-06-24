@@ -103,25 +103,25 @@ struct Fields {
 
 // Tracker specification: defines which fields to extract from a specific driver
 struct Tracker {
-  size_t id;                                   // Driver ID to track
-  std::vector<extractor::Dictionnary> fields;  // List of fields to extract
+  size_t id_;                                   // Driver ID to track
+  std::vector<extractor::Dictionnary> fields_;  // List of fields to extract
 
   // Merge another tracker's fields into this one (union of field sets)
   void fuse(Tracker& in) {
-    fields.insert(fields.end(), in.fields.begin(), in.fields.end());
-    std::sort(fields.begin(), fields.end());
-    fields.erase(std::unique(fields.begin(), fields.end()), fields.end());
+    fields_.insert(fields_.end(), in.fields_.begin(), in.fields_.end());
+    std::sort(fields_.begin(), fields_.end());
+    fields_.erase(std::unique(fields_.begin(), fields_.end()), fields_.end());
   }
 
   // Print tracker information: driver ID and tracked fields
   void print() {
     using exanb::lout;
-    lout << "Tracked Driver Id: " << id << " | ";
-    if (fields.size() == 0) {
+    lout << "Tracked Driver Id: " << id_ << " | ";
+    if (fields_.size() == 0) {
       lout << "No field are tracked" << std::endl;
     } else {
       lout << "Fields: [";
-      for (auto& f : fields) {
+      for (auto& f : fields_) {
         lout << " " << to_cstring(f);
       }
       lout << " ]" << std::endl;
@@ -131,7 +131,7 @@ struct Tracker {
   // Check if force fields (fx, fy, fz) are being tracked
   // (Force fields require interaction computation to be available)
   bool require_interaction() {
-    for (auto& field : fields) {
+    for (auto& field : fields_) {
       if (field == extractor::Dictionnary::fx || field == extractor::Dictionnary::fy ||
           field == extractor::Dictionnary::fz || field == extractor::Dictionnary::momx ||
           field == extractor::Dictionnary::momy || field == extractor::Dictionnary::momz) {
@@ -149,7 +149,7 @@ struct Tracker {
 // @param error_msg Output: error description if validation fails
 // @return true if tracker is compatible, false otherwise
 inline bool compatibility(const extractor::Tracker& ded, Drivers& drvs, std::string& error_msg) {
-  if (ded.id >= drvs.get_size()) {
+  if (ded.id_ >= drvs.get_size()) {
     error_msg = "This Driver ID is not defined";
     return false;
   }
@@ -161,7 +161,7 @@ inline bool compatibility(const extractor::Tracker& ded, Drivers& drvs, std::str
 
 // Central manager for tracking and extracting driver field data during simulation
 struct DriverExtractor {
-  std::vector<extractor::Tracker> tracked_drivers;  // List of active trackers
+  std::vector<extractor::Tracker> tracked_drivers_;  // List of active trackers
 
   // Extract data from drivers according to registered trackers
   // (Implementation depends on extraction mechanism)
@@ -169,10 +169,10 @@ struct DriverExtractor {
 
   // Register a new tracker, merging with existing tracker for same driver if present
   void add(extractor::Tracker& tracker) {
-    auto iterator = std::find_if(tracked_drivers.begin(), tracked_drivers.end(),
-                                 [&tracker](extractor::Tracker& item) { return item.id == tracker.id; });
-    if (iterator == tracked_drivers.end()) {
-      tracked_drivers.push_back(tracker);
+    auto iterator = std::find_if(tracked_drivers_.begin(), tracked_drivers_.end(),
+                                 [&tracker](extractor::Tracker& item) { return item.id_ == tracker.id_; });
+    if (iterator == tracked_drivers_.end()) {
+      tracked_drivers_.push_back(tracker);
     } else {
       iterator->fuse(tracker);
     }
@@ -181,7 +181,7 @@ struct DriverExtractor {
   // Check if any tracked driver requires interaction computation
   // (Returns true if any tracker tracks force or moment fields)
   bool require_interaction() {
-    for (auto& tracker : tracked_drivers) {
+    for (auto& tracker : tracked_drivers_) {
       if (tracker.require_interaction()) {
         return true;
       }
@@ -224,12 +224,12 @@ struct convert<Tracker> {
     }
 
     // Parse driver ID
-    tracker.id = node["id"].as<int>();
+    tracker.id_ = node["id"].as<int>();
 
     // Parse field list and convert string names to enum values
     auto tmp = node["fields"].as<std::vector<std::string>>();
     for (auto& item : tmp) {
-      tracker.fields.push_back(exaDEM::extractor::from_string(item));
+      tracker.fields_.push_back(exaDEM::extractor::from_string(item));
     }
     return true;
   }
