@@ -351,14 +351,14 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
 
   // Prepare interaction item
   PlaceholderInteraction item = {};
-  item.pair.pi.id = body_a.id;
-  item.pair.pi.cell = cell_a;
-  item.pair.pi.p = pa;
-  item.pair.pj.id = body_b.id;
-  item.pair.pj.cell = cell_b;
-  item.pair.pj.p = pb;
-  item.pair.ghost = ghost_flag;
-  item.pair.swap = false;
+  item.pair_.pi_.id_ = body_a.id;
+  item.pair_.pi_.cell_ = cell_a;
+  item.pair_.pi_.p_ = pa;
+  item.pair_.pj_.id_ = body_b.id;
+  item.pair_.pj_.cell_ = cell_b;
+  item.pair_.pj_.p_ = pb;
+  item.pair_.ghost_ = ghost_flag;
+  item.pair_.swap_ = false;
 
   // Fill pass A→B (skip loops if no interactions)
   if (count1 > 0 || count2 > 0 || count3 > 0) {
@@ -367,10 +367,10 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
         for (int j = threadIdx.x; j < nvb; j += blockDim.x) {
           if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
                                    &shpb)) {
-            item.pair.pi.sub = i;
-            item.pair.pj.sub = j;
-            item.pair.type = InteractionTypeId::VertexVertex;
-            item.pair.swap = false;
+            item.pair_.pi_.sub_ = i;
+            item.pair_.pj_.sub_ = j;
+            item.pair_.type_ = InteractionTypeId::VertexVertex;
+            item.pair_.swap_ = false;
             interactions[InteractionTypeId::VertexVertex].set(prefix[0]++, item);
           }
         }
@@ -379,10 +379,10 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
         for (int j = threadIdx.x; j < neb; j += blockDim.x) {
           if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
                                  &shpb)) {
-            item.pair.pi.sub = i;
-            item.pair.pj.sub = j;
-            item.pair.type = InteractionTypeId::VertexEdge;
-            item.pair.swap = false;
+            item.pair_.pi_.sub_ = i;
+            item.pair_.pj_.sub_ = j;
+            item.pair_.type_ = InteractionTypeId::VertexEdge;
+            item.pair_.swap_ = false;
             interactions[InteractionTypeId::VertexEdge].set(prefix[1]++, item);
           }
         }
@@ -391,10 +391,10 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
         for (int j = threadIdx.x; j < nfb; j += blockDim.x) {
           if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
                                  &shpb)) {
-            item.pair.pi.sub = i;
-            item.pair.pj.sub = j;
-            item.pair.type = InteractionTypeId::VertexFace;
-            item.pair.swap = false;
+            item.pair_.pi_.sub_ = i;
+            item.pair_.pj_.sub_ = j;
+            item.pair_.type_ = InteractionTypeId::VertexFace;
+            item.pair_.swap_ = false;
             interactions[InteractionTypeId::VertexFace].set(prefix[2]++, item);
           }
         }
@@ -408,10 +408,10 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
       for (int j = threadIdx.x; j < neb; j += blockDim.x) {
         if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
                              &shpb)) {
-          item.pair.pi.sub = i;
-          item.pair.pj.sub = j;
-          item.pair.type = InteractionTypeId::EdgeEdge;
-          item.pair.swap = false;
+          item.pair_.pi_.sub_ = i;
+          item.pair_.pj_.sub_ = j;
+          item.pair_.type_ = InteractionTypeId::EdgeEdge;
+          item.pair_.swap_ = false;
           interactions[InteractionTypeId::EdgeEdge].set(prefix[3]++, item);
         }
       }
@@ -420,19 +420,19 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
 
   // Swap for B→A
   if (count5 > 0 || count6 > 0) {
-    gpu_swap(item.pair.pi.id, item.pair.pj.id);
-    gpu_swap(item.pair.pi.cell, item.pair.pj.cell);
-    gpu_swap(item.pair.pi.p, item.pair.pj.p);
-    item.pair.swap = true;
+    gpu_swap(item.pair_.pi_.id_, item.pair_.pj_.id_);
+    gpu_swap(item.pair_.pi_.cell_, item.pair_.pj_.cell_);
+    gpu_swap(item.pair_.pi_.p_, item.pair_.pj_.p_);
+    item.pair_.swap_ = true;
 
     for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
       if (count5 > 0) {
         for (int i = threadIdx.x; i < nea; i += blockDim.x) {
           if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i,
                                  &shpa)) {
-            item.pair.pi.sub = j;
-            item.pair.pj.sub = i;
-            item.pair.type = InteractionTypeId::VertexEdge;
+            item.pair_.pi_.sub_ = j;
+            item.pair_.pj_.sub_ = i;
+            item.pair_.type_ = InteractionTypeId::VertexEdge;
             interactions[InteractionTypeId::VertexEdge].set(prefix[1]++, item);
           }
         }
@@ -441,9 +441,9 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
         for (int i = threadIdx.x; i < nfa; i += blockDim.x) {
           if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i,
                                  &shpa)) {
-            item.pair.pi.sub = j;
-            item.pair.pj.sub = i;
-            item.pair.type = InteractionTypeId::VertexFace;
+            item.pair_.pi_.sub_ = j;
+            item.pair_.pj_.sub_ = i;
+            item.pair_.type_ = InteractionTypeId::VertexFace;
             interactions[InteractionTypeId::VertexFace].set(prefix[2]++, item);
           }
         }

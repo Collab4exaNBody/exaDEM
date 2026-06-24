@@ -29,33 +29,33 @@ namespace exaDEM {
  * @brief Structure representing an interaction in a Discrete Element Method (DEM) simulation.
  */
 struct Interaction {
-  InteractionPair pair; /**< The InteractionPair structure containing information about the interacting particles and
+  InteractionPair pair_; /**< The InteractionPair structure containing information about the interacting particles and
                            the type of interaction. */
   // specialized members
-  exanb::Vec3d friction = {0, 0, 0}; /**< Friction vector associated with the interaction. */
-  exanb::Vec3d moment = {0, 0, 0};   /**< Moment vector associated with the interaction. */
+  exanb::Vec3d friction_ = {0, 0, 0}; /**< Friction vector associated with the interaction. */
+  exanb::Vec3d moment_ = {0, 0, 0};   /**< Moment vector associated with the interaction. */
 
   /** @brief Get the first particle location.
    * [return] Reference to the first particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& i() { return pair.pi; }
-  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& i() const { return pair.pi; }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& i() { return pair_.pi_; }
+  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& i() const { return pair_.pi_; }
 
   /** @brief Get the second particle location.
    * [return] Reference to the second particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& j() { return pair.pj; }
-  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& j() const { return pair.pj; }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& j() { return pair_.pj_; }
+  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& j() const { return pair_.pj_; }
 
   /** @brief Get the owner particle location.
    * [return] Reference to the owner particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& owner() { return pair.owner(); }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& owner() { return pair_.owner(); }
 
   /** @brief Get the partner particle location.
    * [return] Reference to the partner particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& partner() { return pair.partner(); }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& partner() { return pair_.partner(); }
 
   /** @brief Get the driver particle location.
    * [return] Reference to the driver particle location.
@@ -65,32 +65,32 @@ struct Interaction {
   /** @brief Get the type of the interaction.
    * [return] The type of the interaction.
    */
-  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() { return pair.type; }
-  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() const { return pair.type; }
+  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() { return pair_.type_; }
+  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() const { return pair_.type_; }
 
   /** @brief Get the cell index associated with the interaction.
    * [return] The cell index.
    */
-  ONIKA_HOST_DEVICE_FUNC inline uint32_t cell() { return pair.owner().cell; }
+  ONIKA_HOST_DEVICE_FUNC inline uint32_t cell() { return pair_.owner().cell_; }
 
   /** @brief Get the driver particle ID.
    * [return] The driver particle ID.
    */
-  ONIKA_HOST_DEVICE_FUNC inline uint64_t driver_id() { return pair.pj.id; }
+  ONIKA_HOST_DEVICE_FUNC inline uint64_t driver_id() { return pair_.pj_.id_; }
 
   /** @brief Get the pair information associated with the interaction.
    * [return] Reference to the interaction pair.
    */
-  ONIKA_HOST_DEVICE_FUNC inline InteractionPair& pair_info() { return pair; }
-  ONIKA_HOST_DEVICE_FUNC inline const InteractionPair& pair_info() const { return pair; }
+  ONIKA_HOST_DEVICE_FUNC inline InteractionPair& pair_info() { return pair_; }
+  ONIKA_HOST_DEVICE_FUNC inline const InteractionPair& pair_info() const { return pair_; }
 
   /**
    * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
    */
   ONIKA_HOST_DEVICE_FUNC void reset() {
     constexpr exanb::Vec3d null = {0, 0, 0};
-    friction = null;
-    moment = null;
+    friction_ = null;
+    moment_ = null;
   }
 
   /** @brief Check if the interaction is persistent.
@@ -114,11 +114,11 @@ struct Interaction {
    * @return True if the interaction is active (moment vector or friction vector is non-zero), false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool active() const {
-    if (!pair.active()) {
+    if (!pair_.active()) {
       return false;
     }
     constexpr exanb::Vec3d null = {0, 0, 0};
-    bool res = ((moment != null) || (friction != null));
+    bool res = ((moment_ != null) || (friction_ != null));
     return res;
   }
 
@@ -126,49 +126,49 @@ struct Interaction {
    * @brief Displays the Interaction data.
    */
   void print() {
-    pair.print();
-    std::cout << "Friction: " << friction << ", Moment: " << moment << ")" << std::endl;
+    pair_.print();
+    std::cout << "Friction: " << friction_ << ", Moment: " << moment_ << ")" << std::endl;
   }
 
   /**
    * @brief Displays the Interaction data.
    */
   void print() const {
-    pair.print();
-    std::cout << "Friction: " << friction << ", Moment: " << moment << ")" << std::endl;
+    pair_.print();
+    std::cout << "Friction: " << friction_ << ", Moment: " << moment_ << ")" << std::endl;
   }
 
   /** @brief Updates the interaction with the values from another interaction.
    * [param] I The interaction to update from.
    */
   ONIKA_HOST_DEVICE_FUNC void update(Interaction& I) {
-    this->friction = I.friction;
-    this->moment = I.moment;
+    this->friction_ = I.friction_;
+    this->moment_ = I.moment_;
   }
 
   /** @brief Checks if two interactions are equal.
    * [param] I The interaction to compare with.
    * [return] True if the interactions are equal, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator==(Interaction& I) { return (pair == I.pair); }
+  ONIKA_HOST_DEVICE_FUNC bool operator==(Interaction& I) { return (pair_ == I.pair_); }
 
   /** @brief Checks if two interactions are equal.
    * [param] I The interaction to compare with.
    * [return] True if the interactions are equal, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator==(const Interaction& I) const { return (pair == I.pair); }
+  ONIKA_HOST_DEVICE_FUNC bool operator==(const Interaction& I) const { return (pair_ == I.pair_); }
 
   /** @brief Checks if one interaction is less than another.
    * [param] I The interaction to compare with.
    * [return] True if the current interaction is less than the other, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator<(Interaction& I) { return (pair < I.pair); }
+  ONIKA_HOST_DEVICE_FUNC bool operator<(Interaction& I) { return (pair_ < I.pair_); }
 
   /** @brief Checks if one interaction is less than another.
    * [param] I The interaction to compare with.
    * [return] True if the current interaction is less than the other, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator<(const Interaction& I) const { return (pair < I.pair); }
+  ONIKA_HOST_DEVICE_FUNC bool operator<(const Interaction& I) const { return (pair_ < I.pair_); }
 };
 
 static_assert(std::is_trivially_copyable_v<Interaction>, "Interaction must remain trivially copyable");

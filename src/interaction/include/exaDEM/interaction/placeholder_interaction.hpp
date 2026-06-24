@@ -35,7 +35,7 @@ namespace exaDEM {
  */
 template <typename InteractionT>
 inline bool filter_duplicates(const InteractionT& I) {
-  return I.pair.ghost != InteractionPair::PartnerGhost;
+  return I.pair_.ghost_ != InteractionPair::PartnerGhost;
 }
 
 /** @brief Compute the maximum of two compile-time constants.
@@ -76,21 +76,21 @@ struct PlaceholderInteraction {
   static_assert(PlaceholderInteractionSize > 0);
 
   // members
-  InteractionPair pair;                                             /**< The InteractionPair structure containing information about the interacting particles and the type of interaction. */
-  alignas(MaxAlign) uint8_t data[PlaceholderInteractionSize] = {};  /**< The data buffer for storing interaction-specific information. */
+  InteractionPair pair_;                                             /**< The InteractionPair structure containing information about the interacting particles and the type of interaction. */
+  alignas(MaxAlign) uint8_t data_[PlaceholderInteractionSize] = {};  /**< The data buffer for storing interaction-specific information. */
 
   /** @brief Get the first particle location.
    * [return] A reference to the first particle location.
    */
   ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& i() {
-    return pair.pi;
+    return pair_.pi_;
   }
 
   /** @brief Get the second particle location.
    * [return] A reference to the second particle location.
    */
   ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& j() {
-    return pair.pj;
+    return pair_.pj_;
   }
 
   /** @brief Get the driver particle location.
@@ -104,56 +104,56 @@ struct PlaceholderInteraction {
   * [return] The type of the interaction.
   */
   ONIKA_HOST_DEVICE_FUNC inline uint16_t type() {
-    return pair.type;
+    return pair_.type_;
   }
 
-  /** @brief Get the type of the interaction. 
+  /** @brief Get the type of the interaction.
    * [return] The type of the interaction.
    */
   ONIKA_HOST_DEVICE_FUNC inline uint16_t type() const {
-    return pair.type;
+    return pair_.type_;
   }
 
   /** @brief Get the cell index.
    * [return] The cell index.
    */
   ONIKA_HOST_DEVICE_FUNC inline uint32_t cell() {
-    return pair.owner().cell;
+    return pair_.owner().cell_;
   }
 
   /** @brief Get the owner particle location.
    * [return] A reference to the owner particle location.
    */
   ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& owner() {
-    return pair.owner();
+    return pair_.owner();
   }
 
   /** @brief Get the owner particle location.
    * [return] A reference to the owner particle location.
    */
   ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& owner() const {
-    return pair.owner();
+    return pair_.owner();
   }
 
   /** @brief Get the partner particle location.
    * [return] A reference to the partner particle location.
    */
   ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& partner() {
-    return pair.partner();
+    return pair_.partner();
   }
 
   /** @brief Get the interaction pair information.
    * [return] A reference to the interaction pair information.
    */
   ONIKA_HOST_DEVICE_FUNC inline InteractionPair& pair_info() {
-    return pair;
+    return pair_;
   }
 
   /** @brief Get the interaction pair information.
    * [return] A reference to the interaction pair information.
    */
   ONIKA_HOST_DEVICE_FUNC inline const InteractionPair& pair_info() const {
-    return pair;
+    return pair_;
   }
 
   /** @brief Check if the interaction is consistent by verifying the consistency of its InteractionPair.
@@ -163,7 +163,7 @@ struct PlaceholderInteraction {
    */
   template <bool DisplayWarnings = true>
   inline bool consistent() const {
-    return pair.consistent<DisplayWarnings>();
+    return pair_.consistent<DisplayWarnings>();
   }
 
   /** @brief Displays the Interaction data.
@@ -190,14 +190,14 @@ struct PlaceholderInteraction {
    * [param in] The PlaceholderInteraction to copy data from.
    */
   void update(PlaceholderInteraction& in) {
-    std::memcpy(data, in.data, PlaceholderInteractionSize * sizeof(uint8_t));
+    std::memcpy(data_, in.data_, PlaceholderInteractionSize * sizeof(uint8_t));
   }
 
   /** @brief Clears the placeholder interaction data.
    * [return] A reference to the cleared placeholder interaction data.
    */
   void clear_placeholder() {
-    memset(data, 0, PlaceholderInteractionSize);
+    memset(data_, 0, PlaceholderInteractionSize);
   }
 
 
@@ -208,7 +208,7 @@ struct PlaceholderInteraction {
       return this->as<InnerBondInteraction>().active();
     }
 #ifndef ONIKA_CUDA_VERSION
-    pair.print();
+    pair_.print();
     color_log::mpi_error("PlaceholderInteraction::active",
                          "The type value of this interaction is invalid: " + std::to_string(type()));
     std::exit(EXIT_FAILURE);
@@ -231,7 +231,7 @@ struct PlaceholderInteraction {
       color_log::mpi_error("PlaceholderInteraction::persistent",
                            "The interaction is undefined, please define it.");
     }
-    pair.print();
+    pair_.print();
     color_log::mpi_error("PlaceholderInteraction::persistent",
                          "The type value of this interaction is invalid: "
                          + std::to_string(static_cast<int>(type())));
@@ -255,7 +255,7 @@ struct PlaceholderInteraction {
       color_log::mpi_error("PlaceholderInteraction::persistent",
                            "The interaction is undefined, please define it.");
     }
-    pair.print();
+    pair_.print();
     color_log::mpi_error("PlaceholderInteraction::persistent",
                          "The type value of this interaction is invalid: "
                          + std::to_string(static_cast<int>(type())));
@@ -349,7 +349,7 @@ struct PlaceholderInteraction {
    * @return True if the interactions are equal, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool operator==(PlaceholderInteraction& I) {
-    return (pair == I.pair);
+    return (pair_ == I.pair_);
   }
 
   /** @brief Check if two placeholder interactions are equal.
@@ -357,7 +357,7 @@ struct PlaceholderInteraction {
    * @return True if the interactions are equal, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool operator==(const PlaceholderInteraction& I) const {
-    return (pair == I.pair);
+    return (pair_ == I.pair_);
   }
 
   /** @brief Check if a placeholder interaction is less than another.
@@ -365,7 +365,7 @@ struct PlaceholderInteraction {
    * @return True if this interaction is less than the other, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool operator<(PlaceholderInteraction& I) {
-    return (pair < I.pair);
+    return (pair_ < I.pair_);
   }
 
   /** @brief Check if a placeholder interaction is less than another.
@@ -373,7 +373,7 @@ struct PlaceholderInteraction {
    * @return True if this interaction is less than the other, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool operator<(const PlaceholderInteraction& I) const {
-    return (pair < I.pair);
+    return (pair_ < I.pair_);
   }
 
   /**
@@ -384,10 +384,10 @@ struct PlaceholderInteraction {
    * @param I Interaction to compare with
    */
   ONIKA_HOST_DEVICE_FUNC bool sort_by_owner_p(const PlaceholderInteraction& I) const {
-    if (this->owner().p != I.owner().p) {
-      return (this->owner().p < I.owner().p);
+    if (this->owner().p_ != I.owner().p_) {
+      return (this->owner().p_ < I.owner().p_);
     }
-    return (this->pair < I.pair);
+    return (this->pair_ < I.pair_);
   }
 
   /**

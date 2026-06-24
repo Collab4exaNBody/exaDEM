@@ -95,7 +95,7 @@ class StickPolyhedraOperator : public OperatorNode {
       // TLS interaction
       PlaceholderInteraction item;
       item.clear_placeholder();
-      item.as<InnerBondInteraction>().unbroken = true;
+      item.as<InnerBondInteraction>().unbroken_ = true;
 
       // local storage per thread
       InteractionManager manager;
@@ -143,9 +143,9 @@ class StickPolyhedraOperator : public OperatorNode {
         // Define a function to add a new interaction if a contact is possible.
         auto add_contact = [](std::vector<PlaceholderInteraction>& local, PlaceholderInteraction& item, int sub_i,
                               int sub_j, double dn0) -> void {
-          item.pair.pi.sub = sub_i;
-          item.pair.pj.sub = sub_j;
-          item.as<InnerBondInteraction>().dn0 = dn0;
+          item.pair_.pi_.sub_ = sub_i;
+          item.pair_.pj_.sub_ = sub_j;
+          item.as<InnerBondInteraction>().dn0_ = dn0;
           local.push_back(item);
         };
 
@@ -167,14 +167,14 @@ class StickPolyhedraOperator : public OperatorNode {
               }
               const uint64_t id_j = cells[cell_j][field::id][p_j];
 
-              item.pair.ghost = InteractionPair::NotGhost;
-              item.pair.swap = false;
+              item.pair_.ghost_ = InteractionPair::NotGhost;
+              item.pair_.swap_ = false;
 
               if (id_i[p_i] >= id_j) {
                 return;
               }
               if (g.is_ghost_cell(cell_j)) {
-                item.pair.ghost = InteractionPair::OwnerGhost;
+                item.pair_.ghost_ = InteractionPair::OwnerGhost;
               }
 
               // Get particle pointers for the particle j.
@@ -214,20 +214,20 @@ class StickPolyhedraOperator : public OperatorNode {
               const InnerBondParams& ibp = ibpa(t_i[p_i], typej);
 
               // Add interactions
-              item.pair.type = InteractionTypeId::InnerBond;
+              item.pair_.type_ = InteractionTypeId::InnerBond;
 
               // particle i (id, cell id, particle position, sub vertex)
               auto& pi = item.i();
-              pi.id = id_i[p_i];
-              pi.p = p_i;
-              pi.cell = cell_i;
+              pi.id_ = id_i[p_i];
+              pi.p_ = p_i;
+              pi.cell_ = cell_i;
               const int nfi = shpi->get_number_of_faces();
 
               // particle j (id, cell id, particle position, sub vertex)
               auto& pj = item.j();
-              pj.id = id_j;
-              pj.p = p_j;
-              pj.cell = cell_j;
+              pj.id_ = id_j;
+              pj.p_ = p_j;
+              pj.cell_ = cell_j;
               const int nfj = shpj->get_number_of_faces();
 
               bool found = false;
@@ -272,8 +272,8 @@ class StickPolyhedraOperator : public OperatorNode {
                   // define the interface fracture criterion
                   // MixedMode:     En + Et > 2.0 * area * g  (g stored in gn)
                   // SeparateModes: En > 2.0 * area * gn and Et > 2.0 * area * gt
-                  const double area = pi.id < pj.id ? shpi->get_face_area(i, hi) : shpj->get_face_area(j, hj);
-                  RuptureCriteria& criterion = item.as<InnerBondInteraction>().criterion;
+                  const double area = pi.id_ < pj.id_ ? shpi->get_face_area(i, hi) : shpj->get_face_area(j, hj);
+                  RuptureCriteria& criterion = item.as<InnerBondInteraction>().criterion_;
                   criterion.mode = ibp.mode;
                   if (ibp.mode == RuptureMode::MixedMode) {
                     criterion.criterion() = 2 * area * ibp.gn;
@@ -308,7 +308,7 @@ class StickPolyhedraOperator : public OperatorNode {
               // compute inner bond weight such as kn / kt are
               // imposed on a interface instead of a for each interaction
               for (auto& it : local) {
-                it.as<InnerBondInteraction>().weight = 1. / static_cast<double>(local.size());
+                it.as<InnerBondInteraction>().weight_ = 1. / static_cast<double>(local.size());
               }
 
               bool check = check_stiked_face(local, p_i, vertices_i);

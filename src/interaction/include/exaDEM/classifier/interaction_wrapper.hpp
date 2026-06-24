@@ -195,26 +195,26 @@ struct InteractionWrapper {
 
   ONIKA_HOST_DEVICE_FUNC
   inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) const {
-    assert(m_type == item.pair.type);
+    assert(m_type == item.pair_.type_);
     // --- particle ids
-    id_i[idx] = item.pair.pi.id;
-    id_j[idx] = item.pair.pj.id;
+    id_i[idx] = item.pair_.pi_.id_;
+    id_j[idx] = item.pair_.pj_.id_;
 
     // --- cell ids
-    cell_i[idx] = item.pair.pi.cell;
-    cell_j[idx] = item.pair.pj.cell;
+    cell_i[idx] = item.pair_.pi_.cell_;
+    cell_j[idx] = item.pair_.pj_.cell_;
 
     // --- position in cell
-    p_i[idx] = item.pair.pi.p;
-    p_j[idx] = item.pair.pj.p;
+    p_i[idx] = item.pair_.pi_.p_;
+    p_j[idx] = item.pair_.pj_.p_;
 
     // --- sub ids
-    sub_i[idx] = item.pair.pi.sub;
-    sub_j[idx] = item.pair.pj.sub;
+    sub_i[idx] = item.pair_.pi_.sub_;
+    sub_j[idx] = item.pair_.pj_.sub_;
 
     // --- swap, ghost
-    m_swap[idx] = item.pair.swap;
-    m_ghost[idx] = item.pair.ghost;
+    m_swap[idx] = item.pair_.swap_;
+    m_ghost[idx] = item.pair_.ghost_;
   }
 
   ONIKA_HOST_DEVICE_FUNC
@@ -225,33 +225,33 @@ struct InteractionWrapper {
 
   ONIKA_HOST_DEVICE_FUNC
   inline bool same(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
-    return item.pair == pair(idx);
+    return item.pair_ == pair(idx);
   }
 
   ONIKA_HOST_DEVICE_FUNC
   inline void update(const uint64_t idx, const exaDEM::Interaction& item) const {
-    ft_x[idx] = item.friction.x;
-    ft_y[idx] = item.friction.y;
-    ft_z[idx] = item.friction.z;
+    ft_x[idx] = item.friction_.x;
+    ft_y[idx] = item.friction_.y;
+    ft_z[idx] = item.friction_.z;
 
-    mom_x[idx] = item.moment.x;
-    mom_y[idx] = item.moment.y;
-    mom_z[idx] = item.moment.z;
+    mom_x[idx] = item.moment_.x;
+    mom_y[idx] = item.moment_.y;
+    mom_z[idx] = item.moment_.z;
   }
 
   ONIKA_HOST_DEVICE_FUNC
   inline void update(const uint64_t idx, const exaDEM::InnerBondInteraction& item) const {
-    ft_x[idx] = item.friction.x;
-    ft_y[idx] = item.friction.y;
-    ft_z[idx] = item.friction.z;
-    en[idx] = item.en;
-    tds[idx] = item.tds;
-    et[idx] = item.et;
-    dn0[idx] = item.dn0;
-    weight[idx] = item.weight;
-    criterion[idx] = item.criterion;
+    ft_x[idx] = item.friction_.x;
+    ft_y[idx] = item.friction_.y;
+    ft_z[idx] = item.friction_.z;
+    en[idx] = item.en_;
+    tds[idx] = item.tds_;
+    et[idx] = item.et_;
+    dn0[idx] = item.dn0_;
+    weight[idx] = item.weight_;
+    criterion[idx] = item.criterion_;
 
-    unbroken[idx] = item.unbroken;
+    unbroken[idx] = item.unbroken_;
   }
 
   ONIKA_HOST_DEVICE_FUNC

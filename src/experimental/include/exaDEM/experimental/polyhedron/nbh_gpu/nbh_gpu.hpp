@@ -257,26 +257,26 @@ struct ApplyClassifierFunc {  // Second pass
       AddInteractionFunc(const InteractionParticleAccessor& in) : data(in), item{}, prefix({0, 0, 0, 0}) {}
 
       ONIKA_HOST_DEVICE_FUNC
-      void set_ghost(int level_of_ghost) { item.pair.ghost = level_of_ghost; }
+      void set_ghost(int level_of_ghost) { item.pair_.ghost_ = level_of_ghost; }
 
       ONIKA_HOST_DEVICE_FUNC
       inline void operator()(int i, int j, int InteractionType, bool swap) {
-        item.pair.swap = swap;
-        item.pair.pi.sub = i;
-        item.pair.pj.sub = j;
-        auto& PJ = item.pair.pj;
-        PJ.sub = j;
-        item.pair.type = InteractionType;
+        item.pair_.swap_ = swap;
+        item.pair_.pi_.sub_ = i;
+        item.pair_.pj_.sub_ = j;
+        auto& PJ = item.pair_.pj_;
+        PJ.sub_ = j;
+        item.pair_.type_ = InteractionType;
         /*
            printf("adder interaction %d at place %d = "
            "idi: %llu idj: %llu, subi: %u, subj: %u, swap %d\n",
            InteractionType,
            prefix[InteractionType],
-           (unsigned long long)item.pair.pi.id,
-           (unsigned long long)item.pair.pj.id,
-           item.pair.pi.sub,
-           item.pair.pj.sub,
-           (int) item.pair.swap);
+           (unsigned long long)item.pair_.pi_.id_,
+           (unsigned long long)item.pair_.pj_.id_,
+           item.pair_.pi_.sub_,
+           item.pair_.pj_.sub_,
+           (int) item.pair_.swap_);
            */
         data[InteractionType].set(prefix[InteractionType]++, item);
       }
@@ -284,9 +284,9 @@ struct ApplyClassifierFunc {  // Second pass
       ONIKA_HOST_DEVICE_FUNC inline bool skip(uint8_t i) { return false; }
 
       ONIKA_HOST_DEVICE_FUNC inline void swap_ij() {
-        gpu_swap(item.pair.pi.id, item.pair.pj.id);
-        gpu_swap(item.pair.pi.cell, item.pair.pj.cell);
-        gpu_swap(item.pair.pi.p, item.pair.pj.p);
+        gpu_swap(item.pair_.pi_.id_, item.pair_.pj_.id_);
+        gpu_swap(item.pair_.pi_.cell_, item.pair_.pj_.cell_);
+        gpu_swap(item.pair_.pi_.p_, item.pair_.pj_.p_);
       }
     };
 
@@ -350,12 +350,12 @@ struct ApplyClassifierFunc {  // Second pass
         auto& shpb = shps[body_b.type];
         ParticleVertexView vertices_b = {pb, vertex_cell_b};
         // do not forget to reset the interaction
-        adder.item.pair.pi.id = body_a.id;
-        adder.item.pair.pi.p = pa;
-        adder.item.pair.pi.cell = cell_id_a;
-        adder.item.pair.pj.id = static_cast<uint64_t>(body_b.id);
-        adder.item.pair.pj.p = static_cast<uint16_t>(pb);
-        adder.item.pair.pj.cell = static_cast<size_t>(cell_id_b);
+        adder.item.pair_.pi_.id_ = body_a.id;
+        adder.item.pair_.pi_.p_ = pa;
+        adder.item.pair_.pi_.cell_ = cell_id_a;
+        adder.item.pair_.pj_.id_ = static_cast<uint64_t>(body_b.id);
+        adder.item.pair_.pj_.p_ = static_cast<uint16_t>(pb);
+        adder.item.pair_.pj_.cell_ = static_cast<size_t>(cell_id_b);
         detection(adder, rcut_inc, body_a, vertices_a, shpa, aabb_body_a, obb_a, body_b, vertices_b, shpb);
       }
     }

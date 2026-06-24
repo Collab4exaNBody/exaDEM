@@ -198,7 +198,7 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
           data_ptr[j].print();
           color_log::mpi_error("transfer_classifier_grid", "This interacion is illformed");
         }
-        if (_pid != data_ptr[j].owner().id) {
+        if (_pid != data_ptr[j].owner().id_) {
           break;
         }
         _size++;

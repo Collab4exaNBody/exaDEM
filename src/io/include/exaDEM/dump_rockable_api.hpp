@@ -119,13 +119,13 @@ inline exaDEM::Interaction convert(const rockable::Interaction& input) {
   exaDEM::Interaction res;
   auto& pi = res.i();
   auto& pj = res.j();
-  pi.id = input.i;
-  pj.id = input.j;
-  pi.sub = input.subi;
-  pj.sub = input.subj;
-  res.pair.type = input.type;
-  res.friction = input.ft;
-  res.moment = input.mom;
+  pi.id_ = input.i;
+  pj.id_ = input.j;
+  pi.sub_ = input.subi;
+  pj.sub_ = input.subj;
+  res.pair_.type_ = input.type;
+  res.friction_ = input.ft;
+  res.moment_ = input.mom;
   return res;
 }
 

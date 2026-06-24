@@ -77,13 +77,13 @@ struct CountIPDFunc {
     size_t n_particles = cell.size();
     NbhDriverCounter func;
     PlaceholderInteraction item = {};
-    item.pair.swap = false;
-    item.pair.ghost = InteractionPair::NotGhost;
+    item.pair_.swap_ = false;
+    item.pair_.ghost_ = InteractionPair::NotGhost;
     auto& pi_c = item.i();
     auto& pd_c = item.driver();
-    pi_c.cell = cell_id;
-    pd_c.cell = 123456;  // Default value [debug]
-    pd_c.p = 12345;      // Default value [debug]
+    pi_c.cell_ = cell_id;
+    pd_c.cell_ = 123456;  // Default value [debug]
+    pd_c.p_ = 12345;      // Default value [debug]
 
     const auto* __restrict__ id = cell[field::id];
     const auto* __restrict__ h = cell[field::homothety];
@@ -95,15 +95,15 @@ struct CountIPDFunc {
     for (size_t drvs_idx = 0; drvs_idx < drvs.m_nb_drivers; drvs_idx++) {
       DRIVER_TYPE drv_type = drvs.m_type_index[drvs_idx].m_type;
       if (drv_type == DRIVER_TYPE::CYLINDER) {
-        item.pair.type = InteractionTypeId::VertexCylinder;
+        item.pair_.type_ = InteractionTypeId::VertexCylinder;
         Cylinder& driver = drvs.get_typed_driver<Cylinder>(drvs_idx);
         add_driver_interaction(driver, func, item, n_particles, rcut_inc, t, id, vertex_cell, h, shps);
       } else if (drv_type == DRIVER_TYPE::SURFACE) {
-        item.pair.type = InteractionTypeId::VertexSurface;
+        item.pair_.type_ = InteractionTypeId::VertexSurface;
         Surface& driver = drvs.get_typed_driver<Surface>(drvs_idx);
         add_driver_interaction(driver, func, item, n_particles, rcut_inc, t, id, vertex_cell, h, shps);
       } else if (drv_type == DRIVER_TYPE::BALL) {
-        item.pair.type = InteractionTypeId::VertexBall;
+        item.pair_.type_ = InteractionTypeId::VertexBall;
         Ball& driver = drvs.get_typed_driver<Ball>(drvs_idx);
         add_driver_interaction(driver, func, item, n_particles, rcut_inc, t, id, vertex_cell, h, shps);
       } else if (drv_type == DRIVER_TYPE::RSHAPE) {
@@ -141,8 +141,8 @@ struct ClassifyIPDFunc {
       const InteractionWrapperAccessor& data;
       InteractionTypePerCellCounter prefix;
       ONIKA_HOST_DEVICE_FUNC inline void operator()(PlaceholderInteraction& item, int sub_i, int sub_j) {
-        item.pair.pi.sub = sub_i;
-        item.pair.pj.sub = sub_j;
+        item.pair_.pi_.sub_ = sub_i;
+        item.pair_.pj_.sub_ = sub_j;
         auto& container = data.get_typed_accessor<IT>(item.type());
         container.set(prefix[item.type()]++, item);
       }
@@ -155,13 +155,13 @@ struct ClassifyIPDFunc {
     size_t n_particles = cell.size();
 
     PlaceholderInteraction item = {};
-    item.pair.swap = false;
-    item.pair.ghost = InteractionPair::NotGhost;
+    item.pair_.swap_ = false;
+    item.pair_.ghost_ = InteractionPair::NotGhost;
     auto& pi = item.i();
     auto& pd = item.driver();
-    pi.cell = cell_id;
-    pd.cell = 123456;  // Default value [debug]
-    pd.p = 12345;      // Default value [debug]
+    pi.cell_ = cell_id;
+    pd.cell_ = 123456;  // Default value [debug]
+    pd.p_ = 12345;      // Default value [debug]
 
     // By default,  if the interaction is between a particle and a driver
     // Data about the particle j is set to -1
@@ -175,17 +175,17 @@ struct ClassifyIPDFunc {
     const auto* __restrict__ quat = cell[field::orient];
     for (size_t drvs_idx = 0; drvs_idx < drvs.m_nb_drivers; drvs_idx++) {
       DRIVER_TYPE drv_type = drvs.m_type_index[drvs_idx].m_type;
-      pd.id = drvs_idx;  // we store the driver idx
+      pd.id_ = drvs_idx;  // we store the driver idx
       if (drv_type == DRIVER_TYPE::CYLINDER) {
-        item.pair.type = InteractionTypeId::VertexCylinder;
+        item.pair_.type_ = InteractionTypeId::VertexCylinder;
         Cylinder& driver = drvs.get_typed_driver<Cylinder>(drvs_idx);
         add_driver_interaction(driver, func, item, n_particles, rcut_inc, t, id, vertex_cell, h, shps);
       } else if (drv_type == DRIVER_TYPE::SURFACE) {
-        item.pair.type = InteractionTypeId::VertexSurface;
+        item.pair_.type_ = InteractionTypeId::VertexSurface;
         Surface& driver = drvs.get_typed_driver<Surface>(drvs_idx);
         add_driver_interaction(driver, func, item, n_particles, rcut_inc, t, id, vertex_cell, h, shps);
       } else if (drv_type == DRIVER_TYPE::BALL) {
-        item.pair.type = InteractionTypeId::VertexBall;
+        item.pair_.type_ = InteractionTypeId::VertexBall;
         Ball& driver = drvs.get_typed_driver<Ball>(drvs_idx);
         add_driver_interaction(driver, func, item, n_particles, rcut_inc, t, id, vertex_cell, h, shps);
       } else if (drv_type == DRIVER_TYPE::RSHAPE) {

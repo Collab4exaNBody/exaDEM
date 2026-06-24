@@ -30,60 +30,60 @@ namespace exaDEM {
  * @brief Structure representing an interaction in a Discrete Element Method (DEM) simulation.
  */
 struct InnerBondInteraction {
-  InteractionPair pair; /**< The InteractionPair structure containing information about the interacting particles and
+  InteractionPair pair_; /**< The InteractionPair structure containing information about the interacting particles and
                            the type of interaction. */
 
   // specialized members
-  exanb::Vec3d friction = {0, 0, 0}; /**< Friction vector associated with the interaction. */
-  double en;                         /**< Normal energy associated with the interaction. */
-  exanb::Vec3d tds;                  /**< Tangential displacement vector associated with the interaction. */
-  double et;                         /**< Tangential energy associated with the interaction. */
-  double dn0;                        /**< Initial normal overlap associated with the interaction. */
-  double weight = 1.0; /**< Weight associated with the interaction, used for scaling forces and moments. */
+  exanb::Vec3d friction_ = {0, 0, 0}; /**< Friction vector associated with the interaction. */
+  double en_;                         /**< Normal energy associated with the interaction. */
+  exanb::Vec3d tds_;                  /**< Tangential displacement vector associated with the interaction. */
+  double et_;                         /**< Tangential energy associated with the interaction. */
+  double dn0_;                        /**< Initial normal overlap associated with the interaction. */
+  double weight_ = 1.0; /**< Weight associated with the interaction, used for scaling forces and moments. */
   RuptureCriteria
-      criterion; /**< Criterion value associated with the interaction, used for determining bond breakage. */
+      criterion_; /**< Criterion value associated with the interaction, used for determining bond breakage. */
 
-  uint8_t unbroken = true; /**< Flag indicating whether the bond is unbroken (true) or broken (false). */
+  uint8_t unbroken_ = true; /**< Flag indicating whether the bond is unbroken (true) or broken (false). */
 
   /** @brief Get the first particle location.
    * [return] Reference to the first particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& i() { return pair.pi; }
-  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& i() const { return pair.pi; }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& i() { return pair_.pi_; }
+  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& i() const { return pair_.pi_; }
 
   /** @brief Get the second particle location.
    * [return] Reference to the second particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& j() { return pair.pj; }
-  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& j() const { return pair.pj; }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& j() { return pair_.pj_; }
+  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& j() const { return pair_.pj_; }
 
   /** @brief Get the type of the interaction.
    * [return] The type of the interaction.
    */
-  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() { return pair.type; }
-  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() const { return pair.type; }
+  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() { return pair_.type_; }
+  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() const { return pair_.type_; }
 
   /** @brief Get the cell index associated with the interaction.
    * [return] The cell index.
    */
-  ONIKA_HOST_DEVICE_FUNC inline uint32_t cell() { return pair.owner().cell; }
+  ONIKA_HOST_DEVICE_FUNC inline uint32_t cell() { return pair_.owner().cell_; }
 
   /** @brief Get the pair information associated with the interaction.
    * [return] Reference to the interaction pair.
    */
-  ONIKA_HOST_DEVICE_FUNC inline InteractionPair& pair_info() { return pair; }
-  ONIKA_HOST_DEVICE_FUNC inline const InteractionPair& pair_info() const { return pair; }
+  ONIKA_HOST_DEVICE_FUNC inline InteractionPair& pair_info() { return pair_; }
+  ONIKA_HOST_DEVICE_FUNC inline const InteractionPair& pair_info() const { return pair_; }
 
   /** @brief Resets the Interaction structure by setting friction and moment vectors to zero.
    */
   ONIKA_HOST_DEVICE_FUNC void reset() {
     constexpr exanb::Vec3d null = {0, 0, 0};
-    friction = null;
-    dn0 = 0;
-    en = 0;
-    tds = exanb::Vec3d{0, 0, 0};
-    et = 0;
-    unbroken = true;
+    friction_ = null;
+    dn0_ = 0;
+    en_ = 0;
+    tds_ = exanb::Vec3d{0, 0, 0};
+    et_ = 0;
+    unbroken_ = true;
     // weight and criteria are not reset
   }
 
@@ -91,7 +91,7 @@ struct InnerBondInteraction {
    * [return] True if the interaction is active (moment vector or friction vector is non-zero), false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool active() const {
-    if (!pair.active()) {
+    if (!pair_.active()) {
       return false;
     }
     return true;
@@ -100,12 +100,12 @@ struct InnerBondInteraction {
   /** @brief Defines whether an interaction will be reconstructed or not.
    * [return] True if the interaction is persistent, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool persistent() { return unbroken; }
+  ONIKA_HOST_DEVICE_FUNC bool persistent() { return unbroken_; }
 
   /** @brief Defines whether an interaction will be reconstructed or not.
    * [return] True if the interaction is persistent, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool persistent() const { return unbroken; }
+  ONIKA_HOST_DEVICE_FUNC bool persistent() const { return unbroken_; }
 
   /** @brief Defines whether to skip other interactions.
    * [return] True.
@@ -116,18 +116,18 @@ struct InnerBondInteraction {
    * @brief Displays the Interaction data.
    */
   void print() {
-    pair.print();
-    std::cout << "Friction: " << friction << ", en: " << en << ", tds: " << tds << ", et: " << et << ", dn0: " << dn0
-              << ", weight: " << weight << ", criterion: " << criterion << ")" << std::endl;
+    pair_.print();
+    std::cout << "Friction: " << friction_ << ", en: " << en_ << ", tds: " << tds_ << ", et: " << et_ << ", dn0: " << dn0_
+              << ", weight: " << weight_ << ", criterion: " << criterion_ << ")" << std::endl;
   }
 
   /**
    * @brief Displays the Interaction data.
    */
   void print() const {
-    pair.print();
-    std::cout << "Friction: " << friction << ", en: " << en << ", tds: " << tds << ", et: " << et << ", dn0: " << dn0
-              << ", weight: " << weight << ", criterion: " << criterion << ")" << std::endl;
+    pair_.print();
+    std::cout << "Friction: " << friction_ << ", en: " << en_ << ", tds: " << tds_ << ", et: " << et_ << ", dn0: " << dn0_
+              << ", weight: " << weight_ << ", criterion: " << criterion_ << ")" << std::endl;
   }
 
   /** @brief Updates the interaction with values from another interaction.
@@ -135,39 +135,39 @@ struct InnerBondInteraction {
    * [return] None.
    */
   ONIKA_HOST_DEVICE_FUNC void update(InnerBondInteraction& I) {
-    this->friction = I.friction;
-    this->en = I.en;
-    this->tds = I.tds;
-    this->et = I.et;
-    this->dn0 = I.dn0;
-    this->weight = I.weight;
-    this->criterion = I.criterion;
-    this->unbroken = I.unbroken;
+    this->friction_ = I.friction_;
+    this->en_ = I.en_;
+    this->tds_ = I.tds_;
+    this->et_ = I.et_;
+    this->dn0_ = I.dn0_;
+    this->weight_ = I.weight_;
+    this->criterion_ = I.criterion_;
+    this->unbroken_ = I.unbroken_;
   }
 
   /** @brief Checks if two interactions are equal.
    * @param I The interaction to compare with.
    * [return] True if the interactions are equal, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator==(InnerBondInteraction& I) { return (pair == I.pair); }
+  ONIKA_HOST_DEVICE_FUNC bool operator==(InnerBondInteraction& I) { return (pair_ == I.pair_); }
 
   /** @brief Checks if two interactions are equal.
    * @param I The interaction to compare with.
    * [return] True if the interactions are equal, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator==(const InnerBondInteraction& I) const { return (pair == I.pair); }
+  ONIKA_HOST_DEVICE_FUNC bool operator==(const InnerBondInteraction& I) const { return (pair_ == I.pair_); }
 
   /** @brief Checks if this interaction is less than another interaction.
    * @param I The interaction to compare with.
    * [return] True if this interaction is less than the other, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator<(InnerBondInteraction& I) { return (pair < I.pair); }
+  ONIKA_HOST_DEVICE_FUNC bool operator<(InnerBondInteraction& I) { return (pair_ < I.pair_); }
 
   /** @brief Checks if this interaction is less than another interaction.
    * @param I The interaction to compare with.
    * [return] True if this interaction is less than the other, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator<(const InnerBondInteraction& I) const { return (pair < I.pair); }
+  ONIKA_HOST_DEVICE_FUNC bool operator<(const InnerBondInteraction& I) const { return (pair_ < I.pair_); }
 };
 
 /**
@@ -183,12 +183,12 @@ struct InnerBondInteraction {
  * @note Assumes that the interaction is already broken (unbroken == false).
  */
 ONIKA_HOST_DEVICE_FUNC inline Interaction broke_interaction(const InnerBondInteraction& I) {
-  assert(I.unbroken == false);
+  assert(I.unbroken_ == false);
   Interaction res;
-  res.pair = I.pair;
-  res.pair.type = InteractionTypeId::VertexVertex;
-  res.friction = I.friction;
-  res.moment = exanb::Vec3d{0, 0, 0};
+  res.pair_ = I.pair_;
+  res.pair_.type_ = InteractionTypeId::VertexVertex;
+  res.friction_ = I.friction_;
+  res.moment_ = exanb::Vec3d{0, 0, 0};
   return res;
 }
 

@@ -4,15 +4,15 @@
 
 namespace exaDEM {
 struct CellGhostDetails {
-  uint32_t m_partner_cell_i = 0;
-  uint32_t m_size = 0;
-  uint32_t m_shift = 0;
+  uint32_t partner_cell_i_ = 0;
+  uint32_t size_ = 0;
+  uint32_t shift_ = 0;
 };
 
 struct InteractionGhostManager {
-  std::vector<std::vector<exaDEM::PlaceholderInteraction>> rbuf;
-  std::vector<std::vector<exaDEM::PlaceholderInteraction>> sbuf;
-  std::vector<std::vector<CellGhostDetails>> send_cell_config;  // send details
-  std::vector<std::vector<CellGhostDetails>> recv_cell_config;  // recv details
+  std::vector<std::vector<exaDEM::PlaceholderInteraction>> rbuf_;
+  std::vector<std::vector<exaDEM::PlaceholderInteraction>> sbuf_;
+  std::vector<std::vector<CellGhostDetails>> send_cell_config_;  // send details
+  std::vector<std::vector<CellGhostDetails>> recv_cell_config_;  // recv details
 };
 }  // namespace exaDEM

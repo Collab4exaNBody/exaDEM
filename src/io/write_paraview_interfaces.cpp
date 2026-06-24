@@ -106,23 +106,23 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
       for (size_t j = interface.loc; j < interface.loc + interface.size; j++) {
         exaDEM::InnerBondInteraction interaction = interactions[j];
         auto& loc = interaction.i();
-        auto& cell = cells[loc.cell];
-        uint16_t type = cell[field::type][loc.p];
-        Quaternion quat = cell[field::orient][loc.p];
+        auto& cell = cells[loc.cell_];
+        uint16_t type = cell[field::type][loc.p_];
+        Quaternion quat = cell[field::orient][loc.p_];
         auto* shp = shps[type];
-        Vec3d r = {cell[field::rx][loc.p], cell[field::ry][loc.p], cell[field::rz][loc.p]};
-        double h = cell[field::homothety][loc.p];
-        vertices[j - interface.loc] = shp->get_vertex(loc.sub, r, h, quat);
+        Vec3d r = {cell[field::rx][loc.p_], cell[field::ry][loc.p_], cell[field::rz][loc.p_]};
+        double h = cell[field::homothety][loc.p_];
+        vertices[j - interface.loc] = shp->get_vertex(loc.sub_, r, h, quat);
         buffers.ids << i << " ";
         buffers.connectivities << buffers.n_vertices++ << " ";
-        buffers.tds << interaction.tds.x << " "
-                    << interaction.tds.y << " "
-                    << interaction.tds.z << " ";
-        buffers.et << interaction.et << " ";
-        buffers.en << interaction.en << " ";
-        En += interaction.en;
-        Et += interaction.et;
-        criterion = interaction.criterion;  // same criterion for every interaction of the interface
+        buffers.tds << interaction.tds_.x << " "
+                    << interaction.tds_.y << " "
+                    << interaction.tds_.z << " ";
+        buffers.et << interaction.et_ << " ";
+        buffers.en << interaction.en_ << " ";
+        En += interaction.en_;
+        Et += interaction.et_;
+        criterion = interaction.criterion_;  // same criterion for every interaction of the interface
       }
 
       // All interactions composing the interface share the same criterion.

@@ -22,13 +22,13 @@ namespace exaDEM {
 // not optimal
 template <typename TMPLC, typename ParticleLocation, typename FieldName>
 ONIKA_HOST_DEVICE_FUNC auto exadem_field_value(TMPLC* cells, ParticleLocation& loc, FieldName& fieldname) {
-  return cells[loc.cell][fieldname][loc.p];
+  return cells[loc.cell_][fieldname][loc.p_];
 }
 
 template <typename TMPLC, typename ParticleLocation>
 ONIKA_HOST_DEVICE_FUNC exanb::Vec3d exadem_field_center(TMPLC* cells, ParticleLocation& loc) {
-  auto& cell = cells[loc.cell];
+  auto& cell = cells[loc.cell_];
 
-  return Vec3d{cell[field::rx][loc.p], cell[field::ry][loc.p], cell[field::rz][loc.p]};
+  return Vec3d{cell[field::rx][loc.p_], cell[field::ry][loc.p_], cell[field::rz][loc.p_]};
 }
 }  // namespace exaDEM

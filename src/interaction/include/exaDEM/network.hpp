@@ -87,8 +87,8 @@ struct NetworkFunctor {
     auto& pi = I.i();
     auto& pj = I.j();
     // === build contact network key
-    IdType i = {pi.cell, pi.p};
-    IdType j = {pj.cell, pj.p};
+    IdType i = {pi.cell_, pi.p_};
+    IdType j = {pj.cell_, pj.p_};
     KeyType key = {i, j};
     auto it = network.find(key);
     if (it != network.end()) {

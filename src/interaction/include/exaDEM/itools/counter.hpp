@@ -142,7 +142,7 @@ struct IOSimInteractionFunctor {
   ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult& local, const uint64_t idx,
                                                 InteractionWrapper<IT> interactions, reduce_thread_local_t = {}) const {
     auto I = interactions(idx);
-    if (I.pair.ghost != InteractionPair::PartnerGhost) {
+    if (I.pair_.ghost_ != InteractionPair::PartnerGhost) {
       const double& dn = dnp[idx];
       local.n_tot_interaction += coef;
       if (dn < 0.0 || I.active()) {
@@ -211,7 +211,7 @@ static inline ParallelExecutionWrapper reduce_data(ParallelExecutionContext* exe
   for (uint64_t i = 0; i < size; i++) {
     auto I = data(i);
     // filter duplicate (mpi ghost)
-    if (I.pair.ghost != InteractionPair::PartnerGhost) {
+    if (I.pair_.ghost_ != InteractionPair::PartnerGhost) {
       const double& dn = func.dnp[i];
       n_tot_interaction += func.coef;
       if (dn < 0.0) {

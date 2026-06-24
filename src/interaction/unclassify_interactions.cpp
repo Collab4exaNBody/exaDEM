@@ -34,23 +34,23 @@ struct UnclassifyFunc {
 #pragma omp for schedule(guided) nowait
     for (size_t it = 0; it < container.size(); it++) {
       auto item1 = container[it];
-      assert(item1.pair.consistent());  // Check if the interaction is correctly formed before updating
+      assert(item1.pair_.consistent());  // Check if the interaction is correctly formed before updating
       // Only active interactions should be updated.
       // If an interaction is not active, it means it has been removed / recomputed (nbh operators).
       if (item1.active()) {
-        auto& celli = ces[item1.pair.owner().cell];
+        auto& celli = ces[item1.pair_.owner().cell_];
         const unsigned int ni = vector_size(celli.m_data);
         PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
 
         // Binary search
         // belonging to the same owner particle
-        uint16_t owner_p = item1.pair.owner().p;
+        uint16_t owner_p = item1.pair_.owner().p_;
 
         // lower_bound
         size_t lo = 0, hi = ni;
         while (lo < hi) {
           size_t mid = lo + (hi - lo) / 2;
-          if (data_i_ptr[mid].owner().p < owner_p) {
+          if (data_i_ptr[mid].owner().p_ < owner_p) {
             lo = mid + 1;
           } else
             hi = mid;
@@ -61,7 +61,7 @@ struct UnclassifyFunc {
         hi = ni;
         while (lo < hi) {
           size_t mid = lo + (hi - lo) / 2;
-          if (data_i_ptr[mid].owner().p <= owner_p) {
+          if (data_i_ptr[mid].owner().p_ <= owner_p) {
             lo = mid + 1;
           } else {
             hi = mid;
@@ -73,7 +73,7 @@ struct UnclassifyFunc {
         bool found = false;
         for (size_t it2 = start; it2 < end; it2++) {
           auto& item2 = (data_i_ptr[it2]).convert<IT>();
-          assert(item2.pair.consistent());  // Check if the interaction is correctly formed before updating
+          assert(item2.pair_.consistent());  // Check if the interaction is correctly formed before updating
           // Only one interaction should match.
           if (item1 == item2) {
             item2.update(item1);
@@ -103,12 +103,12 @@ inline void UnclassifyFunc::operator()<InteractionType::InnerBond>(
   for (size_t it = 0; it < container.size(); it++) {
     auto item1 = container[it];
     // Check if the interaction is correctly formed before updating
-    if (!item1.pair.consistent()) {
+    if (!item1.pair_.consistent()) {
       item1.print();
       color_log::error("unclassify", "One active interaction is illformed in the classified wave");
     }
     // Check if interaction in wave has non-zero friction and moment
-    auto& celli = ces[item1.pair.owner().cell];
+    auto& celli = ces[item1.pair_.owner().cell_];
     const unsigned int ni = vector_size(celli.m_data);
     PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
     // Iterate through interactions in cell to find matching interaction
@@ -116,7 +116,7 @@ inline void UnclassifyFunc::operator()<InteractionType::InnerBond>(
     for (size_t it2 = 0; it2 < ni; it2++) {
       PlaceholderInteraction& item2 = data_i_ptr[it2];
       // Only one interaction should match.
-      if (item1.pair == item2.pair) {
+      if (item1.pair_ == item2.pair_) {
         found = true;
         // Check if the interaction is correctly formed before updating
         if (!item2.consistent()) {

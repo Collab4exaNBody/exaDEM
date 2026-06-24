@@ -87,8 +87,8 @@ class StoreBrokenInterfaceOp : public OperatorNode {
         if (interfaces.break_interface[i] == true) {
           auto [offset, size] = interfaces.data[i];
           auto I = data_wrapper(offset);
-          assert(I.pair.type == InteractionTypeId::InnerBond);
-          auto owner_particle = I.pair.owner();
+          assert(I.pair_.type_ == InteractionTypeId::InnerBond);
+          auto owner_particle = I.pair_.owner();
           auto type_a = exadem_field_value(cells, owner_particle, field::type);
 
           const auto& shp = shps[type_a];
@@ -105,8 +105,8 @@ class StoreBrokenInterfaceOp : public OperatorNode {
           tmp.fid = shp->identify_face(vertices);
           tmp.sid = type_a;
           tmp.iteration = step;
-          tmp.id_a = owner_particle.id;
-          tmp.id_b = I.pair.partner().id;
+          tmp.id_a = owner_particle.id_;
+          tmp.id_b = I.pair_.partner().id_;
 #pragma omp critical
           {
             data.push_back(std::move(tmp));

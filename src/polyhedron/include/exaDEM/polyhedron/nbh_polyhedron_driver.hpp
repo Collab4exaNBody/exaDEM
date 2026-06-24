@@ -94,8 +94,8 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     double hi = homothety[p];
     ParticleVertexView vertices_i = {p, vertices};
     const Quaternion& orient_i = orient[p];
-    pi.p = p;
-    pi.id = id[p];
+    pi.p_ = p;
+    pi.id_ = id[p];
     auto ti = type[p];
     const shape* const shpi = &shps[ti];
     const size_t nv = shpi->get_number_of_vertices();
@@ -119,8 +119,8 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
       obb_v_i.enlarge(rVerlet + shpi->minkowski(hi));
 
       // convention: 7 for vertex-vertex interaction between particle and rshape driver.
-      item.pair.type = InteractionTypeId::VertexRshapeDriverVertex;
-      pi.sub = i;
+      item.pair_.type_ = InteractionTypeId::VertexRshapeDriverVertex;
+      pi.sub_ = i;
       for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_nv; j++) {
         size_t idx = grid_rshape_driver_accessor.grid_id_vertices[j];
         if (filter_vertex_vertex_v2(rVerlet, __particle__, __driver__)) {
@@ -128,7 +128,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
         }
       }
       // convention: 8 for vertex-edge interaction between particle and rshape driver.
-      item.pair.type = InteractionTypeId::VertexRshapeDriverEdge;
+      item.pair_.type_ = InteractionTypeId::VertexRshapeDriverEdge;
       for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_ne; j++) {
         size_t idx = grid_rshape_driver_accessor.grid_id_edges[j];
         if (filter_vertex_edge(rVerlet, __particle__, __driver__)) {
@@ -136,7 +136,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
         }
       }
       // convention: 9 for vertex-face interaction between particle and rshape driver.
-      item.pair.type = InteractionTypeId::VertexRshapeDriverFace;
+      item.pair_.type_ = InteractionTypeId::VertexRshapeDriverFace;
       for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_nf; j++) {
         size_t idx = grid_rshape_driver_accessor.grid_id_faces[j];
         const OBB& obb_f_rshape_j = rshape_obb_faces[idx];
@@ -150,8 +150,8 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
 
     for (size_t i = 0; i < ne; i++) {
       // convention: 10 for edge-edge interaction between particle and rshape driver.
-      item.pair.type = InteractionTypeId::EdgeRshapeDriverEdge;
-      pi.sub = i;
+      item.pair_.type_ = InteractionTypeId::EdgeRshapeDriverEdge;
+      pi.sub_ = i;
       for (size_t j = 0; j < grid_rshape_driver_accessor.rshape_ne; j++) {
         const size_t idx = grid_rshape_driver_accessor.grid_id_edges[j];
         if (filter_edge_edge(rVerlet, __particle__, __driver__)) {
@@ -171,7 +171,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
         continue;
       }
       // convention: 11 for edge-vertex interaction between particle and rshape driver.
-      item.pair.type = InteractionTypeId::EdgeRshapeDriverVertex;
+      item.pair_.type_ = InteractionTypeId::EdgeRshapeDriverVertex;
       for (size_t i = 0; i < ne; i++) {
         if (filter_vertex_edge(rVerlet, __driver__, __particle__)) {
           add_contact(item, i, idx);
@@ -179,7 +179,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
       }
 
       // convention: 12 for face-vertex interaction between particle and rshape driver.
-      item.pair.type = InteractionTypeId::FaceRshapeDriverVertex;
+      item.pair_.type_ = InteractionTypeId::FaceRshapeDriverVertex;
       for (size_t i = 0; i < nf; i++) {
         if (filter_vertex_face(rVerlet, __driver__, __particle__)) {
           add_contact(item, i, idx);
@@ -221,8 +221,8 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
   auto& pi = item.i();                       // particle i (id, cell id, particle position, sub vertex)
 
   for (size_t pid = 0; pid < n_particles; pid++) {
-    pi.p = pid;
-    pi.id = id[pid];
+    pi.p_ = pid;
+    pi.id_ = id[pid];
     const double h = homothety[pid];
     ParticleVertexView vertex_view = {pid, vertices};
 

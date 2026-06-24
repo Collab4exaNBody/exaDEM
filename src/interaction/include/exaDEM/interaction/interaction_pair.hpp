@@ -28,17 +28,17 @@ under the License.
 namespace exaDEM {
 /** @brief Structure representing the location of a particle in the simulation domain. */
 struct ParticleSubLocation {
-  uint64_t id;   /**< Id of the first particle */
-  uint32_t cell; /**< Index of the cell of the first particle involved in the interaction. */
-  uint16_t p;    /**< Index of the particle within its cell for the particle involved in the interaction. */
-  uint32_t sub;  /**< Sub-particle index for the particle involved in the interaction. */
+  uint64_t id_;   /**< Id of the first particle */
+  uint32_t cell_; /**< Index of the cell of the first particle involved in the interaction. */
+  uint16_t p_;    /**< Index of the particle within its cell for the particle involved in the interaction. */
+  uint32_t sub_;  /**< Sub-particle index for the particle involved in the interaction. */
 
   /** @brief Check if two particle sub-locations are equal.
    * @param P The other particle sub-location to compare with.
    * @return True if the sub-locations are equal, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool operator==(ParticleSubLocation& P) {
-    return (id == P.id && cell == P.cell && p == P.p && sub == P.sub);
+    return (id_ == P.id_ && cell_ == P.cell_ && p_ == P.p_ && sub_ == P.sub_);
   }
 
   /** @brief Check if two particle sub-locations are equal.
@@ -46,7 +46,7 @@ struct ParticleSubLocation {
    * @return True if the sub-locations are equal, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool operator==(const ParticleSubLocation& P) const {
-    return (id == P.id && cell == P.cell && p == P.p && sub == P.sub);
+    return (id_ == P.id_ && cell_ == P.cell_ && p_ == P.p_ && sub_ == P.sub_);
   }
 };
 
@@ -61,59 +61,59 @@ struct InteractionPair {
   // means that the interaction is linked to a particle that is in the current subdomain
   static constexpr uint8_t PartnerGhost = 2;
 
-  ParticleSubLocation pi;                       /**< Sub-location of the first particle in the interaction. */
-  ParticleSubLocation pj;                       /**< Sub-location of the second particle in the interaction. */
-  uint16_t type = InteractionTypeId::Undefined; /**< Type of the interaction (e.g., contact type). */
-  uint8_t swap = false; /**< Flag indicating whether the order of the particles is swapped (i.e., if true, pi and pj are
+  ParticleSubLocation pi_;                       /**< Sub-location of the first particle in the interaction. */
+  ParticleSubLocation pj_;                       /**< Sub-location of the second particle in the interaction. */
+  uint16_t type_ = InteractionTypeId::Undefined; /**< Type of the interaction (e.g., contact type). */
+  uint8_t swap_ = false; /**< Flag indicating whether the order of the particles is swapped (i.e., if true, pi and pj are
                            swapped). */
-  uint8_t ghost =
+  uint8_t ghost_ =
       NotGhost; /**< Flag indicating the ghost status of the interaction (e.g., whether it involves ghost particles). */
 
   /** @brief Get a reference to the owner particle sub-location.
    * @return A reference to the owner particle sub-location.
    */
   ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& owner() {
-    if (!swap) {
-      return pi;
+    if (!swap_) {
+      return pi_;
     }
-    return pj;
+    return pj_;
   }
 
   /** @brief Get a reference to the partner particle sub-location.
    * @return A reference to the partner particle sub-location.
    */
   ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& partner() {
-    if (!swap) {
-      return pj;
+    if (!swap_) {
+      return pj_;
     }
-    return pi;
+    return pi_;
   }
 
   /** @brief Get a reference to the owner particle sub-location.
    * @return A reference to the owner particle sub-location.
    */
   ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& owner() const {
-    if (!swap) {
-      return pi;
+    if (!swap_) {
+      return pi_;
     }
-    return pj;
+    return pj_;
   }
 
   /** @brief Get a reference to the partner particle sub-location.
    * @return A reference to the partner particle sub-location.
    */
   ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& partner() const {
-    if (!swap) {
-      return pj;
+    if (!swap_) {
+      return pj_;
     }
-    return pi;
+    return pi_;
   }
 
   /** @brief Check if the interaction is active.
    * @return True if the interaction is active, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC inline bool active() { return ghost != PartnerGhost; }
-  ONIKA_HOST_DEVICE_FUNC inline bool active() const { return ghost != PartnerGhost; }
+  ONIKA_HOST_DEVICE_FUNC inline bool active() { return ghost_ != PartnerGhost; }
+  ONIKA_HOST_DEVICE_FUNC inline bool active() const { return ghost_ != PartnerGhost; }
 
   /** @brief Check if the interaction is consistent by verifying the consistency of its InteractionPair.
    * Used for debugging purposes to ensure that the interaction data is well-formed and does not contain invalid values.
@@ -124,9 +124,9 @@ struct InteractionPair {
   inline bool consistent() const {
     std::string function_name = "InteractionPair::consistent()";
     bool res = true;
-    if (type >= InteractionTypeId::NTypes) {
+    if (type_ >= InteractionTypeId::NTypes) {
       if constexpr (DisplayWarnings) {
-        color_log::warning(function_name, "type is undefined: " + std::to_string(type));
+        color_log::warning(function_name, "type is undefined: " + std::to_string(type_));
       }
       res = false;
     }
@@ -136,15 +136,15 @@ struct InteractionPair {
       }
       res = false;
     }
-    if (ghost > InteractionPair::PartnerGhost) {
+    if (ghost_ > InteractionPair::PartnerGhost) {
       if constexpr (DisplayWarnings) {
-        color_log::warning(function_name, "ghost is undefined: " + std::to_string(ghost));
+        color_log::warning(function_name, "ghost is undefined: " + std::to_string(ghost_));
       }
       res = false;
     }
-    if (swap >= 2 /* not a boolean */) {
+    if (swap_ >= 2 /* not a boolean */) {
       if constexpr (DisplayWarnings) {
-        color_log::warning(function_name, "swap is undefined: " + std::to_string(swap));
+        color_log::warning(function_name, "swap is undefined: " + std::to_string(swap_));
       }
       res = false;
     }
@@ -157,10 +157,10 @@ struct InteractionPair {
   void print() {
     auto [id_i, cell_i, p_i, sub_i] = owner();
     auto [id_j, cell_j, p_j, sub_j] = partner();
-    std::cout << "Interaction(type = " << int(type) << " [cell: " << cell_i << ", idx " << p_i
+    std::cout << "Interaction(type = " << int(type_) << " [cell: " << cell_i << ", idx " << p_i
               << ", particle id: " << id_i << ", sub: " << sub_i << "] and"
               << " [cell: " << cell_j << ", idx " << p_j << ", particle id: " << id_j << ", sub: " << sub_j << "]"
-              << " swap: " << int(swap) << " ghost: " << int(ghost) << ")" << std::endl;
+              << " swap: " << int(swap_) << " ghost: " << int(ghost_) << ")" << std::endl;
   }
 
   /**
@@ -169,10 +169,10 @@ struct InteractionPair {
   void print() const {
     auto [id_i, cell_i, p_i, sub_i] = owner();
     auto [id_j, cell_j, p_j, sub_j] = partner();
-    std::cout << "Interaction(type = " << int(type) << " [cell: " << cell_i << ", idx " << p_i
+    std::cout << "Interaction(type = " << int(type_) << " [cell: " << cell_i << ", idx " << p_i
               << ", particle id: " << id_i << ", sub: " << sub_i << "] and"
               << " [cell: " << cell_j << ", idx " << p_j << ", particle id: " << id_j << ", sub: " << sub_j << "]"
-              << " swap: " << int(swap) << " ghost: " << int(ghost) << ")" << std::endl;
+              << " swap: " << int(swap_) << " ghost: " << int(ghost_) << ")" << std::endl;
   }
 
   ///////////////
@@ -184,13 +184,13 @@ struct InteractionPair {
    * @return True if the interaction pairs are equal, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool operator==(InteractionPair& I) {
-    auto& me_pi = this->pi;
-    auto& you_pi = I.pi;
-    auto& me_pj = this->pj;
-    auto& you_pj = I.pj;
+    auto& me_pi = this->pi_;
+    auto& you_pi = I.pi_;
+    auto& me_pj = this->pj_;
+    auto& you_pj = I.pj_;
 
-    if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub == you_pi.sub && me_pj.sub == you_pj.sub &&
-        this->swap == I.swap && this->type == I.type) {
+    if (me_pi.id_ == you_pi.id_ && me_pj.id_ == you_pj.id_ && me_pi.sub_ == you_pi.sub_ && me_pj.sub_ == you_pj.sub_ &&
+        this->swap_ == I.swap_ && this->type_ == I.type_) {
       return true;
     } else {
       return false;
@@ -202,13 +202,13 @@ struct InteractionPair {
    * @return True if the interaction pairs are equal, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool operator==(const InteractionPair& I) const {
-    auto& me_pi = this->pi;
-    auto& you_pi = I.pi;
-    auto& me_pj = this->pj;
-    auto& you_pj = I.pj;
+    auto& me_pi = this->pi_;
+    auto& you_pi = I.pi_;
+    auto& me_pj = this->pj_;
+    auto& you_pj = I.pj_;
 
-    if (me_pi.id == you_pi.id && me_pj.id == you_pj.id && me_pi.sub == you_pi.sub && me_pj.sub == you_pj.sub &&
-        this->swap == I.swap && this->type == I.type) {
+    if (me_pi.id_ == you_pi.id_ && me_pj.id_ == you_pj.id_ && me_pi.sub_ == you_pi.sub_ && me_pj.sub_ == you_pj.sub_ &&
+        this->swap_ == I.swap_ && this->type_ == I.type_) {
       return true;
     } else {
       return false;
@@ -225,27 +225,27 @@ struct InteractionPair {
     const auto& c = I.owner();
     const auto& d = I.partner();
 
-    if (a.id != c.id) {
-      return a.id < c.id;
+    if (a.id_ != c.id_) {
+      return a.id_ < c.id_;
     }
-    if (b.id != d.id) {
-      return b.id < d.id;
+    if (b.id_ != d.id_) {
+      return b.id_ < d.id_;
     }
 
-    auto t1 = type;
-    auto t2 = I.type;
+    auto t1 = type_;
+    auto t2 = I.type_;
     if (t1 != t2) {
       return t1 < t2;
     }
 
-    if (swap != I.swap) {
-      return swap < I.swap;
+    if (swap_ != I.swap_) {
+      return swap_ < I.swap_;
     }
 
-    if (a.sub != c.sub) {
-      return a.sub < c.sub;
+    if (a.sub_ != c.sub_) {
+      return a.sub_ < c.sub_;
     }
-    return b.sub < d.sub;
+    return b.sub_ < d.sub_;
   }
 };
 }  // namespace exaDEM

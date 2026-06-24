@@ -88,18 +88,18 @@ class UpdateInteractionGhost : public OperatorNode {
     MPI_Comm_size(comm, &mpi_size);
 
     // resize
-    manager.rbuf.resize(n_procs);
-    manager.sbuf.resize(n_procs);
-    manager.send_cell_config.resize(n_procs);
-    manager.recv_cell_config.resize(n_procs);
+    manager.rbuf_.resize(n_procs);
+    manager.sbuf_.resize(n_procs);
+    manager.send_cell_config_.resize(n_procs);
+    manager.recv_cell_config_.resize(n_procs);
 
     std::vector<int> config_size;
     config_size.resize(n_procs);
 
     for (size_t proc = 0; proc < n_procs; proc++) {
-      auto& send_config = manager.send_cell_config[proc];
+      auto& send_config = manager.send_cell_config_[proc];
       const auto& partner = partners[proc];
-      manager.sbuf[proc].clear();
+      manager.sbuf_[proc].clear();
       send_config.clear();
 
       // build send buffers and send_config correctly
@@ -113,8 +113,8 @@ class UpdateInteractionGhost : public OperatorNode {
 
         for (size_t j = 0; j < interactions.size(); j++) {
           const exaDEM::PlaceholderInteraction& I = interactions[j];  // storage.get_particle_item(p, j);
-          if (I.pair.ghost == InteractionPair::OwnerGhost) {
-            manager.sbuf[proc].push_back(I);
+          if (I.pair_.ghost_ == InteractionPair::OwnerGhost) {
+            manager.sbuf_[proc].push_back(I);
             ++n_sent;
           }
         }
@@ -137,16 +137,16 @@ class UpdateInteractionGhost : public OperatorNode {
                     TAG_CONFIG, comm, &req2);
 
           // payload: sbuf in bytes
-          long long count = static_cast<long long>(manager.sbuf[proc].size()) * sizeof(exaDEM::PlaceholderInteraction);
-          MPI_Isend(manager.sbuf[proc].data(), count, MPI_BYTE, proc, TAG_PAYLOAD, comm, &req3);
+          long long count = static_cast<long long>(manager.sbuf_[proc].size()) * sizeof(exaDEM::PlaceholderInteraction);
+          MPI_Isend(manager.sbuf_[proc].data(), count, MPI_BYTE, proc, TAG_PAYLOAD, comm, &req3);
         }
       }
     }
 
     for (size_t proc = 0; proc < n_procs; proc++) {
-      auto& recv_config = manager.recv_cell_config[proc];
+      auto& recv_config = manager.recv_cell_config_[proc];
       const auto& partner = partners[proc];
-      manager.rbuf[proc].clear();
+      manager.rbuf_[proc].clear();
       recv_config.clear();
 
       // recv cell configs
@@ -166,11 +166,11 @@ class UpdateInteractionGhost : public OperatorNode {
 
           // determine overall buffer size from recv_config: use the last entry
           auto& last = recv_config.back();
-          size_t needed = last.m_shift + last.m_size;
-          manager.rbuf[proc].resize(needed);
+          size_t needed = last.shift_ + last.size_;
+          manager.rbuf_[proc].resize(needed);
 
-          long long count = manager.rbuf[proc].size() * sizeof(exaDEM::PlaceholderInteraction);
-          MPI_Irecv(manager.rbuf[proc].data(), count, MPI_BYTE, proc, TAG_PAYLOAD, comm, &rreq3);
+          long long count = manager.rbuf_[proc].size() * sizeof(exaDEM::PlaceholderInteraction);
+          MPI_Irecv(manager.rbuf_[proc].data(), count, MPI_BYTE, proc, TAG_PAYLOAD, comm, &rreq3);
           MPI_Wait(&rreq3, &s3);
         }
       }
@@ -179,13 +179,13 @@ class UpdateInteractionGhost : public OperatorNode {
     // Fill ghost layers with
 #pragma omp parallel for schedule(dynamic)
     for (size_t proc = 0; proc < n_procs; proc++) {
-      auto& buffer = manager.rbuf[proc];
-      for (auto& config : manager.recv_cell_config[proc]) {
-        assert(config.m_size > 0);
-        IJK loc = grid_index_to_ijk(dims, config.m_partner_cell_i);
-        assert(config.m_partner_cell_i < interaction_cells.size());
-        auto& storage = interaction_cells[config.m_partner_cell_i].m_data;
-        if (!gridT.is_ghost_cell(config.m_partner_cell_i)) {
+      auto& buffer = manager.rbuf_[proc];
+      for (auto& config : manager.recv_cell_config_[proc]) {
+        assert(config.size_ > 0);
+        IJK loc = grid_index_to_ijk(dims, config.partner_cell_i_);
+        assert(config.partner_cell_i_ < interaction_cells.size());
+        auto& storage = interaction_cells[config.partner_cell_i_].m_data;
+        if (!gridT.is_ghost_cell(config.partner_cell_i_)) {
           color_log::mpi_error("update_interaction_ghost", "This cell is not a ghost");
         }
 
@@ -193,32 +193,32 @@ class UpdateInteractionGhost : public OperatorNode {
         uint32_t partner_cell = -1;
         uint16_t partner_p = -1;
 
-        for (size_t i = config.m_shift; i < config.m_shift + config.m_size; i++) {
+        for (size_t i = config.shift_; i < config.shift_ + config.size_; i++) {
           bool found = false;
           assert(i < buffer.size());
           exaDEM::PlaceholderInteraction& item = buffer[i];
           // update info
-          auto& owner = item.pair.owner();
-          // auto old = owner.cell;
-          owner.cell = config.m_partner_cell_i;  /// defined by another mpi process (or maybe himself if there are
+          auto& owner = item.pair_.owner();
+          // auto old = owner.cell_;
+          owner.cell_ = config.partner_cell_i_;  /// defined by another mpi process (or maybe himself if there are
                                                  /// periodic boundary conditions)
-          item.pair.ghost = InteractionPair::PartnerGhost;  // identify this kind of interaction
+          item.pair_.ghost_ = InteractionPair::PartnerGhost;  // identify this kind of interaction
 
           // check that the particle is in this cell and update of the particle offset in the cell
           {
             bool is_idx_exist = false;
-            assert(owner.p < cells[owner.cell].size());
-            if (owner.p < cells[owner.cell].size()) {
-              if (owner.id == cells[owner.cell][field::id][owner.p]) {
+            assert(owner.p_ < cells[owner.cell_].size());
+            if (owner.p_ < cells[owner.cell_].size()) {
+              if (owner.id_ == cells[owner.cell_][field::id][owner.p_]) {
                 is_idx_exist = true;
               }
             }
 
             if (!is_idx_exist) {
-              const uint64_t* const __restrict__ ids = cells[owner.cell][field::id];
-              for (size_t p = 0; p < cells[owner.cell].size(); p++) {
-                if (owner.id == ids[p]) {
-                  owner.p = p;
+              const uint64_t* const __restrict__ ids = cells[owner.cell_][field::id];
+              for (size_t p = 0; p < cells[owner.cell_].size(); p++) {
+                if (owner.id_ == ids[p]) {
+                  owner.p_ = p;
                   is_idx_exist = true;
                 }
               }
@@ -229,11 +229,11 @@ class UpdateInteractionGhost : public OperatorNode {
             }
           }
 
-          auto& partner = item.pair.partner();
+          auto& partner = item.pair_.partner();
 
-          if (partner.id == partner_id) {
-            partner.cell = partner_cell;
-            partner.p = partner_p;
+          if (partner.id_ == partner_id) {
+            partner.cell_ = partner_cell;
+            partner.p_ = partner_p;
             found = true;  // still true
           } else {
             found = false;
@@ -250,11 +250,11 @@ class UpdateInteractionGhost : public OperatorNode {
                   if (gridT.is_ghost_cell(neigh)) continue;
                   const uint64_t* const __restrict__ ids = cells[neigh][field::id];
                   for (size_t p = 0; p < cells[neigh].size(); p++) {
-                    if (partner.id == ids[p]) {
-                      partner.cell = neigh;
-                      partner.p = p;
+                    if (partner.id_ == ids[p]) {
+                      partner.cell_ = neigh;
+                      partner.p_ = p;
                       // Cache values
-                      partner_id = partner.id;
+                      partner_id = partner.id_;
                       partner_cell = neigh;
                       partner_p = p;
                       found = true;
@@ -267,14 +267,14 @@ class UpdateInteractionGhost : public OperatorNode {
 
           if (found) {
             // check
-            assert(partner.cell < gridT.number_of_cells());
-            assert(partner.p < cells[partner.cell].size());
-            if (partner.id != cells[partner.cell][field::id][partner.p]) {
+            assert(partner.cell_ < gridT.number_of_cells());
+            assert(partner.p_ < cells[partner.cell_].size());
+            if (partner.id_ != cells[partner.cell_][field::id][partner.p_]) {
               item.print();
               color_log::mpi_error("update_interaction_ghost",
-                                   "partner.id: " + std::to_string(partner.id) +
-                                       " is != of cells[partner.cell][field::id][partner.p]: " +
-                                       std::to_string(cells[partner.cell][field::id][partner.p]));
+                                   "partner.id_: " + std::to_string(partner.id_) +
+                                       " is != of cells[partner.cell_][field::id][partner.p_]: " +
+                                       std::to_string(cells[partner.cell_][field::id][partner.p_]));
             }
             storage.push_back(item);
           }

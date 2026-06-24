@@ -165,45 +165,45 @@ struct ClassifierContainer {
   ONIKA_HOST_DEVICE_FUNC void set(size_t idx, exaDEM::PlaceholderInteraction& interaction) {
     if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) {
       auto& I = interaction.as<Interaction>();
-      setter(ft_x, idx, I.friction.x);
-      setter(ft_y, idx, I.friction.y);
-      setter(ft_z, idx, I.friction.z);
+      setter(ft_x, idx, I.friction_.x);
+      setter(ft_y, idx, I.friction_.y);
+      setter(ft_z, idx, I.friction_.z);
 
-      setter(mom_x, idx, I.moment.x);
-      setter(mom_y, idx, I.moment.y);
-      setter(mom_z, idx, I.moment.z);
+      setter(mom_x, idx, I.moment_.x);
+      setter(mom_y, idx, I.moment_.y);
+      setter(mom_z, idx, I.moment_.z);
     }
 
     if constexpr (IT == InteractionType::InnerBond) {
       auto& I = interaction.as<InnerBondInteraction>();
-      setter(ft_x, idx, I.friction.x);
-      setter(ft_y, idx, I.friction.y);
-      setter(ft_z, idx, I.friction.z);
+      setter(ft_x, idx, I.friction_.x);
+      setter(ft_y, idx, I.friction_.y);
+      setter(ft_z, idx, I.friction_.z);
 
-      setter(en, idx, I.en);
-      setter(tds, idx, I.tds);
-      setter(et, idx, I.et);
-      setter(dn0, idx, I.dn0);
-      setter(weight, idx, I.weight);
-      setter(criterion, idx, I.criterion);
-      setter(unbroken, idx, I.unbroken);
+      setter(en, idx, I.en_);
+      setter(tds, idx, I.tds_);
+      setter(et, idx, I.et_);
+      setter(dn0, idx, I.dn0_);
+      setter(weight, idx, I.weight_);
+      setter(criterion, idx, I.criterion_);
+      setter(unbroken, idx, I.unbroken_);
     }
 
-    auto& [pi, pj, _type, _swap, _ghost] = interaction.pair;
+    auto& [pi, pj, _type, _swap, _ghost] = interaction.pair_;
 
     assert(_type == type);
 
-    setter(id_i, idx, pi.id);
-    setter(id_j, idx, pj.id);
+    setter(id_i, idx, pi.id_);
+    setter(id_j, idx, pj.id_);
 
-    setter(cell_i, idx, pi.cell);
-    setter(cell_j, idx, pj.cell);
+    setter(cell_i, idx, pi.cell_);
+    setter(cell_j, idx, pj.cell_);
 
-    setter(p_i, idx, pi.p);
-    setter(p_j, idx, pj.p);
+    setter(p_i, idx, pi.p_);
+    setter(p_j, idx, pj.p_);
 
-    setter(sub_i, idx, pi.sub);
-    setter(sub_j, idx, pj.sub);
+    setter(sub_i, idx, pi.sub_);
+    setter(sub_j, idx, pj.sub_);
 
     setter(swap, idx, _swap);
     setter(ghost, idx, _ghost);
@@ -286,28 +286,28 @@ struct ClassifierContainer {
 
     if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) {
       Interaction& I = reinterpret_cast<Interaction&>(item);
-      vector_data(ft_x)[id] = I.friction.x;
-      vector_data(ft_y)[id] = I.friction.y;
-      vector_data(ft_z)[id] = I.friction.z;
+      vector_data(ft_x)[id] = I.friction_.x;
+      vector_data(ft_y)[id] = I.friction_.y;
+      vector_data(ft_z)[id] = I.friction_.z;
 
-      vector_data(mom_x)[id] = I.moment.x;
-      vector_data(mom_y)[id] = I.moment.y;
-      vector_data(mom_z)[id] = I.moment.z;
+      vector_data(mom_x)[id] = I.moment_.x;
+      vector_data(mom_y)[id] = I.moment_.y;
+      vector_data(mom_z)[id] = I.moment_.z;
     }
 
     if constexpr (IT == InteractionType::InnerBond) {
       InnerBondInteraction& I = reinterpret_cast<InnerBondInteraction&>(item);
-      vector_data(ft_x)[id] = I.friction.x;
-      vector_data(ft_y)[id] = I.friction.y;
-      vector_data(ft_z)[id] = I.friction.z;
+      vector_data(ft_x)[id] = I.friction_.x;
+      vector_data(ft_y)[id] = I.friction_.y;
+      vector_data(ft_z)[id] = I.friction_.z;
 
-      vector_data(en)[id] = I.en;
-      vector_data(tds)[id] = I.tds;
-      vector_data(et)[id] = I.et;
-      vector_data(dn0)[id] = I.dn0;
-      vector_data(weight)[id] = I.weight;
-      vector_data(criterion)[id] = I.criterion;
-      vector_data(unbroken)[id] = I.unbroken;
+      vector_data(en)[id] = I.en_;
+      vector_data(tds)[id] = I.tds_;
+      vector_data(et)[id] = I.et_;
+      vector_data(dn0)[id] = I.dn0_;
+      vector_data(weight)[id] = I.weight_;
+      vector_data(criterion)[id] = I.criterion_;
+      vector_data(unbroken)[id] = I.unbroken_;
     }
   }
 
