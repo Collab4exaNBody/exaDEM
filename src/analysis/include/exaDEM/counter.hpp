@@ -19,19 +19,19 @@ under the License.
 
 #pragma once
 
-#include <onika/math/basic_types.h>
-#include <onika/flat_tuple.h>
 #include <exanb/grid_cell_particles/particle_region.h>
+#include <onika/flat_tuple.h>
+#include <onika/math/basic_types.h>
 
 namespace exaDEM {
 struct ReduceParticleCounterTypeFunctor {
-  const ParticleRegionCSGShallowCopy region;
-  const uint16_t filter_type;
+  const ParticleRegionCSGShallowCopy region_;
+  const uint16_t filter_type_;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(int& local, const double rx, const double ry, const double rz,
                                                 const uint16_t type, reduce_thread_local_t = {}) const {
     Vec3d r = {rx, ry, rz};
-    if (region.contains(r)) {
-      if (type == filter_type) {
+    if (region_.contains(r)) {
+      if (type == filter_type_) {
         local++;
       }
     }
