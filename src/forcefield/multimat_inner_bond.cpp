@@ -177,17 +177,17 @@ class InnerBondParamsOp : public OperatorNode {
         int64_t type_1 = type_map.at(m1);
         int64_t type_2 = type_map.at(m2);
         InnerBondParams params;
-        params.kn = normal_coeffs[p];
-        params.kt = tangential_coeffs[p];
-        params.damp_rate = damprate_coeffs[p];
+        params.kn_ = normal_coeffs[p];
+        params.kt_ = tangential_coeffs[p];
+        params.damp_rate_ = damprate_coeffs[p];
         if (g.has_value()) {
-          params.mode = RuptureMode::MixedMode;
-          params.gn = (*g)[p];
-          params.gt = 0.0;
+          params.mode_ = RuptureMode::MixedMode;
+          params.gn_ = (*g)[p];
+          params.gt_ = 0.0;
         } else {
-          params.mode = RuptureMode::SeparateModes;
-          params.gn = (*gn)[p];
-          params.gt = (*gt)[p];
+          params.mode_ = RuptureMode::SeparateModes;
+          params.gn_ = (*gn)[p];
+          params.gt_ = (*gt)[p];
         }
 
         ibp.register_multimat(type_1, type_2, params);

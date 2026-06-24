@@ -19,9 +19,9 @@ under the License.
 
 #pragma once
 
-#include <yaml-cpp/yaml.h>
-#include <onika/string_utils.h>
 #include <onika/physics/units.h>
+#include <onika/string_utils.h>
+#include <yaml-cpp/yaml.h>
 
 namespace exaDEM {
 using onika::lout;
@@ -30,14 +30,14 @@ using onika::lout;
  * @brief Encapsulates contact mechanics parameters for a contact interaction model.
  */
 struct ContactParams {
-  double kn = 0; /**< Normal stiffness coefficient (force per unit displacement in the normal direction). */
-  double kt = 0; /**< Tangential stiffness coefficient (force per unit displacement in the tangential direction). */
-  double kr = 0; /**< Rotational stiffness coefficient (torque per unit angular displacement). */
-  double mu = 0; /**< Friction coefficient (Coulomb friction model). */
-  double damp_rate = 0; /**< Damping rate for contact interaction (controls dissipation). */
-  double fc = 0;        /**< Cohesive force threshold (e.g., for bonded contacts). */
-  double dncut = 0;     /**< Distance cutoff below which contact is considered active for cohesion force. */
-  double gamma = 0;     /**< Adhesion energie per unit of surface (default is 0). */
+  double kn_ = 0; /**< Normal stiffness coefficient (force per unit displacement in the normal direction). */
+  double kt_ = 0; /**< Tangential stiffness coefficient (force per unit displacement in the tangential direction). */
+  double kr_ = 0; /**< Rotational stiffness coefficient (torque per unit angular displacement). */
+  double mu_ = 0; /**< Friction coefficient (Coulomb friction model). */
+  double damp_rate_ = 0; /**< Damping rate for contact interaction (controls dissipation). */
+  double fc_ = 0;        /**< Cohesive force threshold (e.g., for bonded contacts). */
+  double dncut_ = 0;     /**< Distance cutoff below which contact is considered active for cohesion force. */
+  double gamma_ = 0;     /**< Adhesion energie per unit of surface (default is 0). */
 };
 
 /**
@@ -48,8 +48,8 @@ struct ContactParams {
  * @return true if all fields of both instances are equal; false otherwise.
  */
 inline bool operator==(ContactParams& a, ContactParams& b) {
-  return (a.dncut == b.dncut) && (a.kn == b.kn) && (a.kt == b.kt) && (a.kr == b.kr) && (a.mu == b.mu) &&
-         (a.fc == b.fc) && (a.damp_rate == b.damp_rate) && (a.gamma == b.gamma);
+  return (a.dncut_ == b.dncut_) && (a.kn_ == b.kn_) && (a.kt_ == b.kt_) && (a.kr_ == b.kr_) && (a.mu_ == b.mu_) &&
+         (a.fc_ == b.fc_) && (a.damp_rate_ == b.damp_rate_) && (a.gamma_ == b.gamma_);
 }
 
 /**
@@ -95,8 +95,8 @@ inline void display_end_table<ContactParams>() {
  */
 inline std::string display(ContactParams& params) {
   std::string line =
-      onika::format_string(" %.3e | %.3e | %.3e | %.3e | %.3e | %.3e | %.3e | %.3e |", params.kn, params.kt, params.kr,
-                           params.mu, params.fc, params.damp_rate, params.dncut, params.gamma);
+      onika::format_string(" %.3e | %.3e | %.3e | %.3e | %.3e | %.3e | %.3e | %.3e |", params.kn_, params.kt_,
+                           params.kr_, params.mu_, params.fc_, params.damp_rate_, params.dncut_, params.gamma_);
   return line;
 }
 
@@ -122,9 +122,9 @@ inline void display_multimat(std::string typeA, std::string typeB, ContactParams
  */
 template <typename STREAM>
 void streaming(STREAM& stream, ContactParams& params) {
-  stream << "{ kn: " << params.kn << ", kt: " << params.kt << ", kr: " << params.kr
-         << ", damp_rate: " << params.damp_rate << ", dncut: " << params.dncut << ", fc: " << params.fc
-         << ", gamma: " << params.gamma << " }";
+  stream << "{ kn: " << params.kn_ << ", kt: " << params.kt_ << ", kr: " << params.kr_
+         << ", damp_rate: " << params.damp_rate_ << ", dncut: " << params.dncut_ << ", fc: " << params.fc_
+         << ", gamma: " << params.gamma_ << " }";
 }
 }  // namespace exaDEM
 
@@ -142,11 +142,11 @@ struct convert<ContactParams> {
       return false;
     }
     if (!node["dncut"] && !node["fc"]) {
-      v.dncut = 0.0;
-      v.fc = 0.0;
+      v.dncut_ = 0.0;
+      v.fc_ = 0.0;
     } else if (node["dncut"] && node["fc"]) {
-      v.dncut = node["dncut"].as<Quantity>().convert();
-      v.fc = node["fc"].as<Quantity>().convert();
+      v.dncut_ = node["dncut"].as<Quantity>().convert();
+      v.fc_ = node["fc"].as<Quantity>().convert();
     } else if (!node["dncut"]) {
       lerr << "dncut is missing\n";
       return false;
@@ -171,18 +171,18 @@ struct convert<ContactParams> {
     }
 
     if (node["gamma"]) {
-      v.gamma = node["gamma"].as<Quantity>().convert();
+      v.gamma_ = node["gamma"].as<Quantity>().convert();
     } else {
-      v.gamma = 0.0;  // valeur par défaut
+      v.gamma_ = 0.0;  // valeur par défaut
     }
 
-    v.kn = node["kn"].as<Quantity>().convert();
-    v.kt = node["kt"].as<Quantity>().convert();
-    if(node["kr"]) {
-      v.kr = node["kr"].as<Quantity>().convert();
+    v.kn_ = node["kn"].as<Quantity>().convert();
+    v.kt_ = node["kt"].as<Quantity>().convert();
+    if (node["kr"]) {
+      v.kr_ = node["kr"].as<Quantity>().convert();
     }
-    v.mu = node["mu"].as<Quantity>().convert();
-    v.damp_rate = node["damp_rate"].as<Quantity>().convert();
+    v.mu_ = node["mu"].as<Quantity>().convert();
+    v.damp_rate_ = node["damp_rate"].as<Quantity>().convert();
 
     return true;
   }

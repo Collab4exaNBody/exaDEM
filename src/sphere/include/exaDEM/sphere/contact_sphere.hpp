@@ -157,7 +157,7 @@ struct ContactLawFunc {
 
     /** if cohesive force */
     if constexpr (LawComboTraits<LawCombo>::cohesive) {
-      contact = (contact || dn <= cp.dncut);
+      contact = (contact || dn <= cp.dncut_);
     }
 
     if (contact) {
@@ -263,7 +263,7 @@ struct ContactLawDriverFunc {
 
     /** if cohesive force */
     if constexpr (LawComboTraits<LawCombo>::cohesive) {
-      contact = (contact || dn <= cp.dncut);
+      contact = (contact || dn <= cp.dncut_);
     }
     if (contact) {
       // === vrot
@@ -361,7 +361,7 @@ struct ContactLawRShapeDriverFunc {
 
     /** if cohesive force */
     if constexpr (LawComboTraits<LawCombo>::cohesive) {
-      contact = (contact || dn <= cp.dncut);
+      contact = (contact || dn <= cp.dncut_);
     }
 
     if (contact) {

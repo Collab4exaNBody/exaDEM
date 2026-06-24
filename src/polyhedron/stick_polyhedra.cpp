@@ -274,12 +274,12 @@ class StickPolyhedraOperator : public OperatorNode {
                   // SeparateModes: En > 2.0 * area * gn and Et > 2.0 * area * gt
                   const double area = pi.id_ < pj.id_ ? shpi->get_face_area(i, hi) : shpj->get_face_area(j, hj);
                   RuptureCriteria& criterion = item.as<InnerBondInteraction>().criterion_;
-                  criterion.mode_ = ibp.mode;
-                  if (ibp.mode == RuptureMode::MixedMode) {
-                    criterion.criterion() = 2 * area * ibp.gn;
+                  criterion.mode_ = ibp.mode_;
+                  if (ibp.mode_ == RuptureMode::MixedMode) {
+                    criterion.criterion() = 2 * area * ibp.gn_;
                   } else {
-                    criterion.normal_criterion() = 2 * area * ibp.gn;
-                    criterion.tangential_criterion() = 2 * area * ibp.gt;
+                    criterion.normal_criterion() = 2 * area * ibp.gn_;
+                    criterion.tangential_criterion() = 2 * area * ibp.gt_;
                   }
 
                   found = true;

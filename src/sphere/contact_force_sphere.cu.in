@@ -267,13 +267,13 @@ class ComputeContactClassifierSphere : public OperatorNode {
       /** Some global checks */
       /** Is cohesive force define while it's not used */
       if constexpr (!LawComboTraits<LawCombo>::cohesive) {
-        if (config->dncut > 0) {
+        if (config->dncut_ > 0) {
           color_log::error(opertor_name(),
                            "dncut is != 0 while the cohesive force is not used. Please, use "
                            "contact_[InputType]_[Shape]_hooke_cohesive operators.");
         }
 
-        if (drivers->get_size() > 0 && config_driver->dncut > 0) {
+        if (drivers->get_size() > 0 && config_driver->dncut_ > 0) {
           color_log::error(opertor_name(),
                            "dncut is != 0 while the cohesive force is not used. Please, use "
                            "contact_[InputType]_[Shape]_hooke_cohesive operators.");
@@ -291,15 +291,15 @@ class ComputeContactClassifierSphere : public OperatorNode {
 
     double kn = 0.0;
     if (config.has_value()) {
-      kn = std::max(kn, config->kn);
+      kn = std::max(kn, config->kn_);
     }
 
     if (config_driver.has_value()) {
-      kn = std::max(kn, config->kn);
+      kn = std::max(kn, config->kn_);
     }
 
     if (multimat_cp.has_value()) {
-      auto get_max_kn = [&kn](const ContactParams& cp) -> void { kn = std::max(kn, cp.kn); };
+      auto get_max_kn = [&kn](const ContactParams& cp) -> void { kn = std::max(kn, cp.kn_); };
       multimat_cp->apply(get_max_kn);
     }
     *max_kn = kn;

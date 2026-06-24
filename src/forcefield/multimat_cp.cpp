@@ -172,24 +172,24 @@ class MultiMatContactParams : public OperatorNode {
         int64_t type_1 = type_map.at(m1);
         int64_t type_2 = type_map.at(m2);
         ContactParams params;
-        params.kn = normal_coeffs[p];
-        params.kt = tangential_coeffs[p];
-        params.kr = rotational_coeffs[p];
-        params.mu = frictional_coeffs[p];
-        params.damp_rate = damping_coeffs[p];
+        params.kn_ = normal_coeffs[p];
+        params.kt_ = tangential_coeffs[p];
+        params.kr_ = rotational_coeffs[p];
+        params.mu_ = frictional_coeffs[p];
+        params.damp_rate_ = damping_coeffs[p];
 
         if (fill_cohesion_part) {
-          params.fc = cohesion_coeffs[p];
-          params.dncut = dncut_coeffs[p];
+          params.fc_ = cohesion_coeffs[p];
+          params.dncut_ = dncut_coeffs[p];
         } else {
-          params.fc = 0.0;
-          params.dncut = 0.0;
+          params.fc_ = 0.0;
+          params.dncut_ = 0.0;
         }
 
         if (fill_DMT_part) {
-          params.gamma = gamma_coeffs[p];
+          params.gamma_ = gamma_coeffs[p];
         } else {
-          params.gamma = 0.0;
+          params.gamma_ = 0.0;
         }
         cp.register_multimat(type_1, type_2, params);
       }

@@ -17,17 +17,21 @@ specific language governing permissions and limitations
 under the License.
 */
 
+// onika
 #include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
+// exanb
+#include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
 #include <mpi.h>
 
-#include <exaDEM/traversal.hpp>
+// exaDEM
 #include <exaDEM/drivers.hpp>
 #include <exaDEM/forcefield/gravity_force.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
 
@@ -62,24 +66,24 @@ class GravityForce : public OperatorNode {
 
   inline void execute() final {
     // Particles
-		const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
+    const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
     GravityForceFunctor funcP{*gravity};
     compute_cell_particles(*grid, false, funcP, compute_field_set, parallel_execution_context(), ccpo);
 
     // Drivers
-		if (drivers.has_value()) {
+    if (drivers.has_value()) {
       int rank;
       MPI_Comm_rank(*mpi, &rank);
       // This operation should be done by only one mpi process.
-      // An MPI reduction (sum) is performed on the driver forces after. 
+      // An MPI reduction (sum) is performed on the driver forces after.
       if (rank == 0) {
-		    GravityForceDriverFunctor funcD{*gravity};
+        GravityForceDriverFunctor funcD{*gravity};
         for (size_t id = 0; id < drivers->get_size(); id++) {
-				  drivers->apply(id, funcD);
+          drivers->apply(id, funcD);
         }
       }
     }
-	}
+  }
 };
 
 // === register factories ===

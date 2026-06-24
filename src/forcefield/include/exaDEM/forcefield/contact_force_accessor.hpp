@@ -5,20 +5,20 @@ namespace exaDEM {
 
 template <typename ContactParamsT>
 struct SingleMatContactParamsTAccessor {
-  const ContactParamsT cpt;
+  const ContactParamsT cpt_;
   ONIKA_HOST_DEVICE_FUNC inline const ContactParamsT& operator()(int typeA, int typeB) const {
-    return cpt;
+    return cpt_;
   }
 };
 
 template <typename ContactParamsT>
 struct MultiMatContactParamsTAccessor {
-  const ContactParamsT* cpt;
-  const int size;
+  const ContactParamsT* cpt_;
+  const int size_;
   ONIKA_HOST_DEVICE_FUNC inline const ContactParamsT& operator()(int typeA, int typeB) const {
-    assert(typeA < size);
-    assert(typeB < size);
-    return cpt[typeA * size + typeB];
+    assert(typeA < size_);
+    assert(typeB < size_);
+    return cpt_[typeA * size_ + typeB];
   }
 };
 }  // namespace exaDEM

@@ -133,13 +133,13 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
     }
     double kn = 0.0;
     if (config.has_value()) {
-      kn = std::max(kn, config->kn);
+      kn = std::max(kn, config->kn_);
     }
     if (config_driver.has_value()) {
-      kn = std::max(kn, config->kn);
+      kn = std::max(kn, config->kn_);
     }
     if (multimat_cp.has_value()) {
-      auto get_max_kn = [&kn](const ContactParams& cp) -> void { kn = std::max(kn, cp.kn); };
+      auto get_max_kn = [&kn](const ContactParams& cp) -> void { kn = std::max(kn, cp.kn_); };
       multimat_cp->apply(get_max_kn);
     }
     *max_kn = kn;
@@ -302,12 +302,12 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
       /** Some global checks */
       /** Is cohesive force define while it's not used */
       if constexpr (!LawComboTraits<LawCombo>::cohesive) {
-        if (config->dncut > 0) {
+        if (config->dncut_ > 0) {
           std::string msg = "dncut is != 0 while the cohesive force is not used.\n";
           msg += "Please, use contact_[InputType]_polyhedron_cohesive_[CohesiveLaw] operators.";
           color_log::error(operator_name(), msg);
         }
-        if (drivers->get_size() > 0 && config_driver->dncut > 0) {
+        if (drivers->get_size() > 0 && config_driver->dncut_ > 0) {
           std::string msg = "dncut is != 0 while the cohesive force is not used.\n";
           msg += "Please, use contact_[InputType]_polyhedron_cohesive_[CohesiveLaw] operators.";
           color_log::error(operator_name(), msg);

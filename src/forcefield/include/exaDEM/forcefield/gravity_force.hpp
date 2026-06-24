@@ -24,24 +24,24 @@ under the License.
 
 namespace exaDEM {
 struct GravityForceDriverFunctor {
-  exanb::Vec3d g = {0.0, 0.0, -9.807};
+  exanb::Vec3d g_ = {0.0, 0.0, -9.807};
   template <typename T>
   inline void operator()(T& drv) const {
     if constexpr (std::is_same_v<std::remove_cv_t<T>, exaDEM::RShapeDriver>) {
       if(drv.motion_type == MotionType::PARTICLE) {
-        drv.fields.forces += g * drv.fields.mass;
+        drv.fields.forces += g_ * drv.fields.mass;
       }
     }
   }
 };
 
 struct GravityForceFunctor {
-  exanb::Vec3d g = {0.0, 0.0, -9.807};
+  exanb::Vec3d g_ = {0.0, 0.0, -9.807};
   ONIKA_HOST_DEVICE_FUNC inline
       void operator()(double mass, double& fx, double& fy, double& fz) const {
-        fx += g.x * mass;
-        fy += g.y * mass;
-        fz += g.z * mass;
+        fx += g_.x * mass;
+        fy += g_.y * mass;
+        fz += g_.z * mass;
       }
 };
 }  // namespace exaDEM

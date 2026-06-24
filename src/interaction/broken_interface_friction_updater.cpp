@@ -75,7 +75,7 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
           // Note that broken interactions will be transformed in VertexVertex interactions by the unclassify operator.
           // so we need to use the contact parameters of VertexVertex interactions.
           double ft = exanb::norm(ft_ptr[idx]);
-          double mu = cp(type_a, type_b).mu;
+          double mu = cp(type_a, type_b).mu_;
           // ft_threshold depends on the normal force.
           double ft_threshold = mu * exanb::norm(fn_ptr[idx]);
 
