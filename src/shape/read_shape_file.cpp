@@ -87,7 +87,7 @@ class ReadShapeFileOperator : public OperatorNode {
       }
 
       for (size_t sid = 0; sid < list_of_shapes.size(); sid++) {
-        list_of_shapes[sid].m_name = names[sid];
+        list_of_shapes[sid].name_ = names[sid];
       }
     }
 

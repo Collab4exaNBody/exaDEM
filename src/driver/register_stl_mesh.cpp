@@ -125,9 +125,9 @@ class RegisterRShapeDriver : public OperatorNode {
       }
     }
 
-    shp.m_radius = *minkowski;
+    shp.add_radius(*minkowski);
     // shp.increase_obb(*rcut_inc);
-    shp.increase_obb(shp.m_radius);
+    shp.increase_obb(shp.minkowski());
 
     exaDEM::RShapeDriver driver = {*state, params->input_motion_type};
     driver.shp = shp;

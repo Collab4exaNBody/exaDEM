@@ -80,9 +80,9 @@ __global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(
 
       // OBB test
       const auto& shpb = shps[body_b.type];
-      OBB obb_a = compute_obb(shpa.obb, body_a.r, body_a.quat, body_a.homothety);
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r, body_a.quat, body_a.homothety);
       obb_a.enlarge(rcut_inc);
-      OBB obb_b = compute_obb(shpb.obb, body_b.r, body_b.quat, body_b.homothety);
+      OBB obb_b = compute_obb(shpb.obb_, body_b.r, body_b.quat, body_b.homothety);
       if (obb_a.intersect(obb_b)) {
         count++;
       }
@@ -138,9 +138,9 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
       double rmax = body_a.radius + body_b.radius + rcut_inc;
       if (exanb::dot(r, r) > rmax * rmax) continue;
       const auto& shpb = shps[body_b.type];
-      OBB obb_a = compute_obb(shpa.obb, body_a.r, body_a.quat, body_a.homothety);
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r, body_a.quat, body_a.homothety);
       obb_a.enlarge(rcut_inc);
-      OBB obb_b = compute_obb(shpb.obb, body_b.r, body_b.quat, body_b.homothety);
+      OBB obb_b = compute_obb(shpb.obb_, body_b.r, body_b.quat, body_b.homothety);
       if (obb_a.intersect(obb_b)) count++;
     }
   }
@@ -166,9 +166,9 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
       double rmax = body_a.radius + body_b.radius + rcut_inc;
       if (exanb::dot(r, r) > rmax * rmax) continue;
       const auto& shpb = shps[body_b.type];
-      OBB obb_a = compute_obb(shpa.obb, body_a.r, body_a.quat, body_a.homothety);
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r, body_a.quat, body_a.homothety);
       obb_a.enlarge(rcut_inc);
-      OBB obb_b = compute_obb(shpb.obb, body_b.r, body_b.quat, body_b.homothety);
+      OBB obb_b = compute_obb(shpb.obb_, body_b.r, body_b.quat, body_b.homothety);
       if (obb_a.intersect(obb_b)) {
         int pos = prefix + write_idx;
         out_cell_i[pos] = cell_a;
@@ -221,7 +221,7 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
   int countVV = 0, countVE = 0, countVF = 0, countEE = 0;
 
   // A→B: vertex tests
-  OBB obb_b = compute_obb(shpb.obb, body_b.r, body_b.quat, body_b.homothety);
+  OBB obb_b = compute_obb(shpb.obb_, body_b.r, body_b.quat, body_b.homothety);
   obb_b.enlarge(rcut_inc);
 
   for (int i = threadIdx.y; i < nva; i += blockDim.y) {

@@ -67,7 +67,7 @@ ONIKA_HOST_DEVICE_FUNC inline void detection(Func& func, const double rcut_inc, 
   }
 
   // now test OBB
-  OBB obb_b = compute_obb(shpb.obb, b.r, b.quat, b.homothety);
+  OBB obb_b = compute_obb(shpb.obb_, b.r, b.quat, b.homothety);
   if (!obb_a.intersect(obb_b)) {
     return;
   }
@@ -193,7 +193,7 @@ struct ApplyNbhFunc {
       // setup geometric test prerequis
       AABB aabb_body_a = {body_a.r - body_a.radius - rcut_inc, body_a.r + body_a.radius + rcut_inc};
 
-      OBB obb_a = compute_obb(shpa.obb, body_a.r, body_a.quat, body_a.homothety);
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r, body_a.quat, body_a.homothety);
       obb_a.enlarge(rcut_inc);
 
       for (size_t pb = 0; pb < cell_b.size(); pb++) {
@@ -307,7 +307,7 @@ struct ApplyClassifierFunc {  // Second pass
       // setup geometric test prerequis
       AABB aabb_body_a = {body_a.r - body_a.radius - rcut_inc, body_a.r + body_a.radius + rcut_inc};
 
-      OBB obb_a = compute_obb(shpa.obb, body_a.r, body_a.quat, body_a.homothety);
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r, body_a.quat, body_a.homothety);
       obb_a.enlarge(rcut_inc);
 
       for (size_t pb = 0; pb < cell_b.size(); pb++) {
@@ -341,7 +341,7 @@ struct ApplyClassifierFunc {  // Second pass
       // setup geometric test prerequis
       AABB aabb_body_a = {body_a.r - body_a.radius - rcut_inc, body_a.r + body_a.radius + rcut_inc};
 
-      OBB obb_a = compute_obb(shpa.obb, body_a.r, body_a.quat, body_a.homothety);
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r, body_a.quat, body_a.homothety);
       obb_a.enlarge(rcut_inc);
 
       for (size_t pb = 0; pb < cell_b.size(); pb++) {

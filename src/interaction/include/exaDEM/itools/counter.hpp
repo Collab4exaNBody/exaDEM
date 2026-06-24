@@ -71,9 +71,9 @@ using VectorT = onika::memory::CudaMMVector<T>;
  */
 template <InteractionType IT, class FuncT, class ResultT>
 struct ReduceTFunctor {
-  InteractionWrapper<IT> m_data; /**< Pointer to the data to be reduced. */
-  const FuncT m_func;            /**< Functor that defines how reduction is performed. */
-  ResultT* m_reduced_val;        /**< Pointer to the result of the reduction. */
+  InteractionWrapper<IT> data_; /**< Pointer to the data to be reduced. */
+  const FuncT func_;            /**< Functor that defines how reduction is performed. */
+  ResultT* reduced_val_;        /**< Pointer to the result of the reduction. */
 
   /**
    * @brief Operator to perform the reduction.
@@ -81,7 +81,7 @@ struct ReduceTFunctor {
    */
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const {
     ResultT local_val = ResultT();
-    m_func(local_val, i, m_data, reduce_thread_local_t{});
+    func_(local_val, i, data_, reduce_thread_local_t{});
 
     ONIKA_CU_BLOCK_SHARED onika::cuda::UnitializedPlaceHolder<ResultT> team_val_place_holder;
     ResultT& team_val = team_val_place_holder.get_ref();
@@ -92,12 +92,12 @@ struct ReduceTFunctor {
     ONIKA_CU_BLOCK_SYNC();
 
     if (ONIKA_CU_THREAD_IDX != 0) {
-      m_func(team_val, local_val, reduce_thread_block_t{});
+      func_(team_val, local_val, reduce_thread_block_t{});
     }
     ONIKA_CU_BLOCK_SYNC();
 
     if (ONIKA_CU_THREAD_IDX == 0) {
-      m_func(*m_reduced_val, team_val, reduce_global_t{});
+      func_(*reduced_val_, team_val, reduce_global_t{});
     }
   }
 };
@@ -107,25 +107,25 @@ struct ReduceTFunctor {
  * @brief Stores the results.
  */
 struct IOSimInteractionResult {
-  unsigned long long int n_act_interaction = 0; /**< Number of active interactions. */
-  unsigned long long int n_tot_interaction = 0; /**< Total number of interactions. */
-  double min_dn = 0; /**< Minimum distance between particles during interactions. Or Max overlapping between between two
-                        particles. */
+  unsigned long long int n_act_interaction_ = 0; /**< Number of active interactions. */
+  unsigned long long int n_tot_interaction_ = 0; /**< Total number of interactions. */
+  double min_dn_ = 0; /**< Minimum distance between particles during interactions. Or Max overlapping between between
+                        two particles. */
 
   /**
    * @brief Updates the current interaction result with data from another result.
    * @param in The input interaction result to merge.
    */
   void update(IOSimInteractionResult& in) {
-    n_act_interaction += in.n_act_interaction;
-    n_tot_interaction += in.n_tot_interaction;
-    min_dn = std::min(min_dn, in.min_dn);
+    n_act_interaction_ += in.n_act_interaction_;
+    n_tot_interaction_ += in.n_tot_interaction_;
+    min_dn_ = std::min(min_dn_, in.min_dn_);
   }
 };
 
 struct IOSimInteractionFunctor {
-  const double* const dnp; /**< Pointer to the array of overlapping distances (dn). */
-  const int coef;          /**< Coefficient for symmetry (if sym -> 2 else 1) and interaction type. (driver -> 1) */
+  const double* const dnp_; /**< Pointer to the array of overlapping distances (dn). */
+  const int coef_;          /**< Coefficient for symmetry (if sym -> 2 else 1) and interaction type. (driver -> 1) */
 
   /**
    * @brief Operator to get local interaction data.
@@ -143,11 +143,11 @@ struct IOSimInteractionFunctor {
                                                 InteractionWrapper<IT> interactions, reduce_thread_local_t = {}) const {
     auto I = interactions(idx);
     if (I.pair_.ghost_ != InteractionPair::PartnerGhost) {
-      const double& dn = dnp[idx];
-      local.n_tot_interaction += coef;
+      const double& dn = dnp_[idx];
+      local.n_tot_interaction_ += coef_;
       if (dn < 0.0 || I.active()) {
-        local.n_act_interaction += coef;
-        local.min_dn = std::min(local.min_dn, dn);
+        local.n_act_interaction_ += coef_;
+        local.min_dn_ = std::min(local.min_dn_, dn);
       }
     }
   }
@@ -161,9 +161,9 @@ struct IOSimInteractionFunctor {
    */
   ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult& global, IOSimInteractionResult& local,
                                                 reduce_thread_block_t) const {
-    ONIKA_CU_ATOMIC_ADD(global.n_act_interaction, local.n_act_interaction);
-    ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction, local.n_tot_interaction);
-    EXADEM_CU_ATOMIC_MIN(global.min_dn, local.min_dn);
+    ONIKA_CU_ATOMIC_ADD(global.n_act_interaction_, local.n_act_interaction_);
+    ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction_, local.n_tot_interaction_);
+    EXADEM_CU_ATOMIC_MIN(global.min_dn_, local.min_dn_);
   }
 
   /**
@@ -175,9 +175,9 @@ struct IOSimInteractionFunctor {
    */
   ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult& global, IOSimInteractionResult& local,
                                                 reduce_global_t) const {
-    ONIKA_CU_ATOMIC_ADD(global.n_act_interaction, local.n_act_interaction);
-    ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction, local.n_tot_interaction);
-    EXADEM_CU_ATOMIC_MIN(global.min_dn, local.min_dn);
+    ONIKA_CU_ATOMIC_ADD(global.n_act_interaction_, local.n_act_interaction_);
+    ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction_, local.n_tot_interaction_);
+    EXADEM_CU_ATOMIC_MIN(global.min_dn_, local.min_dn_);
   }
 };
 
@@ -212,17 +212,17 @@ static inline ParallelExecutionWrapper reduce_data(ParallelExecutionContext* exe
     auto I = data(i);
     // filter duplicate (mpi ghost)
     if (I.pair_.ghost_ != InteractionPair::PartnerGhost) {
-      const double& dn = func.dnp[i];
-      n_tot_interaction += func.coef;
+      const double& dn = func.dnp_[i];
+      n_tot_interaction += func.coef_;
       if (dn < 0.0) {
-        n_act_interaction += func.coef;
+        n_act_interaction += func.coef_;
         min_dn = std::min(min_dn, dn);
       }
     }
   }
-  result.n_act_interaction = n_act_interaction;
-  result.n_tot_interaction = n_tot_interaction;
-  result.min_dn = min_dn;
+  result.n_act_interaction_ = n_act_interaction;
+  result.n_tot_interaction_ = n_tot_interaction;
+  result.min_dn_ = min_dn;
 
   // useless but it avoid bugs, TODO LATER
   ParallelForOptions opts;

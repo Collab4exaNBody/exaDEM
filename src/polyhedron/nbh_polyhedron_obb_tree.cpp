@@ -268,7 +268,7 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
               quat QB_relativeTo_QA = QAconj * conv_orient_j;
 
               // Fill intersections
-              OBBtree<subBox>::TreeIntersectionIds(shp->obbtree.root, shp_nbh->obbtree.root, intersections, h, h_nbh,
+              OBBtree<subBox>::TreeIntersectionIds(shp->obbtree_.root, shp_nbh->obbtree_.root, intersections, h, h_nbh,
                                                    0.5 * rVerlet, posB_relativeTo_posA, QB_relativeTo_QA);
 
               auto set_info_i = [&item](uint64_t id, size_t p, size_t cid) -> void {

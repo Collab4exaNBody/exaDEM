@@ -156,7 +156,7 @@ class AddXYZ : public OperatorNode {
     if (shapes_collection.has_value()) {
       auto& shps = *shapes_collection;
       for (size_t i = 0; i < shps.size(); i++) {
-        typeMap[shps[i]->m_name] = i;
+        typeMap[shps[i]->name_] = i;
       }
     }
 

@@ -123,7 +123,7 @@ struct RShapeDriver {
    */
   inline void print() const {
     exanb::lout << "Driver Type: R-Shape" << std::endl;
-    exanb::lout << "Name               = " << shp.m_name << std::endl;
+    exanb::lout << "Name               = " << shp.name_ << std::endl;
     exanb::lout << "Center             = " << fields.center << std::endl;
     exanb::lout << "Minkowski         = " << shp.minkowski() << std::endl;
     exanb::lout << "Velocity           = " << fields.vel << std::endl;
@@ -168,8 +168,8 @@ struct RShapeDriver {
     }
 
     // remove relative paths
-    std::filesystem::path full_name = this->shp.m_name;
-    this->shp.m_name = full_name.filename();
+    std::filesystem::path full_name = this->shp.name_;
+    this->shp.name_ = full_name.filename();
     // motion type
     if (!is_valid_motion_type(motion_type, rshape_valid_motion_types)) {
       std::exit(EXIT_FAILURE);
@@ -425,11 +425,11 @@ struct RShapeDriver {
    * @param stream The output stream to write the YAML information to.
    */
   void dump_driver(const Driver_params& motion, int id, std::string path, std::stringstream& stream) {
-    std::string filename = path + shp.m_name + ".shp";
+    std::string filename = path + shp.name_ + ".shp";
     stream << "  - register_rshape:" << std::endl;
     stream << "     id: " << id << std::endl;
     stream << "     filename: " << filename << std::endl;
-    stream << "     minkowski: " << shp.m_radius << std::endl;
+    stream << "     minkowski: " << shp.minkowski() << std::endl;
     stream << "     state: {";
     stream << "center: [" << fields.center << "]";
     stream << ", vel: [" << fields.vel << "]";

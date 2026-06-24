@@ -82,9 +82,9 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
 
   // Get OBBs from rshape mesh
   auto& rshape_shp = driver.shp;
-  OBB* __restrict__ rshape_obb_vertices = onika::cuda::vector_data(rshape_shp.m_obb_vertices);
-  [[maybe_unused]] OBB* __restrict__ rshape_obb_edges = vector_data(rshape_shp.m_obb_edges);
-  [[maybe_unused]] OBB* __restrict__ rshape_obb_faces = vector_data(rshape_shp.m_obb_faces);
+  OBB* __restrict__ rshape_obb_vertices = onika::cuda::vector_data(rshape_shp.obb_vertices_);
+  [[maybe_unused]] OBB* __restrict__ rshape_obb_edges = vector_data(rshape_shp.obb_edges_);
+  [[maybe_unused]] OBB* __restrict__ rshape_obb_faces = vector_data(rshape_shp.obb_faces_);
 
   // particle i (id, cell id, particle position, sub vertex)
   auto& pi = item.i();
@@ -103,7 +103,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     const size_t nf = shpi->get_number_of_faces();
 
     // Compute particle OBB
-    OBB obb_i = shpi->obb;
+    OBB obb_i = shpi->obb_;
     quat conv_orient_i = quat{vec3r{orient_i.x, orient_i.y, orient_i.z}, orient_i.w};
     obb_i.rotate(conv_orient_i);
     obb_i.translate(vec3r{r.x, r.y, r.z});

@@ -91,7 +91,7 @@ class DumpWriterConfRockable : public OperatorNode {
         if (!all_shapes.contains(D.shp)) {  // add shape
           all_shapes.add_shape(D.shp);
         }
-        sdriver << D.shp.m_name << " " << 0 /* group */ << " " << 0 /* cluster */ << " " << 1 /* homothety */ << " "
+        sdriver << D.shp.name_ << " " << 0 /* group */ << " " << 0 /* cluster */ << " " << 1 /* homothety */ << " "
                 << D.fields.center.x << " " << D.fields.center.y << " " << D.fields.center.z << " " << D.fields.vel.x << " " << D.fields.vel.y << " "
                 << D.fields.vel.z << " " << D.fields.acc.x << " " << D.fields.acc.y << " " << D.fields.acc.z << " " << D.fields.quat.w << " " << D.fields.quat.x
                 << " " << D.fields.quat.y << " " << D.fields.quat.z << " " << D.fields.vrot.x << " " << D.fields.vrot.y << " " << D.fields.vrot.z << " "

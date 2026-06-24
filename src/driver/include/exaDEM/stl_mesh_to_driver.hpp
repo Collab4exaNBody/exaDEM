@@ -34,9 +34,9 @@ inline shape build_shape(STLMeshReader& mesh, std::string name) {
   shape shp;
   const int n_faces = mesh.m_data.size();
   std::vector<int> idx;
-  auto& shp_v = shp.m_vertices;
-  auto& shp_e = shp.m_edges;
-  auto& shp_f = shp.m_faces;
+  auto& shp_v = shp.vertices_;
+  auto& shp_e = shp.edges_;
+  auto& shp_f = shp.faces_;
 
   // tmp edges
   std::vector<std::pair<size_t, size_t>> tmp_e;
@@ -119,7 +119,7 @@ inline shape build_shape(STLMeshReader& mesh, std::string name) {
     }
   }
 
-  shp.m_name = name;
+  shp.name_ = name;
   shp.compute_offset_faces();
   return shp;
 }

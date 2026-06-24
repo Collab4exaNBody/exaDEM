@@ -64,7 +64,7 @@ inline void build_buffer_obb(const exanb::Vec3d& pos, const uint64_t id, const u
 
   double homothety = 1;
   vec3r p = conv_to_vec3r(pos);
-  OBB obbi = shp->obb;
+  OBB obbi = shp->obb_;
   quat Q = conv_to_quat(orient);
   obbi.rotate(Q);
   obbi.extent *= homothety;

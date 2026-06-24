@@ -274,9 +274,9 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                         // Eliminate if two polyhedra are two far away if there is not intersection
                                         // between their OBBs.
                                         const Quaternion& orient = orient_a[p_a];
-                                        OBB obb_i = compute_obb(shp->obb, Vec3d{rx, ry, rz}, orient, hi);
-                                        OBB obb_j =
-                                            compute_obb(shp_nbh->obb, Vec3d{rx_nbh, ry_nbh, rz_nbh}, orient_nbh, h_nbh);
+                                        OBB obb_i = compute_obb(shp->obb_, Vec3d{rx, ry, rz}, orient, hi);
+                                        OBB obb_j = compute_obb(shp_nbh->obb_, Vec3d{rx_nbh, ry_nbh, rz_nbh},
+                                                                orient_nbh, h_nbh);
 
                                         obb_i.enlarge(0.5 * rVerlet);
                                         obb_j.enlarge(0.5 * rVerlet);
@@ -394,7 +394,6 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
         assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
       }  // GRID_OMP_FOR_END
     }
-    
   }
 };
 

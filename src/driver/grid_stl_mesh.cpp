@@ -143,9 +143,9 @@ class UpdateGridRShapeOperator : public OperatorNode {
           grid_rshape[i].clean();
         }
 
-        auto& obb_v = driver.shp.m_obb_vertices;
-        auto& obb_e = driver.shp.m_obb_edges;
-        auto& obb_f = driver.shp.m_obb_faces;
+        auto& obb_v = driver.shp.obb_vertices_;
+        auto& obb_e = driver.shp.obb_edges_;
+        auto& obb_f = driver.shp.obb_faces_;
 
 #pragma omp parallel
         {

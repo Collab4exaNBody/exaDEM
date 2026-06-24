@@ -116,7 +116,7 @@ inline void build_buffer_polyhedron(const exanb::Vec3d& pos, const shape* shp, c
     auto writer_e = [&buffers, &shp](const int first, const int second) {
       buffers.n_lines++;
       buffers.lines << " " << buffers.n_vertices + first << " " << buffers.n_vertices + second;
-      buffers.tube_size << " " << shp->m_radius;
+      buffers.tube_size << " " << shp->minkowski();
       buffers.line_offsets << " " << buffers.incr_line_offset;
       buffers.incr_line_offset += 2;
     };

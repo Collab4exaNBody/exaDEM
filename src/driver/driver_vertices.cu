@@ -18,13 +18,13 @@ under the License.
 */
 
 #include <mpi.h>
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_factory.h>
-#include <onika/scg/operator_slot.h>
 #include <onika/math/basic_types.h>
 #include <onika/parallel/block_parallel_for.h>
 #include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/parallel_for.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
 
 #include <exaDEM/drivers.hpp>
 #include <exaDEM/shapes.hpp>
@@ -37,9 +37,7 @@ struct WrapperRShapeDriverComputeVertices {
   Vec3d* rshape_vertices;
   const Vec3d* shp_vertices;
   ONIKA_HOST_DEVICE_FUNC
-  void operator()(int idx) const {
-    rshape_vertices[idx] = center + quat * shp_vertices[idx];
-  }
+  void operator()(int idx) const { rshape_vertices[idx] = center + quat * shp_vertices[idx]; }
 };
 }  // namespace exaDEM
 
@@ -71,7 +69,7 @@ class DriverVertices : public OperatorNode {
       Vec3d rshape_center = mesh.fields.center;
       Quaternion rshape_quat = mesh.fields.quat;
       Vec3d* ptr_rshape_vertices = onika::cuda::vector_data(mesh.vertices);
-      Vec3d* ptr_shp_vertices = onika::cuda::vector_data(mesh.shp.m_vertices);
+      Vec3d* ptr_shp_vertices = onika::cuda::vector_data(mesh.shp.vertices_);
       WrapperRShapeDriverComputeVertices func = {rshape_center, rshape_quat, ptr_rshape_vertices, ptr_shp_vertices};
       parallel_for(size, func, m_parallel_execution_context(), opts);
     }
@@ -104,9 +102,7 @@ class DriverVertices : public OperatorNode {
     Drivers& drvs = *drivers;
     size_t size = drvs.get_size();
     set_gpu_enabled(!(*force_host));
-    auto pec_func = [this]() {
-      return this->parallel_execution_context();
-    };
+    auto pec_func = [this]() { return this->parallel_execution_context(); };
     for (size_t i = 0; i < size; i++) {
       DriverComputeVerticesFunc<decltype(pec_func)> func = {pec_func};
       drivers->apply(i, func);

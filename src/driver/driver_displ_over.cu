@@ -18,10 +18,10 @@ under the License.
 */
 
 #include <mpi.h>
+#include <onika/math/basic_types.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
-#include <onika/math/basic_types.h>
 
 #include <exaDEM/drivers.hpp>
 #include <exaDEM/reduce_rshape_driver.hpp>
@@ -39,9 +39,7 @@ struct Accumulator {
   VectorT<int> data;  ///< Storage buffer
 
  public:
-  Accumulator() {
-    reset();
-  }
+  Accumulator() { reset(); }
 
   /// Reset accumulator to zero
   void reset() {
@@ -50,14 +48,10 @@ struct Accumulator {
   }
 
   /// Get raw pointer to data
-  int* __restrict__ get_ptr() {
-    return data.data();
-  }
+  int* __restrict__ get_ptr() { return data.data(); }
 
-	/// Get current value
-  int get() {
-    return data[0];
-  }
+  /// Get current value
+  int get() { return data[0]; }
 };
 
 /**
@@ -71,7 +65,7 @@ struct DriverDisplOver {
   Drivers& bcpd;                                                 ///< Backup drivers
   const size_t bd_idx;                                           ///< Backup driver index
   Driver_params& motion;                                         ///< Driver Motion reference
-	Accumulator storage;                                           ///< Result accumulator
+  Accumulator storage;                                           ///< Result accumulator
 
   inline int operator()(exaDEM::Cylinder& a) {
     return 0;  // WARNING should not move
@@ -79,14 +73,14 @@ struct DriverDisplOver {
 
   inline int operator()(exaDEM::Surface& a) {
     exaDEM::Surface& b = bcpd.get_typed_driver<exaDEM::Surface>(bd_idx);
-		exanb::Vec3d d = a.fields.center_proj - b.fields.center_proj;
+    exanb::Vec3d d = a.fields.center_proj - b.fields.center_proj;
 
     if (b.motion_type == PENDULUM_MOTION) {
       // Utility function: compute the intersection between a line and a plane
       auto intersect_line_plane = [](const exanb::Vec3d& plane_point,   // A point lying on the plane (pendulum anchor)
                                      const exanb::Vec3d& plane_normal,  // Plane normal vector
                                      const exanb::Vec3d& line_point,    // Starting point of the line (initial
-                                                                 // pendulum position)
+                                                                        // pendulum position)
                                      const exanb::Vec3d& line_dir       // Direction vector of the line
                                      ) -> exanb::Vec3d {
         // Ensure the line is not parallel to the plane
@@ -100,10 +94,10 @@ struct DriverDisplOver {
       };
 
       // Project the initial pendulum positions onto their respective planes
-      exanb::Vec3d proj_a =
-          intersect_line_plane(motion.pendulum_anchor_point, a.fields.normal, motion.pendulum_initial_position, motion.pendulum_direction());
-      exanb::Vec3d proj_b =
-          intersect_line_plane(motion.pendulum_anchor_point, b.fields.normal, motion.pendulum_initial_position, motion.pendulum_direction());
+      exanb::Vec3d proj_a = intersect_line_plane(motion.pendulum_anchor_point, a.fields.normal,
+                                                 motion.pendulum_initial_position, motion.pendulum_direction());
+      exanb::Vec3d proj_b = intersect_line_plane(motion.pendulum_anchor_point, b.fields.normal,
+                                                 motion.pendulum_initial_position, motion.pendulum_direction());
       d = proj_b - proj_a;
     }
 
@@ -147,8 +141,9 @@ struct DriverDisplOver {
 #ifdef ONIKA_CUDA_VERSION
     storage.reset();
     size_t size = a.shp.get_number_of_vertices();
-    const exanb::Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp.m_vertices);
-    RShapeDriverDisplacementFunctor SVDFunc = {r2, ptr_shp_vertices, a.fields.center, a.fields.quat, b.fields.center, b.fields.quat};
+    const exanb::Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp.vertices_);
+    RShapeDriverDisplacementFunctor SVDFunc = {
+        r2, ptr_shp_vertices, a.fields.center, a.fields.quat, b.fields.center, b.fields.quat};
     ReduceMaxRShapeDriverDisplacementFunctor func = {SVDFunc, storage.get_ptr()};
 
     onika::parallel::ParallelForOptions opts;
@@ -229,9 +224,7 @@ class DriverDisplacementOver : public OperatorNode {
     Drivers& bcpd = *backup_drvs;
     size_t bcpd_size = bcpd.get_size();
 
-    auto pec_func = [this]() {
-      return this->parallel_execution_context();
-    };
+    auto pec_func = [this]() { return this->parallel_execution_context(); };
 
     for (size_t i = 0; i < bcpd_size && local_drivers_displ == 0; i++) {
       DriverDisplOver<decltype(pec_func)> func = {pec_func, max_dist2, comm, bcpd, i, drvs.get_motion(i)};

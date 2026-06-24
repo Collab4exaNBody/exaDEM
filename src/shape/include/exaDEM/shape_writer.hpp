@@ -41,8 +41,8 @@ inline void write_shp(const shape& shp, std::stringstream& output) {
   int n_faces = shp.get_number_of_faces();
 
   output << std::endl << "<" << std::endl;
-  output << "name " << shp.m_name.c_str() << std::endl;
-  output << "radius " << shp.m_radius << std::endl;
+  output << "name " << shp.name_.c_str() << std::endl;
+  output << "radius " << shp.minkowski() << std::endl;
   output << "preCompDone y" << std::endl;
   output << "nv " << n_vertices << std::endl;
   for (int i = 0; i < n_vertices; i++) {
@@ -51,7 +51,7 @@ inline void write_shp(const shape& shp, std::stringstream& output) {
   }
   output << "ne " << n_edges << std::endl;
   for (int i = 0; i < n_edges; i++) {
-    output << shp.m_edges[2 * i] << " " << shp.m_edges[2 * i + 1] << std::endl;
+    output << shp.edges_[2 * i] << " " << shp.edges_[2 * i + 1] << std::endl;
   }
   output << "nf " << n_faces << std::endl;
   for (int i = 0; i < n_faces; i++) {
@@ -62,14 +62,14 @@ inline void write_shp(const shape& shp, std::stringstream& output) {
     }
     output << std::endl;
   }
-  output << "obb.extent " << shp.obb.extent << std::endl;
-  output << "obb.e1 " << shp.obb.e1 << std::endl;
-  output << "obb.e2 " << shp.obb.e2 << std::endl;
-  output << "obb.e3 " << shp.obb.e3 << std::endl;
-  output << "obb.center " << shp.obb.center << std::endl;
+  output << "obb.extent " << shp.obb_.extent << std::endl;
+  output << "obb.e1 " << shp.obb_.e1 << std::endl;
+  output << "obb.e2 " << shp.obb_.e2 << std::endl;
+  output << "obb.e3 " << shp.obb_.e3 << std::endl;
+  output << "obb.center " << shp.obb_.center << std::endl;
   output << "orientation 1.0 0.0 0.0 0.0" << std::endl;
-  output << "volume " << shp.m_volume << std::endl;
-  auto& inertia_over_mass = shp.m_inertia_on_mass;
+  output << "volume " << shp.get_volume() << std::endl;
+  auto inertia_over_mass = shp.get_Im();
   output << "I/m " << inertia_over_mass.x << " " << inertia_over_mass.y << " " << inertia_over_mass.z << std::endl;
   output << ">" << std::endl;
 }
