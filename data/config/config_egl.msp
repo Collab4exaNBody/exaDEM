@@ -180,7 +180,7 @@ viz_data_egl:
     - egl_start_frame: { surface: "ExaDEM Visualization" , camera: "camera" }
     - egl_particles_to_vertex_buffer
     - egl_draw: { vertex_buffer: "particles" , elements: "noghost_particles" , primitive: GL_POINTS , shader_program: "oriented_shape"  }
-    - egl_driver_update_uniform: { shader_program: "driver_surface" }
+#    - egl_driver_update_uniform: { shader_program: "driver_surface" }
     - egl_draw: { vertex_buffer: "driver_vertices" , elements: "driver_triangles" , primitive: GL_TRIANGLES , shader_program: "driver_surface"  }
 #    - timestep_file: "gl/frame_%09d"
 #    - egl_write_frame: { surface: "ExaDEM Visualization" }

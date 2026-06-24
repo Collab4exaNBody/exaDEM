@@ -75,101 +75,81 @@ namespace exaDEM
       const bool runs_on_gpu = ( global_cuda_ctx()!=nullptr && global_cuda_ctx()->has_devices() );
       const int n_drivers = drivers->get_size();
       ldbg << "egl_driver_to_buffer : nb drivers = " << n_drivers << std::endl;
-      long vcount = 0;
-      long tcount = 0;
-      for(int i=0;i<n_drivers;i++)
+
+      for(int drv_i=0;drv_i<n_drivers;drv_i++)
       {
-        if( drivers->type(i) == DRIVER_TYPE::RSHAPE )
+
+        if( drivers->type(drv_i) == DRIVER_TYPE::RSHAPE )
         {
-          const auto & drv = drivers->get_typed_driver<RShapeDriver>(i);
+          const auto & drv = drivers->get_typed_driver<RShapeDriver>(drv_i);
           const auto & shp = drv.shp;
-          ldbg << "driver #"<<i<<" is rshape, shape : nv="<<shp.get_number_of_vertices()<<", nf="<<shp.get_number_of_faces()<<", ntv="<<drv.vertices.size()<<std::endl;
-          vcount += shp.get_number_of_vertices();
-          for(int j=0;j<shp.get_number_of_faces();j++)
+          ldbg << "driver #"<<drv_i<<" is rshape, shape="<<shp.m_name<<", nv="<<shp.get_number_of_vertices()<<", nf="<<shp.get_number_of_faces()<<", ntv="<<drv.vertices.size()<<std::endl;
+          long vcount = shp.get_number_of_vertices();
+          long tcount = 0;
+          const int n_faces = shp.get_number_of_faces();
+          for(int j=0;j<n_faces;j++)
           {
             const auto [idx,n] = shp.get_face(j);
             if(n>=3) tcount += n-2;
           }
-        }
-      }
+          ldbg << "total vertices = "<< vcount << ", total triangles = "<< tcount << std::endl;
 
-      ldbg << "total vertices = "<< vcount << ", total triangles = "<< tcount << std::endl;
-
-      // create vertex buffer
-      const std::string vertex_buffer = "driver_vertices";
-      int vbuf_id = egl_render_manager->vertex_buffers_id( vertex_buffer );
-      if( vbuf_id == -1 )
-      {
-        ldbg << "EGL : create vertex buffer " << vertex_buffer <<std::endl;
-        std::vector<GLint> vertex_attribs = { GL_FLOAT, 3, GL_FLOAT, 3, GL_FLOAT, 3};
-        vbuf_id = egl_render_manager->create_vertex_buffers( vertex_buffer , vcount , vertex_attribs );
-      }
-      GLVertexBuffers & glvbos = egl_render_manager->vertex_buffers(vbuf_id);
-      ldbg << "EGL : update vertex buffer " << vertex_buffer << " , nv="<< vcount << " , id="<<vbuf_id<<std::endl;
-      glvbos.set_number_of_vertices( vcount );
-      GLfloat * vdata = nullptr;
-      if( runs_on_gpu ) vdata = (GLfloat*) glvbos.gpu_map_write_only(0);
-      else vdata = (GLfloat*) glvbos.host_map_write_only(0);
-
-      long vertidx = 0;
-      for(int i=0;i<n_drivers;i++)
-      {
-        if( drivers->type(i) == DRIVER_TYPE::RSHAPE )
-        {
-          const auto & drv = drivers->get_typed_driver<RShapeDriver>(i);
-          const auto & shp = drv.shp;
-          long dnv = shp.get_number_of_vertices();
-          GLCopyDriverVertices func = { drv.vertices.data(), vdata + vertidx*3 };
-          onika::parallel::parallel_for( dnv, func, parallel_execution_context("glcpydrv") );
-          vertidx += dnv;
-        }
-      }
-      if( runs_on_gpu ) glvbos.gpu_unmap(0);
-      else glvbos.host_unmap(0);
-      if( vertidx != vcount )
-      {
-        onika::fatal_error() << "inconsistent number of vertices"<<std::endl;
-      }
-
-      // create triangle indices buffer
-      const std::string element_buffer = "driver_triangles";
-      int ebuf_id = egl_render_manager->element_buffer_id( element_buffer );
-      if( ebuf_id == -1 )
-      {
-        ldbg << "EGL : create element buffer " << element_buffer <<std::endl;
-        ebuf_id = egl_render_manager->create_element_buffer( element_buffer , tcount*3 );
-
-        auto & ebuf = egl_render_manager->element_buffer(ebuf_id);
-        ldbg << "EGL : update element buffer " << element_buffer << " , triangles="<< tcount << " , id="<<ebuf_id<<std::endl;
-        auto * elptr = ebuf.map_buffer_write_only();
-
-        long ti = 0;
-        long vi = 0;
-        for(int i=0;i<n_drivers;i++)
-        {
-          if( drivers->type(i) == DRIVER_TYPE::RSHAPE )
+          // create vertex buffer
+          const std::string vertex_buffer = "drv" + std::to_string(drv_i) + "_vertices";
+          int vbuf_id = egl_render_manager->vertex_buffers_id( vertex_buffer );
+          if( vbuf_id == -1 )
           {
-            const auto & drv = drivers->get_typed_driver<RShapeDriver>(i);
-            const auto & shp = drv.shp;
-            const int n_faces = shp.get_number_of_faces();
+            ldbg << "EGL : create vertex buffer " << vertex_buffer <<std::endl;
+            std::vector<GLint> vertex_attribs = { GL_FLOAT, 3, GL_FLOAT, 3, GL_FLOAT, 3};
+            vbuf_id = egl_render_manager->create_vertex_buffers( vertex_buffer , vcount , vertex_attribs );
+          }
+          GLVertexBuffers & glvbos = egl_render_manager->vertex_buffers(vbuf_id);
+          ldbg << "EGL : update vertex buffer " << vertex_buffer << " , nv="<< vcount << " , id="<<vbuf_id<<std::endl;
+          glvbos.set_number_of_vertices( vcount );
+          GLfloat * vdata = nullptr;
+          if( runs_on_gpu ) vdata = (GLfloat*) glvbos.gpu_map_write_only(0);
+          else vdata = (GLfloat*) glvbos.host_map_write_only(0);
+
+          GLCopyDriverVertices func = { drv.vertices.data(), vdata };
+          onika::parallel::parallel_for( vcount, func, parallel_execution_context("glcpydrv") );
+
+          if( runs_on_gpu ) glvbos.gpu_unmap(0);
+          else glvbos.host_unmap(0);
+
+          // create triangle indices buffer
+          const std::string element_buffer = "drv" + std::to_string(drv_i) + "_triangles";
+          int ebuf_id = egl_render_manager->element_buffer_id( element_buffer );
+          if( ebuf_id == -1 )
+          {
+            ldbg << "EGL : create element buffer " << element_buffer <<std::endl;
+            ebuf_id = egl_render_manager->create_element_buffer( element_buffer , tcount*3 );
+
+            auto & ebuf = egl_render_manager->element_buffer(ebuf_id);
+            ldbg << "EGL : update element buffer " << element_buffer << " , triangles="<< tcount << " , id="<<ebuf_id<<std::endl;
+            auto * elptr = ebuf.map_buffer_write_only();
+
+            long ti = 0;
             for(int j=0;j<n_faces;j++)
             {
               const auto [idx,n] = shp.get_face(j);
-              for(int k=1;k<(n-1);k++) { elptr[ti++]=vi+idx[0]; elptr[ti++]=vi+idx[k]; elptr[ti++]=vi+idx[k+1]; }
+              for(int k=1;k<(n-1);k++) { elptr[ti++]=idx[0]; elptr[ti++]=idx[k]; elptr[ti++]=idx[k+1]; }
             }
-            vi += shp.get_number_of_vertices();
+            
+            ebuf.unmap_buffer();
+            if( ti != tcount * 3 )
+            {
+              onika::fatal_error() << "Internal error: wrong triangle count"<<std::endl;
+            }
           }
+          else
+          {
+            ldbg << "EGL : skip element buffer " << element_buffer << " update , id="<<ebuf_id<<std::endl;
+          }
+      
         }
-        ebuf.unmap_buffer();
-        if( ti != tcount * 3 )
-        {
-          onika::fatal_error() << "Internal error: wrong triangle count"<<std::endl;
-        }
+
       }
-      else
-      {
-        ldbg << "EGL : skip element buffer " << element_buffer << " update , id="<<ebuf_id<<std::endl;
-      }
+      
     }
 
   };
