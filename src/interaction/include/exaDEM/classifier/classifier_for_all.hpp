@@ -53,10 +53,10 @@ struct AnalysisDataPackerNull {
  * normal force (fn), and tangential force (ft) into their respective buffers.
  */
 struct AnalysisDataPacker {
-  double* __restrict__ dnp; /**< Pointer to the buffer storing overlap (dn) values between particles. */
-  Vec3d* __restrict__ cpp;  /**< Pointer to the buffer storing contact point positions. */
-  Vec3d* __restrict__ fnp;  /**< Pointer to the buffer storing normal force vectors (fn). */
-  Vec3d* __restrict__ ftp;  /**< Pointer to the buffer storing tangential force vectors (ft). */
+  double* __restrict__ dnp_; /**< Pointer to the buffer storing overlap (dn) values between particles. */
+  Vec3d* __restrict__ cpp_;  /**< Pointer to the buffer storing contact point positions. */
+  Vec3d* __restrict__ fnp_;  /**< Pointer to the buffer storing normal force vectors (fn). */
+  Vec3d* __restrict__ ftp_;  /**< Pointer to the buffer storing tangential force vectors (ft). */
 
   /**
    * @brief Constructor that initializes the data packer with buffers from a classifier.
@@ -69,10 +69,10 @@ struct AnalysisDataPacker {
    */
   AnalysisDataPacker(Classifier& ic, int type) {
     auto [_dnp, _cpp, _fnp, _ftp] = ic.contact_state(type);
-    dnp = _dnp;
-    cpp = _cpp;
-    fnp = _fnp;
-    ftp = _ftp;
+    dnp_ = _dnp;
+    cpp_ = _cpp;
+    fnp_ = _fnp;
+    ftp_ = _ftp;
   }
 
   /**
@@ -89,10 +89,10 @@ struct AnalysisDataPacker {
    */
   ONIKA_HOST_DEVICE_FUNC inline void operator()(const uint64_t idx, const double dn, const Vec3d& contact,
                                                 const Vec3d& fn, const Vec3d& ft) const {
-    dnp[idx] = dn;
-    cpp[idx] = contact;
-    fnp[idx] = fn;
-    ftp[idx] = ft;
+    dnp_[idx] = dn;
+    cpp_[idx] = contact;
+    fnp_[idx] = fn;
+    ftp_[idx] = ft;
   }
 };
 
@@ -115,10 +115,10 @@ struct AnalysisDataPacker {
  */
 template <InteractionType IT, typename K, typename AnalysisDataPacker, typename... Args>
 struct WrapperContactLawForAll {
-  InteractionWrapper<IT> data;
-  const K kernel;             /**< Kernel function to be applied. */
-  AnalysisDataPacker packer;  /**< Kernel function to be applied. */
-  std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
+  InteractionWrapper<IT> data_;
+  const K kernel_;             /**< Kernel function to be applied. */
+  AnalysisDataPacker packer_;  /**< Kernel function to be applied. */
+  std::tuple<Args...> params_; /**< Tuple of parameters to be passed to the kernel function. */
 
   /**
    * @brief Constructor to initialize the WrapperForAll struct.
@@ -128,7 +128,7 @@ struct WrapperContactLawForAll {
    * @param args Additional parameters passed to the kernel function.
    */
   WrapperContactLawForAll(InteractionWrapper<IT>& d, K& k, AnalysisDataPacker& p, Args... args)
-      : data(std::move(d)), kernel(k), packer(p), params(std::tuple<Args...>(args...)) {}
+      : data_(std::move(d)), kernel_(k), packer_(p), params_(std::tuple<Args...>(args...)) {}
 
   /**
    * @brief Helper function to apply the kernel function to a single element.
@@ -139,10 +139,10 @@ struct WrapperContactLawForAll {
    */
   template <size_t... Is>
   ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const {
-    auto item = data(i);
-    const auto [dn, pos, fn, ft] = kernel(item, std::get<Is>(params)...);
-    data.update(i, item);
-    packer(i, dn, pos, fn, ft);  // packer is used to store interaction data
+    auto item = data_(i);
+    const auto [dn, pos, fn, ft] = kernel_(item, std::get<Is>(params_)...);
+    data_.update(i, item);
+    packer_(i, dn, pos, fn, ft);  // packer is used to store interaction data
   }
 
   /**
@@ -160,9 +160,9 @@ struct WrapperContactLawForAll {
 /*******************************************/
 template <InteractionType IT, typename K, typename... Args>
 struct WrapperForAll {
-  InteractionWrapper<IT> data;
-  K kernel;                   /**< Kernel function to be applied. */
-  std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
+  InteractionWrapper<IT> data_;
+  K kernel_;                   /**< Kernel function to be applied. */
+  std::tuple<Args...> params_; /**< Tuple of parameters to be passed to the kernel function. */
 
   /**
    * @brief Constructor to initialize the WrapperForAll struct.
@@ -171,7 +171,7 @@ struct WrapperForAll {
    * @param args Additional parameters passed to the kernel function.
    */
   WrapperForAll(InteractionWrapper<IT>& d, K& k, Args... args)
-      : data(std::move(d)), kernel(k), params(std::tuple<Args...>(args...)) {}
+      : data_(std::move(d)), kernel_(k), params_(std::tuple<Args...>(args...)) {}
 
   /**
    * @brief Helper function to apply the kernel function to a single element.
@@ -181,9 +181,9 @@ struct WrapperForAll {
    */
   template <size_t... Is>
   ONIKA_HOST_DEVICE_FUNC inline void apply(uint64_t i, tuple_helper::index<Is...> indexes) const {
-    // exaDEM::Interaction item = data(i);
-    auto item = data(i);
-    kernel(i, item, std::get<Is>(params)...);
+    // exaDEM::Interaction item = data_(i);
+    auto item = data_(i);
+    kernel_(i, item, std::get<Is>(params_)...);
   }
 
   /**

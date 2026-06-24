@@ -33,8 +33,8 @@ inline void write_vtp_interface(std::string name, paraview_interface_helper& buf
   outFile << "<?xml version=\"1.0\"?>" << std::endl;
   outFile << "<VTKFile type=\"PolyData\">" << std::endl;
   outFile << "  <PolyData>" << std::endl;
-  outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices_ << "\" NumberOfLines=\"" << 0 << "\" NumberOfPolys=\""
-          << buffers.n_polygons_ << "\">" << std::endl;
+  outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices_ << "\" NumberOfLines=\"" << 0
+          << "\" NumberOfPolys=\"" << buffers.n_polygons_ << "\">" << std::endl;
   outFile << "    <PointData>" << std::endl;
 
   outFile << "      <DataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;

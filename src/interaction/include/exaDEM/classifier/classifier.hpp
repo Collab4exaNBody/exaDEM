@@ -37,10 +37,10 @@ struct Classifier {
   using WaveIB = ClassifierContainer<InteractionType::InnerBond>;
 
   // Members
-  std::vector<WavePP> m_particles;            ///< Storage for interactions categorized by type.
-  std::vector<WavePD> m_drivers;              ///< Storage for interactions categorized by type.
-  std::vector<WaveIB> m_innerbonds;           ///< Used for fragmentation
-  std::vector<ContactState> m_contact_state;  ///< Storage for contact state data.
+  std::vector<WavePP> particles_;            ///< Storage for interactions categorized by type.
+  std::vector<WavePD> drivers_;              ///< Storage for interactions categorized by type.
+  std::vector<WaveIB> innerbonds_;           ///< Used for fragmentation
+  std::vector<ContactState> contact_state_;  ///< Storage for contact state data.
 
   /**
    * @brief Default constructor.
@@ -55,23 +55,23 @@ struct Classifier {
    * @brief Initializes the waves vector to hold interactions for each type.
    */
   void initialize() {
-    m_particles.resize(InteractionTypeId::NTypesPP);
-    m_drivers.resize(InteractionTypeId::NTypesParticleDriver);
-    m_innerbonds.resize(InteractionTypeId::NTypesInnerBond);
-    m_contact_state.resize(InteractionTypeId::NTypes);
+    particles_.resize(InteractionTypeId::NTypesPP);
+    drivers_.resize(InteractionTypeId::NTypesParticleDriver);
+    innerbonds_.resize(InteractionTypeId::NTypesInnerBond);
+    contact_state_.resize(InteractionTypeId::NTypes);
     size_t typeId = 0;
     for (; typeId <= get_last_id<InteractionType::ParticleParticle>(); typeId++) {
       int typed_id = get_typed_idx<InteractionType::ParticleParticle>(typeId);
-      m_particles[typed_id].type = typeId;
+      particles_[typed_id].type_ = typeId;
     }
     for (; typeId <= get_last_id<InteractionType::ParticleDriver>(); typeId++) {
       int typed_id = get_typed_idx<InteractionType::ParticleDriver>(typeId);
       // lout << "typeID " << typeId << " typed id " << typed_id << std::endl;
-      m_drivers[typed_id].type = typeId;
+      drivers_[typed_id].type_ = typeId;
     }
     for (; typeId <= get_last_id<InteractionType::InnerBond>(); typeId++) {
       int typed_id = get_typed_idx<InteractionType::InnerBond>(typeId);
-      m_innerbonds[typed_id].type = typeId;
+      innerbonds_[typed_id].type_ = typeId;
     }
   }
 
@@ -79,13 +79,13 @@ struct Classifier {
    * @brief Clears all stored interactions in the waves vector.
    */
   void reset_containers() {
-    for (auto& container : m_particles) {
+    for (auto& container : particles_) {
       container.clear();
     }
-    for (auto& container : m_drivers) {
+    for (auto& container : drivers_) {
       container.clear();
     }
-    for (auto& container : m_innerbonds) {
+    for (auto& container : innerbonds_) {
       container.clear();
     }
   }
@@ -96,11 +96,11 @@ struct Classifier {
   template <InteractionType IT>
   auto& get_container() {
     if constexpr (IT == InteractionType::ParticleParticle) {
-      return m_particles;
+      return particles_;
     } else if constexpr (IT == InteractionType::ParticleDriver) {
-      return m_drivers;
+      return drivers_;
     } else if constexpr (IT == InteractionType::InnerBond) {
-      return m_innerbonds;
+      return innerbonds_;
     }
   }
 
@@ -110,11 +110,11 @@ struct Classifier {
   template <InteractionType IT>
   const auto& get_container() const {
     if constexpr (IT == InteractionType::ParticleParticle) {
-      return m_particles;
+      return particles_;
     } else if constexpr (IT == InteractionType::ParticleDriver) {
-      return m_drivers;
+      return drivers_;
     } else if constexpr (IT == InteractionType::InnerBond) {
-      return m_innerbonds;
+      return innerbonds_;
     }
   }
 
@@ -160,7 +160,7 @@ struct Classifier {
    */
   InteractionWrapper<InteractionType::InnerBond> get_sticked_interaction_wrapper() {
     WaveIB& ib = get_data<InnerBond>(InteractionTypeId::FirstIdInnerBond);
-    assert(m_innerbonds.size() == InteractionTypeId::NTypesInnerBond);
+    assert(innerbonds_.size() == InteractionTypeId::NTypesInnerBond);
     return InteractionWrapper<InteractionType::InnerBond>(ib);  // WARNING here
   }
 
@@ -171,7 +171,7 @@ struct Classifier {
   size_t get_size(size_t id) {
     ClassifierContainerSizeFunc func;
     CDispatcher::dispatch(id, *this, func);
-    return func.value;
+    return func.value_;
   }
 
   /** @brief Resizes the container for a specific interaction type.
@@ -238,14 +238,14 @@ struct Classifier {
    */
   std::tuple<double*, Vec3d*, Vec3d*, Vec3d*> contact_state(int id) {
     assert(id < InteractionTypeId::NTypes);
-    auto& state = m_contact_state[id];
+    auto& state = contact_state_[id];
     // fit size if needed
     size_t size = get_size(id);
     state.resize(size);
-    double* const __restrict__ dnp = onika::cuda::vector_data(state.dn);
-    Vec3d* const __restrict__ cpp = onika::cuda::vector_data(state.cp);
-    Vec3d* const __restrict__ fnp = onika::cuda::vector_data(state.fn);
-    Vec3d* const __restrict__ ftp = onika::cuda::vector_data(state.ft);
+    double* const __restrict__ dnp = onika::cuda::vector_data(state.dn_);
+    Vec3d* const __restrict__ cpp = onika::cuda::vector_data(state.cp_);
+    Vec3d* const __restrict__ fnp = onika::cuda::vector_data(state.fn_);
+    Vec3d* const __restrict__ ftp = onika::cuda::vector_data(state.ft_);
     return {dnp, cpp, fnp, ftp};
   }
 
@@ -254,18 +254,18 @@ struct Classifier {
    *
    * @return Number of interaction types.
    */
-  size_t number_of_waves() { return m_particles.size() + m_drivers.size() + m_innerbonds.size(); }
-  size_t number_of_waves() const { return m_particles.size() + m_drivers.size() + m_innerbonds.size(); }
+  size_t number_of_waves() { return particles_.size() + drivers_.size() + innerbonds_.size(); }
+  size_t number_of_waves() const { return particles_.size() + drivers_.size() + innerbonds_.size(); }
 
   // debug
   void display() {
-    for (auto& container : m_particles) {
+    for (auto& container : particles_) {
       container.display();
     }
-    for (auto& container : m_drivers) {
+    for (auto& container : drivers_) {
       container.display();
     }
-    for (auto& container : m_innerbonds) {
+    for (auto& container : innerbonds_) {
       container.display();
     }
   }

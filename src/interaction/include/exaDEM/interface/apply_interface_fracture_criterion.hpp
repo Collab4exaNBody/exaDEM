@@ -11,7 +11,7 @@ namespace exaDEM {
 struct ApplyInterfaceFractureCriterionFunc {
   Interface* const interface_;      // list of interfaces
   uint8_t* const break_interface_;  // list of booleans that indicate if the interface is broken or not. 1 if the
-                                   // interface is broken, 0 otherwise.
+                                    // interface is broken, 0 otherwise.
   InteractionWrapper<InteractionType::InnerBond> interaction_;  // interactions that compose the interfaces
 
   /** @brief Apply the fracture criterion to the i-th interface

@@ -43,9 +43,9 @@ struct InterfaceManager {
   template <typename T>
   using vector_t = onika::memory::CudaMMVector<T>;
   vector_t<Interface> data_;  // list of interfaces. Each interface is defined by its location in the classifier and its
-                             // size (number of interactions that compose the interface)
+                              // size (number of interactions that compose the interface)
   vector_t<uint8_t> break_interface_;  // list of booleans that indicate if the interface is broken or not. 1 if the
-                                      // interface is broken, 0 otherwise.
+                                       // interface is broken, 0 otherwise.
 
   /** @brief Resize the interface manager
    * @param new_size The new size of the interface manager.

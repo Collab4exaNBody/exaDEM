@@ -22,30 +22,30 @@ namespace exaDEM {
 struct ContactState {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
-  VectorT<double> dn;  // overlap
-  VectorT<Vec3d> cp;   // contact point
-  VectorT<Vec3d> fn;   // normal force
-  VectorT<Vec3d> ft;   // tangential force
+  VectorT<double> dn_;  // overlap
+  VectorT<Vec3d> cp_;   // contact point
+  VectorT<Vec3d> fn_;   // normal force
+  VectorT<Vec3d> ft_;   // tangential force
 
   /** @brief Resize the buffers to the specified size.
    * @param size The new size of the buffers.
    */
   void resize(const size_t size) {
     assert(size < 1e9);  // arbitrary limit to catch bugs
-    if (size == dn.size()) {
+    if (size == dn_.size()) {
       return;
     }
 
     if (size != 0) {
-      dn.resize(size);
-      cp.resize(size);
-      fn.resize(size);
-      ft.resize(size);
+      dn_.resize(size);
+      cp_.resize(size);
+      fn_.resize(size);
+      ft_.resize(size);
     } else {
-      dn.clear();
-      cp.clear();
-      fn.clear();
-      ft.clear();
+      dn_.clear();
+      cp_.clear();
+      fn_.clear();
+      ft_.clear();
     }
   }
 };

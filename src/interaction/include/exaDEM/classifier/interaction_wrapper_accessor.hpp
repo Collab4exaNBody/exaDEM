@@ -22,18 +22,18 @@ under the License.
 
 namespace exaDEM {
 struct InteractionWrapperAccessor {
-  InteractionWrapper<ParticleParticle>* particleparticle;
-  InteractionWrapper<ParticleDriver>* particledriver;
-  InteractionWrapper<InnerBond>* innerbond;
+  InteractionWrapper<ParticleParticle>* particleparticle_;
+  InteractionWrapper<ParticleDriver>* particledriver_;
+  InteractionWrapper<InnerBond>* innerbond_;
 
   template <InteractionType IT>
   ONIKA_HOST_DEVICE_FUNC auto& get_typed_accessor(int idx) const {
     if constexpr (IT == InteractionType::ParticleParticle) {
-      return particleparticle[get_typed_idx<IT>(idx)];
+      return particleparticle_[get_typed_idx<IT>(idx)];
     } else if constexpr (IT == InteractionType::ParticleDriver) {
-      return particledriver[get_typed_idx<IT>(idx)];
+      return particledriver_[get_typed_idx<IT>(idx)];
     } else if constexpr (IT == InteractionType::InnerBond) {
-      return innerbond[get_typed_idx<IT>(idx)];
+      return innerbond_[get_typed_idx<IT>(idx)];
     }
   }
 };
@@ -41,33 +41,33 @@ struct InteractionWrapperAccessor {
 struct InteractionWrapperStorage {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
-  VectorT<InteractionWrapper<ParticleParticle>> particleparticle;
-  VectorT<InteractionWrapper<ParticleDriver>> particledriver;
-  VectorT<InteractionWrapper<InnerBond>> innerbond;
+  VectorT<InteractionWrapper<ParticleParticle>> particleparticle_;
+  VectorT<InteractionWrapper<ParticleDriver>> particledriver_;
+  VectorT<InteractionWrapper<InnerBond>> innerbond_;
 
   InteractionWrapperStorage(Classifier& classifier) {
-    particleparticle.resize(InteractionTypeId::NTypesPP);
+    particleparticle_.resize(InteractionTypeId::NTypesPP);
     for (size_t i = InteractionTypeId::FirstIdParticle; i <= InteractionTypeId::LastIdParticle; i++) {
       auto& c = classifier.get_data<InteractionType::ParticleParticle>(i);
-      particleparticle[i] = InteractionWrapper(c);
+      particleparticle_[i] = InteractionWrapper(c);
     }
-    particledriver.resize(InteractionTypeId::NTypesParticleDriver);
+    particledriver_.resize(InteractionTypeId::NTypesParticleDriver);
     for (size_t i = InteractionTypeId::FirstIdDriver; i <= InteractionTypeId::LastIdDriver; i++) {
       auto& c = classifier.get_data<InteractionType::ParticleDriver>(i);
-      particledriver[i - InteractionTypeId::FirstIdDriver] = InteractionWrapper<InteractionType::ParticleDriver>(c);
+      particledriver_[i - InteractionTypeId::FirstIdDriver] = InteractionWrapper<InteractionType::ParticleDriver>(c);
     }
-    innerbond.resize(InteractionTypeId::NTypesStickecParticles);
+    innerbond_.resize(InteractionTypeId::NTypesStickecParticles);
     for (size_t i = InteractionTypeId::FirstIdInnerBond; i <= InteractionTypeId::LastIdInnerBond; i++) {
       auto& c = classifier.get_data<InteractionType::InnerBond>(i);
-      innerbond[i - InteractionTypeId::FirstIdInnerBond] = InteractionWrapper(c);
+      innerbond_[i - InteractionTypeId::FirstIdInnerBond] = InteractionWrapper(c);
     }
   }
 
   InteractionWrapperAccessor accessor() {
     InteractionWrapperAccessor res;
-    res.particleparticle = particleparticle.data();
-    res.particledriver = particledriver.data();
-    res.innerbond = innerbond.data();
+    res.particleparticle_ = particleparticle_.data();
+    res.particledriver_ = particledriver_.data();
+    res.innerbond_ = innerbond_.data();
     return res;
   }
 

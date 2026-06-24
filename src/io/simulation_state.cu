@@ -102,9 +102,9 @@ struct SimulationStateNode : public OperatorNode {
     {
       SimulationStateReducFunc func;
       for (int typeID = 0; typeID < types; typeID++) {
-        assert(typeID < static_cast<int>(classifier.m_contact_state.size()));
-        const auto& buffs = classifier.m_contact_state[typeID];  // get buffers for this interaction type
-        const double* const dnp = onika::cuda::vector_data(buffs.dn);
+        assert(typeID < static_cast<int>(classifier.contact_state_.size()));
+        const auto& buffs = classifier.contact_state_[typeID];  // get buffers for this interaction type
+        const double* const dnp = onika::cuda::vector_data(buffs.dn_);
         int coef = 1;
         if (typeID < InteractionTypeId::NTypesPP && symetric) {
           coef *= 2;

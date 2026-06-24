@@ -39,8 +39,9 @@ inline std::string display(RuptureMode mode) {
 }
 
 struct RuptureCriteria {
-  double criteria_1_ = 0;             /// stores the normal+tangential rupture criterion (MixedMode) or the normal rupture criterion (SeparateModes)
-  double criteria_2_ = 0;             /// stores the tangential rupture criterion (SeparateModes only)
+  double criteria_1_ = 0;  /// stores the normal+tangential rupture criterion (MixedMode)
+                           /// or the normal rupture criterion (SeparateModes)
+  double criteria_2_ = 0;  /// stores the tangential rupture criterion (SeparateModes only)
   RuptureMode mode_ = RuptureMode::None;
 
   ONIKA_HOST_DEVICE_FUNC inline double& criterion() {

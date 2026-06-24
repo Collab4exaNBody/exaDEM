@@ -52,7 +52,7 @@ class UpdateInterfaces : public OperatorNode {
     size_t loc = 0;
     while (loc < n_interactions) {
       // Here, we do not build interfaces that are managed by another MPI process (partner).
-      if (interactions.ghost[loc] == InteractionPair::PartnerGhost) {
+      if (interactions.ghost_[loc] == InteractionPair::PartnerGhost) {
         loc++;
         continue;
       }

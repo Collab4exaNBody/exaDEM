@@ -41,21 +41,21 @@ struct InterationPairWrapper {
   template <typename InteractionContainerT>
   void wrap(InteractionContainerT& container) {
     using namespace onika::cuda;
-    id_i = container.id_i.data();
-    id_j = container.id_j.data();
+    id_i = container.id_i_.data();
+    id_j = container.id_j_.data();
 
-    cell_i = container.cell_i.data();
-    cell_j = container.cell_j.data();
+    cell_i = container.cell_i_.data();
+    cell_j = container.cell_j_.data();
 
-    p_i = container.p_i.data();
-    p_j = container.p_j.data();
+    p_i = container.p_i_.data();
+    p_j = container.p_j_.data();
 
-    sub_i = container.sub_i.data();
-    sub_j = container.sub_j.data();
+    sub_i = container.sub_i_.data();
+    sub_j = container.sub_j_.data();
 
-    m_type = container.type;
-    m_swap = container.swap.data();
-    m_ghost = container.ghost.data();
+    m_type = container.type_;
+    m_swap = container.swap_.data();
+    m_ghost = container.ghost_.data();
   }
 
   ONIKA_HOST_DEVICE_FUNC
@@ -106,44 +106,44 @@ struct InteractionWrapper {
   InteractionWrapper(ClassifierContainer<IT>& data) {
     using namespace onika::cuda;
     if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) {
-      ft_x = vector_data(data.ft_x);
-      ft_y = vector_data(data.ft_y);
-      ft_z = vector_data(data.ft_z);
+      ft_x = vector_data(data.ft_x_);
+      ft_y = vector_data(data.ft_y_);
+      ft_z = vector_data(data.ft_z_);
 
-      mom_x = vector_data(data.mom_x);
-      mom_y = vector_data(data.mom_y);
-      mom_z = vector_data(data.mom_z);
+      mom_x = vector_data(data.mom_x_);
+      mom_y = vector_data(data.mom_y_);
+      mom_z = vector_data(data.mom_z_);
     }
 
     if constexpr (IT == InteractionType::InnerBond) {
-      ft_x = vector_data(data.ft_x);
-      ft_y = vector_data(data.ft_y);
-      ft_z = vector_data(data.ft_z);
+      ft_x = vector_data(data.ft_x_);
+      ft_y = vector_data(data.ft_y_);
+      ft_z = vector_data(data.ft_z_);
 
-      en = vector_data(data.en);
-      tds = vector_data(data.tds);
-      et = vector_data(data.et);
-      dn0 = vector_data(data.dn0);
-      weight = vector_data(data.weight);
-      criterion = vector_data(data.criterion);
-      unbroken = vector_data(data.unbroken);
+      en = vector_data(data.en_);
+      tds = vector_data(data.tds_);
+      et = vector_data(data.et_);
+      dn0 = vector_data(data.dn0_);
+      weight = vector_data(data.weight_);
+      criterion = vector_data(data.criterion_);
+      unbroken = vector_data(data.unbroken_);
     }
 
-    id_i = vector_data(data.id_i);
-    id_j = vector_data(data.id_j);
+    id_i = vector_data(data.id_i_);
+    id_j = vector_data(data.id_j_);
 
-    cell_i = vector_data(data.cell_i);
-    cell_j = vector_data(data.cell_j);
+    cell_i = vector_data(data.cell_i_);
+    cell_j = vector_data(data.cell_j_);
 
-    p_i = vector_data(data.p_i);
-    p_j = vector_data(data.p_j);
+    p_i = vector_data(data.p_i_);
+    p_j = vector_data(data.p_j_);
 
-    sub_i = vector_data(data.sub_i);
-    sub_j = vector_data(data.sub_j);
+    sub_i = vector_data(data.sub_i_);
+    sub_j = vector_data(data.sub_j_);
 
-    m_type = data.type;
-    m_swap = vector_data(data.swap);
-    m_ghost = vector_data(data.ghost);
+    m_type = data.type_;
+    m_swap = vector_data(data.swap_);
+    m_ghost = vector_data(data.ghost_);
   }
 
   ONIKA_HOST_DEVICE_FUNC inline auto operator()(const uint64_t idx) const {
@@ -158,10 +158,10 @@ struct InteractionWrapper {
     } else if constexpr (IT == ParticleDriver) {
       return Interaction{ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}};
     } else if constexpr (IT == InnerBond) {
-      return InnerBondInteraction{ip,          {ft_x[idx], ft_y[idx], ft_z[idx]},
-                                  en[idx],     tds[idx],
-                                  et[idx],     dn0[idx],
-                                  weight[idx], criterion[idx],
+      return InnerBondInteraction{ip,           {ft_x[idx], ft_y[idx], ft_z[idx]},
+                                  en[idx],      tds[idx],
+                                  et[idx],      dn0[idx],
+                                  weight[idx],  criterion[idx],
                                   unbroken[idx]};
     } else {
       // static_assert(always_false<T>::value, "Unsupported interaction type");
