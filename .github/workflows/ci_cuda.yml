@@ -20,7 +20,7 @@ jobs:
     # CUDA_ARCH does not require an NVIDIA GPU on the runner — only the
     # toolkit and an explicit CMAKE_CUDA_ARCHITECTURES.
     container:
-      image: nvidia/cuda:12.4.1-devel-ubuntu22.04
+      image: nvidia/cuda:13.3.0-devel-ubuntu24.04
 
     steps:
     - name: Install git in container 
