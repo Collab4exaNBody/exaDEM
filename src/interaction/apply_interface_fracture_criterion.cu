@@ -48,7 +48,7 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
     auto& interfaces = *im;
     uint64_t number_of_broken_interfaces = 0;
     InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
-    ApplyInterfaceFractureCriterionFunc func = {interfaces.data.data(), interfaces.break_interface.data(),
+    ApplyInterfaceFractureCriterionFunc func = {interfaces.data_.data(), interfaces.break_interface_.data(),
                                                 data_wrapper};
 
     onika::parallel::ParallelForOptions opts;
@@ -58,8 +58,8 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
     // No copy from GPU if the data has not been touuch by the GPU
 #pragma omp parallel for reduction(+ : number_of_broken_interfaces)
     for (size_t i = 0; i < interfaces.size(); i++) {
-      if (interfaces.break_interface[i] == true) {
-        auto [offset, size] = interfaces.data[i];
+      if (interfaces.break_interface_[i] == true) {
+        auto [offset, size] = interfaces.data_[i];
         for (size_t j = 0; j < size; j++) {
           size_t idx = j + offset;
           data_wrapper.broke(idx);

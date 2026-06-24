@@ -89,21 +89,21 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
 
     MPI_Barrier(*mpi);
 
-    size_t number_of_interfaces = interfaces.data.size();
-    buffers.n_vertices = 0;
-    buffers.n_polygons = number_of_interfaces;
+    size_t number_of_interfaces = interfaces.data_.size();
+    buffers.n_vertices_ = 0;
+    buffers.n_polygons_ = number_of_interfaces;
 
     std::vector<Vec3d> vertices;
     // fill string buffers
     for (size_t i = 0; i < number_of_interfaces; i++) {
-      auto& interface = interfaces.data[i];
+      auto& interface = interfaces.data_[i];
 
       double En = 0;
       double Et = 0;
       RuptureCriteria criterion;
 
-      vertices.resize(interface.size);
-      for (size_t j = interface.loc; j < interface.loc + interface.size; j++) {
+      vertices.resize(interface.size_);
+      for (size_t j = interface.loc_; j < interface.loc_ + interface.size_; j++) {
         exaDEM::InnerBondInteraction interaction = interactions[j];
         auto& loc = interaction.i();
         auto& cell = cells[loc.cell_];
@@ -112,30 +112,30 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
         auto* shp = shps[type];
         Vec3d r = {cell[field::rx][loc.p_], cell[field::ry][loc.p_], cell[field::rz][loc.p_]};
         double h = cell[field::homothety][loc.p_];
-        vertices[j - interface.loc] = shp->get_vertex(loc.sub_, r, h, quat);
-        buffers.ids << i << " ";
-        buffers.connectivities << buffers.n_vertices++ << " ";
-        buffers.tds << interaction.tds_.x << " "
+        vertices[j - interface.loc_] = shp->get_vertex(loc.sub_, r, h, quat);
+        buffers.ids_ << i << " ";
+        buffers.connectivities_ << buffers.n_vertices_++ << " ";
+        buffers.tds_ << interaction.tds_.x << " "
                     << interaction.tds_.y << " "
                     << interaction.tds_.z << " ";
-        buffers.et << interaction.et_ << " ";
-        buffers.en << interaction.en_ << " ";
+        buffers.et_ << interaction.et_ << " ";
+        buffers.en_ << interaction.en_ << " ";
         En += interaction.en_;
         Et += interaction.et_;
         criterion = interaction.criterion_;  // same criterion for every interaction of the interface
       }
 
       // All interactions composing the interface share the same criterion.
-      double E = criterion.mode == RuptureMode::MixedMode
+      double E = criterion.mode_ == RuptureMode::MixedMode
                      ? (En + Et) / criterion.criterion()
                      : std::max(En / criterion.normal_criterion(), Et / criterion.tangential_criterion());
 
       order_face_vertices(vertices);
 
-      buffers.offsets << buffers.n_vertices << " ";
-      for (size_t j = 0; j < interface.size; j++) {
-        buffers.fracturation << E << " ";
-        buffers.vertices << vertices[j].x << " " << vertices[j].y << " " << vertices[j].z << " ";
+      buffers.offsets_ << buffers.n_vertices_ << " ";
+      for (size_t j = 0; j < interface.size_; j++) {
+        buffers.fracturation_ << E << " ";
+        buffers.vertices_ << vertices[j].x << " " << vertices[j].y << " " << vertices[j].z << " ";
       }
     };
 
@@ -143,9 +143,9 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
       exaDEM::write_pvtp_interface(*filename, size, buffers);
     }
 
-    if (buffers.mpi_rank) {  // add ranks
-      for (int i = 0; i < buffers.n_vertices; i++) {
-        buffers.ranks << rank << " ";
+    if (buffers.mpi_rank_) {  // add ranks
+      for (int i = 0; i < buffers.n_vertices_; i++) {
+        buffers.ranks_ << rank << " ";
       }
     }
 

@@ -9,23 +9,23 @@
 namespace exaDEM {
 /** @brief Function to apply the fracture criterion to each interface */
 struct ApplyInterfaceFractureCriterionFunc {
-  Interface* const interface;      // list of interfaces
-  uint8_t* const break_interface;  // list of booleans that indicate if the interface is broken or not. 1 if the
+  Interface* const interface_;      // list of interfaces
+  uint8_t* const break_interface_;  // list of booleans that indicate if the interface is broken or not. 1 if the
                                    // interface is broken, 0 otherwise.
-  InteractionWrapper<InteractionType::InnerBond> interaction;  // interactions that compose the interfaces
+  InteractionWrapper<InteractionType::InnerBond> interaction_;  // interactions that compose the interfaces
 
   /** @brief Apply the fracture criterion to the i-th interface
    * @param i The index of the interface to apply the fracture criterion to.
    */
   ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t i) const {
-    auto& [offset, size] = interface[i];
+    auto& [offset, size] = interface_[i];
     double En = 0.0;
     double Et = 0.0;
 
     // Sum of the normal and tangential energy of the interactions that compose the interface
     for (size_t j = offset; j < offset + size; j++) {
-      En += interaction.En(j);
-      Et += interaction.Et(j);
+      En += interaction_.En(j);
+      Et += interaction_.Et(j);
     }
 
     // Criterion is stored in the interaction that compose the interface.
@@ -34,20 +34,20 @@ struct ApplyInterfaceFractureCriterionFunc {
 
     // Criterion formula: En or Et > 2 * area * g_{n or t}
     // g is defined by the input parameters.
-    RuptureMode mode = interaction.rupture_mode(offset);
+    RuptureMode mode = interaction_.rupture_mode(offset);
     if (mode == RuptureMode::MixedMode) {
-      double criterion = interaction.mixed_criterion(offset);
+      double criterion = interaction_.mixed_criterion(offset);
       if (En + Et > criterion) {  // cs = sum
-        break_interface[i] = true;
+        break_interface_[i] = true;
       }
     }
     if (mode == RuptureMode::SeparateModes) {
-      double cn = interaction.normal_criterion(offset);
-      double ct = interaction.tangential_criterion(offset);
+      double cn = interaction_.normal_criterion(offset);
+      double ct = interaction_.tangential_criterion(offset);
       if (En > cn) {
-        break_interface[i] = true;
+        break_interface_[i] = true;
       } else if (Et > ct) {
-        break_interface[i] = true;
+        break_interface_[i] = true;
       }
     }
   }

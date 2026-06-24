@@ -39,43 +39,43 @@ inline std::string display(RuptureMode mode) {
 }
 
 struct RuptureCriteria {
-  double criteria_1 = 0;             /// stores the normal+tangential rupture criterion (MixedMode) or the normal rupture criterion (SeparateModes)
-  double criteria_2 = 0;             /// stores the tangential rupture criterion (SeparateModes only)
-  RuptureMode mode = RuptureMode::None;
+  double criteria_1_ = 0;             /// stores the normal+tangential rupture criterion (MixedMode) or the normal rupture criterion (SeparateModes)
+  double criteria_2_ = 0;             /// stores the tangential rupture criterion (SeparateModes only)
+  RuptureMode mode_ = RuptureMode::None;
 
   ONIKA_HOST_DEVICE_FUNC inline double& criterion() {
-    assert(mode == RuptureMode::MixedMode);
-    return criteria_1;
+    assert(mode_ == RuptureMode::MixedMode);
+    return criteria_1_;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline double criterion() const {
-    assert(mode == RuptureMode::MixedMode);
-    return criteria_1;
+    assert(mode_ == RuptureMode::MixedMode);
+    return criteria_1_;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline double& normal_criterion() {
-    assert(mode == RuptureMode::SeparateModes);
-    return criteria_1;
+    assert(mode_ == RuptureMode::SeparateModes);
+    return criteria_1_;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline double normal_criterion() const {
-    assert(mode == RuptureMode::SeparateModes);
-    return criteria_1;
+    assert(mode_ == RuptureMode::SeparateModes);
+    return criteria_1_;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline double& tangential_criterion() {
-    assert(mode == RuptureMode::SeparateModes);
-    return criteria_2;
+    assert(mode_ == RuptureMode::SeparateModes);
+    return criteria_2_;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline double tangential_criterion() const {
-    assert(mode == RuptureMode::SeparateModes);
-    return criteria_2;
+    assert(mode_ == RuptureMode::SeparateModes);
+    return criteria_2_;
   }
 };
 
 inline std::ostream& operator<<(std::ostream& out, const RuptureCriteria& c) {
-  out << "{ mode: " << display(c.mode) << ", criteria_1: " << c.criteria_1 << ", criteria_2: " << c.criteria_2
+  out << "{ mode: " << display(c.mode_) << ", criteria_1: " << c.criteria_1_ << ", criteria_2: " << c.criteria_2_
       << " }";
   return out;
 }

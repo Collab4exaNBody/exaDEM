@@ -65,8 +65,8 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
 #pragma omp parallel for
     for (size_t i = 0; i < interfaces.size(); i++) {
       // If the interface is broken, we need to update the friction of the interactions and break them
-      if (interfaces.break_interface[i] == true) {
-        auto [offset, size] = interfaces.data[i];
+      if (interfaces.break_interface_[i] == true) {
+        auto [offset, size] = interfaces.data_[i];
         auto type_a = cells[data_wrapper.cell_i[offset]][field::type][data_wrapper.p_i[offset]];
         auto type_b = cells[data_wrapper.cell_j[offset]][field::type][data_wrapper.p_j[offset]];
         for (size_t j = 0; j < size; j++) {

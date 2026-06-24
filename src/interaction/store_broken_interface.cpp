@@ -84,8 +84,8 @@ class StoreBrokenInterfaceOp : public OperatorNode {
 #pragma omp for
       for (size_t i = 0; i < interfaces.size(); i++) {
         // If the interface is broken, we need to update the friction of the interactions and break them
-        if (interfaces.break_interface[i] == true) {
-          auto [offset, size] = interfaces.data[i];
+        if (interfaces.break_interface_[i] == true) {
+          auto [offset, size] = interfaces.data_[i];
           auto I = data_wrapper(offset);
           assert(I.pair_.type_ == InteractionTypeId::InnerBond);
           auto owner_particle = I.pair_.owner();

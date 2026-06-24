@@ -5,18 +5,18 @@
 namespace exaDEM {
 /** @brief Helper struct for creating Paraview-compatible interface files */
 struct paraview_interface_helper {
-  bool mpi_rank;                     // Store MPI rank if needed
-  int n_vertices = 0;                // Number of vertices "in all interfaces"
-  int n_polygons = 0;                // Number of polygons "in all interfaces"
-  std::stringstream vertices;        // Stream to store vertex coordinates
-  std::stringstream offsets;         // Stream to store polygon offsets (number of vertices per polygon)
-  std::stringstream ranks;           // Stream to store MPI ranks (optional)
-  std::stringstream ids;             // Stream to store unique IDs for each vertex (optional)
-  std::stringstream connectivities;  // Stream to store polygon / face connectivity (vertex indices for each polygon)
-  std::stringstream fracturation;    // Stream to store fracturation rate of each vertex (optional)
-  std::stringstream en;              // Stream to store normal energy of each vertex (optional)
-  std::stringstream tds;             // Stream to store tangential displacement of each vertex (optional)
-  std::stringstream et;              // Stream to store tangential energy of each vertex (optional)
+  bool mpi_rank_;                     // Store MPI rank if needed
+  int n_vertices_ = 0;                // Number of vertices "in all interfaces"
+  int n_polygons_ = 0;                // Number of polygons "in all interfaces"
+  std::stringstream vertices_;        // Stream to store vertex coordinates
+  std::stringstream offsets_;         // Stream to store polygon offsets (number of vertices per polygon)
+  std::stringstream ranks_;           // Stream to store MPI ranks (optional)
+  std::stringstream ids_;             // Stream to store unique IDs for each vertex (optional)
+  std::stringstream connectivities_;  // Stream to store polygon / face connectivity (vertex indices for each polygon)
+  std::stringstream fracturation_;    // Stream to store fracturation rate of each vertex (optional)
+  std::stringstream en_;              // Stream to store normal energy of each vertex (optional)
+  std::stringstream tds_;             // Stream to store tangential displacement of each vertex (optional)
+  std::stringstream et_;              // Stream to store tangential energy of each vertex (optional)
 };
 
 /** @brief Write a VTP file for interfaces
@@ -33,52 +33,52 @@ inline void write_vtp_interface(std::string name, paraview_interface_helper& buf
   outFile << "<?xml version=\"1.0\"?>" << std::endl;
   outFile << "<VTKFile type=\"PolyData\">" << std::endl;
   outFile << "  <PolyData>" << std::endl;
-  outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices << "\" NumberOfLines=\"" << 0 << "\" NumberOfPolys=\""
-          << buffers.n_polygons << "\">" << std::endl;
+  outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices_ << "\" NumberOfLines=\"" << 0 << "\" NumberOfPolys=\""
+          << buffers.n_polygons_ << "\">" << std::endl;
   outFile << "    <PointData>" << std::endl;
 
   outFile << "      <DataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
-  outFile << buffers.ids.rdbuf() << std::endl;
+  outFile << buffers.ids_.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
 
-  if (buffers.mpi_rank) {  // MPI  rank - optional
+  if (buffers.mpi_rank_) {  // MPI  rank - optional
     outFile << "      <DataArray type=\"Int32\" Name=\"MPI rank\"  NumberOfComponents=\"1\" format=\"ascii\">"
             << std::endl;
-    outFile << buffers.ranks.rdbuf() << std::endl;
+    outFile << buffers.ranks_.rdbuf() << std::endl;
     outFile << "      </DataArray>" << std::endl;
   }
 
   outFile << "      <DataArray type=\"Float64\" Name=\"Fracturation rate\"  NumberOfComponents=\"1\" format=\"ascii\">"
           << std::endl;
-  outFile << buffers.fracturation.rdbuf() << std::endl;
+  outFile << buffers.fracturation_.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
 
   outFile << "      <DataArray type=\"Float64\" Name=\"En\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
-  outFile << buffers.en.rdbuf() << std::endl;
+  outFile << buffers.en_.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
 
   outFile
       << "      <DataArray type=\"Float64\" Name=\"TangentialDisplacement\"  NumberOfComponents=\"3\" format=\"ascii\">"
       << std::endl;
-  outFile << buffers.tds.rdbuf() << std::endl;
+  outFile << buffers.tds_.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
 
   outFile << "      <DataArray type=\"Float64\" Name=\"Et\"  NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
-  outFile << buffers.et.rdbuf() << std::endl;
+  outFile << buffers.et_.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
 
   outFile << "    </PointData>" << std::endl;
   outFile << "    <Points>" << std::endl;
   outFile << "      <DataArray type=\"Float64\" Name=\"\"  NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-  outFile << buffers.vertices.rdbuf() << std::endl;
+  outFile << buffers.vertices_.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
   outFile << "    </Points>" << std::endl;
   outFile << "    <Polys>" << std::endl;
   outFile << "      <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
-  outFile << buffers.connectivities.rdbuf() << std::endl;
+  outFile << buffers.connectivities_.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
   outFile << "      <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
-  outFile << buffers.offsets.rdbuf() << std::endl;
+  outFile << buffers.offsets_.rdbuf() << std::endl;
   outFile << "      </DataArray>" << std::endl;
   outFile << "    </Polys>" << std::endl;
   outFile << "    </Piece>" << std::endl;
@@ -104,7 +104,7 @@ inline void write_pvtp_interface(std::string filename, size_t number_of_files, p
   outFile << "    <PPointData>" << std::endl;
   /// PARTICLE FIELDS
   outFile << "      <PDataArray type=\"Int64\" Name=\"Id\"  NumberOfComponents=\"1\"/>" << std::endl;
-  if (buffers.mpi_rank) {
+  if (buffers.mpi_rank_) {
     outFile << "      <PDataArray type=\"Int32\" Name=\"MPI rank\"  NumberOfComponents=\"1\"/>" << std::endl;
   }
   outFile << "      <PDataArray type=\"Float64\" Name=\"Fracturation rate\"  NumberOfComponents=\"1\"/>" << std::endl;

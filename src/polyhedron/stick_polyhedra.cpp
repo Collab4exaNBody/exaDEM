@@ -274,7 +274,7 @@ class StickPolyhedraOperator : public OperatorNode {
                   // SeparateModes: En > 2.0 * area * gn and Et > 2.0 * area * gt
                   const double area = pi.id_ < pj.id_ ? shpi->get_face_area(i, hi) : shpj->get_face_area(j, hj);
                   RuptureCriteria& criterion = item.as<InnerBondInteraction>().criterion_;
-                  criterion.mode = ibp.mode;
+                  criterion.mode_ = ibp.mode;
                   if (ibp.mode == RuptureMode::MixedMode) {
                     criterion.criterion() = 2 * area * ibp.gn;
                   } else {
