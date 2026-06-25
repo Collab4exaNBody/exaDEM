@@ -22,7 +22,7 @@ under the License.
 #include <string>
 
 namespace exaDEM {
-enum RuptureMode { EnergyMixedMode, EnergySeparateModes, StressEnergySeparateMode, None };
+enum RuptureMode { EnergyMixedMode, EnergySeparateMode, StressEnergySeparateMode, None };
 
 /**
  * @brief Returns a human-readable name for a RuptureMode value.
@@ -31,8 +31,8 @@ inline std::string display(RuptureMode mode) {
   switch (mode) {
     case RuptureMode::EnergyMixedMode:
       return "EnergyMixedMode";
-    case RuptureMode::EnergySeparateModes:
-      return "EnergySeparateModes";
+    case RuptureMode::EnergySeparateMode:
+      return "EnergySeparateMode";
     case RuptureMode::StressEnergySeparateMode:
       return "StressEnergySeparateMode";
     default:
@@ -41,44 +41,55 @@ inline std::string display(RuptureMode mode) {
 }
 
 struct RuptureCriteria {
-  double criteria_1 = 0;             /// stores the normal+tangential rupture criterion (EnergyMixedMode and StressEnergySeparateMode) or the normal rupture criterion (EnergySeparateModes)
-  double criteria_2 = 0;             /// stores the tangential rupture criterion (EnergySeparateModes only) or the stress rupture criterion (StressEnergySeparateMode only)
-  RuptureMode mode = RuptureMode::None; 
+  double criteria_1 = 0;  /// stores the normal+tangential rupture criterion (EnergyMixedMode and
+                          /// StressEnergySeparateMode) or the normal rupture criterion (EnergySeparateModes)
+  double criteria_2 = 0;  /// stores the tangential rupture criterion (EnergySeparateMode only) or the stress rupture
+                          /// criterion (StressEnergySeparateMode only)
+  RuptureMode mode = RuptureMode::None;
 
   ONIKA_HOST_DEVICE_FUNC inline double& energy_criterion() {
-    assert(mode == RuptureMode::EnergyMixedMode||mode == RuptureMode::StressEnergySeparateMode);
+    assert(mode == RuptureMode::EnergyMixedMode || mode == RuptureMode::StressEnergySeparateMode);
     return criteria_1;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline double energy_criterion() const {
-    assert(mode == RuptureMode::EnergyMixedMode||mode == RuptureMode::StressEnergySeparateMode);
+  ONIKA_HOST_DEVICE_FUNC inline const double& energy_criterion() const {
+    assert(mode == RuptureMode::EnergyMixedMode || mode == RuptureMode::StressEnergySeparateMode);
     return criteria_1;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC inline double& stress_criterion() {
+    assert(mode == RuptureMode::StressEnergySeparateMode);
+    return criteria_2;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC inline const double& stress_criterion() const {
+    assert(mode == RuptureMode::StressEnergySeparateMode);
+    return criteria_2;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline double& energy_normal_criterion() {
-    assert(mode == RuptureMode::EnergySeparateModes);
+    assert(mode == RuptureMode::EnergySeparateMode);
     return criteria_1;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline double energy_normal_criterion() const {
-    assert(mode == RuptureMode::EnergySeparateModes);
+    assert(mode == RuptureMode::EnergySeparateMode);
     return criteria_1;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline double& energy_tangential_criterion() {
-    assert(mode == RuptureMode::EnergySeparateModes);
+    assert(mode == RuptureMode::EnergySeparateMode);
     return criteria_2;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline double energy_tangential_criterion() const {
-    assert(mode == RuptureMode::EnergySeparateModes);
+    assert(mode == RuptureMode::EnergySeparateMode);
     return criteria_2;
   }
 };
 
 inline std::ostream& operator<<(std::ostream& out, const RuptureCriteria& c) {
-  out << "{ mode: " << display(c.mode) << ", criteria_1: " << c.criteria_1 << ", criteria_2: " << c.criteria_2
-      << " }";
+  out << "{ mode: " << display(c.mode) << ", criteria_1: " << c.criteria_1 << ", criteria_2: " << c.criteria_2 << " }";
   return out;
 }
 }  // namespace exaDEM

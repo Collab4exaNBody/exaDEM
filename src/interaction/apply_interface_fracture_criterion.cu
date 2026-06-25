@@ -33,9 +33,6 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
   ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{""});
   ADD_SLOT(bool, result, OUTPUT);
   ADD_SLOT(bool, display, INPUT, false, DocString{"Display interface broken."});
-  ADD_SLOT(double, physical_time, INPUT, OPTIONAL, DocString{"Current physical time."});
-
-
 
  public:
   inline std::string documentation() const final {
@@ -51,18 +48,10 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
     auto& interfaces = *im;
     uint64_t number_of_broken_interfaces = 0;
     InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
-    auto [dn,cp,fn,ft] = ic->contact_state(InteractionTypeId::InnerBond);
+    auto [dn, cp, fn, ft] = ic->contact_state(InteractionTypeId::InnerBond);
 
-    ApplyInterfaceFractureCriterionFunc func = {interfaces.data.data(), interfaces.break_interface.data(),
-                                                data_wrapper, fn, dn};
-    
-    double time = 0.0;
-
-    if (physical_time.has_value()) {
-      time = *physical_time;
-    } else {
-      time = 0.0;
-    }
+    ApplyInterfaceFractureCriterionFunc func = {interfaces.data.data(), interfaces.break_interface.data(), data_wrapper,
+                                                fn, dn};
 
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_STATIC;

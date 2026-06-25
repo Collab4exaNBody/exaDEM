@@ -37,9 +37,9 @@ struct InnerBondParams {
   /** Rupture mode for the fracture criterion. Set to MixedMode when the user provides "g" in the input file,
    * SeparateModes when the user provides "gn" and "gt" instead. */
   RuptureMode mode = RuptureMode::None;
-  double gn = 0.0; /**< MixedMode: combined fracture energy release rate (g). SeparateModes: normal fracture energy
+  double crit1 = 0.0; /**< MixedMode: combined fracture energy release rate (g). SeparateModes: normal fracture energy
                       release rate. */
-  double gt = 0.0; /**< SeparateModes only: tangential fracture energy release rate. */
+  double crit2 = 0.0; /**< SeparateModes only: tangential fracture energy release rate. */
 };
 
 /**
@@ -50,8 +50,8 @@ struct InnerBondParams {
  * @return true if all fields of both instances are equal; false otherwise.
  */
 inline bool operator==(InnerBondParams& a, InnerBondParams& b) {
-  return (a.kn == b.kn) && (a.kt == b.kt) && (a.damp_rate == b.damp_rate) && (a.mode == b.mode) && (a.gn == b.gn) &&
-         (a.gt == b.gt);
+  return (a.kn == b.kn) && (a.kt == b.kt) && (a.damp_rate == b.damp_rate) && (a.mode == b.mode) &&
+         (a.crit1 == b.crit1) && (a.crit2 == b.crit2);
 }
 
 /**
@@ -75,7 +75,9 @@ inline void display_header<InnerBondParams>() {
        << std::endl;
   lout << "|        typeA |        typeB |        kn |        kt | damp_rate |  mode : Mixed |         g |         X |"
        << std::endl;
-  lout << "|              |              |           |           |           |     Seperated |        gn |        gt |"
+  lout << "|              |              |           |           |           |     Separated |        gn |        gt |"
+       << std::endl;
+  lout << "|              |              |           |           |           | Stress Energy |         g |     sigma |"
        << std::endl;
 
   lout << "----------------------------------------------------------------------------------------------------------"
@@ -96,7 +98,7 @@ inline void display_end_table<InnerBondParams>() {
  */
 inline std::string display(InnerBondParams& params) {
   std::string line = onika::format_string(" %.3e | %.3e | %.3e | %13s | %.3e | %.3e |", params.kn, params.kt,
-                                          params.damp_rate, exaDEM::display(params.mode), params.gn, params.gt);
+                                          params.damp_rate, exaDEM::display(params.mode), params.crit1, params.crit2);
   return line;
 }
 
@@ -123,7 +125,8 @@ inline void display_multimat(std::string typeA, std::string typeB, InnerBondPara
 template <typename STREAM>
 void streaming(STREAM& stream, InnerBondParams& params) {
   stream << "{ kn: " << params.kn << ", kt: " << params.kt << ", damp_rate: " << params.damp_rate
-         << ", mode: " << exaDEM::display(params.mode) << ", gn: " << params.gn << ", gt: " << params.gt << " }";
+         << ", mode: " << exaDEM::display(params.mode) << ", crit1: " << params.crit1 << ", crit2: " << params.crit2
+         << " }";
 }
 }  // namespace exaDEM
 
@@ -156,32 +159,33 @@ struct convert<InnerBondParams> {
     v.kn = node["kn"].as<Quantity>().convert();
     v.kt = node["kt"].as<Quantity>().convert();
     v.damp_rate = node["damp_rate"].as<Quantity>().convert();
-   
-   // StressEnergySeparateMode: The user provides "sigma" and "g" in the input file. The fracture criterion is based on a combination of stress and energy.
-   if(node["sigma"]){
-    if(!node["g"]) {
-      lerr << "g is missing\n";
-      return false;
-    }
-    v.gn = node["g"].as<Quantity>().convert();
-    v.mode = exaDEM::RuptureMode::StressEnergySeparateMode;
-    v.gt = node["sigma"].as<Quantity>().convert();
 
-   } else if (node["g"]) {  // EnergyMixedMode: The user provides "g" in the input file. The fracture criterion is based on the sum of normal and tangential energy.
+    // StressEnergySeparateMode: The user provides "sigma" and "g" in the input file. The fracture criterion is based on
+    // a combination of stress and energy.
+    if (node["sigma"]) {
+      if (!node["g"]) {
+        lerr << "g is missing\n";
+        return false;
+      }
+      v.crit1 = node["g"].as<Quantity>().convert();
+      v.mode = exaDEM::RuptureMode::StressEnergySeparateMode;
+      v.crit2 = node["sigma"].as<Quantity>().convert();
 
+    } else if (node["g"]) {  // EnergyMixedMode: The user provides "g" in the input file. The fracture criterion is
+                             // based on the sum of normal and tangential energy.
       if (node["gn"] || node["gt"]) {
         lerr << "Please, define only g (remove gt or gn).\n";
         return false;
       }
       // MixedMode: a single fracture criterion is used (En + Et > 2 * area * g). Stored in gn, gt is unused.
       v.mode = exaDEM::RuptureMode::EnergyMixedMode;
-      v.gn = node["g"].as<Quantity>().convert();
-      v.gt = 0.0;
+      v.crit1 = node["g"].as<Quantity>().convert();
+      v.crit2 = 0.0;
     } else if (node["gn"] && node["gt"]) {
       // SeparateModes: normal and tangential fracture criteria are checked independently.
-      v.mode = exaDEM::RuptureMode::EnergySeparateModes;
-      v.gn = node["gn"].as<Quantity>().convert();
-      v.gt = node["gt"].as<Quantity>().convert();
+      v.mode = exaDEM::RuptureMode::EnergySeparateMode;
+      v.crit1 = node["gn"].as<Quantity>().convert();
+      v.crit2 = node["gt"].as<Quantity>().convert();
     }
 
     if (v.mode == exaDEM::RuptureMode::None) {
