@@ -3,6 +3,8 @@ import re
 from collections import defaultdict
 import numpy as np
 
+from lib.mass_properties import compute_obb
+
 from lib.data_class import (
     Contact,
     Particle,
@@ -412,11 +414,16 @@ def write_shp_file(shapes: Shapes, outfile: str, radius: float):
             for f in faces:
                 fout.write(f'{len(f)} {" ".join(map(str, f))}\n')
 
-            fout.write("obb.extent 0.5 0.5 0.5\n")
-            fout.write("obb.e1 1.0 0.0 0.0\n")
-            fout.write("obb.e2 0.0 1.0 0.0\n")
-            fout.write("obb.e3 0.0 0.0 1.0\n")
-            fout.write("obb.center 0. 0. 0.\n")
+
+            # --- OBB 
+            verts_arr = np.array(vertices)  # shape (n, 3)
+            obb_center, e1, e2, e3, half_ext = compute_obb(verts_arr)
+
+            fout.write(f"obb.extent {half_ext[0]} {half_ext[1]} {half_ext[2]}\n")
+            fout.write(f"obb.e1 {e1[0]} {e1[1]} {e1[2]}\n")
+            fout.write(f"obb.e2 {e2[0]} {e2[1]} {e2[2]}\n")
+            fout.write(f"obb.e3 {e3[0]} {e3[1]} {e3[2]}\n")
+            fout.write(f"obb.center {obb_center[0]} {obb_center[1]} {obb_center[2]}\n")
             fout.write("position 0. 0. 0.\n")
             fout.write("orientation 1.0 0.0 0.0 0.0\n")
 

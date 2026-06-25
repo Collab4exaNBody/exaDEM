@@ -22,54 +22,56 @@ under the License.
 #include <string>
 
 namespace exaDEM {
-enum RuptureMode { MixedMode, SeparateModes, None };
+enum RuptureMode { EnergyMixedMode, EnergySeparateModes, StressEnergySeparateMode, None };
 
 /**
  * @brief Returns a human-readable name for a RuptureMode value.
  */
 inline std::string display(RuptureMode mode) {
   switch (mode) {
-    case RuptureMode::MixedMode:
-      return "MixedMode";
-    case RuptureMode::SeparateModes:
-      return "SeparateModes";
+    case RuptureMode::EnergyMixedMode:
+      return "EnergyMixedMode";
+    case RuptureMode::EnergySeparateModes:
+      return "EnergySeparateModes";
+    case RuptureMode::StressEnergySeparateMode:
+      return "StressEnergySeparateMode";
     default:
       return "None";
   }
 }
 
 struct RuptureCriteria {
-  double criteria_1 = 0;             /// stores the normal+tangential rupture criterion (MixedMode) or the normal rupture criterion (SeparateModes)
-  double criteria_2 = 0;             /// stores the tangential rupture criterion (SeparateModes only)
-  RuptureMode mode = RuptureMode::None;
+  double criteria_1 = 0;             /// stores the normal+tangential rupture criterion (EnergyMixedMode and StressEnergySeparateMode) or the normal rupture criterion (EnergySeparateModes)
+  double criteria_2 = 0;             /// stores the tangential rupture criterion (EnergySeparateModes only) or the stress rupture criterion (StressEnergySeparateMode only)
+  RuptureMode mode = RuptureMode::None; 
 
-  ONIKA_HOST_DEVICE_FUNC inline double& criterion() {
-    assert(mode == RuptureMode::MixedMode);
+  ONIKA_HOST_DEVICE_FUNC inline double& energy_criterion() {
+    assert(mode == RuptureMode::EnergyMixedMode||mode == RuptureMode::StressEnergySeparateMode);
     return criteria_1;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline double criterion() const {
-    assert(mode == RuptureMode::MixedMode);
+  ONIKA_HOST_DEVICE_FUNC inline double energy_criterion() const {
+    assert(mode == RuptureMode::EnergyMixedMode||mode == RuptureMode::StressEnergySeparateMode);
     return criteria_1;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline double& normal_criterion() {
-    assert(mode == RuptureMode::SeparateModes);
+  ONIKA_HOST_DEVICE_FUNC inline double& energy_normal_criterion() {
+    assert(mode == RuptureMode::EnergySeparateModes);
     return criteria_1;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline double normal_criterion() const {
-    assert(mode == RuptureMode::SeparateModes);
+  ONIKA_HOST_DEVICE_FUNC inline double energy_normal_criterion() const {
+    assert(mode == RuptureMode::EnergySeparateModes);
     return criteria_1;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline double& tangential_criterion() {
-    assert(mode == RuptureMode::SeparateModes);
+  ONIKA_HOST_DEVICE_FUNC inline double& energy_tangential_criterion() {
+    assert(mode == RuptureMode::EnergySeparateModes);
     return criteria_2;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline double tangential_criterion() const {
-    assert(mode == RuptureMode::SeparateModes);
+  ONIKA_HOST_DEVICE_FUNC inline double energy_tangential_criterion() const {
+    assert(mode == RuptureMode::EnergySeparateModes);
     return criteria_2;
   }
 };

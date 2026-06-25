@@ -156,19 +156,30 @@ struct convert<InnerBondParams> {
     v.kn = node["kn"].as<Quantity>().convert();
     v.kt = node["kt"].as<Quantity>().convert();
     v.damp_rate = node["damp_rate"].as<Quantity>().convert();
+   
+   // StressEnergySeparateMode: The user provides "sigma" and "g" in the input file. The fracture criterion is based on a combination of stress and energy.
+   if(node["sigma"]){
+    if(!node["g"]) {
+      lerr << "g is missing\n";
+      return false;
+    }
+    v.gn = node["g"].as<Quantity>().convert();
+    v.mode = exaDEM::RuptureMode::StressEnergySeparateMode;
+    v.gt = node["sigma"].as<Quantity>().convert();
 
-    if (node["g"]) {
+   } else if (node["g"]) {  // EnergyMixedMode: The user provides "g" in the input file. The fracture criterion is based on the sum of normal and tangential energy.
+
       if (node["gn"] || node["gt"]) {
         lerr << "Please, define only g (remove gt or gn).\n";
         return false;
       }
       // MixedMode: a single fracture criterion is used (En + Et > 2 * area * g). Stored in gn, gt is unused.
-      v.mode = exaDEM::RuptureMode::MixedMode;
+      v.mode = exaDEM::RuptureMode::EnergyMixedMode;
       v.gn = node["g"].as<Quantity>().convert();
       v.gt = 0.0;
     } else if (node["gn"] && node["gt"]) {
       // SeparateModes: normal and tangential fracture criteria are checked independently.
-      v.mode = exaDEM::RuptureMode::SeparateModes;
+      v.mode = exaDEM::RuptureMode::EnergySeparateModes;
       v.gn = node["gn"].as<Quantity>().convert();
       v.gt = node["gt"].as<Quantity>().convert();
     }

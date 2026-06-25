@@ -39,6 +39,8 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
   ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT, REQUIRED,
            DocString{"List of contact parameters for simulations with multiple materials"});
   ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{""});
+  ADD_SLOT(double, physical_time, INPUT, REQUIRED, DocString{"Current physical time."});
+
 
  public:
   inline std::string documentation() const final {
@@ -69,6 +71,10 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
         auto [offset, size] = interfaces.data[i];
         auto type_a = cells[data_wrapper.cell_i[offset]][field::type][data_wrapper.p_i[offset]];
         auto type_b = cells[data_wrapper.cell_j[offset]][field::type][data_wrapper.p_j[offset]];
+
+        auto vaz = cells[data_wrapper.cell_i[offset]][field::vz][data_wrapper.p_i[offset]];
+        double time = *physical_time;
+
         for (size_t j = 0; j < size; j++) {
           size_t idx = j + offset;
           data_wrapper.broke(idx);  // mark the interaction as broken.
