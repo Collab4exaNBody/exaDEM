@@ -73,11 +73,14 @@ template <>
 inline void display_header<InnerBondParams>() {
   lout << "=========================================================================================================="
        << std::endl;
-  lout << "|        typeA |        typeB |        kn |        kt | damp_rate |  mode : Mixed |         g |         X |"
+  lout << "|        typeA |        typeB |        kn |        kt | damp_rate |             mode : Mixed |         g |  "
+          "       X |"
        << std::endl;
-  lout << "|              |              |           |           |           |     Separated |        gn |        gt |"
+  lout << "|              |              |           |           |           |                Separated |        gn |  "
+          "      gt |"
        << std::endl;
-  lout << "|              |              |           |           |           | Stress Energy |         g |     sigma |"
+  lout << "|              |              |           |           |           |            Stress Energy |         g |  "
+          "   sigma |"
        << std::endl;
 
   lout << "----------------------------------------------------------------------------------------------------------"
