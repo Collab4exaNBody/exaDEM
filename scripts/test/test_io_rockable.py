@@ -4,6 +4,13 @@ import os
 from lib.io_utils import read_rockable_file, write_rockable_file
 from lib.data_class import RockableData
 
+# scripts/ directory, set via CMake when run through ctest, falling back to
+# the source tree when pytest is invoked directly.
+SCRIPTS_DIR = os.environ.get(
+    "CMAKE_CURRENT_SOURCE_DIR",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+)
+
 
 # =========================
 # FLOAT COMPARISON
@@ -96,7 +103,7 @@ def test_io_rockable_roundtrip(tmp_path):
     '''
     Test the round-trip of reading and writing a RockableData object to ensure that the IO functions are consistent. It reads a reference .txt file, writes it back, and then reads the generated file again to compare the two data structures. Any differences in the parameters, interactions, particles, or stick_distance will be reported as errors. The test will pass if no differences are found.   
     '''
-    input_file = "test/data/io_rockable/input.conf"
+    input_file = os.path.join(SCRIPTS_DIR, "test/data/io_rockable/input.conf")
     assert os.path.exists(input_file), f"Missing file: {input_file}"
 
     output_file = tmp_path / "out.txt"
