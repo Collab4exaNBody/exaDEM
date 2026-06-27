@@ -158,10 +158,10 @@ struct InteractionWrapper {
     } else if constexpr (IT == ParticleDriver) {
       return Interaction{ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}};
     } else if constexpr (IT == InnerBond) {
-      return InnerBondInteraction{ip,          {ft_x[idx], ft_y[idx], ft_z[idx]},
-                                  en[idx],     tds[idx],
-                                  et[idx],     dn0[idx],
-                                  weight[idx], criterion[idx],
+      return InnerBondInteraction{ip,           {ft_x[idx], ft_y[idx], ft_z[idx]},
+                                  en[idx],      tds[idx],
+                                  et[idx],      dn0[idx],
+                                  weight[idx],  criterion[idx],
                                   unbroken[idx]};
     } else {
       // static_assert(always_false<T>::value, "Unsupported interaction type");
@@ -174,13 +174,8 @@ struct InteractionWrapper {
 
   ONIKA_HOST_DEVICE_FUNC inline double& Et(const uint64_t idx) const { return et[idx]; }
 
-  ONIKA_HOST_DEVICE_FUNC inline double& mixed_criterion(const uint64_t idx) const { return criterion[idx].criterion(); }
-  ONIKA_HOST_DEVICE_FUNC inline double& normal_criterion(const uint64_t idx) const {
-    return criterion[idx].normal_criterion();
-  }
-  ONIKA_HOST_DEVICE_FUNC inline double& tangential_criterion(const uint64_t idx) const {
-    return criterion[idx].tangential_criterion();
-  }
+  ONIKA_HOST_DEVICE_FUNC inline RuptureCriteria& criteria(const uint64_t idx) const { return criterion[idx]; }
+
   ONIKA_HOST_DEVICE_FUNC inline RuptureMode rupture_mode(const uint64_t idx) const { return criterion[idx].mode; }
 
   ONIKA_HOST_DEVICE_FUNC inline void broke(const uint64_t idx) const { unbroken[idx] = false; }

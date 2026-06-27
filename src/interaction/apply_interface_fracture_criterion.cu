@@ -48,8 +48,10 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
     auto& interfaces = *im;
     uint64_t number_of_broken_interfaces = 0;
     InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
-    ApplyInterfaceFractureCriterionFunc func = {interfaces.data.data(), interfaces.break_interface.data(),
-                                                data_wrapper};
+    auto [dn, cp, fn, ft] = ic->contact_state(InteractionTypeId::InnerBond);
+
+    ApplyInterfaceFractureCriterionFunc func = {interfaces.data.data(), interfaces.break_interface.data(), data_wrapper,
+                                                fn, dn};
 
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_STATIC;
