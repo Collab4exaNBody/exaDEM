@@ -272,14 +272,21 @@ class StickPolyhedraOperator : public OperatorNode {
                   // define the interface fracture criterion
                   // MixedMode:     En + Et > 2.0 * area * g  (g stored in gn)
                   // SeparateModes: En > 2.0 * area * gn and Et > 2.0 * area * gt
+                  // VT A MODIFIER
                   const double area = pi.id_ < pj.id_ ? shpi->get_face_area(i, hi) : shpj->get_face_area(j, hj);
                   RuptureCriteria& criterion = item.as<InnerBondInteraction>().criterion_;
                   criterion.mode_ = ibp.mode_;
-                  if (ibp.mode_ == RuptureMode::MixedMode) {
-                    criterion.criterion() = 2 * area * ibp.gn_;
+                  if (ibp.mode_ == RuptureMode::EnergyMixedMode) {
+                    criterion.energy_criterion() = 2 * area * ibp.crit1_;
+                  } else if (ibp.mode_ == RuptureMode::EnergySeparateMode) {
+                    criterion.energy_normal_criterion() = 2 * area * ibp.crit1_;
+                    criterion.energy_tangential_criterion() = 2 * area * ibp.crit2_;
+                  } else if (ibp.mode_ == RuptureMode::StressEnergySeparateMode) {
+                    criterion.energy_criterion() = 2 * area * ibp.crit1_;
+                    criterion.stress_criterion() = area * ibp.crit2_;  // crit2 = sigma_n (Check surface area factor)
+
                   } else {
-                    criterion.normal_criterion() = 2 * area * ibp.gn_;
-                    criterion.tangential_criterion() = 2 * area * ibp.gt_;
+                    assert(false);
                   }
 
                   found = true;

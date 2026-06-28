@@ -45,6 +45,8 @@ class InnerBondParamsOp : public OperatorNode {
            DocString{"List of gn values (separate modes normal fracture energy release rate). Requires gt."});
   ADD_SLOT(std::vector<double>, gt, INPUT, OPTIONAL,
            DocString{"List of gt values (separate modes tangential fracture energy release rate). Requires gn."});
+  ADD_SLOT(std::vector<double>, sigma, INPUT, OPTIONAL,
+           DocString{"List of stress criterion values (stress separate mode). Requires g."});
 
   ADD_SLOT(InnerBondParams, default_config, INPUT, OPTIONAL,
            DocString{"Contact parameters for sphere interactions"});  // can be re-used for to dump contact network
@@ -139,11 +141,15 @@ class InnerBondParamsOp : public OperatorNode {
       }
       if (g.has_value()) {
         check_lengths_match(*g, "g");
+        if (sigma.has_value()) {
+          check_lengths_match(*sigma, "sigma");
+        }
       } else if (gn.has_value() && gt.has_value()) {
         check_lengths_match(*gn, "gn");
         check_lengths_match(*gt, "gt");
       } else {
-        color_log::error(this->operator_name(), "You must define either \"g\" or both \"gn\" and \"gt\".");
+        color_log::error(this->operator_name(),
+                         "You must define either \"g\", or both \"gn\" and \"gt\", or \"g\" and \"sigma\".");
       }
 
       /** check types / materials */
@@ -181,13 +187,19 @@ class InnerBondParamsOp : public OperatorNode {
         params.kt_ = tangential_coeffs[p];
         params.damp_rate_ = damprate_coeffs[p];
         if (g.has_value()) {
-          params.mode_ = RuptureMode::MixedMode;
-          params.gn_ = (*g)[p];
-          params.gt_ = 0.0;
+          if (!sigma.has_value()) {
+            params.mode_ = RuptureMode::EnergyMixedMode;
+            params.crit1_ = (*g)[p];
+            params.crit2_ = 0.0;
+          } else {
+            params.mode_ = RuptureMode::StressEnergySeparateMode;
+            params.crit1_ = (*g)[p];
+            params.crit2_ = (*sigma)[p];
+          }
         } else {
-          params.mode_ = RuptureMode::SeparateModes;
-          params.gn_ = (*gn)[p];
-          params.gt_ = (*gt)[p];
+          params.mode_ = RuptureMode::EnergySeparateMode;
+          params.crit1_ = (*gn)[p];
+          params.crit2_ = (*gt)[p];
         }
 
         ibp.register_multimat(type_1, type_2, params);

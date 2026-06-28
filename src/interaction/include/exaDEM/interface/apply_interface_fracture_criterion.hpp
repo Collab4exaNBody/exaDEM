@@ -13,6 +13,8 @@ struct ApplyInterfaceFractureCriterionFunc {
   uint8_t* const break_interface_;  // list of booleans that indicate if the interface is broken or not. 1 if the
                                     // interface is broken, 0 otherwise.
   InteractionWrapper<InteractionType::InnerBond> interaction_;  // interactions that compose the interfaces
+  exanb::Vec3d* const fn_;  // list of normal forces for each interaction that compose the interfaces
+  double* const dn_;        // list of normal displacements for each interaction that compose the interfaces
 
   /** @brief Apply the fracture criterion to the i-th interface
    * @param i The index of the interface to apply the fracture criterion to.
@@ -21,12 +23,17 @@ struct ApplyInterfaceFractureCriterionFunc {
     auto& [offset, size] = interface_[i];
     double En = 0.0;
     double Et = 0.0;
+    double S = 0.0;
 
     // Sum of the normal and tangential energy of the interactions that compose the interface
     for (size_t j = offset; j < offset + size; j++) {
       En += interaction_.En(j);
       Et += interaction_.Et(j);
+      if (dn_[j] > 0.0) {
+        S += norm(fn_[j]);
+      }
     }
+    S = S / size;  // average of the normal forces of the interactions that compose the interface
 
     // Criterion is stored in the interaction that compose the interface.
     // We can take the criterion of the first interaction
@@ -34,19 +41,25 @@ struct ApplyInterfaceFractureCriterionFunc {
 
     // Criterion formula: En or Et > 2 * area * g_{n or t}
     // g is defined by the input parameters.
-    RuptureMode mode = interaction_.rupture_mode(offset);
-    if (mode == RuptureMode::MixedMode) {
-      double criterion = interaction_.mixed_criterion(offset);
-      if (En + Et > criterion) {  // cs = sum
+    RuptureCriteria& criterion = interaction_.criteria(offset);
+    RuptureMode mode = criterion.mode_;
+    if (mode == RuptureMode::EnergyMixedMode) {
+      double threshold = criterion.energy_criterion();
+      if (En + Et > threshold) {  // cs = sum
         break_interface_[i] = true;
       }
-    }
-    if (mode == RuptureMode::SeparateModes) {
-      double cn = interaction_.normal_criterion(offset);
-      double ct = interaction_.tangential_criterion(offset);
+    } else if (mode == RuptureMode::EnergySeparateMode) {
+      double cn = criterion.energy_normal_criterion();
+      double ct = criterion.energy_tangential_criterion();
       if (En > cn) {
         break_interface_[i] = true;
       } else if (Et > ct) {
+        break_interface_[i] = true;
+      }
+    } else if (mode == RuptureMode::StressEnergySeparateMode) {
+      double energy_threshold = criterion.energy_criterion();
+      double stress_threshold = criterion.stress_criterion();
+      if ((En > energy_threshold) && (S > stress_threshold)) {
         break_interface_[i] = true;
       }
     }

@@ -3,6 +3,13 @@ import numpy as np
 import os
 from lib.io_utils import assert_files_close
 
+# scripts/ directory, set via CMake when run through ctest, falling back to
+# the source tree when pytest is invoked directly.
+SCRIPTS_DIR = os.environ.get(
+    "CMAKE_CURRENT_SOURCE_DIR",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+)
+
 # ----------------------------
 # Utils
 # ----------------------------
@@ -49,15 +56,15 @@ def test_compute_clusters_stresses_tensors_regression(tmp_path):
 
     """
 
-    input_folder = os.path.abspath("test/data/compute_clusters_stresses_tensors/")    
-    ref_wall_forces = os.path.abspath("test/data/compute_clusters_stresses_tensors/wall_forces.txt")
-    ref_stress_tensors = os.path.abspath("test/data/compute_clusters_stresses_tensors/clusters_stresses_tensor.txt")
+    input_folder = os.path.join(SCRIPTS_DIR, "test/data/compute_clusters_stresses_tensors/")
+    ref_wall_forces = os.path.join(SCRIPTS_DIR, "test/data/compute_clusters_stresses_tensors/wall_forces.txt")
+    ref_stress_tensors = os.path.join(SCRIPTS_DIR, "test/data/compute_clusters_stresses_tensors/clusters_stresses_tensor.txt")
 
     out_wall_forces = tmp_path / "wall_forces.txt"
     out_stress_tensors = tmp_path / "clusters_stresses_tensor.txt"
 
     # --- run script ---
-    script_path = os.path.abspath("post_processing/compute_clusters_stresses_tensors.py")
+    script_path = os.path.join(SCRIPTS_DIR, "post_processing/compute_clusters_stresses_tensors.py")
 
     cmd = [
       "python3",

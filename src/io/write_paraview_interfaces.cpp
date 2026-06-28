@@ -16,18 +16,18 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <mpi.h>
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_factory.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/math/basic_types.h>
-#include <onika/math/basic_types_operators.h>
-#include <onika/math/basic_types_stream.h>
-#include <onika/string_utils.h>
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
+#include <mpi.h>
+#include <onika/math/basic_types.h>
+#include <onika/math/basic_types_operators.h>
+#include <onika/math/basic_types_stream.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/string_utils.h>
 
 #include <algorithm>
 #include <cstdlib>
@@ -81,6 +81,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
     Classifier& classifier = *ic;
     auto& interactions = classifier.get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
     auto& shps = *shapes_collection;
+    auto [dn, cp, fn, ft] = ic->contact_state(InteractionTypeId::InnerBond);
     paraview_interface_helper buffers = {*mpi_rank};  // it contains streams
 
     if (rank == 0) {
@@ -100,6 +101,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
 
       double En = 0;
       double Et = 0;
+      double S = 0;
       RuptureCriteria criterion;
 
       vertices.resize(interface.size_);
@@ -122,13 +124,21 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
         buffers.en_ << interaction.en_ << " ";
         En += interaction.en_;
         Et += interaction.et_;
+        if (dn[j] > 0) {
+          S += exanb::norm(fn[j]);
+        }
         criterion = interaction.criterion_;  // same criterion for every interaction of the interface
       }
 
       // All interactions composing the interface share the same criterion.
-      double E = criterion.mode_ == RuptureMode::MixedMode
-                     ? (En + Et) / criterion.criterion()
-                     : std::max(En / criterion.normal_criterion(), Et / criterion.tangential_criterion());
+      double E;
+      if (criterion.mode_ == RuptureMode::EnergyMixedMode) {
+        E = (En + Et) / criterion.energy_criterion();
+      } else if (criterion.mode_ == RuptureMode::EnergySeparateMode) {
+        E = std::max(En / criterion.energy_normal_criterion(), Et / criterion.energy_tangential_criterion());
+      } else if (criterion.mode_ == RuptureMode::StressEnergySeparateMode) {
+        E = std::max(En / criterion.energy_criterion(), S / criterion.stress_criterion());
+      }
 
       order_face_vertices(vertices);
 

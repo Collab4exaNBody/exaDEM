@@ -2,6 +2,13 @@ import subprocess
 import numpy as np
 import os
 
+# scripts/ directory, set via CMake when run through ctest, falling back to
+# the source tree when pytest is invoked directly.
+SCRIPTS_DIR = os.environ.get(
+    "CMAKE_CURRENT_SOURCE_DIR",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
+)
+
 
 # ----------------------------
 # Utils
@@ -99,9 +106,9 @@ def test_tess2rockable_regression(tmp_path):
 
     """
 
-    input_tess = "test/data/tess2rockable/cube.tess"
-    ref_conf = "test/data/tess2rockable/out_sticked.conf"
-    ref_shp = "test/data/tess2rockable/out.shp"
+    input_tess = os.path.join(SCRIPTS_DIR, "test/data/tess2rockable/cube.tess")
+    ref_conf = os.path.join(SCRIPTS_DIR, "test/data/tess2rockable/out_sticked.conf")
+    ref_shp = os.path.join(SCRIPTS_DIR, "test/data/tess2rockable/out.shp")
 
     out_conf = tmp_path / "out_sticked.conf"
     out_shp = tmp_path / "out.shp"
@@ -109,7 +116,7 @@ def test_tess2rockable_regression(tmp_path):
     # --- run script ---
     cmd = [
         "python3",
-        "pre_processing/tess2rockable.py",
+        os.path.join(SCRIPTS_DIR, "pre_processing/tess2rockable.py"),
         input_tess,
         "1.e-4",
          str(out_shp),

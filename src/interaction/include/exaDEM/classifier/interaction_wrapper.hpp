@@ -174,13 +174,8 @@ struct InteractionWrapper {
 
   ONIKA_HOST_DEVICE_FUNC inline double& Et(const uint64_t idx) const { return et[idx]; }
 
-  ONIKA_HOST_DEVICE_FUNC inline double& mixed_criterion(const uint64_t idx) const { return criterion[idx].criterion(); }
-  ONIKA_HOST_DEVICE_FUNC inline double& normal_criterion(const uint64_t idx) const {
-    return criterion[idx].normal_criterion();
-  }
-  ONIKA_HOST_DEVICE_FUNC inline double& tangential_criterion(const uint64_t idx) const {
-    return criterion[idx].tangential_criterion();
-  }
+  ONIKA_HOST_DEVICE_FUNC inline RuptureCriteria& criteria(const uint64_t idx) const { return criterion[idx]; }
+
   ONIKA_HOST_DEVICE_FUNC inline RuptureMode rupture_mode(const uint64_t idx) const { return criterion[idx].mode_; }
 
   ONIKA_HOST_DEVICE_FUNC inline void broke(const uint64_t idx) const { unbroken[idx] = false; }

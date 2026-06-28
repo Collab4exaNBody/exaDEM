@@ -119,3 +119,49 @@ def polyhedron_mass_properties(
     eigvals, eigvecs = np.linalg.eigh(I)
 
     return mass, center, eigvals/mass
+
+def compute_obb(vertices: np.ndarray):
+    """
+    Compute an Oriented Bounding Box (OBB) for a set of vertices using PCA.
+
+    Parameters
+    ----------
+    vertices : np.ndarray, shape (n, 3)
+
+    Returns
+    -------
+    center : np.ndarray (3,)
+    e1, e2, e3 : np.ndarray (3,)  — axes unitaires (colonnes de la matrice de rotation)
+    half_extents : np.ndarray (3,) — demi-dimensions selon e1, e2, e3
+    """
+    center = vertices.mean(axis=0)
+    centered = vertices - center
+
+    # PCA via SVD
+    _, _, Vt = np.linalg.svd(centered, full_matrices=False)
+    # Vt rows = principal axes (sorted by decreasing variance)
+    e1, e2, e3 = Vt[0], Vt[1], Vt[2]
+
+    # Assurer un repère direct (det = +1)
+    if np.linalg.det(np.stack([e1, e2, e3])) < 0:
+        e3 = -e3
+
+    # Projeter tous les vertices sur chaque axe
+    proj1 = centered @ e1
+    proj2 = centered @ e2
+    proj3 = centered @ e3
+
+    half_extents = np.array([
+        (proj1.max() - proj1.min()) / 2,
+        (proj2.max() - proj2.min()) / 2,
+        (proj3.max() - proj3.min()) / 2,
+    ])
+
+    # Centre de la boîte (peut différer légèrement du centroïde)
+    obb_center = center + (
+        (proj1.max() + proj1.min()) / 2 * e1 +
+        (proj2.max() + proj2.min()) / 2 * e2 +
+        (proj3.max() + proj3.min()) / 2 * e3
+    )
+
+    return obb_center, e1, e2, e3, half_extents
