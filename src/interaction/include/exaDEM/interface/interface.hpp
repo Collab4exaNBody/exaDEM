@@ -27,25 +27,25 @@ namespace exaDEM {
 /** @brief A struct representing an interface composed of multiple interactions */
 struct Interface {
   // Important assumption: interactions are stored contiguously
-  size_t loc;   // Location in the classifier
-  size_t size;  // Number of interactions composed this interface
+  size_t loc_;   // Location in the classifier
+  size_t size_;  // Number of interactions composed this interface
 };
 
 // This struct is used to build interfaces on the CPU.
 // The data is then copied to the InterfaceManager that is used on the GPU.
 /** @brief Struct used to build interfaces on the CPU */
 struct InterfaceBuildManager {
-  std::vector<Interface> data;  // list of interfaces.
+  std::vector<Interface> data_;  // list of interfaces.
 };
 
 /** @brief Struct used to handle interfaces on the CPU/GPU */
 struct InterfaceManager {
   template <typename T>
   using vector_t = onika::memory::CudaMMVector<T>;
-  vector_t<Interface> data;  // list of interfaces. Each interface is defined by its location in the classifier and its
-                             // size (number of interactions that compose the interface)
-  vector_t<uint8_t> break_interface;  // list of booleans that indicate if the interface is broken or not. 1 if the
-                                      // interface is broken, 0 otherwise.
+  vector_t<Interface> data_;  // list of interfaces. Each interface is defined by its location in the classifier and its
+                              // size (number of interactions that compose the interface)
+  vector_t<uint8_t> break_interface_;  // list of booleans that indicate if the interface is broken or not. 1 if the
+                                       // interface is broken, 0 otherwise.
 
   /** @brief Resize the interface manager
    * @param new_size The new size of the interface manager.
@@ -53,16 +53,16 @@ struct InterfaceManager {
   void resize(size_t new_size) {
     assert(new_size < 1e8);  // 1e8 is an arbitrary value to avoid resizing the interface manager with a too large size.
                              // This can be a sign of a bug.
-    data.clear();
-    data.resize(new_size);
-    break_interface.resize(new_size);
-    std::fill(break_interface.begin(), break_interface.end(), false);
+    data_.clear();
+    data_.resize(new_size);
+    break_interface_.resize(new_size);
+    std::fill(break_interface_.begin(), break_interface_.end(), false);
   }
 
   /** @brief Get the size of the interface manager
    * @return The size of the interface manager.
    */
-  size_t size() { return data.size(); }
+  size_t size() { return data_.size(); }
 };
 
 /** @brief Check the consistency of the interfaces
@@ -77,8 +77,8 @@ inline bool check_interface_consistency(InterfaceBuildManager& interfaces,
 
   // disable openmp, this function is only used for debugging purposes.
   // #pragma omp parallel for reduction(+ : res)
-  for (size_t i = 0; i < interfaces.data.size(); i++) {
-    auto [loc, size] = interfaces.data[i];
+  for (size_t i = 0; i < interfaces.data_.size(); i++) {
+    auto [loc, size] = interfaces.data_[i];
 
     uint64_t id_i = interactions.particle_id_i(loc);
     uint64_t id_j = interactions.particle_id_j(loc);

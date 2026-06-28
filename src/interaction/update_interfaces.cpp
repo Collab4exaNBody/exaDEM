@@ -46,13 +46,13 @@ class UpdateInterfaces : public OperatorNode {
     auto& manager = *im;
     ClassifierContainer<InteractionType::InnerBond>& interactions =
         ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
-    build_manager.data.clear();
+    build_manager.data_.clear();
     size_t n_interactions = interactions.size();
 
     size_t loc = 0;
     while (loc < n_interactions) {
       // Here, we do not build interfaces that are managed by another MPI process (partner).
-      if (interactions.ghost[loc] == InteractionPair::PartnerGhost) {
+      if (interactions.ghost_[loc] == InteractionPair::PartnerGhost) {
         loc++;
         continue;
       }
@@ -76,18 +76,18 @@ class UpdateInterfaces : public OperatorNode {
         n--;  // exclude the last element that failed the test
       }
       Interface interface = {loc, n};
-      build_manager.data.push_back(interface);
+      build_manager.data_.push_back(interface);
       loc += n;
     }
     assert(loc == n_interactions);
 
-    int n_interfaces = build_manager.data.size();
+    int n_interfaces = build_manager.data_.size();
     int total_interfaces = 0;
     MPI_Reduce(&n_interfaces, &total_interfaces, 1, MPI_INT, MPI_SUM, 0, *mpi);
     ldbg << "Number of interfaces: " << total_interfaces << std::endl;
 
-    manager.resize(build_manager.data.size());
-    std::memcpy(manager.data.data(), build_manager.data.data(), build_manager.data.size() * sizeof(Interface));
+    manager.resize(build_manager.data_.size());
+    std::memcpy(manager.data_.data(), build_manager.data_.data(), build_manager.data_.size() * sizeof(Interface));
     assert(check_interface_consistency(build_manager,
                                        ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond)));
   }

@@ -24,13 +24,13 @@ namespace exaDEM {
 /** @brief A manager for handling interactions between particles.
  */
 struct InteractionManager {
-  std::vector<exaDEM::PlaceholderInteraction> hist =
+  std::vector<exaDEM::PlaceholderInteraction> hist_ =
       {};  // historical interactions, used to update interactions with history
-  std::vector<std::vector<exaDEM::PlaceholderInteraction>> list =
+  std::vector<std::vector<exaDEM::PlaceholderInteraction>> list_ =
       {};  // list of interactions per particle, used to update interactions without history
-  std::vector<std::vector<uint64_t>> ignore = {};  // list of ignored interaction IDs per particle
-  size_t current_cell_id;         // current cell id, used for consistency check when update persistent interactions
-  size_t current_cell_particles;  // current number of particles in the cell, used for consistency check when update
+  std::vector<std::vector<uint64_t>> ignore_ = {};  // list of ignored interaction IDs per particle
+  size_t current_cell_id_;         // current cell id, used for consistency check when update persistent interactions
+  size_t current_cell_particles_;  // current number of particles in the cell, used for consistency check when update
                                   // persistent interactions
 
   /** @brief Reset the interaction manager.
@@ -38,13 +38,13 @@ struct InteractionManager {
    * [param size] The number of particles in the system.
    */
   void reset(const size_t size) {
-    list.clear();
-    ignore.clear();
-    list.resize(size);
-    ignore.resize(size);
+    list_.clear();
+    ignore_.clear();
+    list_.resize(size);
+    ignore_.resize(size);
     for (size_t p = 0; p < size; p++) {
-      list[p].clear();
-      ignore[p].clear();
+      list_[p].clear();
+      ignore_[p].clear();
     }
   }
 
@@ -54,10 +54,10 @@ struct InteractionManager {
    * [param I] The PlaceholderInteraction to add.
    */
   void add_item(exaDEM::PlaceholderInteraction& I) {
-    size_t p = I.owner().p;
-    assert(p < list.size());
+    size_t p = I.owner().p_;
+    assert(p < list_.size());
     if (!skip_ignored_interactions(p, I)) {
-      list[p].push_back(I);
+      list_[p].push_back(I);
     }
   }
 
@@ -77,7 +77,7 @@ struct InteractionManager {
    */
   size_t get_size() {
     size_t count(0);
-    for (auto& it : list) {
+    for (auto& it : list_) {
       count += it.size();
     }
     return count;
@@ -98,16 +98,16 @@ struct InteractionManager {
     assert(data.size() == total_size);  // data correctly resized
 
     // Loop over each particle's interaction list and copy interactions to the storage data array.
-    for (size_t p = 0; p < list.size(); p++) {
+    for (size_t p = 0; p < list_.size(); p++) {
       info[p].offset = offset;
       // Optionally update interactions with history before copying to storage.
       if constexpr (use_history) {
-        update(list[p], hist);
+        update(list_[p], hist_);
       }
-      assert(offset + list[p].size() <= total_size);  // offset within bounds
-      std::copy(list[p].begin(), list[p].end(), data.data() + offset);
-      info[p].size = list[p].size();
-      offset += list[p].size();
+      assert(offset + list_[p].size() <= total_size);  // offset within bounds
+      std::copy(list_[p].begin(), list_[p].end(), data.data() + offset);
+      info[p].size = list_[p].size();
+      offset += list_[p].size();
     }
 
     assert(offset == total_size);  // all data accounted for
@@ -118,26 +118,26 @@ struct InteractionManager {
    * Call it after update persistent interaction
    */
   void update_ignore_interaction() {
-    size_t n = list.size();
-    ignore.resize(n);
+    size_t n = list_.size();
+    ignore_.resize(n);
     // Loop over all particles (related to a cell).
     for (size_t p = 0; p < n; p++) {
-      auto& interactions = list[p];
+      auto& interactions = list_[p];
       // Loop over interactions of particle at position p to find those that should be ignored.
       for (size_t i = 0; i < interactions.size(); i++) {
         if (interactions[i].ignore_other_interactions()) {
           auto& partner = interactions[i].j();
-          auto& ignore_ids = ignore[p];
+          auto& ignore_ids = ignore_[p];
           bool add_info = true;
           // Check if the partner id is already in the ignore list to avoid duplicates.
           for (size_t j = 0; j < ignore_ids.size(); j++) {
-            if (partner.id == ignore_ids[j]) {
+            if (partner.id_ == ignore_ids[j]) {
               add_info = false;
               break;
             }
           }
           if (add_info) {
-            ignore_ids.push_back(partner.id);
+            ignore_ids.push_back(partner.id_);
           }
         }
       }
@@ -151,10 +151,10 @@ struct InteractionManager {
    * [return] True if the interaction should be skipped, false otherwise.
    */
   bool skip_ignored_interactions(size_t p, exaDEM::PlaceholderInteraction& I) {
-    auto& partner = I.pair.partner();
-    auto& ignore_ids = ignore[p];
+    auto& partner = I.pair_.partner();
+    auto& ignore_ids = ignore_[p];
     for (size_t j = 0; j < ignore_ids.size(); j++) {
-      if (partner.id == ignore_ids[j]) {
+      if (partner.id_ == ignore_ids[j]) {
         return true;
       }
     }
@@ -173,28 +173,28 @@ inline void update_persistent_interactions(InteractionManager& manager,
   for (size_t i = 0; i < n_interactions; i++) {
     PlaceholderInteraction& I = storage.m_data[i];
     if (I.persistent()) {
-      if (I.pair.owner().cell != manager.current_cell_id) {
+      if (I.pair_.owner().cell_ != manager.current_cell_id_) {
         color_log::mpi_error(
             "update_persistent_interactions",
-            "This interaction is illformed, owner.cell should be: " + std::to_string(manager.current_cell_id) +
-                " cell: " + std::to_string(I.pair.owner().cell) + " p: " + std::to_string(I.pair.owner().p) +
-                " id: " + std::to_string(I.pair.owner().id) + " type: " + std::to_string(I.pair.type));
+            "This interaction is illformed, owner.cell should be: " + std::to_string(manager.current_cell_id_) +
+                " cell: " + std::to_string(I.pair_.owner().cell_) + " p: " + std::to_string(I.pair_.owner().p_) +
+                " id: " + std::to_string(I.pair_.owner().id_) + " type: " + std::to_string(I.pair_.type_));
       }
-      if (I.pair.owner().p >= manager.current_cell_particles) {
+      if (I.pair_.owner().p_ >= manager.current_cell_particles_) {
         color_log::mpi_error("update_persistent_interactions",
                              "This interaction is illformed, owner.p should be inferior to: " +
-                                 std::to_string(manager.current_cell_particles) +
-                                 " cell: " + std::to_string(I.pair.owner().cell) + " p; " +
-                                 std::to_string(I.pair.owner().p) + " id: " + std::to_string(I.pair.owner().id));
+                                 std::to_string(manager.current_cell_particles_) +
+                                 " cell: " + std::to_string(I.pair_.owner().cell_) + " p; " +
+                                 std::to_string(I.pair_.owner().p_) + " id: " + std::to_string(I.pair_.owner().id_));
       }
-      assert(I.pair.owner().p < manager.list.size());
-      manager.list[I.pair.owner().p].push_back(I);
+      assert(I.pair_.owner().p_ < manager.list_.size());
+      manager.list_[I.pair_.owner().p_].push_back(I);
     }
   }
 
   // Keep interactions sorted for interfaces (contiguous interactions).
-  for (size_t p = 0; p < manager.list.size(); p++) {
-    std::stable_sort(manager.list[p].begin(), manager.list[p].end());
+  for (size_t p = 0; p < manager.list_.size(); p++) {
+    std::stable_sort(manager.list_[p].begin(), manager.list_[p].end());
   }
 }
 
@@ -233,7 +233,7 @@ bool check_stiked_face(std::vector<exaDEM::PlaceholderInteraction>& interactions
   // identify vertices
   for (size_t i = 0; i < interactions.size(); i++) {
     if (interactions[i].type() == InteractionTypeId::InnerBond) {
-      vertex_id.push_back(interactions[i].pair.pi.sub);
+      vertex_id.push_back(interactions[i].pair_.pi_.sub_);
     }
   }
 

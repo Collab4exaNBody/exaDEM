@@ -217,7 +217,7 @@ class DumpReaderConfRockable : public OperatorNode {
 
         // We shift the particle positions using the values from the "position"
         // field, which is not used by exaDEM.
-        // Vec3d shape_position_shift = map_shift[shps[rp.type]->m_name];
+        // Vec3d shape_position_shift = map_shift[shps[rp.type]->name_];
         Vec3d pos = rockable_particles[p].pos;  // + shape_position_shift;
 
         // shapes
@@ -339,18 +339,18 @@ class DumpReaderConfRockable : public OperatorNode {
         RShapeDriverFields state = RShapeDriverFields();
 
         auto& particle = manager.drivers[id];
-        state.center = particle.pos;
-        state.vel = particle.pos;  // will be reset by the motion type
+        state.center_ = particle.pos;
+        state.vel_ = particle.pos;  // will be reset by the motion type
                                    // will move evant with the STATIONARY motion type
-        state.vrot = particle.vrot;
-        state.quat = particle.Q;
+        state.vrot_ = particle.vrot;
+        state.quat_ = particle.Q;
 
         int type = particle.type;
         shape shp = *(manager.shps[type]);
         RShapeDriver driver;
-        driver.fields = state;
-        driver.motion_type = MotionType::STATIONARY;
-        driver.shp = shp;
+        driver.fields_ = state;
+        driver.motion_type_ = MotionType::STATIONARY;
+        driver.shp_ = shp;
         driver.initialize(motion);
         drvs.add_driver(next_id + id, driver, motion);
       }

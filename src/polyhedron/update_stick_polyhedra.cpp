@@ -112,22 +112,22 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
             continue;
           }
           // get members
-          auto& particle_loc_a = item.pair.owner();
-          auto& particle_loc_b = item.pair.partner();
+          auto& particle_loc_a = item.pair_.owner();
+          auto& particle_loc_b = item.pair_.partner();
 
-          uint64_t id = particle_loc_a.id;
+          uint64_t id = particle_loc_a.id_;
 
-          // if( shift > 0 && previous_a_id == particle_loc_a.id )
-          //    if( i > 0 && previous_a_id == particle_loc_a.id )
+          // if( shift > 0 && previous_a_id == particle_loc_a.id_ )
+          //    if( i > 0 && previous_a_id == particle_loc_a.id_ )
           //    {
-          //        particle_loc_a.cell = interactions[i - 1].pair.owner().cell;
-          //        particle_loc_a.p    = interactions[i - 1].pair.owner().p;
+          //        particle_loc_a.cell_ = interactions[i - 1].pair.owner().cell;
+          //        particle_loc_a.p_    = interactions[i - 1].pair.owner().p;
           //      }
           //      else
           {
             auto [find, p_a] = locate_particle_id(id_a, n_particles, id);
-            particle_loc_a.cell = cell_a;
-            particle_loc_a.p = p_a;
+            particle_loc_a.cell_ = cell_a;
+            particle_loc_a.p_ = p_a;
 
             // check error
             if (!find) {
@@ -138,16 +138,16 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
           }
 
           // reuse data
-          //    if( previous_b_id == particle_loc_b.id )
+          //    if( previous_b_id == particle_loc_b.id_ )
           //    {
           //      assert(i>0);
-          //      particle_loc_b.cell = interactions[i - 1].pair.partner().cell;
-          //    particle_loc_b.p    = interactions[i - 1].pair.partner().p;
+          //      particle_loc_b.cell_ = interactions[i - 1].pair.partner().cell;
+          //    particle_loc_b.p_    = interactions[i - 1].pair.partner().p;
           //      }
           //      else
           {
             // looking for both cell and p values in current and other cells
-            Vec3d r = {rx_a[particle_loc_a.p], ry_a[particle_loc_a.p], rz_a[particle_loc_a.p]};
+            Vec3d r = {rx_a[particle_loc_a.p_], ry_a[particle_loc_a.p_], rz_a[particle_loc_a.p_]};
             AABB cover_particle = {r - Rmax, r + Rmax};
             IJK max = g.locate_cell(cover_particle.bmax);
             IJK min = g.locate_cell(cover_particle.bmin);
@@ -162,10 +162,10 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
                     const uint64_t* __restrict__ id_b = cells[cell_b][field::id];
                     ONIKA_ASSUME_ALIGNED(id_b);
                     for (uint16_t p_b = 0; p_b < nb; p_b++) {
-                      if (id_b[p_b] == particle_loc_b.id) {
-                        particle_loc_b.cell = cell_b;
-                        particle_loc_b.p = p_b;
-                        item.pair.ghost =
+                      if (id_b[p_b] == particle_loc_b.id_) {
+                        particle_loc_b.cell_ = cell_b;
+                        particle_loc_b.p_ = p_b;
+                        item.pair_.ghost_ =
                             g.is_ghost_cell(cell_b) ? InteractionPair::OwnerGhost : InteractionPair::NotGhost;
                         do_continue = false;
                         break;
@@ -179,12 +179,12 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
             if (do_continue) {
               color_log::error(
                   "update_persistent_interactions",
-                  "The particle b with the particle id " + std::to_string(particle_loc_b.id) + " has not been found");
+                  "The particle b with the particle id " + std::to_string(particle_loc_b.id_) + " has not been found");
             }
           }
           // update previous_ab_id
-          previous_a_id = particle_loc_a.id;
-          previous_b_id = particle_loc_b.id;
+          previous_a_id = particle_loc_a.id_;
+          previous_b_id = particle_loc_b.id_;
         }
         //          }
       }  //    GRID_OMP_FOR_END

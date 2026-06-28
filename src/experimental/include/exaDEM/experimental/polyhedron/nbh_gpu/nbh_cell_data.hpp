@@ -19,23 +19,23 @@ struct CellInteractionInformation {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
 
-  VectorT<size_t> start_cell;            // start index of interactions for each cell
-  VectorT<size_t> number_of_pair_cells;  // number of interaction pairs in each cell
-  VectorT<uint8_t> update_ghost;         // flag indicating if ghost update is needed
+  VectorT<size_t> start_cell_;            // start index of interactions for each cell
+  VectorT<size_t> number_of_pair_cells_;  // number of interaction pairs in each cell
+  VectorT<uint8_t> update_ghost_;         // flag indicating if ghost update is needed
 
   // Resize all vectors to a given size
   void resize(size_t size) {
-    start_cell.resize(size);
-    number_of_pair_cells.resize(size);
-    update_ghost.resize(size);
+    start_cell_.resize(size);
+    number_of_pair_cells_.resize(size);
+    update_ghost_.resize(size);
   }
 
   // Prefetch all vectors to CPU memory asynchronously
   void prefetch_cpu(onikaStream_t& st) {
 #ifdef ONIKA_CUDA_VERSION
-    ONIKA_PREFETCH(start_cell.data(), start_cell.size() * sizeof(size_t), cudaCpuDeviceId, st);
-    ONIKA_PREFETCH(number_of_pair_cells.data(), number_of_pair_cells.size() * sizeof(size_t), cudaCpuDeviceId, st);
-    ONIKA_PREFETCH(update_ghost.data(), update_ghost.size() * sizeof(uint8_t), cudaCpuDeviceId, st);
+    ONIKA_PREFETCH(start_cell_.data(), start_cell_.size() * sizeof(size_t), cudaCpuDeviceId, st);
+    ONIKA_PREFETCH(number_of_pair_cells_.data(), number_of_pair_cells_.size() * sizeof(size_t), cudaCpuDeviceId, st);
+    ONIKA_PREFETCH(update_ghost_.data(), update_ghost_.size() * sizeof(uint8_t), cudaCpuDeviceId, st);
 #endif
   }
 };
@@ -96,14 +96,14 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
                               GridCellParticleInteraction& ges, const int typeID_start = 0,
                               const int typeID_end = InteractionTypeId::NTypes - 1) {
   // Number of non-empty cells to process
-  size_t ncells = info.start_cell.size();
+  size_t ncells = info.start_cell_.size();
 
   // Parallel loop over non-empty cells
 #pragma omp parallel for
   for (size_t cell_idx = 0; cell_idx < ncells; cell_idx++) {
     // Skip if we only want ghost cells and this cell is not flagged
     if constexpr (ghost_only) {
-      if (info.update_ghost[cell_idx] == 0) {
+      if (info.update_ghost_[cell_idx] == 0) {
         continue;
       }
     }
@@ -119,15 +119,15 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
       particle_pair_end[k] = 0;
     }
 
-    if (info.number_of_pair_cells[cell_idx] > 0) {
-      size_t first_interaction = info.start_cell[cell_idx];
-      size_t last_interaction = first_interaction + info.number_of_pair_cells[cell_idx] - 1;
-      particle_pair_start = classifier_helper.offset[first_interaction];
-      particle_pair_end = classifier_helper.offset[last_interaction] + classifier_helper.size[last_interaction];
+    if (info.number_of_pair_cells_[cell_idx] > 0) {
+      size_t first_interaction = info.start_cell_[cell_idx];
+      size_t last_interaction = first_interaction + info.number_of_pair_cells_[cell_idx] - 1;
+      particle_pair_start = classifier_helper.offset_[first_interaction];
+      particle_pair_end = classifier_helper.offset_[last_interaction] + classifier_helper.size_[last_interaction];
     }
 
-    auto first_elem_per_type = particle_pair_start + classifier_helper_driver.offset[cell_idx];
-    auto n_elem_per_type = particle_pair_end - particle_pair_start + classifier_helper_driver.size[cell_idx];
+    auto first_elem_per_type = particle_pair_start + classifier_helper_driver.offset_[cell_idx];
+    auto n_elem_per_type = particle_pair_end - particle_pair_start + classifier_helper_driver.size_[cell_idx];
 
     // Total number of interactions in this cell
     size_t number_of_interactions = 0;
@@ -198,7 +198,7 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
           data_ptr[j].print();
           color_log::mpi_error("transfer_classifier_grid", "This interacion is illformed");
         }
-        if (_pid != data_ptr[j].owner().id) {
+        if (_pid != data_ptr[j].owner().id_) {
           break;
         }
         _size++;

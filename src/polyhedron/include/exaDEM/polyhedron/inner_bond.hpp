@@ -72,12 +72,12 @@ struct inner_bond_law {
    * @brief Retrieves the position vector of a particle from a cell.
    *
    * This function retrieves the position vector of a particle identified
-   * by `pi.p` from the given cell using field indices `field::rx`, `field::ry`,
+   * by `pi.p_` from the given cell using field indices `field::rx`, `field::ry`,
    * and `field::rz`.
    *
    * @tparam TMPLC Type of the cell.
    * @param cell Reference to the cell containing particle data.
-   * @param pi.p Index of the particle.
+   * @param pi.p_ Index of the particle.
    * @return Vec3d Position vector of the particle.
    */
   template <typename TMPLC>
@@ -90,12 +90,12 @@ struct inner_bond_law {
    * @brief Retrieves the velocity vector of a particle from a cell.
    *
    * This function retrieves the velocity vector of a particle identified
-   * by `pi.p` from the given cell using field indices `field::vx`, `field::vy`,
+   * by `pi.p_` from the given cell using field indices `field::vx`, `field::vy`,
    * and `field::vz`.
    *
    * @tparam TMPLC Type of the cell.
    * @param cell Reference to the cell containing particle data.
-   * @param pi.p Index of the particle.
+   * @param pi.p_ Index of the particle.
    * @return Vec3d Velocity vector of the particle.
    */
   template <typename TMPLC>
@@ -124,38 +124,38 @@ struct inner_bond_law {
     const auto& pi = item.i();
     // particle j (id, cell id, particle position, sub vertex)
     const auto& pj = item.j();
-    auto& celli = cells[pi.cell];
-    auto& cellj = cells[pj.cell];
+    auto& celli = cells[pi.cell_];
+    auto& cellj = cells[pj.cell_];
 
-    assert(pi.p < celli.size());
-    assert(pj.p < cellj.size());
+    assert(pi.p_ < celli.size());
+    assert(pj.p_ < cellj.size());
 
     // === positions
-    const Vec3d ri = get_r(celli, pi.p);
-    const Vec3d rj = get_r(cellj, pj.p);
+    const Vec3d ri = get_r(celli, pi.p_);
+    const Vec3d rj = get_r(cellj, pj.p_);
 
     // === vrot
-    const Vec3d& vroti = celli[field::vrot][pi.p];
-    const Vec3d& vrotj = cellj[field::vrot][pj.p];
+    const Vec3d& vroti = celli[field::vrot][pi.p_];
+    const Vec3d& vrotj = cellj[field::vrot][pj.p_];
 
     // === type
-    const auto& typei = celli[field::type][pi.p];
-    const auto& typej = cellj[field::type][pj.p];
+    const auto& typei = celli[field::type][pi.p_];
+    const auto& typej = cellj[field::type][pj.p_];
 
     // === vertex array
-    const ParticleVertexView verticesi = {pi.p, gv[pi.cell]};
-    const ParticleVertexView verticesj = {pj.p, gv[pj.cell]};
+    const ParticleVertexView verticesi = {pi.p_, gv[pi.cell_]};
+    const ParticleVertexView verticesj = {pj.p_, gv[pj.cell_]};
 
     // === homothety
-    const double hi = celli[field::homothety][pi.p];
-    const double hj = cellj[field::homothety][pj.p];
+    const double hi = celli[field::homothety][pi.p_];
+    const double hj = cellj[field::homothety][pj.p_];
 
     // === shapes
     const shape& shpi = shps[typei];
     const shape& shpj = shps[typej];
 
     auto [contact, dn, n, contact_position] =
-        detection_vertex_vertex(verticesi, hi, pi.sub, &shpi, verticesj, hj, pj.sub, &shpj);
+        detection_vertex_vertex(verticesi, hi, pi.sub_, &shpi, verticesj, hj, pj.sub_, &shpj);
 
     // temporary vec3d to store forces.
     Vec3d fi = {0, 0, 0};
@@ -164,38 +164,38 @@ struct inner_bond_law {
     // === Contact Force parameters
     const InnerBondParams& ibp = ibpa(typei, typej);
 
-    const Vec3d vi = get_v(celli, pi.p);
-    const Vec3d vj = get_v(cellj, pj.p);
-    const auto& mi = celli[field::mass][pi.p];
-    const auto& mj = cellj[field::mass][pj.p];
+    const Vec3d vi = get_v(celli, pi.p_);
+    const Vec3d vj = get_v(cellj, pj.p_);
+    const auto& mi = celli[field::mass][pi.p_];
+    const auto& mj = cellj[field::mass][pj.p_];
 
     const double meff = compute_effective_mass(mi, mj);
 
-    force_law_core(dn, n, item.dn0, item.weight,
+    force_law_core(dn, n, item.dn0_, item.weight_,
                    dt, ibp, meff,
-                   item.en, item.tds, item.et, item.friction,
+                   item.en_, item.tds_, item.et_, item.friction_,
                    contact_position, ri, vi, fi, vroti,  // particle 1
                    rj, vj, vrotj);  // particle nbh
 
-    fn = fi - item.friction;
+    fn = fi - item.friction_;
     Vec3d null = {0, 0, 0};
 
     // === update particle informations
     // ==== Particle i
-    auto& momi = celli[field::mom][pi.p];
+    auto& momi = celli[field::mom][pi.p_];
     lockAndAdd(momi, compute_moments(contact_position, ri, fi, null));
-    lockAndAdd(celli[field::fx][pi.p], fi.x);
-    lockAndAdd(celli[field::fy][pi.p], fi.y);
-    lockAndAdd(celli[field::fz][pi.p], fi.z);
+    lockAndAdd(celli[field::fx][pi.p_], fi.x);
+    lockAndAdd(celli[field::fy][pi.p_], fi.y);
+    lockAndAdd(celli[field::fz][pi.p_], fi.z);
 
     // ==== Particle j
-    auto& momj = cellj[field::mom][pj.p];
+    auto& momj = cellj[field::mom][pj.p_];
     lockAndAdd(momj, compute_moments(contact_position, rj, -fi, null));
-    lockAndAdd(cellj[field::fx][pj.p], -fi.x);
-    lockAndAdd(cellj[field::fy][pj.p], -fi.y);
-    lockAndAdd(cellj[field::fz][pj.p], -fi.z);
+    lockAndAdd(cellj[field::fx][pj.p_], -fi.x);
+    lockAndAdd(cellj[field::fy][pj.p_], -fi.y);
+    lockAndAdd(cellj[field::fz][pj.p_], -fi.z);
 
-    return {dn, contact_position, fn, item.friction};
+    return {dn, contact_position, fn, item.friction_};
   }
 };
 }  // namespace polyhedron

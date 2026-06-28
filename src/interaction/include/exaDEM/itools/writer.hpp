@@ -59,25 +59,25 @@ std::stringstream create_buffer(GridT& grid, Classifier& ic) {
       if (f != 0 || dn < 0 || type == InteractionTypeId::InnerBond) {
         /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
         if (ghost != InteractionPair::PartnerGhost) {
-          stream << i.id << "," << j.id << ",";
-          stream << i.sub << "," << j.sub << ",";
+          stream << i.id_ << "," << j.id_ << ",";
+          stream << i.sub_ << "," << j.sub_ << ",";
           stream << type << ",";
           stream << dn << ",";
           stream << cp_ptr[idx] << ",";
           stream << fn_ptr[idx] << ",";
           stream << ft_ptr[idx] << ",";
-          stream << cells[i.cell][field::rx][i.p] << ",";
-          stream << cells[i.cell][field::ry][i.p] << ",";
-          stream << cells[i.cell][field::rz][i.p] << ",";
+          stream << cells[i.cell_][field::rx][i.p_] << ",";
+          stream << cells[i.cell_][field::ry][i.p_] << ",";
+          stream << cells[i.cell_][field::rz][i.p_] << ",";
           if (type >= 4 && type < 13)  // drivers
           {
             stream << 0 << ",";
             stream << 0 << ",";
             stream << 0;
           } else {
-            stream << cells[j.cell][field::rx][j.p] << ",";
-            stream << cells[j.cell][field::ry][j.p] << ",";
-            stream << cells[j.cell][field::rz][j.p];
+            stream << cells[j.cell_][field::rx][j.p_] << ",";
+            stream << cells[j.cell_][field::ry][j.p_] << ",";
+            stream << cells[j.cell_][field::rz][j.p_];
           }
           stream << std::endl;
         }

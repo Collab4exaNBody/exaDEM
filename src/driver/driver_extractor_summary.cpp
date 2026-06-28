@@ -44,7 +44,7 @@ class DriverExtractorSummary : public OperatorNode {
     using exanb::lout;
     if (driver_extractor.has_value()) {
       lout << "======= Driver Extractor ========" << std::endl;
-      for (auto& it : driver_extractor->tracked_drivers) {
+      for (auto& it : driver_extractor->tracked_drivers_) {
         it.print();
       }
       lout << "=================================" << std::endl;

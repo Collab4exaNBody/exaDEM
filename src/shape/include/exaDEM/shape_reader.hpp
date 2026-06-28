@@ -43,7 +43,7 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
   exanb::Vec3d position = {0, 0, 0};
   while (input >> key) {
     if (key == "name") {
-      input >> shp.m_name;
+      input >> shp.name_;
     }
     // recomputed
     if (key == "preCompDone") {
@@ -56,13 +56,15 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
                          "shapeSurvey to define these values (command “c”).");
       }
     } else if (key == "radius") {
-      input >> shp.m_radius;
+      double r;
+      input >> r;
+      shp.add_radius(r);
     } else if (key == "volume") {
-      input >> shp.m_volume;
+      input >> shp.volume_;
     } else if (key == "I/m") {
       exanb::Vec3d Im;
       input >> Im.x >> Im.y >> Im.z;
-      shp.m_inertia_on_mass = Im;
+      shp.inertia_on_mass_ = Im;
     } else if (key == "position") {
       input >> position.x >> position.y >> position.z;
     } else if (key == "nv") {
@@ -104,7 +106,7 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
     } else if (key == "na") {
       color_log::warning("read_shape", "na is no longer used; face areas are now computed.");
     } else if (key == ">") {
-      shp.obb = build_obb_from_shape(shp);
+      shp.obb_ = build_obb_from_shape(shp);
       shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
       shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
       shp.compute_face_areas();

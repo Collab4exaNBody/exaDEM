@@ -183,23 +183,23 @@ class InnerBondParamsOp : public OperatorNode {
         int64_t type_1 = type_map.at(m1);
         int64_t type_2 = type_map.at(m2);
         InnerBondParams params;
-        params.kn = normal_coeffs[p];
-        params.kt = tangential_coeffs[p];
-        params.damp_rate = damprate_coeffs[p];
+        params.kn_ = normal_coeffs[p];
+        params.kt_ = tangential_coeffs[p];
+        params.damp_rate_ = damprate_coeffs[p];
         if (g.has_value()) {
           if (!sigma.has_value()) {
-            params.mode = RuptureMode::EnergyMixedMode;
-            params.crit1 = (*g)[p];
-            params.crit2 = 0.0;
+            params.mode_ = RuptureMode::EnergyMixedMode;
+            params.crit1_ = (*g)[p];
+            params.crit2_ = 0.0;
           } else {
-            params.mode = RuptureMode::StressEnergySeparateMode;
-            params.crit1 = (*g)[p];
-            params.crit2 = (*sigma)[p];
+            params.mode_ = RuptureMode::StressEnergySeparateMode;
+            params.crit1_ = (*g)[p];
+            params.crit2_ = (*sigma)[p];
           }
         } else {
-          params.mode = RuptureMode::EnergySeparateMode;
-          params.crit1 = (*gn)[p];
-          params.crit2 = (*gt)[p];
+          params.mode_ = RuptureMode::EnergySeparateMode;
+          params.crit1_ = (*gn)[p];
+          params.crit2_ = (*gt)[p];
         }
 
         ibp.register_multimat(type_1, type_2, params);

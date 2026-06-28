@@ -97,7 +97,7 @@ class ParticleBarycenterAnalysis : public OperatorNode {
       reduce_cell_particles(*grid, false, func, value, reduce_field_set, parallel_execution_context(), {}, rcpo);
 
       // Reduce over MPI processes
-      double local[4] = {static_cast<double>(value.count), value.barycenter.x, value.barycenter.y, value.barycenter.z};
+      double local[4] = {static_cast<double>(value.count_), value.barycenter_.x, value.barycenter_.y, value.barycenter_.z};
       double global[4] = {0.0, 0.0, 0.0, 0.0};  // count, x, y, z
       MPI_Reduce(&local, &global, 4, MPI_DOUBLE, MPI_SUM, 0, *mpi);
       std::string var_name_rx = "Type[" + std::to_string(type) + "][rx]";

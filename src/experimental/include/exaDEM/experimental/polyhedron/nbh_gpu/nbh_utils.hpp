@@ -51,14 +51,14 @@ inline void debug_print(InteractionTypePerCellCounter& in1, InteractionTypePerCe
 }
 
 struct PrefixSumInteractionTypePerCellCounter {
-  InteractionTypePerCellCounter* const offset;
-  InteractionTypePerCellCounter* const size;
-  size_t n_elem;
+  InteractionTypePerCellCounter* const offset_;
+  InteractionTypePerCellCounter* const size_;
+  size_t n_elem_;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t id) const {
-    offset[0][id] = 0;
-    for (size_t i = 1; i < n_elem; i++) {
-      offset[i][id] = offset[i - 1][id] + size[i - 1][id];
+    offset_[0][id] = 0;
+    for (size_t i = 1; i < n_elem_; i++) {
+      offset_[i][id] = offset_[i - 1][id] + size_[i - 1][id];
     }
   }
 };

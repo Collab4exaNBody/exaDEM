@@ -105,8 +105,8 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
 #pragma omp for schedule(dynamic)
       for (size_t ci = 0; ci < cell_size; ci++) {
         // reinit item
-        item.pair.ghost = InteractionPair::NotGhost;
-        item.pair.swap = false;
+        item.pair_.ghost_ = InteractionPair::NotGhost;
+        item.pair_.swap_ = false;
         size_t cell_a = cell_ptr[ci];
         auto& vertex_cell_a = vertex_fields[cell_a];
         IJK loc_a = grid_index_to_ijk(dims, cell_a);
@@ -119,8 +119,8 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
           continue;
         }
 
-        manager.current_cell_id = cell_a;
-        manager.current_cell_particles = n_particles;
+        manager.current_cell_id_ = cell_a;
+        manager.current_cell_particles_ = n_particles;
 
         // identify ill-formed interactions and erase them.
         // safe guard to avoid processing ill-formed interactions.
@@ -137,9 +137,9 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
         PlaceholderInteraction* __restrict__ const data_ptr = storage.m_data.data();
 
         // Extract historical interactions from storage and move them in the manager
-        // manager.hist is cleared before extracting history.
-        extract_history(manager.hist, data_ptr, data_size);
-        std::stable_sort(manager.hist.begin(), manager.hist.end());
+        // manager.hist_ is cleared before extracting history.
+        extract_history(manager.hist_, data_ptr, data_size);
+        std::stable_sort(manager.hist_.begin(), manager.hist_.end());
 
         // Reset the manager, it will be filled with new interactions and updated historical interactions.
         manager.reset(n_particles);
@@ -170,8 +170,8 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
 
         // Define a function to add a new interaction if a contact is possible.
         auto add_contact = [&manager](PlaceholderInteraction& item, int sub_i, int sub_j) -> void {
-          item.pair.pi.sub = sub_i;
-          item.pair.pj.sub = sub_j;
+          item.pair_.pi_.sub_ = sub_i;
+          item.pair_.pj_.sub_ = sub_j;
           manager.add_item(item);
         };
 
@@ -185,27 +185,27 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
           auto& drvs = *drivers;
           auto& pi = item.i();       // particle i (id, cell id, particle position, sub vertex)
           auto& pd = item.driver();  // particle driver (id, cell id, particle position, sub vertex)
-          pi.cell = cell_a;
+          pi.cell_ = cell_a;
           // By default, if the interaction is between a particle and a driver
           // Data about the particle j is set to -1
           // Except for id_j that contains the driver id
-          pd.id = -1;
-          pd.cell = -1;
-          pd.p = -1;
+          pd.id_ = -1;
+          pd.cell_ = -1;
+          pd.p_ = -1;
           for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++) {
-            pd.id = drvs_idx;  // we store the driver idx
+            pd.id_ = drvs_idx;  // we store the driver idx
             if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER) {
-              item.pair.type = InteractionTypeId::VertexCylinder;
+              item.pair_.type_ = InteractionTypeId::VertexCylinder;
               Cylinder& driver = drvs.get_typed_driver<Cylinder>(drvs_idx);
               add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, h_a,
                                      shps.data());
             } else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE) {
-              item.pair.type = InteractionTypeId::VertexSurface;
+              item.pair_.type_ = InteractionTypeId::VertexSurface;
               Surface& driver = drvs.get_typed_driver<Surface>(drvs_idx);
               add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, h_a,
                                      shps.data());
             } else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL) {
-              item.pair.type = InteractionTypeId::VertexBall;
+              item.pair_.type_ = InteractionTypeId::VertexBall;
               Ball& driver = drvs.get_typed_driver<Ball>(drvs_idx);
               add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, h_a,
                                      shps.data());
@@ -226,16 +226,16 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                        is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index) {
                                         // default value of the interaction studied (A or i -> B or j)
                                         const uint64_t id_nbh = cells[cell_b][field::id][p_b];
-                                        item.i().id = 666;
-                                        item.j().id = 666;
-                                        item.pair.ghost = InteractionPair::NotGhost;
-                                        item.pair.swap = false;
+                                        item.i().id_ = 666;
+                                        item.j().id_ = 666;
+                                        item.pair_.ghost_ = InteractionPair::NotGhost;
+                                        item.pair_.swap_ = false;
 
                                         if (id_a[p_a] >= id_nbh) {
                                           return;
                                         }
                                         if (g.is_ghost_cell(cell_b)) {
-                                          item.pair.ghost = InteractionPair::OwnerGhost;
+                                          item.pair_.ghost_ = InteractionPair::OwnerGhost;
                                         }
 
                                         VertexField& vertex_cell_b = vertex_fields[cell_b];
@@ -274,9 +274,9 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                         // Eliminate if two polyhedra are two far away if there is not intersection
                                         // between their OBBs.
                                         const Quaternion& orient = orient_a[p_a];
-                                        OBB obb_i = compute_obb(shp->obb, Vec3d{rx, ry, rz}, orient, hi);
-                                        OBB obb_j =
-                                            compute_obb(shp_nbh->obb, Vec3d{rx_nbh, ry_nbh, rz_nbh}, orient_nbh, h_nbh);
+                                        OBB obb_i = compute_obb(shp->obb_, Vec3d{rx, ry, rz}, orient, hi);
+                                        OBB obb_j = compute_obb(shp_nbh->obb_, Vec3d{rx_nbh, ry_nbh, rz_nbh},
+                                                                orient_nbh, h_nbh);
 
                                         obb_i.enlarge(0.5 * rVerlet);
                                         obb_j.enlarge(0.5 * rVerlet);
@@ -294,13 +294,13 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                         // particle j (id, cell id, particle position, sub vertex)
                                         auto& pj = item.j();
 
-                                        pi.id = id_a[p_a];
-                                        pi.p = p_a;
-                                        pi.cell = cell_a;
+                                        pi.id_ = id_a[p_a];
+                                        pi.p_ = p_a;
+                                        pi.cell_ = cell_a;
 
-                                        pj.id = id_nbh;
-                                        pj.p = p_b;
-                                        pj.cell = cell_b;
+                                        pj.id_ = id_nbh;
+                                        pj.p_ = p_b;
+                                        pj.cell_ = cell_b;
 
                                         // get particle j data.
                                         const int nv = shp->get_number_of_vertices();
@@ -314,27 +314,27 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
 #define PARAMETERS_SWAP_TRUE rVerlet, vertices_b, h_nbh, j, shp_nbh, vertices_a, hi, i, shp
 
                                         // exclude possibilities with obb
-                                        item.pair.swap = false;
+                                        item.pair_.swap_ = false;
                                         for (int i = 0; i < nv; i++) {
                                           auto vi = vertices_a[i];
                                           OBB obbvi;
                                           obbvi.center = {vi.x, vi.y, vi.z};
                                           obbvi.enlarge(shp->minkowski(hi));
                                           if (obb_j.intersect(obbvi)) {
-                                            item.pair.type = InteractionTypeId::VertexVertex;
+                                            item.pair_.type_ = InteractionTypeId::VertexVertex;
                                             for (int j = 0; j < nv_nbh; j++) {
                                               if (filter_vertex_vertex(PARAMETERS_SWAP_FALSE)) {
                                                 add_contact(item, i, j);
                                               }
                                             }
-                                            item.pair.type = InteractionTypeId::VertexEdge;
+                                            item.pair_.type_ = InteractionTypeId::VertexEdge;
                                             for (int j = 0; j < ne_nbh; j++) {
                                               if (filter_vertex_edge(PARAMETERS_SWAP_FALSE)) {
                                                 add_contact(item, i, j);
                                               }
                                             }
 
-                                            item.pair.type = InteractionTypeId::VertexFace;
+                                            item.pair_.type_ = InteractionTypeId::VertexFace;
                                             for (int j = 0; j < nf_nbh; j++) {
                                               if (filter_vertex_face(PARAMETERS_SWAP_FALSE)) {
                                                 add_contact(item, i, j);
@@ -343,7 +343,7 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                           }
                                         }
 
-                                        item.pair.type = InteractionTypeId::EdgeEdge;
+                                        item.pair_.type_ = InteractionTypeId::EdgeEdge;
                                         for (int i = 0; i < ne; i++) {
                                           for (int j = 0; j < ne_nbh; j++) {
                                             if (filter_edge_edge(PARAMETERS_SWAP_FALSE)) {
@@ -353,14 +353,14 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                         }
 
                                         // interaction of from particle j to particle i
-                                        item.pair.swap = true;
-                                        pj.cell = cell_a;
-                                        pj.id = id_a[p_a];
-                                        pj.p = p_a;
+                                        item.pair_.swap_ = true;
+                                        pj.cell_ = cell_a;
+                                        pj.id_ = id_a[p_a];
+                                        pj.p_ = p_a;
 
-                                        pi.cell = cell_b;
-                                        pi.id = id_nbh;
-                                        pi.p = p_b;
+                                        pi.cell_ = cell_b;
+                                        pi.id_ = id_nbh;
+                                        pi.p_ = p_b;
 
                                         for (int j = 0; j < nv_nbh; j++) {
                                           auto vj = vertices_b[j];
@@ -369,14 +369,14 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                           obbvj.enlarge(shp_nbh->minkowski(h_nbh));
 
                                           if (obb_i.intersect(obbvj)) {
-                                            item.pair.type = InteractionTypeId::VertexEdge;
+                                            item.pair_.type_ = InteractionTypeId::VertexEdge;
                                             for (int i = 0; i < ne; i++) {
                                               if (filter_vertex_edge(PARAMETERS_SWAP_TRUE)) {
                                                 add_contact(item, j, i);
                                               }
                                             }
 
-                                            item.pair.type = InteractionTypeId::VertexFace;
+                                            item.pair_.type_ = InteractionTypeId::VertexFace;
                                             for (int i = 0; i < nf; i++) {
                                               if (filter_vertex_face(PARAMETERS_SWAP_TRUE)) {
                                                 add_contact(item, j, i);
@@ -394,7 +394,6 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
         assert(migration_test::check_info_value(storage.m_info.data(), storage.m_info.size(), 1e6));
       }  // GRID_OMP_FOR_END
     }
-    
   }
 };
 

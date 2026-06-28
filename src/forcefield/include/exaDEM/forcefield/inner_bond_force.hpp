@@ -45,7 +45,7 @@ inline void force_law_core(const double dn,
                            const Vec3d& vrot_j   // angular velocities j
 ) {
   // === Compute damping coefficient
-  const double damp = compute_damp(ibp.damp_rate, ibp.kn, meff);
+  const double damp = compute_damp(ibp.damp_rate_, ibp.kn_, meff);
 
   // === Relative velocity (j relative to i)
   auto vel = compute_relative_velocity(
@@ -55,7 +55,7 @@ inline void force_law_core(const double dn,
   const double vn = exanb::dot(vel, n);
 
   // === Normal force (elatic contact + viscous damping)
-  double fne = -ibp.kn * weight * (dn - dn0);
+  double fne = -ibp.kn_ * weight * (dn - dn0);
   double fnv = damp * vn;
   double fn = fne + fnv;
   const Vec3d vfn = fn * n;  // vector fn
@@ -63,7 +63,7 @@ inline void force_law_core(const double dn,
   // === Tangential force (friction)
   const Vec3d ds = compute_tangential_force(dt, vn, n, vel);
   tds += ds;
-  ft = weight * ibp.kt * tds;
+  ft = weight * ibp.kt_ * tds;
 
   // === sum forces
   f_i = vfn + ft;
@@ -72,8 +72,8 @@ inline void force_law_core(const double dn,
   if (fne > 0) {
     En = 0;  // Compression
   } else {
-    En = 0.5 * weight * ibp.kn * (dn - dn0) * (dn - dn0);  // Tension
+    En = 0.5 * weight * ibp.kn_ * (dn - dn0) * (dn - dn0);  // Tension
   }
-  Et = 0.5 * weight * ibp.kt * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
+  Et = 0.5 * weight * ibp.kt_ * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
 }
 }  // namespace exaDEM

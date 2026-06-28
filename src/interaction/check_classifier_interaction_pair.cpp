@@ -37,11 +37,11 @@ struct CheckClassifierInteractionPairFunc {
   template <InteractionType IT>
   void operator()(ClassifierContainer<IT>& container) {
     for (size_t j = 0; j < container.size(); j++) {
-      size_t cellId = container.cell_i[j];
-      size_t particlePosition = container.p_i[j];
+      size_t cellId = container.cell_i_[j];
+      size_t particlePosition = container.p_i_[j];
       auto& cell = cells[cellId];
       if (particlePosition >= cell.size()) {
-        color_log::warning(operator_name, "Details -> wave: " + std::to_string(container.type) +
+        color_log::warning(operator_name, "Details -> wave: " + std::to_string(container.type_) +
                                               " position in the classifier: " + std::to_string(j) +
                                               " looking for the cell: " + std::to_string(cellId) +
                                               " at the position: " + std::to_string(particlePosition));
@@ -50,11 +50,11 @@ struct CheckClassifierInteractionPairFunc {
                          "storage that does not exist or no longer exists.");
       }
       if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::InnerBond) {
-        size_t cellId = container.cell_j[j];
-        size_t particlePosition = container.p_j[j];
+        size_t cellId = container.cell_j_[j];
+        size_t particlePosition = container.p_j_[j];
         auto& cell = cells[cellId];
         if (particlePosition >= cell.size()) {
-          color_log::warning(operator_name, "Details -> wave: " + std::to_string(container.type) +
+          color_log::warning(operator_name, "Details -> wave: " + std::to_string(container.type_) +
                                                 " position in the classifier: " + std::to_string(j) +
                                                 " looking for the cell: " + std::to_string(cellId) +
                                                 " at the position: " + std::to_string(particlePosition));

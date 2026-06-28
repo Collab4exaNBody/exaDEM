@@ -92,8 +92,8 @@ class UpdateContactInteractionSphere : public OperatorNode {
       InteractionManager manager;
 #pragma omp for schedule(dynamic)
       for (size_t ci = 0; ci < cell_size; ci++) {
-        item.pair.ghost = InteractionPair::NotGhost;
-        item.pair.swap = false;
+        item.pair_.ghost_ = InteractionPair::NotGhost;
+        item.pair_.swap_ = false;
         size_t cell_a = cell_ptr[ci];
         IJK loc_a = grid_index_to_ijk(dims, cell_a);
 
@@ -121,9 +121,9 @@ class UpdateContactInteractionSphere : public OperatorNode {
         PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
 
         // Extract historical interactions from storage and move them in the manager
-        // manager.hist is cleared before extracting history.
-        extract_history(manager.hist, data_ptr, data_size);
-        std::stable_sort(manager.hist.begin(), manager.hist.end());
+        // manager.hist_ is cleared before extracting history.
+        extract_history(manager.hist_, data_ptr, data_size);
+        std::stable_sort(manager.hist_.begin(), manager.hist_.end());
         manager.reset(n_particles);
 
         // Move persistent interactions in the InteractionManager
@@ -154,10 +154,10 @@ class UpdateContactInteractionSphere : public OperatorNode {
         item.clear_placeholder();  // reset the placeholder before filling it with new data
         auto& pi = item.i();       // particle i (id, cell, pos, sub)
         auto& pd = item.driver();  // particle driver (id, cell, pos, sub)
-        pi.cell = cell_a;
-        pi.sub = 0;  // sub vertex is set to 0 by default. Not used for spheres, but can be used for sub-vertex of
+        pi.cell_ = cell_a;
+        pi.sub_ = 0;  // sub vertex is set to 0 by default. Not used for spheres, but can be used for sub-vertex of
         // polyhedrons.
-        pd.sub = 0;
+        pd.sub_ = 0;
 
         // First, interaction between a sphere and a driver
         if (drivers.has_value()) {
@@ -165,13 +165,13 @@ class UpdateContactInteractionSphere : public OperatorNode {
           // By default, if the interaction is between a particle and a driver
           // Data about the particle j is set to -1
           // Except for id_j that contains the driver id
-          pd.id = decltype(pd.id)(-1);
-          pd.cell = decltype(pd.cell)(-1);
-          pd.p = decltype(pd.p)(-1);
+          pd.id_ = decltype(pd.id_)(-1);
+          pd.cell_ = decltype(pd.cell_)(-1);
+          pd.p_ = decltype(pd.p_)(-1);
 
           // We loop over all the drivers to check if they are close enough to interact with the particles of the cell
           for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++) {
-            pd.id = drvs_idx;  // we store the driver idx
+            pd.id_ = drvs_idx;  // we store the driver idx
             DRIVER_TYPE type = drvs.type(drvs_idx);
 
             if (type == DRIVER_TYPE::UNDEFINED) {
@@ -179,41 +179,41 @@ class UpdateContactInteractionSphere : public OperatorNode {
             }
 
             if (type == DRIVER_TYPE::CYLINDER) {
-              item.pair.type = InteractionTypeId::VertexCylinder;
-              pd.id = drvs_idx;
+              item.pair_.type_ = InteractionTypeId::VertexCylinder;
+              pd.id_ = drvs_idx;
               Cylinder& driver = drvs.get_typed_driver<Cylinder>(drvs_idx);
               for (size_t p = 0; p < n_particles; p++) {
                 const Vec3d r = {rx[p], ry[p], rz[p]};
                 const double rVerletMax = rad[p] + rVerlet;
                 if (driver.filter(rVerletMax, r)) {
-                  pi.p = p;
-                  pi.id = id_a[p];
+                  pi.p_ = p;
+                  pi.id_ = id_a[p];
                   manager.add_item(item);
                 }
               }
             } else if (type == DRIVER_TYPE::SURFACE) {
-              item.pair.type = InteractionTypeId::VertexSurface;
-              pd.id = drvs_idx;
+              item.pair_.type_ = InteractionTypeId::VertexSurface;
+              pd.id_ = drvs_idx;
               Surface& driver = drvs.get_typed_driver<Surface>(drvs_idx);
               for (size_t p = 0; p < n_particles; p++) {
                 const Vec3d r = {rx[p], ry[p], rz[p]};
                 const double rVerletMax = rad[p] + rVerlet;
                 if (driver.filter(rVerletMax, r)) {
-                  pi.p = p;
-                  pi.id = id_a[p];
+                  pi.p_ = p;
+                  pi.id_ = id_a[p];
                   manager.add_item(item);
                 }
               }
             } else if (type == DRIVER_TYPE::BALL) {
-              item.pair.type = InteractionTypeId::VertexBall;
-              pd.id = drvs_idx;
+              item.pair_.type_ = InteractionTypeId::VertexBall;
+              pd.id_ = drvs_idx;
               Ball& driver = drvs.get_typed_driver<Ball>(drvs_idx);
               for (size_t p = 0; p < n_particles; p++) {
                 const Vec3d r = {rx[p], ry[p], rz[p]};
                 const double rVerletMax = rad[p] + rVerlet;
                 if (driver.filter(rVerletMax, r)) {
-                  pi.p = p;
-                  pi.id = id_a[p];
+                  pi.p_ = p;
+                  pi.id_ = id_a[p];
                   manager.add_item(item);
                 }
               }
@@ -231,7 +231,7 @@ class UpdateContactInteractionSphere : public OperatorNode {
           }
         }
 
-        item.pair.type = InteractionTypeId::VertexVertex;
+        item.pair_.type_ = InteractionTypeId::VertexVertex;
 
         // We add interactions between spheres of the cell and spheres of the neighboring cells.
         if (sym) {  // if symetric is true, we add interactions between two spheres only once.
@@ -251,13 +251,13 @@ class UpdateContactInteractionSphere : public OperatorNode {
                 auto& pj = item.j();  // particle i (id, cell id, particle position, sub vertex)
 
                 // Add interactions
-                pi.id = id_a[p_a];
-                pi.p = p_a;
-                pi.sub = 0;
-                pj.id = id_nbh;
-                pj.p = p_b;
-                pj.cell = cell_b;
-                pj.sub = 0;
+                pi.id_ = id_a[p_a];
+                pi.p_ = p_a;
+                pi.sub_ = 0;
+                pj.id_ = id_nbh;
+                pj.p_ = p_b;
+                pj.cell_ = cell_b;
+                pj.sub_ = 0;
                 manager.add_item(item);
               });
         } else {  // If symetric is false, we add interactions between two spheres twice, once for each order (A or i ->
@@ -268,27 +268,27 @@ class UpdateContactInteractionSphere : public OperatorNode {
                                                           size_t p_nbh_index) {
                 // default value of the interaction studied (A or i -> B or j)
                 const uint64_t id_nbh = cells[cell_b][field::id][p_b];
-                item.pair.ghost = InteractionPair::NotGhost;
-                item.pair.swap = false;
+                item.pair_.ghost_ = InteractionPair::NotGhost;
+                item.pair_.swap_ = false;
 
                 if (id_a[p_a] >= id_nbh) {
                   return;
                 }
                 if (g.is_ghost_cell(cell_b)) {
-                  item.pair.ghost = InteractionPair::OwnerGhost;
+                  item.pair_.ghost_ = InteractionPair::OwnerGhost;
                 }
 
                 auto& pi = item.i();  // particle i (id, cell id, particle position, sub vertex)
                 auto& pj = item.j();  // particle i (id, cell id, particle position, sub vertex)
 
                 // Add interactions
-                pi.id = id_a[p_a];
-                pi.p = p_a;
-                pi.sub = 0;
-                pj.id = id_nbh;
-                pj.p = p_b;
-                pj.cell = cell_b;
-                pj.sub = 0;
+                pi.id_ = id_a[p_a];
+                pi.p_ = p_a;
+                pi.sub_ = 0;
+                pj.id_ = id_nbh;
+                pj.p_ = p_b;
+                pj.cell_ = cell_b;
+                pj.sub_ = 0;
                 manager.add_item(item);
               });
         }

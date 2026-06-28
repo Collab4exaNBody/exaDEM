@@ -87,8 +87,8 @@ struct NetworkFunctor {
     auto& pi = I.i();
     auto& pj = I.j();
     // === build contact network key
-    IdType i = {pi.cell, pi.p};
-    IdType j = {pj.cell, pj.p};
+    IdType i = {pi.cell_, pi.p_};
+    IdType j = {pj.cell_, pj.p_};
     KeyType key = {i, j};
     auto it = network.find(key);
     if (it != network.end()) {
@@ -107,8 +107,8 @@ struct NetworkFunctor {
    */
   template <typename Is, typename Data>
   void operator()(const size_t size, Is& interactions, Data& data) {
-    Vec3d* fn = onika::cuda::vector_data(data.fn);
-    Vec3d* ft = onika::cuda::vector_data(data.ft);
+    Vec3d* fn = onika::cuda::vector_data(data.fn_);
+    Vec3d* ft = onika::cuda::vector_data(data.ft_);
     for (size_t i = 0; i < size; i++) {
       const Vec3d fni = fn[i];
       const Vec3d fti = ft[i];

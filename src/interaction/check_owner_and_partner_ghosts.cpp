@@ -57,9 +57,9 @@ class CheckOwnerPartnerGhosts : public OperatorNode {
     for (size_t i = 0; i < cells.size(); i++) {
       for (auto& item : cells[i].m_data) {
         int type = item.type();
-        if (item.pair.ghost == InteractionPair::PartnerGhost) {
+        if (item.pair_.ghost_ == InteractionPair::PartnerGhost) {
           partners[type] += 1;
-        } else if (item.pair.ghost == InteractionPair::OwnerGhost) {
+        } else if (item.pair_.ghost_ == InteractionPair::OwnerGhost) {
           owners[type] += 1;
         }
       }

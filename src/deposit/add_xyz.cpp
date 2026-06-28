@@ -16,25 +16,25 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <chrono>
-#include <ctime>
+#include <exanb/core/grid.h>
+#include <exanb/core/make_grid_variant_operator.h>
 #include <mpi.h>
-#include <string>
-#include <numeric>
-#include <string>
-
+#include <onika/log.h>
+#include <onika/math/basic_types_stream.h>
 #include <onika/math/basic_types_yaml.h>
 #include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
-#include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/grid.h>
-#include <onika/math/basic_types_stream.h>
-#include <onika/log.h>
+#include <onika/scg/operator_slot.h>
+
+#include <chrono>
+#include <ctime>
+#include <numeric>
+#include <string>
 // #include "ustamp/vector_utils.h"
-#include <onika/file_utils.h>
-#include <exanb/core/domain.h>
 #include <exanb/core/check_particles_inside_cell.h>
+#include <exanb/core/domain.h>
+#include <onika/file_utils.h>
+
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/shapes.hpp>
 
@@ -44,22 +44,19 @@ using namespace exanb;
 struct ParticleType {
   static inline constexpr size_t MAX_STR_LEN = 16;
 
-  double m_mass = 1.0;
-  double m_radius = 1.0;
-  char m_name[MAX_STR_LEN] = {'\0'};
+  double mass_ = 1.0;
+  double radius_ = 1.0;
+  char name_[MAX_STR_LEN] = {'\0'};
 
   inline void set_name(const std::string& s) {
     if (s.length() >= MAX_STR_LEN) {
-      color_log::error("ParticleType::set_name",
-                       "Particle name too long : length=" + std::to_string(s.length()) +
-                       ", max=" + std::to_string(MAX_STR_LEN - 1));
+      color_log::error("ParticleType::set_name", "Particle name too long : length=" + std::to_string(s.length()) +
+                                                     ", max=" + std::to_string(MAX_STR_LEN - 1));
     }
-    std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
-    m_name[MAX_STR_LEN - 1] = '\0';
+    std::strncpy(name_, s.c_str(), MAX_STR_LEN);
+    name_[MAX_STR_LEN - 1] = '\0';
   }
-  inline std::string name() const {
-    return m_name;
-  }
+  inline std::string name() const { return name_; }
 };
 
 using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;
@@ -76,9 +73,7 @@ class AddXYZ : public OperatorNode {
   ADD_SLOT(ParticleTypes, particle_types, INPUT, OPTIONAL);
   ADD_SLOT(shapes, shapes_collection, INPUT, OPTIONAL, DocString{"Collection of shapes"});
 
-  std::string operator_name() {
-    return "add_xyz";
-  }
+  std::string operator_name() { return "add_xyz"; }
 
   bool check_slot() {
     if (*rcut_max <= 0.0) {
@@ -114,11 +109,8 @@ class AddXYZ : public OperatorNode {
       Filter = *filter;
       enlarge(Filter, -(*rcut_max));  // reduce AABB
 
-      if (Filter.bmin.x > Filter.bmax.x ||
-          Filter.bmin.y > Filter.bmax.y ||
-          Filter.bmin.z > Filter.bmax.z) {
-        color_log::warning(operator_name(),
-                           "The filter area is too small. No particles can be deposited.");
+      if (Filter.bmin.x > Filter.bmax.x || Filter.bmin.y > Filter.bmax.y || Filter.bmin.z > Filter.bmax.z) {
+        color_log::warning(operator_name(), "The filter area is too small. No particles can be deposited.");
       }
     }
 
@@ -149,14 +141,14 @@ class AddXYZ : public OperatorNode {
     std::map<std::string, unsigned int> typeMap;
     if (particle_types.has_value()) {
       for (size_t i = 0; i < particle_types->size(); i++) {
-        typeMap[particle_types->at(i).m_name] = i;
+        typeMap[particle_types->at(i).name()] = i;
       }
     }
 
     if (shapes_collection.has_value()) {
       auto& shps = *shapes_collection;
       for (size_t i = 0; i < shps.size(); i++) {
-        typeMap[shps[i]->m_name] = i;
+        typeMap[shps[i]->name_] = i;
       }
     }
 
@@ -166,18 +158,18 @@ class AddXYZ : public OperatorNode {
     auto cells = g.cells();
     cell_locks.resize(n_cells);
 
-#   pragma omp parallel for schedule(dynamic) reduction(max:next_id)
-    for(size_t cell_i=0; cell_i<n_cells; cell_i++) {
-      if( ! g.is_ghost_cell(cell_i) ) {
+#pragma omp parallel for schedule(dynamic) reduction(max : next_id)
+    for (size_t cell_i = 0; cell_i < n_cells; cell_i++) {
+      if (!g.is_ghost_cell(cell_i)) {
         size_t n = cells[cell_i].size();
-        for(size_t p=0 ; p<n ; p++) {
+        for (size_t p = 0; p < n; p++) {
           const unsigned long long id = cells[cell_i][field::id][p];
           next_id = std::max(next_id, id);
         }
       }
     }
     MPI_Allreduce(MPI_IN_PLACE, &next_id, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, *mpi);
-    ++ next_id; // start right after greatest id
+    ++next_id;  // start right after greatest id
 
     std::vector<ParticleTupleIO> particle_data;
 
@@ -201,9 +193,7 @@ class AddXYZ : public OperatorNode {
       std::stringstream(line) >> box_size_x >> box_size_y >> box_size_z;
       std::stringstream(line) >> box_size_x >> box_size_y >> box_size_z;
 
-      ldbg << " box: [" << box_size_x << ", "
-          << box_size_y << ", "
-          << box_size_z << "]" << std::endl; 
+      ldbg << " box: [" << box_size_x << ", " << box_size_y << ", " << box_size_z << "]" << std::endl;
 
       // read one line at a time
       while (std::getline(file, line)) {
@@ -213,7 +203,7 @@ class AddXYZ : public OperatorNode {
         // first value not necessary here
         std::stringstream(line) >> type >> x >> y >> z;
 
-        Vec3d p = {x,y,z};
+        Vec3d p = {x, y, z};
         p += shifter;
         if (apply_filter) {
           if (!is_inside(Filter, p)) {
@@ -224,27 +214,23 @@ class AddXYZ : public OperatorNode {
         n_particles++;
         particle_data.push_back(ParticleTupleIO(p.x, p.y, p.z, next_id++, typeMap[type]));
       }
-      if (n_filtered_particles>0) {
-        color_log::highlight(operator_name(),
-                             "Number of filtered particles: "
-                             + std::to_string(n_filtered_particles));
-
+      if (n_filtered_particles > 0) {
+        color_log::highlight(operator_name(), "Number of filtered particles: " + std::to_string(n_filtered_particles));
       }
     }
 
     MPI_Bcast(&n_particles, 1, MPI_INT, 0, *mpi);
     particle_data.resize(n_particles);
-    MPI_Bcast(particle_data.data(), n_particles * sizeof(ParticleTupleIO),
-              MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(particle_data.data(), n_particles * sizeof(ParticleTupleIO), MPI_BYTE, 0, MPI_COMM_WORLD);
 
     auto dims = g.dimension();
     long local_particles = 0;
-#   pragma omp parallel for reduction(+:local_particles)
+#pragma omp parallel for reduction(+ : local_particles)
     for (auto p : particle_data) {
       Vec3d r{p[field::rx], p[field::ry], p[field::rz]};
       const IJK loc = g.locate_cell(r);
 
-      if (g.contains(loc) && is_inside(d.bounds() , r) && is_inside(g.grid_bounds(), r)) {
+      if (g.contains(loc) && is_inside(d.bounds(), r) && is_inside(g.grid_bounds(), r)) {
         size_t cell_i = grid_ijk_to_index(dims, loc);
         if (!g.is_ghost_cell(cell_i)) {
           ParticleTuple pt = p;
@@ -256,22 +242,17 @@ class AddXYZ : public OperatorNode {
       }
     }
 
-    if (particle_data.size()>0) {
-      color_log::highlight(operator_name(),
-                           "Number of added particles: " +
-                           std::to_string(particle_data.size()));
+    if (particle_data.size() > 0) {
+      color_log::highlight(operator_name(), "Number of added particles: " + std::to_string(particle_data.size()));
     }
 
     // Some checks
     long global_particles = 0;
     MPI_Reduce(&local_particles, &global_particles, 1, MPI_LONG, MPI_SUM, 0, *mpi);
 
-    if(rank == 0 && global_particles != (long)particle_data.size()) {
-      color_log::error(operator_name(),
-                       "Number of added particle is " + 
-                       std::to_string(global_particles) +
-                       " instead of " +
-                       std::to_string(particle_data.size()));
+    if (rank == 0 && global_particles != (long)particle_data.size()) {
+      color_log::error(operator_name(), "Number of added particle is " + std::to_string(global_particles) +
+                                            " instead of " + std::to_string(particle_data.size()));
     }
 
     g.rebuild_particle_offsets();
@@ -281,8 +262,6 @@ class AddXYZ : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(exadem_add_xyz) {
-  OperatorNodeFactory::instance()->register_factory(
-      "add_xyz",
-      make_grid_variant_operator<AddXYZ>);
+  OperatorNodeFactory::instance()->register_factory("add_xyz", make_grid_variant_operator<AddXYZ>);
 }
 }  // namespace exaDEM

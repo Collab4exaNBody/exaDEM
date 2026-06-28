@@ -102,9 +102,9 @@ struct SimulationStateNode : public OperatorNode {
     {
       SimulationStateReducFunc func;
       for (int typeID = 0; typeID < types; typeID++) {
-        assert(typeID < static_cast<int>(classifier.m_contact_state.size()));
-        const auto& buffs = classifier.m_contact_state[typeID];  // get buffers for this interaction type
-        const double* const dnp = onika::cuda::vector_data(buffs.dn);
+        assert(typeID < static_cast<int>(classifier.contact_state_.size()));
+        const auto& buffs = classifier.contact_state_[typeID];  // get buffers for this interaction type
+        const double* const dnp = onika::cuda::vector_data(buffs.dn_);
         int coef = 1;
         if (typeID < InteractionTypeId::NTypesPP && symetric) {
           coef *= 2;
@@ -153,9 +153,9 @@ struct SimulationStateNode : public OperatorNode {
                              sim.kinetic_energy.y,
                              sim.kinetic_energy.z,
                              sim.mass};
-      uint64_t tmpUInt64T[4] = {sim.n_particles, red.n_act_interaction, red.n_tot_interaction, interfaces};
+      uint64_t tmpUInt64T[4] = {sim.n_particles, red.n_act_interaction_, red.n_tot_interaction_, interfaces};
       MPI_Allreduce(MPI_IN_PLACE, tmpDouble, 7, MPI_DOUBLE, MPI_SUM, comm);
-      MPI_Allreduce(MPI_IN_PLACE, &red.min_dn, 1, MPI_DOUBLE, MPI_MIN, comm);
+      MPI_Allreduce(MPI_IN_PLACE, &red.min_dn_, 1, MPI_DOUBLE, MPI_MIN, comm);
       MPI_Allreduce(MPI_IN_PLACE, tmpUInt64T, 4, MPI_UINT64_T, MPI_SUM, comm);
 
       rotation_energy.x = tmpDouble[0];
@@ -165,7 +165,7 @@ struct SimulationStateNode : public OperatorNode {
       kinetic_energy.y = tmpDouble[4];
       kinetic_energy.z = tmpDouble[5];
       mass = tmpDouble[6];
-      dn = red.min_dn;
+      dn = red.min_dn_;
 
       total_particles = tmpUInt64T[0];
       active_interactions = tmpUInt64T[1];

@@ -95,7 +95,7 @@ class RegisterRShapeDriver : public OperatorNode {
       shp = read_shp(output_name, big_shape);
       if (shp.get_Im() != exanb::Vec3d{0, 0, 0}) {
         color_log::warning(operator_name(), "Override inertia using shape I/m");
-        state->inertia = shp.get_Im() / state->mass;
+        state->inertia_ = shp.get_Im() / state->mass_;
       }
     }
 
@@ -125,12 +125,12 @@ class RegisterRShapeDriver : public OperatorNode {
       }
     }
 
-    shp.m_radius = *minkowski;
+    shp.add_radius(*minkowski);
     // shp.increase_obb(*rcut_inc);
-    shp.increase_obb(shp.m_radius);
+    shp.increase_obb(shp.minkowski());
 
-    exaDEM::RShapeDriver driver = {*state, params->input_motion_type};
-    driver.shp = shp;
+    exaDEM::RShapeDriver driver = {*state, params->input_motion_type_};
+    driver.shp_ = shp;
     driver.initialize(*params);
     drivers->add_driver(*id, driver, *params);
     exanb::lout << "========= STL Mesh ==============" << std::endl;

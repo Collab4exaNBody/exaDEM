@@ -14,26 +14,26 @@ namespace exaDEM {
 struct ParticlePairStorage {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
-  VectorT<uint32_t> cell_i;         ///< Cell index of particle i
-  VectorT<uint32_t> cell_j;         ///< Cell index of particle j
-  VectorT<uint16_t> p_i;            ///< Index of particle i within its cell
-  VectorT<uint16_t> p_j;            ///< Index of particle j within its cell
-  VectorT<uint8_t> ghost;           ///< Ghost tag per pair
-  VectorT<uint32_t> cell_pair_idx;  ///< Index of the cell pair this particle pair came from
-  size_t size = 0;                  ///< Current number of stored particle pairs
+  VectorT<uint32_t> cell_i_;         ///< Cell index of particle i
+  VectorT<uint32_t> cell_j_;         ///< Cell index of particle j
+  VectorT<uint16_t> p_i_;            ///< Index of particle i within its cell
+  VectorT<uint16_t> p_j_;            ///< Index of particle j within its cell
+  VectorT<uint8_t> ghost_;           ///< Ghost tag per pair
+  VectorT<uint32_t> cell_pair_idx_;  ///< Index of the cell pair this particle pair came from
+  size_t size_ = 0;                  ///< Current number of stored particle pairs
 
   /**
    * @brief Resize all internal vectors to hold n particle pairs.
    * @param n New number of particle pairs.
    */
   void resize(size_t n) {
-    cell_i.resize(n);
-    cell_j.resize(n);
-    p_i.resize(n);
-    p_j.resize(n);
-    ghost.resize(n);
-    cell_pair_idx.resize(n);
-    size = n;
+    cell_i_.resize(n);
+    cell_j_.resize(n);
+    p_i_.resize(n);
+    p_j_.resize(n);
+    ghost_.resize(n);
+    cell_pair_idx_.resize(n);
+    size_ = n;
   }
 };
 
@@ -63,26 +63,26 @@ __global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(
 
   for (size_t pa = threadIdx.y; pa < nA; pa += blockDim.y) {
     auto body_a = load(cA, pa);
-    const auto& shpa = shps[body_a.type];
+    const auto& shpa = shps[body_a.type_];
 
-    AABB aabb_a = {body_a.r - body_a.radius - rcut_inc, body_a.r + body_a.radius + rcut_inc};
+    AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
       auto body_b = load(cB, pb);
 
-      if (body_a.id >= body_b.id) continue;
+      if (body_a.id_ >= body_b.id_) continue;
 
-      if (!is_inside_threshold(aabb_a, body_b.r, body_b.radius)) continue;
+      if (!is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
 
-      Vec3d r = body_b.r - body_a.r;
-      double rmax = body_a.radius + body_b.radius + rcut_inc;
+      Vec3d r = body_b.r_ - body_a.r_;
+      double rmax = body_a.radius_ + body_b.radius_ + rcut_inc;
       if (exanb::dot(r, r) > rmax * rmax) continue;
 
       // OBB test
-      const auto& shpb = shps[body_b.type];
-      OBB obb_a = compute_obb(shpa.obb, body_a.r, body_a.quat, body_a.homothety);
+      const auto& shpb = shps[body_b.type_];
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
       obb_a.enlarge(rcut_inc);
-      OBB obb_b = compute_obb(shpb.obb, body_b.r, body_b.quat, body_b.homothety);
+      OBB obb_b = compute_obb(shpb.obb_, body_b.r_, body_b.quat_, body_b.homothety_);
       if (obb_a.intersect(obb_b)) {
         count++;
       }
@@ -126,21 +126,21 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
   // First pass: count (for BlockScan)
   for (size_t pa = threadIdx.y; pa < nA; pa += blockDim.y) {
     auto body_a = load(cA, pa);
-    const auto& shpa = shps[body_a.type];
-    AABB aabb_a = {body_a.r - body_a.radius - rcut_inc, body_a.r + body_a.radius + rcut_inc};
+    const auto& shpa = shps[body_a.type_];
+    AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
       auto body_b = load(cB, pb);
-      // if (body_a.id >= body_b.id && ghost_flag == 0) continue;
-      if (body_a.id >= body_b.id) continue;
-      if (!is_inside_threshold(aabb_a, body_b.r, body_b.radius)) continue;
-      Vec3d r = body_b.r - body_a.r;
-      double rmax = body_a.radius + body_b.radius + rcut_inc;
+      // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
+      if (body_a.id_ >= body_b.id_) continue;
+      if (!is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
+      Vec3d r = body_b.r_ - body_a.r_;
+      double rmax = body_a.radius_ + body_b.radius_ + rcut_inc;
       if (exanb::dot(r, r) > rmax * rmax) continue;
-      const auto& shpb = shps[body_b.type];
-      OBB obb_a = compute_obb(shpa.obb, body_a.r, body_a.quat, body_a.homothety);
+      const auto& shpb = shps[body_b.type_];
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
       obb_a.enlarge(rcut_inc);
-      OBB obb_b = compute_obb(shpb.obb, body_b.r, body_b.quat, body_b.homothety);
+      OBB obb_b = compute_obb(shpb.obb_, body_b.r_, body_b.quat_, body_b.homothety_);
       if (obb_a.intersect(obb_b)) count++;
     }
   }
@@ -154,21 +154,21 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
   int write_idx = 0;
   for (size_t pa = threadIdx.y; pa < nA; pa += blockDim.y) {
     auto body_a = load(cA, pa);
-    const auto& shpa = shps[body_a.type];
-    AABB aabb_a = {body_a.r - body_a.radius - rcut_inc, body_a.r + body_a.radius + rcut_inc};
+    const auto& shpa = shps[body_a.type_];
+    AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
       auto body_b = load(cB, pb);
-      // if (body_a.id >= body_b.id && ghost_flag == 0) continue;
-      if (body_a.id >= body_b.id) continue;
-      if (!is_inside_threshold(aabb_a, body_b.r, body_b.radius)) continue;
-      Vec3d r = body_b.r - body_a.r;
-      double rmax = body_a.radius + body_b.radius + rcut_inc;
+      // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
+      if (body_a.id_ >= body_b.id_) continue;
+      if (!is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
+      Vec3d r = body_b.r_ - body_a.r_;
+      double rmax = body_a.radius_ + body_b.radius_ + rcut_inc;
       if (exanb::dot(r, r) > rmax * rmax) continue;
-      const auto& shpb = shps[body_b.type];
-      OBB obb_a = compute_obb(shpa.obb, body_a.r, body_a.quat, body_a.homothety);
+      const auto& shpb = shps[body_b.type_];
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
       obb_a.enlarge(rcut_inc);
-      OBB obb_b = compute_obb(shpb.obb, body_b.r, body_b.quat, body_b.homothety);
+      OBB obb_b = compute_obb(shpb.obb_, body_b.r_, body_b.quat_, body_b.homothety_);
       if (obb_a.intersect(obb_b)) {
         int pos = prefix + write_idx;
         out_cell_i[pos] = cell_a;
@@ -206,8 +206,8 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
 
   auto body_a = load(cells[cell_a], pa);
   auto body_b = load(cells[cell_b], pb);
-  const auto& shpa = shps[body_a.type];
-  const auto& shpb = shps[body_b.type];
+  const auto& shpa = shps[body_a.type_];
+  const auto& shpb = shps[body_b.type_];
   ParticleVertexView vertices_a = {pa, vertex_fields[cell_a]};
   ParticleVertexView vertices_b = {pb, vertex_fields[cell_b]};
 
@@ -221,21 +221,21 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
   int countVV = 0, countVE = 0, countVF = 0, countEE = 0;
 
   // A→B: vertex tests
-  OBB obb_b = compute_obb(shpb.obb, body_b.r, body_b.quat, body_b.homothety);
+  OBB obb_b = compute_obb(shpb.obb_, body_b.r_, body_b.quat_, body_b.homothety_);
   obb_b.enlarge(rcut_inc);
 
   for (int i = threadIdx.y; i < nva; i += blockDim.y) {
     for (int j = threadIdx.x; j < nvb; j += blockDim.x) {
-      if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+      if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
                                &shpb))
         countVV++;
     }
     for (int j = threadIdx.x; j < neb; j += blockDim.x) {
-      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
+      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
         countVE++;
     }
     for (int j = threadIdx.x; j < nfb; j += blockDim.x) {
-      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
+      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
         countVF++;
     }
   }
@@ -243,7 +243,7 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
   // Edge-Edge
   for (int i = threadIdx.y; i < nea; i += blockDim.y) {
     for (int j = threadIdx.x; j < neb; j += blockDim.x) {
-      if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
+      if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
         countEE++;
     }
   }
@@ -251,11 +251,11 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
   // B→A: reverse VE, VF
   for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
     for (int i = threadIdx.x; i < nea; i += blockDim.x) {
-      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i, &shpa))
+      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
         countVE++;
     }
     for (int i = threadIdx.x; i < nfa; i += blockDim.x) {
-      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i, &shpa))
+      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
         countVF++;
     }
   }
@@ -294,8 +294,8 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
 
   auto body_a = load(cells[cell_a], pa);
   auto body_b = load(cells[cell_b], pb);
-  const auto& shpa = shps[body_a.type];
-  const auto& shpb = shps[body_b.type];
+  const auto& shpa = shps[body_a.type_];
+  const auto& shpb = shps[body_b.type_];
   ParticleVertexView vertices_a = {pa, vertex_fields[cell_a]};
   ParticleVertexView vertices_b = {pb, vertex_fields[cell_b]};
 
@@ -316,26 +316,26 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
 
   for (int i = threadIdx.y; i < nva; i += blockDim.y) {
     for (int j = threadIdx.x; j < nvb; j += blockDim.x)
-      if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+      if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
                                &shpb))
         count1++;
     for (int j = threadIdx.x; j < neb; j += blockDim.x)
-      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
+      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
         count2++;
     for (int j = threadIdx.x; j < nfb; j += blockDim.x)
-      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
+      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
         count3++;
   }
   for (int i = threadIdx.y; i < nea; i += blockDim.y)
     for (int j = threadIdx.x; j < neb; j += blockDim.x)
-      if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j, &shpb))
+      if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
         count4++;
   for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
     for (int i = threadIdx.x; i < nea; i += blockDim.x)
-      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i, &shpa))
+      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
         count5++;
     for (int i = threadIdx.x; i < nfa; i += blockDim.x)
-      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i, &shpa))
+      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
         count6++;
   }
 
@@ -351,50 +351,50 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
 
   // Prepare interaction item
   PlaceholderInteraction item = {};
-  item.pair.pi.id = body_a.id;
-  item.pair.pi.cell = cell_a;
-  item.pair.pi.p = pa;
-  item.pair.pj.id = body_b.id;
-  item.pair.pj.cell = cell_b;
-  item.pair.pj.p = pb;
-  item.pair.ghost = ghost_flag;
-  item.pair.swap = false;
+  item.pair_.pi_.id_ = body_a.id_;
+  item.pair_.pi_.cell_ = cell_a;
+  item.pair_.pi_.p_ = pa;
+  item.pair_.pj_.id_ = body_b.id_;
+  item.pair_.pj_.cell_ = cell_b;
+  item.pair_.pj_.p_ = pb;
+  item.pair_.ghost_ = ghost_flag;
+  item.pair_.swap_ = false;
 
   // Fill pass A→B (skip loops if no interactions)
   if (count1 > 0 || count2 > 0 || count3 > 0) {
     for (int i = threadIdx.y; i < nva; i += blockDim.y) {
       if (count1 > 0) {
         for (int j = threadIdx.x; j < nvb; j += blockDim.x) {
-          if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+          if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
                                    &shpb)) {
-            item.pair.pi.sub = i;
-            item.pair.pj.sub = j;
-            item.pair.type = InteractionTypeId::VertexVertex;
-            item.pair.swap = false;
+            item.pair_.pi_.sub_ = i;
+            item.pair_.pj_.sub_ = j;
+            item.pair_.type_ = InteractionTypeId::VertexVertex;
+            item.pair_.swap_ = false;
             interactions[InteractionTypeId::VertexVertex].set(prefix[0]++, item);
           }
         }
       }
       if (count2 > 0) {
         for (int j = threadIdx.x; j < neb; j += blockDim.x) {
-          if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+          if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
                                  &shpb)) {
-            item.pair.pi.sub = i;
-            item.pair.pj.sub = j;
-            item.pair.type = InteractionTypeId::VertexEdge;
-            item.pair.swap = false;
+            item.pair_.pi_.sub_ = i;
+            item.pair_.pj_.sub_ = j;
+            item.pair_.type_ = InteractionTypeId::VertexEdge;
+            item.pair_.swap_ = false;
             interactions[InteractionTypeId::VertexEdge].set(prefix[1]++, item);
           }
         }
       }
       if (count3 > 0) {
         for (int j = threadIdx.x; j < nfb; j += blockDim.x) {
-          if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+          if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
                                  &shpb)) {
-            item.pair.pi.sub = i;
-            item.pair.pj.sub = j;
-            item.pair.type = InteractionTypeId::VertexFace;
-            item.pair.swap = false;
+            item.pair_.pi_.sub_ = i;
+            item.pair_.pj_.sub_ = j;
+            item.pair_.type_ = InteractionTypeId::VertexFace;
+            item.pair_.swap_ = false;
             interactions[InteractionTypeId::VertexFace].set(prefix[2]++, item);
           }
         }
@@ -406,12 +406,12 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
   if (count4 > 0) {
     for (int i = threadIdx.y; i < nea; i += blockDim.y) {
       for (int j = threadIdx.x; j < neb; j += blockDim.x) {
-        if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety, i, &shpa, vertices_b, body_b.homothety, j,
+        if (filter_edge_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
                              &shpb)) {
-          item.pair.pi.sub = i;
-          item.pair.pj.sub = j;
-          item.pair.type = InteractionTypeId::EdgeEdge;
-          item.pair.swap = false;
+          item.pair_.pi_.sub_ = i;
+          item.pair_.pj_.sub_ = j;
+          item.pair_.type_ = InteractionTypeId::EdgeEdge;
+          item.pair_.swap_ = false;
           interactions[InteractionTypeId::EdgeEdge].set(prefix[3]++, item);
         }
       }
@@ -420,30 +420,30 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
 
   // Swap for B→A
   if (count5 > 0 || count6 > 0) {
-    gpu_swap(item.pair.pi.id, item.pair.pj.id);
-    gpu_swap(item.pair.pi.cell, item.pair.pj.cell);
-    gpu_swap(item.pair.pi.p, item.pair.pj.p);
-    item.pair.swap = true;
+    gpu_swap(item.pair_.pi_.id_, item.pair_.pj_.id_);
+    gpu_swap(item.pair_.pi_.cell_, item.pair_.pj_.cell_);
+    gpu_swap(item.pair_.pi_.p_, item.pair_.pj_.p_);
+    item.pair_.swap_ = true;
 
     for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
       if (count5 > 0) {
         for (int i = threadIdx.x; i < nea; i += blockDim.x) {
-          if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i,
+          if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i,
                                  &shpa)) {
-            item.pair.pi.sub = j;
-            item.pair.pj.sub = i;
-            item.pair.type = InteractionTypeId::VertexEdge;
+            item.pair_.pi_.sub_ = j;
+            item.pair_.pj_.sub_ = i;
+            item.pair_.type_ = InteractionTypeId::VertexEdge;
             interactions[InteractionTypeId::VertexEdge].set(prefix[1]++, item);
           }
         }
       }
       if (count6 > 0) {
         for (int i = threadIdx.x; i < nfa; i += blockDim.x) {
-          if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety, j, &shpb, vertices_a, body_a.homothety, i,
+          if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i,
                                  &shpa)) {
-            item.pair.pi.sub = j;
-            item.pair.pj.sub = i;
-            item.pair.type = InteractionTypeId::VertexFace;
+            item.pair_.pi_.sub_ = j;
+            item.pair_.pj_.sub_ = i;
+            item.pair_.type_ = InteractionTypeId::VertexFace;
             interactions[InteractionTypeId::VertexFace].set(prefix[2]++, item);
           }
         }
@@ -459,18 +459,18 @@ inline void reconstruct_cell_pair_offsets(ParticlePairStorage& pp_storage, Inter
 #pragma omp parallel for
   for (size_t cp = 0; cp < num_cell_pairs; cp++) {
     for (int t = 0; t < InteractionTypeId::NTypes; t++) {
-      info_cell_pair.offset[cp][t] = 0;
-      info_cell_pair.size[cp][t] = 0;
+      info_cell_pair.offset_[cp][t] = 0;
+      info_cell_pair.size_[cp][t] = 0;
     }
   }
 
 // Accumulate (parallel with atomics)
 #pragma omp parallel for
   for (size_t pp = 0; pp < num_particle_pairs; pp++) {
-    uint32_t cp = pp_storage.cell_pair_idx[pp];
+    uint32_t cp = pp_storage.cell_pair_idx_[pp];
     for (int t = 0; t < 4; t++) {
 #pragma omp atomic
-      info_cell_pair.size[cp][t] += count_per_pp[pp][t];
+      info_cell_pair.size_[cp][t] += count_per_pp[pp][t];
     }
   }
 
@@ -480,8 +480,8 @@ inline void reconstruct_cell_pair_offsets(ParticlePairStorage& pp_storage, Inter
 
   for (size_t cp = 0; cp < num_cell_pairs; cp++) {
     for (int t = 0; t < InteractionTypeId::NTypes; t++) {
-      info_cell_pair.offset[cp][t] = running[t];
-      running[t] += info_cell_pair.size[cp][t];
+      info_cell_pair.offset_[cp][t] = running[t];
+      running[t] += info_cell_pair.size_[cp][t];
     }
   }
 }

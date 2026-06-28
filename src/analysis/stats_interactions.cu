@@ -60,7 +60,7 @@ class StatsInteractions : public OperatorNode {
     auto incr_interaction_counters = [null](const PlaceholderInteraction& I, int& count, int& active_count,
                                             int& active_global_count, int& ghost_count,
                                             int& ghost_global_count) -> void {
-      if (I.pair.ghost == InteractionPair::PartnerGhost) {
+      if (I.pair_.ghost_ == InteractionPair::PartnerGhost) {
         ghost_count++;
         ghost_global_count++;
       } else {

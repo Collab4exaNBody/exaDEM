@@ -60,21 +60,21 @@ struct ComputeStressTensorFunc {
       // get fij and cij
       auto& i = I.i();  // id for particle id, cell for cell id, p for position,
                         // sub for vertex id
-      auto& cell = cells[i.cell];
+      auto& cell = cells[i.cell_];
       Vec3d fij = fnp[idx] + ftp[idx];
-      Vec3d pos_i = {cell[field::rx][i.p], cell[field::ry][i.p], cell[field::rz][i.p]};
+      Vec3d pos_i = {cell[field::rx][i.p_], cell[field::ry][i.p_], cell[field::rz][i.p_]};
       Vec3d cij = cpp[idx] - pos_i;
-      exaDEM::mat3d_atomic_add_contribution(cell[field::stress][i.p], exanb::tensor(fij, cij));
+      exaDEM::mat3d_atomic_add_contribution(cell[field::stress][i.p_], exanb::tensor(fij, cij));
 
       // polyhedron - polyhedron || sphere - sphere
       if constexpr ((type <= 3 && sym == true) || is_innerbond) {
         auto& j = I.j();  // id for particle id, cell for cell id, p for
                           // position, sub for vertex id
-        auto& cellj = cells[j.cell];
+        auto& cellj = cells[j.cell_];
         Vec3d fji = -fij;
-        Vec3d pos_j = {cellj[field::rx][j.p], cellj[field::ry][j.p], cellj[field::rz][j.p]};
+        Vec3d pos_j = {cellj[field::rx][j.p_], cellj[field::ry][j.p_], cellj[field::rz][j.p_]};
         Vec3d cji = cpp[idx] - pos_j;
-        exaDEM::mat3d_atomic_add_contribution(cellj[field::stress][j.p], exanb::tensor(fji, cji));
+        exaDEM::mat3d_atomic_add_contribution(cellj[field::stress][j.p_], exanb::tensor(fji, cji));
       }
     }
   }

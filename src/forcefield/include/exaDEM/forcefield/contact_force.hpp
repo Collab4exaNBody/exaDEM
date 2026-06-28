@@ -115,11 +115,11 @@ ONIKA_HOST_DEVICE_FUNC inline void reset(Vec3d& in) {  in = Vec3d{0.0, 0.0, 0.0}
 ONIKA_HOST_DEVICE_FUNC inline void apply_dmt_force(const ContactParams& hkp, double reff, double dn, const Vec3d& n,
                                                    Vec3d& f_i) {
   // Disabled if gamma <= 0
-  if (hkp.gamma <= 0.0) return;
+  if (hkp.gamma_ <= 0.0) return;
 
   // DMT : attractive force only if  contact (dn < 0)
   if (dn < 0.0) {
-    double F_dmt = 2.0 * M_PI * reff * hkp.gamma;
+    double F_dmt = 2.0 * M_PI * reff * hkp.gamma_;
 
     // attractive force : -F_dmt * n
     f_i -= F_dmt * n;
@@ -163,9 +163,9 @@ ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
 
   // === Cohesive law : before contact
   if constexpr (LawComboTraits<LawCombo>::cohesive) {
-    if (dn >= 0)  // dn <= hkp.dncut if contact
+    if (dn >= 0)  // dn <= hkp.dncut_ if contact
     {
-      const double fn_value = (hkp.fc / hkp.dncut) * dn - hkp.fc;
+      const double fn_value = (hkp.fc_ / hkp.dncut_) * dn - hkp.fc_;
       f_i += fn_value * n;
       ft = {0, 0, 0};
       return;
@@ -173,7 +173,7 @@ ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
   }
 
   // === Compute damping coefficient
-  const double damp = compute_damp(hkp.damp_rate, hkp.kn, meff);
+  const double damp = compute_damp(hkp.damp_rate_, hkp.kn_, meff);
 
   // === Relative velocity (j relative to i)
   auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
@@ -187,18 +187,18 @@ ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
   // Hooke
   if constexpr (LawComboTraits<LawCombo>::hooke) {
     // - Normal force (elastic contact + viscous damping)
-    fn = compute_normal_force<LawComboTraits<LawCombo>::cohesive>(hkp.kn, hkp.fc, damp, dn, vn, n);
+    fn = compute_normal_force<LawComboTraits<LawCombo>::cohesive>(hkp.kn_, hkp.fc_, damp, dn, vn, n);
 
     // - Tangential force (friction)
-    ft += exaDEM::compute_tangential_force(hkp.kt, dt, vn, n, vel);
+    ft += exaDEM::compute_tangential_force(hkp.kt_, dt, vn, n, vel);
 
     double threshold_ft;
 
     // - Fit tangential force
     if constexpr (!LawComboTraits<LawCombo>::cohesive) {
-      threshold_ft = exaDEM::compute_threshold_ft(hkp.mu, hkp.kn, dn);
+      threshold_ft = exaDEM::compute_threshold_ft(hkp.mu_, hkp.kn_, dn);
     } else {
-      threshold_ft = exaDEM::compute_threshold_ft_with_cohesive_force(hkp.mu, exanb::dot(fn, n), hkp.fc);
+      threshold_ft = exaDEM::compute_threshold_ft_with_cohesive_force(hkp.mu_, exanb::dot(fn, n), hkp.fc_);
     }
     exaDEM::fit_tangential_force(threshold_ft, ft);
   }
@@ -220,7 +220,7 @@ ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
   // if constexpr (LawComboTraits<LawCombo>::jkr)
 
   // === update moments
-  mom_i += hkp.kr * (vrot_j - vrot_i) * dt;
+  mom_i += hkp.kr_ * (vrot_j - vrot_i) * dt;
 
   Vec3d branch = contact_position - pos_i;
   double r = (exanb::dot(branch, vrot_i)) / (exanb::dot(vrot_i, vrot_i));

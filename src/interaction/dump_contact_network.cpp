@@ -71,7 +71,7 @@ class ContactNetwork : public OperatorNode {
     for (size_t type = get_first_id<InteractionType::ParticleParticle>();
          type < get_last_id<InteractionType::ParticleParticle>(); type++) {  // skip drivers
       auto& interactions = classifier.get_data<InteractionType::ParticleParticle>(type);
-      auto& forces = classifier.m_contact_state[type];
+      auto& forces = classifier.contact_state_[type];
       const size_t n = interactions.size();
       manager(n, interactions, forces);
     }
