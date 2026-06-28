@@ -104,7 +104,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_innerbond);
 
     NbhCellHostStorage CellInfoStorageHost;
-    CellInteractionInformation& info_cell = nbh_manager->info_cell;
+    CellInteractionInformation& info_cell = nbh_manager->info_cell_;
 
     auto convert_offset_ijk = [](int offset) {
       assert(offset < 27);
@@ -116,10 +116,10 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     };
 
     info_cell.resize(cell_size);
-    std::memset(info_cell.update_ghost.data(), 0, cell_size * sizeof(uint8_t));
+    std::memset(info_cell.update_ghost_.data(), 0, cell_size * sizeof(uint8_t));
     size_t shift = 0;
     for (size_t i = 0; i < cell_size; i++) {
-      info_cell.start_cell[i] = shift;
+      info_cell.start_cell_[i] = shift;
       size_t incr = 0;
       size_t cell_a = cell_ptr[i];
       IJK loc_a = grid_index_to_ijk(dims, cell_a);
@@ -127,26 +127,26 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
       for (size_t j = 0; j < 27; j++) {
         size_t cell_b = grid_ijk_to_index(dims, loc_a + convert_offset_ijk(j));
         if (cells[cell_b].size() > 0) {
-          CellInfoStorageHost.owner_cell.push_back(cell_a);
-          CellInfoStorageHost.partner_cell.push_back(cell_b);
+          CellInfoStorageHost.owner_cell_.push_back(cell_a);
+          CellInfoStorageHost.partner_cell_.push_back(cell_b);
           if (g.is_ghost_cell(cell_b)) {
-            info_cell.update_ghost[i] = 1;
-            CellInfoStorageHost.ghost.push_back(InteractionPair::OwnerGhost);
+            info_cell.update_ghost_[i] = 1;
+            CellInfoStorageHost.ghost_.push_back(InteractionPair::OwnerGhost);
           } else {
-            CellInfoStorageHost.ghost.push_back(InteractionPair::NotGhost);
+            CellInfoStorageHost.ghost_.push_back(InteractionPair::NotGhost);
           }
           incr++;
         }
       }
-      info_cell.number_of_pair_cells[i] = incr;
+      info_cell.number_of_pair_cells_[i] = incr;
       shift += incr;
     }
     info_cell.prefetch_cpu(st_updateghost);
-    CellDriverStorage& info_cell_driver = nbh_manager->info_cell_driver;
+    CellDriverStorage& info_cell_driver = nbh_manager->info_cell_driver_;
     info_cell_driver.resize(cell_size, get_exec_ctx);
     auto cell_driver_accessor = info_cell_driver.accessor();
 
-    NbhCellStorage& info_cell_pair = nbh_manager->info_pair_cell;
+    NbhCellStorage& info_cell_pair = nbh_manager->info_pair_cell_;
     info_cell_pair.reset(CellInfoStorageHost, get_exec_ctx);
 
     NbhCellAccessor accessor(info_cell_pair);
@@ -157,11 +157,11 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     CountIPDFunc counter_driver = {cells, cell_driver_accessor, cell_ptr, *rcut_inc, shps.data(), vertex_fields, drvs};
 
-    auto cell_pair_size = CellInfoStorageHost.owner_cell.size();
+    auto cell_pair_size = CellInfoStorageHost.owner_cell_.size();
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
     parallel_for(cell_size, counter_driver, parallel_execution_context("nbh_gpu::counter_driver,"), opts);
-    PrefixSumInteractionTypePerCellCounter func_prefix_driver{cell_driver_accessor.offset, cell_driver_accessor.size,
+    PrefixSumInteractionTypePerCellCounter func_prefix_driver{cell_driver_accessor.offset_, cell_driver_accessor.size_,
                                                               cell_size};
 
     ParallelExecutionSpace<1> parallel_range_fpd = {{get_first_id<InteractionType::ParticleDriver>()},
@@ -186,7 +186,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     pp_counts.resize(cell_pair_size);
 
     CountParticlePairsKernel<pp_block_x, pp_block_y>
-        <<<cell_pair_size, pp_block>>>(cells, accessor.owner_cell, accessor.partner_cell, accessor.ghost, *rcut_inc,
+        <<<cell_pair_size, pp_block>>>(cells, accessor.owner_cell_, accessor.partner_cell_, accessor.ghost_, *rcut_inc,
                                        shps.data(), vertex_fields, pp_counts.data(), cell_pair_size);
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
@@ -210,9 +210,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     if (total_pp > 0) {
       FillParticlePairsKernel<pp_block_x, pp_block_y><<<cell_pair_size, pp_block>>>(
-          cells, accessor.owner_cell, accessor.partner_cell, accessor.ghost, *rcut_inc, shps.data(), vertex_fields,
-          pp_offsets.data(), pp_storage.cell_i.data(), pp_storage.cell_j.data(), pp_storage.p_i.data(),
-          pp_storage.p_j.data(), pp_storage.ghost.data(), pp_storage.cell_pair_idx.data(), cell_pair_size);
+          cells, accessor.owner_cell_, accessor.partner_cell_, accessor.ghost_, *rcut_inc, shps.data(), vertex_fields,
+          pp_offsets.data(), pp_storage.cell_i_.data(), pp_storage.cell_j_.data(), pp_storage.p_i_.data(),
+          pp_storage.p_j_.data(), pp_storage.ghost_.data(), pp_storage.cell_pair_idx_.data(), cell_pair_size);
       ONIKA_CU_DEVICE_SYNCHRONIZE();
     }
 
@@ -228,8 +228,8 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     if (total_pp > 0) {
       CountInteractionsPPKernel<pp_block_x, pp_block_y><<<total_pp, pp_block>>>(
-          cells, vertex_fields, shps.data(), *rcut_inc, pp_storage.cell_i.data(), pp_storage.cell_j.data(),
-          pp_storage.p_i.data(), pp_storage.p_j.data(), interaction_counts.data(), total_pp);
+          cells, vertex_fields, shps.data(), *rcut_inc, pp_storage.cell_i_.data(), pp_storage.cell_j_.data(),
+          pp_storage.p_i_.data(), pp_storage.p_j_.data(), interaction_counts.data(), total_pp);
       ONIKA_CU_DEVICE_SYNCHRONIZE();
 
       // GPU prefix sum per interaction type
@@ -280,7 +280,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     // ****** Resize Classifier for Driver ******* //
     for (int typeID = get_first_id<InteractionType::ParticleDriver>();
          typeID <= get_last_id<InteractionType::ParticleDriver>(); typeID++) {
-      size_t newsize = info_cell_driver.offset.back()[typeID] + info_cell_driver.size.back()[typeID];
+      size_t newsize = info_cell_driver.offset_.back()[typeID] + info_cell_driver.size_.back()[typeID];
       container.resize(typeID, newsize);
     }
 
@@ -290,9 +290,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     // ****** Fill Classifier PP (PCCP) ******* //
     if (total_pp > 0) {
       FillInteractionsPPKernel<pp_block_x, pp_block_y>
-          <<<total_pp, pp_block>>>(cells, vertex_fields, shps.data(), *rcut_inc, pp_storage.cell_i.data(),
-                                   pp_storage.cell_j.data(), pp_storage.p_i.data(), pp_storage.p_j.data(),
-                                   pp_storage.ghost.data(), interaction_prefix.data(), classifier_accessor, total_pp);
+          <<<total_pp, pp_block>>>(cells, vertex_fields, shps.data(), *rcut_inc, pp_storage.cell_i_.data(),
+                                   pp_storage.cell_j_.data(), pp_storage.p_i_.data(), pp_storage.p_j_.data(),
+                                   pp_storage.ghost_.data(), interaction_prefix.data(), classifier_accessor, total_pp);
       ONIKA_CU_DEVICE_SYNCHRONIZE();
 
       reconstruct_cell_pair_offsets(pp_storage, interaction_counts.data(), total_pp, cell_pair_size, info_cell_pair);
@@ -304,33 +304,33 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-    UpdateHistoryFunc update_history = {history.start.data(),
-                                        history.size.data(),
-                                        history.data.data(),
-                                        info_cell.start_cell.data(),
-                                        info_cell.number_of_pair_cells.data(),
+    UpdateHistoryFunc update_history = {history.start_.data(),
+                                        history.size_.data(),
+                                        history.data_.data(),
+                                        info_cell.start_cell_.data(),
+                                        info_cell.number_of_pair_cells_.data(),
                                         accessor,
                                         cell_driver_accessor,
                                         classifier_interaction_accessor};
 
-    parallel_for(history.start.size(), update_history, parallel_execution_context(), opts);
+    parallel_for(history.start_.size(), update_history, parallel_execution_context(), opts);
 
     // === ADD PERSISTENT INTERACTIONS ===
     {
       std::vector<PlaceholderInteraction> unmatched_persistent;
       for (size_t ci = 0; ci < cell_size; ci++) {
-        size_t hist_begin = history.start[ci];
-        size_t hist_end = hist_begin + history.size[ci];
+        size_t hist_begin = history.start_[ci];
+        size_t hist_end = hist_begin + history.size_[ci];
         for (size_t h = hist_begin; h < hist_end; h++) {
-          PlaceholderInteraction I = history.data[h];
+          PlaceholderInteraction I = history.data_[h];
           auto type = I.type();
           if (type < get_first_id<InteractionType::ParticleDriver>() ||
               type > get_last_id<InteractionType::ParticleDriver>())
             continue;
           if (!I.persistent()) continue;
           auto& wrapper = classifier_interaction_accessor.get_typed_accessor<InteractionType::ParticleDriver>(type);
-          int drv_offset = cell_driver_accessor.offset[ci][type];
-          int drv_size = cell_driver_accessor.size[ci][type];
+          int drv_offset = cell_driver_accessor.offset_[ci][type];
+          int drv_size = cell_driver_accessor.size_[ci][type];
           bool found = false;
           for (int k = drv_offset; k < drv_offset + drv_size; k++) {
             if (wrapper.same(k, I)) {
