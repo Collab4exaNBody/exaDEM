@@ -71,7 +71,7 @@ namespace exaDEM
         oss<<"\tfloat d,s;\n";
 
         auto emit_vertex_mul_p = [&](int vi) { oss << "\tgl_Position = P * v["<<vi<<"]; EmitVertex();\n"; };
-        auto emit_vertex = [&](int vi) { oss << "\tgl_Position = v["<<vi<<"]; EmitVertex();\n"; };
+        //auto emit_vertex = [&](int vi) { oss << "\tgl_Position = v["<<vi<<"]; EmitVertex();\n"; };
 
         // create triangle indices buffer
         const int n_faces = shp.get_number_of_faces();
