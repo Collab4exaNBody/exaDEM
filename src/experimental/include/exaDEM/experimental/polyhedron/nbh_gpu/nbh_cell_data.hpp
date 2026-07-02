@@ -8,7 +8,7 @@ static inline onikaError_t ONIKA_PREFETCH(const void* ptr, size_t size, int devi
                          (device == cudaCpuDeviceId) ? 0 : device};
   return cudaMemPrefetchAsync(ptr, size, loc, 0, stream);
 #else
-  return ONIKA_PREFETCH(ptr, size, device, stream);
+  return cudaMemPrefetchAsync(ptr, size, device, stream);
 #endif
 }
 
