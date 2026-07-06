@@ -89,9 +89,8 @@ class InnerBondParamsOp : public OperatorNode {
 
     if (!group1.has_value() && !group2.has_value()) {
       if (!default_config.has_value()) {
-        color_log::error(
-            this->operator_name(),
-            "You must define either a list for group combinations (group1, group2) or a default config.");
+        color_log::error(this->operator_name(),
+                         "You must define either a list for group combinations (group1, group2) or a default config.");
       }
     }
 
@@ -175,9 +174,12 @@ class InnerBondParamsOp : public OperatorNode {
       }
     } else if (default_config.has_value()) {
       ibp.setup_multimat(1, *default_config);
+    } else {
+      color_log::error(this->operator_name(),
+                       "You must define either a list for group combinations (group1, group2) or a default config.");
     }
 
-    bool multimat_mode = group1.has_value();
+    bool multimat_mode = true;
     bool driver_mode = false;
 
     ibp.check_completeness(multimat_mode, driver_mode);

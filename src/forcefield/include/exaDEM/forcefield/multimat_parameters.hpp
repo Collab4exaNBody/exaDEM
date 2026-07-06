@@ -20,6 +20,7 @@ under the License.
 #pragma once
 
 #include <exanb/core/particle_type_id.h>
+
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/forcefield/contact_force_accessor.hpp>
 
@@ -256,16 +257,16 @@ struct MultiMatParamsT {
       return it != reverse_type_map_.end() ? it->second : "group_" + std::to_string(g);
     };
     display_header<ContactParamsT>();
+
     // Loop through all groups
     for (int g1 = 0; g1 < number_of_groups_; g1++) {
       // Display group-to-group parameters
-      if (multimat_mode) {
-        for (int g2 = 0; g2 <= g1; g2++) /** symmetric definition */
-        {
-          ContactParamsT& cp = multimat_cp_[this->get_idx_multimat(g1, g2)];
-          display_multimat(group_name(g1), group_name(g2), cp);
-        }
+      for (int g2 = 0; g2 <= g1; g2++) /** symmetric definition */
+      {
+        ContactParamsT& cp = multimat_cp_[this->get_idx_multimat(g1, g2)];
+        display_multimat(group_name(g1), group_name(g2), cp);
       }
+
       // Display driver-to-group parameters
       if (drivers_mode) {
         for (int drv = 0; drv < number_of_drivers_; drv++) {
