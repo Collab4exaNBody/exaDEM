@@ -114,6 +114,12 @@ class DumpReaderConfRockable : public OperatorNode {
 
  public:
   inline void execute() final {
+    if (*bounds_mode == ReadBoundsSelectionMode::FILE_BOUNDS) {
+      color_log::error("read_conf_rockable",
+                       "ReadBoundsSelectionMode::FILE_BOUNDS is not supported for rockable files. Please use "
+                       "ReadBoundsSelectionMode::COMPUTED_BOUNDS or ReadBoundsSelectionMode::DOMAIN_BOUNDS.");
+    }
+
     //-------------------------------------------------------------------------------------------
     // Reading datas from YAML or previous input
     std::string file_name = onika::data_file_path(*filename);
@@ -157,6 +163,7 @@ class DumpReaderConfRockable : public OperatorNode {
     std::vector<ParticleTupleIO> particle_data;
 
     rockable::ConfReader manager;
+
     std::ifstream file;
     file.open(file_name, std::ifstream::in);
     if (!file.is_open()) {
@@ -272,7 +279,9 @@ class DumpReaderConfRockable : public OperatorNode {
 
       // domain->m_bounds = bounds;
       compute_domain_bounds(*domain, *bounds_mode, *enlarge_bounds, file_bounds, file_bounds, false);
-      domain->set_periodic_boundary(manager.periodic[0], manager.periodic[1], manager.periodic[2]);
+      if (*bounds_mode != ReadBoundsSelectionMode::DOMAIN_BOUNDS) {
+        domain->set_periodic_boundary(manager.periodic[0], manager.periodic[1], manager.periodic[2]);
+      }
       lout << "Particles        = " << particle_data.size() << std::endl;
       lout << "Domain XForm     = " << domain->xform() << std::endl;
       lout << "Domain bounds    = " << domain->bounds() << std::endl;
@@ -341,7 +350,7 @@ class DumpReaderConfRockable : public OperatorNode {
         auto& particle = manager.drivers[id];
         state.center_ = particle.pos;
         state.vel_ = particle.pos;  // will be reset by the motion type
-                                   // will move evant with the STATIONARY motion type
+                                    // will move evant with the STATIONARY motion type
         state.vrot_ = particle.vrot;
         state.quat_ = particle.Q;
 
