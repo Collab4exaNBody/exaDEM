@@ -12,6 +12,7 @@ input_data:
   - init_rcb_grid
   - particle_type:
      type: [  Sphere1 ]
+     group: [        0 ]
   - lattice:
      structure: SC
      types: [ Sphere1 ]
@@ -20,6 +21,7 @@ input_data:
   - set_fields:
      polyhedra: false
      type:              [ Sphere1 ]
+     group:             [       0 ]
      radius:            [    0.5 ]
      velocity:          [ [0,0,-1]]
      sigma_velocity:    [   0.001 ]

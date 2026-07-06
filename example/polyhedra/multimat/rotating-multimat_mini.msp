@@ -21,19 +21,20 @@ input_data:
   - set_fields:
      polyhedra: true
      type:              [ alpha3, Octahedron]
+     group:             [      0,          1]
      velocity:          [[0,0,0],    [0,0,0]]
      sigma_velocity:    [    0.1,        0.1]
      random_quaternion: [   true,       true]
   - multimat_contact_params:
-     mat1:      [ alpha3,     alpha3, Octahedron ]
-     mat2:      [ alpha3, Octahedron, Octahedron ]
-     kn:        [   5000,      10000,      15000 ]
-     kt:        [   4000,       8000,      12000 ]
-     kr:        [    0.0,        0.0,        0.0 ]
-     mu:        [    0.1,        0.2,        0.3 ]
-     damprate:  [  0.999,      0.999,      0.999 ]
+     group1:    [     0,      0,       1 ]
+     group2:    [     0,      1,       1 ]
+     kn:        [  5000,  10000,   15000 ]
+     kt:        [  4000,   8000,   12000 ]
+     kr:        [   0.0,    0.0,     0.0 ]
+     mu:        [   0.1,    0.2,     0.3 ]
+     damprate:  [ 0.999,  0.999,   0.999 ]
   - drivers_contact_params:
-     mat:       [ alpha3, Octahedron ]
+     group:     [      0,          1 ]
      driver_id: [      0,          0 ]
      kn:        [  10000,      15000 ]
      kt:        [   8000,      12000 ]

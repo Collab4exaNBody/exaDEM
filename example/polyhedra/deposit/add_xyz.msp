@@ -22,6 +22,7 @@ adder:
   - set_fields:
      polyhedra: true
      type:              [     shape1 ,     shape2 ,      shape3 ]
+     group:             [          0 ,          0 ,           0 ]
      random_quaternion: [       true ,       true ,        true ]
      sigma_velocity:    [       0.01 ,       0.01 ,        0.01 ]
      velocity:          [ [0,0,-0.1] , [0,0,-0.2] , [0,0,-0.05] ]
@@ -48,6 +49,7 @@ input_data:
   - set_fields:
      polyhedra: true
      type:              [     shape2 ]
+     group:             [          0 ]
      random_quaternion: [       true ]
      sigma_velocity:    [       0.01 ]
      velocity:          [ [0,0,-0.2] ]

@@ -10,6 +10,7 @@ io_tree:
 input_data:
   - particle_type:
      type: [ Sphere0 , Sphere1 , Sphere2 ]
+     group: [       0 ,       0 ,       0 ]
   - rsa_vol_frac:
       periodic: [true,true,false]
       bounds: [ [ 10 , 10 , 10 ] , [ 14, 14, 14] ]
@@ -17,6 +18,7 @@ input_data:
   - set_fields:
      polyhedra: false
      type:              [ Sphere2 , Sphere1 , Sphere0 ]
+     group:             [       0 ,       0 ,       0 ]
      radius:            [     0.5 ,    0.25 ,   0.125 ]
      velocity:          [ [0,0,0] , [0,0,0] , [0,0,0] ]
      sigma_velocity:    [   0.001 ,   0.001 ,   0.001 ]

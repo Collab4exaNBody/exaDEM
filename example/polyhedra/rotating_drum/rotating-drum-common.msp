@@ -7,6 +7,7 @@ set_mono_mat:
   - set_fields:
      polyhedra: true
      type:             [ Octahedron ]
+     group:            [          0 ]
      random_quaterion: [       true ]
      sigma_velocity:   [       0.01 ]
      velocity:         [    [0,0,0] ]     
@@ -15,6 +16,7 @@ set_duo_mat:
   - set_fields:
      polyhedra: true
      type:              [ alpha3, Octahedron]
+     group:             [      0,          0]
      velocity:          [[0,0,0],    [0,0,0]]
      sigma_velocity:    [    0.1,        0.1]
      random_quaternion: [   true,       true]

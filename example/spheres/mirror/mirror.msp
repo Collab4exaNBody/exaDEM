@@ -10,6 +10,7 @@ io_tree:
 input_data:
   - particle_type:
      type: [ Sphere1 ]
+     group: [       0 ]
   - read_xyz:
      file: input_file_mirror.xyz
      bounds_mode: FILE
@@ -19,6 +20,7 @@ input_data:
   - set_fields:
      polyhedra: false
      type:           [ Sphere1 ]
+     group:          [       0 ]
      radius:         [     0.5 ]
      density:        [    0.02 ]
      velocity:       [ [0,0,0] ]

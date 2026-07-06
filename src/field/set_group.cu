@@ -70,11 +70,17 @@ class SetGroupOperator : public OperatorNode {
     return R"EOF(
         Assigns the group field to every particle according to its type.
 
-        YAML example:
+        YAML examples:
 
-          - set_group:
-             type:  [ TypeA, TypeB, TypeC ]
-             group: [     0,     1,     0 ]
+          init_polyhedra:
+            - set_group:
+               type:  [ alpha3, Octahedron, Cube ]
+               group: [      0,          1,    0 ]
+
+          init_spheres:
+            - set_group:
+               type:  [ Sphere1, Sphere2, Sphere3 ]
+               group: [       0,       1,       0 ]
         )EOF";
   }
 
