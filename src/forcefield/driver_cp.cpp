@@ -30,11 +30,10 @@ under the License.
 
 namespace exaDEM {
 class DriversContactParams : public OperatorNode {
-  ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED);
   ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT_OUTPUT, REQUIRED,
            DocString{"List of contact parameters for simulations with multiple materials"});
   ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
-  ADD_SLOT(std::vector<std::string>, mat, INPUT, OPTIONAL, DocString{"List of materials."});
+  ADD_SLOT(std::vector<uint32_t>, group, INPUT, OPTIONAL, DocString{"List of particle group indices."});
   ADD_SLOT(std::vector<int>, driver_id, INPUT, OPTIONAL, DocString{"List of drivers."});
   ADD_SLOT(std::vector<double>, dncut, INPUT, OPTIONAL, DocString{"List of dncut values."});
   ADD_SLOT(std::vector<double>, kn, INPUT, OPTIONAL, DocString{"List of ln values."});
@@ -57,7 +56,7 @@ class DriversContactParams : public OperatorNode {
         YAML example:
 
           - drivers_contact_params:
-             mat:       [  Type1, Type2 ]
+             group:     [      0,     1 ]
              driver_id: [      0,     0 ]
              kn:        [  10000, 15000 ]
              kt:        [   8000, 12000 ]
@@ -74,8 +73,6 @@ class DriversContactParams : public OperatorNode {
 
  public:
   inline void execute() final {
-    const auto& type_map = *particle_type_map;
-    int n_types = type_map.size();
     MultiMatParamsT<ContactParams>& cp = *multimat_cp;
 
     // We use the same data map to for drivers
@@ -99,17 +96,9 @@ class DriversContactParams : public OperatorNode {
     if (default_config.has_value()) params = *default_config;
     cp.setup_drivers(driver_map, params);
 
-    if (n_types == 1 && drvs.get_size() == 1) {
-      color_log::warning(operator_name(),
-                         "Advice: You are defining contact parameters while there is only one type of particle.");
-      color_log::warning(operator_name(),
-                         "You should use 'contact_force' or 'contact_force_singlemat' as the operator, and avoid using "
-                         "'drivers_contact_params'.");
-    }
-
     // check input slots
-    if (mat.has_value()) {  /** not default config */
-      auto& material_types = *mat;
+    if (group.has_value()) {  /** not default config */
+      auto& particle_groups = *group;
       auto& drv_id = *driver_id;
       auto& normal_coeffs = *kn;
       auto& tangential_coeffs = *kt;
@@ -121,13 +110,13 @@ class DriversContactParams : public OperatorNode {
       std::vector<double> dncut_coeffs;
       std::vector<double> gamma_coeffs;
 
-      int number_of_pairs = material_types.size();
+      int number_of_pairs = particle_groups.size();
 
       auto check_lengths_match = [number_of_pairs, this]<typename Vec>(Vec& list, std::string cp_field_name) -> bool {
         if (number_of_pairs != int(list.size())) {
           std::string msg = "The length of the field \"" + cp_field_name;
           msg += "\" does not match the size of the other fields. ";
-          msg += "mat1.size() = " + std::to_string(number_of_pairs);
+          msg += "group.size() = " + std::to_string(number_of_pairs);
           msg += ", while " + cp_field_name + ".size() = " + std::to_string(list.size());
           color_log::error(this->operator_name(), msg);
         }
@@ -159,19 +148,6 @@ class DriversContactParams : public OperatorNode {
         fill_DMT_part = true;
       }
 
-      /** check types / materials */
-      for (auto& type_name : material_types) {
-        if (type_map.find(type_name) == type_map.end()) {
-          color_log::error(operator_name(), "The type [" + type_name + "] is not defined", false);
-          std::string msg = "Available types are = ";
-          for (auto& it : type_map) {
-            msg += it.first + " ";
-          }
-          msg += ".";
-          color_log::error(operator_name(), msg);
-        }
-      }
-
       /** Check input driver indexes */
       for (auto did : drv_id) {
         if (did >= int(drvs.get_size())) {
@@ -186,8 +162,7 @@ class DriversContactParams : public OperatorNode {
       }
 
       for (int p = 0; p < number_of_pairs; p++) {
-        std::string m1 = material_types[p];
-        int64_t type = type_map.at(m1);
+        uint32_t grp = particle_groups[p];
         int64_t drv = drv_id[p];
         params.kn_ = normal_coeffs[p];
         params.kt_ = tangential_coeffs[p];
@@ -208,7 +183,7 @@ class DriversContactParams : public OperatorNode {
         } else {
           params.gamma_ = 0.0;
         }
-        cp.register_driver(type, drv, params);
+        cp.register_driver(grp, drv, params);
       }
     }
 

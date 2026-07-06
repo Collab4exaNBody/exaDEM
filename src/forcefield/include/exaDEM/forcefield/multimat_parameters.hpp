@@ -41,26 +41,22 @@ struct MultiMatParamsT {
   ParticleTypeMap driver_map_;                 //< Maps driver types to driver indices
   ReverseParticleTypeMap reverse_type_map_;    //< Maps material indices back to particle type names
   ReverseParticleTypeMap reverse_driver_map_;  //< Maps driver indices back to driver type names
-  int number_of_materials_;                    //< Number of unique material types in the simulation
+  int number_of_groups_;                       //< Number of unique groups in the simulation
   int number_of_drivers_;                      //< Number of unique driver types in the simulation
 
   /**
-   * @brief Returns the number of material types.
+   * @brief Returns the number of groups.
    */
-  int size_types() {
-    assert(type_map_.size() == reverse_type_map_.size());
-    assert(type_map_.size() * type_map_.size() >= multimat_cp_.size());
-    assert(static_cast<int>(type_map_.size()) >= number_of_materials_);
-    return number_of_materials_;
+  int size_groups() {
+    assert(static_cast<int>(multimat_cp_.size()) >= number_of_groups_ * number_of_groups_);
+    return number_of_groups_;
   }
 
   /**
    * @brief Returns the number of driver types.
    */
-
   int size_drivers() {
     assert(driver_map_.size() == reverse_driver_map_.size());
-    assert(static_cast<int>(driver_map_.size()) * static_cast<int>(type_map_.size()) >= drivers_cp_.size());
     assert(static_cast<int>(driver_map_.size()) >= number_of_drivers_);
     return number_of_drivers_;
   }
@@ -70,7 +66,7 @@ struct MultiMatParamsT {
    * @return Accessor to the material-to-material contact parameters.
    */
   MultiMatContactParamsTAccessor<ContactParamsT> get_multimat_accessor() const {
-    MultiMatContactParamsTAccessor<ContactParamsT> res = {multimat_cp_.data(), number_of_materials_};
+    MultiMatContactParamsTAccessor<ContactParamsT> res = {multimat_cp_.data(), number_of_groups_};
     return res;
   }
 
@@ -108,15 +104,17 @@ struct MultiMatParamsT {
    * @param input_map A map of particle types to material indices.
    * @param cp Initial contact parameters for each material pair (default is a default-constructed object).
    */
+  void setup_multimat(int n_groups, ContactParamsT cp = {}) {
+    number_of_groups_ = n_groups;
+    multimat_cp_.resize(number_of_groups_ * number_of_groups_, cp);
+  }
+
   void setup_multimat(const ParticleTypeMap& input_map, ContactParamsT cp = {}) {
-    /** Define type map and reverse type map */
     type_map_ = input_map;
     for (auto it : type_map_) {
       reverse_type_map_[it.second] = it.first;
     }
-    // Allocate array of Contact Force Parameters
-    number_of_materials_ = input_map.size();
-    multimat_cp_.resize(number_of_materials_ * number_of_materials_, cp);
+    setup_multimat(static_cast<int>(input_map.size()), cp);
   }
 
   /**
@@ -136,8 +134,8 @@ struct MultiMatParamsT {
       reverse_driver_map_[it.second] = it.first;
     }
     number_of_drivers_ = input_map.size();
-    assert(number_of_materials_ > 0);
-    drivers_cp_.resize(number_of_drivers_ * number_of_materials_, cp);
+    assert(number_of_groups_ > 0);
+    drivers_cp_.resize(number_of_drivers_ * number_of_groups_, cp);
   }
 
   /**
@@ -147,10 +145,10 @@ struct MultiMatParamsT {
    * @param mat2 The index of the second material.
    * @return The calculated index for the material-to-material contact parameter.
    */
-  ONIKA_HOST_DEVICE_FUNC inline int get_idx_multimat(int mat1, int mat2) {
-    assert(mat1 < size_types());
-    assert(mat2 < size_types());
-    return mat1 * number_of_materials_ + mat2;
+  ONIKA_HOST_DEVICE_FUNC inline int get_idx_multimat(int group1, int group2) {
+    assert(group1 < number_of_groups_);
+    assert(group2 < number_of_groups_);
+    return group1 * number_of_groups_ + group2;
   }
 
   /**
@@ -163,10 +161,10 @@ struct MultiMatParamsT {
    * @param driver The index of the driver.
    * @return The calculated index for the driver-to-material contact parameter.
    */
-  ONIKA_HOST_DEVICE_FUNC inline int get_idx_drivers(int mat, int driver) {
-    assert(mat < number_of_materials_);
+  ONIKA_HOST_DEVICE_FUNC inline int get_idx_drivers(int group, int driver) {
+    assert(group < number_of_groups_);
     assert(driver < number_of_drivers_);
-    return mat * number_of_drivers_ + driver;
+    return group * number_of_drivers_ + driver;
   }
 
   /**
@@ -179,10 +177,10 @@ struct MultiMatParamsT {
    * @param mat2 The index of the second material.
    * @param cp The contact parameters to be registered for the interaction.
    */
-  void register_multimat(int mat1, int mat2, ContactParamsT& cp) {
-    int id = get_idx_multimat(mat1, mat2);
+  void register_multimat(int group1, int group2, ContactParamsT& cp) {
+    int id = get_idx_multimat(group1, group2);
     multimat_cp_[id] = cp;
-    id = get_idx_multimat(mat2, mat1);
+    id = get_idx_multimat(group2, group1);
     multimat_cp_[id] = cp;
   }
 
@@ -195,8 +193,8 @@ struct MultiMatParamsT {
    * @param driver The index of the driver.
    * @param cp The contact parameters to be registered for the interaction.
    */
-  void register_driver(int mat, int driver, ContactParamsT& cp) {
-    int id = get_idx_drivers(mat, driver);
+  void register_driver(int group, int driver, ContactParamsT& cp) {
+    int id = get_idx_drivers(group, driver);
     drivers_cp_[id] = cp;
   }
 
@@ -214,25 +212,25 @@ struct MultiMatParamsT {
   bool check_completeness(bool check_multimat = true, bool check_driver = true) {
     bool check = true;
     ContactParamsT default_cp = {};
-    for (int m1 = 0; m1 < number_of_materials_; m1++) {
+    for (int g1 = 0; g1 < number_of_groups_; g1++) {
       if (check_multimat) {
-        // Check material-to-material parameters
-        for (int m2 = 0; m2 <= m1; m2++) /** symtric definition */
+        // Check group-to-group parameters
+        for (int g2 = 0; g2 <= g1; g2++) /** symmetric definition */
         {
-          if (multimat_cp_[this->get_idx_multimat(m1, m2)] == default_cp) {
+          if (multimat_cp_[this->get_idx_multimat(g1, g2)] == default_cp) {
             color_log::warning("MultiMatParamsT::check_completeness",
-                               "Contact force parameters for the pair (mat: " + std::to_string(m1) +
-                                   ", mat: " + std::to_string(m2) + ") are not defined.");
+                               "Contact force parameters for the pair (group: " + std::to_string(g1) +
+                                   ", group: " + std::to_string(g2) + ") are not defined.");
             check = false;
           }
         }
       }
-      // Check driver-to-material parameters
+      // Check driver-to-group parameters
       if (check_driver) {
         for (int drv = 0; drv < number_of_drivers_; drv++) {
-          if (drivers_cp_[this->get_idx_drivers(m1, drv)] == default_cp) {
+          if (drivers_cp_[this->get_idx_drivers(g1, drv)] == default_cp) {
             color_log::warning("MultiMatParamsT::check_completeness",
-                               "Contact force parameters for the pair (mat: " + std::to_string(m1) +
+                               "Contact force parameters for the pair (group: " + std::to_string(g1) +
                                    ", driver: " + std::to_string(drv) + ") are not defined.");
             check = false;
           }
@@ -253,23 +251,25 @@ struct MultiMatParamsT {
    * @param drivers_mode If true, displays driver-to-material contact parameters.
    */
   void display(bool multimat_mode = true, bool drivers_mode = true) {
+    auto group_name = [this](int g) -> std::string {
+      auto it = reverse_type_map_.find(g);
+      return it != reverse_type_map_.end() ? it->second : "group_" + std::to_string(g);
+    };
     display_header<ContactParamsT>();
-    // Loop through all materials
-    for (int m1 = 0; m1 < number_of_materials_; m1++) {
-      // Display material-to-material parameters
+    // Loop through all groups
+    for (int g1 = 0; g1 < number_of_groups_; g1++) {
+      // Display group-to-group parameters
       if (multimat_mode) {
-        for (int m2 = 0; m2 <= m1; m2++) /** symtric definition */
+        for (int g2 = 0; g2 <= g1; g2++) /** symmetric definition */
         {
-          std::string type1 = reverse_type_map_[m1];
-          std::string type2 = reverse_type_map_[m2];
-          ContactParamsT& cp = multimat_cp_[this->get_idx_multimat(m1, m2)];
-          display_multimat(type1, type2, cp);
+          ContactParamsT& cp = multimat_cp_[this->get_idx_multimat(g1, g2)];
+          display_multimat(group_name(g1), group_name(g2), cp);
         }
       }
-      // Display driver-to-material parameters
+      // Display driver-to-group parameters
       if (drivers_mode) {
         for (int drv = 0; drv < number_of_drivers_; drv++) {
-          display_multimat(reverse_type_map_[m1], reverse_driver_map_[drv], drivers_cp_[this->get_idx_drivers(m1, drv)]);
+          display_multimat(group_name(g1), reverse_driver_map_[drv], drivers_cp_[this->get_idx_drivers(g1, drv)]);
         }
       }
     }
@@ -283,19 +283,19 @@ struct MultiMatParamsT {
    * @param mat2 The index of the second material.
    * @return A reference to the contact parameters for the material-to-material interaction.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ContactParamsT& get_multimat_cp(int mat1, int mat2) const {
-    return multimat_cp_[this->get_idx_multimat(mat1, mat2)];
+  ONIKA_HOST_DEVICE_FUNC inline ContactParamsT& get_multimat_cp(int group1, int group2) const {
+    return multimat_cp_[this->get_idx_multimat(group1, group2)];
   }
 
   /**
-   * @brief Retrieves the contact parameters for a driver-to-material interaction.
+   * @brief Retrieves the contact parameters for a driver-to-group interaction.
    *
-   * @param mat The index of the material.
+   * @param group The group index of the particle.
    * @param driver The index of the driver.
-   * @return A reference to the contact parameters for the driver-to-material interaction.
+   * @return A reference to the contact parameters for the driver-to-group interaction.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ContactParamsT& get_drivers_cp(int mat, int driver) const {
-    return drivers_cp_[this->get_idx_drivers(mat, driver)];
+  ONIKA_HOST_DEVICE_FUNC inline ContactParamsT& get_drivers_cp(int group, int driver) const {
+    return drivers_cp_[this->get_idx_drivers(group, driver)];
   }
 };
 }  // namespace exaDEM

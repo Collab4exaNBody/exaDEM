@@ -135,6 +135,8 @@ class StickPolyhedraOperator : public OperatorNode {
         ONIKA_ASSUME_ALIGNED(rz_i);
         const auto* __restrict__ t_i = cells[cell_i][field::type];
         ONIKA_ASSUME_ALIGNED(t_i);
+        const auto* __restrict__ g_i = cells[cell_i][field::group];
+        ONIKA_ASSUME_ALIGNED(g_i);
         const auto* __restrict__ h_i = cells[cell_i][field::homothety];
         ONIKA_ASSUME_ALIGNED(t_i);
         const auto* __restrict__ cluster_i = cells[cell_i][field::cluster];
@@ -158,8 +160,8 @@ class StickPolyhedraOperator : public OperatorNode {
         apply_cell_particle_neighbors(
             *grid, *chunk_neighbors, cell_i, loc_i, std::false_type() /* not symetric */,
             // capture
-            [&g, &vertex_fields, &cells, cell_i, &item, &shps, dn_crit, id_i, rx_i, ry_i, rz_i, t_i, h_i, cluster_i,
-             &vertex_cell_i, &add_contact, xform, is_xform, &manager, &local,
+            [&g, &vertex_fields, &cells, cell_i, &item, &shps, dn_crit, id_i, rx_i, ry_i, rz_i, t_i, g_i, h_i,
+             cluster_i, &vertex_cell_i, &add_contact, xform, is_xform, &manager, &local,
              &ibpa](size_t p_i, size_t cell_j, unsigned int p_j, size_t p_j_index) {
               double clusterj = cells[cell_j][field::cluster][p_j];
               if (clusterj != cluster_i[p_i]) {
@@ -182,6 +184,7 @@ class StickPolyhedraOperator : public OperatorNode {
               ParticleVertexView vertices_j = {p_j, vertex_cell_j};
               auto& cellj = cells[cell_j];
               const uint32_t typej = cellj[field::type][p_j];
+              const uint32_t groupj = cellj[field::group][p_j];
               double rxj = cellj[field::rx][p_j];
               double ryj = cellj[field::ry][p_j];
               double rzj = cellj[field::rz][p_j];
@@ -211,7 +214,7 @@ class StickPolyhedraOperator : public OperatorNode {
               const shape* shpj = shps[typej];
 
               // get stick law force parameters to define the interface fracture criterion
-              const InnerBondParams& ibp = ibpa(t_i[p_i], typej);
+              const InnerBondParams& ibp = ibpa(g_i[p_i], groupj);
 
               // Add interactions
               item.pair_.type_ = InteractionTypeId::InnerBond;

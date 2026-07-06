@@ -31,11 +31,10 @@ under the License.
 namespace exaDEM {
 
 class InnerBondParamsOp : public OperatorNode {
-  ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT, REQUIRED);
   ADD_SLOT(MultiMatParamsT<InnerBondParams>, multimat_ibp, OUTPUT,
            DocString{"List of contact parameters for simulations with multiple materials"});
-  ADD_SLOT(std::vector<std::string>, mat1, INPUT, OPTIONAL, DocString{"List of materials."});
-  ADD_SLOT(std::vector<std::string>, mat2, INPUT, OPTIONAL, DocString{"List of materials."});
+  ADD_SLOT(std::vector<uint32_t>, group1, INPUT, OPTIONAL, DocString{"List of group indices for the first particle."});
+  ADD_SLOT(std::vector<uint32_t>, group2, INPUT, OPTIONAL, DocString{"List of group indices for the second particle."});
   ADD_SLOT(std::vector<double>, kn, INPUT, OPTIONAL, DocString{"List of ln values."});
   ADD_SLOT(std::vector<double>, kt, INPUT, OPTIONAL, DocString{"List of kt values."});
   ADD_SLOT(std::vector<double>, damp_rate, INPUT, OPTIONAL, DocString{"List of en2 values."});
@@ -61,8 +60,8 @@ class InnerBondParamsOp : public OperatorNode {
         YAML example:
 
           - inner_bond_params:
-             mat1:      [  Type1, Type1, Type2 ]
-             mat2:      [  Type1, Type2, Type2 ]
+             group1:    [      0,     0,     1 ]
+             group2:    [      0,     1,     1 ]
              kn:        [   5000, 10000, 15000 ]
              kt:        [   4000,  8000, 12000 ]
              damp_rate: [  0.999, 0.999, 0.999 ]
@@ -73,12 +72,12 @@ class InnerBondParamsOp : public OperatorNode {
         (separate modes fracture criterion) for every pair, but not both at once:
 
           - inner_bond_params:
-             mat1:      [  Type1, Type2 ]
-             mat2:      [  Type1, Type2 ]
+             group1:    [      0,     1 ]
+             group2:    [      0,     1 ]
              kn:        [   5000, 15000 ]
              kt:        [   4000, 12000 ]
-             damp_rate: [  0.999,  0.999 ]
-             g:         [   1e-5,   1e-5 ]
+             damp_rate: [  0.999, 0.999 ]
+             g:         [   1e-5,  1e-5 ]
         )EOF";
   }
 
@@ -86,52 +85,37 @@ class InnerBondParamsOp : public OperatorNode {
 
  public:
   inline void execute() final {
-    const auto& type_map = *particle_type_map;
     MultiMatParamsT<InnerBondParams>& ibp = *multimat_ibp;
 
-    int n_types = type_map.size();
-    if (n_types == 1) {
-      lout << "\033[1;32mAdvice: You are defining contact parameters while there is only one type of particle. "
-           << "You should use 'contact_force' or 'contact_force_singlemat' as the operator, "
-           << "and avoid using 'multimat_contact_params'.\033[0m" << std::endl;
-    }
-
-    if (!mat1.has_value() && !mat2.has_value()) {
+    if (!group1.has_value() && !group2.has_value()) {
       if (!default_config.has_value()) {
-        color_log::error(this->operator_name(),
-                         "You must define either a list for material combinations (mat1, mat2) or a list of default "
-                         "parameters \'devault_config\'.");
+        color_log::error(
+            this->operator_name(),
+            "You must define either a list for group combinations (group1, group2) or a default config.");
       }
     }
 
-    if (default_config.has_value()) {
-      auto& params = *default_config;
-      ibp.setup_multimat(type_map, params);
-    } else {
-      ibp.setup_multimat(type_map);
-    }
-
-    if (mat1.has_value() && mat2.has_value()) {
-      // check input slots
-      auto& material_types_1 = *mat1;
-      auto& material_types_2 = *mat2;
+    if (group1.has_value() && group2.has_value()) {
+      auto& groups_1 = *group1;
+      auto& groups_2 = *group2;
       auto& normal_coeffs = *kn;
       auto& tangential_coeffs = *kt;
       auto& damprate_coeffs = *damp_rate;
 
-      int number_of_pairs = material_types_1.size();
+      int number_of_pairs = groups_1.size();
 
       auto check_lengths_match = [number_of_pairs, this]<typename Vec>(Vec& list, std::string ibp_field_name) -> bool {
         if (number_of_pairs != int(list.size())) {
-          color_log::error(this->operator_name(), "The length of the field \"" + ibp_field_name +
-                                                      "\" does not match the size of the other fields. mat1.size() = " +
-                                                      std::to_string(number_of_pairs) + ", while " + ibp_field_name +
-                                                      ".size() = " + std::to_string(list.size()) + ".");
+          color_log::error(
+              this->operator_name(),
+              "The length of the field \"" + ibp_field_name +
+                  "\" does not match the size of the other fields. group1.size() = " + std::to_string(number_of_pairs) +
+                  ", while " + ibp_field_name + ".size() = " + std::to_string(list.size()) + ".");
         }
         return true;
       };
 
-      check_lengths_match(material_types_2, "type2");
+      check_lengths_match(groups_2, "group2");
       check_lengths_match(normal_coeffs, "kn");
       check_lengths_match(tangential_coeffs, "kt");
       check_lengths_match(damprate_coeffs, "damp_rate");
@@ -152,36 +136,21 @@ class InnerBondParamsOp : public OperatorNode {
                          "You must define either \"g\", or both \"gn\" and \"gt\", or \"g\" and \"sigma\".");
       }
 
-      /** check types / materials */
-      for (auto& type_name : material_types_1) {
-        if (type_map.find(type_name) == type_map.end()) {
-          color_log::error(operator_name(), "The type [" + type_name + "] is not defined", false);
-          std::string msg = "Available types are = ";
-          for (auto& it : type_map) {
-            msg += it.first + " ";
-          }
-          msg += ".";
-          color_log::error(operator_name(), msg);
-        }
-      }
+      // Compute number of groups as max(group1, group2) + 1
+      uint32_t max_group = 0;
+      for (auto g : groups_1) max_group = std::max(max_group, g);
+      for (auto g : groups_2) max_group = std::max(max_group, g);
+      int n_groups = static_cast<int>(max_group) + 1;
 
-      for (auto& type_name : material_types_2) {
-        if (type_map.find(type_name) == type_map.end()) {
-          color_log::error(operator_name(), "The type [" + type_name + "] is not defined", false);
-          std::string msg = "Available types are = ";
-          for (auto& it : type_map) {
-            msg += it.first + " ";
-          }
-          msg += ".";
-          color_log::error(operator_name(), msg);
-        }
+      if (default_config.has_value()) {
+        ibp.setup_multimat(n_groups, *default_config);
+      } else {
+        ibp.setup_multimat(n_groups);
       }
 
       for (int p = 0; p < number_of_pairs; p++) {
-        std::string m1 = material_types_1[p];
-        std::string m2 = material_types_2[p];
-        int64_t type_1 = type_map.at(m1);
-        int64_t type_2 = type_map.at(m2);
+        int g1 = static_cast<int>(groups_1[p]);
+        int g2 = static_cast<int>(groups_2[p]);
         InnerBondParams params;
         params.kn_ = normal_coeffs[p];
         params.kt_ = tangential_coeffs[p];
@@ -202,11 +171,13 @@ class InnerBondParamsOp : public OperatorNode {
           params.crit2_ = (*gt)[p];
         }
 
-        ibp.register_multimat(type_1, type_2, params);
+        ibp.register_multimat(g1, g2, params);
       }
+    } else if (default_config.has_value()) {
+      ibp.setup_multimat(1, *default_config);
     }
 
-    bool multimat_mode = true;
+    bool multimat_mode = group1.has_value();
     bool driver_mode = false;
 
     ibp.check_completeness(multimat_mode, driver_mode);

@@ -73,7 +73,7 @@ template <>
 inline void display_header<InnerBondParams>() {
   lout << "=========================================================================================================="
        << std::endl;
-  lout << "|        typeA |        typeB |        kn |        kt | damp_rate |             mode : Mixed |         g |  "
+  lout << "|       groupA |       groupB |        kn |        kt | damp_rate |             mode : Mixed |         g |  "
           "       X |"
        << std::endl;
   lout << "|              |              |           |           |           |                Separated |        gn |  "
@@ -100,21 +100,21 @@ inline void display_end_table<InnerBondParams>() {
  * @brief Formats the contact parameters into a single table row string.
  */
 inline std::string display(InnerBondParams& params) {
-  std::string line = onika::format_string(" %.3e | %.3e | %.3e | %13s | %.3e | %.3e |", params.kn_, params.kt_,
-                                          params.damp_rate_, exaDEM::display(params.mode_), params.crit1_,
-                                          params.crit2_);
+  std::string line =
+      onika::format_string(" %.3e | %.3e | %.3e | %13s | %.3e | %.3e |", params.kn_, params.kt_, params.damp_rate_,
+                           exaDEM::display(params.mode_), params.crit1_, params.crit2_);
   return line;
 }
 
 /**
  * @brief Displays a full formatted line in the contact parameters table.
  *
- * @param typeA Identifier for the first type (e.g., material A).
- * @param typeB Identifier for the second type (e.g., material B).
+ * @param groupA Identifier for the first type (e.g., material A).
+ * @param groupB Identifier for the second type (e.g., material B).
  * @param params Reference to the InnerBondParams instance to display.
  */
-inline void display_multimat(std::string typeA, std::string typeB, InnerBondParams& params) {
-  std::string line_types = onika::format_string("| %12s | %12s |", typeA, typeB);
+inline void display_multimat(std::string groupA, std::string groupB, InnerBondParams& params) {
+  std::string line_types = onika::format_string("| %12s | %12s |", groupA, groupB);
   std::string line_params = display(params);
   lout << line_types << line_params << std::endl;
 }
@@ -129,8 +129,8 @@ inline void display_multimat(std::string typeA, std::string typeB, InnerBondPara
 template <typename STREAM>
 void streaming(STREAM& stream, InnerBondParams& params) {
   stream << "{ kn: " << params.kn_ << ", kt: " << params.kt_ << ", damp_rate: " << params.damp_rate_
-         << ", mode: " << exaDEM::display(params.mode_) << ", crit1: " << params.crit1_
-         << ", crit2: " << params.crit2_ << " }";
+         << ", mode: " << exaDEM::display(params.mode_) << ", crit1: " << params.crit1_ << ", crit2: " << params.crit2_
+         << " }";
 }
 }  // namespace exaDEM
 

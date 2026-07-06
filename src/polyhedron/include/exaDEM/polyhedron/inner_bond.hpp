@@ -138,9 +138,11 @@ struct inner_bond_law {
     const Vec3d& vroti = celli[field::vrot][pi.p_];
     const Vec3d& vrotj = cellj[field::vrot][pj.p_];
 
-    // === type
+    // === type (for shape lookup) and group (for contact parameters)
     const auto& typei = celli[field::type][pi.p_];
     const auto& typej = cellj[field::type][pj.p_];
+    const auto& groupi = celli[field::group][pi.p_];
+    const auto& groupj = cellj[field::group][pj.p_];
 
     // === vertex array
     const ParticleVertexView verticesi = {pi.p_, gv[pi.cell_]};
@@ -162,7 +164,7 @@ struct inner_bond_law {
     Vec3d fn = {0, 0, 0};
 
     // === Contact Force parameters
-    const InnerBondParams& ibp = ibpa(typei, typej);
+    const InnerBondParams& ibp = ibpa(groupi, groupj);
 
     const Vec3d vi = get_v(celli, pi.p_);
     const Vec3d vj = get_v(cellj, pj.p_);
