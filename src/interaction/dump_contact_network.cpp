@@ -69,8 +69,18 @@ class ContactNetwork : public OperatorNode {
     // iterate over interaction types
     // for (size_t type = 0; type < classifier.number_of_waves(); type++)
     for (size_t type = get_first_id<InteractionType::ParticleParticle>();
-         type < get_last_id<InteractionType::ParticleParticle>(); type++) {  // skip drivers
+         type <= get_last_id<InteractionType::ParticleParticle>(); type++) {
       auto& interactions = classifier.get_data<InteractionType::ParticleParticle>(type);
+      auto& forces = classifier.contact_state_[type];
+      const size_t n = interactions.size();
+      manager(n, interactions, forces);
+    }
+
+    // skip drivers
+
+    for (size_t type = get_first_id<InteractionType::InnerBond>(); type <= get_last_id<InteractionType::InnerBond>();
+         type++) {
+      auto& interactions = classifier.get_data<InteractionType::InnerBond>(type);
       auto& forces = classifier.contact_state_[type];
       const size_t n = interactions.size();
       manager(n, interactions, forces);
