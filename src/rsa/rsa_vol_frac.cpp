@@ -14,7 +14,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-
+#include <exanb/core/grid_algorithm.h>
 #include <exanb/core/check_particles_inside_cell.h>
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
