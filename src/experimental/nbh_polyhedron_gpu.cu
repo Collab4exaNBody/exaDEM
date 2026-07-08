@@ -55,12 +55,21 @@ namespace exaDEM {
 // temporary storage for GPU computations. Avoid allocating and deallocating memory on GPU every time the operator is
 // called. It will be removed in the future and replaced by a more generic scratch space for GPU computations
 struct DataNeighborGPUScratch {
+  ParticlePairStorage pp_storage_;
   onika::memory::CudaMMVector<int> pp_counts_;
   onika::memory::CudaMMVector<int> pp_offsets_;
   onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_counts_;
   onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_prefix_;
-  onika::memory::CudaMMVector<ParticlePairStorage> pp_storage_;
+  onika::memory::CudaMMVector<int> type_counts_[InteractionTypeId::NTypesPP];
+  onika::memory::CudaMMVector<int> type_prefix_[InteractionTypeId::NTypesPP];
 };
+
+template <typename T>
+void reset(onika::memory::CudaMMVector<T>& vec) {
+  if (vec.size() > 0) {
+    ONIKA_CU_MEMSET(vec.data(), 0, vec.size() * sizeof(T));
+  }
+}
 
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
@@ -85,14 +94,14 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
 				YAML example [no option]:
 
-					- nbh_polyhedron_gpu_pccp
+					- nbh_polyhedron_gpu
 			 )EOF";
   }
 
   inline void execute() final {
     using namespace onika::parallel;
 #ifndef ONIKA_CUDA_VERSION
-    color_log::error("nbh_polyhedron_gpu_pccp",
+    color_log::error("nbh_polyhedron_gpu",
                      "This operator only work on GPU.\n"
                      "                     Please use nbh_polyhedron.");
 #else
@@ -172,6 +181,16 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     auto cell_pair_size = CellInfoStorageHost.owner_cell_.size();
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
+    // Used in Build particle pairs (PCCP)
+    // Place here to avoid several synchronization calls in the middle of the operator.
+    auto& pp_counts = scratch->pp_counts_;
+    auto& pp_offsets = scratch->pp_offsets_;
+    pp_offsets.resize(cell_pair_size);
+    reset(pp_offsets);
+    pp_counts.resize(cell_pair_size);
+    reset(pp_counts);
+    // end scratch variables
+
     parallel_for(cell_size, counter_driver, parallel_execution_context("nbh_gpu::counter_driver,"), opts);
     PrefixSumInteractionTypePerCellCounter func_prefix_driver{cell_driver_accessor.offset_, cell_driver_accessor.size_,
                                                               cell_size};
@@ -194,16 +213,11 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     constexpr int pp_block_y = 8;
     dim3 pp_block(pp_block_x, pp_block_y, 1);
 
-    onika::memory::CudaMMVector<int>& pp_counts = scratch->pp_counts_;
-    pp_counts.resize(cell_pair_size);
-
     CountParticlePairsKernel<pp_block_x, pp_block_y>
         <<<cell_pair_size, pp_block>>>(cells, accessor.owner_cell_, accessor.partner_cell_, accessor.ghost_, *rcut_inc,
                                        shps.data(), vertex_fields, pp_counts.data(), cell_pair_size);
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-    onika::memory::CudaMMVector<int>& pp_offsets = scratch->pp_offsets_;
-    pp_offsets.resize(cell_pair_size);
     {
       void* d_tmp = nullptr;
       size_t tmp_bytes = 0;
@@ -215,10 +229,22 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
     size_t total_pp = 0;
-    if (cell_pair_size > 0) total_pp = pp_counts[cell_pair_size - 1] + pp_offsets[cell_pair_size - 1];
+    if (cell_pair_size > 0) {
+      total_pp = pp_counts[cell_pair_size - 1] + pp_offsets[cell_pair_size - 1];
+    }
 
-    ParticlePairStorage& pp_storage = scratch->pp_storage_;
+    auto& pp_storage = scratch->pp_storage_;
     pp_storage.resize(total_pp);
+
+    // Used in Count interactions per particle pair (PCCP)
+    // Place here to avoid several synchronization calls in the middle of the operator.
+    auto& interaction_counts = scratch->interaction_counts_;
+    auto& interaction_prefix = scratch->interaction_prefix_;
+    interaction_counts.resize(total_pp);
+    reset(interaction_counts);
+    interaction_prefix.resize(total_pp);
+    reset(interaction_prefix);
+    // end scratch variables
 
     if (total_pp > 0) {
       FillParticlePairsKernel<pp_block_x, pp_block_y><<<cell_pair_size, pp_block>>>(
@@ -229,10 +255,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     }
 
     // ****** Count interactions per particle pair (PCCP) ******* //
-    onika::memory::CudaMMVector<InteractionTypePerCellCounter>& interaction_counts = scratch->interaction_counts_;
-    interaction_counts.resize(total_pp);
-    onika::memory::CudaMMVector<InteractionTypePerCellCounter>& interaction_prefix = scratch->interaction_prefix_;
-    interaction_prefix.resize(total_pp);
+
     InteractionTypePerCellCounter total_interactions;
     for (int typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
       total_interactions[typeID] = 0;
@@ -245,16 +268,19 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
       ONIKA_CU_DEVICE_SYNCHRONIZE();
 
       // GPU prefix sum per interaction type
-      onika::memory::CudaMMVector<int>& type_counts = scratch->type_counts_;
-      onika::memory::CudaMMVector<int>& type_prefix = scratch->type_prefix_;
-      for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
-        type_counts[t].resize(total_pp);
-        type_prefix[t].resize(total_pp);
+      auto& type_counts = scratch->type_counts_;
+      auto& type_prefix = scratch->type_prefix_;
+      for (int typeID = 0; typeID < InteractionTypeId::NTypesPP; typeID++) {
+        type_counts[typeID].resize(total_pp);
+        reset(type_counts[typeID]);
+        type_prefix[typeID].resize(total_pp);
+        reset(type_prefix[typeID]);
       }
 
       int block_1d = 256;
       int grid_1d = (total_pp + block_1d - 1) / block_1d;
 
+      ONIKA_CU_DEVICE_SYNCHRONIZE();
       ExtractInteractionCounts<<<grid_1d, block_1d>>>(interaction_counts.data(), type_counts[0].data(),
                                                       type_counts[1].data(), type_counts[2].data(),
                                                       type_counts[3].data(), total_pp);
@@ -392,7 +418,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 };
 
 // === register factories ===
-ONIKA_AUTORUN_INIT(nbh_polyhedron_gpu_pccp) {
+ONIKA_AUTORUN_INIT(nbh_polyhedron_gpu) {
   OperatorNodeFactory::instance()->register_factory("nbh_polyhedron_gpu",
                                                     make_grid_variant_operator<UpdateClassifierPolyhedronGPUPCCP>);
 }
