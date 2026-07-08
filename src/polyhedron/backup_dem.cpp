@@ -16,15 +16,16 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
-#include <exanb/core/grid.h>
-#include <onika/math/basic_types.h>
-#include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/grid_fields.h>
 #include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
+#include <exanb/core/grid_fields.h>
+#include <exanb/core/make_grid_variant_operator.h>
+#include <exanb/core/parallel_grid_algorithm.h>
+#include <onika/math/basic_types.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
 #include <exaDEM/polyhedron/backup_dem.hpp>
 
 namespace exaDEM {
@@ -41,13 +42,13 @@ struct DEMBackupNode : public OperatorNode {
     auto& bd = *backup_dem;
 
     const bool defbox = !domain->xform_is_identity();
-    Mat3d m_xform = domain->xform();
+    Mat3d xform = domain->xform();
     setup_dem_backup(bd, cells, dims);
 
-    double* data = bd.m_data.data();
-    uint32_t* idxs = bd.m_index_map.data();
+    double* data = bd.data_.data();
+    uint32_t* idxs = bd.index_map_.data();
 
-#   pragma omp parallel
+#pragma omp parallel
     {
       GRID_OMP_FOR_BEGIN(dims - 2 * gl, _, loc_no_gl) {
         const IJK loc = loc_no_gl + gl;
@@ -59,11 +60,11 @@ struct DEMBackupNode : public OperatorNode {
         const auto* __restrict__ rz = cells[i][field::rz];
         const auto* __restrict__ orient = cells[i][field::orient];
 
-#       pragma omp simd
+#pragma omp simd
         for (size_t j = 0; j < n_particles; j++) {
-          const size_t p = j*DEMBackupData::components;
+          const size_t p = j * DEMBackupData::components;
           if (defbox) {
-            Vec3d r = m_xform * Vec3d{rx[j], ry[j], rz[j]};
+            Vec3d r = xform * Vec3d{rx[j], ry[j], rz[j]};
             rb[p] = r.x;
             rb[p + 1] = r.y;
             rb[p + 2] = r.z;

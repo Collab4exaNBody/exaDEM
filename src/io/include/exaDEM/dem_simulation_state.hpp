@@ -20,6 +20,7 @@ under the License.
 
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
+
 #include <cstdlib>
 
 namespace exaDEM {
@@ -28,112 +29,72 @@ class SimulationState {
   using Vec3d = exanb::Vec3d;
 
  public:
-  inline void set_kinetic_energy(const Vec3d& x) {
-    m_kinetic_energy = x;
-  }
+  inline void set_kinetic_energy(const Vec3d& x) { kinetic_energy_ = x; }
 
-  inline const Vec3d& kinetic_energy() const {
-    return m_kinetic_energy;
-  }
+  inline const Vec3d& kinetic_energy() const { return kinetic_energy_; }
 
-  inline double kinetic_energy_scal() const {
-    return m_kinetic_energy.x + m_kinetic_energy.y + m_kinetic_energy.z;
-  }
+  inline double kinetic_energy_scal() const { return kinetic_energy_.x + kinetic_energy_.y + kinetic_energy_.z; }
 
-  inline void set_rotation_energy(const Vec3d& x) {
-    m_rotation_energy = x;
-  }
+  inline void set_rotation_energy(const Vec3d& x) { rotation_energy_ = x; }
 
-  inline const Vec3d& rotation_energy() const {
-    return m_rotation_energy;
-  }
+  inline const Vec3d& rotation_energy() const { return rotation_energy_; }
 
-  inline double rotation_energy_scal() const {
-    return m_rotation_energy.x + m_rotation_energy.y + m_rotation_energy.z;
-  }
+  inline double rotation_energy_scal() const { return rotation_energy_.x + rotation_energy_.y + rotation_energy_.z; }
 
-  inline void set_mass(double x) {
-    m_mass = x;
-  }
+  inline void set_mass(double x) { mass_ = x; }
 
-  inline double mass() const {
-    return m_mass;
-  }
+  inline double mass() const { return mass_; }
 
-  inline void set_volume(double x) {
-    m_volume = x;
-  }
+  inline void set_volume(double x) { volume_ = x; }
 
-  inline double volume() const {
-    return m_volume;
-  }
+  inline double volume() const { return volume_; }
 
-  inline void set_particle_count(uint64_t x) {
-    m_particle_count = x;
-  }
+  inline void set_particle_count(uint64_t x) { particle_count_ = x; }
 
-  inline uint64_t particle_count() const {
-    return m_particle_count;
-  }
+  inline uint64_t particle_count() const { return particle_count_; }
 
-  inline void set_active_interaction_count(uint64_t x) {
-    m_active_interactions = x;
-  }
+  inline void set_active_interaction_count(uint64_t x) { active_interactions_ = x; }
 
-  inline uint64_t active_interaction_count() const {
-    return m_active_interactions;
-  }
+  inline uint64_t active_interaction_count() const { return active_interactions_; }
 
-  inline void set_interaction_count(uint64_t x) {
-    m_interaction_count = x;
-  }
+  inline void set_interaction_count(uint64_t x) { interaction_count_ = x; }
 
-  inline uint64_t interaction_count() const {
-    return m_interaction_count;
-  }
+  inline uint64_t interaction_count() const { return interaction_count_; }
 
-  inline void set_dn(double x) {
-    m_dn = x;
-  }
+  inline void set_dn(double x) { dn_ = x; }
 
-  inline double dn() const {
-    return m_dn;
-  }
+  inline double dn() const { return dn_; }
 
-  inline void set_interface_count(uint64_t n) {
-    m_interface_count = n;
-  }
+  inline void set_interface_count(uint64_t n) { interface_count_ = n; }
 
-  inline uint64_t interface_count() const {
-    return m_interface_count;
-  }
+  inline uint64_t interface_count() const { return interface_count_; }
 
   inline size_t compute_particles_throughput(std::chrono::time_point<std::chrono::steady_clock> new_timepoint,
                                              int new_timestep) const {
-    if (m_last_timestep == -1) {
+    if (last_timestep_ == -1) {
       return 0;
     }
-    return m_particle_count * (new_timestep - m_last_timestep) /
-           (std::chrono::duration<double>(new_timepoint - m_last_timepoint).count());
+    return particle_count_ * (new_timestep - last_timestep_) /
+           (std::chrono::duration<double>(new_timepoint - last_timepoint_).count());
   }
   inline void update_timestep_timepoint(std::chrono::time_point<std::chrono::steady_clock> new_timepoint,
                                         int new_timestep) {
-    m_last_timestep = new_timestep;
-    m_last_timepoint = new_timepoint;
+    last_timestep_ = new_timestep;
+    last_timepoint_ = new_timepoint;
   }
 
  private:
-  Vec3d m_kinetic_energy;
-  Vec3d m_rotation_energy;
-  Vec3d m_temperature;
-  double m_mass = 0.;
-  double m_volume = 0.;
-  uint64_t m_particle_count = 0;
-  uint64_t m_active_interactions = 0;
-  uint64_t m_interaction_count = 0;
-  double m_dn = 0;
-  uint64_t m_interface_count = 0;
-  int m_last_timestep = -1;
-  std::chrono::time_point<std::chrono::steady_clock> m_last_timepoint;
+  Vec3d kinetic_energy_;
+  Vec3d rotation_energy_;
+  Vec3d temperature_;
+  double mass_ = 0.;
+  double volume_ = 0.;
+  uint64_t particle_count_ = 0;
+  uint64_t active_interactions_ = 0;
+  uint64_t interaction_count_ = 0;
+  double dn_ = 0;
+  uint64_t interface_count_ = 0;
+  int last_timestep_ = -1;
+  std::chrono::time_point<std::chrono::steady_clock> last_timepoint_;
 };
 }  // namespace exaDEM

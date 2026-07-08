@@ -32,14 +32,14 @@ using vector_t = onika::memory::CudaMMVector<T>;
  * using a Structure of Arrays (SoA) layout for performance on GPU.
  */
 struct VertexField {
-  int m_n_particles = 0;       /**< Number of particles */
-  int m_n_vertices = 0;        /**< Number of vertices per particle */
-  vector_t<double> m_vertices; /**< Flattened storage of 3D vertex data in SoA layout (x, y, z) */
+  int n_particles_ = 0;       /**< Number of particles */
+  int n_vertices_ = 0;        /**< Number of vertices per particle */
+  vector_t<double> vertices_; /**< Flattened storage of 3D vertex data in SoA layout (x, y, z) */
 
   void resize(int np /* number of particles */, int nv /* number of vertices */) {
-    m_n_particles = np;
-    m_n_vertices = nv;
-    m_vertices.resize(3 * m_n_particles * m_n_vertices);
+    n_particles_ = np;
+    n_vertices_ = nv;
+    vertices_.resize(3 * n_particles_ * n_vertices_);
   }
 
   /**
@@ -49,13 +49,13 @@ struct VertexField {
    */
   ONIKA_HOST_DEVICE_FUNC inline Vec3d operator()(int pid, int vid)
 #if defined(__GNUC__)
-  __attribute__((always_inline))
+      __attribute__((always_inline))
 #endif
   {
-    assert(vid < m_n_vertices);
-    int i = pid + 3 * m_n_particles * vid;
-    double* const __restrict__ data = onika::cuda::vector_data(m_vertices);
-    return Vec3d{data[i], data[i + m_n_particles], data[i + 2 * m_n_particles]};
+    assert(vid < n_vertices_);
+    int i = pid + 3 * n_particles_ * vid;
+    double* const __restrict__ data = onika::cuda::vector_data(vertices_);
+    return Vec3d{data[i], data[i + n_particles_], data[i + 2 * n_particles_]};
   }
 
   /**
@@ -65,14 +65,14 @@ struct VertexField {
    */
   ONIKA_HOST_DEVICE_FUNC inline Vec3d operator()(int pid, int vid) const
 #if defined(__GNUC__)
-  __attribute__((always_inline))
+      __attribute__((always_inline))
 #endif
   {
-    assert(vid < m_n_vertices);
-    assert(pid < m_n_particles);
-    int i = pid + 3 * m_n_particles * vid;
-    const double* __restrict__ data = onika::cuda::vector_data(m_vertices);
-    return Vec3d{data[i], data[i + m_n_particles], data[i + 2 * m_n_particles]};
+    assert(vid < n_vertices_);
+    assert(pid < n_particles_);
+    int i = pid + 3 * n_particles_ * vid;
+    const double* __restrict__ data = onika::cuda::vector_data(vertices_);
+    return Vec3d{data[i], data[i + n_particles_], data[i + 2 * n_particles_]};
   }
 
   /**
@@ -82,13 +82,13 @@ struct VertexField {
    * @param vid Vertex index (within particle)
    */
   ONIKA_HOST_DEVICE_FUNC inline void set(const Vec3d& value, int pid, int vid) {
-    assert(vid < m_n_vertices);
-    assert(pid < m_n_particles);
-    int i = pid + 3 * m_n_particles * vid;
-    double* const __restrict__ data = onika::cuda::vector_data(m_vertices);
+    assert(vid < n_vertices_);
+    assert(pid < n_particles_);
+    int i = pid + 3 * n_particles_ * vid;
+    double* const __restrict__ data = onika::cuda::vector_data(vertices_);
     data[i] = value.x;
-    data[i + m_n_particles] = value.y;
-    data[i + 2 * m_n_particles] = value.z;
+    data[i + n_particles_] = value.y;
+    data[i + 2 * n_particles_] = value.z;
   }
 };
 
@@ -98,15 +98,15 @@ struct VertexField {
  * It allows simplified access to all vertices associated with the given particle.
  */
 struct ParticleVertexView {
-  size_t pid;          /**< Particle ID */
-  VertexField& buffer; /**< Reference to the vertex field buffer */
+  size_t pid_;          /**< Particle ID */
+  VertexField& buffer_; /**< Reference to the vertex field buffer */
 
   ONIKA_HOST_DEVICE_FUNC inline Vec3d operator[](int vid) __attribute__((always_inline))
 #if defined(__GNUC__)
   __attribute__((always_inline))
 #endif
   {
-    return buffer(pid, vid);
+    return buffer_(pid_, vid);
   }
 
   ONIKA_HOST_DEVICE_FUNC inline const Vec3d operator[](int vid) const __attribute__((always_inline))
@@ -114,12 +114,10 @@ struct ParticleVertexView {
   __attribute__((always_inline))
 #endif
   {
-    return buffer(pid, vid);
+    return buffer_(pid_, vid);
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline void set(Vec3d& vertex, int vid) {
-    buffer.set(vertex, pid, vid);
-  }
+  ONIKA_HOST_DEVICE_FUNC inline void set(Vec3d& vertex, int vid) { buffer_.set(vertex, pid_, vid); }
 };
 
 /**
@@ -128,22 +126,14 @@ struct ParticleVertexView {
  * Each cell holds vertex fields for multiple particles.
  */
 struct CellVertexField {
-  vector_t<VertexField> buffers; /**< Array of vertex field buffers (one per cell) */
+  vector_t<VertexField> buffers_; /**< Array of vertex field buffers (one per cell) */
 
-  VertexField* data() {
-    return buffers.data();
-  }
+  VertexField* data() { return buffers_.data(); }
 
-  void resize(int size) {
-    buffers.resize(size);
-  }
+  void resize(int size) { buffers_.resize(size); }
 
-  void resize(int cell, int np, int nv) {
-    buffers[cell].resize(np, nv);
-  }
+  void resize(int cell, int np, int nv) { buffers_[cell].resize(np, nv); }
 
-  ONIKA_HOST_DEVICE_FUNC inline VertexField& operator[](int i) {
-    return buffers[i];
-  }
+  ONIKA_HOST_DEVICE_FUNC inline VertexField& operator[](int i) { return buffers_[i]; }
 };
 }  // namespace exaDEM
