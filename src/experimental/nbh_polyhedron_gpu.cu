@@ -51,6 +51,17 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+
+// temporary storage for GPU computations. Avoid allocating and deallocating memory on GPU every time the operator is
+// called. It will be removed in the future and replaced by a more generic scratch space for GPU computations
+struct DataNeighborGPUScratch {
+  onika::memory::CudaMMVector<int> pp_counts_;
+  onika::memory::CudaMMVector<int> pp_offsets_;
+  onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_counts_;
+  onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_prefix_;
+  onika::memory::CudaMMVector<ParticlePairStorage> pp_storage_;
+};
+
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
@@ -65,6 +76,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(NBHManager, nbh_manager, INPUT_OUTPUT, DocString{"Data about packed interactions within classifier."});
+  ADD_SLOT(DataNeighborGPUScratch, scratch, PRIVATE, DocString{"Scratch space for GPU computations"});
 
  public:
   inline std::string documentation() const final {
@@ -182,7 +194,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     constexpr int pp_block_y = 8;
     dim3 pp_block(pp_block_x, pp_block_y, 1);
 
-    onika::memory::CudaMMVector<int> pp_counts;
+    onika::memory::CudaMMVector<int>& pp_counts = scratch->pp_counts_;
     pp_counts.resize(cell_pair_size);
 
     CountParticlePairsKernel<pp_block_x, pp_block_y>
@@ -190,7 +202,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
                                        shps.data(), vertex_fields, pp_counts.data(), cell_pair_size);
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-    onika::memory::CudaMMVector<int> pp_offsets;
+    onika::memory::CudaMMVector<int>& pp_offsets = scratch->pp_offsets_;
     pp_offsets.resize(cell_pair_size);
     {
       void* d_tmp = nullptr;
@@ -205,7 +217,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     size_t total_pp = 0;
     if (cell_pair_size > 0) total_pp = pp_counts[cell_pair_size - 1] + pp_offsets[cell_pair_size - 1];
 
-    ParticlePairStorage pp_storage;
+    ParticlePairStorage& pp_storage = scratch->pp_storage_;
     pp_storage.resize(total_pp);
 
     if (total_pp > 0) {
@@ -217,9 +229,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     }
 
     // ****** Count interactions per particle pair (PCCP) ******* //
-    onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_counts;
+    onika::memory::CudaMMVector<InteractionTypePerCellCounter>& interaction_counts = scratch->interaction_counts_;
     interaction_counts.resize(total_pp);
-    onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_prefix;
+    onika::memory::CudaMMVector<InteractionTypePerCellCounter>& interaction_prefix = scratch->interaction_prefix_;
     interaction_prefix.resize(total_pp);
     InteractionTypePerCellCounter total_interactions;
     for (int typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
@@ -233,8 +245,8 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
       ONIKA_CU_DEVICE_SYNCHRONIZE();
 
       // GPU prefix sum per interaction type
-      onika::memory::CudaMMVector<int> type_counts[InteractionTypeId::NTypesPP];
-      onika::memory::CudaMMVector<int> type_prefix[InteractionTypeId::NTypesPP];
+      onika::memory::CudaMMVector<int>& type_counts = scratch->type_counts_;
+      onika::memory::CudaMMVector<int>& type_prefix = scratch->type_prefix_;
       for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
         type_counts[t].resize(total_pp);
         type_prefix[t].resize(total_pp);
