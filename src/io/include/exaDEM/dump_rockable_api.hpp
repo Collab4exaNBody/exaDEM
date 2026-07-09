@@ -1,14 +1,15 @@
 #pragma once
 
 #include <exanb/core/particle_type_id.h>
-#include <exaDEM/shapes.hpp>
+
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shape_reader.hpp>
+#include <exaDEM/shapes.hpp>
 #include <fstream>
 
 namespace rockable {
-using exanb::Vec3d;
 using exanb::Quaternion;
+using exanb::Vec3d;
 
 /**
  * @brief Data structure representing a single particle for I/O purposes.
@@ -149,7 +150,7 @@ struct ConfReader {
   std::vector<rockable::Interaction> driver_interactions;  ///< Vector of interactions involving drivers
 
   // For exaDEM integration
-  exaDEM::shapes shps;          ///< Registry of shapes indexed by particle type
+  exaDEM::shapes shps;         ///< Registry of shapes indexed by particle type
   exanb::ParticleTypeMap ptm;  ///< Map from particle type names to type IDs
 
   /**
@@ -278,7 +279,7 @@ struct ConfReader {
         continue;  // empty line
       }
       if (line[first_char_pos] == '#') {
-        continue;          // comment line
+        continue;  // comment line
       }
 
       onika::ldbg << line << std::endl;

@@ -229,6 +229,7 @@ class DumpReaderConfRockable : public OperatorNode {
 
         // shapes
         ptio[field::type] = rp.type;
+        ptio[field::group] = rp.group;
         const auto& shp = shps[ptio[field::type]];
         double d = manager.densities[ptio[field::type]];
         ptio[field::mass] = d * shp->get_volume(rp.homothety);
@@ -327,6 +328,7 @@ class DumpReaderConfRockable : public OperatorNode {
         ldbg << "ID: " << t[field::id] << " arot " << "(" << t[field::arot].x << "," << t[field::arot].y << ","
              << t[field::arot].z << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " h " << t[field::homothety] << std::endl;
+        ldbg << "ID: " << t[field::id] << " group " << t[field::group] << std::endl;
         ldbg << "ID: " << t[field::id] << " radius " << t[field::radius] << std::endl;
         ldbg << "ID: " << t[field::id] << " mass " << t[field::mass] << std::endl;
         ldbg << "ID: " << t[field::id] << " intertia " << t[field::inertia] << std::endl;
