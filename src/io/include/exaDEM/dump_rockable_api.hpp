@@ -270,8 +270,7 @@ struct ConfReader {
    *
    * @param file Input file stream to read from.
    */
-  void read_stream(std::ifstream& file) {
-    int max_warning_displayed = 40;
+  void read_stream(std::ifstream& file, int max_warning_displayed) {
     std::string key, line;
     while (std::getline(file, line)) {
       size_t first_char_pos = line.find_first_not_of(" \t");

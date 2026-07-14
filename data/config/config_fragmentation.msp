@@ -45,13 +45,12 @@ prepro_fragmentation:
   condition: apply_particle_sticking
   body:
     - stick_polyhedra
-#    - stats_interactions
 
 do_update_persistent_interactions_if_required: update_persistent_interactions
 
 ### IO
 particle_write_paraview_generic:
-  - write_paraview_polyhedra
+  - write_paraview_polyhedra_pvtu
   - write_paraview_obb_particles
   - timestep_paraview_file: "ParaviewOutputFiles/interface_%010d"
   - message: { mesg: "Write paraview " , endl: false }
@@ -81,4 +80,3 @@ init_update_particle_neighbors:
 
 +chunk_neighbors_impl:
   - update_interfaces
-#  - stats_interactions

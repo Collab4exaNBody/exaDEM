@@ -71,6 +71,7 @@ inline void display_end_table();
  */
 template <>
 inline void display_header<InnerBondParams>() {
+  lout << std::endl;
   lout << "============================================================================================================"
           "=========="
        << std::endl;
@@ -85,7 +86,7 @@ inline void display_header<InnerBondParams>() {
        << std::endl;
 
   lout << "------------------------------------------------------------------------------------------------------------"
-          "--------"
+          "----------"
        << std::endl;
 }
 
@@ -95,7 +96,8 @@ inline void display_header<InnerBondParams>() {
 template <>
 inline void display_end_table<InnerBondParams>() {
   lout << "=========================================================================================================="
-          "==========="
+          "============"
+       << std::endl
        << std::endl;
 }
 
@@ -104,7 +106,7 @@ inline void display_end_table<InnerBondParams>() {
  */
 inline std::string display(InnerBondParams& params) {
   std::string line =
-      onika::format_string(" %.3e | %.3e | %.3e | %13s | %.3e | %.3e |", params.kn_, params.kt_, params.damp_rate_,
+      onika::format_string(" %.3e | %.3e | %.3e | %24s | %.3e | %.3e |", params.kn_, params.kt_, params.damp_rate_,
                            exaDEM::display(params.mode_), params.crit1_, params.crit2_);
   return line;
 }

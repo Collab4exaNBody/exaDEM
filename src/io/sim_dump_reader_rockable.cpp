@@ -77,6 +77,7 @@ class DumpReaderConfRockable : public OperatorNode {
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid, INPUT_OUTPUT);
   ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{" Dump file name to read."});
+  ADD_SLOT(int, max_warning_displayed, INPUT, 10, DocString{"Number of warnings displayed."});
   ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::COMPUTED_BOUNDS);
   ADD_SLOT(shapes, shapes_collection, OUTPUT, DocString{"Collection of shapes"});
   ADD_SLOT(Domain, domain, INPUT_OUTPUT);
@@ -131,17 +132,11 @@ class DumpReaderConfRockable : public OperatorNode {
     } else {
       basename = file_name;
     }
-    lout << "======== " << basename << " ========" << std::endl;
+    lout << std::endl;
+    lout << "==================== " << basename << " =============" << std::endl;
     //-------------------------------------------------------------------------------------------
 
-    using ParticleTupleIO = decltype(grid->cells()[0][0]);  // onika::soatl::FieldTuple<field::_rx,
-                                                            // field::_ry, field::_rz, field::_id,
-                                                            // field::_vx, field::_vy, field::_vz,
-                                                            // field::_fx, field::_fy, field::_fz,
-                                                            // field::_vrot, field::_arot,
-                                                            // field::_orient, field::_type,
-                                                            // field::_inertia,  field::_mass,
-                                                            // field::_radius,  field::_homothety >;
+    using ParticleTupleIO = decltype(grid->cells()[0][0]);
     using ParticleTuple = decltype(grid->cells()[0][0]);
 
     static constexpr bool has_field_cluster = ParticleTuple::has_field(field::cluster);
@@ -169,7 +164,7 @@ class DumpReaderConfRockable : public OperatorNode {
     if (!file.is_open()) {
       color_log::error("read_conf_rockable", "File " + file_name + " not found !");
     }
-    manager.read_stream(file);
+    manager.read_stream(file, *max_warning_displayed);
     auto map_shift = scan_shape_position(manager.shapeFile);  // get "position" stored in shapes and shift
                                                               // particle positions.
 
@@ -336,7 +331,7 @@ class DumpReaderConfRockable : public OperatorNode {
       }
     }
 
-    lout << "============================" << std::endl;
+    lout << "=====================================================" << std::endl;
     grid->rebuild_particle_offsets();
     assert(check_particles_inside_cell(*grid));
 
