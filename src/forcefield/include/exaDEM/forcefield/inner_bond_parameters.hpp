@@ -72,7 +72,7 @@ inline void display_end_table();
 template <>
 inline void display_header<InnerBondParams>() {
   lout << "============================================================================================================"
-          "========"
+          "=========="
        << std::endl;
   lout << "|       groupA |       groupB |        kn |        kt | damp_rate |             mode : Mixed |         g |  "
           "       X |"
@@ -95,7 +95,7 @@ inline void display_header<InnerBondParams>() {
 template <>
 inline void display_end_table<InnerBondParams>() {
   lout << "=========================================================================================================="
-          "========"
+          "==========="
        << std::endl;
 }
 

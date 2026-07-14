@@ -57,7 +57,6 @@ namespace exaDEM {
  */
 namespace itools /* interaction tools */
 {
-using namespace onika::parallel;
 template <typename T>
 using VectorT = onika::memory::CudaMMVector<T>;
 
@@ -140,7 +139,8 @@ struct IOSimInteractionFunctor {
    */
   template <InteractionType IT>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult& local, const uint64_t idx,
-                                                InteractionWrapper<IT> interactions, reduce_thread_local_t = {}) const {
+                                                const InteractionWrapper<IT>& interactions,
+                                                reduce_thread_local_t = {}) const {
     auto I = interactions(idx);
     if (I.pair_.ghost_ != InteractionPair::PartnerGhost) {
       const double& dn = dnp_[idx];
@@ -195,8 +195,11 @@ struct IOSimInteractionFunctor {
  * @return A wrapper for the parallel execution.
  */
 template <InteractionType IT, typename Func, typename ResultT>
-static inline ParallelExecutionWrapper reduce_data(ParallelExecutionContext* exec_ctx, InteractionWrapper<IT>& data,
-                                                   Func& func, uint64_t size, ResultT& result) {
+static inline onika::parallel::ParallelExecutionWrapper reduce_data(onika::parallel::ParallelExecutionContext* exec_ctx,
+                                                                    InteractionWrapper<IT>& data, Func& func,
+                                                                    uint64_t size, ResultT& result) {
+  using namespace onika::parallel;
+  using namespace onika::parallel;
   // #     if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef ONIKA_CUDA_VERSION
   ParallelForOptions opts;
@@ -238,7 +241,10 @@ namespace onika {
 namespace parallel {
 template <exaDEM::InteractionType IT, class FuncT, class ResultT>
 struct ParallelForFunctorTraits<exaDEM::itools::ReduceTFunctor<IT, FuncT, ResultT>> {
-  static inline constexpr bool CudaCompatible = true;
+  static inline constexpr bool CudaCompatible = ParallelForFunctorTraits<FuncT>::CudaCompatible;
+  ;
+  static inline constexpr bool RequiresBlockSynchronousCall =
+      ParallelForFunctorTraits<FuncT>::RequiresBlockSynchronousCall;
 };
 }  // namespace parallel
 }  // namespace onika

@@ -45,7 +45,7 @@ prepro_fragmentation:
   condition: apply_particle_sticking
   body:
     - stick_polyhedra
-    - stats_interactions
+#    - stats_interactions
 
 do_update_persistent_interactions_if_required: update_persistent_interactions
 
