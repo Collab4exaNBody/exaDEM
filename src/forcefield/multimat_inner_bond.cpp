@@ -81,7 +81,7 @@ class InnerBondParamsOp : public OperatorNode {
         )EOF";
   }
 
-  inline std::string operator_name() { return "inner_bond_params"; }
+  inline std::string operator_name() const { return "inner_bond_params"; }
 
  public:
   inline void execute() final {
@@ -96,40 +96,44 @@ class InnerBondParamsOp : public OperatorNode {
 
     if (group1.has_value() && group2.has_value()) {
       auto& groups_1 = *group1;
+      int number_of_pairs = groups_1.size();
+
+      auto check_lengths_match = [number_of_pairs, this](auto& slot, std::string ibp_field_name) {
+        if (!slot.has_value()) {
+          color_log::error(this->operator_name(),
+                           "\"" + ibp_field_name + "\" is required when group1/group2 are defined.");
+        }
+        auto& vec = *slot;
+        if (number_of_pairs != int(vec.size())) {
+          color_log::error(
+              this->operator_name(),
+              "The length of the field \"" + ibp_field_name +
+                  "\" does not match the size of the other fields. group1.size() = " + std::to_string(number_of_pairs) +
+                  ", while " + ibp_field_name + ".size() = " + std::to_string(vec.size()) + ".");
+        }
+      };
+
+      check_lengths_match(group2, "group2");
+      check_lengths_match(kn, "kn");
+      check_lengths_match(kt, "kt");
+      check_lengths_match(damp_rate, "damp_rate");
+
       auto& groups_2 = *group2;
       auto& normal_coeffs = *kn;
       auto& tangential_coeffs = *kt;
       auto& damprate_coeffs = *damp_rate;
 
-      int number_of_pairs = groups_1.size();
-
-      auto check_lengths_match = [number_of_pairs, this]<typename Vec>(Vec& list, std::string ibp_field_name) -> bool {
-        if (number_of_pairs != int(list.size())) {
-          color_log::error(
-              this->operator_name(),
-              "The length of the field \"" + ibp_field_name +
-                  "\" does not match the size of the other fields. group1.size() = " + std::to_string(number_of_pairs) +
-                  ", while " + ibp_field_name + ".size() = " + std::to_string(list.size()) + ".");
-        }
-        return true;
-      };
-
-      check_lengths_match(groups_2, "group2");
-      check_lengths_match(normal_coeffs, "kn");
-      check_lengths_match(tangential_coeffs, "kt");
-      check_lengths_match(damprate_coeffs, "damp_rate");
-
       if (g.has_value() && (gn.has_value() || gt.has_value())) {
         color_log::error(this->operator_name(), "\"g\" is mutually exclusive with \"gn\"/\"gt\".");
       }
       if (g.has_value()) {
-        check_lengths_match(*g, "g");
+        check_lengths_match(g, "g");
         if (sigma.has_value()) {
-          check_lengths_match(*sigma, "sigma");
+          check_lengths_match(sigma, "sigma");
         }
       } else if (gn.has_value() && gt.has_value()) {
-        check_lengths_match(*gn, "gn");
-        check_lengths_match(*gt, "gt");
+        check_lengths_match(gn, "gn");
+        check_lengths_match(gt, "gt");
       } else {
         color_log::error(this->operator_name(),
                          "You must define either \"g\", or both \"gn\" and \"gt\", or \"g\" and \"sigma\".");
@@ -137,9 +141,26 @@ class InnerBondParamsOp : public OperatorNode {
 
       // Compute number of groups as max(group1, group2) + 1
       uint32_t max_group = 0;
-      for (auto g : groups_1) max_group = std::max(max_group, g);
-      for (auto g : groups_2) max_group = std::max(max_group, g);
+      for (auto grp : groups_1) max_group = std::max(max_group, grp);
+      for (auto grp : groups_2) max_group = std::max(max_group, grp);
       int n_groups = static_cast<int>(max_group) + 1;
+
+      if (!default_config.has_value()) {
+        std::vector<std::vector<bool>> covered(n_groups, std::vector<bool>(n_groups, false));
+        for (int p = 0; p < number_of_pairs; p++) {
+          int a = groups_1[p], b = groups_2[p];
+          covered[a][b] = covered[b][a] = true;
+        }
+        for (int i = 0; i < n_groups; i++) {
+          for (int j = i; j < n_groups; j++) {
+            if (!covered[i][j]) {
+              color_log::warning(this->operator_name(), "Pair (" + std::to_string(i) + ", " + std::to_string(j) +
+                                                            ") is not explicitly defined and no default_config is set"
+                                                            " — interactions may be undefined.");
+            }
+          }
+        }
+      }
 
       if (default_config.has_value()) {
         ibp.setup_multimat(n_groups, *default_config);

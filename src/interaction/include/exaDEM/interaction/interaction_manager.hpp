@@ -24,22 +24,20 @@ namespace exaDEM {
 /** @brief A manager for handling interactions between particles.
  */
 struct InteractionManager {
-  std::vector<exaDEM::PlaceholderInteraction> hist_ =
-      {};  // historical interactions, used to update interactions with history
-  std::vector<std::vector<exaDEM::PlaceholderInteraction>> list_ =
-      {};  // list of interactions per particle, used to update interactions without history
-  std::vector<std::vector<uint64_t>> ignore_ = {};  // list of ignored interaction IDs per particle
+  std::vector<exaDEM::PlaceholderInteraction>
+      hist_;  // historical interactions, used to update interactions with history
+  std::vector<std::vector<exaDEM::PlaceholderInteraction>>
+      list_;  // list of interactions per particle, used to update interactions without history
+  std::vector<std::vector<uint64_t>> ignore_;  // list of ignored interaction IDs per particle
   size_t current_cell_id_;         // current cell id, used for consistency check when update persistent interactions
   size_t current_cell_particles_;  // current number of particles in the cell, used for consistency check when update
-                                  // persistent interactions
+                                   // persistent interactions
 
   /** @brief Reset the interaction manager.
    * This function clears all interactions and initializes the lists with the specified size.
    * [param size] The number of particles in the system.
    */
   void reset(const size_t size) {
-    list_.clear();
-    ignore_.clear();
     list_.resize(size);
     ignore_.resize(size);
     for (size_t p = 0; p < size; p++) {
@@ -206,7 +204,7 @@ inline void update_persistent_interactions(InteractionManager& manager,
  */
 inline void extract_history(std::vector<PlaceholderInteraction>& local,
                             const PlaceholderInteraction* __restrict__ const data, const unsigned int size) {
-  local.clear();
+  local.resize(0);
   for (size_t i = 0; i < size; i++) {
     const auto& item = data[i];
     if (item.persistent()) {

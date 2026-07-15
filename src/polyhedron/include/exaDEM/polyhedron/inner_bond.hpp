@@ -18,11 +18,11 @@ under the License.
 */
 #pragma once
 
-#include <tuple>
 #include <exaDEM/forcefield/inner_bond_force.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
-#include <exaDEM/interaction/interaction.hpp>
+#include <tuple>
 
 namespace exaDEM {
 namespace polyhedron {
@@ -34,9 +34,7 @@ namespace polyhedron {
  * @param val Reference to the double variable to be modified.
  * @param add Value to add atomically to the variable.
  */
-ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(double& val, double add) {
-  ONIKA_CU_ATOMIC_ADD(val, add);
-}
+ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(double& val, double add) { ONIKA_CU_ATOMIC_ADD(val, add); }
 
 /**
  * @brief Atomically adds components of a Vec3d to another Vec3d variable.
@@ -71,17 +69,13 @@ struct inner_bond_law {
   /**
    * @brief Retrieves the position vector of a particle from a cell.
    *
-   * This function retrieves the position vector of a particle identified
-   * by `pi.p_` from the given cell using field indices `field::rx`, `field::ry`,
-   * and `field::rz`.
-   *
    * @tparam TMPLC Type of the cell.
    * @param cell Reference to the cell containing particle data.
-   * @param pi.p_ Index of the particle.
-   * @return Vec3d Position vector of the particle.
+   * @param p Index of the particle.
+   * @return Vec3d Position vector of the particle (transformed).
    */
   template <typename TMPLC>
-  ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_r(TMPLC& cell, const int p) const {
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d get_r(TMPLC& cell, const int p) const {
     Vec3d res = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
     return xform.transformCoord(res);
   }
@@ -89,19 +83,14 @@ struct inner_bond_law {
   /**
    * @brief Retrieves the velocity vector of a particle from a cell.
    *
-   * This function retrieves the velocity vector of a particle identified
-   * by `pi.p_` from the given cell using field indices `field::vx`, `field::vy`,
-   * and `field::vz`.
-   *
    * @tparam TMPLC Type of the cell.
    * @param cell Reference to the cell containing particle data.
-   * @param pi.p_ Index of the particle.
+   * @param p Index of the particle.
    * @return Vec3d Velocity vector of the particle.
    */
   template <typename TMPLC>
-  ONIKA_HOST_DEVICE_FUNC inline const Vec3d get_v(TMPLC& cell, const int p) const {
-    const Vec3d res = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
-    return res;
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d get_v(TMPLC& cell, const int p) const {
+    return {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
   }
 
   /**
@@ -110,9 +99,9 @@ struct inner_bond_law {
    * @tparam TMPLC Type of the cells or particles container.
    * @tparam TMPLV Vertex Type container.
    * @tparam TIBFPA Template Inner Bond Force Parameters Accessor.
-   * @param item Reference to the Interaction object representing the interaction details.
+   * @param item Reference to the InnerBondInteraction object representing the interaction details.
    * @param cells Pointer to the cells or particles container.
-   * @param cpa Reference to the ContactParams object containing interaction parameters.
+   * @param ibpa Reference to the InnerBondParams accessor containing interaction parameters.
    * @param shps Pointer to the shapes array providing shape information for interactions.
    * @param dt Time increment for the simulation step.
    */
@@ -159,10 +148,6 @@ struct inner_bond_law {
     auto [contact, dn, n, contact_position] =
         detection_vertex_vertex(verticesi, hi, pi.sub_, &shpi, verticesj, hj, pj.sub_, &shpj);
 
-    // temporary vec3d to store forces.
-    Vec3d fi = {0, 0, 0};
-    Vec3d fn = {0, 0, 0};
-
     // === Contact Force parameters
     const InnerBondParams& ibp = ibpa(groupi, groupj);
 
@@ -173,26 +158,24 @@ struct inner_bond_law {
 
     const double meff = compute_effective_mass(mi, mj);
 
-    force_law_core(dn, n, item.dn0_, item.weight_,
-                   dt, ibp, meff,
-                   item.en_, item.tds_, item.et_, item.friction_,
+    Vec3d fi;  // set by force_law_core
+    force_law_core(dn, n, item.dn0_, item.weight_, dt, ibp, meff, item.en_, item.tds_, item.et_, item.friction_,
                    contact_position, ri, vi, fi, vroti,  // particle 1
-                   rj, vj, vrotj);  // particle nbh
+                   rj, vj, vrotj);                       // particle nbh
 
-    fn = fi - item.friction_;
-    Vec3d null = {0, 0, 0};
+    const Vec3d fn = fi - item.friction_;
 
     // === update particle informations
     // ==== Particle i
     auto& momi = celli[field::mom][pi.p_];
-    lockAndAdd(momi, compute_moments(contact_position, ri, fi, null));
+    lockAndAdd(momi, compute_moments(contact_position, ri, fi, Vec3d{}));
     lockAndAdd(celli[field::fx][pi.p_], fi.x);
     lockAndAdd(celli[field::fy][pi.p_], fi.y);
     lockAndAdd(celli[field::fz][pi.p_], fi.z);
 
     // ==== Particle j
     auto& momj = cellj[field::mom][pj.p_];
-    lockAndAdd(momj, compute_moments(contact_position, rj, -fi, null));
+    lockAndAdd(momj, compute_moments(contact_position, rj, -fi, Vec3d{}));
     lockAndAdd(cellj[field::fx][pj.p_], -fi.x);
     lockAndAdd(cellj[field::fy][pj.p_], -fi.y);
     lockAndAdd(cellj[field::fz][pj.p_], -fi.z);
