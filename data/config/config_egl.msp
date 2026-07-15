@@ -15,7 +15,7 @@ visualization_init:
           #include <uniform/camera>
           #include <math/quaternion>
           layout (location = 0) in vec3 aPos;
-          layout (binding = auto_binding(DriverBindingPoint)) uniform DriverUniformObject
+          layout (binding = auto) uniform DriverUniformObject
           {
             vec4 center;
             vec4 quat;
