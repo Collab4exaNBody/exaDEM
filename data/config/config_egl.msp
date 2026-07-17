@@ -5,7 +5,7 @@ visualization_init:
       surface: "ExaDEM Visualization"
       width: 1024
       height: 760
-  - egl_check_cu_graphics: { surface: "ExaDEM Visualization" }
+#  - egl_check_cu_graphics: { surface: "ExaDEM Visualization" }
   - egl_create_shader_program:
       shader_program: "driver_surface"
       sources:
@@ -13,10 +13,17 @@ visualization_init:
           #version 460 core
           #extension GL_ARB_shading_language_include : require
           #include <uniform/camera>
+          #include <math/quaternion>
           layout (location = 0) in vec3 aPos;
+          layout (binding = auto) uniform DriverUniformObject
+          {
+            vec4 center;
+            vec4 quat;
+          } driver;
           void main()
           {
-            gl_Position = camera.modelview[0] * vec4(aPos,1);
+            vec4 pos = vec4( quaternion_to_matrix(driver.quat) * ( aPos + driver.center.xyz ) , 1 );
+            gl_Position = camera.modelview[0] * pos;
           }
 
         GL_GEOMETRY_SHADER: |
@@ -170,9 +177,9 @@ viz_data_egl:
   body:
     - egl_handle_events: { surface: "ExaDEM Visualization" , camera: "camera" }
     - egl_start_frame: { surface: "ExaDEM Visualization" , camera: "camera" }
+    - egl_draw_drivers: { shader_program: "driver_surface" }
     - egl_particles_to_vertex_buffer
     - egl_draw: { vertex_buffer: "particles" , elements: "noghost_particles" , primitive: GL_POINTS , shader_program: "oriented_shape"  }
-    - egl_draw: { vertex_buffer: "driver_vertices" , elements: "driver_triangles" , primitive: GL_TRIANGLES , shader_program: "driver_surface"  }
 #    - timestep_file: "gl/frame_%09d"
 #    - egl_write_frame: { surface: "ExaDEM Visualization" }
     - egl_end_frame: { surface: "ExaDEM Visualization" }
