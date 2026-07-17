@@ -114,6 +114,12 @@ class DumpReaderConfRockable : public OperatorNode {
 
  public:
   inline void execute() final {
+    if (*bounds_mode == ReadBoundsSelectionMode::FILE_BOUNDS) {
+      color_log::error("read_conf_rockable",
+                       "ReadBoundsSelectionMode::FILE_BOUNDS is not supported for rockable files. Please use "
+                       "ReadBoundsSelectionMode::COMPUTED_BOUNDS or ReadBoundsSelectionMode::DOMAIN_BOUNDS.");
+    }
+
     //-------------------------------------------------------------------------------------------
     // Reading datas from YAML or previous input
     std::string file_name = onika::data_file_path(*filename);
@@ -157,6 +163,7 @@ class DumpReaderConfRockable : public OperatorNode {
     std::vector<ParticleTupleIO> particle_data;
 
     rockable::ConfReader manager;
+
     std::ifstream file;
     file.open(file_name, std::ifstream::in);
     if (!file.is_open()) {
@@ -217,7 +224,7 @@ class DumpReaderConfRockable : public OperatorNode {
 
         // We shift the particle positions using the values from the "position"
         // field, which is not used by exaDEM.
-        // Vec3d shape_position_shift = map_shift[shps[rp.type]->m_name];
+        // Vec3d shape_position_shift = map_shift[shps[rp.type]->name_];
         Vec3d pos = rockable_particles[p].pos;  // + shape_position_shift;
 
         // shapes
@@ -272,7 +279,9 @@ class DumpReaderConfRockable : public OperatorNode {
 
       // domain->m_bounds = bounds;
       compute_domain_bounds(*domain, *bounds_mode, *enlarge_bounds, file_bounds, file_bounds, false);
-      domain->set_periodic_boundary(manager.periodic[0], manager.periodic[1], manager.periodic[2]);
+      if (*bounds_mode != ReadBoundsSelectionMode::DOMAIN_BOUNDS) {
+        domain->set_periodic_boundary(manager.periodic[0], manager.periodic[1], manager.periodic[2]);
+      }
       lout << "Particles        = " << particle_data.size() << std::endl;
       lout << "Domain XForm     = " << domain->xform() << std::endl;
       lout << "Domain bounds    = " << domain->bounds() << std::endl;
@@ -339,18 +348,18 @@ class DumpReaderConfRockable : public OperatorNode {
         RShapeDriverFields state = RShapeDriverFields();
 
         auto& particle = manager.drivers[id];
-        state.center = particle.pos;
-        state.vel = particle.pos;  // will be reset by the motion type
-                                   // will move evant with the STATIONARY motion type
-        state.vrot = particle.vrot;
-        state.quat = particle.Q;
+        state.center_ = particle.pos;
+        state.vel_ = particle.pos;  // will be reset by the motion type
+                                    // will move evant with the STATIONARY motion type
+        state.vrot_ = particle.vrot;
+        state.quat_ = particle.Q;
 
         int type = particle.type;
         shape shp = *(manager.shps[type]);
         RShapeDriver driver;
-        driver.fields = state;
-        driver.motion_type = MotionType::STATIONARY;
-        driver.shp = shp;
+        driver.fields_ = state;
+        driver.motion_type_ = MotionType::STATIONARY;
+        driver.shp_ = shp;
         driver.initialize(motion);
         drvs.add_driver(next_id + id, driver, motion);
       }

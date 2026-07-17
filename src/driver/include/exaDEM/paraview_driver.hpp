@@ -30,10 +30,10 @@ namespace exaDEM {
  */
 struct info_ball
 {
-  int id;         /**< Unique identifier of the driver */
-  exanb::Vec3d center;   /**< Center position of the sphere */
-  double radius;  /**< Radius of the sphere */
-  exanb::Vec3d vel;      /**< Velocity of the sphere */
+  int id_;         /**< Unique identifier of the driver */
+  exanb::Vec3d center_;   /**< Center position of the sphere */
+  double radius_;  /**< Radius of the sphere */
+  exanb::Vec3d vel_;      /**< Velocity of the sphere */
 };
 
 /**
@@ -42,10 +42,10 @@ struct info_ball
  */
 struct info_surface
 {
-  int id;         /**< Unique identifier of the surface */
-  exanb::Vec3d normal;   /**< Unit normal vector defining the plane orientation */
-  double offset;  /**< Plane offset in equation n · x = offset */
-  exanb::Vec3d vel;      /**< Velocity of the surface */
+  int id_;         /**< Unique identifier of the surface */
+  exanb::Vec3d normal_;   /**< Unit normal vector defining the plane orientation */
+  double offset_;  /**< Plane offset in equation n · x = offset */
+  exanb::Vec3d vel_;      /**< Velocity of the surface */
 };
 
 /**
@@ -54,10 +54,10 @@ struct info_surface
  */
 struct info_cylinder
 {
-  int id;         /**< Unique identifier of the cylinder */
-  exanb::Vec3d center;   /**< A point on the cylinder axis */
-  exanb::Vec3d normal;   /**< Axis direction of the cylinder (should be unit length) */
-  double radius;  /**< Radius of the cylinder */
+  int id_;         /**< Unique identifier of the cylinder */
+  exanb::Vec3d center_;   /**< A point on the cylinder axis */
+  exanb::Vec3d normal_;   /**< Axis direction of the cylinder (should be unit length) */
+  double radius_;  /**< Radius of the cylinder */
 };
 
 std::tuple<bool, bool, exanb::Vec3d> intersect(exanb::Vec3d& n,

@@ -58,7 +58,7 @@ struct Interaction {
  */
 template <typename STREAM>
 void stream(STREAM& output, const Particle& p, exaDEM::shapes& shps) {
-  output << shps[p.type]->m_name << " " << p.group << " " << p.cluster << " " << p.homothety << " " << p.pos.x << " "
+  output << shps[p.type]->name_ << " " << p.group << " " << p.cluster << " " << p.homothety << " " << p.pos.x << " "
          << p.pos.y << " " << p.pos.z << " " << p.vel.x << " " << p.vel.y << " " << p.vel.z << " " << p.acc.x << " "
          << p.acc.y << " " << p.acc.z << " " << p.Q.w << " " << p.Q.x << " " << p.Q.y << " " << p.Q.z << " " << p.vrot.x
          << " " << p.vrot.y << " " << p.vrot.z << " " << p.arot.x << " " << p.arot.y << " " << p.arot.z;
@@ -119,13 +119,13 @@ inline exaDEM::Interaction convert(const rockable::Interaction& input) {
   exaDEM::Interaction res;
   auto& pi = res.i();
   auto& pj = res.j();
-  pi.id = input.i;
-  pj.id = input.j;
-  pi.sub = input.subi;
-  pj.sub = input.subj;
-  res.pair.type = input.type;
-  res.friction = input.ft;
-  res.moment = input.mom;
+  pi.id_ = input.i;
+  pj.id_ = input.j;
+  pi.sub_ = input.subi;
+  pj.sub_ = input.subj;
+  res.pair_.type_ = input.type;
+  res.friction_ = input.ft;
+  res.moment_ = input.mom;
   return res;
 }
 

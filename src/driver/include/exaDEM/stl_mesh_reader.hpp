@@ -30,14 +30,14 @@ namespace exaDEM {
  * accessing the mesh data, and retrieving individual faces.
  */
 struct STLMeshReader {
-  std::vector<Face> m_data; /**< A collection of Face objects representing the mesh. */
+  std::vector<Face> data_; /**< A collection of Face objects representing the mesh. */
 
   /**
    * @brief Adds a Face to the mesh.
    * @param face The Face to be added to the mesh.
    */
   void add_face(Face& face) {
-    m_data.push_back(face);
+    data_.push_back(face);
   }
 
   /**
@@ -45,7 +45,7 @@ struct STLMeshReader {
    * @return A reference to the vector of Face objects representing the mesh.
    */
   std::vector<Face>& get_data() {
-    return m_data;
+    return data_;
   }
 
   /**
@@ -54,7 +54,7 @@ struct STLMeshReader {
    * @return A reference to the specified Face.
    */
   Face& get_data(const int idx) {
-    return m_data[idx];
+    return data_[idx];
   }
 
   /**

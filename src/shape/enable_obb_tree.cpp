@@ -48,7 +48,7 @@ class EnableOBBTree : public OperatorNode {
       shape* shp = shapes[sid];
       shp->buildOBBtree();
       if (*verbosity) {
-        lout << "Build OBBTree for the shape " << shp->m_name << "." << std::endl;
+        lout << "Build OBBTree for the shape " << shp->name_ << "." << std::endl;
       }
     }
     *enable_obb_tree = true;

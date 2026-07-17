@@ -128,28 +128,28 @@ struct ContactLawFunc {
     using ContactParamsT = ContactParams;
     auto& i = item.i();  // id for particle id, cell for cell id, p for position, sub for vertex id
     auto& j = item.j();  // id for particle id, cell for cell id, p for position, sub for vertex id
-    auto& cell_i = cells[i.cell];
-    auto& cell_j = cells[j.cell];
+    auto& cell_i = cells[i.cell_];
+    auto& cell_j = cells[j.cell_];
 
     // === positions
-    const Vec3d ri = get_r(cell_i, i.p);
-    const Vec3d rj = get_r(cell_j, j.p);
+    const Vec3d ri = get_r(cell_i, i.p_);
+    const Vec3d rj = get_r(cell_j, j.p_);
 
     // === positions
     // === radii
-    const double rad_i = cell_i[field::radius][i.p];
-    const double rad_j = cell_j[field::radius][j.p];
+    const double rad_i = cell_i[field::radius][i.p_];
+    const double rad_j = cell_j[field::radius][j.p_];
 
     // === vrot
-    const Vec3d& vrot_i = cell_i[field::vrot][i.p];
-    const Vec3d& vrot_j = cell_j[field::vrot][j.p];
+    const Vec3d& vrot_i = cell_i[field::vrot][i.p_];
+    const Vec3d& vrot_j = cell_j[field::vrot][j.p_];
 
     auto [contact, dn, n, contact_position] = detection_vertex_vertex_core(ri, rad_i, rj, rad_j);
     Vec3d fn = {0, 0, 0};
 
     // === types
-    const int& t_i = cell_i[field::type][i.p];
-    const int& t_j = cell_j[field::type][j.p];
+    const int& t_i = cell_i[field::type][i.p_];
+    const int& t_j = cell_j[field::type][j.p_];
 
     // === Conctact Parameters
     const ContactParamsT& cp = cpa(t_i, t_j);
@@ -157,52 +157,52 @@ struct ContactLawFunc {
 
     /** if cohesive force */
     if constexpr (LawComboTraits<LawCombo>::cohesive) {
-      contact = (contact || dn <= cp.dncut);
+      contact = (contact || dn <= cp.dncut_);
     }
 
     if (contact) {
       // === velocities
-      const Vec3d vi = get_v(cell_i, i.p);
-      const Vec3d vj = get_v(cell_j, j.p);
+      const Vec3d vi = get_v(cell_i, i.p_);
+      const Vec3d vj = get_v(cell_j, j.p_);
 
       // === mass
-      const auto& m_i = cell_i[field::mass][i.p];
-      const auto& m_j = cell_j[field::mass][j.p];
+      const auto& m_i = cell_i[field::mass][i.p_];
+      const auto& m_j = cell_j[field::mass][j.p_];
 
       // temporary vec3d to store forces.
       Vec3d f = {0, 0, 0};
       const double meff = compute_effective_mass(m_i, m_j);
       const double reff = compute_effective_radius(rad_i, rad_j);
 
-      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item.friction, contact_position, ri, vi,
-                                                  f, item.moment, vrot_i,  // particle i
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item.friction_, contact_position, ri, vi,
+                                                  f, item.moment_, vrot_i,  // particle i
                                                   rj, vj, vrot_j);         // particle j
 
       // === For analysis
-      fn = f - item.friction;
+      fn = f - item.friction_;
 
       // === update particle informations
       // ==== Particle i
-      auto& mom_i = cell_i[field::mom][i.p];
-      lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment));
-      lockAndAdd(cell_i[field::fx][i.p], f.x);
-      lockAndAdd(cell_i[field::fy][i.p], f.y);
-      lockAndAdd(cell_i[field::fz][i.p], f.z);
+      auto& mom_i = cell_i[field::mom][i.p_];
+      lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment_));
+      lockAndAdd(cell_i[field::fx][i.p_], f.x);
+      lockAndAdd(cell_i[field::fy][i.p_], f.y);
+      lockAndAdd(cell_i[field::fz][i.p_], f.z);
 
       // ==== Particle j
       if constexpr (sym) {
-        auto& mom_j = cell_j[field::mom][j.p];
-        lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment));
-        lockAndAdd(cell_j[field::fx][j.p], -f.x);
-        lockAndAdd(cell_j[field::fy][j.p], -f.y);
-        lockAndAdd(cell_j[field::fz][j.p], -f.z);
+        auto& mom_j = cell_j[field::mom][j.p_];
+        lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment_));
+        lockAndAdd(cell_j[field::fx][j.p_], -f.x);
+        lockAndAdd(cell_j[field::fy][j.p_], -f.y);
+        lockAndAdd(cell_j[field::fz][j.p_], -f.z);
       }
     } else {
       item.reset();
       dn = 0;
     }
 
-    return {dn, contact_position, fn, item.friction};
+    return {dn, contact_position, fn, item.friction_};
   }
 };
 
@@ -241,8 +241,8 @@ struct ContactLawDriverFunc {
     using ContactParamsT = ContactParams;
     const int driver_idx = item.driver_id();
     TMPLD& driver = drvs.get_typed_driver<TMPLD>(driver_idx);
-    auto& cell = cells[i.cell];
-    const size_t p = i.p;
+    auto& cell = cells[i.cell_];
+    const size_t p = i.p_;
 
     // === positions
     Vec3d r = {cell[field::rx][p], cell[field::ry][p], cell[field::rz][p]};
@@ -255,7 +255,7 @@ struct ContactLawDriverFunc {
     Vec3d fn = null;
 
     // === types
-    const auto& type = cell[field::type][i.p];
+    const auto& type = cell[field::type][i.p_];
 
     // === Conctact Parameters
     const ContactParamsT& cp = cpa(type, driver_idx);
@@ -263,7 +263,7 @@ struct ContactLawDriverFunc {
 
     /** if cohesive force */
     if constexpr (LawComboTraits<LawCombo>::cohesive) {
-      contact = (contact || dn <= cp.dncut);
+      contact = (contact || dn <= cp.dncut_);
     }
     if (contact) {
       // === vrot
@@ -275,28 +275,28 @@ struct ContactLawDriverFunc {
 
       Vec3d f = null;
       contact_force_core<ContactLaw, CohesiveLaw>(
-          dn, n, time, cp, meff, reff, item.friction, contact_position, r, v, f,
-          item.moment, vrot,                              // particle i
+          dn, n, time, cp, meff, reff, item.friction_, contact_position, r, v, f,
+          item.moment_, vrot,                              // particle i
           driver.position(), driver.velocity(), driver.angular_velocity());  // particle j
 
       // === For analysis
-      fn = f - item.friction;
+      fn = f - item.friction_;
 
       // === update informations
-      lockAndAdd(mom, compute_moments(contact_position, r, f, item.moment));
+      lockAndAdd(mom, compute_moments(contact_position, r, f, item.moment_));
       lockAndAdd(cell[field::fx][p], f.x);
       lockAndAdd(cell[field::fy][p], f.y);
       lockAndAdd(cell[field::fz][p], f.z);
 
       // only forces now
-      if (need_forces(driver.motion_type)) {
+      if (need_forces(driver.motion_type_)) {
         lockAndAdd(driver.forces(), -f);
       }
     } else {
       item.reset();
       dn = 0;
     }
-    return {dn, contact_position, fn, item.friction};
+    return {dn, contact_position, fn, item.friction_};
   }
 };
 
@@ -336,8 +336,8 @@ struct ContactLawRShapeDriverFunc {
     RShapeDriver& driver = drvs.get_typed_driver<RShapeDriver>(driver_idx);
     auto& cell = cells[item.cell()];
 
-    const size_t p_i = i.p;
-    const size_t sub_d = d.sub;
+    const size_t p_i = i.p_;
+    const size_t sub_d = d.sub_;
 
     // === particle i
     Vec3d r_i = {cell[field::rx][p_i], cell[field::ry][p_i], cell[field::rz][p_i]};
@@ -345,7 +345,7 @@ struct ContactLawRShapeDriverFunc {
     const Vec3d& vrot_i = cell[field::vrot][p_i];
     const double radius_i = cell[field::radius][p_i];
     // === driver j
-    const auto& shp_d = driver.shp;
+    const auto& shp_d = driver.shp_;
     const Quaternion orient_d = driver.orientation();
     constexpr double homothety_d = 1.0;
     auto [contact, dn, n, contact_position] =
@@ -353,7 +353,7 @@ struct ContactLawRShapeDriverFunc {
     Vec3d fn = {0, 0, 0};
 
     // === types
-    const auto& type = cell[field::type][i.p];
+    const auto& type = cell[field::type][i.p_];
 
     // === Conctact Parameters
     const ContactParamsT& cp = cpa(type, driver_idx);
@@ -361,7 +361,7 @@ struct ContactLawRShapeDriverFunc {
 
     /** if cohesive force */
     if constexpr (LawComboTraits<LawCombo>::cohesive) {
-      contact = (contact || dn <= cp.dncut);
+      contact = (contact || dn <= cp.dncut_);
     }
 
     if (contact) {
@@ -371,31 +371,31 @@ struct ContactLawRShapeDriverFunc {
       const double reff = cell[field::radius][p_i];
 
       Vec3d f = {0, 0, 0};
-      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item.friction, contact_position, r_i,
-                                                  v_i, f, item.moment, vrot_i,                    // particle i
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item.friction_, contact_position, r_i,
+                                                  v_i, f, item.moment_, vrot_i,                    // particle i
                                                   driver.position(), driver.velocity(), driver.angular_velocity());  // driver
 
       // === For analysis
-      fn = f - item.friction;
+      fn = f - item.friction_;
 
       // === update informations
-      lockAndAdd(mom, compute_moments(contact_position, r_i, f, item.moment));
+      lockAndAdd(mom, compute_moments(contact_position, r_i, f, item.moment_));
       lockAndAdd(cell[field::fx][p_i], f.x);
       lockAndAdd(cell[field::fy][p_i], f.y);
       lockAndAdd(cell[field::fz][p_i], f.z);
 
       // only forces now
-      if (need_forces(driver.motion_type)) {
+      if (need_forces(driver.motion_type_)) {
         lockAndAdd(driver.forces(), -f);
       }
       if (driver.need_moment()) {
-        lockAndAdd(driver.moment(), compute_moments(contact_position, driver.position(), -f, -item.moment));
+        lockAndAdd(driver.moment(), compute_moments(contact_position, driver.position(), -f, -item.moment_));
       }
     } else {
       item.reset();
       dn = 0;
     }
-    return {dn, contact_position, fn, item.friction};
+    return {dn, contact_position, fn, item.friction_};
   }
 };
 }  // namespace sphere

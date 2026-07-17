@@ -66,9 +66,9 @@ class DriverExtractorOp : public OperatorNode {
         // write header
         if (size == 0) {
           std::string header = "time ";
-          for (auto& tracker : extractor.tracked_drivers) {
-            std::string _id = "_" + std::to_string(tracker.id);
-            for (auto& field : tracker.fields) {
+          for (auto& tracker : extractor.tracked_drivers_) {
+            std::string _id = "_" + std::to_string(tracker.id_);
+            for (auto& field : tracker.fields_) {
               header += extractor::to_cstring(field) + _id + " ";
             }
           }
@@ -79,9 +79,9 @@ class DriverExtractorOp : public OperatorNode {
         std::string line = std::to_string(*physical_time) + " ";
         auto& drvs = *drivers;
 
-        for (auto& tracker : extractor.tracked_drivers) {
+        for (auto& tracker : extractor.tracked_drivers_) {
           DriverExtractFunc func = {"", tracker};
-          drvs.apply(tracker.id, func);
+          drvs.apply(tracker.id_, func);
           line += func.stream;
         }
 

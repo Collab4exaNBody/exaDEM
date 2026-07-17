@@ -14,7 +14,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-
+#include <exanb/core/grid_algorithm.h>
 #include <exanb/core/check_particles_inside_cell.h>
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
@@ -48,24 +48,6 @@ under the License.
 #include <rsa_random.hxx>
 
 namespace exaDEM {
-struct ParticleType {
-  static inline constexpr size_t MAX_STR_LEN = 16;
-  double m_mass = 1.0;
-  double m_radius = 1.0;
-  char m_name[MAX_STR_LEN] = {'\0'};
-
-  inline void set_name(const std::string& s) {
-    if (s.length() >= MAX_STR_LEN) {
-      std::cerr << "Particle name too long : length=" << s.length() << ", max=" << (MAX_STR_LEN - 1) << "\n";
-      std::abort();
-    }
-    std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
-    m_name[MAX_STR_LEN - 1] = '\0';
-  }
-  inline std::string name() const { return m_name; }
-};
-
-using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;
 
 struct RSAParameters {
   double radius;

@@ -35,7 +35,7 @@ class AddShapeCubeOperator : public OperatorNode {
   ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT_OUTPUT);
   ADD_SLOT(double, length, INPUT, 1.0, DocString{"Define cube length. "});
   ADD_SLOT(std::string, name, INPUT, "cube", DocString{"Set Shape name."});
-  ADD_SLOT(double, minskowski, INPUT, 0.01, DocString{"Set Minskowski value."});
+  ADD_SLOT(double, minkowski, INPUT, 0.01, DocString{"Set Minkowski value."});
 
  public:
   inline std::string documentation() const override final {
@@ -46,15 +46,15 @@ class AddShapeCubeOperator : public OperatorNode {
 
 					- add_cube:
              name: MyCube
-             minskowski: 0.0001
+             minkowski: 0.0001
              length: 0.25
     )EOF";
   }
 
   inline void execute() override final {
     auto& ptm = *particle_type_map;
-    lout << "Add Shape: " << *name << " length: " << *length << " minskowski: " << *minskowski << std::endl;
-    shape shp = basic_shape::create_cube(*name, *length, *minskowski);
+    lout << "Add Shape: " << *name << " length: " << *length << " minkowski: " << *minkowski << std::endl;
+    shape shp = basic_shape::create_cube(*name, *length, *minkowski);
     register_shape(ptm, *shapes_collection, shp);
   };
 };

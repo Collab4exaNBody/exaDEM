@@ -35,23 +35,23 @@ using ReverseParticleTypeMap = std::map<uint64_t, std::string>;
  */
 template <typename ContactParamsT>
 struct MultiMatParamsT {
-  vector_t<ContactParamsT> multimat_cp;       //< Contact parameters between material pairs
-  vector_t<ContactParamsT> drivers_cp;        //< Contact parameters between drivers and materials
-  ParticleTypeMap type_map;                   //< Maps particle types to material indices
-  ParticleTypeMap driver_map;                 //< Maps driver types to driver indices
-  ReverseParticleTypeMap reverse_type_map;    //< Maps material indices back to particle type names
-  ReverseParticleTypeMap reverse_driver_map;  //< Maps driver indices back to driver type names
-  int number_of_materials;                    //< Number of unique material types in the simulation
-  int number_of_drivers;                      //< Number of unique driver types in the simulation
+  vector_t<ContactParamsT> multimat_cp_;       //< Contact parameters between material pairs
+  vector_t<ContactParamsT> drivers_cp_;        //< Contact parameters between drivers and materials
+  ParticleTypeMap type_map_;                   //< Maps particle types to material indices
+  ParticleTypeMap driver_map_;                 //< Maps driver types to driver indices
+  ReverseParticleTypeMap reverse_type_map_;    //< Maps material indices back to particle type names
+  ReverseParticleTypeMap reverse_driver_map_;  //< Maps driver indices back to driver type names
+  int number_of_materials_;                    //< Number of unique material types in the simulation
+  int number_of_drivers_;                      //< Number of unique driver types in the simulation
 
   /**
    * @brief Returns the number of material types.
    */
   int size_types() {
-    assert(type_map.size() == reverse_type_map.size());
-    assert(type_map.size() * type_map.size() >= multimat_cp.size());
-    assert(static_cast<int>(type_map.size()) >= number_of_materials);
-    return number_of_materials;
+    assert(type_map_.size() == reverse_type_map_.size());
+    assert(type_map_.size() * type_map_.size() >= multimat_cp_.size());
+    assert(static_cast<int>(type_map_.size()) >= number_of_materials_);
+    return number_of_materials_;
   }
 
   /**
@@ -59,10 +59,10 @@ struct MultiMatParamsT {
    */
 
   int size_drivers() {
-    assert(driver_map.size() == reverse_driver_map.size());
-    assert(static_cast<int>(driver_map.size()) * static_cast<int>(type_map.size()) >= drivers_cp.size());
-    assert(static_cast<int>(driver_map.size()) >= number_of_drivers);
-    return number_of_drivers;
+    assert(driver_map_.size() == reverse_driver_map_.size());
+    assert(static_cast<int>(driver_map_.size()) * static_cast<int>(type_map_.size()) >= drivers_cp_.size());
+    assert(static_cast<int>(driver_map_.size()) >= number_of_drivers_);
+    return number_of_drivers_;
   }
 
   /**
@@ -70,7 +70,7 @@ struct MultiMatParamsT {
    * @return Accessor to the material-to-material contact parameters.
    */
   MultiMatContactParamsTAccessor<ContactParamsT> get_multimat_accessor() const {
-    MultiMatContactParamsTAccessor<ContactParamsT> res = {multimat_cp.data(), number_of_materials};
+    MultiMatContactParamsTAccessor<ContactParamsT> res = {multimat_cp_.data(), number_of_materials_};
     return res;
   }
 
@@ -79,30 +79,30 @@ struct MultiMatParamsT {
    * @return Accessor to the driver-to-material contact parameters.
    */
   MultiMatContactParamsTAccessor<ContactParamsT> get_drivers_accessor() const {
-    MultiMatContactParamsTAccessor<ContactParamsT> res = {drivers_cp.data(), number_of_drivers};
+    MultiMatContactParamsTAccessor<ContactParamsT> res = {drivers_cp_.data(), number_of_drivers_};
     return res;
   }
 
   /**
-   * @brief Applies a function to each element of `multimat_cp` and `drivers_cp`.
+   * @brief Applies a function to each element of `multimat_cp_` and `drivers_cp_`.
    *
    * This generic method accepts a functor (or lambda) and applies it
-   * to all elements contained in `multimat_cp` followed by those in `drivers_cp`.
+   * to all elements contained in `multimat_cp_` followed by those in `drivers_cp_`.
    *
    * @tparam Func The type of the functor or lambda to be applied.
    * @param func A reference to the functor or lambda to apply to each element.
    */
   template <typename Func>
   void apply(Func& func) {
-    for (size_t i = 0; i < multimat_cp.size(); i++) func(multimat_cp[i]);
-    for (size_t i = 0; i < drivers_cp.size(); i++) func(drivers_cp[i]);
+    for (size_t i = 0; i < multimat_cp_.size(); i++) func(multimat_cp_[i]);
+    for (size_t i = 0; i < drivers_cp_.size(); i++) func(drivers_cp_[i]);
   }
 
   /**
    * @brief Initializes the material-to-material contact parameters.
    *
-   * Sets up the type maps (`type_map` and `reverse_type_map`) and allocates the
-   * array of contact parameters (`multimat_cp`) based on the provided input map.
+   * Sets up the type maps (`type_map_` and `reverse_type_map_`) and allocates the
+   * array of contact parameters (`multimat_cp_`) based on the provided input map.
    * Initializes the contact parameters for each material pair.
    *
    * @param input_map A map of particle types to material indices.
@@ -110,20 +110,20 @@ struct MultiMatParamsT {
    */
   void setup_multimat(const ParticleTypeMap& input_map, ContactParamsT cp = {}) {
     /** Define type map and reverse type map */
-    type_map = input_map;
-    for (auto it : type_map) {
-      reverse_type_map[it.second] = it.first;
+    type_map_ = input_map;
+    for (auto it : type_map_) {
+      reverse_type_map_[it.second] = it.first;
     }
     // Allocate array of Contact Force Parameters
-    number_of_materials = input_map.size();
-    multimat_cp.resize(number_of_materials * number_of_materials, cp);
+    number_of_materials_ = input_map.size();
+    multimat_cp_.resize(number_of_materials_ * number_of_materials_, cp);
   }
 
   /**
    * @brief Initializes the driver-to-material contact parameters.
    *
-   * Sets up the type maps (`driver_map` and `reverse_driver_map`) and allocates the
-   * array of contact parameters (`drivers_cp`) based on the provided input map.
+   * Sets up the type maps (`driver_map_` and `reverse_driver_map_`) and allocates the
+   * array of contact parameters (`drivers_cp_`) based on the provided input map.
    * Initializes the contact parameters for interactions between drivers and materials.
    *
    * @param input_map A map of particle types to driver indices.
@@ -131,13 +131,13 @@ struct MultiMatParamsT {
    * object).
    */
   void setup_drivers(const ParticleTypeMap& input_map, ContactParamsT cp = {}) {
-    driver_map = input_map;
-    for (auto it : driver_map) {
-      reverse_driver_map[it.second] = it.first;
+    driver_map_ = input_map;
+    for (auto it : driver_map_) {
+      reverse_driver_map_[it.second] = it.first;
     }
-    number_of_drivers = input_map.size();
-    assert(number_of_materials > 0);
-    drivers_cp.resize(number_of_drivers * number_of_materials, cp);
+    number_of_drivers_ = input_map.size();
+    assert(number_of_materials_ > 0);
+    drivers_cp_.resize(number_of_drivers_ * number_of_materials_, cp);
   }
 
   /**
@@ -150,7 +150,7 @@ struct MultiMatParamsT {
   ONIKA_HOST_DEVICE_FUNC inline int get_idx_multimat(int mat1, int mat2) {
     assert(mat1 < size_types());
     assert(mat2 < size_types());
-    return mat1 * number_of_materials + mat2;
+    return mat1 * number_of_materials_ + mat2;
   }
 
   /**
@@ -164,9 +164,9 @@ struct MultiMatParamsT {
    * @return The calculated index for the driver-to-material contact parameter.
    */
   ONIKA_HOST_DEVICE_FUNC inline int get_idx_drivers(int mat, int driver) {
-    assert(mat < number_of_materials);
-    assert(driver < number_of_drivers);
-    return mat * number_of_drivers + driver;
+    assert(mat < number_of_materials_);
+    assert(driver < number_of_drivers_);
+    return mat * number_of_drivers_ + driver;
   }
 
   /**
@@ -181,9 +181,9 @@ struct MultiMatParamsT {
    */
   void register_multimat(int mat1, int mat2, ContactParamsT& cp) {
     int id = get_idx_multimat(mat1, mat2);
-    multimat_cp[id] = cp;
+    multimat_cp_[id] = cp;
     id = get_idx_multimat(mat2, mat1);
-    multimat_cp[id] = cp;
+    multimat_cp_[id] = cp;
   }
 
   /**
@@ -197,7 +197,7 @@ struct MultiMatParamsT {
    */
   void register_driver(int mat, int driver, ContactParamsT& cp) {
     int id = get_idx_drivers(mat, driver);
-    drivers_cp[id] = cp;
+    drivers_cp_[id] = cp;
   }
 
   /**
@@ -214,12 +214,12 @@ struct MultiMatParamsT {
   bool check_completeness(bool check_multimat = true, bool check_driver = true) {
     bool check = true;
     ContactParamsT default_cp = {};
-    for (int m1 = 0; m1 < number_of_materials; m1++) {
+    for (int m1 = 0; m1 < number_of_materials_; m1++) {
       if (check_multimat) {
         // Check material-to-material parameters
         for (int m2 = 0; m2 <= m1; m2++) /** symtric definition */
         {
-          if (multimat_cp[this->get_idx_multimat(m1, m2)] == default_cp) {
+          if (multimat_cp_[this->get_idx_multimat(m1, m2)] == default_cp) {
             color_log::warning("MultiMatParamsT::check_completeness",
                                "Contact force parameters for the pair (mat: " + std::to_string(m1) +
                                    ", mat: " + std::to_string(m2) + ") are not defined.");
@@ -229,8 +229,8 @@ struct MultiMatParamsT {
       }
       // Check driver-to-material parameters
       if (check_driver) {
-        for (int drv = 0; drv < number_of_drivers; drv++) {
-          if (drivers_cp[this->get_idx_drivers(m1, drv)] == default_cp) {
+        for (int drv = 0; drv < number_of_drivers_; drv++) {
+          if (drivers_cp_[this->get_idx_drivers(m1, drv)] == default_cp) {
             color_log::warning("MultiMatParamsT::check_completeness",
                                "Contact force parameters for the pair (mat: " + std::to_string(m1) +
                                    ", driver: " + std::to_string(drv) + ") are not defined.");
@@ -255,21 +255,21 @@ struct MultiMatParamsT {
   void display(bool multimat_mode = true, bool drivers_mode = true) {
     display_header<ContactParamsT>();
     // Loop through all materials
-    for (int m1 = 0; m1 < number_of_materials; m1++) {
+    for (int m1 = 0; m1 < number_of_materials_; m1++) {
       // Display material-to-material parameters
       if (multimat_mode) {
         for (int m2 = 0; m2 <= m1; m2++) /** symtric definition */
         {
-          std::string type1 = reverse_type_map[m1];
-          std::string type2 = reverse_type_map[m2];
-          ContactParamsT& cp = multimat_cp[this->get_idx_multimat(m1, m2)];
+          std::string type1 = reverse_type_map_[m1];
+          std::string type2 = reverse_type_map_[m2];
+          ContactParamsT& cp = multimat_cp_[this->get_idx_multimat(m1, m2)];
           display_multimat(type1, type2, cp);
         }
       }
       // Display driver-to-material parameters
       if (drivers_mode) {
-        for (int drv = 0; drv < number_of_drivers; drv++) {
-          display_multimat(reverse_type_map[m1], reverse_driver_map[drv], drivers_cp[this->get_idx_drivers(m1, drv)]);
+        for (int drv = 0; drv < number_of_drivers_; drv++) {
+          display_multimat(reverse_type_map_[m1], reverse_driver_map_[drv], drivers_cp_[this->get_idx_drivers(m1, drv)]);
         }
       }
     }
@@ -284,7 +284,7 @@ struct MultiMatParamsT {
    * @return A reference to the contact parameters for the material-to-material interaction.
    */
   ONIKA_HOST_DEVICE_FUNC inline ContactParamsT& get_multimat_cp(int mat1, int mat2) const {
-    return multimat_cp[this->get_idx_multimat(mat1, mat2)];
+    return multimat_cp_[this->get_idx_multimat(mat1, mat2)];
   }
 
   /**
@@ -295,7 +295,7 @@ struct MultiMatParamsT {
    * @return A reference to the contact parameters for the driver-to-material interaction.
    */
   ONIKA_HOST_DEVICE_FUNC inline ContactParamsT& get_drivers_cp(int mat, int driver) const {
-    return drivers_cp[this->get_idx_drivers(mat, driver)];
+    return drivers_cp_[this->get_idx_drivers(mat, driver)];
   }
 };
 }  // namespace exaDEM

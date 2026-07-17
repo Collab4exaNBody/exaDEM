@@ -17,11 +17,12 @@ specific language governing permissions and limitations
 under the License.
  */
 #pragma once
-#include <exaDEM/shapes.hpp>
 #include <exanb/core/particle_type_id.h>
+
 #include <cassert>
-#include <fstream>
+#include <exaDEM/shapes.hpp>
 #include <filesystem>
+#include <fstream>
 #include <regex>
 
 namespace exaDEM {
@@ -34,16 +35,15 @@ namespace exaDEM {
  * @return shape      Fully populated shape object.
  */
 inline shape read_shp(std::ifstream& input, bool big_shape = false) {
-  using exanb::Vec3d;
   using exanb::Quaternion;
+  using exanb::Vec3d;
   shape shp;
   std::string key, line;
   std::vector<int> face_indices_buffer;
   exanb::Vec3d position = {0, 0, 0};
-  while (1) {
-    input >> key;
+  while (input >> key) {
     if (key == "name") {
-      input >> shp.m_name;
+      input >> shp.name_;
     }
     // recomputed
     if (key == "preCompDone") {
@@ -56,13 +56,15 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
                          "shapeSurvey to define these values (command “c”).");
       }
     } else if (key == "radius") {
-      input >> shp.m_radius;
+      double r;
+      input >> r;
+      shp.add_radius(r);
     } else if (key == "volume") {
-      input >> shp.m_volume;
+      input >> shp.volume_;
     } else if (key == "I/m") {
       exanb::Vec3d Im;
       input >> Im.x >> Im.y >> Im.z;
-      shp.m_inertia_on_mass = Im;
+      shp.inertia_on_mass_ = Im;
     } else if (key == "position") {
       input >> position.x >> position.y >> position.z;
     } else if (key == "nv") {
@@ -102,16 +104,18 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
       }
       shp.compute_offset_faces();
     } else if (key == "na") {
-      color_log::warning("read_shape",
-                         "na is no longer used; face areas are now computed.");
+      color_log::warning("read_shape", "na is no longer used; face areas are now computed.");
     } else if (key == ">") {
-      shp.obb = build_obb_from_shape(shp);
+      shp.obb_ = build_obb_from_shape(shp);
       shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
       shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
       shp.compute_face_areas();
       return shp;
     }
   }
+
+  color_log::error("read_shp", "Unexpected end-of-file or malformed shape definition.");
+  return shp;
 }
 
 /**
@@ -126,7 +130,8 @@ inline std::vector<shape> read_shps(const std::string file_name, bool big_shape 
   std::ifstream input(file_name.c_str());
   std::vector<shape> res;
   if (!input.is_open()) {
-    color_log::error("write_shapes", "Impossible to create the output file: " + file_name);
+    color_log::error("read_shps", "Impossible to open the input file: " + file_name);
+    return res;
   }
 
   for (std::string line; getline(input, line);) {
@@ -171,10 +176,15 @@ inline shape read_shp(const std::string file_name, bool big_shape = false) {
  */
 inline void read_shp(shapes& shps, const std::string file_name, bool big_shape = false, bool vtk = false) {
   std::ifstream input(file_name.c_str());
+  if (!input.is_open()) {
+    color_log::error("read_shp", "Impossible to open the input file: " + file_name);
+    return;
+  }
+
   for (std::string line; getline(input, line);) {
     if (line == "<") {
       shape shp = read_shp(input, big_shape);
-      shps.add_shape(&shp);
+      shps.add_shape(shp);
       if (!big_shape) shp.print();
       if (vtk) shp.write_paraview();
     }

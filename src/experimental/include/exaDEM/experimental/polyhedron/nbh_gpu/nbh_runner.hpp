@@ -15,13 +15,11 @@ specific language governing permissions and limitations
 under the License.
 */
 
-
 #pragma once
 
-#include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/block_parallel_for.h>
+#include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/parallel_for.h>
-
 
 namespace exaDEM {
 using namespace onika::parallel;
@@ -42,14 +40,13 @@ struct gen_seq<0, Is...> : index<Is...> {};
 
 template <typename Func, typename... Args>
 struct NeighborRunner {
-  const size_t* const cell_idx;
-  IJK dims;
-  Func func;
-  std::tuple<Args...> params; /**< Tuple of parameters to be passed to the kernel function. */
+  const size_t* const cell_idx_;
+  IJK dims_;
+  Func func_;
+  std::tuple<Args...> params_; /**< Tuple of parameters to be passed to the kernel function. */
 
   NeighborRunner(const size_t* const cells, const IJK& d, Func& f, Args... args)
-      : cell_idx(cells), dims(d), func(f), params(std::tuple<Args...>(args...)) {}
-
+      : cell_idx_(cells), dims_(d), func_(f), params_(std::tuple<Args...>(args...)) {}
 
   IJK convert_offset_ijk(int offset) const {
     assert(offset < 27);
@@ -61,18 +58,17 @@ struct NeighborRunner {
   }
 
   std::pair<size_t, size_t> nbh_runner_decode_block(onikaInt3_t& block) const {
-    size_t cell_a = cell_idx[block.x];
-    IJK loc_a = grid_index_to_ijk(dims, cell_a);
-    size_t cell_b = grid_ijk_to_index(dims, loc_a + convert_offset_ijk(block.y));
+    size_t cell_a = cell_idx_[block.x];
+    IJK loc_a = grid_index_to_ijk(dims_, cell_a);
+    size_t cell_b = grid_ijk_to_index(dims_, loc_a + convert_offset_ijk(block.y));
     return {cell_a, cell_b};
   }
 
   template <size_t... Is>
-  ONIKA_HOST_DEVICE_FUNC inline void apply(onikaInt3_t& block,
-                                           tuple_helper::index<Is...> indexes) const {
+  ONIKA_HOST_DEVICE_FUNC inline void apply(onikaInt3_t& block, tuple_helper::index<Is...> indexes) const {
     assert(block.z == 1);
     auto [cell_a, cell_b] = nbh_runner_decode_block(block);
-    func(cell_a, cell_b, std::get<Is>(params)...); 
+    func_(cell_a, cell_b, std::get<Is>(params_)...);
   }
 
   /**
@@ -92,16 +88,14 @@ struct NeighborRunnerFunctorTraits {
 };
 }  // namespace exaDEM
 
-
-
 namespace onika {
 namespace parallel {
 
 template <typename Func, typename... Args>
 struct ParallelForFunctorTraits<exaDEM::NeighborRunner<Func, Args...>> {
-  static inline constexpr bool RequiresBlockSynchronousCall = exaDEM::NeighborRunnerFunctorTraits<Func>::RequiresBlockSynchronousCall;
+  static inline constexpr bool RequiresBlockSynchronousCall =
+      exaDEM::NeighborRunnerFunctorTraits<Func>::RequiresBlockSynchronousCall;
   static inline constexpr bool CudaCompatible = exaDEM::NeighborRunnerFunctorTraits<Func>::CudaCompatible;
 };
 }  // namespace parallel
 }  // namespace onika
-

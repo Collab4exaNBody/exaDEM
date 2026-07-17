@@ -41,21 +41,21 @@ struct InterationPairWrapper {
   template <typename InteractionContainerT>
   void wrap(InteractionContainerT& container) {
     using namespace onika::cuda;
-    id_i = container.id_i.data();
-    id_j = container.id_j.data();
+    id_i = container.id_i_.data();
+    id_j = container.id_j_.data();
 
-    cell_i = container.cell_i.data();
-    cell_j = container.cell_j.data();
+    cell_i = container.cell_i_.data();
+    cell_j = container.cell_j_.data();
 
-    p_i = container.p_i.data();
-    p_j = container.p_j.data();
+    p_i = container.p_i_.data();
+    p_j = container.p_j_.data();
 
-    sub_i = container.sub_i.data();
-    sub_j = container.sub_j.data();
+    sub_i = container.sub_i_.data();
+    sub_j = container.sub_j_.data();
 
-    m_type = container.type;
-    m_swap = container.swap.data();
-    m_ghost = container.ghost.data();
+    m_type = container.type_;
+    m_swap = container.swap_.data();
+    m_ghost = container.ghost_.data();
   }
 
   ONIKA_HOST_DEVICE_FUNC
@@ -81,7 +81,8 @@ struct InteractionWrapper {
   double* et = nullptr;
   double* dn0 = nullptr;
   double* weight = nullptr;
-  double* criterion = nullptr;
+  RuptureCriteria* criterion = nullptr;
+
   uint8_t* unbroken = nullptr;
 
   // particle id
@@ -105,44 +106,44 @@ struct InteractionWrapper {
   InteractionWrapper(ClassifierContainer<IT>& data) {
     using namespace onika::cuda;
     if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) {
-      ft_x = vector_data(data.ft_x);
-      ft_y = vector_data(data.ft_y);
-      ft_z = vector_data(data.ft_z);
+      ft_x = vector_data(data.ft_x_);
+      ft_y = vector_data(data.ft_y_);
+      ft_z = vector_data(data.ft_z_);
 
-      mom_x = vector_data(data.mom_x);
-      mom_y = vector_data(data.mom_y);
-      mom_z = vector_data(data.mom_z);
+      mom_x = vector_data(data.mom_x_);
+      mom_y = vector_data(data.mom_y_);
+      mom_z = vector_data(data.mom_z_);
     }
 
     if constexpr (IT == InteractionType::InnerBond) {
-      ft_x = vector_data(data.ft_x);
-      ft_y = vector_data(data.ft_y);
-      ft_z = vector_data(data.ft_z);
+      ft_x = vector_data(data.ft_x_);
+      ft_y = vector_data(data.ft_y_);
+      ft_z = vector_data(data.ft_z_);
 
-      en = vector_data(data.en);
-      tds = vector_data(data.tds);
-      et = vector_data(data.et);
-      dn0 = vector_data(data.dn0);
-      weight = vector_data(data.weight);
-      criterion = vector_data(data.criterion);
-      unbroken = vector_data(data.unbroken);
+      en = vector_data(data.en_);
+      tds = vector_data(data.tds_);
+      et = vector_data(data.et_);
+      dn0 = vector_data(data.dn0_);
+      weight = vector_data(data.weight_);
+      criterion = vector_data(data.criterion_);
+      unbroken = vector_data(data.unbroken_);
     }
 
-    id_i = vector_data(data.id_i);
-    id_j = vector_data(data.id_j);
+    id_i = vector_data(data.id_i_);
+    id_j = vector_data(data.id_j_);
 
-    cell_i = vector_data(data.cell_i);
-    cell_j = vector_data(data.cell_j);
+    cell_i = vector_data(data.cell_i_);
+    cell_j = vector_data(data.cell_j_);
 
-    p_i = vector_data(data.p_i);
-    p_j = vector_data(data.p_j);
+    p_i = vector_data(data.p_i_);
+    p_j = vector_data(data.p_j_);
 
-    sub_i = vector_data(data.sub_i);
-    sub_j = vector_data(data.sub_j);
+    sub_i = vector_data(data.sub_i_);
+    sub_j = vector_data(data.sub_j_);
 
-    m_type = data.type;
-    m_swap = vector_data(data.swap);
-    m_ghost = vector_data(data.ghost);
+    m_type = data.type_;
+    m_swap = vector_data(data.swap_);
+    m_ghost = vector_data(data.ghost_);
   }
 
   ONIKA_HOST_DEVICE_FUNC inline auto operator()(const uint64_t idx) const {
@@ -173,7 +174,9 @@ struct InteractionWrapper {
 
   ONIKA_HOST_DEVICE_FUNC inline double& Et(const uint64_t idx) const { return et[idx]; }
 
-  ONIKA_HOST_DEVICE_FUNC inline double& Criterion(const uint64_t idx) const { return criterion[idx]; }
+  ONIKA_HOST_DEVICE_FUNC inline RuptureCriteria& criteria(const uint64_t idx) const { return criterion[idx]; }
+
+  ONIKA_HOST_DEVICE_FUNC inline RuptureMode rupture_mode(const uint64_t idx) const { return criterion[idx].mode_; }
 
   ONIKA_HOST_DEVICE_FUNC inline void broke(const uint64_t idx) const { unbroken[idx] = false; }
 
@@ -187,26 +190,26 @@ struct InteractionWrapper {
 
   ONIKA_HOST_DEVICE_FUNC
   inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) const {
-    assert(m_type == item.pair.type);
+    assert(m_type == item.pair_.type_);
     // --- particle ids
-    id_i[idx] = item.pair.pi.id;
-    id_j[idx] = item.pair.pj.id;
+    id_i[idx] = item.pair_.pi_.id_;
+    id_j[idx] = item.pair_.pj_.id_;
 
     // --- cell ids
-    cell_i[idx] = item.pair.pi.cell;
-    cell_j[idx] = item.pair.pj.cell;
+    cell_i[idx] = item.pair_.pi_.cell_;
+    cell_j[idx] = item.pair_.pj_.cell_;
 
     // --- position in cell
-    p_i[idx] = item.pair.pi.p;
-    p_j[idx] = item.pair.pj.p;
+    p_i[idx] = item.pair_.pi_.p_;
+    p_j[idx] = item.pair_.pj_.p_;
 
     // --- sub ids
-    sub_i[idx] = item.pair.pi.sub;
-    sub_j[idx] = item.pair.pj.sub;
+    sub_i[idx] = item.pair_.pi_.sub_;
+    sub_j[idx] = item.pair_.pj_.sub_;
 
     // --- swap, ghost
-    m_swap[idx] = item.pair.swap;
-    m_ghost[idx] = item.pair.ghost;
+    m_swap[idx] = item.pair_.swap_;
+    m_ghost[idx] = item.pair_.ghost_;
   }
 
   ONIKA_HOST_DEVICE_FUNC
@@ -217,32 +220,33 @@ struct InteractionWrapper {
 
   ONIKA_HOST_DEVICE_FUNC
   inline bool same(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
-    return item.pair == pair(idx);
+    return item.pair_ == pair(idx);
   }
 
   ONIKA_HOST_DEVICE_FUNC
   inline void update(const uint64_t idx, const exaDEM::Interaction& item) const {
-    ft_x[idx] = item.friction.x;
-    ft_y[idx] = item.friction.y;
-    ft_z[idx] = item.friction.z;
+    ft_x[idx] = item.friction_.x;
+    ft_y[idx] = item.friction_.y;
+    ft_z[idx] = item.friction_.z;
 
-    mom_x[idx] = item.moment.x;
-    mom_y[idx] = item.moment.y;
-    mom_z[idx] = item.moment.z;
+    mom_x[idx] = item.moment_.x;
+    mom_y[idx] = item.moment_.y;
+    mom_z[idx] = item.moment_.z;
   }
 
   ONIKA_HOST_DEVICE_FUNC
   inline void update(const uint64_t idx, const exaDEM::InnerBondInteraction& item) const {
-    ft_x[idx] = item.friction.x;
-    ft_y[idx] = item.friction.y;
-    ft_z[idx] = item.friction.z;
-    en[idx] = item.en;
-    tds[idx] = item.tds;
-    et[idx] = item.et;
-    dn0[idx] = item.dn0;
-    weight[idx] = item.weight;
-    criterion[idx] = item.criterion;
-    unbroken[idx] = item.unbroken;
+    ft_x[idx] = item.friction_.x;
+    ft_y[idx] = item.friction_.y;
+    ft_z[idx] = item.friction_.z;
+    en[idx] = item.en_;
+    tds[idx] = item.tds_;
+    et[idx] = item.et_;
+    dn0[idx] = item.dn0_;
+    weight[idx] = item.weight_;
+    criterion[idx] = item.criterion_;
+
+    unbroken[idx] = item.unbroken_;
   }
 
   ONIKA_HOST_DEVICE_FUNC

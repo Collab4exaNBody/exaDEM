@@ -24,23 +24,23 @@ namespace exaDEM {
 
 /** @brief Cell indexes for vertices, edges, and faces relative to a cell of the projection grid. */
 struct RShapeDriverCellIndexes {
-  size_t offset;    /**< Index of the grid cell. */
-  size_t nvertices; /**< Number of vertices in the grid cell. */
-  size_t nedges;    /**< Number of edges in the grid cell. */
-  size_t nfaces;    /**< Number of faces in the grid cell. */
+  size_t offset_;    /**< Index of the grid cell. */
+  size_t nvertices_; /**< Number of vertices in the grid cell. */
+  size_t nedges_;    /**< Number of edges in the grid cell. */
+  size_t nfaces_;    /**< Number of faces in the grid cell. */
 };
 
-// List of geometric elements (vertices, edges, faces) projected on the grid for a R-Shape driver.
+/** @brief List of geometric elements (vertices, edges, faces) projected on the grid for a R-Shape driver. */
 struct RShapeDriverGridCellIndexes {
   onika::memory::CudaMMVector<RShapeDriverCellIndexes>
-      cells;  // List of grid cells with their respective counts of vertices, edges, and faces.
-  onika::memory::CudaMMVector<int> data;  // List of vertex, edge, and face indices for all grid cells.
+      cells_; /**< List of grid cells with their respective counts of vertices, edges, and faces. */
+  onika::memory::CudaMMVector<int> data_; /**< List of vertex, edge, and face indices for all grid cells. */
 
   /** @brief Reset the grid.
    */
   void reset() {
-    cells.clear();
-    data.clear();
+    cells_.clear();
+    data_.clear();
   }
 
   /** @brief Initialize the grid with a specified number of cells and total element counts.
@@ -52,48 +52,45 @@ struct RShapeDriverGridCellIndexes {
   void initialize(size_t number_of_cells, size_t total_nvertices, size_t total_nedges, size_t total_nfaces) {
     assert(number_of_cells < 1e8);  // 1e8 is an arbitrary value to avoid resizing the grid with a too large size.
                                     // This can be a sign of a bug.
-    cells.clear();
-    cells.resize(number_of_cells);
-    data.clear();
-    data.resize(total_nvertices + total_nedges + total_nfaces);
+    cells_.clear();
+    cells_.resize(number_of_cells);
+    data_.clear();
+    data_.resize(total_nvertices + total_nedges + total_nfaces);
   }
 
   /** @brief Fill a grid cell with the given element indices.
    * @param cell_idx The index of the grid cell to fill.
-   * @param nvertices The number of vertices in the grid cell.
-   * @param nedges The number of edges in the grid cell.
-   * @param nfaces The number of faces in the grid cell.
-   * @param indices_vertices Pointer to the array of vertex indices.
-   * @param indices_edges Pointer to the array of edge indices.
-   * @param indices_faces Pointer to the array of face indices.
+   * @param indices_vertices Span of vertex indices for the grid cell.
+   * @param indices_edges Span of edge indices for the grid cell.
+   * @param indices_faces Span of face indices for the grid cell.
    */
   inline void fill_cell(size_t cell_idx, std::span<const int> indices_vertices, std::span<const int> indices_edges,
                         std::span<const int> indices_faces) {
-    assert(cell_idx < cells.size());
+    assert(cell_idx < cells_.size());
     // offset is set by the caller, it is the responsibility of the caller to ensure that the offset is correct and that
     // the data is not overwritten. cells[cell_idx].offset = offset;
 
-    RShapeDriverCellIndexes& cell = cells[cell_idx];
+    RShapeDriverCellIndexes& cell = cells_[cell_idx];
 
-    cell.nvertices = indices_vertices.size();
-    cell.nedges = indices_edges.size();
-    cell.nfaces = indices_faces.size();
-    std::memcpy(data.data() + cell.offset, indices_vertices.data(), cell.nvertices * sizeof(int));
-    std::memcpy(data.data() + cell.offset + cell.nvertices, indices_edges.data(), cell.nedges * sizeof(int));
-    std::memcpy(data.data() + cell.offset + cell.nvertices + cell.nedges, indices_faces.data(),
-                cell.nfaces * sizeof(int));
+    cell.nvertices_ = indices_vertices.size();
+    cell.nedges_ = indices_edges.size();
+    cell.nfaces_ = indices_faces.size();
+    std::memcpy(data_.data() + cell.offset_, indices_vertices.data(), cell.nvertices_ * sizeof(int));
+    std::memcpy(data_.data() + cell.offset_ + cell.nvertices_, indices_edges.data(), cell.nedges_ * sizeof(int));
+    std::memcpy(data_.data() + cell.offset_ + cell.nvertices_ + cell.nedges_, indices_faces.data(),
+                cell.nfaces_ * sizeof(int));
 
 #ifndef NDEBUG
-    if (cell_idx < cells.size() - 1) {
-      size_t next_offset = cells[cell_idx + 1].offset;
-      size_t current_offset = cell.offset;
-      size_t current_size = cell.nvertices + cell.nedges + cell.nfaces;
+    if (cell_idx < cells_.size() - 1) {
+      size_t next_offset = cells_[cell_idx + 1].offset_;
+      size_t current_offset = cell.offset_;
+      size_t current_size = cell.nvertices_ + cell.nedges_ + cell.nfaces_;
       assert(current_offset + current_size == next_offset);
     } else {
       // for the last cell, we can only check that the offset + size does not exceed the total size of the data.
-      size_t current_offset = cell.offset;
-      size_t current_size = cell.nvertices + cell.nedges + cell.nfaces;
-      assert(current_offset + current_size == data.size());
+      size_t current_offset = cell.offset_;
+      size_t current_size = cell.nvertices_ + cell.nedges_ + cell.nfaces_;
+      assert(current_offset + current_size == data_.size());
     }
 #endif
   }
@@ -102,11 +99,11 @@ struct RShapeDriverGridCellIndexes {
    */
   inline void debug() const {
     exanb::lout << "RShapeDriverGrid:" << std::endl;
-    exanb::lout << "Number of cells: " << cells.size() << std::endl;
-    for (size_t i = 0; i < cells.size(); i++) {
-      const RShapeDriverCellIndexes& cell = cells[i];
-      exanb::lout << "Cell " << i << ": offset=" << cell.offset << ", nvertices=" << cell.nvertices
-                  << ", nedges=" << cell.nedges << ", nfaces=" << cell.nfaces << std::endl;
+    exanb::lout << "Number of cells: " << cells_.size() << std::endl;
+    for (size_t i = 0; i < cells_.size(); i++) {
+      const RShapeDriverCellIndexes& cell = cells_[i];
+      exanb::lout << "Cell " << i << ": offset=" << cell.offset_ << ", nvertices=" << cell.nvertices_
+                  << ", nedges=" << cell.nedges_ << ", nfaces=" << cell.nfaces_ << std::endl;
     }
   }
 };
@@ -115,27 +112,32 @@ struct RShapeDriverGridCellIndexes {
  */
 struct RShapeDriverCellAccessor {
  public:
-  const int* grid_id_vertices;  // List of vertex indices.
-  const int* grid_id_edges;     // List of edge indices.
-  const int* grid_id_faces;     // List of face indices.
-  size_t rshape_nv;             // Number of vertices in the grid cell.
-  size_t rshape_ne;             // Number of edges in the grid cell.
-  size_t rshape_nf;             // Number of faces in the grid cell.
+  const int* grid_id_vertices_; /**< List of vertex indices. */
+  const int* grid_id_edges_;    /**< List of edge indices. */
+  const int* grid_id_faces_;    /**< List of face indices. */
+  size_t rshape_nv_;            /**< Number of vertices in the grid cell. */
+  size_t rshape_ne_;            /**< Number of edges in the grid cell. */
+  size_t rshape_nf_;            /**< Number of faces in the grid cell. */
 
+  /** @brief Build an accessor to the vertex, edge, and face indices of a given grid cell.
+   * @param cell_idx Index of the grid cell to access.
+   * @param grid_rshape Grid storing the geometric elements projected for the R-Shape driver.
+   */
   ONIKA_HOST_DEVICE_FUNC RShapeDriverCellAccessor(size_t cell_idx, const RShapeDriverGridCellIndexes& grid_rshape) {
     using onika::cuda::vector_data;
 
-    const RShapeDriverCellIndexes& cell_info = grid_rshape.cells[cell_idx];
-    const int* data_ptr = vector_data(grid_rshape.data);
-    grid_id_vertices = data_ptr + cell_info.offset;
-    grid_id_edges = grid_id_vertices + cell_info.nvertices;
-    grid_id_faces = grid_id_edges + cell_info.nedges;
-    rshape_nv = cell_info.nvertices;
-    rshape_ne = cell_info.nedges;
-    rshape_nf = cell_info.nfaces;
+    const RShapeDriverCellIndexes& cell_info = vector_data(grid_rshape.cells_)[cell_idx];
+    const int* data_ptr = vector_data(grid_rshape.data_);
+    grid_id_vertices_ = data_ptr + cell_info.offset_;
+    grid_id_edges_ = grid_id_vertices_ + cell_info.nvertices_;
+    grid_id_faces_ = grid_id_edges_ + cell_info.nedges_;
+    rshape_nv_ = cell_info.nvertices_;
+    rshape_ne_ = cell_info.nedges_;
+    rshape_nf_ = cell_info.nfaces_;
   }
 
  private:
+  /** @brief Default constructor disabled; an accessor must always be bound to a grid cell. */
   RShapeDriverCellAccessor() {}
 };
 }  // namespace exaDEM

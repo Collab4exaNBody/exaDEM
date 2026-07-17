@@ -17,13 +17,14 @@ specific language governing permissions and limitations
 under the License.
  */
 
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
+#include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
 #include <exanb/core/particle_type_id.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
 #include <exaDEM/forcefield/inner_bond_parameters.hpp>
 #include <exaDEM/forcefield/multimat_parameters.hpp>
 
@@ -38,7 +39,15 @@ class InnerBondParamsOp : public OperatorNode {
   ADD_SLOT(std::vector<double>, kn, INPUT, OPTIONAL, DocString{"List of ln values."});
   ADD_SLOT(std::vector<double>, kt, INPUT, OPTIONAL, DocString{"List of kt values."});
   ADD_SLOT(std::vector<double>, damp_rate, INPUT, OPTIONAL, DocString{"List of en2 values."});
-  ADD_SLOT(std::vector<double>, g, INPUT, OPTIONAL, DocString{"List of g values."});
+  ADD_SLOT(std::vector<double>, g, INPUT, OPTIONAL,
+           DocString{"List of g values (mixed mode fracture energy release rate). Mutually exclusive with gn/gt."});
+  ADD_SLOT(std::vector<double>, gn, INPUT, OPTIONAL,
+           DocString{"List of gn values (separate modes normal fracture energy release rate). Requires gt."});
+  ADD_SLOT(std::vector<double>, gt, INPUT, OPTIONAL,
+           DocString{"List of gt values (separate modes tangential fracture energy release rate). Requires gn."});
+  ADD_SLOT(std::vector<double>, sigma, INPUT, OPTIONAL,
+           DocString{"List of stress criterion values (stress separate mode). Requires g."});
+
   ADD_SLOT(InnerBondParams, default_config, INPUT, OPTIONAL,
            DocString{"Contact parameters for sphere interactions"});  // can be re-used for to dump contact network
   ADD_SLOT(bool, verbosity, INPUT, false, DocString{"Print force field parameter details"});
@@ -47,7 +56,7 @@ class InnerBondParamsOp : public OperatorNode {
   // ----------- Operator documentation ------------
   inline std::string documentation() const final {
     return R"EOF(
-        This operator fills type id to all particles. 
+        This operator fills innerbond input parameters. 
 
         YAML example:
 
@@ -56,16 +65,24 @@ class InnerBondParamsOp : public OperatorNode {
              mat2:      [  Type1, Type2, Type2 ]
              kn:        [   5000, 10000, 15000 ]
              kt:        [   4000,  8000, 12000 ]
-             kr:        [    0.0,   0.0,   0.0 ]
              damp_rate: [  0.999, 0.999, 0.999 ]
-             g:         [   1e-5,  1e-5,  1e-5 ]
+             gn:        [   1e-5,  1e-5,  1e-5 ]
+             gt:        [   1e-5,  1e-5,  1e-5 ]
 
+        Either provide "g" (mixed mode fracture criterion) or both "gn" and "gt"
+        (separate modes fracture criterion) for every pair, but not both at once:
+
+          - inner_bond_params:
+             mat1:      [  Type1, Type2 ]
+             mat2:      [  Type1, Type2 ]
+             kn:        [   5000, 15000 ]
+             kt:        [   4000, 12000 ]
+             damp_rate: [  0.999,  0.999 ]
+             g:         [   1e-5,   1e-5 ]
         )EOF";
   }
 
-  inline std::string operator_name() {
-    return "inner_bond_params";
-  }
+  inline std::string operator_name() { return "inner_bond_params"; }
 
  public:
   inline void execute() final {
@@ -101,7 +118,6 @@ class InnerBondParamsOp : public OperatorNode {
       auto& normal_coeffs = *kn;
       auto& tangential_coeffs = *kt;
       auto& damprate_coeffs = *damp_rate;
-      auto& g_coeffs = *g;
 
       int number_of_pairs = material_types_1.size();
 
@@ -119,7 +135,22 @@ class InnerBondParamsOp : public OperatorNode {
       check_lengths_match(normal_coeffs, "kn");
       check_lengths_match(tangential_coeffs, "kt");
       check_lengths_match(damprate_coeffs, "damp_rate");
-      check_lengths_match(g_coeffs, "g");
+
+      if (g.has_value() && (gn.has_value() || gt.has_value())) {
+        color_log::error(this->operator_name(), "\"g\" is mutually exclusive with \"gn\"/\"gt\".");
+      }
+      if (g.has_value()) {
+        check_lengths_match(*g, "g");
+        if (sigma.has_value()) {
+          check_lengths_match(*sigma, "sigma");
+        }
+      } else if (gn.has_value() && gt.has_value()) {
+        check_lengths_match(*gn, "gn");
+        check_lengths_match(*gt, "gt");
+      } else {
+        color_log::error(this->operator_name(),
+                         "You must define either \"g\", or both \"gn\" and \"gt\", or \"g\" and \"sigma\".");
+      }
 
       /** check types / materials */
       for (auto& type_name : material_types_1) {
@@ -152,10 +183,24 @@ class InnerBondParamsOp : public OperatorNode {
         int64_t type_1 = type_map.at(m1);
         int64_t type_2 = type_map.at(m2);
         InnerBondParams params;
-        params.kn = normal_coeffs[p];
-        params.kt = tangential_coeffs[p];
-        params.damp_rate = damprate_coeffs[p];
-        params.g = g_coeffs[p];
+        params.kn_ = normal_coeffs[p];
+        params.kt_ = tangential_coeffs[p];
+        params.damp_rate_ = damprate_coeffs[p];
+        if (g.has_value()) {
+          if (!sigma.has_value()) {
+            params.mode_ = RuptureMode::EnergyMixedMode;
+            params.crit1_ = (*g)[p];
+            params.crit2_ = 0.0;
+          } else {
+            params.mode_ = RuptureMode::StressEnergySeparateMode;
+            params.crit1_ = (*g)[p];
+            params.crit2_ = (*sigma)[p];
+          }
+        } else {
+          params.mode_ = RuptureMode::EnergySeparateMode;
+          params.crit1_ = (*gn)[p];
+          params.crit2_ = (*gt)[p];
+        }
 
         ibp.register_multimat(type_1, type_2, params);
       }

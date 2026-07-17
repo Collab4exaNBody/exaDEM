@@ -31,14 +31,14 @@ setup_drivers:
      state: {center: [0.,0,-0.02], mass: 0.0038239}
      params: { motion_type: STATIONARY }
      filename: planDo.shp
-     minskowski: 0.02 
+     minkowski: 0.02 
 
   - register_rshape:
      id: 1
      state: {center: [0.,0,2.02], mass: 0.0038239}
      params: { motion_type: LINEAR_FORCE_MOTION, motion_vector: [0,0,-1], const_force: 200.}
      filename: planUp.shp
-     minskowski: 0.02 
+     minkowski: 0.02 
 
 
 compute_force:

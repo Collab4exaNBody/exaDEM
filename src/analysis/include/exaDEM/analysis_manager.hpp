@@ -19,44 +19,44 @@ under the License.
 
 #pragma once
 
-#include <onika/string_utils.h>
 #include <mpi.h>
+#include <onika/string_utils.h>
 
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <cstdint>
 
 namespace exaDEM {
 namespace analysis {
 
 struct AnalysisFileManager {
-  std::filesystem::path path;
-  std::string filename;
-  std::stringstream line;
-  std::stringstream header;
+  std::filesystem::path path_;
+  std::string filename_;
+  std::stringstream line_;
+  std::stringstream header_;
 
-  void set_path(std::string p) { path = p; }
-  void set_filename(std::string f) { filename = f; }
+  void set_path(std::string p) { path_ = p; }
+  void set_filename(std::string f) { filename_ = f; }
 
   bool first() {
-    std::string full_name = path.string() + "/" + this->filename;
+    std::string full_name = path_.string() + "/" + this->filename_;
     return !std::filesystem::exists(full_name);
   }
 
   template <typename T>
   void add_element(std::string name, T& new_element, std::string format) {
-    header << name << " ";
+    header_ << name << " ";
     std::string element = onika::format_string(format, new_element);
-    line << element << " ";
+    line_ << element << " ";
   }
 
   void create_directories() {
-    exanb::ldbg << "create directory " << this->path << std::endl;
-    std::filesystem::create_directories(this->path);
+    exanb::ldbg << "create directory " << this->path_ << std::endl;
+    std::filesystem::create_directories(this->path_);
   }
 
-  void endl() { line << std::endl; }
+  void endl() { line_ << std::endl; }
 
   void write() {
     int rank;
@@ -65,17 +65,17 @@ struct AnalysisFileManager {
       return;
     }
 
-    std::string full_path = path.string() + "/" + this->filename;
+    std::string full_path = path_.string() + "/" + this->filename_;
     std::ofstream file;
     exanb::ldbg << "trying to open " << full_path << std::endl;
     if (first()) {
       create_directories();
       file.open(full_path);
-      file << header.rdbuf() << std::endl;
+      file << header_.rdbuf() << std::endl;
     } else {
       file.open(full_path, std::ofstream::in | std::ofstream::ate);
     }
-    file << line.rdbuf();
+    file << line_.rdbuf();
     file.close();
   }
 };

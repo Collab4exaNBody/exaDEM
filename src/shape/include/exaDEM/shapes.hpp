@@ -18,35 +18,36 @@ under the License.
 */
 #pragma once
 
-#include <exaDEM/shape.hpp>
 #include <exanb/core/particle_type_id.h>
+
+#include <exaDEM/shape.hpp>
 
 namespace exaDEM {
 /**
  * @brief Container for geometric shapes used in particle interactions.
  */
 struct shapes {
-  onika::memory::CudaMMVector<shape> m_data; ///< Shape storage on CPU/GPU
-  int m_max_nv = 0;                          ///< Maximum number of vertices among all shapes
-  bool m_use_obb_tree = false;               ///< Whether to enable OBB-tree acceleration
+  onika::memory::CudaMMVector<shape> data_;  ///< Shape storage on CPU/GPU
+  int max_nv_ = 0;                           ///< Maximum number of vertices among all shapes
+  bool use_obb_tree_ = false;                ///< Whether to enable OBB-tree acceleration
 
   /// @return pointer to device data (const)
-  inline const shape* data() const { return onika::cuda::vector_data(m_data); }
+  inline const shape* data() const { return onika::cuda::vector_data(data_); }
 
   /// @return number of shapes stored
-  inline size_t size() { return onika::cuda::vector_size(m_data); }
+  inline size_t size() { return onika::cuda::vector_size(data_); }
 
   /// @overload const version
-  inline size_t size() const { return onika::cuda::vector_size(m_data); }
+  inline size_t size() const { return onika::cuda::vector_size(data_); }
 
   /// @return maximum number of vertices among all stored shapes
-  inline size_t max_number_of_vertices() { return m_max_nv; }
+  inline size_t max_number_of_vertices() { return max_nv_; }
 
   /// @return true if OBB tree acceleration is enabled
-  inline bool use_obb_tree() { return m_use_obb_tree; }
+  inline bool use_obb_tree() { return use_obb_tree_; }
 
   /// Enable OBB tree acceleration
-  void enable_obb_tree() { m_use_obb_tree = true; }
+  void enable_obb_tree() { use_obb_tree_ = true; }
 
   /**
    * @brief Access shape by index (const)
@@ -54,10 +55,10 @@ struct shapes {
    * @return pointer to the shape
    */
   ONIKA_HOST_DEVICE_FUNC
-      inline const shape* operator[](const uint32_t idx) const {
-        const shape* data = onika::cuda::vector_data(m_data);
-        return data + idx;
-      }
+  inline const shape* operator[](const uint32_t idx) const {
+    const shape* data = onika::cuda::vector_data(data_);
+    return data + idx;
+  }
 
   /**
    * @brief Access shape by index (mutable)
@@ -65,10 +66,10 @@ struct shapes {
    * @return pointer to the shape
    */
   ONIKA_HOST_DEVICE_FUNC
-      inline shape* operator[](const uint32_t idx) {
-        shape* const data = onika::cuda::vector_data(m_data);
-        return data + idx;
-      }
+  inline shape* operator[](const uint32_t idx) {
+    shape* const data = onika::cuda::vector_data(data_);
+    return data + idx;
+  }
 
   /**
    * @brief Access shape by name
@@ -76,22 +77,22 @@ struct shapes {
    * @return pointer to the shape, or nullptr if not found
    */
   ONIKA_HOST_DEVICE_FUNC
-      inline shape* operator[](const std::string name) {
-        for (auto& shp : this->m_data) {
-          if (shp.m_name == name) {
-            return &shp;
-          }
-        }
-        return nullptr;
+  inline shape* operator[](const std::string name) {
+    for (auto& shp : this->data_) {
+      if (shp.name_ == name) {
+        return &shp;
       }
+    }
+    return nullptr;
+  }
 
   /**
    * @brief Add a new shape (copy)
    * @param shp shape to add
    */
   inline void add_shape(shape& shp) {
-    this->m_data.push_back(shp);  // copy
-    m_max_nv = std::max(m_max_nv, shp.get_number_of_vertices());
+    this->data_.push_back(shp);  // copy
+    max_nv_ = std::max(max_nv_, shp.get_number_of_vertices());
   }
 
   /// @brief Add a new shape (by pointer)
@@ -103,8 +104,8 @@ struct shapes {
    * @return true if found, false otherwise
    */
   inline bool contains(shape& shp) {
-    for (auto& s : m_data) {
-      if (shp.m_name == s.m_name) {
+    for (auto& s : data_) {
+      if (shp.name_ == s.name_) {
         return true;
       }
     }
@@ -120,16 +121,14 @@ struct shapes {
  * @param shp   shape to register.
  */
 inline void register_shape(exanb::ParticleTypeMap& ptm, shapes& shps, shape& shp) {
-  if (ptm.find(shp.m_name) != ptm.end()) {
-    shp.m_name = shp.m_name + "X";
-    color_log::warning(
-        "register_shape",
-        "This polyhedron name is already taken, exaDEM has renamed it to: " + shp.m_name);
+  if (ptm.find(shp.name_) != ptm.end()) {
+    shp.name_ = shp.name_ + "X";
+    color_log::warning("register_shape",
+                       "This polyhedron name is already taken, exaDEM has renamed it to: " + shp.name_);
   }
-  ptm[shp.m_name] = shps.size();
+  ptm[shp.name_] = shps.size();
   shps.add_shape(&shp);
 }
-
 
 /**
  * @brief Registers a collection of shapes into the particle type map and shape container.
@@ -140,13 +139,12 @@ inline void register_shape(exanb::ParticleTypeMap& ptm, shapes& shps, shape& shp
  */
 inline void register_shapes(exanb::ParticleTypeMap& ptm, shapes& shps, std::vector<shape>& shp) {
   for (auto& s : shp) {
-    if (ptm.find(s.m_name) != ptm.end()) {
-      s.m_name = s.m_name + "X";
-      color_log::warning(
-          "register_shapes",
-          "This polyhedron name is already taken, exaDEM has renamed it to: " + s.m_name);
+    if (ptm.find(s.name_) != ptm.end()) {
+      s.name_ = s.name_ + "X";
+      color_log::warning("register_shapes",
+                         "This polyhedron name is already taken, exaDEM has renamed it to: " + s.name_);
     }
-    ptm[s.m_name] = shps.size();
+    ptm[s.name_] = shps.size();
     shps.add_shape(&s);
   }
 }

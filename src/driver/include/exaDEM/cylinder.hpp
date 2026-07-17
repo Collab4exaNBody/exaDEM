@@ -26,13 +26,13 @@ under the License.
 namespace exaDEM {
 // Data fields for a cylindrical driver
 struct CylinderFields {
-  double radius = -1;              /**< Radius of the cylinder. */
-  exanb::Vec3d axis = {1, 0, 1};   /**< Normalized axis direction of the cylinder. */
-  exanb::Vec3d center = {0, 0, 0}; /**< Center position of the cylinder in 3D space. */
-  exanb::Vec3d vel = {0, 0, 0};    /**< Linear velocity of the cylinder. */
-  exanb::Vec3d vrot = {0, 0, 0};   /**< Angular velocity (rotation) of the cylinder. */
-  exanb::Vec3d forces = {0, 0, 0}; /**< Accumulated forces applied to the cylinder from interactions. */
-  exanb::Vec3d mom = {0, 0, 0};    /**< Accumulated moments (torques) applied to the cylinder. */
+  double radius_ = -1;              /**< Radius of the cylinder. */
+  exanb::Vec3d axis_ = {1, 0, 1};   /**< Normalized axis direction of the cylinder. */
+  exanb::Vec3d center_ = {0, 0, 0}; /**< Center position of the cylinder in 3D space. */
+  exanb::Vec3d vel_ = {0, 0, 0};    /**< Linear velocity of the cylinder. */
+  exanb::Vec3d vrot_ = {0, 0, 0};   /**< Angular velocity (rotation) of the cylinder. */
+  exanb::Vec3d forces_ = {0, 0, 0}; /**< Accumulated forces applied to the cylinder from interactions. */
+  exanb::Vec3d mom_ = {0, 0, 0};    /**< Accumulated moments (torques) applied to the cylinder. */
 };
 }  // namespace exaDEM
 
@@ -52,14 +52,14 @@ struct convert<exaDEM::CylinderFields> {
     if (!check_error(node, "center")) {
       return false;
     }
-    v.radius = node["radius"].as<Quantity>().convert();
-    v.axis = node["axis"].as<exanb::Vec3d>();
-    v.center = node["center"].as<exanb::Vec3d>();
+    v.radius_ = node["radius"].as<Quantity>().convert();
+    v.axis_ = node["axis"].as<exanb::Vec3d>();
+    v.center_ = node["center"].as<exanb::Vec3d>();
     if (check(node, "vel")) {
-      v.vel = node["vel"].as<exanb::Vec3d>();
+      v.vel_ = node["vel"].as<exanb::Vec3d>();
     }
     if (check(node, "vrot")) {
-      v.vrot = node["vrot"].as<exanb::Vec3d>();
+      v.vrot_ = node["vrot"].as<exanb::Vec3d>();
     }
     return true;
   }
@@ -76,8 +76,8 @@ namespace exaDEM {
  * an axis direction, and a center position.
  */
 struct Cylinder {
-  CylinderFields fields;
-  MotionType motion_type;
+  CylinderFields fields_;
+  MotionType motion_type_;
 
   /**
    * @brief Get the type of the driver (in this case, CYLINDER).
@@ -95,13 +95,13 @@ struct Cylinder {
     const std::vector<MotionType> cylinder_valid_motion_types = {
       STATIONARY};
 
-    if (!is_valid_motion_type(motion_type, cylinder_valid_motion_types)) {
+    if (!is_valid_motion_type(motion_type_, cylinder_valid_motion_types)) {
       std::exit(EXIT_FAILURE);
-    } else if (!motion.check_motion_coherence(motion_type)) {
+    } else if (!motion.check_motion_coherence(motion_type_)) {
       std::exit(EXIT_FAILURE);
     }
-    assert(fields.radius > 0);
-    fields.center = fields.axis * fields.center;
+    assert(fields_.radius_ > 0);
+    fields_.center_ = fields_.axis_ * fields_.center_;
   }
 
   /**
@@ -109,11 +109,11 @@ struct Cylinder {
    */
   inline void print() const {
     exanb::lout << "Driver Type: Cylinder" << std::endl;
-    exanb::lout << "Radius: " << fields.radius << std::endl;
-    exanb::lout << "Axis  : " << fields.axis << std::endl;
-    exanb::lout << "Center: " << fields.center << std::endl;
-    exanb::lout << "Vel   : " << fields.vel << std::endl;
-    exanb::lout << "AngVel: " << fields.vrot << std::endl;
+    exanb::lout << "Radius: " << fields_.radius_ << std::endl;
+    exanb::lout << "Axis  : " << fields_.axis_ << std::endl;
+    exanb::lout << "Center: " << fields_.center_ << std::endl;
+    exanb::lout << "Vel   : " << fields_.vel_ << std::endl;
+    exanb::lout << "AngVel: " << fields_.vrot_ << std::endl;
   }
 
   /**
@@ -122,12 +122,12 @@ struct Cylinder {
   void dump_driver(const Driver_params& motion, int id, std::stringstream& stream) {
     stream << "  - register_cylinder:" << std::endl;
     stream << "     id: " << id << std::endl;
-    stream << "     state: { radius: " << fields.radius;
-    stream << ",axis: [" << fields.axis << "]";
-    stream << ",center: [" << fields.center << "]";
-    stream << ",vel: [" << fields.vel << "]";
-    stream << ",vrot: [" << fields.vrot << "]}" << std::endl;
-    motion.dump_driver_params(motion_type, stream);
+    stream << "     state: { radius: " << fields_.radius_;
+    stream << ",axis: [" << fields_.axis_ << "]";
+    stream << ",center: [" << fields_.center_ << "]";
+    stream << ",vel: [" << fields_.vel_ << "]";
+    stream << ",vrot: [" << fields_.vrot_ << "]}" << std::endl;
+    motion.dump_driver_params(motion_type_, stream);
   }
 
   /**
@@ -165,15 +165,15 @@ struct Cylinder {
    * @brief Field accessors for position, velocity, forces, and rotation.
    */
   // Position getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields.center; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields_.center_; }
   // Linear velocity getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields.vel; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields_.vel_; }
   // Accumulated forces getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields.forces; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields_.forces_; }
   // Accumulated moment (torque) getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields.mom; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields_.mom_; }
   // Angular velocity getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields.vrot; }
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields_.vrot_; }
 
   /**
    * @brief Compute a normal vector associated with the given axis.
@@ -198,9 +198,9 @@ struct Cylinder {
     exanb::Vec3d p1 = {1,1,1};
     exanb::Vec3d p2 = {-1,-1,-1};
     exanb::Vec3d p3 = {-1,1,1};
-    p3 = p3 * fields.axis; // projection
-    p1 = p1 * fields.axis - p3; // projection
-    p2 = p2 * fields.axis - p3; // projection
+    p3 = p3 * fields_.axis_; // projection
+    p1 = p1 * fields_.axis_ - p3; // projection
+    p2 = p2 * fields_.axis_ - p3; // projection
     exanb::Vec3d normal = exanb::cross(p1, p2);
     return normal / exanb::norm(normal);
   }
@@ -212,14 +212,14 @@ struct Cylinder {
    * @return True if the point is within the cut-off radius of the cylinder, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const exanb::Vec3d& vi) {
-    const exanb::Vec3d proj = vi * fields.axis;
+    const exanb::Vec3d proj = vi * fields_.axis_;
 
     // === direction
-    const exanb::Vec3d dir = proj - fields.center;
+    const exanb::Vec3d dir = proj - fields_.center_;
 
     // === interpenetration
     const double d = exanb::norm(dir);
-    const double dn = fields.radius - (d + rcut);
+    const double dn = fields_.radius_ - (d + rcut);
     return dn <= 0;
   }
 
@@ -243,16 +243,16 @@ struct Cylinder {
   ONIKA_HOST_DEVICE_FUNC
       inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& pi) {
         // === project the vertex in the plan as the cylinder center
-        const exanb::Vec3d proj = pi * fields.axis;
+        const exanb::Vec3d proj = pi * fields_.axis_;
 
         // === direction
-        const exanb::Vec3d dir = fields.center - proj;
+        const exanb::Vec3d dir = fields_.center_ - proj;
 
         // === interpenetration
         const double d = exanb::norm(dir);
 
         // === compute interpenetration
-        const double dn = fields.radius - (rcut + d);
+        const double dn = fields_.radius_ - (rcut + d);
 
         if (dn > 0) {
           return {false, dn, exanb::Vec3d(), exanb::Vec3d()};

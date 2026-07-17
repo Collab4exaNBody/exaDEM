@@ -26,6 +26,7 @@ global:
   analysis_interaction_dump_frequency: -1 
   analysis_dump_stress_tensor_frequency: -1
   active_interaction_checker: false
+  dump_broken_interface: true
 
 # default grid variant we use
 grid_flavor: grid_flavor_dem

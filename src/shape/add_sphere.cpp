@@ -35,7 +35,7 @@ class AddShapeSphereOperator : public OperatorNode {
   ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT_OUTPUT);
   ADD_SLOT(double, length, INPUT, 1.0, DocString{"Define sphere length. "});
   ADD_SLOT(std::string, name, INPUT, "sphere", DocString{"Set Shape name."});
-  ADD_SLOT(double, minskowski, INPUT, 0.01, DocString{"Set Minskowski value."});
+  ADD_SLOT(double, minkowski, INPUT, 0.01, DocString{"Set Minkowski value."});
 
  public:
   inline std::string documentation() const override final {
@@ -46,14 +46,14 @@ class AddShapeSphereOperator : public OperatorNode {
 
 					- add_sphere:
              name: MySphere
-             minskowski: 0.0001
+             minkowski: 0.0001
     )EOF";
   }
 
   inline void execute() override final {
     auto& ptm = *particle_type_map;
     lout << "Add Shape= " << *name << std::endl;
-    shape shp = basic_shape::create_sphere(*name, *minskowski);
+    shape shp = basic_shape::create_sphere(*name, *minkowski);
     register_shape(ptm, *shapes_collection, shp);
   };
 };

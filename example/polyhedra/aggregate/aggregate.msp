@@ -46,7 +46,7 @@ setup_drivers:
   - register_stl_mesh:
      id: 0
      filename: cup.stl
-     minskowski: 0.001
+     minkowski: 0.001
      scale: 2.0
   
 compute_force:

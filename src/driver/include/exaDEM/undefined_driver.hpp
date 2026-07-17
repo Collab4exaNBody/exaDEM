@@ -21,7 +21,7 @@ under the License.
 
 namespace exaDEM {
 struct UndefinedDriver {
-  Driver_params motion;
+  Driver_params motion_;
   /**
    * @brief Get the type of the driver (in this case, UNDEFINED).
    * @return The type of the driver.

@@ -25,11 +25,13 @@ under the License.
 #include <onika/math/basic_types.h>
 #include <onika/memory/allocator.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <exaDEM/basic_types.hpp>
 #include <exaDEM/color_log.hpp>
 #include <fstream>
+#include <limits>
 #include <vector>
 
 // #include <exaDEM/shape_printer.hpp>
@@ -49,39 +51,39 @@ struct shape {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
 
-  VectorT<exanb::Vec3d> m_vertices;  ///< List of vertices of the shape
-  exanb::Vec3d m_inertia_on_mass;    ///< Inertia vector divided by mass
-  VectorT<OBB> m_obb_vertices;       ///< Oriented bounding boxes for each vertex
+  VectorT<exanb::Vec3d> vertices_;  ///< List of vertices of the shape
+  exanb::Vec3d inertia_on_mass_;    ///< Inertia vector divided by mass
+  VectorT<OBB> obb_vertices_;       ///< Oriented bounding boxes for each vertex
                                      ///< (only for RShape drivers)
-  VectorT<OBB> m_obb_edges;          ///< OBBs for edges (only for RShape drivers)
-  VectorT<OBB> m_obb_faces;          ///< OBBs for faces (only for RShape drivers)
-  OBB obb;                           ///< Global OBB of the shape
-  VectorT<int> m_edges;              ///< List of edges, stored as pairs of vertex indices
-  VectorT<int> m_faces;              ///< List of faces, stored as sequences of vertex indices
-  VectorT<int> m_offset_faces;       ///< Offsets for indexing faces in m_faces
-  VectorT<double> m_face_area;       ///< Face area
-  double m_radius;                   ///< Radius used for contact detection
-  double m_volume;                   ///< Volume of the shape
-  std::string m_name = "undefined";  ///< Name of the shape
-  OBBtree<subBox> obbtree;           ///< Optional OBB tree for accelerated collision detection
+  VectorT<OBB> obb_edges_;          ///< OBBs for edges (only for RShape drivers)
+  VectorT<OBB> obb_faces_;          ///< OBBs for faces (only for RShape drivers)
+  OBB obb_;                           ///< Global OBB of the shape
+  VectorT<int> edges_;              ///< List of edges, stored as pairs of vertex indices
+  VectorT<int> faces_;              ///< List of faces, stored as sequences of vertex indices
+  VectorT<int> offset_faces_;       ///< Offsets for indexing faces in faces_
+  VectorT<double> face_area_;       ///< Face area
+  double radius_;                   ///< Radius used for contact detection
+  double volume_;                   ///< Volume of the shape
+  std::string name_ = "undefined";  ///< Name of the shape
+  OBBtree<subBox> obbtree_;           ///< Optional OBB tree for accelerated collision detection
 
   /**
    * @brief Default constructor.
    */
   shape() {
-    m_faces.push_back(0);  // init
+    faces_.push_back(0);  // init
   }
 
   /**
    * @brief Clear vertices, edges, faces and reset the name.
    */
   void clear() {
-    m_vertices.clear();
-    m_faces.clear();
-    m_faces.resize(1);
-    m_faces[0] = 0;
-    m_edges.clear();
-    m_name = "undefined";
+    vertices_.clear();
+    faces_.clear();
+    faces_.resize(1);
+    faces_[0] = 0;
+    edges_.clear();
+    name_ = "undefined";
   }
 
   // #######  pre compute functions ######## //
@@ -141,8 +143,8 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline double get_volume(double h = 1.0) const {
-    assert(m_volume != 0 && "wrong initialisation");
-    return h * h * h * m_volume;
+    assert(volume_ != 0 && "wrong initialisation");
+    return h * h * h * volume_;
   }
 
   /**
@@ -151,7 +153,7 @@ struct shape {
    * @return Reference to inertia vector
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline const exanb::Vec3d get_Im(double h = 1.0) { return h * h * m_inertia_on_mass; }
+  inline const exanb::Vec3d get_Im(double h = 1.0) { return h * h * inertia_on_mass_; }
 
   /**
    * @brief Get the inertia on mass vector (const version).
@@ -159,35 +161,35 @@ struct shape {
    * @return Reference to inertia vector
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline const exanb::Vec3d get_Im(double h = 1.0) const { return h * h * m_inertia_on_mass; }
+  inline const exanb::Vec3d get_Im(double h = 1.0) const { return h * h * inertia_on_mass_; }
 
   /**
    * @brief Get number of vertices.
    * @return Number of vertices
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline int get_number_of_vertices() { return onika::cuda::vector_size(m_vertices); }
+  inline int get_number_of_vertices() { return onika::cuda::vector_size(vertices_); }
 
   /**
    * @brief Get number of vertices (const version).
    * @return Number of vertices
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline int get_number_of_vertices() const { return onika::cuda::vector_size(m_vertices); }
+  inline int get_number_of_vertices() const { return onika::cuda::vector_size(vertices_); }
 
   /**
    * @brief Get number of edges.
    * @return Number of edges
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline int get_number_of_edges() { return onika::cuda::vector_size(m_edges) / 2; }
+  inline int get_number_of_edges() { return onika::cuda::vector_size(edges_) / 2; }
 
   /**
    * @brief Get number of edges (const version).
    * @return Number of edges
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline int get_number_of_edges() const { return onika::cuda::vector_size(m_edges) / 2; }
+  inline int get_number_of_edges() const { return onika::cuda::vector_size(edges_) / 2; }
 
   /**
    * @brief Get number of faces.
@@ -195,7 +197,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline int get_number_of_faces() {
-    const int* __restrict__ faces = onika::cuda::vector_data(m_faces);
+    const int* __restrict__ faces = onika::cuda::vector_data(faces_);
     return faces[0];
   }
 
@@ -205,7 +207,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline int get_number_of_faces() const {
-    const int* __restrict__ faces = onika::cuda::vector_data(m_faces);
+    const int* __restrict__ faces = onika::cuda::vector_data(faces_);
     return faces[0];
   }
 
@@ -216,7 +218,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline exanb::Vec3d& get_vertex(int i) {
-    exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
+    exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(vertices_);
     return vertices[i];
   }
 
@@ -227,7 +229,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline const exanb::Vec3d& get_vertex(int i) const {
-    const exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
+    const exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(vertices_);
     return vertices[i];
   }
 
@@ -241,7 +243,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline exanb::Vec3d get_vertex(int i, const exanb::Vec3d& p, const double h, const exanb::Quaternion& orient) {
-    const exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
+    const exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(vertices_);
     return p + orient * (h * vertices[i]);
   }
 
@@ -255,7 +257,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline exanb::Vec3d get_vertex(int i, const exanb::Vec3d& p, const double h, const exanb::Quaternion& orient) const {
-    const exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(m_vertices);
+    const exanb::Vec3d* __restrict__ vertices = onika::cuda::vector_data(vertices_);
     return p + orient * (h * vertices[i]);
   }
 
@@ -266,7 +268,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline std::pair<int, int> get_edge(int i) {
-    const int* __restrict__ edges = onika::cuda::vector_data(m_edges);
+    const int* __restrict__ edges = onika::cuda::vector_data(edges_);
     return {edges[2 * i], edges[2 * i + 1]};
   }
 
@@ -277,7 +279,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline std::pair<int, int> get_edge(int i) const {
-    const int* __restrict__ edges = onika::cuda::vector_data(m_edges);
+    const int* __restrict__ edges = onika::cuda::vector_data(edges_);
     return {edges[2 * i], edges[2 * i + 1]};
   }
 
@@ -287,7 +289,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   inline int* get_faces() {
-    int* faces = onika::cuda::vector_data(m_faces);
+    int* faces = onika::cuda::vector_data(faces_);
     return faces;
   }
 
@@ -296,17 +298,18 @@ struct shape {
    * @return Pointer to integer array of faces
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline int* get_faces() const {
-    const int* faces = onika::cuda::vector_data(m_faces);
-    return (int*)faces;
+  inline const int* get_faces() const {
+    const int* faces = onika::cuda::vector_data(faces_);
+    return (const int*)faces;
   }
 
   /**
    * @brief Compute offsets for each face in the flat faces array.
+   * @warning This function use OMP and should not be called in a parallel region.
    */
   inline void compute_offset_faces() {
     int n = this->get_number_of_faces();
-    m_offset_faces.resize(n);
+    offset_faces_.resize(n);
     int* start = this->get_faces();
 #pragma omp parallel for
     for (int i = 0; i < n; i++) {
@@ -316,7 +319,7 @@ struct shape {
         acc += ptr[0] + 1;  // ptr[0] contains the number of vertices of this face
         ptr += ptr[0] + 1;
       }
-      m_offset_faces[i] = acc;
+      offset_faces_[i] = acc;
     }
   }
 
@@ -327,7 +330,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   const std::pair<int*, int> get_face(int i) {
-    auto* __restrict__ data = onika::cuda::vector_data(m_offset_faces);
+    auto* __restrict__ data = onika::cuda::vector_data(offset_faces_);
     int* ptr = this->get_faces();
     int index = data[i];
     return {ptr + index + 1, ptr[index]};
@@ -339,9 +342,9 @@ struct shape {
    * @return Pair {pointer to vertex indices, number of vertices}
    */
   ONIKA_HOST_DEVICE_FUNC
-  const std::pair<int*, int> get_face(int i) const {
-    auto* __restrict__ data = onika::cuda::vector_data(m_offset_faces);
-    int* ptr = this->get_faces();
+  const std::pair<const int*, int> get_face(int i) const {
+    auto* __restrict__ data = onika::cuda::vector_data(offset_faces_);
+    const int* ptr = this->get_faces();
     int index = data[i];
     return {ptr + index + 1, ptr[index]};
   }
@@ -354,7 +357,7 @@ struct shape {
    */
   ONIKA_HOST_DEVICE_FUNC
   double get_face_area(int i, double h = 1.0) const {
-    const auto* ptr = onika::cuda::vector_data(m_face_area);
+    const auto* ptr = onika::cuda::vector_data(face_area_);
     return ptr[i] * h * h;
   }
 
@@ -368,7 +371,7 @@ struct shape {
   ONIKA_HOST_DEVICE_FUNC
   inline OBB get_obb_edge(const exanb::Vec3d& position, const size_t index,
                           const exanb::Quaternion& orientation) const {
-    OBB res = m_obb_edges[index];
+    OBB res = obb_edges_[index];
     res.rotate(conv_to_quat(orientation));
     res.translate(conv_to_vec3r(position));
     return res;
@@ -384,7 +387,7 @@ struct shape {
   ONIKA_HOST_DEVICE_FUNC
   inline OBB get_obb_face(const exanb::Vec3d& position, const size_t index,
                           const exanb::Quaternion& orientation) const {
-    OBB res = m_obb_faces[index];
+    OBB res = obb_faces_[index];
     res.rotate(conv_to_quat(orientation));
     res.translate(conv_to_vec3r(position));
     return res;
@@ -394,9 +397,7 @@ struct shape {
    * @brief Add a vertex to the shape.
    * @param vertex 3D position of the vertex
    */
-  void add_vertex(const exanb::Vec3d& vertex) {
-    m_vertices.push_back(vertex);
-  }
+  void add_vertex(const exanb::Vec3d& vertex) { vertices_.push_back(vertex); }
 
   /**
    * @brief Add an edge to the shape.
@@ -406,8 +407,8 @@ struct shape {
   void add_edge(int i, int j) {
     assert(i >= 0 && "add negatif vertex");
     assert(j >= 0 && "add negatif vertex");
-    m_edges.push_back(i);
-    m_edges.push_back(j);
+    edges_.push_back(i);
+    edges_.push_back(j);
   }
 
   /**
@@ -417,38 +418,37 @@ struct shape {
    */
   void add_face(size_t num_vertices, int* const vertex_indices) {
     assert(num_vertices != 0);
-    m_faces[0]++;
-    const size_t old_size = m_faces.size();
-    m_faces.resize(old_size + num_vertices + 1);  // number of vertex + 1 storage to this number
-    m_faces[old_size] = num_vertices;
+    faces_[0]++;
+    const size_t old_size = faces_.size();
+    faces_.resize(old_size + num_vertices + 1);  // number of vertex + 1 storage to this number
+    faces_[old_size] = num_vertices;
     for (size_t it = 0; it < num_vertices; it++) {
-      m_faces[old_size + 1 + it] = vertex_indices[it];
+      faces_[old_size + 1 + it] = vertex_indices[it];
     }
   }
-
 
   void add_face(std::initializer_list<int> vertex_indices) {
     size_t num_vertices = vertex_indices.size();
     assert(num_vertices != 0);
 
-    // Initialise le compteur de faces si m_faces est vide
-    if (m_faces.empty()) {
-      m_faces.push_back(0);
+    // Initialise le compteur de faces si faces_ est vide
+    if (faces_.empty()) {
+      faces_.push_back(0);
     }
 
-    m_faces[0]++; // Incrémente le nombre total de faces
+    faces_[0]++;  // Incrémente le nombre total de faces
 
-    const size_t old_size = m_faces.size();
+    const size_t old_size = faces_.size();
 
     // On réserve l'espace : num_vertices + 1 (pour stocker le nombre de sommets)
-    m_faces.resize(old_size + num_vertices + 1);
+    faces_.resize(old_size + num_vertices + 1);
 
-    m_faces[old_size] = static_cast<int>(num_vertices);
+    faces_[old_size] = static_cast<int>(num_vertices);
 
     // Copie efficace des sommets
     size_t i = 1;
     for (int idx : vertex_indices) {
-      m_faces[old_size + i] = idx;
+      faces_[old_size + i] = idx;
       i++;
     }
   }
@@ -457,19 +457,19 @@ struct shape {
    * @brief retur, the minkowski radius used for detection.
    * @param radius Minkowsku radius
    */
-  ONIKA_HOST_DEVICE_FUNC double minskowski() { return m_radius; }
+  ONIKA_HOST_DEVICE_FUNC double minkowski() { return radius_; }
 
-  ONIKA_HOST_DEVICE_FUNC double minskowski(double h) { return h * minskowski(); }
+  ONIKA_HOST_DEVICE_FUNC double minkowski(double h) { return h * minkowski(); }
 
-  ONIKA_HOST_DEVICE_FUNC double minskowski() const { return m_radius; }
+  ONIKA_HOST_DEVICE_FUNC double minkowski() const { return radius_; }
 
-  ONIKA_HOST_DEVICE_FUNC double minskowski(double h) const { return h * minskowski(); }
+  ONIKA_HOST_DEVICE_FUNC double minkowski(double h) const { return h * minkowski(); }
 
   /**
    * @brief Set the minkowski radius used for detection.
    * @param radius Minkowsku radius
    */
-  void add_radius(const double radius) { m_radius = radius; }
+  void add_radius(const double radius) { radius_ = radius; }
 
   /**
    * @brief Compute the maximum cutoff radius (distance from origin + Minkowski
@@ -481,7 +481,7 @@ struct shape {
     double rcut = 0;
     for (size_t vertex_idx = 0; vertex_idx < n_vertices; vertex_idx++) {
       const auto& vertex = this->get_vertex(vertex_idx);
-      const double d = exanb::norm(vertex) + m_radius;
+      const double d = exanb::norm(vertex) + radius_;
       rcut = std::max(rcut, d);
     }
     assert(rcut != 0);
@@ -600,21 +600,21 @@ struct shape {
   /**
    * @brief Rescale the shape by a given factor.
    * @param scale Scaling factor
-   * @param enable_minskowski_rescaling Enable to rescale the minskowski radius
+   * @param enable_minkowski_rescaling Enable to rescale the minkowski radius
    */
-  void rescale(const double scale, const bool enable_minskowski_rescaling) {
-    if (enable_minskowski_rescaling) {
-      m_radius *= scale;
+  void rescale(const double scale, const bool enable_minkowski_rescaling) {
+    if (enable_minkowski_rescaling) {
+      radius_ *= scale;
     }
 
     auto scale_vertices = [](exanb::Vec3d& v, double s) { v = s * v; };
     for_all_vertices(scale_vertices, scale);
-    m_volume = this->get_volume(scale);
-    m_inertia_on_mass = this->get_Im(scale);
+    volume_ = this->get_volume(scale);
+    inertia_on_mass_ = this->get_Im(scale);
     std::vector<vec3r> vertices;
-    vertices.resize(m_vertices.size());
-    for (size_t vid = 0; vid < m_vertices.size(); vid++) vertices[vid] = conv_to_vec3r(get_vertex(vid));
-    obb = build_OBB(vertices, m_radius);
+    vertices.resize(vertices_.size());
+    for (size_t vid = 0; vid < vertices_.size(); vid++) vertices[vid] = conv_to_vec3r(get_vertex(vid));
+    obb_ = build_OBB(vertices, radius_);
   }
 
   /**
@@ -628,19 +628,20 @@ struct shape {
       v.z = v.z * d.z;
     };
     for_all_vertices(deform_vertices, deformation);
-    if (m_volume != 0) {
-      m_volume *= (deformation.x * deformation.y * deformation.z);
+    if (volume_ != 0) {
+      volume_ *= (deformation.x * deformation.y * deformation.z);
     }
     std::vector<vec3r> vertices;
-    vertices.resize(m_vertices.size());
-    for (size_t vid = 0; vid < m_vertices.size(); vid++) {
+    vertices.resize(vertices_.size());
+    for (size_t vid = 0; vid < vertices_.size(); vid++) {
       vertices[vid] = conv_to_vec3r(get_vertex(vid));
     }
-    obb = build_OBB(vertices, m_radius);
+    obb_ = build_OBB(vertices, radius_);
   }
 
   /**
    * @brief Compute the surface area of the shape.
+   * @warning This function use OMP and should not be called in a parallel region.
    * @return Total surface area
    */
   double compute_surface() const {
@@ -650,13 +651,14 @@ struct shape {
 #pragma omp parallel for reduction(+ : surface)
     for (size_t face_idx = 0; face_idx < n_faces; face_idx++) {
       auto [vertices_ptr, face_size] = this->get_face(face_idx);
-      const exanb::Vec3d& v0 = m_vertices[vertices_ptr[0]];
+      assert(face_size >= 1);
+      const exanb::Vec3d& v0 = vertices_[vertices_ptr[0]];
 
       if (face_size == 3) {
         for (int j = 1; j < face_size - 1; j++) {
           const size_t k = j + 1;
-          const exanb::Vec3d v1 = m_vertices[vertices_ptr[j]] - v0;
-          const exanb::Vec3d v2 = m_vertices[vertices_ptr[k]] - v0;
+          const exanb::Vec3d v1 = vertices_[vertices_ptr[j]] - v0;
+          const exanb::Vec3d v2 = vertices_[vertices_ptr[k]] - v0;
           surface += 0.5 * exanb::norm(exanb::cross(v1, v2));
         }
       }
@@ -667,30 +669,30 @@ struct shape {
 
   /**
    * @brief Compute the surfaces for each face.
+   * @warning This function use OMP and should not be called in a parallel region.
    */
   void compute_face_areas() {
     const size_t n_faces = this->get_number_of_faces();
-    m_face_area.resize(n_faces);
+    face_area_.resize(n_faces);
 
 #pragma omp parallel for
     for (size_t face_idx = 0; face_idx < n_faces; face_idx++) {
       double surface = 0;
       auto [vertices_ptr, face_size] = this->get_face(face_idx);
-      const exanb::Vec3d& v0 = m_vertices[vertices_ptr[0]];
+      assert(face_size >= 1);
+      const exanb::Vec3d& v0 = vertices_[vertices_ptr[0]];
 
       if (face_size >= 3) {
         for (int j = 1; j < face_size - 1; j++) {
           const size_t k = j + 1;
-          const exanb::Vec3d v1 = m_vertices[vertices_ptr[j]] - v0;
-          const exanb::Vec3d v2 = m_vertices[vertices_ptr[k]] - v0;
+          const exanb::Vec3d v1 = vertices_[vertices_ptr[j]] - v0;
+          const exanb::Vec3d v2 = vertices_[vertices_ptr[k]] - v0;
           surface += 0.5 * exanb::norm(exanb::cross(v1, v2));
- 
         }
       } else {
-        color_log::error("compute_face_areas",
-                         "This is not a face (n_vertices<3)");
+        color_log::error("compute_face_areas", "This is not a face (n_vertices<3)");
       }
-      m_face_area[face_idx] = surface;
+      face_area_[face_idx] = surface;
     }
   }
 
@@ -700,40 +702,59 @@ struct shape {
    * @param shift The shift vector applied to each vertex.
    */
   void shift_vertices(const exanb::Vec3d& shift) {
-    auto shift_vertex = [](exanb::Vec3d& vertex, const exanb::Vec3d& shift) {
-      vertex -= shift;
-    };
+    auto shift_vertex = [](exanb::Vec3d& vertex, const exanb::Vec3d& shift) { vertex -= shift; };
     for_all_vertices(shift_vertex, shift);
   }
 
   // CPU
-  // could be optimized without sort ...
   /**
    * @brief Finds the face matching a given set of vertex IDs.
-   * @param vertices Vertex IDs to identify (modified by sort).
+   * @param vertices Vertex IDs to identify.
+   * @param allow_partial_match If true, also accept a face that is a superset of vertices.
    * @return Matching face ID.
    */
-  uint16_t identify_face(std::span<int> vertices) const {
-    std::vector<int> input(vertices.begin(), vertices.end());
-    std::sort(input.begin(), input.end());
+  uint16_t identify_face(std::span<int> vertices, bool allow_partial_match = true) const {
+    const auto n_vertices = static_cast<int>(vertices.size());
+    const auto n_faces = get_number_of_faces();
 
-    int n_vertices = vertices.size();
-    for (uint16_t fid = 0; fid < get_number_of_faces(); ++fid) {
+    for (uint16_t fid = 0; fid < n_faces; ++fid) {
       auto [data, size] = get_face(fid);
-      if (size != n_vertices) continue;
+      if (size != n_vertices) {
+        continue;
+      }
 
-      std::vector<int> face(data, data + size);
-      std::sort(face.begin(), face.end());
-
-      if (input == face) return fid;
+      if (std::is_permutation(data, data + size, vertices.begin(), vertices.end())) {
+        return fid;
+      }
     }
 
-    std::string msg = "Impossible to identify a face in shape: " + m_name + ".\n";
+    if (allow_partial_match) {
+      // Looking for partial correspondence.
+      for (uint16_t fid = 0; fid < n_faces; ++fid) {
+        auto [data, size] = get_face(fid);
+        if (size < n_vertices) {
+          continue;
+        }
+
+        const bool is_subset = std::all_of(vertices.begin(), vertices.end(), [data, size](int v) {
+          return std::find(data, data + size, v) != data + size;
+        });
+
+        if (is_subset) {
+          return fid;
+        }
+      }
+    }
+
+    std::string msg = "Impossible to identify a face in shape: " + name_ + ".\n";
     msg += "Vertices ID are: [ ";
-    for (size_t i = 0; i < vertices.size(); i++) msg += std::to_string(vertices[i]) + " ";
+    for (int i = 0; i < n_vertices; i++) {
+      msg += std::to_string(vertices[i]) + " ";
+    }
     msg += "]";
     color_log::error("shape::identify_face", msg);
-    return 0;
+
+    return std::numeric_limits<uint16_t>::max();
   }
 
   /// OBBTree Section
@@ -745,7 +766,7 @@ struct shape {
    * is recursively built. The OBBs are enlarged by the particle radius.
    */
   void buildOBBtree() {
-    obbtree.reset(obbtree.root);
+    obbtree_.reset(obbtree_.root);
     std::vector<OBBbundle<subBox>> obb_bundles;
 
     // Build OBBs for faces
@@ -755,10 +776,10 @@ struct shape {
       bundle.data.isub = face_idx;
       bundle.data.nbPoints = n_vertices;
 
-      for (int vi = 0; vi < n_vertices; vi++) bundle.points.push_back(conv_to_vec3r(m_vertices[vertex_ids[vi]]));
+      for (int vi = 0; vi < n_vertices; vi++) bundle.points.push_back(conv_to_vec3r(vertices_[vertex_ids[vi]]));
 
       std::vector<OBBbundle<subBox>> single_bundle{bundle};
-      bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+      bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, radius_);
       obb_bundles.push_back(bundle);
     }
 
@@ -768,11 +789,11 @@ struct shape {
       OBBbundle<subBox> bundle;
       bundle.data.isub = edge_idx;
       bundle.data.nbPoints = 2;
-      bundle.points.push_back(conv_to_vec3r(m_vertices[v0]));
-      bundle.points.push_back(conv_to_vec3r(m_vertices[v1]));
+      bundle.points.push_back(conv_to_vec3r(vertices_[v0]));
+      bundle.points.push_back(conv_to_vec3r(vertices_[v1]));
 
       std::vector<OBBbundle<subBox>> single_bundle{bundle};
-      bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+      bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, radius_);
       obb_bundles.push_back(bundle);
     }
 
@@ -781,15 +802,15 @@ struct shape {
       OBBbundle<subBox> bundle;
       bundle.data.isub = vert_idx;
       bundle.data.nbPoints = 1;
-      bundle.points.push_back(conv_to_vec3r(m_vertices[vert_idx]));
+      bundle.points.push_back(conv_to_vec3r(vertices_[vert_idx]));
 
       std::vector<OBBbundle<subBox>> single_bundle{bundle};
-      bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, m_radius);
+      bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, radius_);
       obb_bundles.push_back(bundle);
     }
 
     // Recursively build the OBB tree
-    obbtree.root = OBBtree<subBox>::recursiveBuild(obbtree.root, obb_bundles, m_radius);
+    obbtree_.root = OBBtree<subBox>::recursiveBuild(obbtree_.root, obb_bundles, radius_);
   }
 
   /// IO Section
@@ -852,10 +873,10 @@ struct shape {
   inline void print() {
     exanb::lout << std::endl;
     exanb::lout << "======= Shape Configuration =====" << std::endl;
-    exanb::lout << "Shape Name        = " << this->m_name << std::endl;
-    exanb::lout << "Shape Radius      = " << this->m_radius << std::endl;
-    exanb::lout << "Shape I/m         = [" << this->m_inertia_on_mass << "]" << std::endl;
-    exanb::lout << "Shape Volume      = " << this->m_volume << std::endl;
+    exanb::lout << "Shape Name        = " << this->name_ << std::endl;
+    exanb::lout << "Shape Radius      = " << this->radius_ << std::endl;
+    exanb::lout << "Shape I/m         = [" << this->inertia_on_mass_ << "]" << std::endl;
+    exanb::lout << "Shape Volume      = " << this->volume_ << std::endl;
     print_vertices();
     print_edges();
     print_faces();
@@ -867,8 +888,8 @@ struct shape {
    */
   inline void write_paraview() {
     using exanb::ldbg;
-    ldbg << " writting paraview for shape " << this->m_name << std::endl;
-    std::string name = m_name + ".vtk";
+    ldbg << " writting paraview for shape " << this->name_ << std::endl;
+    std::string name = name_ + ".vtk";
     std::ofstream outFile(name);
     if (!outFile) {
       color_log::error("Shape::write_paraview", "Impossible to create an output file!", false);
@@ -894,7 +915,7 @@ struct shape {
 
     int count_polygon_size = this->get_number_of_faces();
     int count_polygon_table_size = 0;
-    int* ptr = this->m_faces.data() + 1;
+    int* ptr = this->faces_.data() + 1;
     for (int it = 0; it < count_polygon_size; it++) {
       count_polygon_table_size += ptr[0] + 1;  // number of vertices + vertex idexes
       ptr += ptr[0] + 1;                       // -> next face
@@ -920,8 +941,8 @@ struct shape {
    */
   inline void write_move_paraview(std::string path, int timestep, exanb::Vec3d& center, exanb::Quaternion& quat) {
     std::string time = std::to_string(timestep);
-    exanb::ldbg << " writting paraview for shape " << this->m_name << " timestep: " << time << std::endl;
-    std::string name = path + m_name + "_" + time + ".vtk";
+    exanb::ldbg << " writting paraview for shape " << this->name_ << " timestep: " << time << std::endl;
+    std::string name = path + name_ + "_" + time + ".vtk";
     std::ofstream outFile(name);
     if (!outFile) {
       color_log::error("Shape::write_move_paraview", "Impossible to create the output file: " + name, false);
@@ -943,7 +964,7 @@ struct shape {
     outFile << std::endl;
     int count_polygon_size = this->get_number_of_faces();
     int count_polygon_table_size = 0;
-    int* ptr = this->m_faces.data() + 1;
+    int* ptr = this->faces_.data() + 1;
     for (int it = 0; it < count_polygon_size; it++) {
       count_polygon_table_size += ptr[0] + 1;  // number of vertices + vertex idexes
       ptr += ptr[0] + 1;                       // -> next face

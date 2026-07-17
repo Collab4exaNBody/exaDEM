@@ -39,6 +39,7 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
   ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT, REQUIRED,
            DocString{"List of contact parameters for simulations with multiple materials"});
   ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{""});
+  ADD_SLOT(double, physical_time, INPUT, REQUIRED, DocString{"Current physical time."});
 
  public:
   inline std::string documentation() const final {
@@ -65,17 +66,18 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
 #pragma omp parallel for
     for (size_t i = 0; i < interfaces.size(); i++) {
       // If the interface is broken, we need to update the friction of the interactions and break them
-      if (interfaces.break_interface[i] == true) {
-        auto [offset, size] = interfaces.data[i];
+      if (interfaces.break_interface_[i] == true) {
+        auto [offset, size] = interfaces.data_[i];
         auto type_a = cells[data_wrapper.cell_i[offset]][field::type][data_wrapper.p_i[offset]];
         auto type_b = cells[data_wrapper.cell_j[offset]][field::type][data_wrapper.p_j[offset]];
+
         for (size_t j = 0; j < size; j++) {
           size_t idx = j + offset;
           data_wrapper.broke(idx);  // mark the interaction as broken.
           // Note that broken interactions will be transformed in VertexVertex interactions by the unclassify operator.
           // so we need to use the contact parameters of VertexVertex interactions.
           double ft = exanb::norm(ft_ptr[idx]);
-          double mu = cp(type_a, type_b).mu;
+          double mu = cp(type_a, type_b).mu_;
           // ft_threshold depends on the normal force.
           double ft_threshold = mu * exanb::norm(fn_ptr[idx]);
 

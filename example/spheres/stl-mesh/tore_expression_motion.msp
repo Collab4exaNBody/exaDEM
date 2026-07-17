@@ -40,7 +40,7 @@ setup_drivers:
   - register_stl_mesh:
      id: 0
      filename: tore.stl
-     minskowski: 0.01 
+     minkowski: 0.01 
      state: { }
      params: 
         motion_type: EXPRESSION

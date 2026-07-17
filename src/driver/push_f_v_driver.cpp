@@ -25,11 +25,11 @@ under the License.
 namespace exaDEM {
 using namespace onika::scg;
 struct PushForceVeloctyDriverFunc {
-  const double dt;
+  const double dt_;
 
   template<typename DriverT>
   inline void operator()(DriverT& arg, const Driver_params& motion) const {
-    arg.push_f_v(motion, dt);
+    arg.push_f_v(motion, dt_);
   }
 };
 

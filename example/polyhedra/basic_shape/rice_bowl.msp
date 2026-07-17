@@ -15,7 +15,7 @@ input_data:
   - init_rcb_grid
   - add_rice:
      length: 1.0
-     minskowski: 0.25
+     minkowski: 0.25
   - lattice:
      structure: SC
      types: [ rice ]

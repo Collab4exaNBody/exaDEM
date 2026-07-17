@@ -130,8 +130,8 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
         // Extract history before reset it
         const size_t data_size = storage.m_data.size();
         PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
-        extract_history(manager.hist, data_ptr, data_size);
-        std::sort(manager.hist.begin(), manager.hist.end());
+        extract_history(manager.hist_, data_ptr, data_size);
+        std::sort(manager.hist_.begin(), manager.hist_.end());
         manager.reset(n_particles);
 
         // Move persistent interactions in the InteractionManager
@@ -160,8 +160,8 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
 
         // Define a function to add a new interaction if a contact is possible.
         auto add_contact = [&manager](PlaceholderInteraction& item, int sub_i, int sub_j) -> void {
-          item.pair.pi.sub = sub_i;
-          item.pair.pj.sub = sub_j;
+          item.pair_.pi_.sub_ = sub_i;
+          item.pair_.pj_.sub_ = sub_j;
           manager.add_item(item);
         };
 
@@ -172,31 +172,31 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
 
         // First, interaction between a polyhedron and a driver
         if (drivers.has_value()) {
-          item.pair.swap = false;
+          item.pair_.swap_ = false;
           auto& pi = item.i();       // particle i (id, cell id, particle position, sub vertex)
           auto& pd = item.driver();  // particle driver (id, cell id, particle position, sub vertex)
           auto& drvs = *drivers;
-          pi.cell = cell_a;
+          pi.cell_ = cell_a;
           // By default, if the interaction is between a particle and a driver
           // Data about the particle j is set to -1
           // Except for id_j that contains the driver id
-          pd.id = -1;
-          pd.cell = -1;
-          pd.p = -1;
+          pd.id_ = -1;
+          pd.cell_ = -1;
+          pd.p_ = -1;
           for (size_t drvs_idx = 0; drvs_idx < drvs.get_size(); drvs_idx++) {
-            pd.id = drvs_idx;  // we store the driver idx
+            pd.id_ = drvs_idx;  // we store the driver idx
             if (drvs.type(drvs_idx) == DRIVER_TYPE::CYLINDER) {
-              item.pair.type = 4;
+              item.pair_.type_ = 4;
               Cylinder& driver = drvs.get_typed_driver<Cylinder>(drvs_idx);
               add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, h_a,
                                      shps.data());
             } else if (drvs.type(drvs_idx) == DRIVER_TYPE::SURFACE) {
-              item.pair.type = 5;
+              item.pair_.type_ = 5;
               Surface& driver = drvs.get_typed_driver<Surface>(drvs_idx);
               add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, h_a,
                                      shps.data());
             } else if (drvs.type(drvs_idx) == DRIVER_TYPE::BALL) {
-              item.pair.type = 6;
+              item.pair_.type_ = 6;
               Ball& driver = drvs.get_typed_driver<Ball>(drvs_idx);
               add_driver_interaction(driver, add_contact, item, n_particles, rVerlet, t_a, id_a, vertex_cell_a, h_a,
                                      shps.data());
@@ -268,18 +268,18 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
               quat QB_relativeTo_QA = QAconj * conv_orient_j;
 
               // Fill intersections
-              OBBtree<subBox>::TreeIntersectionIds(shp->obbtree.root, shp_nbh->obbtree.root, intersections, h, h_nbh,
+              OBBtree<subBox>::TreeIntersectionIds(shp->obbtree_.root, shp_nbh->obbtree_.root, intersections, h, h_nbh,
                                                    0.5 * rVerlet, posB_relativeTo_posA, QB_relativeTo_QA);
 
               auto set_info_i = [&item](uint64_t id, size_t p, size_t cid) -> void {
-                item.pair.pi.id = id;
-                item.pair.pi.p = p;
-                item.pair.pi.cell = cid;
+                item.pair_.pi_.id_ = id;
+                item.pair_.pi_.p_ = p;
+                item.pair_.pi_.cell_ = cid;
               };
               auto set_info_j = [&item](uint64_t id, size_t p, size_t cid) -> void {
-                item.pair.pj.id = id;
-                item.pair.pj.p = p;
-                item.pair.pj.cell = cid;
+                item.pair_.pj_.id_ = id;
+                item.pair_.pj_.p_ = p;
+                item.pair_.pj_.cell_ = cid;
               };
 
               for (size_t c = 0; c < intersections.size(); c++) {
@@ -289,27 +289,27 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
                 int j_nbPoints = intersections[c].second.nbPoints;
                 if (i_nbPoints == 1) {
                   if (j_nbPoints == 1) {
-                    item.pair.swap = false;
+                    item.pair_.swap_ = false;
                     set_info_i(id_a[p_a], p_a, cell_a);
                     set_info_j(id_nbh, p_b, cell_b);
-                    item.pair.type = InteractionTypeId::VertexVertex;
+                    item.pair_.type_ = InteractionTypeId::VertexVertex;
                     if (filter_vertex_vertex(rVerlet, vertices_a, h, i, shp, vertices_b, h_nbh, j, shp_nbh)) {
                       add_contact(item, i, j);
                     }
                   } else if (j_nbPoints == 2) {
-                    item.pair.swap = false;
+                    item.pair_.swap_ = false;
                     set_info_i(id_a[p_a], p_a, cell_a);
                     set_info_j(id_nbh, p_b, cell_b);
-                    item.pair.type = InteractionTypeId::VertexEdge;
+                    item.pair_.type_ = InteractionTypeId::VertexEdge;
                     bool contact = filter_vertex_edge(rVerlet, vertices_a, h, i, shp, vertices_b, h_nbh, j, shp_nbh);
                     if (contact) {
                       add_contact(item, i, j);
                     }
                   } else if (j_nbPoints >= 3) {
-                    item.pair.swap = false;
+                    item.pair_.swap_ = false;
                     set_info_i(id_a[p_a], p_a, cell_a);
                     set_info_j(id_nbh, p_b, cell_b);
-                    item.pair.type = InteractionTypeId::VertexFace;
+                    item.pair_.type_ = InteractionTypeId::VertexFace;
                     bool contact = filter_vertex_face(rVerlet, vertices_a, h, i, shp, vertices_b, h_nbh, j, shp_nbh);
                     if (contact) {
                       add_contact(item, i, j);
@@ -318,19 +318,19 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
                 } else if (i_nbPoints == 2) {
                   if (j_nbPoints == 1) {
                     /** warning, a -> j and b -> i */
-                    item.pair.swap = true;
+                    item.pair_.swap_ = true;
                     set_info_i(id_nbh, p_b, cell_b);
                     set_info_j(id_a[p_a], p_a, cell_a);
-                    item.pair.type = InteractionTypeId::VertexEdge;
+                    item.pair_.type_ = InteractionTypeId::VertexEdge;
                     bool contact = filter_vertex_edge(rVerlet, vertices_b, h_nbh, j, shp_nbh, vertices_a, h, i, shp);
                     if (contact) {
                       add_contact(item, j, i);
                     }
                   } else if (j_nbPoints == 2) {
-                    item.pair.swap = false;
+                    item.pair_.swap_ = false;
                     set_info_i(id_a[p_a], p_a, cell_a);
                     set_info_j(id_nbh, p_b, cell_b);
-                    item.pair.type = InteractionTypeId::EdgeEdge;
+                    item.pair_.type_ = InteractionTypeId::EdgeEdge;
                     bool contact = filter_edge_edge(rVerlet, vertices_a, h, i, shp, vertices_b, h_nbh, j, shp_nbh);
                     if (contact) {
                       add_contact(item, i, j);
@@ -339,10 +339,10 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
                 } else if (i_nbPoints >= 3) {
                   if (j_nbPoints == 1) {
                     /** warning, a -> j and b -> i */
-                    item.pair.swap = true;
+                    item.pair_.swap_ = true;
                     set_info_i(id_nbh, p_b, cell_b);
                     set_info_j(id_a[p_a], p_a, cell_a);
-                    item.pair.type = InteractionTypeId::VertexFace;
+                    item.pair_.type_ = InteractionTypeId::VertexFace;
                     bool contact = filter_vertex_face(rVerlet, vertices_b, h_nbh, j, shp_nbh, vertices_a, h, i, shp);
                     if (contact) {
                       add_contact(item, j, i);

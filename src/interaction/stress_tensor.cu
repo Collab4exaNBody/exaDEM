@@ -38,7 +38,7 @@ under the License.
 
 namespace exaDEM {
 template <int type, bool sym>
-struct compute_stress_tensor {
+struct ComputeStressTensorFunc {
   /** @brief Compute the stress tensor for a given interaction
    * @param idx The index of the interaction
    * @param I The interaction for which to compute the stress tensor
@@ -49,31 +49,32 @@ struct compute_stress_tensor {
    * @param cpp The contact point position for the interaction
    */
   template <typename TMPLC>
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t idx, Interaction& I, TMPLC* const __restrict__ cells,
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t idx, auto& I, TMPLC* const __restrict__ cells,
                                                 const double* const __restrict__ dnp,
                                                 const Vec3d* const __restrict__ fnp,
                                                 const Vec3d* const __restrict__ ftp,
                                                 const Vec3d* const __restrict__ cpp) const {
     assert(type == I.type());
-    if (dnp[idx] < 0.0) {
+    constexpr bool is_innerbond = ConvertToIntertactionType<type>() == InteractionType::InnerBond;
+    if (dnp[idx] < 0.0 || is_innerbond) {
       // get fij and cij
       auto& i = I.i();  // id for particle id, cell for cell id, p for position,
                         // sub for vertex id
-      auto& cell = cells[i.cell];
+      auto& cell = cells[i.cell_];
       Vec3d fij = fnp[idx] + ftp[idx];
-      Vec3d pos_i = {cell[field::rx][i.p], cell[field::ry][i.p], cell[field::rz][i.p]};
+      Vec3d pos_i = {cell[field::rx][i.p_], cell[field::ry][i.p_], cell[field::rz][i.p_]};
       Vec3d cij = cpp[idx] - pos_i;
-      exaDEM::mat3d_atomic_add_contribution(cell[field::stress][i.p], exanb::tensor(fij, cij));
+      exaDEM::mat3d_atomic_add_contribution(cell[field::stress][i.p_], exanb::tensor(fij, cij));
 
       // polyhedron - polyhedron || sphere - sphere
-      if constexpr (type <= 3 && sym == true) {
+      if constexpr ((type <= 3 && sym == true) || is_innerbond) {
         auto& j = I.j();  // id for particle id, cell for cell id, p for
                           // position, sub for vertex id
-        auto& cellj = cells[j.cell];
+        auto& cellj = cells[j.cell_];
         Vec3d fji = -fij;
-        Vec3d pos_j = {cellj[field::rx][j.p], cellj[field::ry][j.p], cellj[field::rz][j.p]};
+        Vec3d pos_j = {cellj[field::rx][j.p_], cellj[field::ry][j.p_], cellj[field::rz][j.p_]};
         Vec3d cji = cpp[idx] - pos_j;
-        exaDEM::mat3d_atomic_add_contribution(cellj[field::stress][j.p], exanb::tensor(fji, cji));
+        exaDEM::mat3d_atomic_add_contribution(cellj[field::stress][j.p_], exanb::tensor(fji, cji));
       }
     }
   }
@@ -85,7 +86,7 @@ struct compute_stress_tensor {
  * Op: the operator class that contains the parallel execution context
  */
 template <int NTypes, bool Sym, typename Op>
-struct compute_stress_tensors {
+struct ComputeStressTensorsLoop {
   Op* oper;  //< the operator class that contains the parallel execution context
 
   /** @brief Compute the stress tensor for all interactions of a given type
@@ -107,7 +108,7 @@ struct compute_stress_tensors {
           classifier.contact_state(Type);       // get parameters: get forces (fn, ft) and contact positions
                                                 // (cp) computed into the contact force operators.
       InteractionWrapper<IT> interactions(Ip);  // get data: interaction
-      compute_stress_tensor<Type, Sym> func;    // get kernel
+      ComputeStressTensorFunc<Type, Sym> func;  // get kernel
                                                 // pack data, kernel, and interaction in a wrapper
       WrapperForAll wrapper(interactions, func, cells, dnp, fnp, ftp, cpp);
       // launch kernel
@@ -171,7 +172,7 @@ class StressTensor : public OperatorNode {
     Classifier& cf = *ic;
     // get kernel
 
-    compute_stress_tensors<InteractionTypeId::NTypesPP, sym, StressTensor> runner = {this};
+    ComputeStressTensorsLoop<InteractionTypeId::NTypes, sym, StressTensor> runner = {this};
     runner(cf, cells);
   }
 };

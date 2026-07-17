@@ -44,7 +44,7 @@ include(${CMAKE_MODULE_PATH}/xnb_add_plugins.cmake)
 # ==============================
 # === Application version    ===
 # ==============================
-set(EXADEM_VERSION "exaDEM-1.2.1") 
+set(EXADEM_VERSION "exaDEM-1.2.2") 
 message(STATUS "Project version : ${EXADEM_VERSION}")
 
 

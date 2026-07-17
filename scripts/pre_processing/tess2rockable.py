@@ -215,6 +215,101 @@ def compute_cells(cells_data: CellsData, gap) -> Shapes:
 
     return cell_shapes, cells_out
 
+#def compute_interface_statistics(cells_data: CellsData, cell_shapes: dict, E_young: float):
+def compute_interface_statistics(cells_data: CellsData, cell_shapes: dict, E_young: float, stats_file: str = None):
+    """
+    Compute statistics on Voronoi interfaces (shared faces between cells).
+    For each pair of neighboring cells (i,j), compute:
+      - A_ij : area of the shared face
+      - L_ij : center-to-center distance
+    Then output <A_ij>, <L_ij>, and recommended kn = E * <A_ij> / <L_ij>
+
+    Parameters
+    ----------
+    cells_out : CellsData
+        original Neper geometry (global face/vertex indices)
+    cell_shapes : dict
+        pid -> Shape, with shape.center in world coordinates
+    E_young : float
+        macroscopic Young's modulus to calibrate kn
+    """
+    polyhedra  = cells_data.polyhedra   # pid -> [fid, ...]
+    faces      = cells_data.faces       # fid -> [vid, ...]
+    vertices   = cells_data.vertices    # vid -> [x, y, z]
+
+    # Build map: fid -> list of pids that own this face
+    face_to_cells = {}
+    for pid, face_ids in polyhedra.items():
+        for fid in face_ids:
+            face_to_cells.setdefault(fid, []).append(pid)
+
+    # Shared faces = interfaces between two cells
+    interfaces = {
+        fid: pids
+        for fid, pids in face_to_cells.items()
+        if len(pids) == 2
+    }
+
+    print(f"Number of interfaces found: {len(interfaces)}")
+
+    A_list = []
+    L_list = []
+
+    for fid, (pid_i, pid_j) in interfaces.items():
+        # --- Face area (polygon, potentially non-planar -> triangulate from centroid)
+        face_vids  = faces[fid]
+        face_coords = np.array([vertices[v] for v in face_vids])
+        centroid   = face_coords.mean(axis=0)
+
+        area = 0.0
+        n = len(face_vids)
+        for k in range(n):
+            v0 = face_coords[k]
+            v1 = face_coords[(k + 1) % n]
+            area += 0.5 * np.linalg.norm(np.cross(v0 - centroid, v1 - centroid))
+
+        # --- Center-to-center distance
+        ci = cell_shapes[pid_i].center
+        cj = cell_shapes[pid_j].center
+        L  = np.linalg.norm(np.array(ci) - np.array(cj))
+
+        A_list.append(area)
+        L_list.append(L)
+
+    A_arr = np.array(A_list)
+    L_arr = np.array(L_list)
+
+    A_mean = A_arr.mean()
+    L_mean = L_arr.mean()
+    kn     = E_young * A_mean / L_mean
+
+    print(f"\n--- Interface statistics ---")
+    print(f"  N interfaces : {len(A_arr)}")
+    print(f"  <A_ij>       : {A_mean:.6e}")
+    print(f"  std(A_ij)    : {A_arr.std():.6e}")
+    print(f"  <L_ij>       : {L_mean:.6e}")
+    print(f"  std(L_ij)    : {L_arr.std():.6e}")
+    print(f"  <A_ij/L_ij>  : {(A_arr/L_arr).mean():.6e}  (alternative mean)")
+    print(f"\n--- Calibration ---")
+    print(f"  kn = E * <A_ij> / <L_ij> = {E_young:.4e} * {A_mean:.4e} / {L_mean:.4e}")
+    print(f"  kn = {kn:.6e}")
+
+
+    if stats_file is not None:
+        with open(stats_file, "w") as f:
+            f.write("--- Interface statistics ---\n")
+            f.write(f"N interfaces : {len(A_arr)}\n")
+            f.write(f"<A_ij>       : {A_mean:.6e}\n")
+            f.write(f"std(A_ij)    : {A_arr.std():.6e}\n")
+            f.write(f"<L_ij>       : {L_mean:.6e}\n")
+            f.write(f"std(L_ij)    : {L_arr.std():.6e}\n")
+            f.write(f"<A_ij/L_ij>  : {(A_arr/L_arr).mean():.6e}\n")
+            f.write("\n--- Calibration ---\n")
+            f.write(f"kn = E * <A_ij> / <L_ij> = {E_young:.4e} * {A_mean:.4e} / {L_mean:.4e}\n")
+            f.write(f"kn = {kn:.6e}\n")
+
+    return A_mean, L_mean, kn
+
 #***************************
 # MAIN
 #***************************
@@ -276,6 +371,9 @@ def main():
     cell_shapes, cells_out = compute_cells(Neper_cell_datas, gap)
     write_shp_file(cell_shapes, shp_file, radius)
     check_interfaces(cell_shapes, Neper_cell_datas.polyhedra)
+    stats_file = shp_file.rsplit('.', 1)[0] + '_stats.txt'
+    E_young = 1.
+    A_mean, L_mean, kn = compute_interface_statistics(Neper_cell_datas, cell_shapes, E_young, stats_file=stats_file)
     cell_centers = {
       pid: shape.center
       for pid, shape in cell_shapes.items()

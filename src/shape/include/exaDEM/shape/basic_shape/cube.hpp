@@ -1,66 +1,59 @@
 #pragma once
 
-#include <exaDEM/shape.hpp>
-
 #include <cmath>
+#include <exaDEM/shape.hpp>
 
 namespace exaDEM {
 namespace basic_shape {
 /**
- * @brief Return a shape of a cuboïde. 
+ * @brief Return a shape of a cuboïde.
  * @param name Shape name.
  * @param length Cube length
- * @param minskowski Minskowski radius
+ * @param minkowski Minkowski radius
  */
-shape create_cube(std::string name, double length, double minskowski) {
+shape create_cube(std::string name, double length, double minkowski) {
   // rename
   const double c = length;
-  const double r = minskowski;
+  const double r = minkowski;
   const double pi = M_PI;
   shape shp;
-  shp.m_name = name;
-  shp.m_radius = r;
+  shp.name_ = name;
+  shp.add_radius(r);
 
   // ---------- Volume ----------
-  shp.m_volume =
-      c*c*c 
-      + 6.0 * c * c * r
-      + 3.0 * pi * r * r * c
-      + (4.0/3.0) * pi * r * r * r;
+  shp.volume_ = c * c * c + 6.0 * c * c * r + 3.0 * pi * r * r * c + (4.0 / 3.0) * pi * r * r * r;
 
   /// Compute Inertia
   // Inertia Cube
-  double I = (1.0/6.0) * std::pow(c, 5);
+  double I = (1.0 / 6.0) * std::pow(c, 5);
 
   // Intertia Faces (6 prismes c x c x r)
   const double d = 0.5 * (c + r);
-  const double I_face = (1.0/12.0) * c * c * r * (c * c + r * r);
-  const double V_face    = c * c * r;
+  const double I_face = (1.0 / 12.0) * c * c * r * (c * c + r * r);
+  const double V_face = c * c * r;
 
-  I += 6.0 * (I_face + V_face * d*d);
+  I += 6.0 * (I_face + V_face * d * d);
 
   // Interia Edges
-  const double V_edges = 3.0 * pi * r*r * c;
-  I += V_edges * ( (c*c)/12.0 + (r*r)/2.0 );
+  const double V_edges = 3.0 * pi * r * r * c;
+  I += V_edges * ((c * c) / 12.0 + (r * r) / 2.0);
 
   // Interia Vertices
-  I += (8.0/15.0) * pi * std::pow(r, 5);
+  I += (8.0 / 15.0) * pi * std::pow(r, 5);
 
   // ---------- I / m ----------
-  shp.m_inertia_on_mass = I / shp.m_volume * exanb::Vec3d{1, 1, 1};
+  shp.inertia_on_mass_ = I / shp.get_volume() * exanb::Vec3d{1, 1, 1};
 
   shp.add_vertex({-0.5, -0.5, -0.5});  // v0
-  shp.add_vertex({ 0.5, -0.5, -0.5});  // v1
-  shp.add_vertex({ 0.5,  0.5, -0.5});  // v2
-  shp.add_vertex({-0.5,  0.5, -0.5});  // v3
-  shp.add_vertex({-0.5, -0.5,  0.5});  // v4
-  shp.add_vertex({ 0.5, -0.5,  0.5});  // v5
-  shp.add_vertex({ 0.5,  0.5,  0.5});  // v6
-  shp.add_vertex({-0.5,  0.5,  0.5});  // v7
+  shp.add_vertex({0.5, -0.5, -0.5});   // v1
+  shp.add_vertex({0.5, 0.5, -0.5});    // v2
+  shp.add_vertex({-0.5, 0.5, -0.5});   // v3
+  shp.add_vertex({-0.5, -0.5, 0.5});   // v4
+  shp.add_vertex({0.5, -0.5, 0.5});    // v5
+  shp.add_vertex({0.5, 0.5, 0.5});     // v6
+  shp.add_vertex({-0.5, 0.5, 0.5});    // v7
 
-  auto func = [c] (exanb::Vec3d& v) -> void {
-    v *= c;
-  };
+  auto func = [c](exanb::Vec3d& v) -> void { v *= c; };
   shp.for_all_vertices(func);
 
   shp.add_edge(0, 1);  // below
@@ -85,10 +78,10 @@ shape create_cube(std::string name, double length, double minskowski) {
   shp.compute_offset_faces();
 
   shp.compute_face_areas();
-  shp.obb = build_obb_from_shape(shp);
+  shp.obb_ = build_obb_from_shape(shp);
   shp.pre_compute_obb_edges(exanb::Vec3d{0, 0, 0}, exanb::Quaternion{1, 0, 0, 0});
   shp.pre_compute_obb_faces(exanb::Vec3d{0, 0, 0}, exanb::Quaternion{1, 0, 0, 0});
   return shp;
-} 
-}  // namespace shape
+}
+}  // namespace basic_shape
 }  // namespace exaDEM

@@ -12,7 +12,7 @@ setup_drivers:
      id: 0
      filename: box_for_octa.stl
      deform: [2,2,1]
-     minskowski: 0.01
+     minkowski: 0.01
 
 domain:
   cell_size: 1.5 m

@@ -281,7 +281,7 @@ class SetFields : public OperatorNode {
 			if (*polyhedra) {
 				const shapes& shps = *shapes_collection;
 				const auto& shp = shps[type_id];
-				if (type_id >= shps.size() || shp->m_name != type_name) {
+				if (type_id >= shps.size() || shp->name_ != type_name) {
 					color_log::error(operator_name(), "We can't find the shape related to the type " + type_name +
 																								". Please verify that you have load all shape files.");
 				}

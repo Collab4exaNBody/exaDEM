@@ -25,22 +25,22 @@ under the License.
 // These kernels are closed / idenitcal to the kernels defined whithin the numerical scheme plugin
 namespace exaDEM {
 struct DriverPushToQuaternionFunctor {
-  double m_dt;
-  double m_dt_2;
-  double m_dt2_2;
+  double dt_;
+  double dt_2_;
+  double dt2_2_;
 
   ONIKA_HOST_DEVICE_FUNC
   inline void operator()(exanb::Quaternion& Q, exanb::Vec3d& vrot, const exanb::Vec3d arot) const {
-    Q = Q + dot(Q, vrot) * m_dt;
+    Q = Q + dot(Q, vrot) * dt_;
     Q = normalize(Q);
-    vrot += m_dt_2 * arot;
+    vrot += dt_2_ * arot;
   }
 };
 
 struct DriverPushToAngularVelocityFunctor {
-  double m_dt_2;
+  double dt_2_;
   ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(exanb::Vec3d& vrot, const exanb::Vec3d& arot) const { vrot += arot * m_dt_2; }
+  inline void operator()(exanb::Vec3d& vrot, const exanb::Vec3d& arot) const { vrot += arot * dt_2_; }
 };
 
 struct DriverPushToAngularAccelerationFunctor {

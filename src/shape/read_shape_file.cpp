@@ -16,18 +16,19 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-#include <vector>
-#include <iomanip>
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
+#include <exanb/core/particle_type_id.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <onika/math/basic_types_stream.h>
 #include <onika/memory/allocator.h>  // for ONIKA_ASSUME_ALIGNED macro
-#include <exanb/core/particle_type_id.h>
-#include <exaDEM/shapes.hpp>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
 #include <exaDEM/shape_reader.hpp>
+#include <exaDEM/shapes.hpp>
+#include <iomanip>
+#include <vector>
 
 namespace exaDEM {
 using namespace exanb;
@@ -41,8 +42,8 @@ class ReadShapeFileOperator : public OperatorNode {
   ADD_SLOT(std::vector<std::string>, rename, INPUT, OPTIONAL,
            DocString{"This option renames the input shapes. Note that a vector of string should be provided. Example: "
                      "rename: [Shape1, Shape2, Shape3]"});
-  ADD_SLOT(bool, rescale_minskowski, INPUT, true,
-           DocString{"This option disable the rescaling of the minskowski radius."});
+  ADD_SLOT(bool, rescale_minkowski, INPUT, true,
+           DocString{"This option disable the rescaling of the minkowski radius."});
   ADD_SLOT(bool, verbosity, INPUT, true);
   ADD_SLOT(bool, vtk, INPUT, true, DocString{"Write vtk files."});
 
@@ -86,14 +87,14 @@ class ReadShapeFileOperator : public OperatorNode {
       }
 
       for (size_t sid = 0; sid < list_of_shapes.size(); sid++) {
-        list_of_shapes[sid].m_name = names[sid];
+        list_of_shapes[sid].name_ = names[sid];
       }
     }
 
     if (scale_factor.has_value()) {
-      if (!(*rescale_minskowski)) {
+      if (!(*rescale_minkowski)) {
         color_log::warning("read_shape_file",
-                           "You are disabling the minskowski radius rescaling, note that the volume and other "
+                           "You are disabling the minkowski radius rescaling, note that the volume and other "
                            "properties could be wrong.");
       }
 
@@ -105,7 +106,7 @@ class ReadShapeFileOperator : public OperatorNode {
                                                 std::to_string(scales.size()) + "elements");
       }
 
-      const bool rescale_minskowki_radius = *rescale_minskowski;
+      const bool rescale_minskowki_radius = *rescale_minkowski;
       for (size_t sid = 0; sid < list_of_shapes.size(); sid++) {
         list_of_shapes[sid].rescale(scales[sid], rescale_minskowki_radius);
       }

@@ -44,7 +44,7 @@ class RegisterBall : public OperatorNode {
   }
 
   inline void execute() final {
-    exaDEM::Ball driver(*state, params->input_motion_type);
+    exaDEM::Ball driver(*state, params->input_motion_type_);
     driver.initialize(*params);
     drivers->add_driver(*id, driver, *params);
   }

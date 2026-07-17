@@ -7,12 +7,12 @@ namespace exaDEM {
  * @brief Packed particle data for detection and initialization.
  */
 struct ParticleDetectPack {
-  Quaternion quat;      ///< Particle orientation as a quaternion
-  Vec3d r;              ///< Particle position
-  uint64_t id;          ///< Unique particle ID
-  ParticleTypeInt type; ///< Particle type (integer code)
-  double radius;        ///< Particle radius
-  double homothety;     ///< Scaling factor applied to particle size
+  Quaternion quat_;       ///< Particle orientation as a quaternion
+  Vec3d r_;               ///< Particle position
+  uint64_t id_;           ///< Unique particle ID
+  ParticleTypeInt type_;  ///< Particle type (integer code)
+  double radius_;         ///< Particle radius
+  double homothety_;      ///< Scaling factor applied to particle size
 };
 
 /**
@@ -22,53 +22,44 @@ struct ParticleDetectPack {
  * @param i Index of the particle in the cell
  * @return ParticleDetectPack with all particle information
  */
-template<typename TMPLC>
-ONIKA_HOST_DEVICE_FUNC
-inline ParticleDetectPack load(TMPLC& cell, size_t i) {
+template <typename TMPLC>
+ONIKA_HOST_DEVICE_FUNC inline ParticleDetectPack load(TMPLC& cell, size_t i) {
   ParticleDetectPack p;
 
   // Load orientation
-  p.quat = cell[field::orient][i];
+  p.quat_ = cell[field::orient][i];
 
   // Load position
-  p.r.x = cell[field::rx][i];
-  p.r.y = cell[field::ry][i];
-  p.r.z = cell[field::rz][i];
+  p.r_.x = cell[field::rx][i];
+  p.r_.y = cell[field::ry][i];
+  p.r_.z = cell[field::rz][i];
 
   // Load identification and type
-  p.id   = cell[field::id][i];
-  p.type = cell[field::type][i];
+  p.id_ = cell[field::id][i];
+  p.type_ = cell[field::type][i];
 
   // Load radius and scaling factor
-  p.radius    = cell[field::radius][i];
-  p.homothety = cell[field::homothety][i];
+  p.radius_ = cell[field::radius][i];
+  p.homothety_ = cell[field::homothety][i];
 
   return p;
 }
 
-template<typename Func> ONIKA_HOST_DEVICE_FUNC
-inline void detection(Func& func,
-                      const double rcut_inc,
-                      ParticleDetectPack& a,
-                      ParticleVertexView& vertices_a,
-                      const shape& shpa,
-                      AABB& aabb,
-                      OBB& obb_a,
-                      ParticleDetectPack& b,
-                      ParticleVertexView& vertices_b,
-                      const shape& shpb) {
-
-  if (a.id >= b.id) {
+template <typename Func>
+ONIKA_HOST_DEVICE_FUNC inline void detection(Func& func, const double rcut_inc, ParticleDetectPack& a,
+                                             ParticleVertexView& vertices_a, const shape& shpa, AABB& aabb, OBB& obb_a,
+                                             ParticleDetectPack& b, ParticleVertexView& vertices_b, const shape& shpb) {
+  if (a.id_ >= b.id_) {
     return;
   }
 
   // very coarse test
-  if (!is_inside_threshold(aabb, b.r, b.radius)) {
+  if (!is_inside_threshold(aabb, b.r_, b.radius_)) {
     return;
   }
 
-  Vec3d r = b.r - a.r;
-  double rmax = a.radius + b.radius + rcut_inc;
+  Vec3d r = b.r_ - a.r_;
+  double rmax = a.radius_ + b.radius_ + rcut_inc;
 
   // basic tests
   if (exanb::dot(r, r) > rmax * rmax) {
@@ -76,7 +67,7 @@ inline void detection(Func& func,
   }
 
   // now test OBB
-  OBB obb_b = compute_obb(shpb.obb, b.r, b.quat, b.homothety);
+  OBB obb_b = compute_obb(shpb.obb_, b.r_, b.quat_, b.homothety_);
   if (!obb_a.intersect(obb_b)) {
     return;
   }
@@ -90,8 +81,8 @@ inline void detection(Func& func,
   const int neb = shpb.get_number_of_edges();
   const int nfb = shpb.get_number_of_faces();
 
-#define PARAMETERS_SWAP_FALSE rcut_inc, vertices_a, a.homothety, i, &shpa, vertices_b, b.homothety, j, &shpb
-#define PARAMETERS_SWAP_TRUE rcut_inc, vertices_b, b.homothety, j, &shpb, vertices_a, a.homothety, i, &shpa
+#define PARAMETERS_SWAP_FALSE rcut_inc, vertices_a, a.homothety_, i, &shpa, vertices_b, b.homothety_, j, &shpb
+#define PARAMETERS_SWAP_TRUE rcut_inc, vertices_b, b.homothety_, j, &shpb, vertices_a, a.homothety_, i, &shpa
 
   const onikaDim3_t& block = ONIKA_CU_BLOCK_DIMS;
   const onikaDim3_t& thread = ONIKA_CU_THREAD_COORD;
@@ -101,7 +92,7 @@ inline void detection(Func& func,
     // exclude possibilities with obb
     OBB obbvi;
     obbvi.center = {vi.x, vi.y, vi.z};
-    obbvi.enlarge(shpa.minskowski(a.homothety));
+    obbvi.enlarge(shpa.minkowski(a.homothety_));
     if (obb_b.intersect(obbvi)) {
       if (!func.skip(InteractionTypeId::VertexVertex)) {
         for (int j = thread.y; j < nvb; j += block.y) {
@@ -141,7 +132,7 @@ inline void detection(Func& func,
     auto vbj = vertices_b[j];
     OBB obbvj;
     obbvj.center = {vbj.x, vbj.y, vbj.z};
-    obbvj.enlarge(shpb.minskowski(b.homothety));
+    obbvj.enlarge(shpb.minkowski(b.homothety_));
 
     if (obb_a.intersect(obbvj)) {
       if (!func.skip(InteractionTypeId::VertexEdge)) {
@@ -164,31 +155,30 @@ inline void detection(Func& func,
 #undef PARAMETERS_SWAP_TRUE
 }
 
-template<typename TMPLC>
+template <typename TMPLC>
 struct ApplyNbhFunc {
-  TMPLC cells;
-  NbhCellAccessor accessor;
-  const double rcut_inc;
-  const shape* const shps;
-  VertexField* const vertex_fields;
+  TMPLC cells_;
+  NbhCellAccessor accessor_;
+  const double rcut_inc_;
+  const shape* const shps_;
+  VertexField* const vertex_fields_;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(onikaInt3_t coord) const {
     long idx = coord.x;
-    size_t cell_id_a = accessor.owner_cell[idx];
-    size_t cell_id_b = accessor.partner_cell[idx];
-    auto& cell_a = cells[cell_id_a];
-    auto& cell_b = cells[cell_id_b];
-    VertexField& vertex_cell_a = vertex_fields[cell_id_a];
-    VertexField& vertex_cell_b = vertex_fields[cell_id_b];
+    size_t cell_id_a = accessor_.owner_cell_[idx];
+    size_t cell_id_b = accessor_.partner_cell_[idx];
+    auto& cell_a = cells_[cell_id_a];
+    auto& cell_b = cells_[cell_id_b];
+    VertexField& vertex_cell_a = vertex_fields_[cell_id_a];
+    VertexField& vertex_cell_b = vertex_fields_[cell_id_b];
 
     // used by detection
     struct counter_func {
-      InteractionTypePerCellCounter counter;
-      ONIKA_HOST_DEVICE_FUNC counter_func() : counter({0,0,0,0}) {}
+      InteractionTypePerCellCounter counter_;
+      ONIKA_HOST_DEVICE_FUNC counter_func() : counter_({0, 0, 0, 0}) {}
       ONIKA_HOST_DEVICE_FUNC inline bool skip(uint8_t i) { return false; }
       ONIKA_HOST_DEVICE_FUNC void swap_ij() {}
-      ONIKA_HOST_DEVICE_FUNC inline void operator()(
-          int i, int j, int InteractionType, bool swap) {
-        counter[InteractionType]++;
+      ONIKA_HOST_DEVICE_FUNC inline void operator()(int i, int j, int InteractionType, bool swap) {
+        counter_[InteractionType]++;
       }
     };
 
@@ -198,56 +188,51 @@ struct ApplyNbhFunc {
       // load data relative to the particle a
       auto body_a = load(cell_a, pa);
       ParticleVertexView vertices_a = {pa, vertex_cell_a};
-      auto& shpa = shps[body_a.type];
+      auto& shpa = shps_[body_a.type_];
 
       // setup geometric test prerequis
-      AABB aabb_body_a = {body_a.r - body_a.radius - rcut_inc,
-                          body_a.r + body_a.radius + rcut_inc};
+      AABB aabb_body_a = {body_a.r_ - body_a.radius_ - rcut_inc_, body_a.r_ + body_a.radius_ + rcut_inc_};
 
-      OBB obb_a = compute_obb(shpa.obb,
-                              body_a.r, body_a.quat,
-                              body_a.homothety);
-      obb_a.enlarge(rcut_inc);
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
+      obb_a.enlarge(rcut_inc_);
 
       for (size_t pb = 0; pb < cell_b.size(); pb++) {
         // load data relative to the particle b
         auto body_b = load(cell_b, pb);
-        auto& shpb = shps[body_b.type];
+        auto& shpb = shps_[body_b.type_];
         ParticleVertexView vertices_b = {pb, vertex_cell_b};
-        detection(func, rcut_inc, body_a, vertices_a,
-                  shpa, aabb_body_a, obb_a,
-                  body_b, vertices_b, shpb);
+        detection(func, rcut_inc_, body_a, vertices_a, shpa, aabb_body_a, obb_a, body_b, vertices_b, shpb);
       }
     }
-    auto& res = accessor.size[idx];
+    auto& res = accessor_.size_[idx];
     for (int typeID = get_first_id<InteractionType::ParticleParticle>();
          typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
-      if (func.counter[typeID] > 0) {
-        accessor.skip[idx] = false;
-        //printf("do not skip cell pair %ld\n", idx);
-        ONIKA_CU_ATOMIC_ADD(res[typeID], func.counter[typeID]);
+      if (func.counter_[typeID] > 0) {
+        accessor_.skip_[idx] = false;
+        // printf("do not skip cell pair %ld\n", idx);
+        ONIKA_CU_ATOMIC_ADD(res[typeID], func.counter_[typeID]);
       }
     }
   }
 };
 
-template<size_t BLOCKX, size_t BLOCKY, typename TMPLC>
+template <size_t BLOCKX, size_t BLOCKY, typename TMPLC>
 struct ApplyClassifierFunc {  // Second pass
                               // Note: This operator is quite demanding in terms of memory.
                               // Do not increase the number of members.
                               // That's why we only recover useful wrappers.
-  TMPLC cells;
-  NbhCellAccessor accessor;
-  const double rcut_inc;
-  const shape* const shps;
-  VertexField* const vertex_fields;
-  InteractionParticleAccessor interactions;
+  TMPLC cells_;
+  NbhCellAccessor accessor_;
+  const double rcut_inc_;
+  const shape* const shps_;
+  VertexField* const vertex_fields_;
+  InteractionParticleAccessor interactions_;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(onikaInt3_t coord) const {
     using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
     long idx = coord.x;
-    //std::assert(coord.y == 0);
-    if (accessor.skip[idx]) {  // set by the first pass
+    // std::assert(coord.y == 0);
+    if (accessor_.skip_[idx]) {  // set by the first pass
       return;
     }
 
@@ -255,139 +240,123 @@ struct ApplyClassifierFunc {  // Second pass
     ONIKA_CU_BLOCK_SHARED typename BlockScan::TempStorage temp_storage;
     // used by detection
     struct counter_func {
-      InteractionTypePerCellCounter counter = {0,0,0,0};
+      InteractionTypePerCellCounter counter_ = {0, 0, 0, 0};
       ONIKA_HOST_DEVICE_FUNC inline void swap_ij() {}
       ONIKA_HOST_DEVICE_FUNC inline bool skip(uint8_t i) { return false; }
-      ONIKA_HOST_DEVICE_FUNC inline void operator()(
-          int i, int j, int InteractionType, bool swap) {
-        counter[InteractionType]++;
+      ONIKA_HOST_DEVICE_FUNC inline void operator()(int i, int j, int InteractionType, bool swap) {
+        counter_[InteractionType]++;
       }
     };
 
     struct AddInteractionFunc {
-      const InteractionParticleAccessor& data;
-      PlaceholderInteraction item;
-      InteractionTypePerCellCounter prefix;
+      const InteractionParticleAccessor& data_;
+      PlaceholderInteraction item_;
+      InteractionTypePerCellCounter prefix_;
 
       ONIKA_HOST_DEVICE_FUNC
-      AddInteractionFunc(const InteractionParticleAccessor& in)
-          : data(in), item{}, prefix({0,0,0,0}) {}
+      AddInteractionFunc(const InteractionParticleAccessor& in) : data_(in), item_{}, prefix_({0, 0, 0, 0}) {}
 
       ONIKA_HOST_DEVICE_FUNC
-      void set_ghost(int level_of_ghost) {
-        item.pair.ghost = level_of_ghost;
-      }
+      void set_ghost(int level_of_ghost) { item_.pair_.ghost_ = level_of_ghost; }
 
       ONIKA_HOST_DEVICE_FUNC
       inline void operator()(int i, int j, int InteractionType, bool swap) {
-        item.pair.swap = swap;
-        item.pair.pi.sub = i;
-        item.pair.pj.sub = j;
-        auto& PJ = item.pair.pj;
-        PJ.sub = j;
-        item.pair.type = InteractionType;
+        item_.pair_.swap_ = swap;
+        item_.pair_.pi_.sub_ = i;
+        item_.pair_.pj_.sub_ = j;
+        auto& PJ = item_.pair_.pj_;
+        PJ.sub_ = j;
+        item_.pair_.type_ = InteractionType;
         /*
            printf("adder interaction %d at place %d = "
            "idi: %llu idj: %llu, subi: %u, subj: %u, swap %d\n",
            InteractionType,
-           prefix[InteractionType],
-           (unsigned long long)item.pair.pi.id,
-           (unsigned long long)item.pair.pj.id,
-           item.pair.pi.sub,
-           item.pair.pj.sub,
-           (int) item.pair.swap);
+           prefix_[InteractionType],
+           (unsigned long long)item_.pair_.pi_.id_,
+           (unsigned long long)item_.pair_.pj_.id_,
+           item_.pair_.pi_.sub_,
+           item_.pair_.pj_.sub_,
+           (int) item_.pair_.swap_);
            */
-        data[InteractionType].set(prefix[InteractionType]++, item);
+        data_[InteractionType].set(prefix_[InteractionType]++, item_);
       }
 
-      ONIKA_HOST_DEVICE_FUNC inline bool skip(uint8_t i) {
-        return false;
-      }
+      ONIKA_HOST_DEVICE_FUNC inline bool skip(uint8_t i) { return false; }
 
       ONIKA_HOST_DEVICE_FUNC inline void swap_ij() {
-        gpu_swap(item.pair.pi.id, item.pair.pj.id);
-        gpu_swap(item.pair.pi.cell, item.pair.pj.cell);
-        gpu_swap(item.pair.pi.p, item.pair.pj.p);
+        gpu_swap(item_.pair_.pi_.id_, item_.pair_.pj_.id_);
+        gpu_swap(item_.pair_.pi_.cell_, item_.pair_.pj_.cell_);
+        gpu_swap(item_.pair_.pi_.p_, item_.pair_.pj_.p_);
       }
     };
 
     counter_func func;
-    size_t cell_id_a = accessor.owner_cell[idx];
-    size_t cell_id_b = accessor.partner_cell[idx];
-    auto& cell_a = cells[cell_id_a];
-    auto& cell_b = cells[cell_id_b];
-    VertexField& vertex_cell_a = vertex_fields[cell_id_a];
-    VertexField& vertex_cell_b = vertex_fields[cell_id_b];
+    size_t cell_id_a = accessor_.owner_cell_[idx];
+    size_t cell_id_b = accessor_.partner_cell_[idx];
+    auto& cell_a = cells_[cell_id_a];
+    auto& cell_b = cells_[cell_id_b];
+    VertexField& vertex_cell_a = vertex_fields_[cell_id_a];
+    VertexField& vertex_cell_b = vertex_fields_[cell_id_b];
 
     for (size_t pa = 0; pa < cell_a.size(); pa++) {
       // load data relative to the particle a
       auto body_a = load(cell_a, pa);
       ParticleVertexView vertices_a = {pa, vertex_cell_a};
-      auto& shpa = shps[body_a.type];
+      auto& shpa = shps_[body_a.type_];
 
       // setup geometric test prerequis
-      AABB aabb_body_a = {body_a.r - body_a.radius - rcut_inc,
-                          body_a.r + body_a.radius + rcut_inc};
+      AABB aabb_body_a = {body_a.r_ - body_a.radius_ - rcut_inc_, body_a.r_ + body_a.radius_ + rcut_inc_};
 
-      OBB obb_a = compute_obb(shpa.obb,
-                              body_a.r, body_a.quat,
-                              body_a.homothety);
-      obb_a.enlarge(rcut_inc);
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
+      obb_a.enlarge(rcut_inc_);
 
       for (size_t pb = 0; pb < cell_b.size(); pb++) {
         // load data relative to the particle b
         auto body_b = load(cell_b, pb);
-        auto& shpb = shps[body_b.type];
+        auto& shpb = shps_[body_b.type_];
         ParticleVertexView vertices_b = {pb, vertex_cell_b};
-        detection(func, rcut_inc, body_a, vertices_a,
-                  shpa, aabb_body_a, obb_a,
-                  body_b, vertices_b, shpb);
+        detection(func, rcut_inc_, body_a, vertices_a, shpa, aabb_body_a, obb_a, body_b, vertices_b, shpb);
       }
     }
 
-    AddInteractionFunc adder(interactions);
+    AddInteractionFunc adder(interactions_);
     // These Interactions are tagged to be copied in ghost areas
-    adder.set_ghost(accessor.ghost[idx]);
+    adder.set_ghost(accessor_.ghost_[idx]);
 
-    auto& sdata = accessor.offset[idx];
+    auto& sdata = accessor_.offset_[idx];
     for (int typeID = get_first_id<InteractionType::ParticleParticle>();
          typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
-      BlockScan(temp_storage).ExclusiveSum(func.counter[typeID], adder.prefix[typeID]);
+      BlockScan(temp_storage).ExclusiveSum(func.counter_[typeID], adder.prefix_[typeID]);
       ONIKA_CU_BLOCK_SYNC();
-      adder.prefix[typeID] += sdata[typeID];
-      //printf("adder.prefix[%d] = %d\n", typeID, adder.prefix[typeID]);
+      adder.prefix_[typeID] += sdata[typeID];
+      // printf("adder.prefix_[%d] = %d\n", typeID, adder.prefix_[typeID]);
     }
 
     for (size_t pa = 0; pa < cell_a.size(); pa++) {
       // load data relative to the particle a
       auto body_a = load(cell_a, pa);
       ParticleVertexView vertices_a = {pa, vertex_cell_a};
-      auto& shpa = shps[body_a.type];
+      auto& shpa = shps_[body_a.type_];
 
       // setup geometric test prerequis
-      AABB aabb_body_a = {body_a.r - body_a.radius - rcut_inc,
-                          body_a.r + body_a.radius + rcut_inc};
+      AABB aabb_body_a = {body_a.r_ - body_a.radius_ - rcut_inc_, body_a.r_ + body_a.radius_ + rcut_inc_};
 
-      OBB obb_a = compute_obb(shpa.obb,
-                              body_a.r, body_a.quat,
-                              body_a.homothety);
-      obb_a.enlarge(rcut_inc);
+      OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
+      obb_a.enlarge(rcut_inc_);
 
       for (size_t pb = 0; pb < cell_b.size(); pb++) {
         // load data relative to the particle b
         auto body_b = load(cell_b, pb);
-        auto& shpb = shps[body_b.type];
+        auto& shpb = shps_[body_b.type_];
         ParticleVertexView vertices_b = {pb, vertex_cell_b};
         // do not forget to reset the interaction
-        adder.item.pair.pi.id = body_a.id;
-        adder.item.pair.pi.p = pa;
-        adder.item.pair.pi.cell = cell_id_a;
-        adder.item.pair.pj.id = static_cast<uint64_t>(body_b.id);
-        adder.item.pair.pj.p = static_cast<uint16_t>(pb);
-        adder.item.pair.pj.cell = static_cast<size_t>(cell_id_b);
-        detection(adder, rcut_inc, body_a, vertices_a,
-                  shpa, aabb_body_a, obb_a,
-                  body_b, vertices_b, shpb);
+        adder.item_.pair_.pi_.id_ = body_a.id_;
+        adder.item_.pair_.pi_.p_ = pa;
+        adder.item_.pair_.pi_.cell_ = cell_id_a;
+        adder.item_.pair_.pj_.id_ = static_cast<uint64_t>(body_b.id_);
+        adder.item_.pair_.pj_.p_ = static_cast<uint16_t>(pb);
+        adder.item_.pair_.pj_.cell_ = static_cast<size_t>(cell_id_b);
+        detection(adder, rcut_inc_, body_a, vertices_a, shpa, aabb_body_a, obb_a, body_b, vertices_b, shpb);
       }
     }
   }
@@ -396,12 +365,12 @@ struct ApplyClassifierFunc {  // Second pass
 
 namespace onika {
 namespace parallel {
-template<typename TMPLC>
+template <typename TMPLC>
 struct BlockParallelForFunctorTraits<exaDEM::ApplyNbhFunc<TMPLC>> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;
   static inline constexpr bool CudaCompatible = true;
 };
-template<size_t BX, size_t BY, typename TMPLC>
+template <size_t BX, size_t BY, typename TMPLC>
 struct BlockParallelForFunctorTraits<exaDEM::ApplyClassifierFunc<BX, BY, TMPLC>> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;
   static inline constexpr bool CudaCompatible = true;
