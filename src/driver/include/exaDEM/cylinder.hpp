@@ -157,7 +157,7 @@ struct Cylinder {
    * @param time Current simulation time.
    * @param dt Time step.
    */
-  ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
+  inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
         if (!is_stationary(motion_type_)) {
 
       if (motion_type_ == MotionType::SHAKER) {
