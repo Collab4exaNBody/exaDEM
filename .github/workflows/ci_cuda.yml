@@ -23,10 +23,6 @@ jobs:
       image: nvidia/cuda:13.3.0-devel-ubuntu24.04
 
     steps:
-    - name: Fix apt sources (http -> https) and enable retries
-      run: |
-        sed -i 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g; s|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list.d/ubuntu.sources
-        echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries    
     - name: Install git in container 
       run: |
         apt-get update
