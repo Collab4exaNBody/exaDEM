@@ -84,6 +84,7 @@ class DumpReaderConfRockable : public OperatorNode {
   ADD_SLOT(AABB, bounds, INPUT, OPTIONAL, DocString{"This option overide the domain bounds."});
   ADD_SLOT(double, enlarge_bounds, INPUT, 0.0, DocString{"Define a layer around the volume size. Default size is 0."});
   ADD_SLOT(ParticleTypeMap, particle_type_map, OUTPUT);
+  ADD_SLOT(uint32_t, n_groups, OUTPUT, DocString{"Number of distinct groups (max group index + 1)"});
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
   ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
@@ -155,6 +156,7 @@ class DumpReaderConfRockable : public OperatorNode {
     MPI_Comm_size(*mpi, &np);
 
     uint64_t n_particles = 0;
+    uint32_t max_group = 0;
     std::vector<ParticleTupleIO> particle_data;
 
     rockable::ConfReader manager;
@@ -225,6 +227,7 @@ class DumpReaderConfRockable : public OperatorNode {
         // shapes
         ptio[field::type] = rp.type;
         ptio[field::group] = rp.group;
+        max_group = std::max(max_group, static_cast<uint32_t>(rp.group));
         const auto& shp = shps[ptio[field::type]];
         double d = manager.densities[ptio[field::type]];
         ptio[field::mass] = d * shp->get_volume(rp.homothety);
@@ -294,6 +297,10 @@ class DumpReaderConfRockable : public OperatorNode {
     // send bounds and size_box values to all cores
     MPI_Bcast(&(*domain), sizeof(Domain), MPI_CHARACTER, 0, *mpi);
     // assert(check_domain(*domain));
+
+    // send the max group index to all cores (only rank 0 has read the particles)
+    MPI_Bcast(&max_group, 1, MPI_UNSIGNED, 0, *mpi);
+    *n_groups = max_group + 1;
 
     grid->set_offset(IJK{0, 0, 0});
     grid->set_origin(domain->bounds().bmin);

@@ -1,0 +1,5 @@
+check_input_data:
+  body:
+    - update_traversals
+    - check_homothety
+    - check_group_completeness

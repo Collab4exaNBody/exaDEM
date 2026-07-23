@@ -17,6 +17,8 @@ specific language governing permissions and limitations
 under the License.
 */
 
+#include <algorithm>
+
 // onika
 #include <onika/memory/allocator.h>
 #include <onika/scg/operator.h>
@@ -64,11 +66,13 @@ class SetGroupOperator : public OperatorNode {
   ADD_SLOT(std::vector<std::string>, type, INPUT, REQUIRED, DocString{"List of particle type names"});
   ADD_SLOT(std::vector<uint32_t>, group, INPUT, REQUIRED,
            DocString{"Group index associated to each type (same order as 'type')"});
+  ADD_SLOT(uint32_t, n_groups, OUTPUT, DocString{"Number of distinct groups (max group index + 1)"});
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
         Assigns the group field to every particle according to its type.
+        Also outputs 'n_groups', the number of distinct groups (max group index + 1).
 
         YAML examples:
 
@@ -92,6 +96,11 @@ class SetGroupOperator : public OperatorNode {
     if (type_names.size() != group_values.size()) {
       color_log::error("set_group", "'type' and 'group' lists must have the same length.");
     }
+
+    // Number of distinct groups, exposed for downstream operators.
+    uint32_t max_group = 0;
+    for (auto g : group_values) max_group = std::max(max_group, g);
+    *n_groups = max_group + 1;
 
     // Build type_id -> group lookup table in unified memory
     const size_t n_types = type_map.size();

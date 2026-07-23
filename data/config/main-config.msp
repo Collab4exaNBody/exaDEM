@@ -25,8 +25,9 @@ includes:
   - config_stress_tensor.msp
   - config_end_iteration.msp
   - config_input.msp
-  - config_dt_critical.msp 
+  - config_dt_critical.msp
   - config_cell_projection.msp
+  - config_check_input_data.msp
 
 # usually outputs ParticleSpecies type to a slot named species, in case the data reader doesn't provide species description
 reduce_species_after_read: nop
@@ -141,7 +142,7 @@ simulation:
     - grid_flavor
     - particle_regions
     - input_data
-    - check_homothety 
+    - check_input_data
     - init_rcut_max
     - init_prolog
     - grid_post_processing

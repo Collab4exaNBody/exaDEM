@@ -17,13 +17,14 @@ specific language governing permissions and limitations
 under the License.
 */
 
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
+#include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/grid.h>
 #include <exanb/core/particle_type_id.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
 #include <exaDEM/forcefield/contact_parameters.hpp>
 #include <exaDEM/forcefield/multimat_parameters.hpp>
 
@@ -34,6 +35,10 @@ class MultiMatContactParams : public OperatorNode {
            DocString{"List of contact parameters for simulations with multiple materials"});
   ADD_SLOT(std::vector<uint32_t>, group1, INPUT, OPTIONAL, DocString{"List of group indices for the first particle."});
   ADD_SLOT(std::vector<uint32_t>, group2, INPUT, OPTIONAL, DocString{"List of group indices for the second particle."});
+  ADD_SLOT(uint32_t, n_groups, INPUT_OUTPUT, OPTIONAL,
+           DocString{"Number of distinct groups. If already set (e.g. by set_group or read_conf_rockable), it is "
+                     "checked against group1/group2; otherwise it is computed from group1/group2 (max group index + 1) "
+                     "and written back."});
   ADD_SLOT(std::vector<double>, dncut, INPUT, OPTIONAL, DocString{"List of dncut values."});
   ADD_SLOT(std::vector<double>, kn, INPUT, OPTIONAL, DocString{"List of ln values."});
   ADD_SLOT(std::vector<double>, kt, INPUT, OPTIONAL, DocString{"List of kt values."});
@@ -66,9 +71,7 @@ class MultiMatContactParams : public OperatorNode {
         )EOF";
   }
 
-  inline std::string operator_name() {
-    return "multimat_contact_params";
-  }
+  inline std::string operator_name() { return "multimat_contact_params"; }
 
  public:
   inline void execute() final {
@@ -91,10 +94,11 @@ class MultiMatContactParams : public OperatorNode {
 
       auto check_lengths_match = [number_of_pairs, this]<typename Vec>(Vec& list, std::string cp_field_name) -> bool {
         if (number_of_pairs != int(list.size())) {
-          color_log::error(this->operator_name(), "The length of the field \"" + cp_field_name +
-                                                      "\" does not match the size of the other fields. group1.size() = " +
-                                                      std::to_string(number_of_pairs) + ", while " + cp_field_name +
-                                                      ".size() = " + std::to_string(list.size()) + ".");
+          color_log::error(
+              this->operator_name(),
+              "The length of the field \"" + cp_field_name +
+                  "\" does not match the size of the other fields. group1.size() = " + std::to_string(number_of_pairs) +
+                  ", while " + cp_field_name + ".size() = " + std::to_string(list.size()) + ".");
         }
         return true;
       };
@@ -128,12 +132,23 @@ class MultiMatContactParams : public OperatorNode {
       uint32_t max_group = 0;
       for (auto g : groups_1) max_group = std::max(max_group, g);
       for (auto g : groups_2) max_group = std::max(max_group, g);
-      int n_groups = static_cast<int>(max_group) + 1;
+      uint32_t n_groups_from_fields = max_group + 1;
+
+      if (n_groups.has_value()) {
+        // n_groups was already set upstream (e.g. set_group, read_conf_rockable): check consistency.
+        if (n_groups_from_fields > *n_groups) {
+          color_log::error(this->operator_name(),
+                           "group1/group2 reference group index " + std::to_string(n_groups_from_fields - 1) +
+                               ", which is out of range for n_groups = " + std::to_string(*n_groups) + ".");
+        }
+      } else {
+        *n_groups = n_groups_from_fields;
+      }
 
       if (default_config.has_value()) {
-        cp.setup_multimat(n_groups, *default_config);
+        cp.setup_multimat(static_cast<int>(*n_groups), *default_config);
       } else {
-        cp.setup_multimat(n_groups);
+        cp.setup_multimat(static_cast<int>(*n_groups));
       }
 
       for (int p = 0; p < number_of_pairs; p++) {
@@ -162,7 +177,8 @@ class MultiMatContactParams : public OperatorNode {
         cp.register_multimat(g1, g2, params);
       }
     } else if (default_config.has_value()) {
-      cp.setup_multimat(1, *default_config);
+      uint32_t ng = n_groups.has_value() ? *n_groups : 1;
+      cp.setup_multimat(static_cast<int>(ng), *default_config);
     }
 
     bool multimat_mode = group1.has_value();
