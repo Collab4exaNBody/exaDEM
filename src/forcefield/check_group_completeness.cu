@@ -69,7 +69,7 @@ template <typename GridT, class = AssertGridHasFields<GridT, field::_group>>
 class CheckGroupCompleteness : public OperatorNode {
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);
-  ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT_OUTPUT, OPTIONAL,
+  ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT, OPTIONAL,
            DocString{"List of contact parameters for simulations with multiple materials"});
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 

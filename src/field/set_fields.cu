@@ -112,6 +112,7 @@ class SetFields : public OperatorNode {
 
   // outputs
   ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0, DocString{"rcut_max"});
+  ADD_SLOT(uint32_t, n_groups, OUTPUT, DocString{"Number of distinct groups (max group index + 1)"});
 
   // others
   ADD_SLOT(bool, polyhedra, INPUT, REQUIRED, DocString{"Define if the kind of particles is polyhedron or sphere."});
@@ -202,6 +203,13 @@ class SetFields : public OperatorNode {
     mat.set_rnd_ang_v = sigma_angular_velocity.has_value();
     mat.set_q = quaternion.has_value();
     mat.set_rnd_q = random_quaternion.has_value();
+
+    // Number of distinct groups, exposed for downstream operators.
+    uint32_t max_group = 0;
+    if (group.has_value()) {
+      for (auto g : *group) max_group = std::max(max_group, g);
+    }
+    *n_groups = max_group + 1;
 
     lout << "======= Particle Fields =========" << std::endl;
     for (size_t i = 0; i < types.size(); i++) {

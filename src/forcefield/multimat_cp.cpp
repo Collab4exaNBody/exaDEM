@@ -35,10 +35,10 @@ class MultiMatContactParams : public OperatorNode {
            DocString{"List of contact parameters for simulations with multiple materials"});
   ADD_SLOT(std::vector<uint32_t>, group1, INPUT, OPTIONAL, DocString{"List of group indices for the first particle."});
   ADD_SLOT(std::vector<uint32_t>, group2, INPUT, OPTIONAL, DocString{"List of group indices for the second particle."});
-  ADD_SLOT(uint32_t, n_groups, INPUT_OUTPUT, OPTIONAL,
-           DocString{"Number of distinct groups. If already set (e.g. by set_group or read_conf_rockable), it is "
-                     "checked against group1/group2; otherwise it is computed from group1/group2 (max group index + 1) "
-                     "and written back."});
+  ADD_SLOT(uint32_t, n_groups, INPUT_OUTPUT, 1,
+           DocString{"Number of distinct groups. If already set to more than 1 (e.g. by set_group or "
+                     "read_conf_rockable), it is checked against group1/group2; otherwise it is computed from "
+                     "group1/group2 (max group index + 1) and written back."});
   ADD_SLOT(std::vector<double>, dncut, INPUT, OPTIONAL, DocString{"List of dncut values."});
   ADD_SLOT(std::vector<double>, kn, INPUT, OPTIONAL, DocString{"List of ln values."});
   ADD_SLOT(std::vector<double>, kt, INPUT, OPTIONAL, DocString{"List of kt values."});
@@ -134,15 +134,17 @@ class MultiMatContactParams : public OperatorNode {
       for (auto g : groups_2) max_group = std::max(max_group, g);
       uint32_t n_groups_from_fields = max_group + 1;
 
-      if (n_groups.has_value()) {
-        // n_groups was already set upstream (e.g. set_group, read_conf_rockable): check consistency.
-        if (n_groups_from_fields > *n_groups) {
-          color_log::error(this->operator_name(),
-                           "group1/group2 reference group index " + std::to_string(n_groups_from_fields - 1) +
-                               ", which is out of range for n_groups = " + std::to_string(*n_groups) + ".");
-        }
-      } else {
-        *n_groups = n_groups_from_fields;
+      // n_groups must cover at least the range referenced by group1/group2, or the value already set upstream.
+      const uint32_t n_groups_upstream = *n_groups;
+      *n_groups = std::max(n_groups_upstream, n_groups_from_fields);
+
+      if (n_groups_upstream > n_groups_from_fields && !default_config.has_value()) {
+        // group1/group2 don't cover every pair up to n_groups: default_config is needed to fill the rest.
+        color_log::error(this->operator_name(),
+                         "n_groups = " + std::to_string(n_groups_upstream) +
+                             " is larger than the number of groups covered by group1/group2 (" +
+                             std::to_string(n_groups_from_fields) +
+                             "). A default_config must be defined to cover the remaining group pairs.");
       }
 
       if (default_config.has_value()) {
@@ -177,8 +179,7 @@ class MultiMatContactParams : public OperatorNode {
         cp.register_multimat(g1, g2, params);
       }
     } else if (default_config.has_value()) {
-      uint32_t ng = n_groups.has_value() ? *n_groups : 1;
-      cp.setup_multimat(static_cast<int>(ng), *default_config);
+      cp.setup_multimat(static_cast<int>(*n_groups), *default_config);
     }
 
     bool multimat_mode = group1.has_value();
