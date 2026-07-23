@@ -46,10 +46,16 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
 
   inline void execute() final {
     auto& interfaces = *im;
+    int init_value = 0;
     uint64_t number_of_broken_interfaces = 0;
     InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
     auto [dn, cp, fn, ft] = ic->contact_state(InteractionTypeId::InnerBond);
 
+    ApplyAndReduceInterfaceFractureCriterionFunc func = {data_wrapper, fn, dn};
+
+    number_of_broken_interfaces = reduce_interface(interfaces, func, init_value,
+                                parallel_execution_context("apply_rupture_criterion"));
+#ifdef APPLY_CRITERION_NO_REDUCTION
     ApplyInterfaceFractureCriterionFunc func = {interfaces.data_.data(), interfaces.break_interface_.data(),
                                                 data_wrapper, fn, dn};
 
@@ -58,18 +64,19 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
     parallel_for(interfaces.size(), func, parallel_execution_context(), opts);
 
     // No copy from GPU if the data has not been touuch by the GPU
+
 #pragma omp parallel for reduction(+ : number_of_broken_interfaces)
     for (size_t i = 0; i < interfaces.size(); i++) {
       if (interfaces.break_interface_[i] == true) {
-        auto [offset, size] = interfaces.data_[i];
+        /*auto [offset, size] = interfaces.data_[i];
         for (size_t j = 0; j < size; j++) {
           size_t idx = j + offset;
           data_wrapper.broke(idx);
-        }
+        }*/
         number_of_broken_interfaces++;
       }
     }
-
+#endif
     MPI_Allreduce(MPI_IN_PLACE, &number_of_broken_interfaces, 1, MPI_UINT64_T, MPI_SUM, *mpi);
     if (*display && number_of_broken_interfaces > 0) {
       if (number_of_broken_interfaces == 1) {

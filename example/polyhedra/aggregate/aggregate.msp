@@ -26,6 +26,7 @@ add_particles:
   - set_fields:
      polyhedra: true
      type:              [         Aggregate ]
+     group:             [                 0 ]
      velocity:          [ [0.0 , 0.0, -0.2] ]
      sigma_velocity:    [             0.001 ]
      random_quaternion: [              true ]

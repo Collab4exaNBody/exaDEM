@@ -147,11 +147,11 @@ struct ContactLawFunc {
     auto [contact, dn, n, contact_position] = detection_vertex_vertex_core(ri, rad_i, rj, rad_j);
     Vec3d fn = {0, 0, 0};
 
-    // === types
-    const int& t_i = cell_i[field::type][i.p_];
-    const int& t_j = cell_j[field::type][j.p_];
+    // === groups (for contact parameters)
+    const auto& t_i = cell_i[field::group][i.p_];
+    const auto& t_j = cell_j[field::group][j.p_];
 
-    // === Conctact Parameters
+    // === Contact Parameters
     const ContactParamsT& cp = cpa(t_i, t_j);
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
@@ -254,10 +254,10 @@ struct ContactLawDriverFunc {
     auto [contact, dn, n, contact_position] = detector_vertex_driver(driver, r, rad);
     Vec3d fn = null;
 
-    // === types
-    const auto& type = cell[field::type][i.p_];
+    // === group (for contact parameters)
+    const auto& type = cell[field::group][i.p_];
 
-    // === Conctact Parameters
+    // === Contact Parameters
     const ContactParamsT& cp = cpa(type, driver_idx);
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
@@ -352,10 +352,10 @@ struct ContactLawRShapeDriverFunc {
         detection(r_i, radius_i, driver.position(), homothety_d, sub_d, &shp_d, orient_d);
     Vec3d fn = {0, 0, 0};
 
-    // === types
-    const auto& type = cell[field::type][i.p_];
+    // === group (for contact parameters)
+    const auto& type = cell[field::group][i.p_];
 
-    // === Conctact Parameters
+    // === Contact Parameters
     const ContactParamsT& cp = cpa(type, driver_idx);
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 

@@ -70,6 +70,11 @@ inline void warning(const std::string& operator_name, const std::string& text) {
   onika::lout << yellow(full_text) << std::endl;
 }
 
+inline void debug(const std::string& operator_name, const std::string& text) {
+  std::string full_text = "[DEBUG, " + operator_name + "] " + text;
+  onika::ldbg << magenta(full_text) << std::endl;
+}
+
 inline void error(const std::string& operator_name, const std::string& text, bool stop_execution = true) {
   std::string full_text = "[ERROR, " + operator_name + "] " + text;
   onika::lout << red(full_text) << std::endl;

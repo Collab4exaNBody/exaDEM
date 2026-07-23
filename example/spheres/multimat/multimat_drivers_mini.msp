@@ -18,26 +18,27 @@ input_data:
   - set_fields:
      polyhedra: false
      type:           [ Sphere1, Sphere2 ]
+     group:          [       0,       1 ]
      radius:         [     0.5,    0.25 ]
      density:        [    0.02,    0.01 ]
      velocity:       [ [0,0,0], [0,0,0] ]
      sigma_velocity: [    0.01,    0.01 ]
   - multimat_contact_params:
-     mat1:      [ Sphere1, Sphere2, Sphere1 ]
-     mat2:      [ Sphere1, Sphere2, Sphere2 ]
-     kn:        [     100,    1000,     500 ]
-     kt:        [      80,     800,     400 ]
-     kr:        [     0.1,     0.1,     0.1 ]
-     mu:        [     0.6,     0.8,     0.4 ]
-     damprate:  [    0.99,    0.99,    0.99 ]
+     group1:    [   0,    1,    0 ]
+     group2:    [   0,    1,    1 ]
+     kn:        [ 100, 1000,  500 ]
+     kt:        [  80,  800,  400 ]
+     kr:        [ 0.1,  0.1,  0.1 ]
+     mu:        [ 0.6,  0.8,  0.4 ]
+     damprate:  [0.99, 0.99, 0.99 ]
   - drivers_contact_params:
-     mat:       [ Sphere1, Sphere2 ]
-     driver_id: [       0,       0 ]
-     kn:        [     100,    1000 ]
-     kt:        [      80,     800 ]
-     kr:        [     0.1,     0.1 ]
-     mu:        [     0.6,     0.8 ]
-     damprate:  [    0.99,    0.99 ]
+     group:     [   0,    1 ]
+     driver_id: [   0,    0 ]
+     kn:        [ 100, 1000 ]
+     kt:        [  80,  800 ]
+     kr:        [ 0.1,  0.1 ]
+     mu:        [ 0.6,  0.8 ]
+     damprate:  [0.99, 0.99 ]
      default_config: { kn: 500, kt: 400, kr: 0.1, mu: 0.5, damp_rate: 0.99 }
 
 setup_drivers:

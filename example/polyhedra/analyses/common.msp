@@ -20,6 +20,7 @@ input_data:
   - set_fields:
      polyhedra: true
      type:              [    Poly , Octahedron ]
+     group:             [       0 ,          0 ]
      velocity:          [ [0,0,0] ,    [0,0,0] ]
      sigma_velocity:    [   0.001 ,      0.001 ]
      random_quaternion: [    true ,       true ]
