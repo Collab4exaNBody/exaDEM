@@ -143,6 +143,7 @@ struct par_vtu_poly_helper {
   CellDataField<Vec3d> inertia{"inertia"};
   CellDataField<Mat3d> stress{"stress"};
   CellDataField<int32_t> cluster{"cluster"};
+  CellDataField<int32_t> group{"group"};
   CellDataField<int32_t> mpi_rank{"mpi_rank"};
 };
 
@@ -150,7 +151,7 @@ inline void build_buffer_vtu_polyhedron(const exanb::Vec3d& pos, const shape* sh
                                         uint64_t id, uint16_t type, double vx, double vy, double vz, double h,
                                         const exanb::Vec3d& vrot, const exanb::Vec3d& arot, double mass, double radius,
                                         const exanb::Vec3d& inertia, const exanb::Mat3d& stress, uint32_t cluster,
-                                        int mpi_rank, par_vtu_poly_helper& buffers) {
+                                        uint32_t group, int mpi_rank, par_vtu_poly_helper& buffers) {
   const int vertex_base = buffers.n_vertices;
   const int n_vertices = shp->get_number_of_vertices();
 
@@ -197,6 +198,7 @@ inline void build_buffer_vtu_polyhedron(const exanb::Vec3d& pos, const shape* sh
   buffers.inertia.append(inertia);
   buffers.stress.append(stress);
   buffers.cluster.append(static_cast<int32_t>(cluster));
+  buffers.group.append(static_cast<int32_t>(group));
   buffers.mpi_rank.append(static_cast<int32_t>(mpi_rank));
 
   buffers.n_cells += 1;
@@ -232,6 +234,7 @@ inline void write_vtu_polyhedron(const std::string& name, par_vtu_poly_helper& b
   write_cell_data_array(outFile, buffers.inertia);
   write_cell_data_array(outFile, buffers.stress);
   write_cell_data_array(outFile, buffers.cluster);
+  write_cell_data_array(outFile, buffers.group);
   write_cell_data_array(outFile, buffers.mpi_rank);
   outFile << "      </CellData>" << std::endl;
   outFile << "      <Cells>" << std::endl;
@@ -287,6 +290,7 @@ inline void write_pvtu_polyhedron(const std::string& filename, size_t number_of_
   write_pcell_data_array(outFile, buffers.inertia);
   write_pcell_data_array(outFile, buffers.stress);
   write_pcell_data_array(outFile, buffers.cluster);
+  write_pcell_data_array(outFile, buffers.group);
   write_pcell_data_array(outFile, buffers.mpi_rank);
   outFile << "    </PCellData>" << std::endl;
   outFile << "    <PCells>" << std::endl;
@@ -330,7 +334,7 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
 
       The "fields" slot is a list of regular expressions selecting which cell data arrays
       are projected. Available fields are: "id", "type", "velocity", "vrot",
-      "arot", "mass", "radius", "inertia", "stress", "cluster"
+      "arot", "mass", "radius", "inertia", "stress", "group", "cluster"
       (if the cluster field is present) and "mpi_rank" (if mpi_rank is enabled).
       By default (".*"), every available field is written, and the .pvtu file
       only declares the fields that are actually selected.
@@ -380,6 +384,7 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
     buffers.inertia.write = field_selector("inertia");
     buffers.stress.write = field_selector("stress");
     buffers.cluster.write = has_field_cluster && field_selector("cluster");
+    buffers.group.write = field_selector("group");
     buffers.mpi_rank.write = *mpi_rank && field_selector("mpi_rank");
 
     bool defbox = !domain->xform_is_identity();
@@ -413,6 +418,7 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
       auto* __restrict__ radius = cell[field::radius];
       auto* __restrict__ inertia = cell[field::inertia];
       auto* __restrict__ stress = cell[field::stress];
+      auto* __restrict__ group = cell[field::group];
       if constexpr (has_field_cluster) {
         cluster = cell[field::cluster];
       }
@@ -425,7 +431,7 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
           cj = cluster[j];
         }
         build_buffer_vtu_polyhedron(pos, shp, orient[j], id[j], type[j], vx[j], vy[j], vz[j], h[j], vrot[j], arot[j],
-                                    mass[j], radius[j], inertia[j], stress[j], cj, rank, buffers);
+                                    mass[j], radius[j], inertia[j], stress[j], cj, group[j], rank, buffers);
       }
     }
 
