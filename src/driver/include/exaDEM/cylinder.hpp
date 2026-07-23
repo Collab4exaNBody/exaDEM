@@ -93,7 +93,7 @@ struct Cylinder {
    */
   inline void initialize(Driver_params& motion) {
     const std::vector<MotionType> cylinder_valid_motion_types = {
-      STATIONARY};
+      STATIONARY,SHAKER};
 
     if (!is_valid_motion_type(motion_type_, cylinder_valid_motion_types)) {
       std::exit(EXIT_FAILURE);
@@ -151,14 +151,25 @@ struct Cylinder {
   }
 
   /**
-   * @brief Update position, velocity, and deformation (not implemented for cylinder).
-   * @details Cylinder kinematics are not yet implemented.
+   * @brief Update position, velocity.
+   * @details Move center in the shaker direction and update velocity.
    * @param motion Driver motion parameters.
    * @param time Current simulation time.
    * @param dt Time step.
    */
-  ONIKA_HOST_DEVICE_FUNC inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
-    /** not implemented */
+  inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
+        if (!is_stationary(motion_type_)) {
+
+      if (motion_type_ == MotionType::SHAKER) {
+        // Shaker motion: displacement is driven by the waveform signal difference
+        const double signal_next = motion.shaker_signal(time + dt);
+        const double signal_current = motion.shaker_signal(time);
+        const double displ = (signal_next - signal_current);
+        
+        fields_.center_ += displ * motion.shaker_direction();
+        fields_.vel_ = motion.shaker_velocity(time + dt);
+      }
+    }
   }
 
   /**
