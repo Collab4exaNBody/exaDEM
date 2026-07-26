@@ -18,6 +18,7 @@ input_data:
   - set_fields:
      polyhedra: true
      type:              [  alpha3 ]
+     group:             [       0 ]
      velocity:          [ [0,0,0] ]
      sigma_velocity:    [    0.01 ]
      random_quaternion: [    true ]

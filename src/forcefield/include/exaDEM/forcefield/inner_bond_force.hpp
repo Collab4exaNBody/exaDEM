@@ -19,6 +19,7 @@ under the License.
 #pragma once
 
 #include <onika/math/basic_types.h>
+
 #include <exaDEM/forcefield/common_kernels.hpp>
 #include <exaDEM/forcefield/inner_bond_parameters.hpp>
 
@@ -26,54 +27,46 @@ namespace exaDEM {
 ONIKA_HOST_DEVICE_FUNC
 inline void force_law_core(const double dn,
                            const Vec3d& n,  // -normal
-                           const double dn0,
-                           const double weight,
-                           const double dt,
-                           const InnerBondParams& ibp,
-                           const double meff,
-                           double& En,
-                           Vec3d& tds,  // cummalative tangential displacement
+                           const double dn0, const double weight, const double dt, const InnerBondParams& ibp,
+                           const double meff, double& En,
+                           Vec3d& tds,  // cumulative tangential displacement
                            double& Et,
                            Vec3d& ft,  // tangential force between particle i and j
                            const Vec3d& contact_position,
                            const Vec3d& pos_i,   // positions i
-                           const Vec3d& vel_i,   // positions i
+                           const Vec3d& vel_i,   // velocities i
                            Vec3d& f_i,           // forces i
                            const Vec3d& vrot_i,  // angular velocities i
                            const Vec3d& pos_j,   // positions j
-                           const Vec3d& vel_j,   // positions j
+                           const Vec3d& vel_j,   // velocities j
                            const Vec3d& vrot_j   // angular velocities j
 ) {
   // === Compute damping coefficient
   const double damp = compute_damp(ibp.damp_rate_, ibp.kn_, meff);
 
   // === Relative velocity (j relative to i)
-  auto vel = compute_relative_velocity(
-      contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
-
-  // compute relative velocity
+  auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
   const double vn = exanb::dot(vel, n);
 
-  // === Normal force (elatic contact + viscous damping)
-  double fne = -ibp.kn_ * weight * (dn - dn0);
-  double fnv = damp * vn;
-  double fn = fne + fnv;
+  // === Normal force (elastic contact + viscous damping)
+  const double delta = dn - dn0;
+  const double kn_w = ibp.kn_ * weight;
+  const double kt_w = ibp.kt_ * weight;
+  const double fne = -kn_w * delta;
+  const double fnv = damp * vn;
+  const double fn = fne + fnv;
   const Vec3d vfn = fn * n;  // vector fn
 
   // === Tangential force (friction)
   const Vec3d ds = compute_tangential_force(dt, vn, n, vel);
   tds += ds;
-  ft = weight * ibp.kt_ * tds;
+  ft = kt_w * tds;
 
   // === sum forces
   f_i = vfn + ft;
 
-  // === Compute energies
-  if (fne > 0) {
-    En = 0;  // Compression
-  } else {
-    En = 0.5 * weight * ibp.kn_ * (dn - dn0) * (dn - dn0);  // Tension
-  }
-  Et = 0.5 * weight * ibp.kt_ * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with  vt = (vel - (vn * n));
+  // === Compute energies (branchless to avoid warp divergence on GPU)
+  En = static_cast<double>(fne <= 0) * (0.5 * kn_w * delta * delta);  // 0 in compression, tension otherwise
+  Et = 0.5 * kt_w * dot(tds, tds);  // 0.5 * kt * norm2(vt * dt); with vt = (vel - (vn * n))
 }
 }  // namespace exaDEM

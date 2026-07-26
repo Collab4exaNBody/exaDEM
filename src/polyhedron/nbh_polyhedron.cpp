@@ -80,10 +80,10 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
     const size_t n_cells = g.number_of_cells();
     const IJK dims = g.dimension();
     auto& interactions = ges->m_data;
-    shapes& shps = *shapes_collection;
-    double rVerlet = *rcut_inc;
-    Mat3d xform = domain->xform();
-    bool is_xform = !domain->xform_is_identity();
+    const shapes& shps = *shapes_collection;
+    const double rVerlet = *rcut_inc;
+    const Mat3d xform = domain->xform();
+    const bool is_xform = !domain->xform_is_identity();
 
     assert(interactions.size() == n_cells);
 
@@ -246,25 +246,13 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                         const uint32_t type_nbh = cells[cell_b][field::type][p_b];
                                         const double h_nbh = cells[cell_b][field::homothety][p_b];
                                         const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
-                                        double rx_nbh = cells[cell_b][field::rx][p_b];
-                                        double ry_nbh = cells[cell_b][field::ry][p_b];
-                                        double rz_nbh = cells[cell_b][field::rz][p_b];
-                                        double rx = rx_a[p_a];
-                                        double ry = ry_a[p_a];
-                                        double rz = rz_a[p_a];
-                                        double hi = h_a[p_a];
+                                        Vec3d r_nbh = {cells[cell_b][field::rx][p_b], cells[cell_b][field::ry][p_b], cells[cell_b][field::rz][p_b]};
+                                        Vec3d r = {rx_a[p_a], ry_a[p_a], rz_a[p_a]};
+                                        const double hi = h_a[p_a];
 
                                         if (is_xform) {
-                                          Vec3d tmp = {rx_nbh, ry_nbh, rz_nbh};
-                                          tmp = xform * tmp;
-                                          rx_nbh = tmp.x;
-                                          ry_nbh = tmp.y;
-                                          rz_nbh = tmp.z;
-                                          tmp = {rx, ry, rz};
-                                          tmp = xform * tmp;
-                                          rx = tmp.x;
-                                          ry = tmp.y;
-                                          rz = tmp.z;
+                                          r = xform * r;
+                                          r_nbh = xform * r_nbh;
                                         }
 
                                         // prev
@@ -274,9 +262,8 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                         // Eliminate if two polyhedra are two far away if there is not intersection
                                         // between their OBBs.
                                         const Quaternion& orient = orient_a[p_a];
-                                        OBB obb_i = compute_obb(shp->obb_, Vec3d{rx, ry, rz}, orient, hi);
-                                        OBB obb_j = compute_obb(shp_nbh->obb_, Vec3d{rx_nbh, ry_nbh, rz_nbh},
-                                                                orient_nbh, h_nbh);
+                                        OBB obb_i = compute_obb(shp->obb_, r, orient, hi);
+                                        OBB obb_j = compute_obb(shp_nbh->obb_, r_nbh, orient_nbh, h_nbh);
 
                                         obb_i.enlarge(0.5 * rVerlet);
                                         obb_j.enlarge(0.5 * rVerlet);

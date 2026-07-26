@@ -6,6 +6,7 @@ includes:
 input_data:
   - particle_type:
       type: [ elastic ]
+      group: [       0 ]
   - read_xyz:
       file: particles.xyz
       bounds_mode: FILE
@@ -13,6 +14,7 @@ input_data:
   - set_fields:
      polyhedra: false
      type:    [ elastic ]
+     group:   [       0 ]
      radius:  [   0.001 ]
      density: [    2000 ]
 

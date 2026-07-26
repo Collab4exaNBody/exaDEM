@@ -30,6 +30,7 @@ input_data:
      sigma_velocity: [0.1]
      random_quaternion: [true]
      type: [Octahedron]
+     group: [         0]
      region: CYL1 
  
 setup_drivers:

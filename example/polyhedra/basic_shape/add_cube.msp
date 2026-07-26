@@ -26,6 +26,7 @@ input_data:
   - set_fields:
      polyhedra: true
      type:              [    cube ]
+     group:             [       0 ]
      random_quaternion: [    true ]
      sigma_velocity:    [     0.1 ]
      velocity:          [ [0,0,0] ]     

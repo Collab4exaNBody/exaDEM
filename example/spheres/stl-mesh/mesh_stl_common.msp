@@ -6,12 +6,14 @@ includes:
 reader1:
   - particle_type:
      type: [ SphereType1 ]
+     group: [           0 ]
   - read_xyz:
      file: particles.xyz
      bounds_mode: FILE
   - set_fields:
      polyhedra: false
      type:           [ SphereType1 ]
+     group:          [           0 ]
      radius:         [      0.0015 ]
      velocity:       [     [0,0,0] ]
      sigma_velocity: [       0.001 ]

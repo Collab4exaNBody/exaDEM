@@ -138,9 +138,11 @@ struct ContactLawFunc {
     const Vec3d& vrot_i = cell_i[field::vrot][pi.p_];
     const Vec3d& vrot_j = cell_j[field::vrot][pj.p_];
 
-    // === type
+    // === type (for shape lookup) and group (for contact parameters)
     const auto& type_i = cell_i[field::type][pi.p_];
     const auto& type_j = cell_j[field::type][pj.p_];
+    const auto& group_i = cell_i[field::group][pi.p_];
+    const auto& group_j = cell_j[field::group][pj.p_];
 
     // === vertex array
     const ParticleVertexView vertices_i = {pi.p_, gv[pi.cell_]};
@@ -161,7 +163,7 @@ struct ContactLawFunc {
     Vec3d fn = {0, 0, 0};
 
     // === Contact Force parameters
-    const auto& cp = cpa(type_i, type_j);
+    const auto& cp = cpa(group_i, group_j);
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
     /** if cohesive force */
@@ -244,6 +246,7 @@ struct ContactLawDriverFunc {
     TMPLD& driver = drvs.get_typed_driver<TMPLD>(driver_idx);
     auto& cell = cells[pi.cell_];
     const auto type = cell[field::type][pi.p_];
+    const auto group = cell[field::group][pi.p_];
     auto& shp = shps[type];
 
     const size_t p = pi.p_;
@@ -261,7 +264,7 @@ struct ContactLawDriverFunc {
     Vec3d fn = null;
 
     // === Contact Force Parameters
-    const auto& cp = cpa(type, driver_idx);
+    const auto& cp = cpa(group, driver_idx);
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
     /** if cohesive force */
@@ -344,8 +347,9 @@ struct ContactLawRShapeDriverFunc {
     const size_t sub_i = pi.sub_;
     const size_t sub_d = pd.sub_;
 
-    // get shapes
+    // get shapes (type) and contact parameters (group)
     const auto type = cell[field::type][pi.p_];
+    const auto group = cell[field::group][pi.p_];
     const auto& shp_i = shps[type];
     const auto& shp_d = driver.shp_;
 
@@ -367,7 +371,7 @@ struct ContactLawRShapeDriverFunc {
     Vec3d fn = null;
 
     // === Contact Force Parameters
-    const auto& cp = cpa(type, driver_idx);
+    const auto& cp = cpa(group, driver_idx);
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
     // === if cohesive force */

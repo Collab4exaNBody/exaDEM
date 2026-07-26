@@ -4,12 +4,14 @@ includes:
 input_data:
   - particle_type: 
      type: [ Sphere1 ]
+     group: [       0 ]
   - read_xyz:
      file: 735.xyz
      bounds_mode: FILE
   - set_fields:
      polyhedra: false
      type:           [ Sphere1 ]
+     group:          [       0 ]
      radius:         [     0.5 ]
      velocity:       [ [0,0,0] ]
      sigma_velocity: [     0.1 ]

@@ -77,12 +77,14 @@ class DumpReaderConfRockable : public OperatorNode {
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid, INPUT_OUTPUT);
   ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{" Dump file name to read."});
+  ADD_SLOT(int, max_warning_displayed, INPUT, 10, DocString{"Number of warnings displayed."});
   ADD_SLOT(ReadBoundsSelectionMode, bounds_mode, INPUT, ReadBoundsSelectionMode::COMPUTED_BOUNDS);
   ADD_SLOT(shapes, shapes_collection, OUTPUT, DocString{"Collection of shapes"});
   ADD_SLOT(Domain, domain, INPUT_OUTPUT);
   ADD_SLOT(AABB, bounds, INPUT, OPTIONAL, DocString{"This option overide the domain bounds."});
   ADD_SLOT(double, enlarge_bounds, INPUT, 0.0, DocString{"Define a layer around the volume size. Default size is 0."});
   ADD_SLOT(ParticleTypeMap, particle_type_map, OUTPUT);
+  ADD_SLOT(uint32_t, n_groups, OUTPUT, DocString{"Number of distinct groups (max group index + 1)"});
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
   ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
@@ -131,17 +133,11 @@ class DumpReaderConfRockable : public OperatorNode {
     } else {
       basename = file_name;
     }
-    lout << "======== " << basename << " ========" << std::endl;
+    lout << std::endl;
+    lout << "==================== " << basename << " =============" << std::endl;
     //-------------------------------------------------------------------------------------------
 
-    using ParticleTupleIO = decltype(grid->cells()[0][0]);  // onika::soatl::FieldTuple<field::_rx,
-                                                            // field::_ry, field::_rz, field::_id,
-                                                            // field::_vx, field::_vy, field::_vz,
-                                                            // field::_fx, field::_fy, field::_fz,
-                                                            // field::_vrot, field::_arot,
-                                                            // field::_orient, field::_type,
-                                                            // field::_inertia,  field::_mass,
-                                                            // field::_radius,  field::_homothety >;
+    using ParticleTupleIO = decltype(grid->cells()[0][0]);
     using ParticleTuple = decltype(grid->cells()[0][0]);
 
     static constexpr bool has_field_cluster = ParticleTuple::has_field(field::cluster);
@@ -160,6 +156,7 @@ class DumpReaderConfRockable : public OperatorNode {
     MPI_Comm_size(*mpi, &np);
 
     uint64_t n_particles = 0;
+    uint32_t max_group = 0;
     std::vector<ParticleTupleIO> particle_data;
 
     rockable::ConfReader manager;
@@ -169,7 +166,7 @@ class DumpReaderConfRockable : public OperatorNode {
     if (!file.is_open()) {
       color_log::error("read_conf_rockable", "File " + file_name + " not found !");
     }
-    manager.read_stream(file);
+    manager.read_stream(file, *max_warning_displayed);
     auto map_shift = scan_shape_position(manager.shapeFile);  // get "position" stored in shapes and shift
                                                               // particle positions.
 
@@ -229,6 +226,8 @@ class DumpReaderConfRockable : public OperatorNode {
 
         // shapes
         ptio[field::type] = rp.type;
+        ptio[field::group] = rp.group;
+        max_group = std::max(max_group, static_cast<uint32_t>(rp.group));
         const auto& shp = shps[ptio[field::type]];
         double d = manager.densities[ptio[field::type]];
         ptio[field::mass] = d * shp->get_volume(rp.homothety);
@@ -299,6 +298,10 @@ class DumpReaderConfRockable : public OperatorNode {
     MPI_Bcast(&(*domain), sizeof(Domain), MPI_CHARACTER, 0, *mpi);
     // assert(check_domain(*domain));
 
+    // send the max group index to all cores (only rank 0 has read the particles)
+    MPI_Bcast(&max_group, 1, MPI_UNSIGNED, 0, *mpi);
+    *n_groups = max_group + 1;
+
     grid->set_offset(IJK{0, 0, 0});
     grid->set_origin(domain->bounds().bmin);
     grid->set_cell_size(domain->cell_size());
@@ -327,6 +330,7 @@ class DumpReaderConfRockable : public OperatorNode {
         ldbg << "ID: " << t[field::id] << " arot " << "(" << t[field::arot].x << "," << t[field::arot].y << ","
              << t[field::arot].z << ")" << std::endl;
         ldbg << "ID: " << t[field::id] << " h " << t[field::homothety] << std::endl;
+        ldbg << "ID: " << t[field::id] << " group " << t[field::group] << std::endl;
         ldbg << "ID: " << t[field::id] << " radius " << t[field::radius] << std::endl;
         ldbg << "ID: " << t[field::id] << " mass " << t[field::mass] << std::endl;
         ldbg << "ID: " << t[field::id] << " intertia " << t[field::inertia] << std::endl;
@@ -334,7 +338,7 @@ class DumpReaderConfRockable : public OperatorNode {
       }
     }
 
-    lout << "============================" << std::endl;
+    lout << "=====================================================" << std::endl;
     grid->rebuild_particle_offsets();
     assert(check_particles_inside_cell(*grid));
 

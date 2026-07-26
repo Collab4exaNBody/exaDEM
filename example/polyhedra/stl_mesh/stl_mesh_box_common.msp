@@ -14,6 +14,7 @@ define_octahedra:
   - set_fields:
      polyhedra: true
      type:              [ Octahedron ]
+     group:             [          0 ]
      random_quaternion: [       true ]
      velocity:          [    [0,0,0] ]
      sigma_velocity:    [        0.1 ]
@@ -29,6 +30,7 @@ define_hexapods:
   - set_fields:
      polyhedra: true
      type:              [  alpha3 ]
+     group:             [       0 ]
      random_quaternion: [    true ]
      velocity:          [ [0,0,0] ]
      sigma_velocity:    [     0.1 ]
@@ -47,6 +49,7 @@ define_mixte:
   - set_fields:
      polyhedra: true
      type:              [ Octahedron ,  alpha3 ]
+     group:             [          0 ,       0 ]
      random_quaternion: [       true ,    true ]
      velocity:          [    [0,0,0] , [0,0,0] ]
      sigma_velocity:    [        0.1 ,     0.1 ]

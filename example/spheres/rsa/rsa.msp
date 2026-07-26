@@ -6,6 +6,7 @@ includes:
 input_data:
   - particle_type:
      type: [ elastic_ball ]
+     group: [            0 ]
   - init_rsa:
      type: 0
      bounds: [ [ 10 , 10 , 10 ] , [ 20, 20, 20] ]
@@ -13,6 +14,7 @@ input_data:
   - set_fields:
      polyhedra: false
      type:           [ elastic_ball ]
+     group:          [            0 ]
      radius:         [          0.5 ] #we need to re-specify here, otherwise the default value is 1.0
      density:        [         0.02 ]
      velocity:       [      [0,0,0] ]

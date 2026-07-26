@@ -1,6 +1,6 @@
 input_data:
   - init_rcb_grid
-  - read_dump_particle_interaction:
+  - read_dump_particle_interaction_v122:
      filename: regression_test_restart_file.dump
      enable_extra_data: false
 

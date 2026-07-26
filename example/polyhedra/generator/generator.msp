@@ -18,6 +18,7 @@ init_new_particles:
   - set_fields:
      polyhedra: true
      type:             [ Octahedron ]
+     group:            [          0 ]
      random_quaterion: [       true ]
      region: AREA
 

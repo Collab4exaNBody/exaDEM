@@ -23,6 +23,7 @@ input_data:
   - init_rcb_grid
   - particle_type:
      type: [ Sphere0 , Sphere1 , Sphere2 ]
+     group: [       0 ,       0 ,       0 ]
   - rsa_vol_frac:
       bounds: [[-20,-20,2.5],[20,20,10]]
       params: [[0.5, 0.08, Sphere2], [0.35, 0.08, Sphere1], [0.2, 0.08, Sphere0]]
@@ -30,6 +31,7 @@ input_data:
   - set_fields:
      polyhedra: false
      type:              [ Sphere2 , Sphere1 , Sphere0 ]
+     group:             [       0 ,       0 ,       0 ]
      radius:            [     0.5 ,    0.35 ,     0.2 ]
      velocity:          [ [0,0,0] , [0,0,0] , [0,0,0] ]
      sigma_velocity:    [   0.001 ,   0.001 ,   0.001 ]

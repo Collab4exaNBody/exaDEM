@@ -6,11 +6,13 @@ includes:
 common_define_particles:
   - particle_type:
      type: [ Sphere1 ]
+     group: [       0 ]
 
 common_setup_particles:
   - set_fields:
      polyhedra: false
      type:           [ Sphere1 ]
+     group:          [       0 ]
      radius:         [     0.5 ]
      density:        [    0.02 ]
      velocity:       [ [0,0,0] ]

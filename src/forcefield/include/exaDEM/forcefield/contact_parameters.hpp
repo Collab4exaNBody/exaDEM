@@ -69,6 +69,7 @@ inline void display_end_table();
  */
 template <>
 inline void display_header<ContactParams>() {
+  lout << std::endl;
   lout << "============================================================================================================"
           "==================="
        << std::endl;

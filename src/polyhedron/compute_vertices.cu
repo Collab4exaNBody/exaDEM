@@ -102,7 +102,7 @@ class PolyhedraComputeVertices : public OperatorNode {
       PolyhedraComputeVerticesFunctor<true> func{shps, vertex_fields.data(), domain->xform()};
       compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), ccpo);
     } else {
-      PolyhedraComputeVerticesFunctor<false> func{shps, vertex_fields.data(), domain->xform()};
+      PolyhedraComputeVerticesFunctor<false> func{shps, vertex_fields.data()};
       compute_cell_particles(*grid, true, func, compute_field_set, parallel_execution_context(), ccpo);
     }
   }

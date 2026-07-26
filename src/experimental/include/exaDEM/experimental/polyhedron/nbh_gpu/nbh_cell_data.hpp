@@ -11,6 +11,8 @@ static inline onikaError_t ONIKA_PREFETCH(const void* ptr, size_t size, int devi
 #else
   return cudaMemPrefetchAsync(ptr, size, device, stream);
 #endif
+#else
+  return onikaError_t(0);
 #endif
 }
 

@@ -28,25 +28,19 @@ input_data:
   - set_fields:
      polyhedra: true
      type:              [    pale ]
+     group:             [       0 ]
      velocity:          [ [0,0,0] ]
      sigma_velocity:    [     0.0 ]
      density:           [       1 ] # gramme par millimètre cube
   - multimat_contact_params:
-     mat1:      [    pale ]
-     mat2:      [    pale ]
+     group1:    [       0 ]
+     group2:    [       0 ]
      kn:        [    5000 ] # Newton / millimètre
      kt:        [    4000 ]
      kr:        [     0.0 ]
      mu:        [     0.1 ]
      damprate:  [    0.99 ]
   - drivers_contact_params:
-     mat:       [    pale ]
-     driver_id: [       0 ]
-     kn:        [    5000 ]
-     kt:        [    4000 ]
-     kr:        [     0.0 ]
-     mu:        [     0.1 ]
-     damprate:  [    0.99 ]
      default_config: { kn: 5000, kt: 4000, kr: 0.0, mu: 0.1, damp_rate: 0.99 }
 
 domain:

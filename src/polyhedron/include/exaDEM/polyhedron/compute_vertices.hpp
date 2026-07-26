@@ -17,28 +17,47 @@ specific language governing permissions and limitations
 under the License.
 */
 #pragma once
-#include <onika/math/basic_types.h>
 #include <exanb/compute/compute_cell_particles.h>
+#include <onika/math/basic_types.h>
+
 #include <cassert>
 
 namespace exaDEM {
 template <bool def_box>
-struct PolyhedraComputeVerticesFunctor {
-  const shape* shps;
-  VertexField* pcvf;
-  const Mat3d xform;
+struct PolyhedraComputeVerticesFunctor;
+
+template <>
+struct PolyhedraComputeVerticesFunctor<true> {
+  const shape* __restrict__ shps;
+  VertexField* __restrict__ pcvf;
+  Mat3d xform;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(const size_t cell_idx, const size_t p, const uint32_t type,
                                                 const double& rx, const double& ry, const double& rz, const double& h,
                                                 const exanb::Quaternion& orient) const {
-    // get vertices
     ParticleVertexView vertices = {p, pcvf[cell_idx]};
-
-    // h will be used in a next development
     const auto& shp = shps[type];
-    const unsigned int nv = shp.get_number_of_vertices();
-    exanb::Vec3d position = {rx, ry, rz};
-    if constexpr (def_box) position = xform * position;
-    for (size_t i = 0; i < nv; i++) {
+    const int nv = shp.get_number_of_vertices();
+    const Vec3d position = xform * Vec3d{rx, ry, rz};
+    for (int i = 0; i < nv; i++) {
+      Vec3d vertex = shp.get_vertex(i, position, h, orient);
+      vertices.set(vertex, i);
+    }
+  }
+};
+
+// économiser les registres de xform
+template <>
+struct PolyhedraComputeVerticesFunctor<false> {
+  const shape* __restrict__ shps;
+  VertexField* __restrict__ pcvf;
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(const size_t cell_idx, const size_t p, const uint32_t type,
+                                                const double& rx, const double& ry, const double& rz, const double& h,
+                                                const exanb::Quaternion& orient) const {
+    ParticleVertexView vertices = {p, pcvf[cell_idx]};
+    const auto& shp = shps[type];
+    const int nv = shp.get_number_of_vertices();
+    const Vec3d position = {rx, ry, rz};
+    for (int i = 0; i < nv; i++) {
       Vec3d vertex = shp.get_vertex(i, position, h, orient);
       vertices.set(vertex, i);
     }

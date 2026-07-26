@@ -38,7 +38,10 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
-Vec3d normalize(Vec3d&& in) { return in / exanb::norm(in); }
+Vec3d normalize(Vec3d&& in) {
+  const double inv_norm = 1.0 / exanb::norm(in);
+  return in * inv_norm;
+}
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_cluster>>
 class StickPolyhedraOperator : public OperatorNode {
@@ -100,6 +103,10 @@ class StickPolyhedraOperator : public OperatorNode {
       // local storage per thread
       InteractionManager manager;
       std::vector<PlaceholderInteraction> local;
+      // per-pair caches for particle j's face normals/areas, reused to avoid
+      // recomputing them (sqrt included) once per (i, j) combination
+      std::vector<Vec3d> nj_cache;
+      std::vector<double> areaj_cache;
 #pragma omp for schedule(dynamic)
       for (size_t ci = 0; ci < cell_size; ci++) {
         size_t cell_i = cell_ptr[ci];
@@ -135,6 +142,8 @@ class StickPolyhedraOperator : public OperatorNode {
         ONIKA_ASSUME_ALIGNED(rz_i);
         const auto* __restrict__ t_i = cells[cell_i][field::type];
         ONIKA_ASSUME_ALIGNED(t_i);
+        const auto* __restrict__ g_i = cells[cell_i][field::group];
+        ONIKA_ASSUME_ALIGNED(g_i);
         const auto* __restrict__ h_i = cells[cell_i][field::homothety];
         ONIKA_ASSUME_ALIGNED(t_i);
         const auto* __restrict__ cluster_i = cells[cell_i][field::cluster];
@@ -158,8 +167,8 @@ class StickPolyhedraOperator : public OperatorNode {
         apply_cell_particle_neighbors(
             *grid, *chunk_neighbors, cell_i, loc_i, std::false_type() /* not symetric */,
             // capture
-            [&g, &vertex_fields, &cells, cell_i, &item, &shps, dn_crit, id_i, rx_i, ry_i, rz_i, t_i, h_i, cluster_i,
-             &vertex_cell_i, &add_contact, xform, is_xform, &manager, &local,
+            [&g, &vertex_fields, &cells, cell_i, &item, &shps, dn_crit, id_i, rx_i, ry_i, rz_i, t_i, g_i, h_i,
+             cluster_i, &vertex_cell_i, &add_contact, xform, is_xform, &manager, &local, &nj_cache, &areaj_cache,
              &ibpa](size_t p_i, size_t cell_j, unsigned int p_j, size_t p_j_index) {
               double clusterj = cells[cell_j][field::cluster][p_j];
               if (clusterj != cluster_i[p_i]) {
@@ -182,6 +191,7 @@ class StickPolyhedraOperator : public OperatorNode {
               ParticleVertexView vertices_j = {p_j, vertex_cell_j};
               auto& cellj = cells[cell_j];
               const uint32_t typej = cellj[field::type][p_j];
+              const uint32_t groupj = cellj[field::group][p_j];
               double rxj = cellj[field::rx][p_j];
               double ryj = cellj[field::ry][p_j];
               double rzj = cellj[field::rz][p_j];
@@ -211,7 +221,7 @@ class StickPolyhedraOperator : public OperatorNode {
               const shape* shpj = shps[typej];
 
               // get stick law force parameters to define the interface fracture criterion
-              const InnerBondParams& ibp = ibpa(t_i[p_i], typej);
+              const InnerBondParams& ibp = ibpa(g_i[p_i], groupj);
 
               // Add interactions
               item.pair_.type_ = InteractionTypeId::InnerBond;
@@ -232,6 +242,23 @@ class StickPolyhedraOperator : public OperatorNode {
 
               bool found = false;
 
+              // Precompute face normals/areas of particle j once: they don't
+              // depend on i, so computing them inside the i-loop below would
+              // redo the same cross-product + sqrt up to nfi times each.
+              nj_cache.resize(nfj);
+              areaj_cache.resize(nfj);
+              for (int j = 0; j < nfj; j++) {
+                areaj_cache[j] = shpj->get_face_area(j);
+                auto [vj, size_j] = shpj->get_face(j);
+                if (size_j < 3) {
+                  continue;
+                }
+                Vec3d vj0 = vertices_j[vj[0]];
+                Vec3d vj1 = vertices_j[vj[1]];
+                Vec3d vj2 = vertices_j[vj[2]];
+                nj_cache[j] = normalize(exanb::cross(vj1 - vj0, vj2 - vj0));
+              }
+
               for (int i = 0; i < nfi && !found; i++) {
                 auto [vi, size_i] = shpi->get_face(i);
                 if (size_i < 3) {
@@ -242,14 +269,11 @@ class StickPolyhedraOperator : public OperatorNode {
                 Vec3d vi2 = vertices_i[vi[2]];
 
                 Vec3d ni = normalize(exanb::cross(vi1 - vi0, vi2 - vi0));
+                const double area_i = shpi->get_face_area(i);
 
                 for (int j = 0; j < nfj && !found; j++) {
                   auto [vj, size_j] = shpj->get_face(j);
 
-                  double surface_ratio = shpi->get_face_area(i) / shpj->get_face_area(j);
-                  if (surface_ratio > 1.01 || surface_ratio < 0.99) {
-                    continue;
-                  }
                   if (size_j < 3) {
                     continue;
                   }
@@ -257,11 +281,12 @@ class StickPolyhedraOperator : public OperatorNode {
                     continue;
                   }
 
-                  Vec3d vj0 = vertices_j[vj[0]];
-                  Vec3d vj1 = vertices_j[vj[1]];
-                  Vec3d vj2 = vertices_j[vj[2]];
+                  double surface_ratio = area_i / areaj_cache[j];
+                  if (surface_ratio > 1.01 || surface_ratio < 0.99) {
+                    continue;
+                  }
 
-                  Vec3d nj = normalize(exanb::cross(vj1 - vj0, vj2 - vj0));
+                  const Vec3d& nj = nj_cache[j];
                   Vec3d nij = exanb::cross(ni, nj);
                   double dotij = exanb::norm(nij);
 

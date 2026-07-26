@@ -11,6 +11,7 @@ input_data:
   - init_rcb_grid
   - particle_type:
      type: [  Sphere1,  Sphere2, Sphere3, Sphere4 ]
+     group: [        0,        0,       0,       0 ]
   - lattice:
      structure: FCC
      types: [ Sphere1,  Sphere2, Sphere3, Sphere4 ]
@@ -19,6 +20,7 @@ input_data:
   - set_fields:
      polyhedra: false
      type:           [ Sphere1, Sphere2, Sphere3, Sphere4 ]
+     group:          [       0,       0,       0,       0 ]
      radius:         [     1.0,     0.5,     0.8,     0.6 ]
      density:        [    0.02,    0.04,    0.03,    0.35 ]
      velocity:       [ [0,0,0], [0,0,0], [0,0,0], [0,0,0] ]

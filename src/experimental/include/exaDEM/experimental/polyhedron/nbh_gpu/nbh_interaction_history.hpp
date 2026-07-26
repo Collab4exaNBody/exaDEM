@@ -43,10 +43,6 @@ void setup_history_clean_ges(TMPLC& cells, size_t* idxs, size_t ncells, GridCell
     size_t cell_idx = idxs[i];
     sum += ges.m_data[cell_idx].m_data.size();
     history.size_[i] = ges.m_data[cell_idx].m_data.size();
-    /*
-    for (size_t j = 0 ; j < ges.m_data[idxs[i]].m_data.size() ; j++) {
-      ges.m_data[idxs[i]].m_data[j].print();
-    }*/
   }
 
   history.start_[0] = 0;

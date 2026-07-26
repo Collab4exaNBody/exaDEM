@@ -104,8 +104,8 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
       }
       shp.compute_offset_faces();
     } else if (key == "na") {
-      color_log::warning("read_shape", "na is no longer used; face areas are now computed.");
-    } else if (key == ">") {
+      color_log::debug("read_shape", "na is no longer used; face areas are now computed.");
+    } else if (key == ">") {  // close the shape
       shp.obb_ = build_obb_from_shape(shp);
       shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
       shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});

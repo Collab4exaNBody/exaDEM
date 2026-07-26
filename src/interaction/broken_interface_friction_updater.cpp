@@ -68,8 +68,8 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
       // If the interface is broken, we need to update the friction of the interactions and break them
       if (interfaces.break_interface_[i] == true) {
         auto [offset, size] = interfaces.data_[i];
-        auto type_a = cells[data_wrapper.cell_i[offset]][field::type][data_wrapper.p_i[offset]];
-        auto type_b = cells[data_wrapper.cell_j[offset]][field::type][data_wrapper.p_j[offset]];
+        auto type_a = cells[data_wrapper.cell_i[offset]][field::group][data_wrapper.p_i[offset]];
+        auto type_b = cells[data_wrapper.cell_j[offset]][field::group][data_wrapper.p_j[offset]];
 
         for (size_t j = 0; j < size; j++) {
           size_t idx = j + offset;

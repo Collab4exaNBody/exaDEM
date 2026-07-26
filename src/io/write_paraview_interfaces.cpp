@@ -117,9 +117,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
         vertices[j - interface.loc_] = shp->get_vertex(loc.sub_, r, h, quat);
         buffers.ids_ << i << " ";
         buffers.connectivities_ << buffers.n_vertices_++ << " ";
-        buffers.tds_ << interaction.tds_.x << " "
-                    << interaction.tds_.y << " "
-                    << interaction.tds_.z << " ";
+        buffers.tds_ << interaction.tds_.x << " " << interaction.tds_.y << " " << interaction.tds_.z << " ";
         buffers.et_ << interaction.et_ << " ";
         buffers.en_ << interaction.en_ << " ";
         En += interaction.en_;
@@ -131,7 +129,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
       }
 
       // All interactions composing the interface share the same criterion.
-      double E;
+      double E = 0;
       if (criterion.mode_ == RuptureMode::EnergyMixedMode) {
         E = (En + Et) / criterion.energy_criterion();
       } else if (criterion.mode_ == RuptureMode::EnergySeparateMode) {
