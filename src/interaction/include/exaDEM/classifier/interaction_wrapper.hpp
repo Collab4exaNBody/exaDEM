@@ -24,11 +24,7 @@ under the License.
 #include <type_traits>
 
 namespace exaDEM {
-// Same bookkeeping fields as ClassifierContainer<IT>'s `bk_` (EXADEM_INTERACTION_COMMON_FIELDS,
-// declared in classifier_container.hpp), and as InteractionWrapper<IT>'s `bk_` below. Wraps any
-// ClassifierContainer<IT> generically (it never touches physics fields, so it doesn't need to be
-// specialized per IT). Storage is onika::cuda::span<T>, accessed via operator[](attr::NAME) --
-// see interaction_decoration.hpp for how NEW_TAG/SHARED_TAG and the `bk_` convention work.
+
 struct InterationPairWrapper {
   template <typename T>
   using VectorT = onika::cuda::span<T>;

@@ -87,8 +87,8 @@ struct ClassifierContainer<InteractionType::ParticleParticle> {
 
   template <typename Func>
   void apply_on_fields(Func& func) {
-    apply_on_flat_tuple(func, bk_);
-    apply_on_flat_tuple(func, fm_);
+    cpu_apply_on_flat_tuple(func, bk_);
+    cpu_apply_on_flat_tuple(func, fm_);
   }
 
   struct ClearFunctor {
@@ -256,8 +256,8 @@ struct ClassifierContainer<InteractionType::ParticleDriver> {
 
   template <typename Func>
   void apply_on_fields(Func& func) {
-    apply_on_flat_tuple(func, bk_);
-    apply_on_flat_tuple(func, fm_);
+    cpu_apply_on_flat_tuple(func, bk_);
+    cpu_apply_on_flat_tuple(func, fm_);
   }
 
   struct ClearFunctor {
@@ -426,8 +426,8 @@ struct ClassifierContainer<InteractionType::InnerBond> {
 
   template <typename Func>
   void apply_on_fields(Func& func) {
-    apply_on_flat_tuple(func, bk_);
-    apply_on_flat_tuple(func, fm_);
+    cpu_apply_on_flat_tuple(func, bk_);
+    cpu_apply_on_flat_tuple(func, fm_);
   }
 
   struct ClearFunctor {

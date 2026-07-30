@@ -52,27 +52,42 @@ ONIKA_HOST_DEVICE_FUNC inline decltype(auto) get_nth_any(TupleT& t) {
 
 /// @brief Implementation detail of apply_on_flat_tuple(), expanding the index pack.
 template <typename Func, typename TupleT, size_t... Is>
-inline void apply_on_flat_tuple_impl(Func& func, TupleT& t, std::index_sequence<Is...>) {
+ONIKA_HOST_DEVICE_FUNC inline void apply_on_flat_tuple_impl(Func& func, TupleT& t, std::index_sequence<Is...>) {
+  (func(get_nth_any<Is>(t)), ...);
+}
+
+/// @brief Host-only twin of apply_on_flat_tuple_impl(), for functors that aren't device-callable
+/// (e.g. ClearFunctor/ResizeFunctor, which call std::vector::clear()/resize()).
+template <typename Func, typename TupleT, size_t... Is>
+inline void cpu_apply_on_flat_tuple_impl(Func& func, TupleT& t, std::index_sequence<Is...>) {
   (func(get_nth_any<Is>(t)), ...);
 }
 
 /// @brief Implementation detail of zip_apply_on_flat_tuple(), expanding the index pack.
 template <typename Func, typename TupleA, typename TupleB, size_t... Is>
-inline void zip_apply_on_flat_tuple_impl(Func& func, TupleA& a, TupleB& b, std::index_sequence<Is...>) {
+ONIKA_HOST_DEVICE_FUNC inline void zip_apply_on_flat_tuple_impl(Func& func, TupleA& a, TupleB& b,
+                                                                std::index_sequence<Is...>) {
   (func(get_nth_any<Is>(a), get_nth_any<Is>(b)), ...);
 }
 }  // namespace interaction_field_details
 
 /// @brief Applies func(element) to every element of a FlatTuple, in order.
 template <typename Func, typename TupleT>
-inline void apply_on_flat_tuple(Func& func, TupleT& t) {
+ONIKA_HOST_DEVICE_FUNC inline void apply_on_flat_tuple(Func& func, TupleT& t) {
   interaction_field_details::apply_on_flat_tuple_impl(func, t, std::make_index_sequence<TupleT::size()>{});
+}
+
+/// @brief Host-only twin of apply_on_flat_tuple(), for functors that aren't device-callable (see
+/// cpu_apply_on_flat_tuple_impl()).
+template <typename Func, typename TupleT>
+inline void cpu_apply_on_flat_tuple(Func& func, TupleT& t) {
+  interaction_field_details::cpu_apply_on_flat_tuple_impl(func, t, std::make_index_sequence<TupleT::size()>{});
 }
 
 /// @brief Applies func(a_element, b_element) position-by-position over two FlatTuples built
 /// from the same field list (hence the same size and field order).
 template <typename Func, typename TupleA, typename TupleB>
-inline void zip_apply_on_flat_tuple(Func& func, TupleA& a, TupleB& b) {
+ONIKA_HOST_DEVICE_FUNC inline void zip_apply_on_flat_tuple(Func& func, TupleA& a, TupleB& b) {
   static_assert(TupleA::size() == TupleB::size(), "zip_apply_on_flat_tuple: mismatched tuple sizes");
   interaction_field_details::zip_apply_on_flat_tuple_impl(func, a, b, std::make_index_sequence<TupleA::size()>{});
 }
