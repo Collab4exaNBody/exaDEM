@@ -21,9 +21,26 @@ under the License.
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_stream.h>
 
+#include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/interaction/interaction_decoration.hpp>
 #include <exaDEM/interaction/interaction_pair.hpp>
 #include <exaDEM/interface/rupture_criterion.hpp>
 #include <iostream>
+
+// Single source of truth for InnerBondInteraction's per-interaction fields.
+// 'friction' reuses the tag already declared (NEW_TAG) by Interaction in interaction.hpp,
+// hence SHARED_TAG here; it must keep the same tuple index (0) as there.
+#define EXADEM_INNER_BOND_FIELDS(X)         \
+  X(exanb::Vec3d, friction, 0, SHARED_TAG)  \
+  X(double, en, 1, NEW_TAG)                 \
+  X(exanb::Vec3d, tds, 2, NEW_TAG)          \
+  X(double, et, 3, NEW_TAG)                 \
+  X(double, dn0, 4, NEW_TAG)                \
+  X(double, weight, 5, NEW_TAG)             \
+  X(RuptureCriteria, criterion, 6, NEW_TAG) \
+  X(uint8_t, unbroken, 7, NEW_TAG)
+
+EXADEM_INTERACTION_FIELD_TAGS(EXADEM_INNER_BOND_FIELDS)
 
 namespace exaDEM {
 /**
@@ -33,17 +50,22 @@ struct InnerBondInteraction {
   InteractionPair pair_; /**< The InteractionPair structure containing information about the interacting particles and
                            the type of interaction. */
 
-  // specialized members
-  exanb::Vec3d friction_ = {0, 0, 0}; /**< Friction vector associated with the interaction. */
-  double en_;                         /**< Normal energy associated with the interaction. */
-  exanb::Vec3d tds_;                  /**< Tangential displacement vector associated with the interaction. */
-  double et_;                         /**< Tangential energy associated with the interaction. */
-  double dn0_;                        /**< Initial normal overlap associated with the interaction. */
-  double weight_ = 1.0; /**< Weight associated with the interaction, used for scaling forces and moments. */
-  RuptureCriteria
-      criterion_; /**< Criterion value associated with the interaction, used for determining bond breakage. */
+  // specialized members, accessed through operator[] with the tags declared above, e.g.
+  // It[attr::friction], It[attr::en], It[attr::tds], It[attr::et], It[attr::dn0],
+  // It[attr::weight], It[attr::criterion], It[attr::unbroken]
+  EXADEM_INTERACTION_TUPLE_TYPE(EXADEM_INNER_BOND_FIELDS)
+  fm_ = {
+      {0, 0, 0},  // friction
+      0.0,        // en
+      {0, 0, 0},  // tds
+      0.0,        // et
+      0.0,        // dn0
+      1.0,        // weight: used for scaling forces and moments.
+      {},         // criterion: used for determining bond breakage.
+      true        // unbroken: whether the bond is unbroken (true) or broken (false).
+  };
 
-  uint8_t unbroken_ = true; /**< Flag indicating whether the bond is unbroken (true) or broken (false). */
+  EXADEM_INTERACTION_FIELD_ACCESSOR(EXADEM_INNER_BOND_FIELDS)
 
   /** @brief Get the first particle location.
    * [return] Reference to the first particle location.
@@ -78,12 +100,12 @@ struct InnerBondInteraction {
    */
   ONIKA_HOST_DEVICE_FUNC void reset() {
     constexpr exanb::Vec3d null = {0, 0, 0};
-    friction_ = null;
-    dn0_ = 0;
-    en_ = 0;
-    tds_ = exanb::Vec3d{0, 0, 0};
-    et_ = 0;
-    unbroken_ = true;
+    (*this)[attr::friction] = null;
+    (*this)[attr::dn0] = 0;
+    (*this)[attr::en] = 0;
+    (*this)[attr::tds] = null;
+    (*this)[attr::et] = 0;
+    (*this)[attr::unbroken] = true;
     // weight and criteria are not reset
   }
 
@@ -100,12 +122,12 @@ struct InnerBondInteraction {
   /** @brief Defines whether an interaction will be reconstructed or not.
    * [return] True if the interaction is persistent, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool persistent() { return unbroken_; }
+  ONIKA_HOST_DEVICE_FUNC bool persistent() { return (*this)[attr::unbroken]; }
 
   /** @brief Defines whether an interaction will be reconstructed or not.
    * [return] True if the interaction is persistent, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool persistent() const { return unbroken_; }
+  ONIKA_HOST_DEVICE_FUNC bool persistent() const { return (*this)[attr::unbroken]; }
 
   /** @brief Defines whether to skip other interactions.
    * [return] True.
@@ -117,8 +139,10 @@ struct InnerBondInteraction {
    */
   void print() {
     pair_.print();
-    std::cout << "Friction: " << friction_ << ", en: " << en_ << ", tds: " << tds_ << ", et: " << et_ << ", dn0: " << dn0_
-              << ", weight: " << weight_ << ", criterion: " << criterion_ << ")" << std::endl;
+    std::cout << "Friction: " << (*this)[attr::friction] << ", en: " << (*this)[attr::en]
+              << ", tds: " << (*this)[attr::tds] << ", et: " << (*this)[attr::et] << ", dn0: " << (*this)[attr::dn0]
+              << ", weight: " << (*this)[attr::weight] << ", criterion: " << (*this)[attr::criterion] << ")"
+              << std::endl;
   }
 
   /**
@@ -126,24 +150,17 @@ struct InnerBondInteraction {
    */
   void print() const {
     pair_.print();
-    std::cout << "Friction: " << friction_ << ", en: " << en_ << ", tds: " << tds_ << ", et: " << et_ << ", dn0: " << dn0_
-              << ", weight: " << weight_ << ", criterion: " << criterion_ << ")" << std::endl;
+    std::cout << "Friction: " << (*this)[attr::friction] << ", en: " << (*this)[attr::en]
+              << ", tds: " << (*this)[attr::tds] << ", et: " << (*this)[attr::et] << ", dn0: " << (*this)[attr::dn0]
+              << ", weight: " << (*this)[attr::weight] << ", criterion: " << (*this)[attr::criterion] << ")"
+              << std::endl;
   }
 
   /** @brief Updates the interaction with values from another interaction.
    * @param I The interaction to update from.
    * [return] None.
    */
-  ONIKA_HOST_DEVICE_FUNC void update(InnerBondInteraction& I) {
-    this->friction_ = I.friction_;
-    this->en_ = I.en_;
-    this->tds_ = I.tds_;
-    this->et_ = I.et_;
-    this->dn0_ = I.dn0_;
-    this->weight_ = I.weight_;
-    this->criterion_ = I.criterion_;
-    this->unbroken_ = I.unbroken_;
-  }
+  ONIKA_HOST_DEVICE_FUNC void update(InnerBondInteraction& I) { this->fm_ = I.fm_; }
 
   /** @brief Checks if two interactions are equal.
    * @param I The interaction to compare with.
@@ -183,12 +200,12 @@ struct InnerBondInteraction {
  * @note Assumes that the interaction is already broken (unbroken == false).
  */
 ONIKA_HOST_DEVICE_FUNC inline Interaction broke_interaction(const InnerBondInteraction& I) {
-  assert(I.unbroken_ == false);
+  assert(I[attr::unbroken] == false);
   Interaction res;
   res.pair_ = I.pair_;
   res.pair_.type_ = InteractionTypeId::VertexVertex;
-  res.friction_ = I.friction_;
-  res.moment_ = exanb::Vec3d{0, 0, 0};
+  res[attr::friction] = I[attr::friction];
+  res[attr::moment] = exanb::Vec3d{0, 0, 0};
   return res;
 }
 

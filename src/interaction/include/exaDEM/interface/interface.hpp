@@ -80,12 +80,12 @@ inline bool check_interface_consistency(InterfaceBuildManager& interfaces,
   for (size_t i = 0; i < interfaces.data_.size(); i++) {
     auto [loc, size] = interfaces.data_[i];
 
-    uint64_t id_i = interactions.particle_id_i(loc);
-    uint64_t id_j = interactions.particle_id_j(loc);
+    uint64_t id_i = interactions[attr::id_i][loc];
+    uint64_t id_j = interactions[attr::id_j][loc];
 
     assert(loc + size <= interactions.size());
     for (size_t next = loc + 1; next < loc + size; next++) {
-      if (id_i != interactions.particle_id_i(next) || id_j != interactions.particle_id_j(next)) {
+      if (id_i != interactions[attr::id_i][next] || id_j != interactions[attr::id_j][next]) {
         res += 1;
       }
     }

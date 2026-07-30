@@ -115,10 +115,10 @@ struct AnalysisDataPacker {
  */
 template <InteractionType IT, typename K, typename AnalysisDataPacker, typename... Args>
 struct WrapperContactLawForAll {
-  InteractionWrapper<IT> data_;
-  const K kernel_;             /**< Kernel function to be applied. */
-  AnalysisDataPacker packer_;  /**< Kernel function to be applied. */
-  std::tuple<Args...> params_; /**< Tuple of parameters to be passed to the kernel function. */
+  mutable InteractionWrapper<IT> data_;  // warning, onika::parallel for requires const classes ...
+  const K kernel_;                       /**< Kernel function to be applied. */
+  AnalysisDataPacker packer_;            /**< Kernel function to be applied. */
+  std::tuple<Args...> params_;           /**< Tuple of parameters to be passed to the kernel function. */
 
   /**
    * @brief Constructor to initialize the WrapperForAll struct.
@@ -161,8 +161,8 @@ struct WrapperContactLawForAll {
 template <InteractionType IT, typename K, typename... Args>
 struct WrapperForAll {
   InteractionWrapper<IT> data_;
-  K kernel_;                   /**< Kernel function to be applied. */
-  std::tuple<Args...> params_; /**< Tuple of parameters to be passed to the kernel function. */
+  K kernel_;                    // Kernel function to be applied. */
+  std::tuple<Args...> params_;  // Tuple of parameters to be passed to the kernel function. */
 
   /**
    * @brief Constructor to initialize the WrapperForAll struct.

@@ -48,7 +48,7 @@ struct ComputeForceMomentDriverFunc {
     const exanb::Vec3d f = fn[i] + ft[i];  // Total force from this interaction
     exaDEM::lockAndAdd(forces[id], -f);
     const exanb::Vec3d Cd = (cp[i] - centers[id]);
-    const exanb::Vec3d mom = exanb::cross(Cd, -f) + -I.moment_;
+    const exanb::Vec3d mom = exanb::cross(Cd, -f) + -I[exaDEM::attr::moment];
     exaDEM::lockAndAdd(moments[id], mom);
   }
 };

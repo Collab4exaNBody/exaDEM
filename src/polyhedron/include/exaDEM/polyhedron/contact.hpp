@@ -182,23 +182,23 @@ struct ContactLawFunc {
       const double meff = compute_effective_mass(m_i, m_j);
       const double reff = compute_effective_mass(rad_i, rad_j);
 
-      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction_, contact_position, ri, vi, f,
-                                                  item.moment_, vrot_i,  // particle 1
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position, ri, vi, f,
+                                                  item[attr::moment], vrot_i,  // particle 1
                                                   rj, vj, vrot_j);      // particle nbh
 
-      fn = f - item.friction_;
+      fn = f - item[attr::friction];
 
       // === update particle informations
       // ==== Particle i
       auto& mom_i = cell_i[field::mom][pi.p_];
-      lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment_));
+      lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item[attr::moment]));
       lockAndAdd(cell_i[field::fx][pi.p_], f.x);
       lockAndAdd(cell_i[field::fy][pi.p_], f.y);
       lockAndAdd(cell_i[field::fz][pi.p_], f.z);
 
       // ==== Particle j
       auto& mom_j = cell_j[field::mom][pj.p_];
-      lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment_));
+      lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item[attr::moment]));
       lockAndAdd(cell_j[field::fx][pj.p_], -f.x);
       lockAndAdd(cell_j[field::fy][pj.p_], -f.y);
       lockAndAdd(cell_j[field::fz][pj.p_], -f.z);
@@ -207,7 +207,7 @@ struct ContactLawFunc {
       dn = 0;
     }
 
-    return {dn, contact_position, fn, item.friction_};
+    return {dn, contact_position, fn, item[attr::friction]};
   }
 };
 
@@ -279,15 +279,15 @@ struct ContactLawDriverFunc {
       const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
       const double meff = cell[field::mass][p];
       const double reff = shp.minkowski(h);
-      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction_, contact_position, r, v, f,
-                                                  item.moment_, vrot,                              // particle i
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position, r, v, f,
+                                                  item[attr::moment], vrot,                              // particle i
                                                   driver.position(), driver.velocity(), driver.angular_velocity());  // particle j
 
       // === for analysis
-      fn = f - item.friction_;
+      fn = f - item[attr::friction];
 
       // === update informations
-      lockAndAdd(mom, compute_moments(contact_position, r, f, item.moment_));
+      lockAndAdd(mom, compute_moments(contact_position, r, f, item[attr::moment]));
       lockAndAdd(cell[field::fx][p], f.x);
       lockAndAdd(cell[field::fy][p], f.y);
       lockAndAdd(cell[field::fz][p], f.z);
@@ -299,7 +299,7 @@ struct ContactLawDriverFunc {
       item.reset();
       dn = 0;
     }
-    return {dn, contact_position, fn, item.friction_};
+    return {dn, contact_position, fn, item[attr::friction]};
   }
 };
 
@@ -388,14 +388,14 @@ struct ContactLawRShapeDriverFunc {
 
       // i to j
       if constexpr (interaction_type <= 10 && interaction_type >= 7) {
-        contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction_, contact_position, r_i,
-                                                    v_i, f, item.moment_, vrot_i,              // particle i
+        contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position, r_i,
+                                                    v_i, f, item[attr::moment], vrot_i,              // particle i
                                                     driver.position(), driver.velocity(), driver.angular_velocity());  // particle driver
 
         // === used for analysis
-        fn = f - item.friction_;
+        fn = f - item[attr::friction];
         // === update informations
-        lockAndAdd(mom, compute_moments(contact_position, r_i, f, item.moment_));
+        lockAndAdd(mom, compute_moments(contact_position, r_i, f, item[attr::moment]));
         lockAndAdd(cell[field::fx][pi.p_], f.x);
         lockAndAdd(cell[field::fy][pi.p_], f.y);
         lockAndAdd(cell[field::fz][pi.p_], f.z);
@@ -406,19 +406,19 @@ struct ContactLawRShapeDriverFunc {
 
       //  j to i
       if constexpr (interaction_type <= 12 && interaction_type >= 11) {
-        contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item.friction_, contact_position,
-                                                    driver.position(), driver.velocity(), f, item.moment_,
+        contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position,
+                                                    driver.position(), driver.velocity(), f, item[attr::moment],
                                                     driver.angular_velocity(), // particle j
                                                     r_i, v_i, vrot_i);  // particle i
 
         // === used for analysis
-        fn = item.friction_ - f;
+        fn = item[attr::friction] - f;
         // === update informations
-        lockAndAdd(mom, compute_moments(contact_position, r_i, -f, -item.moment_));
+        lockAndAdd(mom, compute_moments(contact_position, r_i, -f, -item[attr::moment]));
         lockAndAdd(cell[field::fx][pi.p_], -f.x);
         lockAndAdd(cell[field::fy][pi.p_], -f.y);
         lockAndAdd(cell[field::fz][pi.p_], -f.z);
-        item.friction_ = -item.friction_;
+        item[attr::friction] = -item[attr::friction];
         if (need_forces(driver.motion_type_)) {
           lockAndAdd(driver.forces(), f);
         }
@@ -427,7 +427,7 @@ struct ContactLawRShapeDriverFunc {
       item.reset();
       dn = 0;
     }
-    return {dn, contact_position, fn, item.friction_};
+    return {dn, contact_position, fn, item[attr::friction]};
   }
 };
 }  // namespace polyhedron

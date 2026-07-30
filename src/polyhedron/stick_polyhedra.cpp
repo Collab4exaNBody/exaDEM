@@ -98,7 +98,7 @@ class StickPolyhedraOperator : public OperatorNode {
       // TLS interaction
       PlaceholderInteraction item;
       item.clear_placeholder();
-      item.as<InnerBondInteraction>().unbroken_ = true;
+      item.as<InnerBondInteraction>()[attr::unbroken] = true;
 
       // local storage per thread
       InteractionManager manager;
@@ -154,7 +154,7 @@ class StickPolyhedraOperator : public OperatorNode {
                               int sub_j, double dn0) -> void {
           item.pair_.pi_.sub_ = sub_i;
           item.pair_.pj_.sub_ = sub_j;
-          item.as<InnerBondInteraction>().dn0_ = dn0;
+          item.as<InnerBondInteraction>()[attr::dn0] = dn0;
           local.push_back(item);
         };
 
@@ -299,7 +299,7 @@ class StickPolyhedraOperator : public OperatorNode {
                   // SeparateModes: En > 2.0 * area * gn and Et > 2.0 * area * gt
                   // VT A MODIFIER
                   const double area = pi.id_ < pj.id_ ? shpi->get_face_area(i, hi) : shpj->get_face_area(j, hj);
-                  RuptureCriteria& criterion = item.as<InnerBondInteraction>().criterion_;
+                  RuptureCriteria& criterion = item.as<InnerBondInteraction>()[attr::criterion];
                   criterion.mode_ = ibp.mode_;
                   if (ibp.mode_ == RuptureMode::EnergyMixedMode) {
                     criterion.energy_criterion() = 2 * area * ibp.crit1_;
@@ -340,7 +340,7 @@ class StickPolyhedraOperator : public OperatorNode {
               // compute inner bond weight such as kn / kt are
               // imposed on a interface instead of a for each interaction
               for (auto& it : local) {
-                it.as<InnerBondInteraction>().weight_ = 1. / static_cast<double>(local.size());
+                it.as<InnerBondInteraction>()[attr::weight] = 1. / static_cast<double>(local.size());
               }
 
               bool check = check_stiked_face(local, p_i, vertices_i);

@@ -96,7 +96,7 @@ class StoreBrokenInterfaceOp : public OperatorNode {
           vertices.resize(size);
 
           for (size_t idx = 0; idx < size; idx++) {
-            vertices[idx] = data_wrapper.sub_i[offset + idx];
+            vertices[idx] = data_wrapper[attr::sub_i][offset + idx];
           }
 
           tmp.pos = exadem_field_center(cells, owner_particle);
