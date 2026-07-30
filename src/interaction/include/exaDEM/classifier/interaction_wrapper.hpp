@@ -17,205 +17,105 @@ under the License.
 
 #pragma once
 
+#include <onika/cuda/stl_adaptors.h>
+
 #include <exaDEM/classifier/classifier_container.hpp>
 #include <exaDEM/interaction/interaction.hpp>
+#include <type_traits>
 
 namespace exaDEM {
+
 struct InterationPairWrapper {
-  // particle id
-  uint64_t* id_i;
-  uint64_t* id_j;
-  // cell id
-  uint32_t* cell_i;
-  uint32_t* cell_j;
-  // position into the cell
-  uint16_t* p_i;
-  uint16_t* p_j;
-  // sub id
-  uint32_t* sub_i;
-  uint32_t* sub_j;
+  template <typename T>
+  using VectorT = onika::cuda::span<T>;
+
+  EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_COMMON_FIELDS) bk_ = {};
+  EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR_BK(EXADEM_INTERACTION_COMMON_FIELDS)  // id_i, id_j, cell_i,
+                                                                                 // cell_j, p_i, p_j,
+                                                                                 // sub_i, sub_j, swap, ghost
+
   uint16_t m_type;
-  uint8_t* m_swap;
-  uint8_t* m_ghost;
 
   template <typename InteractionContainerT>
   void wrap(InteractionContainerT& container) {
-    using namespace onika::cuda;
-    id_i = container.id_i_.data();
-    id_j = container.id_j_.data();
-
-    cell_i = container.cell_i_.data();
-    cell_j = container.cell_j_.data();
-
-    p_i = container.p_i_.data();
-    p_j = container.p_j_.data();
-
-    sub_i = container.sub_i_.data();
-    sub_j = container.sub_j_.data();
-
+    ToSpanFunctor to_span_func;
+    zip_apply_on_flat_tuple(to_span_func, bk_, container.bk_);
     m_type = container.type_;
-    m_swap = container.swap_.data();
-    m_ghost = container.ghost_.data();
   }
 
   ONIKA_HOST_DEVICE_FUNC
   inline InteractionPair operator()(size_t i) {
-    return InteractionPair{ParticleSubLocation{id_i[i], cell_i[i], p_i[i], sub_i[i]},
-                           ParticleSubLocation{id_j[i], cell_j[i], p_j[i], sub_j[i]}, m_type, m_swap[i], m_ghost[i]};
+    return InteractionPair{ParticleSubLocation{(*this)[attr::id_i][i], (*this)[attr::cell_i][i], (*this)[attr::p_i][i],
+                                               (*this)[attr::sub_i][i]},
+                           ParticleSubLocation{(*this)[attr::id_j][i], (*this)[attr::cell_j][i], (*this)[attr::p_j][i],
+                                               (*this)[attr::sub_j][i]},
+                           m_type, (*this)[attr::swap][i], (*this)[attr::ghost][i]};
   }
 };
 
 template <InteractionType IT>
-struct InteractionWrapper {
-  // forces
-  double* ft_x = nullptr;
-  double* ft_y = nullptr;
-  double* ft_z = nullptr;
-  // moment
-  double* mom_x = nullptr;
-  double* mom_y = nullptr;
-  double* mom_z = nullptr;
-  // Fragmentation
-  double* en = nullptr;
-  Vec3d* tds = nullptr;
-  double* et = nullptr;
-  double* dn0 = nullptr;
-  double* weight = nullptr;
-  RuptureCriteria* criterion = nullptr;
+struct InteractionWrapper;
 
-  uint8_t* unbroken = nullptr;
+template <>
+struct InteractionWrapper<InteractionType::ParticleParticle> {
+  template <typename T>
+  using VectorT = onika::cuda::span<T>;
 
-  // particle id
-  uint64_t* id_i = nullptr;
-  uint64_t* id_j = nullptr;
-  // cell id
-  uint32_t* cell_i = nullptr;
-  uint32_t* cell_j = nullptr;
-  // position into the cell
-  uint16_t* p_i = nullptr;
-  uint16_t* p_j = nullptr;
-  // sub id
-  uint32_t* sub_i = nullptr;
-  uint32_t* sub_j = nullptr;
+  // Members are declared here, to see attributes, please go to interaction.hpp
+  EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_FIELDS) fm_ = {};
+  EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR(EXADEM_INTERACTION_FIELDS)  // friction, moment
+
+  EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_COMMON_FIELDS) bk_ = {};
+  EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR_BK(EXADEM_INTERACTION_COMMON_FIELDS)  // id_i, id_j, cell_i,
+                                                                                 // cell_j, p_i, p_j,
+                                                                                 // sub_i, sub_j, swap, ghost
+
   uint16_t m_type = InteractionTypeId::Undefined;
-  uint8_t* m_swap = nullptr;
-  uint8_t* m_ghost = nullptr;
 
   InteractionWrapper() {}
 
-  InteractionWrapper(ClassifierContainer<IT>& data) {
-    using namespace onika::cuda;
-    if constexpr (IT == InteractionType::ParticleParticle || IT == InteractionType::ParticleDriver) {
-      ft_x = vector_data(data.ft_x_);
-      ft_y = vector_data(data.ft_y_);
-      ft_z = vector_data(data.ft_z_);
-
-      mom_x = vector_data(data.mom_x_);
-      mom_y = vector_data(data.mom_y_);
-      mom_z = vector_data(data.mom_z_);
-    }
-
-    if constexpr (IT == InteractionType::InnerBond) {
-      ft_x = vector_data(data.ft_x_);
-      ft_y = vector_data(data.ft_y_);
-      ft_z = vector_data(data.ft_z_);
-
-      en = vector_data(data.en_);
-      tds = vector_data(data.tds_);
-      et = vector_data(data.et_);
-      dn0 = vector_data(data.dn0_);
-      weight = vector_data(data.weight_);
-      criterion = vector_data(data.criterion_);
-      unbroken = vector_data(data.unbroken_);
-    }
-
-    id_i = vector_data(data.id_i_);
-    id_j = vector_data(data.id_j_);
-
-    cell_i = vector_data(data.cell_i_);
-    cell_j = vector_data(data.cell_j_);
-
-    p_i = vector_data(data.p_i_);
-    p_j = vector_data(data.p_j_);
-
-    sub_i = vector_data(data.sub_i_);
-    sub_j = vector_data(data.sub_j_);
-
+  InteractionWrapper(ClassifierContainer<InteractionType::ParticleParticle>& data) {
+    ToSpanFunctor to_span_func;
+    zip_apply_on_flat_tuple(to_span_func, fm_, data.fm_);
+    zip_apply_on_flat_tuple(to_span_func, bk_, data.bk_);
     m_type = data.type_;
-    m_swap = vector_data(data.swap_);
-    m_ghost = vector_data(data.ghost_);
   }
 
   ONIKA_HOST_DEVICE_FUNC inline auto operator()(const uint64_t idx) const {
-    InteractionPair ip = {{id_i[idx], cell_i[idx], p_i[idx], sub_i[idx]},
-                          {id_j[idx], cell_j[idx], p_j[idx], sub_j[idx]},
-                          m_type,
-                          m_swap[idx],
-                          m_ghost[idx]};
-
-    if constexpr (IT == ParticleParticle) {
-      return Interaction{ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}};
-    } else if constexpr (IT == ParticleDriver) {
-      return Interaction{ip, {ft_x[idx], ft_y[idx], ft_z[idx]}, {mom_x[idx], mom_y[idx], mom_z[idx]}};
-    } else if constexpr (IT == InnerBond) {
-      return InnerBondInteraction{ip,           {ft_x[idx], ft_y[idx], ft_z[idx]},
-                                  en[idx],      tds[idx],
-                                  et[idx],      dn0[idx],
-                                  weight[idx],  criterion[idx],
-                                  unbroken[idx]};
-    } else {
-      // static_assert(always_false<T>::value, "Unsupported interaction type");
-    }
-  }
-
-  ONIKA_HOST_DEVICE_FUNC inline double& En(const uint64_t idx) const { return en[idx]; }
-
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d& Tds(const uint64_t idx) const { return tds[idx]; }
-
-  ONIKA_HOST_DEVICE_FUNC inline double& Et(const uint64_t idx) const { return et[idx]; }
-
-  ONIKA_HOST_DEVICE_FUNC inline RuptureCriteria& criteria(const uint64_t idx) const { return criterion[idx]; }
-
-  ONIKA_HOST_DEVICE_FUNC inline RuptureMode rupture_mode(const uint64_t idx) const { return criterion[idx].mode_; }
-
-  ONIKA_HOST_DEVICE_FUNC inline void broke(const uint64_t idx) const { unbroken[idx] = false; }
-
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d load_ft(size_t id) { return {ft_x[id], ft_y[id], ft_z[id]}; }
-
-  ONIKA_HOST_DEVICE_FUNC void store_ft(Vec3d&& value, size_t id) {
-    ft_x[id] = value.x;
-    ft_y[id] = value.y;
-    ft_z[id] = value.z;
+    InteractionPair ip = {
+        {(*this)[attr::id_i][idx], (*this)[attr::cell_i][idx], (*this)[attr::p_i][idx], (*this)[attr::sub_i][idx]},
+        {(*this)[attr::id_j][idx], (*this)[attr::cell_j][idx], (*this)[attr::p_j][idx], (*this)[attr::sub_j][idx]},
+        m_type,
+        (*this)[attr::swap][idx],
+        (*this)[attr::ghost][idx]};
+    Interaction res{ip};
+    LoadAtIndexSpanFunctor load_func{idx};
+    zip_apply_on_flat_tuple(load_func, res.fm_, fm_);
+    return res;
   }
 
   ONIKA_HOST_DEVICE_FUNC
-  inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) const {
+  inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) {
     assert(m_type == item.pair_.type_);
-    // --- particle ids
-    id_i[idx] = item.pair_.pi_.id_;
-    id_j[idx] = item.pair_.pj_.id_;
-
-    // --- cell ids
-    cell_i[idx] = item.pair_.pi_.cell_;
-    cell_j[idx] = item.pair_.pj_.cell_;
-
-    // --- position in cell
-    p_i[idx] = item.pair_.pi_.p_;
-    p_j[idx] = item.pair_.pj_.p_;
-
-    // --- sub ids
-    sub_i[idx] = item.pair_.pi_.sub_;
-    sub_j[idx] = item.pair_.pj_.sub_;
-
-    // --- swap, ghost
-    m_swap[idx] = item.pair_.swap_;
-    m_ghost[idx] = item.pair_.ghost_;
+    (*this)[attr::id_i][idx] = item.pair_.pi_.id_;
+    (*this)[attr::id_j][idx] = item.pair_.pj_.id_;
+    (*this)[attr::cell_i][idx] = item.pair_.pi_.cell_;
+    (*this)[attr::cell_j][idx] = item.pair_.pj_.cell_;
+    (*this)[attr::p_i][idx] = item.pair_.pi_.p_;
+    (*this)[attr::p_j][idx] = item.pair_.pj_.p_;
+    (*this)[attr::sub_i][idx] = item.pair_.pi_.sub_;
+    (*this)[attr::sub_j][idx] = item.pair_.pj_.sub_;
+    (*this)[attr::swap][idx] = item.pair_.swap_;
+    (*this)[attr::ghost][idx] = item.pair_.ghost_;
   }
 
   ONIKA_HOST_DEVICE_FUNC
   inline InteractionPair pair(const uint64_t i) const {
-    return InteractionPair{ParticleSubLocation{id_i[i], cell_i[i], p_i[i], sub_i[i]},
-                           ParticleSubLocation{id_j[i], cell_j[i], p_j[i], sub_j[i]}, m_type, m_swap[i], m_ghost[i]};
+    return InteractionPair{ParticleSubLocation{(*this)[attr::id_i][i], (*this)[attr::cell_i][i], (*this)[attr::p_i][i],
+                                               (*this)[attr::sub_i][i]},
+                           ParticleSubLocation{(*this)[attr::id_j][i], (*this)[attr::cell_j][i], (*this)[attr::p_j][i],
+                                               (*this)[attr::sub_j][i]},
+                           m_type, (*this)[attr::swap][i], (*this)[attr::ghost][i]};
   }
 
   ONIKA_HOST_DEVICE_FUNC
@@ -224,38 +124,175 @@ struct InteractionWrapper {
   }
 
   ONIKA_HOST_DEVICE_FUNC
-  inline void update(const uint64_t idx, const exaDEM::Interaction& item) const {
-    ft_x[idx] = item.friction_.x;
-    ft_y[idx] = item.friction_.y;
-    ft_z[idx] = item.friction_.z;
-
-    mom_x[idx] = item.moment_.x;
-    mom_y[idx] = item.moment_.y;
-    mom_z[idx] = item.moment_.z;
+  inline void update(const uint64_t idx, const exaDEM::Interaction& item) {
+    StoreAtIndexSpanFunctor store_func{idx};
+    zip_apply_on_flat_tuple(store_func, this->fm_, item.fm_);
   }
 
   ONIKA_HOST_DEVICE_FUNC
-  inline void update(const uint64_t idx, const exaDEM::InnerBondInteraction& item) const {
-    ft_x[idx] = item.friction_.x;
-    ft_y[idx] = item.friction_.y;
-    ft_z[idx] = item.friction_.z;
-    en[idx] = item.en_;
-    tds[idx] = item.tds_;
-    et[idx] = item.et_;
-    dn0[idx] = item.dn0_;
-    weight[idx] = item.weight_;
-    criterion[idx] = item.criterion_;
-
-    unbroken[idx] = item.unbroken_;
-  }
-
-  ONIKA_HOST_DEVICE_FUNC
-  inline void update(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
-    if constexpr (IT == ParticleParticle) {
-      update(idx, item.as<Interaction>());
-    } else if constexpr (IT == InnerBond) {
-      update(idx, item.as<InnerBondInteraction>());
-    }
+  inline void update(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) {
+    update(idx, item.as<Interaction>());
   }
 };
+
+template <>
+struct InteractionWrapper<InteractionType::ParticleDriver> {
+  template <typename T>
+  using VectorT = onika::cuda::span<T>;
+
+  // Members are declared here, to see attributes, please go to interaction.hpp
+  EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_FIELDS) fm_ = {};
+  EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR(EXADEM_INTERACTION_FIELDS)  // friction, moment
+
+  EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_COMMON_FIELDS) bk_ = {};
+  EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR_BK(EXADEM_INTERACTION_COMMON_FIELDS)  // pair interaction attributes
+
+  uint16_t m_type = InteractionTypeId::Undefined;
+
+  InteractionWrapper() {}
+
+  InteractionWrapper(ClassifierContainer<InteractionType::ParticleDriver>& data) {
+    ToSpanFunctor to_span_func;
+    zip_apply_on_flat_tuple(to_span_func, fm_, data.fm_);
+    zip_apply_on_flat_tuple(to_span_func, bk_, data.bk_);
+    m_type = data.type_;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC inline auto operator()(const uint64_t idx) const {
+    InteractionPair ip = {
+        {(*this)[attr::id_i][idx], (*this)[attr::cell_i][idx], (*this)[attr::p_i][idx], (*this)[attr::sub_i][idx]},
+        {(*this)[attr::id_j][idx], (*this)[attr::cell_j][idx], (*this)[attr::p_j][idx], (*this)[attr::sub_j][idx]},
+        m_type,
+        (*this)[attr::swap][idx],
+        (*this)[attr::ghost][idx]};
+    Interaction res{ip};
+    LoadAtIndexSpanFunctor load_func{idx};
+    zip_apply_on_flat_tuple(load_func, res.fm_, fm_);
+    return res;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) {
+    assert(m_type == item.pair_.type_);
+    (*this)[attr::id_i][idx] = item.pair_.pi_.id_;
+    (*this)[attr::id_j][idx] = item.pair_.pj_.id_;
+    (*this)[attr::cell_i][idx] = item.pair_.pi_.cell_;
+    (*this)[attr::cell_j][idx] = item.pair_.pj_.cell_;
+    (*this)[attr::p_i][idx] = item.pair_.pi_.p_;
+    (*this)[attr::p_j][idx] = item.pair_.pj_.p_;
+    (*this)[attr::sub_i][idx] = item.pair_.pi_.sub_;
+    (*this)[attr::sub_j][idx] = item.pair_.pj_.sub_;
+    (*this)[attr::swap][idx] = item.pair_.swap_;
+    (*this)[attr::ghost][idx] = item.pair_.ghost_;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline InteractionPair pair(const uint64_t i) const {
+    return InteractionPair{ParticleSubLocation{(*this)[attr::id_i][i], (*this)[attr::cell_i][i], (*this)[attr::p_i][i],
+                                               (*this)[attr::sub_i][i]},
+                           ParticleSubLocation{(*this)[attr::id_j][i], (*this)[attr::cell_j][i], (*this)[attr::p_j][i],
+                                               (*this)[attr::sub_j][i]},
+                           m_type, (*this)[attr::swap][i], (*this)[attr::ghost][i]};
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline bool same(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
+    return item.pair_ == pair(idx);
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline void update(const uint64_t idx, const exaDEM::Interaction& item) {
+    StoreAtIndexSpanFunctor store_func{idx};
+    zip_apply_on_flat_tuple(store_func, this->fm_, item.fm_);
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline void update(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) {
+    update(idx, item.as<Interaction>());
+  }
+};
+
+template <>
+struct InteractionWrapper<InteractionType::InnerBond> {
+  template <typename T>
+  using VectorT = onika::cuda::span<T>;
+
+  // Members are declared here, to see attributes, please go to innerbond_interaction.hpp
+  EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INNER_BOND_FIELDS) fm_ = {};
+  EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR(EXADEM_INNER_BOND_FIELDS)  // friction, en, tds, et, dn0, weight,
+                                                                      // criterion, unbroken
+
+  EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_COMMON_FIELDS) bk_ = {};
+  EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR_BK(EXADEM_INTERACTION_COMMON_FIELDS)  // pairt interaction attributes
+
+  uint16_t m_type = InteractionTypeId::Undefined;
+
+  InteractionWrapper() {}
+
+  InteractionWrapper(ClassifierContainer<InteractionType::InnerBond>& data) {
+    ToSpanFunctor to_span_func;
+    zip_apply_on_flat_tuple(to_span_func, fm_, data.fm_);
+    zip_apply_on_flat_tuple(to_span_func, bk_, data.bk_);
+    m_type = data.type_;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC inline auto operator()(const uint64_t idx) const {
+    InteractionPair ip = {
+        {(*this)[attr::id_i][idx], (*this)[attr::cell_i][idx], (*this)[attr::p_i][idx], (*this)[attr::sub_i][idx]},
+        {(*this)[attr::id_j][idx], (*this)[attr::cell_j][idx], (*this)[attr::p_j][idx], (*this)[attr::sub_j][idx]},
+        m_type,
+        (*this)[attr::swap][idx],
+        (*this)[attr::ghost][idx]};
+    InnerBondInteraction res{ip};
+    LoadAtIndexSpanFunctor load_func{idx};
+    zip_apply_on_flat_tuple(load_func, res.fm_, fm_);
+    return res;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) {
+    assert(m_type == item.pair_.type_);
+    (*this)[attr::id_i][idx] = item.pair_.pi_.id_;
+    (*this)[attr::id_j][idx] = item.pair_.pj_.id_;
+    (*this)[attr::cell_i][idx] = item.pair_.pi_.cell_;
+    (*this)[attr::cell_j][idx] = item.pair_.pj_.cell_;
+    (*this)[attr::p_i][idx] = item.pair_.pi_.p_;
+    (*this)[attr::p_j][idx] = item.pair_.pj_.p_;
+    (*this)[attr::sub_i][idx] = item.pair_.pi_.sub_;
+    (*this)[attr::sub_j][idx] = item.pair_.pj_.sub_;
+    (*this)[attr::swap][idx] = item.pair_.swap_;
+    (*this)[attr::ghost][idx] = item.pair_.ghost_;
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline InteractionPair pair(const uint64_t i) const {
+    return InteractionPair{ParticleSubLocation{(*this)[attr::id_i][i], (*this)[attr::cell_i][i], (*this)[attr::p_i][i],
+                                               (*this)[attr::sub_i][i]},
+                           ParticleSubLocation{(*this)[attr::id_j][i], (*this)[attr::cell_j][i], (*this)[attr::p_j][i],
+                                               (*this)[attr::sub_j][i]},
+                           m_type, (*this)[attr::swap][i], (*this)[attr::ghost][i]};
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline bool same(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
+    return item.pair_ == pair(idx);
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline void update(const uint64_t idx, const exaDEM::InnerBondInteraction& item) {
+    StoreAtIndexSpanFunctor store_func{idx};
+    zip_apply_on_flat_tuple(store_func, this->fm_, item.fm_);
+  }
+
+  ONIKA_HOST_DEVICE_FUNC
+  inline void update(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) {
+    update(idx, item.as<InnerBondInteraction>());
+  }
+};
+
+InteractionWrapper(ClassifierContainer<InteractionType::ParticleParticle>&)
+    -> InteractionWrapper<InteractionType::ParticleParticle>;
+InteractionWrapper(ClassifierContainer<InteractionType::ParticleDriver>&)
+    -> InteractionWrapper<InteractionType::ParticleDriver>;
+InteractionWrapper(ClassifierContainer<InteractionType::InnerBond>&) -> InteractionWrapper<InteractionType::InnerBond>;
 }  // namespace exaDEM

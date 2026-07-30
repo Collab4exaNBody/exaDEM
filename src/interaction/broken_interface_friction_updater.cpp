@@ -68,12 +68,12 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
       // If the interface is broken, we need to update the friction of the interactions and break them
       if (interfaces.break_interface_[i] == true) {
         auto [offset, size] = interfaces.data_[i];
-        auto type_a = cells[data_wrapper.cell_i[offset]][field::group][data_wrapper.p_i[offset]];
-        auto type_b = cells[data_wrapper.cell_j[offset]][field::group][data_wrapper.p_j[offset]];
+        auto type_a = cells[data_wrapper[attr::cell_i][offset]][exanb::field::group][data_wrapper[attr::p_i][offset]];
+        auto type_b = cells[data_wrapper[attr::cell_j][offset]][exanb::field::group][data_wrapper[attr::p_j][offset]];
 
         for (size_t j = 0; j < size; j++) {
           size_t idx = j + offset;
-          data_wrapper.broke(idx);  // mark the interaction as broken.
+          data_wrapper[attr::unbroken][idx] = false;  // mark the interaction as broken.
           // Note that broken interactions will be transformed in VertexVertex interactions by the unclassify operator.
           // so we need to use the contact parameters of VertexVertex interactions.
           double ft = exanb::norm(ft_ptr[idx]);
@@ -84,11 +84,11 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
           // If the friction is higher than the threshold.
           // We need to reduce it to the threshold
           if (ft > ft_threshold && ft > 0) {
-            data_wrapper.store_ft(ft_ptr[idx] * ft_threshold / ft, idx);
+            data_wrapper[attr::friction][idx] = ft_ptr[idx] * ft_threshold / ft;
           }
           // If the normal force is zero, we need to set the friction to zero.
           if (dn_ptr[idx] > 0) {
-            data_wrapper.store_ft(Vec3d{0, 0, 0}, idx);
+            data_wrapper[attr::friction][idx] = Vec3d{0, 0, 0};
           }
         }
       }

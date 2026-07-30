@@ -52,24 +52,24 @@ class UpdateInterfaces : public OperatorNode {
     size_t loc = 0;
     while (loc < n_interactions) {
       // Here, we do not build interfaces that are managed by another MPI process (partner).
-      if (interactions.ghost_[loc] == InteractionPair::PartnerGhost) {
+      if (interactions[attr::ghost][loc] == InteractionPair::PartnerGhost) {
         loc++;
         continue;
       }
 
       // Information about the particles managed by the first interaction is retrieved.
       // The interactions that compose an interface are stored contiguously.
-      uint64_t idloci = interactions.particle_id_i(loc);
-      uint64_t idlocj = interactions.particle_id_j(loc);
+      uint64_t idloci = interactions[attr::id_i][loc];
+      uint64_t idlocj = interactions[attr::id_j][loc];
       size_t n = 1;
-      uint64_t idni = interactions.particle_id_i(loc + n);
-      uint64_t idnj = interactions.particle_id_j(loc + n);
+      uint64_t idni = interactions[attr::id_i][loc + n];
+      uint64_t idnj = interactions[attr::id_j][loc + n];
       n++;
 
       // We locate the range of all interactions that make up the interface.
       while (loc + n < n_interactions && idloci == idni && idlocj == idnj) {
-        idni = interactions.particle_id_i(loc + n);
-        idnj = interactions.particle_id_j(loc + n);
+        idni = interactions[attr::id_i][loc + n];
+        idnj = interactions[attr::id_j][loc + n];
         n++;
       }
       if (loc + n != n_interactions) {

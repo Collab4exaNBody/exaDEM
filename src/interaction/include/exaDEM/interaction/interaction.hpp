@@ -18,22 +18,35 @@ under the License.
  */
 #pragma once
 
+#include <onika/flat_tuple.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_stream.h>
 
+#include <exaDEM/interaction/interaction_decoration.hpp>
 #include <exaDEM/interaction/interaction_pair.hpp>
 #include <iostream>
 
+// Single source of truth for Interaction's per-interaction fields: type, name, tuple index, mode.
+// Add a field by adding one line here; the tags and the backing FlatTuple type are derived from it.
+// 'friction' is declared NEW_TAG here: other structs (e.g. InnerBondInteraction) that reuse it
+// must reference it as SHARED_TAG and keep it at the same tuple index (0).
+#define EXADEM_INTERACTION_FIELDS(X)    \
+  X(exanb::Vec3d, friction, 0, NEW_TAG) \
+  X(exanb::Vec3d, moment, 1, NEW_TAG)
+
+EXADEM_INTERACTION_FIELD_TAGS(EXADEM_INTERACTION_FIELDS)
+
 namespace exaDEM {
+
 /**
  * @brief Structure representing an interaction in a Discrete Element Method (DEM) simulation.
  */
 struct Interaction {
   InteractionPair pair_; /**< The InteractionPair structure containing information about the interacting particles and
                            the type of interaction. */
-  // specialized members
-  exanb::Vec3d friction_ = {0, 0, 0}; /**< Friction vector associated with the interaction. */
-  exanb::Vec3d moment_ = {0, 0, 0};   /**< Moment vector associated with the interaction. */
+  // specialized members, accessed through operator[] with the tags declared above, e.g. It[attr::moment]
+  EXADEM_INTERACTION_TUPLE_TYPE(EXADEM_INTERACTION_FIELDS) fm_ = {};
+  EXADEM_INTERACTION_FIELD_ACCESSOR(EXADEM_INTERACTION_FIELDS)
 
   /** @brief Get the first particle location.
    * [return] Reference to the first particle location.
@@ -89,8 +102,8 @@ struct Interaction {
    */
   ONIKA_HOST_DEVICE_FUNC void reset() {
     constexpr exanb::Vec3d null = {0, 0, 0};
-    friction_ = null;
-    moment_ = null;
+    (*this)[attr::friction] = null;
+    (*this)[attr::moment] = null;
   }
 
   /** @brief Check if the interaction is persistent.
@@ -118,7 +131,7 @@ struct Interaction {
       return false;
     }
     constexpr exanb::Vec3d null = {0, 0, 0};
-    bool res = ((moment_ != null) || (friction_ != null));
+    bool res = (((*this)[attr::moment] != null) || ((*this)[attr::friction] != null));
     return res;
   }
 
@@ -127,7 +140,7 @@ struct Interaction {
    */
   void print() {
     pair_.print();
-    std::cout << "Friction: " << friction_ << ", Moment: " << moment_ << ")" << std::endl;
+    std::cout << "Friction: " << (*this)[attr::friction] << ", Moment: " << (*this)[attr::moment] << ")" << std::endl;
   }
 
   /**
@@ -135,16 +148,13 @@ struct Interaction {
    */
   void print() const {
     pair_.print();
-    std::cout << "Friction: " << friction_ << ", Moment: " << moment_ << ")" << std::endl;
+    std::cout << "Friction: " << (*this)[attr::friction] << ", Moment: " << (*this)[attr::moment] << ")" << std::endl;
   }
 
   /** @brief Updates the interaction with the values from another interaction.
    * [param] I The interaction to update from.
    */
-  ONIKA_HOST_DEVICE_FUNC void update(Interaction& I) {
-    this->friction_ = I.friction_;
-    this->moment_ = I.moment_;
-  }
+  ONIKA_HOST_DEVICE_FUNC void update(Interaction& I) { this->fm_ = I.fm_; }
 
   /** @brief Checks if two interactions are equal.
    * [param] I The interaction to compare with.

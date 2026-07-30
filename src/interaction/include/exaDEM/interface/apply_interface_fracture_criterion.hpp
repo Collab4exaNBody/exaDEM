@@ -10,7 +10,8 @@
 namespace exaDEM {
 /** @brief Function to apply the fracture criterion to each interface */
 struct ApplyAndReduceInterfaceFractureCriterionFunc {
-  InteractionWrapper<InteractionType::InnerBond> interaction_;  // interactions that compose the interfaces
+  // Warning, interaction_ is mutable.
+  mutable InteractionWrapper<InteractionType::InnerBond> interaction_;  // interactions that compose the interfaces;
   exanb::Vec3d* const fn_;  // list of normal forces for each interaction that compose the interfaces
   double* const dn_;        // list of normal displacements for each interaction that compose the interfaces
 
@@ -21,15 +22,15 @@ struct ApplyAndReduceInterfaceFractureCriterionFunc {
 
     // Sum of the normal and tangential energy of the interactions that compose the interface
     for (size_t j = offset; j < offset + size; j++) {
-      En += interaction_.En(j);
-      Et += interaction_.Et(j);
+      En += interaction_[attr::en][j];
+      Et += interaction_[attr::et][j];
       if (dn_[j] > 0.0) S += norm(fn_[j]);
     }
     S /= size;  // average normal force over the interface
 
     // Criterion is stored in the first interaction since all interactions in the interface share the same criterion.
     // Criterion formula: En or Et > 2 * area * g_{n or t}  (g defined by input parameters)
-    const RuptureCriteria& criterion = interaction_.criteria(offset);
+    const RuptureCriteria& criterion = interaction_[attr::criterion][offset];
     const RuptureMode mode = criterion.mode_;
     if (mode == RuptureMode::EnergyMixedMode) {
       const double threshold = criterion.energy_criterion();
@@ -47,7 +48,7 @@ struct ApplyAndReduceInterfaceFractureCriterionFunc {
     if (break_interface) {
       broken_interfaces++;
       for (size_t j = offset; j < offset + size; j++) {
-        interaction_.broke(j);
+        interaction_[attr::unbroken][j] = false;
       }
     }
   }

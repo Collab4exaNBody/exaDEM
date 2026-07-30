@@ -17,12 +17,12 @@ specific language governing permissions and limitations
 under the License.
 */
 #pragma once
-#include <tuple>
-#include <exaDEM/forcefield/contact_parameters.hpp>
 #include <exaDEM/forcefield/contact_force.hpp>
+#include <exaDEM/forcefield/contact_parameters.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
-#include <exaDEM/interaction/interaction.hpp>
+#include <tuple>
 
 namespace exaDEM {
 /**
@@ -36,9 +36,7 @@ namespace exaDEM {
  * @param add The value to add to the variable.
  */
 ONIKA_HOST_DEVICE_FUNC
-inline void lockAndAdd(double& val, double add) {
-  ONIKA_CU_ATOMIC_ADD(val, add);
-}
+inline void lockAndAdd(double& val, double add) { ONIKA_CU_ATOMIC_ADD(val, add); }
 
 /**
  * @brief Atomically adds a value to a double variable.
@@ -121,10 +119,9 @@ struct ContactLawFunc {
    * @param time Increment simulation time.
    */
   template <typename TMPLC, typename TCFPA>
-  ONIKA_HOST_DEVICE_FUNC inline
-  std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
-                                                     const TCFPA& cpa,
-                                                     const double time) const {
+  ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
+                                                                                   const TCFPA& cpa,
+                                                                                   const double time) const {
     using ContactParamsT = ContactParams;
     auto& i = item.i();  // id for particle id, cell for cell id, p for position, sub for vertex id
     auto& j = item.j();  // id for particle id, cell for cell id, p for position, sub for vertex id
@@ -174,17 +171,17 @@ struct ContactLawFunc {
       const double meff = compute_effective_mass(m_i, m_j);
       const double reff = compute_effective_radius(rad_i, rad_j);
 
-      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item.friction_, contact_position, ri, vi,
-                                                  f, item.moment_, vrot_i,  // particle i
-                                                  rj, vj, vrot_j);         // particle j
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item[attr::friction], contact_position,
+                                                  ri, vi, f, item[attr::moment], vrot_i,  // particle i
+                                                  rj, vj, vrot_j);                        // particle j
 
       // === For analysis
-      fn = f - item.friction_;
+      fn = f - item[attr::friction];
 
       // === update particle informations
       // ==== Particle i
       auto& mom_i = cell_i[field::mom][i.p_];
-      lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item.moment_));
+      lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item[attr::moment]));
       lockAndAdd(cell_i[field::fx][i.p_], f.x);
       lockAndAdd(cell_i[field::fy][i.p_], f.y);
       lockAndAdd(cell_i[field::fz][i.p_], f.z);
@@ -192,7 +189,7 @@ struct ContactLawFunc {
       // ==== Particle j
       if constexpr (sym) {
         auto& mom_j = cell_j[field::mom][j.p_];
-        lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item.moment_));
+        lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item[attr::moment]));
         lockAndAdd(cell_j[field::fx][j.p_], -f.x);
         lockAndAdd(cell_j[field::fy][j.p_], -f.y);
         lockAndAdd(cell_j[field::fz][j.p_], -f.z);
@@ -202,7 +199,7 @@ struct ContactLawFunc {
       dn = 0;
     }
 
-    return {dn, contact_position, fn, item.friction_};
+    return {dn, contact_position, fn, item[attr::friction]};
   }
 };
 
@@ -232,11 +229,10 @@ struct ContactLawDriverFunc {
    * @param time Increment simulation time.
    */
   template <typename TMPLC, typename TCFPA>
-  ONIKA_HOST_DEVICE_FUNC inline
-  std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
-                                                     const DriversGPUAccessor& drvs,
-                                                     const TCFPA& cpa,
-                                                     const double time) const {
+  ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
+                                                                                   const DriversGPUAccessor& drvs,
+                                                                                   const TCFPA& cpa,
+                                                                                   const double time) const {
     auto& i = item.i();  // id for particle id, cell for cell id, p for position, sub for vertex id
     using ContactParamsT = ContactParams;
     const int driver_idx = item.driver_id();
@@ -274,16 +270,16 @@ struct ContactLawDriverFunc {
       const double reff = cell[field::radius][p];
 
       Vec3d f = null;
-      contact_force_core<ContactLaw, CohesiveLaw>(
-          dn, n, time, cp, meff, reff, item.friction_, contact_position, r, v, f,
-          item.moment_, vrot,                              // particle i
-          driver.position(), driver.velocity(), driver.angular_velocity());  // particle j
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item[attr::friction], contact_position,
+                                                  r, v, f, item[attr::moment], vrot,  // particle i
+                                                  driver.position(), driver.velocity(),
+                                                  driver.angular_velocity());  // particle j
 
       // === For analysis
-      fn = f - item.friction_;
+      fn = f - item[attr::friction];
 
       // === update informations
-      lockAndAdd(mom, compute_moments(contact_position, r, f, item.moment_));
+      lockAndAdd(mom, compute_moments(contact_position, r, f, item[attr::moment]));
       lockAndAdd(cell[field::fx][p], f.x);
       lockAndAdd(cell[field::fy][p], f.y);
       lockAndAdd(cell[field::fz][p], f.z);
@@ -296,7 +292,7 @@ struct ContactLawDriverFunc {
       item.reset();
       dn = 0;
     }
-    return {dn, contact_position, fn, item.friction_};
+    return {dn, contact_position, fn, item[attr::friction]};
   }
 };
 
@@ -324,11 +320,10 @@ struct ContactLawRShapeDriverFunc {
    * @param time The simulation time increment.
    */
   template <typename TMPLC, typename TPCFA>
-  ONIKA_HOST_DEVICE_FUNC inline
-  std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
-                                                     const DriversGPUAccessor& drvs,
-                                                     const TPCFA& cpa,
-                                                     const double time) const {
+  ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
+                                                                                   const DriversGPUAccessor& drvs,
+                                                                                   const TPCFA& cpa,
+                                                                                   const double time) const {
     auto& i = item.i();  // id for particle id, cell for cell id, p for position, sub for vertex id
     auto& d = item.driver();
     using ContactParamsT = ContactParams;
@@ -371,15 +366,16 @@ struct ContactLawRShapeDriverFunc {
       const double reff = cell[field::radius][p_i];
 
       Vec3d f = {0, 0, 0};
-      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item.friction_, contact_position, r_i,
-                                                  v_i, f, item.moment_, vrot_i,                    // particle i
-                                                  driver.position(), driver.velocity(), driver.angular_velocity());  // driver
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, time, cp, meff, reff, item[attr::friction], contact_position,
+                                                  r_i, v_i, f, item[attr::moment], vrot_i,  // particle i
+                                                  driver.position(), driver.velocity(),
+                                                  driver.angular_velocity());  // driver
 
       // === For analysis
-      fn = f - item.friction_;
+      fn = f - item[attr::friction];
 
       // === update informations
-      lockAndAdd(mom, compute_moments(contact_position, r_i, f, item.moment_));
+      lockAndAdd(mom, compute_moments(contact_position, r_i, f, item[attr::moment]));
       lockAndAdd(cell[field::fx][p_i], f.x);
       lockAndAdd(cell[field::fy][p_i], f.y);
       lockAndAdd(cell[field::fz][p_i], f.z);
@@ -389,13 +385,13 @@ struct ContactLawRShapeDriverFunc {
         lockAndAdd(driver.forces(), -f);
       }
       if (driver.need_moment()) {
-        lockAndAdd(driver.moment(), compute_moments(contact_position, driver.position(), -f, -item.moment_));
+        lockAndAdd(driver.moment(), compute_moments(contact_position, driver.position(), -f, -item[attr::moment]));
       }
     } else {
       item.reset();
       dn = 0;
     }
-    return {dn, contact_position, fn, item.friction_};
+    return {dn, contact_position, fn, item[attr::friction]};
   }
 };
 }  // namespace sphere

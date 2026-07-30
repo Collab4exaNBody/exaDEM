@@ -117,15 +117,16 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
         vertices[j - interface.loc_] = shp->get_vertex(loc.sub_, r, h, quat);
         buffers.ids_ << i << " ";
         buffers.connectivities_ << buffers.n_vertices_++ << " ";
-        buffers.tds_ << interaction.tds_.x << " " << interaction.tds_.y << " " << interaction.tds_.z << " ";
-        buffers.et_ << interaction.et_ << " ";
-        buffers.en_ << interaction.en_ << " ";
-        En += interaction.en_;
-        Et += interaction.et_;
+        buffers.tds_ << interaction[attr::tds].x << " " << interaction[attr::tds].y << " " << interaction[attr::tds].z
+                     << " ";
+        buffers.et_ << interaction[attr::et] << " ";
+        buffers.en_ << interaction[attr::en] << " ";
+        En += interaction[attr::en];
+        Et += interaction[attr::et];
         if (dn[j] > 0) {
           S += exanb::norm(fn[j]);
         }
-        criterion = interaction.criterion_;  // same criterion for every interaction of the interface
+        criterion = interaction[attr::criterion];  // same criterion for every interaction of the interface
       }
 
       // All interactions composing the interface share the same criterion.

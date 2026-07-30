@@ -249,12 +249,12 @@ struct ApplyClassifierFunc {  // Second pass
     };
 
     struct AddInteractionFunc {
-      const InteractionParticleAccessor& data_;
+      InteractionParticleAccessor& data_;
       PlaceholderInteraction item_;
       InteractionTypePerCellCounter prefix_;
 
       ONIKA_HOST_DEVICE_FUNC
-      AddInteractionFunc(const InteractionParticleAccessor& in) : data_(in), item_{}, prefix_({0, 0, 0, 0}) {}
+      AddInteractionFunc(InteractionParticleAccessor& in) : data_(in), item_{}, prefix_({0, 0, 0, 0}) {}
 
       ONIKA_HOST_DEVICE_FUNC
       void set_ghost(int level_of_ghost) { item_.pair_.ghost_ = level_of_ghost; }
