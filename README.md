@@ -32,6 +32,8 @@ Documentation is available here:
   - [Examples](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Test_cases.html)
   - [Tutorials](https://collab4exanbody.github.io/doc_exaDEM/project_exaDEM/Tutorial.html)
 
+[PDF version (37 MB)](https://collab4exanbody.github.io/doc_exaDEM/_static/exadem-1-2-2.pdf), automatically generated from the website — GIFs and similar content don't appear.
+
 ## Community Guidelines
 
 For more details, see `CONTRIBUTING.md`. Main guidelines are:
