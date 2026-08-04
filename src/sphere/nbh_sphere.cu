@@ -127,8 +127,9 @@ class UpdateContactInteractionSphere : public OperatorNode {
         manager.reset(n_particles);
 
         // Move persistent interactions in the InteractionManager
-        update_persistent_interactions(manager, storage);
-        manager.update_ignore_interaction();
+        // Currently with config_spheres, interactions can't be persistent
+        // update_persistent_interactions(manager, storage);
+        // manager.update_ignore_interaction();
 
         // Reset storage, interaction history was stored in the manager
         storage.initialize(n_particles);

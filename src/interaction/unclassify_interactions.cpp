@@ -77,6 +77,15 @@ struct UnclassifyFunc {
           // Only one interaction should match.
           if (item1 == item2) {
             item2.update(item1);
+            // DIAGNOSTIC: item2's type_ must still be a valid interaction type right after this write.
+            if (item2.type() >= InteractionTypeId::NTypesParticleParticle &&
+                item2.type() != InteractionTypeId::InnerBond) {
+              item2.print();
+              color_log::error(
+                  "unclassify",
+                  "Interaction type became invalid right after unclassify write: " + std::to_string(item2.type()) +
+                      " (cell: " + std::to_string(item1.pair_.owner().cell_) + ", it2: " + std::to_string(it2) + ")");
+            }
             found = true;
             break;
           }
