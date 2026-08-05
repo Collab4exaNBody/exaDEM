@@ -10,7 +10,6 @@
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
-static constexpr int ParticleParticleSize = 4;
 typedef onika::oarray_t<int, InteractionTypeId::NTypes> InteractionTypePerCellCounter;
 typedef onika::oarray_t<InteractionWrapper<ParticleParticle>, InteractionTypeId::NTypes> InteractionAccessor;
 typedef onika::oarray_t<InteractionWrapper<ParticleParticle>, InteractionTypeId::NTypesPP> InteractionParticleAccessor;

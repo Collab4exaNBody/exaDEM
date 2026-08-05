@@ -34,6 +34,8 @@ struct CellInteractionInformation {
     update_ghost_.resize(size);
   }
 
+  size_t size() const { return start_cell_.size(); }
+
   // Prefetch all vectors to CPU memory asynchronously
   void prefetch_cpu(onikaStream_t& st) {
 #ifdef ONIKA_CUDA_VERSION
@@ -98,7 +100,8 @@ template <bool ghost_only, bool active_interaction, bool append = false>
 void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info, NbhCellStorage& classifier_helper,
                               CellDriverStorage& classifier_helper_driver, InteractionWrapperAccessor& iaccessor,
                               GridCellParticleInteraction& ges, const int typeID_start = 0,
-                              const int typeID_end = InteractionTypeId::NTypes - 1) {
+                              const int typeID_end = InteractionTypeId::NTypes) {
+  //                              const int typeID_end = InteractionTypeId::NTypes - 1) {
   // Number of non-empty cells to process
   size_t ncells = info.start_cell_.size();
 

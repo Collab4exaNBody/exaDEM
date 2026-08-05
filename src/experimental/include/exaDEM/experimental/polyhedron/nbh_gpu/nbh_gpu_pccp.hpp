@@ -1,6 +1,6 @@
 #pragma once
 #include <cub/cub.cuh>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu.hpp>
+#include <exaDEM/experimental/filter_pair_particle.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 
 namespace exaDEM {
@@ -41,11 +41,14 @@ struct ParticlePairStorage {
 // Stage 1: Count particle pairs per cell pair
 // 1 block = 1 cell pair, threads iterate particle pairs
 // ============================================================
-template <int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(
-    TMPLC cells, size_t* __restrict__ owner_cells, size_t* __restrict__ partner_cells,
-    uint8_t* __restrict__ ghost_flags, double rcut_inc, const shape* __restrict__ shps,
-    VertexField* __restrict__ vertex_fields, int* __restrict__ pair_counts, size_t num_cell_pairs) {
+template <int BLOCKX, int BLOCKY, bool IGNORE_PAIR, typename TMPLC>
+__global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(TMPLC cells, size_t* __restrict__ owner_cells,
+                                                                  size_t* __restrict__ partner_cells,
+                                                                  uint8_t* __restrict__ ghost_flags, double rcut_inc,
+                                                                  const shape* __restrict__ shps,
+                                                                  VertexField* __restrict__ vertex_fields,
+                                                                  int* __restrict__ pair_counts, size_t num_cell_pairs,
+                                                                  IgnorePairsGPU::View ignore_pairs) {
   using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING, BLOCKY>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
@@ -68,6 +71,9 @@ __global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(
     AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
+      if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
+        if (ignore_pairs(cell_a, static_cast<uint16_t>(pa), static_cast<uint16_t>(pb))) continue;
+      }
       auto body_b = load(cB, pb);
 
       if (body_a.id_ >= body_b.id_) continue;
@@ -98,7 +104,7 @@ __global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(
 // Stage 2: Fill particle pair arrays
 // 1 block = 1 cell pair
 // ============================================================
-template <int BLOCKX, int BLOCKY, typename TMPLC>
+template <int BLOCKX, int BLOCKY, bool IGNORE_PAIR, typename TMPLC>
 __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
     TMPLC cells, size_t* __restrict__ owner_cells, size_t* __restrict__ partner_cells,
     uint8_t* __restrict__ ghost_flags, double rcut_inc, const shape* __restrict__ shps,
@@ -106,7 +112,7 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
     // output
     uint32_t* __restrict__ out_cell_i, uint32_t* __restrict__ out_cell_j, uint16_t* __restrict__ out_p_i,
     uint16_t* __restrict__ out_p_j, uint8_t* __restrict__ out_ghost, uint32_t* __restrict__ out_cell_pair_idx,
-    size_t num_cell_pairs) {
+    size_t num_cell_pairs, IgnorePairsGPU::View ignore_pairs) {
   using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
   __shared__ typename BlockScan::TempStorage temp_storage;
 
@@ -130,6 +136,9 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
     AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
+      if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
+        if (ignore_pairs(cell_a, static_cast<uint16_t>(pa), static_cast<uint16_t>(pb))) continue;
+      }
       auto body_b = load(cB, pb);
       // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
       if (body_a.id_ >= body_b.id_) continue;
@@ -158,6 +167,9 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
     AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
+      if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
+        if (ignore_pairs(cell_a, static_cast<uint16_t>(pa), static_cast<uint16_t>(pb))) continue;
+      }
       auto body_b = load(cB, pb);
       // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
       if (body_a.id_ >= body_b.id_) continue;
@@ -231,11 +243,13 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
         countVV++;
     }
     for (int j = threadIdx.x; j < neb; j += blockDim.x) {
-      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
+      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
+                             &shpb))
         countVE++;
     }
     for (int j = threadIdx.x; j < nfb; j += blockDim.x) {
-      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
+      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
+                             &shpb))
         countVF++;
     }
   }
@@ -251,11 +265,13 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
   // B→A: reverse VE, VF
   for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
     for (int i = threadIdx.x; i < nea; i += blockDim.x) {
-      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
+      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i,
+                             &shpa))
         countVE++;
     }
     for (int i = threadIdx.x; i < nfa; i += blockDim.x) {
-      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
+      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i,
+                             &shpa))
         countVF++;
     }
   }
@@ -320,10 +336,12 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
                                &shpb))
         count1++;
     for (int j = threadIdx.x; j < neb; j += blockDim.x)
-      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
+      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
+                             &shpb))
         count2++;
     for (int j = threadIdx.x; j < nfb; j += blockDim.x)
-      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
+      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
+                             &shpb))
         count3++;
   }
   for (int i = threadIdx.y; i < nea; i += blockDim.y)
@@ -332,10 +350,12 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
         count4++;
   for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
     for (int i = threadIdx.x; i < nea; i += blockDim.x)
-      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
+      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i,
+                             &shpa))
         count5++;
     for (int i = threadIdx.x; i < nfa; i += blockDim.x)
-      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
+      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i,
+                             &shpa))
         count6++;
   }
 

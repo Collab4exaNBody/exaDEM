@@ -311,6 +311,14 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     InteractionHistory history;
 
+    // Persistent (e.g. stuck/bonded) interactions are already accounted for elsewhere;
+    // skip them here so the neighbor search doesn't rediscover them as plain contacts.
+    // Must run before setup_history_clean_ges(), which resets *ges.
+    ListOfIgnorePairs ignore_pairs;
+    build_list_of_ignore_pair(ignore_pairs, cell_indices, active_cell_count, *ges);
+    IgnorePairsGPU ignore_pairs_gpu;
+    ignore_pairs_gpu.build(ignore_pairs, grid_data.number_of_cells());
+
     setup_history_clean_ges(grid_cells, cell_indices, active_cell_count, *ges, history, st_history);
 
     ONIKA_CU_DEVICE_SYNCHRONIZE();
@@ -318,9 +326,10 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     // ****** Build particle pairs (PCCP) ******* //
     dim3 pp_block(kParticlePairBlockX, kParticlePairBlockY, 1);
 
-    CountParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY><<<neighbor_cell_pair_count, pp_block>>>(
+    CountParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY, true><<<neighbor_cell_pair_count, pp_block>>>(
         grid_cells, cell_pair_accessor.owner_cell_, cell_pair_accessor.partner_cell_, cell_pair_accessor.ghost_,
-        *rcut_inc, shapes_data.data(), vertex_field_data, particle_pair_counts.data(), neighbor_cell_pair_count);
+        *rcut_inc, shapes_data.data(), vertex_field_data, particle_pair_counts.data(), neighbor_cell_pair_count,
+        ignore_pairs_gpu.view());
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
     exclusive_scan_device(particle_pair_counts.data(), particle_pair_offsets.data(), neighbor_cell_pair_count);
@@ -343,12 +352,12 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     // end scratch variables
 
     if (total_pp > 0) {
-      FillParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY><<<neighbor_cell_pair_count, pp_block>>>(
+      FillParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY, true><<<neighbor_cell_pair_count, pp_block>>>(
           grid_cells, cell_pair_accessor.owner_cell_, cell_pair_accessor.partner_cell_, cell_pair_accessor.ghost_,
           *rcut_inc, shapes_data.data(), vertex_field_data, particle_pair_offsets.data(),
           particle_pair_storage.cell_i_.data(), particle_pair_storage.cell_j_.data(), particle_pair_storage.p_i_.data(),
           particle_pair_storage.p_j_.data(), particle_pair_storage.ghost_.data(),
-          particle_pair_storage.cell_pair_idx_.data(), neighbor_cell_pair_count);
+          particle_pair_storage.cell_pair_idx_.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
       ONIKA_CU_DEVICE_SYNCHRONIZE();
     }
 

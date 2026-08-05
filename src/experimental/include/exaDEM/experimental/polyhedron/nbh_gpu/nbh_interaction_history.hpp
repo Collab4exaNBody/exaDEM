@@ -24,20 +24,7 @@ void setup_history_clean_ges(TMPLC& cells, size_t* idxs, size_t ncells, GridCell
   history.size_.resize(ncells);
 
   size_t sum = 0;
-/*
-#pragma omp parallel for reduction(inscan:sum)
-  for(size_t i = 0 ; i < ncells ; i++) {
-    // should contains only active interactions
-    auto& storage = ges.m_data[idxs[i]];
-    assert(interaction_test::check_extra_interaction_storage_consistency(
-            storage.number_of_particles(), storage.m_info.data(), storage.m_data.data()));
 
-    history.size_[i] = storage.m_data.size();
-    sum += storage.m_data.size();
-    #pragma omp scan inclusive(sum)
-    history.start_[i] = sum;
-  }
-  */
 #pragma omp parallel for reduction(+ : sum)
   for (size_t i = 0; i < ncells; ++i) {
     size_t cell_idx = idxs[i];
