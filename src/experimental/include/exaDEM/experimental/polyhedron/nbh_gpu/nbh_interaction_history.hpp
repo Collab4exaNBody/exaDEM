@@ -17,8 +17,8 @@ struct InteractionHistory {
   }
 };
 
-template <typename TMPLC>
-void setup_history_clean_ges(TMPLC& cells, size_t* idxs, size_t ncells, GridCellParticleInteraction& ges,
+template <typename CellsT>
+void setup_history_clean_ges(CellsT& cells, size_t* idxs, size_t ncells, GridCellParticleInteraction& ges,
                              InteractionHistory& history, onikaStream_t& st) {
   history.start_.resize(ncells);
   history.size_.resize(ncells);
@@ -83,7 +83,7 @@ struct UpdateHistoryFunc {
   size_t* __restrict__ size_;
   PlaceholderInteraction* __restrict__ data_;
   CellStorage::View cell_storage_accessor_;
-  InteractionWrapperAccessor classifier_accessor_;
+  InteractionWrapperAccessor interaction_classifier_accessor_;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(long idx) const {
     const UpdateHistoryImplFunc func;
@@ -95,7 +95,7 @@ struct UpdateHistoryFunc {
       auto type = I.type();
       const int a = cell_storage_accessor_.offset_[idx][type];
       const int b = a + cell_storage_accessor_.size_[idx][type];
-      IDispatcher::dispatch(type, classifier_accessor_, func, I, a, b);
+      IDispatcher::dispatch(type, interaction_classifier_accessor_, func, I, a, b);
     }
   }
 };

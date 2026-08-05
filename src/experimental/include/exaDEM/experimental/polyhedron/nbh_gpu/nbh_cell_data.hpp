@@ -123,7 +123,7 @@ inline void add_particle_particle_totals(CellStorage& cell_storage, CellInteract
  */
 template <bool ghost_only, bool active_interaction, bool append = false>
 void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info, CellStorage& cell_storage,
-                              InteractionWrapperAccessor& iaccessor, GridCellParticleInteraction& ges,
+                              InteractionWrapperAccessor& interaction_classifier_accessor, GridCellParticleInteraction& ges,
                               const int typeID_start = 0, const int typeID_end = InteractionTypeId::NTypes) {
   // Number of non-empty cells to process
   size_t ncells = info.start_cell_.size();
@@ -155,7 +155,7 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
       for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
         int start = first_elem_per_type[typeID];
         int size = n_elem_per_type[typeID];
-        IDispatcher::dispatch(typeID, iaccessor, counter, number_of_interactions, start, size);
+        IDispatcher::dispatch(typeID, interaction_classifier_accessor, counter, number_of_interactions, start, size);
       }
     }
 
@@ -187,10 +187,10 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
       if (size > 0) {
         if constexpr (!active_interaction) {
           CopierFunc copier;
-          IDispatcher::dispatch(typeID, iaccessor, copier, data_ptr, shift, start, size);
+          IDispatcher::dispatch(typeID, interaction_classifier_accessor, copier, data_ptr, shift, start, size);
         } else {
           CopierActiveInteractionFunc copier;
-          IDispatcher::dispatch(typeID, iaccessor, copier, to_span(storage.m_data), shift, start, size);
+          IDispatcher::dispatch(typeID, interaction_classifier_accessor, copier, to_span(storage.m_data), shift, start, size);
         }
       }
     }

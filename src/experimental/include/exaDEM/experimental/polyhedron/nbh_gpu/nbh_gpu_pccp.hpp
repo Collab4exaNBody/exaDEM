@@ -51,13 +51,13 @@ struct ParticleDetectPack {
 
 /**
  * @brief Load a ParticleDetectPack from a cell container at index i.
- * @tparam TMPLC Type of the cell container (must support field access via operator[])
+ * @tparam CellsT Type of the cell container (must support field access via operator[])
  * @param cell Reference to the cell container
  * @param i Index of the particle in the cell
  * @return ParticleDetectPack with all particle information
  */
-template <typename TMPLC>
-ONIKA_HOST_DEVICE_FUNC inline ParticleDetectPack load(TMPLC& cell, size_t i) {
+template <typename CellsT>
+ONIKA_HOST_DEVICE_FUNC inline ParticleDetectPack load(CellsT& cell, size_t i) {
   ParticleDetectPack p;
 
   // Load orientation
@@ -83,8 +83,8 @@ ONIKA_HOST_DEVICE_FUNC inline ParticleDetectPack load(TMPLC& cell, size_t i) {
 // Stage 1: Count particle pairs per cell pair
 // 1 block = 1 cell pair, threads iterate particle pairs
 // ============================================================
-template <int BLOCKX, int BLOCKY, bool IGNORE_PAIR, typename TMPLC>
-__global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(TMPLC cells, size_t* __restrict__ owner_cells,
+template <int BLOCKX, int BLOCKY, bool IGNORE_PAIR, typename CellsT>
+__global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(CellsT cells, size_t* __restrict__ owner_cells,
                                                                   size_t* __restrict__ partner_cells,
                                                                   uint8_t* __restrict__ ghost_flags, double rcut_inc,
                                                                   const shape* __restrict__ shps,
@@ -146,9 +146,9 @@ __global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(TMPLC cells, s
 // Stage 2: Fill particle pair arrays
 // 1 block = 1 cell pair
 // ============================================================
-template <int BLOCKX, int BLOCKY, bool IGNORE_PAIR, typename TMPLC>
+template <int BLOCKX, int BLOCKY, bool IGNORE_PAIR, typename CellsT>
 __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
-    TMPLC cells, size_t* __restrict__ owner_cells, size_t* __restrict__ partner_cells,
+    CellsT cells, size_t* __restrict__ owner_cells, size_t* __restrict__ partner_cells,
     uint8_t* __restrict__ ghost_flags, double rcut_inc, const shape* __restrict__ shps,
     VertexField* __restrict__ vertex_fields, int* __restrict__ pair_offsets,
     // output
@@ -241,8 +241,8 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
 // Stage 3: Count interactions per particle pair
 // 1 block = 1 particle pair (PCCP)
 // ============================================================
-template <int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__ vertex_fields,
+template <int BLOCKX, int BLOCKY, typename CellsT>
+__global__ void CountInteractionsPPKernel(CellsT cells, VertexField* __restrict__ vertex_fields,
                                           const shape* __restrict__ shps, double rcut_inc,
                                           uint32_t* __restrict__ pp_cell_i, uint32_t* __restrict__ pp_cell_j,
                                           uint16_t* __restrict__ pp_p_i, uint16_t* __restrict__ pp_p_j,
@@ -331,9 +331,9 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
 // Stage 4: Fill Classifier per particle pair
 // 1 block = 1 particle pair (PCCP)
 // ============================================================
-template <int BLOCKX, int BLOCKY, typename TMPLC>
+template <int BLOCKX, int BLOCKY, typename CellsT>
 __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
-    TMPLC cells, VertexField* __restrict__ vertex_fields, const shape* __restrict__ shps, double rcut_inc,
+    CellsT cells, VertexField* __restrict__ vertex_fields, const shape* __restrict__ shps, double rcut_inc,
     uint32_t* __restrict__ pp_cell_i, uint32_t* __restrict__ pp_cell_j, uint16_t* __restrict__ pp_p_i,
     uint16_t* __restrict__ pp_p_j, uint8_t* __restrict__ pp_ghost,
     InteractionTypePerCellCounter* __restrict__ prefix_data, InteractionParticleAccessor interactions,

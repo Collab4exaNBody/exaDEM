@@ -158,14 +158,14 @@ inline void initialize_interaction_scratch(ScratchT& scratch, size_t total_pp) {
 }
 
 /* Add persistent driver interactions that were not found in the current classifier contents.
-   wrapper_storage backs classifier_interaction_accessor's spans and must be owned by the caller:
+   wrapper_storage backs interaction_classifier_accessor's spans and must be owned by the caller:
    reassigning it here (rather than to a function-local InteractionWrapperStorage) keeps those
    spans valid after this function returns, for whatever the caller does next with the accessor. */
-template <typename ContainerT, typename WrapperAccessorT, typename CellDriverAccessorT>
+template <typename ContainerT, typename WrapperAccessorT, typename CellStorageAccessorT>
 inline void add_unmatched_persistent_interactions(const InteractionHistory& history, size_t cell_size,
                                                   ContainerT& container,
-                                                  WrapperAccessorT& classifier_interaction_accessor,
-                                                  CellDriverAccessorT& cell_driver_accessor,
+                                                  WrapperAccessorT& interaction_classifier_accessor,
+                                                  CellStorageAccessorT& cell_storage_accessor,
                                                   InteractionWrapperStorage& wrapper_storage) {
   std::vector<PlaceholderInteraction> unmatched_persistent;
   for (size_t ci = 0; ci < cell_size; ++ci) {
@@ -180,9 +180,9 @@ inline void add_unmatched_persistent_interactions(const InteractionHistory& hist
       if (!interaction.persistent()) continue;
 
       auto& wrapper =
-          classifier_interaction_accessor.template get_typed_accessor<InteractionType::ParticleDriver>(type);
-      const int drv_offset = cell_driver_accessor.offset_[ci][type];
-      const int drv_size = cell_driver_accessor.size_[ci][type];
+          interaction_classifier_accessor.template get_typed_accessor<InteractionType::ParticleDriver>(type);
+      const int drv_offset = cell_storage_accessor.offset_[ci][type];
+      const int drv_size = cell_storage_accessor.size_[ci][type];
       bool found = false;
       for (int k = drv_offset; k < drv_offset + drv_size; ++k) {
         if (wrapper.same(k, interaction)) {
@@ -214,7 +214,7 @@ inline void add_unmatched_persistent_interactions(const InteractionHistory& hist
   }
 
   wrapper_storage = InteractionWrapperStorage(container);
-  classifier_interaction_accessor = wrapper_storage.accessor();
+  interaction_classifier_accessor = wrapper_storage.accessor();
 }
 
 template <typename GridT, class = AssertGridHasFields<GridT>>
@@ -271,7 +271,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_innerbond);
 
     NbhCellHostStorage cell_neighbor_host_storage;
-    CellInteractionInformation& cell_interaction_info = nbh_manager->info_cell_;
+    CellInteractionInformation& cell_interaction_info = nbh_manager->cell_interaction_info_;
 
     IgnorePairsGPU ignore_pairs_gpu;
     if (*enable_persistent_interactions) {
@@ -286,11 +286,11 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     build_cell_neighbor_metadata(grid_data, grid_dimensions, cell_indices, active_cell_count,
                                  cell_neighbor_host_storage, cell_interaction_info);
     cell_interaction_info.prefetch_cpu(st_updateghost);
-    CellStorage& cell_storage = nbh_manager->info_cell_storage_;
+    CellStorage& cell_storage = nbh_manager->cell_storage_;
     cell_storage.resize(active_cell_count, get_exec_ctx);
-    auto cell_driver_accessor = cell_storage.view();
+    auto cell_storage_accessor = cell_storage.view();
 
-    CellPairStorage& cell_pair_storage = nbh_manager->info_pair_cell_;
+    CellPairStorage& cell_pair_storage = nbh_manager->cell_pair_storage_;
     cell_pair_storage.reset(cell_neighbor_host_storage, get_exec_ctx);
 
     auto cell_pair_accessor = cell_pair_storage.view();
@@ -299,7 +299,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     opts.omp_scheduling = OMP_SCHED_GUIDED;
     // BlockParallelForOptions bopts;
 
-    CountIPDFunc driver_counter = {grid_cells,         cell_driver_accessor, cell_indices,   *rcut_inc,
+    CountDriverInteractionsFunc driver_counter = {grid_cells,         cell_storage_accessor, cell_indices,   *rcut_inc,
                                    shapes_data.data(), vertex_field_data,    driver_accessor};
 
     const auto neighbor_cell_pair_count = cell_neighbor_host_storage.owner_cell_.size();
@@ -318,17 +318,17 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     // end scratch variables
 
     parallel_for(active_cell_count, driver_counter, parallel_execution_context("nbh_gpu::counter_driver,"), opts);
-    PrefixSumInteractionTypePerCellCounter driver_prefix_sum{cell_driver_accessor.offset_, cell_driver_accessor.size_,
+    PrefixSumInteractionTypePerCellCounter cell_storage_prefix_sum{cell_storage_accessor.offset_, cell_storage_accessor.size_,
                                                              active_cell_count};
 
     // ParticleDriver [4,12] and InnerBond [13,13] are contiguous type ranges, so a single range
     // covers both (offset_/size_ share the same per-cell layout for every type).
-    ParallelExecutionSpace<1> parallel_range_fpd = {{get_first_id<InteractionType::ParticleDriver>()},
+    ParallelExecutionSpace<1> prefix_sum_type_range = {{get_first_id<InteractionType::ParticleDriver>()},
                                                     {get_last_id<InteractionType::InnerBond>() + 1}};
 
     ONIKA_CU_DEVICE_SYNCHRONIZE();
-    parallel_for(parallel_range_fpd, driver_prefix_sum, parallel_execution_context("nbh_gpu::func_prefix_driver"),
-                 opts);
+    parallel_for(prefix_sum_type_range, cell_storage_prefix_sum,
+                 parallel_execution_context("nbh_gpu::cell_storage_prefix_sum"), opts);
 
     InteractionHistory history;
 
@@ -449,7 +449,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     InteractionWrapperAccessor interaction_classifier_accessor = wrappers.accessor();
 
     if (*enable_persistent_interactions) {
-      fill_classifier_persistent_inner_bonds(persistent_inner_bonds, cell_driver_accessor,
+      fill_classifier_persistent_inner_bonds(persistent_inner_bonds, cell_storage_accessor,
                                              interaction_classifier_accessor);
     }
 
@@ -469,21 +469,21 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     // Fold PP totals (cell_pair_storage) into cell_storage's per-cell table.
     add_particle_particle_totals(cell_storage, cell_interaction_info, cell_pair_storage);
 
-    ClassifyIPDFunc driver_classifier = {
-        grid_cells,         cell_driver_accessor, cell_indices,    *rcut_inc,
+    ClassifyDriverInteractionsFunc driver_classifier = {
+        grid_cells,         cell_storage_accessor, cell_indices,    *rcut_inc,
         shapes_data.data(), vertex_field_data,    driver_accessor, interaction_classifier_accessor};
     parallel_for(active_cell_count, driver_classifier, parallel_execution_context("nbh_gpu::classify_driver"), opts);
 
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
     UpdateHistoryFunc history_updater = {history.start_.data(), history.size_.data(), history.data_.data(),
-                                         cell_driver_accessor, interaction_classifier_accessor};
+                                         cell_storage_accessor, interaction_classifier_accessor};
 
     parallel_for(history.start_.size(), history_updater, parallel_execution_context(), opts);
 
     // === ADD PERSISTENT INTERACTIONS ===
     add_unmatched_persistent_interactions(history, active_cell_count, interaction_container,
-                                          interaction_classifier_accessor, cell_driver_accessor, wrappers);
+                                          interaction_classifier_accessor, cell_storage_accessor, wrappers);
 
     constexpr bool do_ghost_only = true;
     constexpr bool do_active_interaction_only = false;
