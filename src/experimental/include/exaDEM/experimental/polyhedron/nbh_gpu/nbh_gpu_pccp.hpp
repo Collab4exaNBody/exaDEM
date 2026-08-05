@@ -474,7 +474,7 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
 
 inline void reconstruct_cell_pair_offsets(ParticlePairStorage& pp_storage, InteractionTypePerCellCounter* count_per_pp,
                                           size_t num_particle_pairs, size_t num_cell_pairs,
-                                          NbhCellStorage& info_cell_pair) {
+                                          CellPairStorage& info_cell_pair) {
 // Reset (parallel)
 #pragma omp parallel for
   for (size_t cp = 0; cp < num_cell_pairs; cp++) {

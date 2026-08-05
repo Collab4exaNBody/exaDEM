@@ -5,57 +5,11 @@
 #include <exaDEM/polyhedron/vertices.hpp>
 
 namespace exaDEM {
-struct CellDriverGPUAcessor {
-  InteractionTypePerCellCounter* __restrict__ offset_;
-  InteractionTypePerCellCounter* __restrict__ size_;
-};
-
-struct ResetCell {
-  InteractionTypePerCellCounter* __restrict__ offset_;  ///< Pointer to array of offsets per interaction type
-  InteractionTypePerCellCounter* __restrict__ size_;    ///< Pointer to array of sizes per interaction type
-
-  /**
-   * @brief Reset the data for a given cell index.
-   * @param i Index of the cell to reset
-   */
-  ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(size_t i) const {
-    for (size_t j = 0; j < InteractionTypeId::NTypes; j++) {
-      size_[i][j] = 0;
-      offset_[i][j] = 0;
-    }
-  }
-};
-
-struct CellDriverStorage {
-  // Vector type alias using unified memory (GPU/CPU compatible)
-  template <typename T>
-  using VectorT = onika::memory::CudaMMVector<T>;
-  VectorT<InteractionTypePerCellCounter> offset_;  ///< Offset for each inter
-  VectorT<InteractionTypePerCellCounter> size_;    ///< Number of interaction
-
-  // size should be the number of non empty cells
-  template <typename ExecCtx>
-  void resize(size_t newsize, ExecCtx& exec_ctx) {
-    size_.resize(newsize);
-    offset_.resize(newsize);
-
-    // Reset members (skip flag and arrays)
-    ResetCell reset_func = {offset_.data(), size_.data()};
-
-    // Parallel execution over all cells
-    onika::parallel::ParallelForOptions opts;
-    opts.omp_scheduling = onika::parallel::OMP_SCHED_GUIDED;
-    parallel_for(newsize, reset_func, exec_ctx(), opts);
-  }
-  CellDriverGPUAcessor accessor() { return {offset_.data(), size_.data()}; }
-};
-
 // CountNumberOfInteractionParticleDriverFunc = CountIPDFunc
 template <typename TMPLC>
 struct CountIPDFunc {
   TMPLC cells_;
-  CellDriverGPUAcessor accessor_;
+  CellStorage::View accessor_;
   const size_t* const cell_ptr_;
   const double rcut_inc_;
   const shape* const shps_;
@@ -126,7 +80,7 @@ struct CountIPDFunc {
 template <typename TMPLC>
 struct ClassifyIPDFunc {
   TMPLC cells_;
-  CellDriverGPUAcessor accessor_;
+  CellStorage::View accessor_;
   const size_t* const cell_ptr_;
   const double rcut_inc_;
   const shape* const shps_;

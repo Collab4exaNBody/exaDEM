@@ -50,8 +50,8 @@ inline void debug_print(InteractionTypePerCellCounter& in1, InteractionTypePerCe
 }
 
 struct PrefixSumInteractionTypePerCellCounter {
-  InteractionTypePerCellCounter* const offset_;
-  InteractionTypePerCellCounter* const size_;
+  onika::cuda::span<InteractionTypePerCellCounter> offset_;
+  onika::cuda::span<InteractionTypePerCellCounter> size_;
   size_t n_elem_;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t id) const {
@@ -61,6 +61,13 @@ struct PrefixSumInteractionTypePerCellCounter {
     }
   }
 };
+
+// complètement temporaire avec le const_cast, à remplacer
+template <typename T>
+inline onika::cuda::span<T> to_span(const onika::memory::CudaMMVector<T>& vec) {
+  auto& v = const_cast<onika::memory::CudaMMVector<T>&>(vec);
+  return {onika::cuda::vector_data(v), onika::cuda::vector_size(v)};
+}
 
 /**
  * @brief Swap two values on host or device.

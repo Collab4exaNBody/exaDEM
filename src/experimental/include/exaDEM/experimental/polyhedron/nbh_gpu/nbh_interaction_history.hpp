@@ -82,10 +82,7 @@ struct UpdateHistoryFunc {
   size_t* __restrict__ start_;
   size_t* __restrict__ size_;
   PlaceholderInteraction* __restrict__ data_;
-  size_t* __restrict__ start_cell_;
-  size_t* __restrict__ number_of_pair_cells_;
-  NbhCellAccessor accessor_shift_;
-  CellDriverGPUAcessor driver_accessor_;
+  CellStorage::View cell_storage_accessor_;
   InteractionWrapperAccessor classifier_accessor_;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(long idx) const {
@@ -96,22 +93,8 @@ struct UpdateHistoryFunc {
     for (size_t i = begin; i < end; i++) {
       const PlaceholderInteraction& I = data_[i];
       auto type = I.type();
-      int a, b;
-      if (type >= get_first_id<InteractionType::ParticleDriver>() &&
-          type <= get_last_id<InteractionType::ParticleDriver>()) {
-        a = driver_accessor_.offset_[idx][type];
-        b = a + driver_accessor_.size_[idx][type];
-      } else {
-        if (number_of_pair_cells_[idx] > 0) {
-          size_t first_block_id = start_cell_[idx];
-          size_t last_block_id = first_block_id + number_of_pair_cells_[idx] - 1;
-          a = accessor_shift_.offset_[first_block_id][type];
-          b = accessor_shift_.offset_[last_block_id][type] + accessor_shift_.size_[last_block_id][type];
-        } else {
-          a = 0;
-          b = 0;
-        }
-      }
+      const int a = cell_storage_accessor_.offset_[idx][type];
+      const int b = a + cell_storage_accessor_.size_[idx][type];
       IDispatcher::dispatch(type, classifier_accessor_, func, I, a, b);
     }
   }

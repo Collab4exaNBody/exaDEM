@@ -5,10 +5,10 @@
 #include <onika/memory/allocator.h>
 
 #include <algorithm>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
+#include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <tuple>
 #include <vector>
-
-#include <exaDEM/interaction/grid_cell_interaction.hpp>
 
 namespace exaDEM {
 
@@ -43,13 +43,18 @@ struct IgnorePairsGPU {
   /// once on the host (build()), then call view() right before a kernel launch and
   /// pass the resulting View by value instead.
   struct View {
-    onika::cuda::span<const uint32_t> cell_offset_;  // size == n_cells + 1
-    onika::cuda::span<const PairKey> pairs_;
+    onika::cuda::span<uint32_t> cell_offset_;  // size == n_cells + 1
+    onika::cuda::span<PairKey> pairs_;
+
+    ONIKA_HOST_DEVICE_FUNC inline bool has_pairs_to_ignore(uint32_t cell_id) const {
+      if (cell_id + 1 >= cell_offset_.size()) {
+        return false;
+      }
+      return cell_offset_[cell_id] != cell_offset_[cell_id + 1];
+    }
 
     /**
      * @brief Checks whether (pa, pb) is an ignored pair within the given cell.
-     * @return true if the pair should be ignored, false otherwise (including when
-     *         cell_id is out of range, e.g. the view is default-constructed/empty).
      */
     ONIKA_HOST_DEVICE_FUNC inline bool operator()(uint32_t cell_id, uint16_t pa, uint16_t pb) const {
       const size_t n_cells = cell_offset_.size() == 0 ? 0 : cell_offset_.size() - 1;
@@ -109,9 +114,7 @@ struct IgnorePairsGPU {
   /// @brief Builds a trivially-copyable View, for passing into __global__ kernels. Host-only:
   /// call this right before a kernel launch and pass the result by value.
   inline View view() const {
-    return View{onika::cuda::span<const uint32_t>{onika::cuda::vector_data(cell_offset_),
-                                                   onika::cuda::vector_size(cell_offset_)},
-               onika::cuda::span<const PairKey>{onika::cuda::vector_data(pairs_), onika::cuda::vector_size(pairs_)}};
+    return View{to_span(cell_offset_), to_span(pairs_)};
   }
 };
 

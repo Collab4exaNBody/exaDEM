@@ -272,14 +272,14 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     build_cell_neighbor_metadata(grid_data, grid_dimensions, cell_indices, active_cell_count,
                                  cell_neighbor_host_storage, cell_interaction_info);
     cell_interaction_info.prefetch_cpu(st_updateghost);
-    CellDriverStorage& cell_driver_storage = nbh_manager->info_cell_driver_;
-    cell_driver_storage.resize(active_cell_count, get_exec_ctx);
-    auto cell_driver_accessor = cell_driver_storage.accessor();
+    CellStorage& cell_storage = nbh_manager->info_cell_storage_;
+    cell_storage.resize(active_cell_count, get_exec_ctx);
+    auto cell_driver_accessor = cell_storage.view();
 
-    NbhCellStorage& cell_pair_storage = nbh_manager->info_pair_cell_;
+    CellPairStorage& cell_pair_storage = nbh_manager->info_pair_cell_;
     cell_pair_storage.reset(cell_neighbor_host_storage, get_exec_ctx);
 
-    NbhCellAccessor cell_pair_accessor(cell_pair_storage);
+    auto cell_pair_accessor = cell_pair_storage.view();
 
     ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_GUIDED;
@@ -327,9 +327,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     dim3 pp_block(kParticlePairBlockX, kParticlePairBlockY, 1);
 
     CountParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY, true><<<neighbor_cell_pair_count, pp_block>>>(
-        grid_cells, cell_pair_accessor.owner_cell_, cell_pair_accessor.partner_cell_, cell_pair_accessor.ghost_,
-        *rcut_inc, shapes_data.data(), vertex_field_data, particle_pair_counts.data(), neighbor_cell_pair_count,
-        ignore_pairs_gpu.view());
+        grid_cells, cell_pair_accessor.owner_cell_.data(), cell_pair_accessor.partner_cell_.data(),
+        cell_pair_accessor.ghost_.data(), *rcut_inc, shapes_data.data(), vertex_field_data,
+        particle_pair_counts.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
     exclusive_scan_device(particle_pair_counts.data(), particle_pair_offsets.data(), neighbor_cell_pair_count);
@@ -353,8 +353,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     if (total_pp > 0) {
       FillParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY, true><<<neighbor_cell_pair_count, pp_block>>>(
-          grid_cells, cell_pair_accessor.owner_cell_, cell_pair_accessor.partner_cell_, cell_pair_accessor.ghost_,
-          *rcut_inc, shapes_data.data(), vertex_field_data, particle_pair_offsets.data(),
+          grid_cells, cell_pair_accessor.owner_cell_.data(), cell_pair_accessor.partner_cell_.data(),
+          cell_pair_accessor.ghost_.data(), *rcut_inc, shapes_data.data(), vertex_field_data,
+          particle_pair_offsets.data(),
           particle_pair_storage.cell_i_.data(), particle_pair_storage.cell_j_.data(), particle_pair_storage.p_i_.data(),
           particle_pair_storage.p_j_.data(), particle_pair_storage.ghost_.data(),
           particle_pair_storage.cell_pair_idx_.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
@@ -421,7 +422,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     // ****** Resize Classifier for Driver ******* //
     for (int typeID = get_first_id<InteractionType::ParticleDriver>();
          typeID <= get_last_id<InteractionType::ParticleDriver>(); typeID++) {
-      size_t newsize = cell_driver_storage.offset_.back()[typeID] + cell_driver_storage.size_.back()[typeID];
+      size_t newsize = cell_storage.offset_.back()[typeID] + cell_storage.size_.back()[typeID];
       interaction_container.resize(typeID, newsize);
     }
 
@@ -441,6 +442,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
                                     neighbor_cell_pair_count, cell_pair_storage);
     }
 
+    // Fold PP totals (cell_pair_storage) into cell_storage's per-cell table.
+    add_particle_particle_totals(cell_storage, cell_interaction_info, cell_pair_storage);
+
     ClassifyIPDFunc driver_classifier = {
         grid_cells,         cell_driver_accessor, cell_indices,    *rcut_inc,
         shapes_data.data(), vertex_field_data,    driver_accessor, interaction_classifier_accessor};
@@ -448,14 +452,8 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-    UpdateHistoryFunc history_updater = {history.start_.data(),
-                                         history.size_.data(),
-                                         history.data_.data(),
-                                         cell_interaction_info.start_cell_.data(),
-                                         cell_interaction_info.number_of_pair_cells_.data(),
-                                         cell_pair_accessor,
-                                         cell_driver_accessor,
-                                         interaction_classifier_accessor};
+    UpdateHistoryFunc history_updater = {history.start_.data(), history.size_.data(), history.data_.data(),
+                                         cell_driver_accessor, interaction_classifier_accessor};
 
     parallel_for(history.start_.size(), history_updater, parallel_execution_context(), opts);
 
@@ -466,16 +464,14 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     constexpr bool do_ghost_only = true;
     constexpr bool do_active_interaction_only = false;
     transfer_classifier_grid<do_ghost_only, do_active_interaction_only, false>(
-        cell_indices, cell_interaction_info, cell_pair_storage, cell_driver_storage, interaction_classifier_accessor,
-        *ges, get_first_id<InteractionType::ParticleParticle>(), get_last_id<InteractionType::ParticleParticle>());
+        cell_indices, cell_interaction_info, cell_storage, interaction_classifier_accessor, *ges,
+        get_first_id<InteractionType::ParticleParticle>(), get_last_id<InteractionType::ParticleParticle>());
 
+    // ParticleDriver [4,12] and InnerBond [13,13] are contiguous type ranges, so a single
+    // call covers both (both use append=true anyway).
     transfer_classifier_grid<do_ghost_only, do_active_interaction_only, true>(
-        cell_indices, cell_interaction_info, cell_pair_storage, cell_driver_storage, interaction_classifier_accessor,
-        *ges, get_first_id<InteractionType::InnerBond>(), get_last_id<InteractionType::InnerBond>());
-
-    transfer_classifier_grid<do_ghost_only, do_active_interaction_only, true>(
-        cell_indices, cell_interaction_info, cell_pair_storage, cell_driver_storage, interaction_classifier_accessor,
-        *ges, get_first_id<InteractionType::ParticleDriver>(), get_last_id<InteractionType::ParticleDriver>());
+        cell_indices, cell_interaction_info, cell_storage, interaction_classifier_accessor, *ges,
+        get_first_id<InteractionType::ParticleDriver>(), get_last_id<InteractionType::InnerBond>());
 
 #endif
   }

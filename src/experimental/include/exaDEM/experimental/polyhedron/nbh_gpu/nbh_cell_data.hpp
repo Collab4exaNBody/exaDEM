@@ -76,32 +76,55 @@ struct CountActiveInteractionFunc {
 struct CopierActiveInteractionFunc {
   template <InteractionType IT>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(InteractionWrapper<IT>& wrapper,
-                                                PlaceholderInteraction* __restrict__ data_ptr, size_t& shift, int start,
-                                                int size) const {
+                                                onika::cuda::span<PlaceholderInteraction> data, size_t& shift,
+                                                int start, int size) const {
     for (int j = start; j < start + size; j++) {
-      // printf("shift %lu\n", shift);
       if (wrapper(j).active()) {
-        data_ptr[shift++] = wrapper(j);
-        // printf("shift %lu, id %lu id wrapper %lu\n", shift, data_ptr[shift-1].pair.pi.id, wrapper(j).pair.pi.id);
+        data[shift++] = wrapper(j);
       }
     }
   }
 };
 
 /**
+ * @brief Aggregates CellPairStorage's per-cell-pair particle-particle totals on top of
+ * cell_storage's existing (particle-driver) contents, for every cell.
+ *
+ * @param cell_storage Per-cell storage to aggregate particle-particle totals into.
+ * @param info Per-cell cell-pair range boundaries (same indexing as cell_storage).
+ * @param pair_storage Cell-pair-level storage, already finalized.
+ */
+inline void add_particle_particle_totals(CellStorage& cell_storage, CellInteractionInformation& info,
+                                         CellPairStorage& pair_storage) {
+  const size_t n_cells = info.size();
+#pragma omp parallel for
+  for (size_t cell_idx = 0; cell_idx < n_cells; cell_idx++) {
+    if (info.number_of_pair_cells_[cell_idx] == 0) continue;
+
+    const size_t first = info.start_cell_[cell_idx];
+    const size_t last = first + info.number_of_pair_cells_[cell_idx] - 1;
+    const InteractionTypePerCellCounter pp_start = pair_storage.offset_[first];
+    const InteractionTypePerCellCounter pp_end = pair_storage.offset_[last] + pair_storage.size_[last];
+
+    cell_storage.offset_[cell_idx] = cell_storage.offset_[cell_idx] + pp_start;
+    cell_storage.size_[cell_idx] = cell_storage.size_[cell_idx] + (pp_end - pp_start);
+  }
+}
+
+/**
  * @brief Transfer ghost interactions from classifier to grid storage.
  * @param info CellInteractionInformation storing start indices, number of pair cells, and ghost flags.
- * @param classifier_helper Helper structure providing offsets and owner cell mapping.
+ * @param cell_storage Per-cell interaction counts/offsets, across all interaction types
+ *                     (see CellStorage -- must already be aggregated via
+ *                     add_particle_particle_totals()).
  * @param classifier Classifier providing access to interactions per type.
  * @param ges GridCellParticleInteraction storage for the grid.
  * @param ghost_only If true, only transfers interactions flagged as ghost.
  */
 template <bool ghost_only, bool active_interaction, bool append = false>
-void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info, NbhCellStorage& classifier_helper,
-                              CellDriverStorage& classifier_helper_driver, InteractionWrapperAccessor& iaccessor,
-                              GridCellParticleInteraction& ges, const int typeID_start = 0,
-                              const int typeID_end = InteractionTypeId::NTypes) {
-  //                              const int typeID_end = InteractionTypeId::NTypes - 1) {
+void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info, CellStorage& cell_storage,
+                              InteractionWrapperAccessor& iaccessor, GridCellParticleInteraction& ges,
+                              const int typeID_start = 0, const int typeID_end = InteractionTypeId::NTypes) {
   // Number of non-empty cells to process
   size_t ncells = info.start_cell_.size();
 
@@ -118,23 +141,8 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
     // Grid cell that owns this non-empty cell
     size_t owner_cell = cell_ptr[cell_idx];
 
-    // Compute particle-particle contribution
-    InteractionTypePerCellCounter particle_pair_start;
-    InteractionTypePerCellCounter particle_pair_end;
-    for (int k = 0; k < InteractionTypeId::NTypes; k++) {
-      particle_pair_start[k] = 0;
-      particle_pair_end[k] = 0;
-    }
-
-    if (info.number_of_pair_cells_[cell_idx] > 0) {
-      size_t first_interaction = info.start_cell_[cell_idx];
-      size_t last_interaction = first_interaction + info.number_of_pair_cells_[cell_idx] - 1;
-      particle_pair_start = classifier_helper.offset_[first_interaction];
-      particle_pair_end = classifier_helper.offset_[last_interaction] + classifier_helper.size_[last_interaction];
-    }
-
-    auto first_elem_per_type = particle_pair_start + classifier_helper_driver.offset_[cell_idx];
-    auto n_elem_per_type = particle_pair_end - particle_pair_start + classifier_helper_driver.size_[cell_idx];
+    auto& first_elem_per_type = cell_storage.offset_[cell_idx];
+    auto& n_elem_per_type = cell_storage.size_[cell_idx];
 
     // Total number of interactions in this cell
     size_t number_of_interactions = 0;
@@ -182,7 +190,7 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
           IDispatcher::dispatch(typeID, iaccessor, copier, data_ptr, shift, start, size);
         } else {
           CopierActiveInteractionFunc copier;
-          IDispatcher::dispatch(typeID, iaccessor, copier, data_ptr, shift, start, size);
+          IDispatcher::dispatch(typeID, iaccessor, copier, to_span(storage.m_data), shift, start, size);
         }
       }
     }
