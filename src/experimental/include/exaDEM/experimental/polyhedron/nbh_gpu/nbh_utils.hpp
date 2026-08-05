@@ -50,7 +50,8 @@ inline void debug_print(InteractionTypePerCellCounter& in1, InteractionTypePerCe
 }
 
 struct PrefixSumInteractionTypePerCellCounter {
-  onika::cuda::span<InteractionTypePerCellCounter> offset_;
+  //  WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const
+  mutable onika::cuda::span<InteractionTypePerCellCounter> offset_;
   onika::cuda::span<InteractionTypePerCellCounter> size_;
   size_t n_elem_;
 

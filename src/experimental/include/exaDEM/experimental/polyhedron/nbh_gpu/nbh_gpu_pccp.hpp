@@ -37,6 +37,48 @@ struct ParticlePairStorage {
   }
 };
 
+/**
+ * @brief Packed particle data for detection and initialization.
+ */
+struct ParticleDetectPack {
+  Quaternion quat_;       ///< Particle orientation as a quaternion
+  Vec3d r_;               ///< Particle position
+  uint64_t id_;           ///< Unique particle ID
+  ParticleTypeInt type_;  ///< Particle type (integer code)
+  double radius_;         ///< Particle radius
+  double homothety_;      ///< Scaling factor applied to particle size
+};
+
+/**
+ * @brief Load a ParticleDetectPack from a cell container at index i.
+ * @tparam TMPLC Type of the cell container (must support field access via operator[])
+ * @param cell Reference to the cell container
+ * @param i Index of the particle in the cell
+ * @return ParticleDetectPack with all particle information
+ */
+template <typename TMPLC>
+ONIKA_HOST_DEVICE_FUNC inline ParticleDetectPack load(TMPLC& cell, size_t i) {
+  ParticleDetectPack p;
+
+  // Load orientation
+  p.quat_ = cell[field::orient][i];
+
+  // Load position
+  p.r_.x = cell[field::rx][i];
+  p.r_.y = cell[field::ry][i];
+  p.r_.z = cell[field::rz][i];
+
+  // Load identification and type
+  p.id_ = cell[field::id][i];
+  p.type_ = cell[field::type][i];
+
+  // Load radius and scaling factor
+  p.radius_ = cell[field::radius][i];
+  p.homothety_ = cell[field::homothety][i];
+
+  return p;
+}
+
 // ============================================================
 // Stage 1: Count particle pairs per cell pair
 // 1 block = 1 cell pair, threads iterate particle pairs

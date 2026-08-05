@@ -33,7 +33,6 @@ under the License.
 #include <cassert>
 #include <cub/cub.cuh>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_pccp.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
@@ -158,12 +157,16 @@ inline void initialize_interaction_scratch(ScratchT& scratch, size_t total_pp) {
   reset(interaction_prefix);
 }
 
-/* Add persistent driver interactions that were not found in the current classifier contents. */
+/* Add persistent driver interactions that were not found in the current classifier contents.
+   wrapper_storage backs classifier_interaction_accessor's spans and must be owned by the caller:
+   reassigning it here (rather than to a function-local InteractionWrapperStorage) keeps those
+   spans valid after this function returns, for whatever the caller does next with the accessor. */
 template <typename ContainerT, typename WrapperAccessorT, typename CellDriverAccessorT>
 inline void add_unmatched_persistent_interactions(const InteractionHistory& history, size_t cell_size,
                                                   ContainerT& container,
                                                   WrapperAccessorT& classifier_interaction_accessor,
-                                                  CellDriverAccessorT& cell_driver_accessor) {
+                                                  CellDriverAccessorT& cell_driver_accessor,
+                                                  InteractionWrapperStorage& wrapper_storage) {
   std::vector<PlaceholderInteraction> unmatched_persistent;
   for (size_t ci = 0; ci < cell_size; ++ci) {
     size_t hist_begin = history.start_[ci];
@@ -210,8 +213,8 @@ inline void add_unmatched_persistent_interactions(const InteractionHistory& hist
     w.set(old_size, interaction);
   }
 
-  InteractionWrapperStorage wrappers2(container);
-  classifier_interaction_accessor = wrappers2.accessor();
+  wrapper_storage = InteractionWrapperStorage(container);
+  classifier_interaction_accessor = wrapper_storage.accessor();
 }
 
 template <typename GridT, class = AssertGridHasFields<GridT>>
@@ -229,6 +232,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(NBHManager, nbh_manager, INPUT_OUTPUT, DocString{"Data about packed interactions within classifier."});
   ADD_SLOT(DataNeighborGPUScratch, scratch, PRIVATE, DocString{"Scratch space for GPU computations"});
+  ADD_SLOT(bool, enable_persistent_interactions, INPUT, false, DocString{"Enable persistent interactions"});
 
  public:
   inline std::string documentation() const final {
@@ -269,6 +273,16 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     NbhCellHostStorage cell_neighbor_host_storage;
     CellInteractionInformation& cell_interaction_info = nbh_manager->info_cell_;
 
+    IgnorePairsGPU ignore_pairs_gpu;
+    if (*enable_persistent_interactions) {
+      // Persistent interactions are already accounted for elsewhere; skip them here so the neighbor search doesn't
+      // rediscover them as plain contacts.
+      // Must run before setup_history_clean_ges(), which resets *ges.
+      ListOfIgnorePairs ignore_pairs;
+      build_list_of_ignore_pair(ignore_pairs, cell_indices, active_cell_count, *ges);
+      ignore_pairs_gpu.build(ignore_pairs, grid_data.number_of_cells());
+    }
+
     build_cell_neighbor_metadata(grid_data, grid_dimensions, cell_indices, active_cell_count,
                                  cell_neighbor_host_storage, cell_interaction_info);
     cell_interaction_info.prefetch_cpu(st_updateghost);
@@ -291,6 +305,11 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     const auto neighbor_cell_pair_count = cell_neighbor_host_storage.owner_cell_.size();
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
+    PersistentInnerBonds persistent_inner_bonds;
+    if (*enable_persistent_interactions) {
+      collect_persistent_inner_bonds(persistent_inner_bonds, cell_storage, cell_indices, active_cell_count, *ges);
+    }
+
     // Used in Build particle pairs (PCCP)
     // Place here to avoid several synchronization calls in the middle of the operator.
     auto& particle_pair_counts = scratch->pp_counts_;
@@ -302,22 +321,16 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     PrefixSumInteractionTypePerCellCounter driver_prefix_sum{cell_driver_accessor.offset_, cell_driver_accessor.size_,
                                                              active_cell_count};
 
+    // ParticleDriver [4,12] and InnerBond [13,13] are contiguous type ranges, so a single range
+    // covers both (offset_/size_ share the same per-cell layout for every type).
     ParallelExecutionSpace<1> parallel_range_fpd = {{get_first_id<InteractionType::ParticleDriver>()},
-                                                    {get_last_id<InteractionType::ParticleDriver>() + 1}};
+                                                    {get_last_id<InteractionType::InnerBond>() + 1}};
 
     ONIKA_CU_DEVICE_SYNCHRONIZE();
     parallel_for(parallel_range_fpd, driver_prefix_sum, parallel_execution_context("nbh_gpu::func_prefix_driver"),
                  opts);
 
     InteractionHistory history;
-
-    // Persistent (e.g. stuck/bonded) interactions are already accounted for elsewhere;
-    // skip them here so the neighbor search doesn't rediscover them as plain contacts.
-    // Must run before setup_history_clean_ges(), which resets *ges.
-    ListOfIgnorePairs ignore_pairs;
-    build_list_of_ignore_pair(ignore_pairs, cell_indices, active_cell_count, *ges);
-    IgnorePairsGPU ignore_pairs_gpu;
-    ignore_pairs_gpu.build(ignore_pairs, grid_data.number_of_cells());
 
     setup_history_clean_ges(grid_cells, cell_indices, active_cell_count, *ges, history, st_history);
 
@@ -328,8 +341,8 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     CountParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY, true><<<neighbor_cell_pair_count, pp_block>>>(
         grid_cells, cell_pair_accessor.owner_cell_.data(), cell_pair_accessor.partner_cell_.data(),
-        cell_pair_accessor.ghost_.data(), *rcut_inc, shapes_data.data(), vertex_field_data,
-        particle_pair_counts.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
+        cell_pair_accessor.ghost_.data(), *rcut_inc, shapes_data.data(), vertex_field_data, particle_pair_counts.data(),
+        neighbor_cell_pair_count, ignore_pairs_gpu.view());
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
     exclusive_scan_device(particle_pair_counts.data(), particle_pair_offsets.data(), neighbor_cell_pair_count);
@@ -355,9 +368,8 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
       FillParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY, true><<<neighbor_cell_pair_count, pp_block>>>(
           grid_cells, cell_pair_accessor.owner_cell_.data(), cell_pair_accessor.partner_cell_.data(),
           cell_pair_accessor.ghost_.data(), *rcut_inc, shapes_data.data(), vertex_field_data,
-          particle_pair_offsets.data(),
-          particle_pair_storage.cell_i_.data(), particle_pair_storage.cell_j_.data(), particle_pair_storage.p_i_.data(),
-          particle_pair_storage.p_j_.data(), particle_pair_storage.ghost_.data(),
+          particle_pair_offsets.data(), particle_pair_storage.cell_i_.data(), particle_pair_storage.cell_j_.data(),
+          particle_pair_storage.p_i_.data(), particle_pair_storage.p_j_.data(), particle_pair_storage.ghost_.data(),
           particle_pair_storage.cell_pair_idx_.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
       ONIKA_CU_DEVICE_SYNCHRONIZE();
     }
@@ -426,8 +438,20 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
       interaction_container.resize(typeID, newsize);
     }
 
+    // ****** Resize Classifier for InnerBond ******* //
+    for (int typeID = get_first_id<InteractionType::InnerBond>(); typeID <= get_last_id<InteractionType::InnerBond>();
+         typeID++) {
+      size_t newsize = cell_storage.offset_.back()[typeID] + cell_storage.size_.back()[typeID];
+      interaction_container.resize(typeID, newsize);
+    }
+
     InteractionWrapperStorage wrappers(interaction_container);
     InteractionWrapperAccessor interaction_classifier_accessor = wrappers.accessor();
+
+    if (*enable_persistent_interactions) {
+      fill_classifier_persistent_inner_bonds(persistent_inner_bonds, cell_driver_accessor,
+                                             interaction_classifier_accessor);
+    }
 
     // ****** Fill Classifier PP (PCCP) ******* //
     if (total_pp > 0) {
@@ -459,7 +483,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     // === ADD PERSISTENT INTERACTIONS ===
     add_unmatched_persistent_interactions(history, active_cell_count, interaction_container,
-                                          interaction_classifier_accessor, cell_driver_accessor);
+                                          interaction_classifier_accessor, cell_driver_accessor, wrappers);
 
     constexpr bool do_ghost_only = true;
     constexpr bool do_active_interaction_only = false;
@@ -467,12 +491,19 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
         cell_indices, cell_interaction_info, cell_storage, interaction_classifier_accessor, *ges,
         get_first_id<InteractionType::ParticleParticle>(), get_last_id<InteractionType::ParticleParticle>());
 
-    // ParticleDriver [4,12] and InnerBond [13,13] are contiguous type ranges, so a single
-    // call covers both (both use append=true anyway).
     transfer_classifier_grid<do_ghost_only, do_active_interaction_only, true>(
         cell_indices, cell_interaction_info, cell_storage, interaction_classifier_accessor, *ges,
-        get_first_id<InteractionType::ParticleDriver>(), get_last_id<InteractionType::InnerBond>());
+        get_first_id<InteractionType::ParticleDriver>(), get_last_id<InteractionType::ParticleDriver>());
 
+    // No need to transfer inner bonds to the interaction list, since they are already present in the classifier.
+    // Not that stats_interactions won't count them as well.
+    // Use unclassify to get the inner bonds in the operator stats_interactions.
+    /*
+constexpr bool innerbond_ghost_only = false;  // must reach every cell, not just ghost-adjacent ones
+transfer_classifier_grid<innerbond_ghost_only, do_active_interaction_only, true>(
+    cell_indices, cell_interaction_info, cell_storage, interaction_classifier_accessor, *ges,
+    get_first_id<InteractionType::InnerBond>(), get_last_id<InteractionType::InnerBond>());
+     */
 #endif
   }
 };

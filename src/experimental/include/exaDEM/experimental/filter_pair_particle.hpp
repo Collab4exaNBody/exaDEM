@@ -5,6 +5,7 @@
 #include <onika/memory/allocator.h>
 
 #include <algorithm>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <tuple>
@@ -31,17 +32,52 @@ inline void build_list_of_ignore_pair(ListOfIgnorePairs& ignore_pairs, const siz
   ignore_pairs.list_.erase(std::unique(ignore_pairs.list_.begin(), ignore_pairs.list_.end()), ignore_pairs.list_.end());
 }
 
+struct PersistentInnerBonds {
+  std::vector<PlaceholderInteraction> interactions_;
+  std::vector<size_t> cell_idx_;  // compacted cell index (0..active_cell_count-1), parallel to interactions_
+  std::vector<int> local_rank_;   // rank of this interaction within its cell's inner-bond group
+};
+
+inline void collect_persistent_inner_bonds(PersistentInnerBonds& persistent, CellStorage& cell_storage,
+                                           const size_t* cell_indices, size_t active_cell_count,
+                                           GridCellParticleInteraction& ges) {
+  for (size_t i = 0; i < active_cell_count; i++) {
+    const size_t cell_idx = cell_indices[i];  // compacted index i -> absolute grid cell
+    auto& interactions = ges.m_data[cell_idx].m_data;
+    int local_rank = 0;
+    for (auto& I : interactions) {
+      if (I.type() == InteractionTypeId::InnerBond && I.persistent()) {
+        persistent.interactions_.push_back(I);
+        persistent.cell_idx_.push_back(i);
+        persistent.local_rank_.push_back(local_rank++);
+      }
+    }
+    if (local_rank > 0) {
+      cell_storage.size_[i][InteractionTypeId::InnerBond] += local_rank;
+    }
+  }
+}
+
+inline void fill_classifier_persistent_inner_bonds(const PersistentInnerBonds& persistent,
+                                                   const CellStorage::View& cell_storage_accessor,
+                                                   InteractionWrapperAccessor& interaction_classifier_accessor) {
+  auto& wrapper =
+      interaction_classifier_accessor.get_typed_accessor<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
+  for (size_t k = 0; k < persistent.interactions_.size(); k++) {
+    const size_t cell_i = persistent.cell_idx_[k];
+    const int idx = cell_storage_accessor.offset_[cell_i][InteractionTypeId::InnerBond] + persistent.local_rank_[k];
+    PlaceholderInteraction item = persistent.interactions_[k];
+    wrapper.set(idx, item);
+    wrapper.update(idx, item);
+  }
+}
+
 struct IgnorePairsGPU {
   struct PairKey {
     uint16_t pa_;
     uint16_t pb_;
   };
 
-  /// @brief Trivially-copyable, kernel-launch-passable view of an IgnorePairsGPU.
-  /// CudaMMVector isn't trivially copyable (it's a std::vector under the hood), so
-  /// IgnorePairsGPU itself cannot be passed by value to a __global__ kernel: build it
-  /// once on the host (build()), then call view() right before a kernel launch and
-  /// pass the resulting View by value instead.
   struct View {
     onika::cuda::span<uint32_t> cell_offset_;  // size == n_cells + 1
     onika::cuda::span<PairKey> pairs_;
@@ -99,9 +135,6 @@ struct IgnorePairsGPU {
       cell_offset_[c + 1] += cell_offset_[c];
     }
 
-    // list_ is already sorted by (cell, pa, pb), so its order already matches the
-    // per-cell-contiguous layout pairs_ needs: element idx of list_ maps directly to
-    // element idx of pairs_, so this is an independent, per-index transform.
     const size_t n_pairs = ignore_pairs.list_.size();
     pairs_.resize(n_pairs);
 #pragma omp parallel for
@@ -111,11 +144,7 @@ struct IgnorePairsGPU {
     }
   }
 
-  /// @brief Builds a trivially-copyable View, for passing into __global__ kernels. Host-only:
-  /// call this right before a kernel launch and pass the result by value.
-  inline View view() const {
-    return View{to_span(cell_offset_), to_span(pairs_)};
-  }
+  inline View view() const { return View{to_span(cell_offset_), to_span(pairs_)}; }
 };
 
 }  // namespace exaDEM

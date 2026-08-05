@@ -36,8 +36,8 @@ template <typename FuncT, typename ResultT>
 struct ReduceInterfaceFunctor {
   Interface* const interface_;      /**< List of interfaces */
   uint8_t* const break_interface_;  // list of booleans that indicate if the interface is broken or not. 1 if the
-  FuncT func_;           /**< Functor that defines how reduction is performed. */
-  ResultT* reduced_val_; /**< Pointer to the result of the reduction. */
+  FuncT func_;                      /**< Functor that defines how reduction is performed. */
+  ResultT* reduced_val_;            /**< Pointer to the result of the reduction. */
 
   /**
    * @brief Operator to perform the reduction.
@@ -71,8 +71,8 @@ struct ReduceInterfaceFunctor {
 };
 
 template <typename FuncT, typename ResultT>
-static inline ResultT reduce_interface(
-    InterfaceManager& interface, FuncT& func, ResultT& init, onika::parallel::ParallelExecutionContext* exec_ctx) {
+static inline ResultT reduce_interface(InterfaceManager& interface, FuncT& func, ResultT& init,
+                                       onika::parallel::ParallelExecutionContext* exec_ctx) {
   using namespace onika::parallel;
   ParallelForOptions opts;
   opts.omp_scheduling = OMP_SCHED_STATIC;

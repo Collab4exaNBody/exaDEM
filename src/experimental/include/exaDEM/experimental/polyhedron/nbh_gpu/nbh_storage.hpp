@@ -29,12 +29,13 @@ struct CellPairStorage {
   /// @brief Trivially-copyable, kernel-launch-passable view of a CellPairStorage. Build
   /// via view() right before a kernel launch and pass the result by value.
   struct View {
-    onika::cuda::span<InteractionTypePerCellCounter> size_;    ///< Number of interactions per type for each cell pair
-    onika::cuda::span<InteractionTypePerCellCounter> offset_;  ///< Offset for each interaction type per cell pair
+    // WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const
+    mutable onika::cuda::span<InteractionTypePerCellCounter> size_;    ///< Number of interactions per type for each cell pair
+    mutable onika::cuda::span<InteractionTypePerCellCounter> offset_;  ///< Offset for each interaction type per cell pair
     onika::cuda::span<size_t> owner_cell_;                     ///< Owner cell index for each non-empty cell pair
     onika::cuda::span<size_t> partner_cell_;                   ///< Partner cell index for each non-empty cell pair
     onika::cuda::span<uint8_t> ghost_;                         ///< Partner cell is a ghost ?
-    onika::cuda::span<uint8_t> skip_;                          ///< Flag to skip a cell pair in second pass
+    mutable onika::cuda::span<uint8_t> skip_;                          ///< Flag to skip a cell pair in second pass
   };
 
   /// @brief Functor to reset member arrays per cell pair (size_/offset_/skip_ only --
@@ -122,14 +123,15 @@ struct CellPairStorage {
                 to_span(partner_cell_), to_span(ghost_),  to_span(skip_)};
   }
 };
-
+ 
 struct CellStorage {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
 
   struct View {
-    onika::cuda::span<InteractionTypePerCellCounter> offset_;
-    onika::cuda::span<InteractionTypePerCellCounter> size_;
+    // WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const   
+    mutable onika::cuda::span<InteractionTypePerCellCounter> offset_;
+    mutable onika::cuda::span<InteractionTypePerCellCounter> size_;
   };
 
   /// @brief Functor to reset the per-type counters of a CellStorage for a given cell.

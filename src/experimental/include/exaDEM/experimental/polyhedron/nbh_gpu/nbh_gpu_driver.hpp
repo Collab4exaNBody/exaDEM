@@ -9,7 +9,8 @@ namespace exaDEM {
 template <typename TMPLC>
 struct CountIPDFunc {
   TMPLC cells_;
-  CellStorage::View accessor_;
+  // WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const
+  mutable CellStorage::View accessor_;
   const size_t* const cell_ptr_;
   const double rcut_inc_;
   const shape* const shps_;
