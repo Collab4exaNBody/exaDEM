@@ -29,9 +29,9 @@ under the License.
 
 #include <cassert>
 #include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/interaction_list_layout.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_manager.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
@@ -47,7 +47,8 @@ class UnclassifyGPU : public OperatorNode {
   ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
   ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
-  ADD_SLOT(NBHManager, nbh_manager, INPUT, DocString{"Data about packed interactions within classifier."});
+  ADD_SLOT(InteractionListBuildLayout, interaction_list_layout, INPUT,
+           DocString{"Data about packed interactions within classifier."});
 
  public:
   inline std::string documentation() const final {
@@ -63,7 +64,7 @@ class UnclassifyGPU : public OperatorNode {
 
   inline void execute() final {
     // lout << "unclassify active interaction on GridCellParticleInteraction" << std::endl;
-    classify_interaction_grid(*ic, *traversal_real, *nbh_manager, *ges);
+    classify_interaction_grid(*ic, *traversal_real, *interaction_list_layout, *ges);
   }
 };
 

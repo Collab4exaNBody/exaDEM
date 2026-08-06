@@ -36,7 +36,7 @@ under the License.
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_pccp.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_manager.hpp>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/interaction_list_layout.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
@@ -230,7 +230,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-  ADD_SLOT(NBHManager, nbh_manager, INPUT_OUTPUT, DocString{"Data about packed interactions within classifier."});
+  ADD_SLOT(InteractionListBuildLayout, interaction_list_layout, INPUT_OUTPUT, DocString{"Data about packed interactions within classifier."});
   ADD_SLOT(DataNeighborGPUScratch, scratch, PRIVATE, DocString{"Scratch space for GPU computations"});
   ADD_SLOT(bool, enable_persistent_interactions, INPUT, false, DocString{"Enable persistent interactions"});
 
@@ -271,7 +271,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_innerbond);
 
     NbhCellHostStorage cell_neighbor_host_storage;
-    CellInteractionInformation& cell_interaction_info = nbh_manager->cell_interaction_info_;
+    CellInteractionInformation& cell_interaction_info = interaction_list_layout->cell_interaction_info_;
 
     IgnorePairsGPU ignore_pairs_gpu;
     if (*enable_persistent_interactions) {
@@ -286,11 +286,11 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     build_cell_neighbor_metadata(grid_data, grid_dimensions, cell_indices, active_cell_count,
                                  cell_neighbor_host_storage, cell_interaction_info);
     cell_interaction_info.prefetch_cpu(st_updateghost);
-    CellStorage& cell_storage = nbh_manager->cell_storage_;
+    CellStorage& cell_storage = interaction_list_layout->cell_storage_;
     cell_storage.resize(active_cell_count, get_exec_ctx);
     auto cell_storage_accessor = cell_storage.view();
 
-    CellPairStorage& cell_pair_storage = nbh_manager->cell_pair_storage_;
+    CellPairStorage& cell_pair_storage = interaction_list_layout->cell_pair_storage_;
     cell_pair_storage.reset(cell_neighbor_host_storage, get_exec_ctx);
 
     auto cell_pair_accessor = cell_pair_storage.view();

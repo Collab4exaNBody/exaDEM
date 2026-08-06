@@ -114,7 +114,7 @@ __global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(CellsT cells, 
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
       if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
-        if (ignore_pairs(cell_a, static_cast<uint16_t>(pa), static_cast<uint16_t>(pb))) continue;
+        if (ignore_pairs(cell_a, body_a.id_, cB[field::id][pb])) continue;
       }
       auto body_b = load(cB, pb);
 
@@ -179,7 +179,7 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
       if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
-        if (ignore_pairs(cell_a, static_cast<uint16_t>(pa), static_cast<uint16_t>(pb))) continue;
+        if (ignore_pairs(cell_a, body_a.id_, cB[field::id][pb])) continue;
       }
       auto body_b = load(cB, pb);
       // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
@@ -210,7 +210,7 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
       if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
-        if (ignore_pairs(cell_a, static_cast<uint16_t>(pa), static_cast<uint16_t>(pb))) continue;
+        if (ignore_pairs(cell_a, body_a.id_, cB[field::id][pb])) continue;
       }
       auto body_b = load(cB, pb);
       // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;

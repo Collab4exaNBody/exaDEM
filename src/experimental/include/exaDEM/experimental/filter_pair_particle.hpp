@@ -14,7 +14,7 @@
 namespace exaDEM {
 
 struct ListOfIgnorePairs {
-  std::vector<std::tuple<uint32_t, uint16_t, uint16_t>> list_;  // cell, particle_i, particle_j
+  std::vector<std::tuple<uint32_t, uint64_t, uint64_t>> list_;  // cell, id_i, id_j
 };
 
 inline void build_list_of_ignore_pair(ListOfIgnorePairs& ignore_pairs, const size_t* cell_indices,
@@ -24,7 +24,7 @@ inline void build_list_of_ignore_pair(ListOfIgnorePairs& ignore_pairs, const siz
     auto& interactions = ges.m_data[cell_idx].m_data;
     for (auto& I : interactions) {
       if (I.persistent()) {
-        ignore_pairs.list_.emplace_back(cell_idx, I.pair_.pi_.p_, I.pair_.pj_.p_);
+        ignore_pairs.list_.emplace_back(cell_idx, I.pair_.pi_.id_, I.pair_.pj_.id_);
       }
     }
   }
@@ -74,8 +74,8 @@ inline void fill_classifier_persistent_inner_bonds(const PersistentInnerBonds& p
 
 struct IgnorePairsGPU {
   struct PairKey {
-    uint16_t pa_;
-    uint16_t pb_;
+    uint64_t id_a_;
+    uint64_t id_b_;
   };
 
   struct View {
@@ -90,9 +90,9 @@ struct IgnorePairsGPU {
     }
 
     /**
-     * @brief Checks whether (pa, pb) is an ignored pair within the given cell.
+     * @brief Checks whether (id_a, id_b) is an ignored pair within the given cell.
      */
-    ONIKA_HOST_DEVICE_FUNC inline bool operator()(uint32_t cell_id, uint16_t pa, uint16_t pb) const {
+    ONIKA_HOST_DEVICE_FUNC inline bool operator()(uint32_t cell_id, uint64_t id_a, uint64_t id_b) const {
       const size_t n_cells = cell_offset_.size() == 0 ? 0 : cell_offset_.size() - 1;
       if (cell_id >= n_cells) {
         return false;
@@ -104,30 +104,30 @@ struct IgnorePairsGPU {
       while (lo < hi) {
         const uint32_t mid = lo + (hi - lo) / 2;
         const PairKey& p = pairs_[mid];
-        if (p.pa_ < pa || (p.pa_ == pa && p.pb_ < pb)) {
+        if (p.id_a_ < id_a || (p.id_a_ == id_a && p.id_b_ < id_b)) {
           lo = mid + 1;
         } else {
           hi = mid;
         }
       }
 
-      return lo < cell_offset_[cell_id + 1] && pairs_[lo].pa_ == pa && pairs_[lo].pb_ == pb;
+      return lo < cell_offset_[cell_id + 1] && pairs_[lo].id_a_ == id_a && pairs_[lo].id_b_ == id_b;
     }
   };
 
   onika::memory::CudaMMVector<uint32_t> cell_offset_;  // size == n_cells + 1 (CSR row offsets)
-  onika::memory::CudaMMVector<PairKey> pairs_;         // per-cell contiguous, sorted by (pa_, pb_)
+  onika::memory::CudaMMVector<PairKey> pairs_;         // per-cell contiguous, sorted by (id_a_, id_b_)
 
   /**
    * @brief Builds the CSR layout from a ListOfIgnorePairs.
-   * @param ignore_pairs Source list, assumed sorted by (cell, pa, pb) and deduplicated
+   * @param ignore_pairs Source list, assumed sorted by (cell, id_i, id_j) and deduplicated
    *                      (true right after build_list_of_ignore_pair()).
    * @param n_cells Number of cells in the grid (cell_offset_ is sized n_cells + 1).
    * @warning Use OpenMP
    */
   inline void build(const ListOfIgnorePairs& ignore_pairs, size_t n_cells) {
     cell_offset_.assign(n_cells + 1, 0);
-    for (auto& [cell, pa, pb] : ignore_pairs.list_) {
+    for (auto& [cell, id_i, id_j] : ignore_pairs.list_) {
       assert(cell < n_cells);
       cell_offset_[cell + 1]++;
     }
@@ -139,8 +139,8 @@ struct IgnorePairsGPU {
     pairs_.resize(n_pairs);
 #pragma omp parallel for
     for (size_t idx = 0; idx < n_pairs; idx++) {
-      auto& [cell, pa, pb] = ignore_pairs.list_[idx];
-      pairs_[idx] = PairKey{pa, pb};
+      auto& [cell, id_i, id_j] = ignore_pairs.list_[idx];
+      pairs_[idx] = PairKey{id_i, id_j};
     }
   }
 
