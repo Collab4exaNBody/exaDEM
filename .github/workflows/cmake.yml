@@ -7,7 +7,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v3
@@ -18,15 +18,13 @@ jobs:
       run: sudo apt install libyaml-cpp-dev
     - name: Install
       run: sudo apt-get update && sudo apt-get install lcov
-    - name: Install Python test dependencies
-      run: pip install pytest
     - name: Install Python dependencies
       run: |
         python3 -m pip install --upgrade pip
         python3 -m pip install numpy pytest      
 
     - name: Install MPI
-      run: sudo apt install mpich
+      run: sudo apt install openmpi
       
     - name: Get Onika
       run: git clone --depth 1 https://github.com/Collab4exaNBody/onika.git        
