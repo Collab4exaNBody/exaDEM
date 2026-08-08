@@ -1,0 +1,96 @@
+includes:
+  - config_polyhedra.msp
+
+### change grid flavor here
+grid_flavor: grid_flavor_dem_fragmentation
+
+evaluate_polyhedron_displ:
+  rebind: { threshold: max_displ , result: particle_displ }
+  body: 
+    - vertex_displ_over
+
+trigger_dump_broken_interface:
+  condition: broken_interface AND dump_broken_interface 
+  body:
+    - store_broken_interface
+
+evaluate_interface_breakage:
+  rebind: { result: broken_interface }
+  body:
+    - apply_interface_fracture_criterion:
+       display: true
+
+interface_updater:
+  condition: broken_interface
+  body:
+    - broken_interface_friction_updater
+
+displ_or_break:
+  rebind: { in1: particle_displ, in2: broken_interface, result: particle_displ }
+  body:
+    - boolean_or 
+
+evaluate_particle_displ:
+  - evaluate_polyhedron_displ
+  - evaluate_interface_breakage
+  - trigger_dump_broken_interface
+  - interface_updater
+  - displ_or_break
+
+global: 
+  apply_particle_sticking: false
+  sticking_threshold: 2.e-05
+
+prepro_fragmentation:
+  condition: apply_particle_sticking
+  body:
+    - stick_polyhedra
+    - stats_interactions
+
+do_update_persistent_interactions_if_required: update_persistent_interactions
+
+### IO
+particle_write_paraview_generic:
+  - write_paraview_polyhedra_pvtu
+  - write_paraview_obb_particles
+  - timestep_paraview_file: "ParaviewOutputFiles/interface_%010d"
+  - message: { mesg: "Write paraview " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - write_paraview_interfaces:
+     mpi_rank: true
+
+read_dump_particle_op: read_dump_particle_fragmentation
+write_dump_particle_op: write_dump_particle_fragmentation
+
+### Initialize
+init_update_particle_neighbors:
+  - amr_grid_pairs
+  - chunk_neighbors_contact
+  - prepro_fragmentation
+  - chunk_neighbors_impl
+#  - nbh_polyhedron_obb_tree
+  - do_update_persistent_interactions_if_required
+#  - check_classifier_interaction_pair
+  - stats_classifier
+
+chunk_neighbors_impl:
+  - nbh_polyhedron_gpu:
+     enable_persistent_interactions: true
+  #- check_owner_partner_ghosts
+  - update_interaction_ghost
+  - classify_interaction_ghost
+  #- check_owner_partner_ghosts
+  - update_interfaces
+
+compress_data:
+  - unclassify_gpu
+
+compute_new_vertices: 
+#  - prefetch_positions_gpu
+  - update_persistent_interactions
+  - prefetch_all_fields_gpu
+  - compute_vertices:
+     resize_vertex: true
