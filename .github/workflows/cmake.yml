@@ -24,7 +24,7 @@ jobs:
         python3 -m pip install numpy pytest      
 
     - name: Install MPI
-      run: sudo apt install openmpi
+      run: sudo apt-get install -y openmpi-bin libopenmpi-dev
       
     - name: Get Onika
       run: git clone --depth 1 https://github.com/Collab4exaNBody/onika.git        
