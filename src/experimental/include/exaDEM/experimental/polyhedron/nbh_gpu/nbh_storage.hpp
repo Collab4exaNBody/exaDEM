@@ -1,5 +1,8 @@
 #pragma once
 
+#include <onika/parallel/parallel_execution_operators.h>
+#include <onika/parallel/parallel_execution_queue.h>
+
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 
 namespace exaDEM {
@@ -30,12 +33,14 @@ struct CellPairStorage {
   /// via view() right before a kernel launch and pass the result by value.
   struct View {
     // WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const
-    mutable onika::cuda::span<InteractionTypePerCellCounter> size_;    ///< Number of interactions per type for each cell pair
-    mutable onika::cuda::span<InteractionTypePerCellCounter> offset_;  ///< Offset for each interaction type per cell pair
-    onika::cuda::span<size_t> owner_cell_;                     ///< Owner cell index for each non-empty cell pair
-    onika::cuda::span<size_t> partner_cell_;                   ///< Partner cell index for each non-empty cell pair
-    onika::cuda::span<uint8_t> ghost_;                         ///< Partner cell is a ghost ?
-    mutable onika::cuda::span<uint8_t> skip_;                          ///< Flag to skip a cell pair in second pass
+    mutable onika::cuda::span<InteractionTypePerCellCounter>
+        size_;  ///< Number of interactions per type for each cell pair
+    mutable onika::cuda::span<InteractionTypePerCellCounter>
+        offset_;                               ///< Offset for each interaction type per cell pair
+    onika::cuda::span<size_t> owner_cell_;     ///< Owner cell index for each non-empty cell pair
+    onika::cuda::span<size_t> partner_cell_;   ///< Partner cell index for each non-empty cell pair
+    onika::cuda::span<uint8_t> ghost_;         ///< Partner cell is a ghost ?
+    mutable onika::cuda::span<uint8_t> skip_;  ///< Flag to skip a cell pair in second pass
   };
 
   /// @brief Functor to reset member arrays per cell pair (size_/offset_/skip_ only --
@@ -68,10 +73,12 @@ struct CellPairStorage {
    *
    * @tparam ExecCtx Execution context type for parallel_for
    * @param host Host-side storage
+   * @param queue Queue the reset is dispatched onto (async: caller must synchronize before reading offset_/size_)
+   * @param lane Execution lane to dispatch the reset onto
    * @param exec_ctx Execution context
    */
   template <typename ExecCtx>
-  void reset(NbhCellHostStorage& host, ExecCtx& exec_ctx) {
+  void reset(NbhCellHostStorage& host, onika::parallel::ParallelExecutionQueue& queue, int lane, ExecCtx& exec_ctx) {
     const size_t n_cells = host.owner_cell_.size();
 
     // Consistency check
@@ -105,10 +112,13 @@ struct CellPairStorage {
     // Reset members (skip flag and arrays)
     ResetCellMembers reset_func = {view()};
 
-    // Parallel execution over all cell pairs
+    // Parallel execution over all cell pairs. Dispatched async on `lane`; the caller is
+    // responsible for synchronizing (e.g. via a device sync) before offset_/size_/skip_ are read.
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_GUIDED;
-    parallel_for(n_cells, reset_func, exec_ctx(), opts);
+    queue << onika::parallel::set_lane(lane)
+          << parallel_for(n_cells, reset_func, exec_ctx("nbh_gpu::reset_cell_pair_storage"), opts)
+          << onika::parallel::flush;
   }
 
   /// @brief Builds a trivially-copyable View, for passing into __global__ kernels. Host-only:
@@ -123,13 +133,13 @@ struct CellPairStorage {
                 to_span(partner_cell_), to_span(ghost_),  to_span(skip_)};
   }
 };
- 
+
 struct CellStorage {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
 
   struct View {
-    // WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const   
+    // WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const
     mutable onika::cuda::span<InteractionTypePerCellCounter> offset_;
     mutable onika::cuda::span<InteractionTypePerCellCounter> size_;
   };
@@ -152,17 +162,20 @@ struct CellStorage {
 
   // size should be the number of non empty cells
   template <typename ExecCtx>
-  void resize(size_t newsize, ExecCtx& exec_ctx) {
+  void resize(size_t newsize, onika::parallel::ParallelExecutionQueue& queue, int lane, ExecCtx& exec_ctx) {
     size_.resize(newsize);
     offset_.resize(newsize);
 
     // Reset members
     ResetCellCounters reset_func = {view()};
 
-    // Parallel execution over all cells
+    // Parallel execution over all cells. Dispatched async on `lane`; the caller is responsible
+    // for synchronizing (e.g. via a device sync) before offset_/size_ are read.
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_GUIDED;
-    parallel_for(newsize, reset_func, exec_ctx(), opts);
+    queue << onika::parallel::set_lane(lane)
+          << parallel_for(newsize, reset_func, exec_ctx("nbh_gpu::reset_cell_storage"), opts)
+          << onika::parallel::flush;
   }
 
   /// @brief Builds a trivially-copyable View, for passing into __global__ kernels. Host-only:
