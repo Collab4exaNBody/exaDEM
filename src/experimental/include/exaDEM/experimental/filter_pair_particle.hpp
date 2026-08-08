@@ -109,8 +109,6 @@ inline void collect_persistent_inner_bonds(PersistentInnerBonds& persistent, Cel
   persistent.cell_idx_.resize(offsets[active_cell_count]);
   persistent.local_rank_.resize(offsets[active_cell_count]);
 
-  std::cout << "Total persistent inner bonds: " << offsets[active_cell_count] << std::endl;
-
   // Pass 2 (parallel): each cell writes into its own pre-computed slice.
 #pragma omp parallel for schedule(guided)
   for (size_t i = 0; i < active_cell_count; i++) {
@@ -148,7 +146,6 @@ inline void fill_classifier_persistent_inner_bonds(const PersistentInnerBonds& p
     wrapper.update(idx, item);
     total_interactions_copied++;
   }
-  std::cout << "Total interactions copied: " << total_interactions_copied << std::endl;
 }
 
 struct IgnorePairsGPU {
@@ -226,8 +223,6 @@ struct IgnorePairsGPU {
   inline View view() const { return View{to_span(cell_offset_), to_span(pairs_)}; }
 };
 
-// Bundles the host-side scratch containers used to track persistent interactions across calls,
-// so their underlying vectors keep their capacity instead of being reallocated every call.
 struct PersistentInteractionScratch {
   ListOfIgnorePairs ignore_pairs_;
   PersistentInnerBonds persistent_inner_bonds_;
