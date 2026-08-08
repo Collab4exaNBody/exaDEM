@@ -61,6 +61,10 @@ struct DataNeighborGPUScratch {
   onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_prefix_;
   onika::memory::CudaMMVector<int> type_counts_[InteractionTypeId::NTypesPP];  // only required for PCCP
   onika::memory::CudaMMVector<int> type_prefix_[InteractionTypeId::NTypesPP];  // only required for PCCP
+  onika::memory::CudaMMVector<int>
+      cp_type_counts_[InteractionTypeId::NTypesPP];  // reconstruct_cell_pair_offsets scratch
+  onika::memory::CudaMMVector<int>
+      cp_type_prefix_[InteractionTypeId::NTypesPP];  // reconstruct_cell_pair_offsets scratch
   InteractionHistory history_;
 };
 
@@ -124,17 +128,6 @@ inline void build_cell_neighbor_metadata(const GridT& grid, const IJK& dims, con
     info_cell.number_of_pair_cells_[i] = pair_count;
     shift += pair_count;
   }
-}
-
-/* Run an exclusive prefix sum on device memory using CUB. */
-template <typename T>
-inline void exclusive_scan_device(const T* input, T* output, size_t count, onikaStream_t st = 0) {
-  void* d_tmp = nullptr;
-  size_t tmp_bytes = 0;
-  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st);
-  cudaMalloc(&d_tmp, tmp_bytes);
-  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st);
-  cudaFree(d_tmp);
 }
 
 /* Initialize the temporary buffers used to store particle-pair counts and offsets. */
@@ -252,6 +245,11 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
   inline void execute() final {
     using namespace onika::parallel;
+    using onika::cuda::make_const_span;
+    using onika::cuda::make_span;
+    using onika::cuda::span;
+    using onika::parallel::flush;
+    using onika::parallel::set_lane;
 #ifndef ONIKA_CUDA_VERSION
     color_log::error("nbh_polyhedron_gpu",
                      "This operator only work on GPU.\n"
@@ -340,12 +338,12 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ParallelExecutionSpace<1> prefix_sum_type_range = {{get_first_id<InteractionType::ParticleDriver>()},
                                                        {get_last_id<InteractionType::InnerBond>() + 1}};
 
-    parallel_queue << onika::parallel::set_lane(kLaneParticleDriver)
+    parallel_queue << set_lane(kLaneParticleDriver)
                    << parallel_for(active_cell_count, driver_counter,
                                    parallel_execution_context("nbh_gpu::counter_driver"), opts)
                    << parallel_for(prefix_sum_type_range, cell_storage_prefix_sum,
                                    parallel_execution_context("nbh_gpu::cell_storage_prefix_sum"), opts)
-                   << onika::parallel::flush;
+                   << flush;
     ONIKA_CU_PROF_RANGE_POP();
 
     InteractionHistory& history = scratch->history_;
@@ -427,13 +425,13 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
       }
 
       ExtractInteractionCountsFunc extract_counts{
-          onika::cuda::make_const_span(interaction_counts_per_pair), onika::cuda::make_span(interaction_type_counts[0]),
-          onika::cuda::make_span(interaction_type_counts[1]), onika::cuda::make_span(interaction_type_counts[2]),
-          onika::cuda::make_span(interaction_type_counts[3])};
-      parallel_queue << onika::parallel::set_lane(kLaneParticleParticle)
+          make_const_span(interaction_counts_per_pair), make_span(interaction_type_counts[0]),
+          make_span(interaction_type_counts[1]), make_span(interaction_type_counts[2]),
+          make_span(interaction_type_counts[3])};
+      parallel_queue << set_lane(kLaneParticleParticle)
                      << parallel_for(total_pp, extract_counts,
                                      parallel_execution_context("nbh_gpu::extract_interaction_counts"), opts)
-                     << onika::parallel::flush;
+                     << flush;
 
       // iterate over particle-particle interaction types and compute prefix sum for each type
       for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
@@ -441,15 +439,15 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
                               particle_stream);
       }
 
-      PackInteractionPrefixFunc pack_prefix{onika::cuda::make_span(interaction_prefix_per_pair),
-                                            onika::cuda::make_const_span(interaction_type_prefix[0]),
-                                            onika::cuda::make_const_span(interaction_type_prefix[1]),
-                                            onika::cuda::make_const_span(interaction_type_prefix[2]),
-                                            onika::cuda::make_const_span(interaction_type_prefix[3])};
-      parallel_queue << onika::parallel::set_lane(kLaneParticleParticle)
+      PackInteractionPrefixFunc pack_prefix{make_span(interaction_prefix_per_pair),
+                                            make_const_span(interaction_type_prefix[0]),
+                                            make_const_span(interaction_type_prefix[1]),
+                                            make_const_span(interaction_type_prefix[2]),
+                                            make_const_span(interaction_type_prefix[3])};
+      parallel_queue << set_lane(kLaneParticleParticle)
                      << parallel_for(total_pp, pack_prefix,
                                      parallel_execution_context("nbh_gpu::pack_interaction_prefix"), opts)
-                     << onika::parallel::flush;
+                     << flush;
       parallel_queue.wait(kLaneParticleParticle);
 
       // compute total interactions per type
@@ -498,6 +496,8 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     }
 
     // ****** Fill Classifier PP (PCCP) ******* //
+    ONIKA_CU_DEVICE_SYNCHRONIZE();
+
     ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fill_classifier_pp");
     if (total_pp > 0) {
       FillInteractionsPPKernel<kParticlePairBlockX, kParticlePairBlockY><<<total_pp, pp_block, 0, particle_stream>>>(
@@ -505,24 +505,27 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
           particle_pair_storage.cell_j_.data(), particle_pair_storage.p_i_.data(), particle_pair_storage.p_j_.data(),
           particle_pair_storage.ghost_.data(), interaction_prefix_per_pair.data(),
           particle_particle_classifier_accessor, total_pp);
-      ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
       reconstruct_cell_pair_offsets(particle_pair_storage, interaction_counts_per_pair.data(), total_pp,
-                                    neighbor_cell_pair_count, cell_pair_storage);
+                                    neighbor_cell_pair_count, cell_pair_storage, scratch->cp_type_counts_,
+                                    scratch->cp_type_prefix_, parallel_queue, kLaneParticleParticle, particle_stream,
+                                    get_exec_ctx, opts);
+      parallel_queue.wait(kLaneParticleParticle);
     }
     ONIKA_CU_PROF_RANGE_POP();
 
     // Fold PP totals (cell_pair_storage) into cell_storage's per-cell table.
     ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fold_pp_totals_and_classify_driver");
-    add_particle_particle_totals(cell_storage, cell_interaction_info, cell_pair_storage);
+    add_particle_particle_totals(cell_storage, cell_interaction_info, cell_pair_storage, parallel_queue,
+                                 kLaneParticleDriver, get_exec_ctx, opts);
 
     ClassifyDriverInteractionsFunc driver_classifier = {
         grid_cells,         cell_storage_accessor, cell_indices,    *rcut_inc,
         shapes_data.data(), vertex_field_data,     driver_accessor, interaction_classifier_accessor};
-    parallel_queue << onika::parallel::set_lane(kLaneParticleDriver)
+    parallel_queue << set_lane(kLaneParticleDriver)
                    << parallel_for(active_cell_count, driver_classifier,
                                    parallel_execution_context("nbh_gpu::classify_driver"), opts)
-                   << onika::parallel::flush;
+                   << flush;
     parallel_queue.wait(kLaneParticleDriver);
     ONIKA_CU_PROF_RANGE_POP();
 
@@ -536,9 +539,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_STREAM_SYNCHRONIZE(driver_stream);
     ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
-    parallel_queue << onika::parallel::set_lane(kLaneHistory)
+    parallel_queue << set_lane(kLaneHistory)
                    << parallel_for(history.start_.size(), history_updater, parallel_execution_context(), opts)
-                   << onika::parallel::flush;
+                   << flush;
     parallel_queue.wait(kLaneHistory);
     ONIKA_CU_PROF_RANGE_POP();
 

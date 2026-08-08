@@ -5,6 +5,17 @@
 
 namespace exaDEM {
 
+/* Run an exclusive prefix sum on device memory using CUB. */
+template <typename T>
+inline void exclusive_scan_device(const T* input, T* output, size_t count, onikaStream_t st = 0) {
+  void* d_tmp = nullptr;
+  size_t tmp_bytes = 0;
+  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st);
+  cudaMalloc(&d_tmp, tmp_bytes);
+  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st);
+  cudaFree(d_tmp);
+}
+
 /**
  * @brief Storage for particle pairs (output of neighbor search).
  *
@@ -514,43 +525,33 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
   }
 }
 
-inline void reconstruct_cell_pair_offsets(ParticlePairStorage& pp_storage, InteractionTypePerCellCounter* count_per_pp,
-                                          size_t num_particle_pairs, size_t num_cell_pairs,
-                                          CellPairStorage& info_cell_pair) {
-// Reset (parallel)
-#pragma omp parallel for
-  for (size_t cp = 0; cp < num_cell_pairs; cp++) {
+/// @brief Zeroes info_cell_pair.offset_/size_ for every cell pair, ahead of the atomic accumulation pass.
+struct ResetCellPairCountsFunc {
+  mutable onika::cuda::span<InteractionTypePerCellCounter> offset_;
+  mutable onika::cuda::span<InteractionTypePerCellCounter> size_;
+
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t cp) const {
     for (int t = 0; t < InteractionTypeId::NTypes; t++) {
-      info_cell_pair.offset_[cp][t] = 0;
-      info_cell_pair.size_[cp][t] = 0;
+      offset_[cp][t] = 0;
+      size_[cp][t] = 0;
     }
   }
+};
 
-// Accumulate (parallel with atomics)
-#pragma omp parallel for
-  for (size_t pp = 0; pp < num_particle_pairs; pp++) {
-    uint32_t cp = pp_storage.cell_pair_idx_[pp];
-    for (int t = 0; t < 4; t++) {
-#pragma omp atomic
-      info_cell_pair.size_[cp][t] += count_per_pp[pp][t];
+/// @brief Scatter-adds each particle pair's per-type interaction counts onto its owning cell pair.
+struct AccumulateCellPairCountsFunc {
+  onika::cuda::span<uint32_t> cell_pair_idx_;
+  const InteractionTypePerCellCounter* __restrict__ count_per_pp_;
+  mutable onika::cuda::span<InteractionTypePerCellCounter> size_;
+
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t pp) const {
+    const uint32_t cp = cell_pair_idx_[pp];
+    for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
+      ONIKA_CU_ATOMIC_ADD(size_[cp][t], count_per_pp_[pp][t]);
     }
   }
+};
 
-  // Prefix sum (sequential, but only over cell pairs ~few thousands)
-  InteractionTypePerCellCounter running;
-  for (int t = 0; t < InteractionTypeId::NTypes; t++) running[t] = 0;
-
-  for (size_t cp = 0; cp < num_cell_pairs; cp++) {
-    for (int t = 0; t < InteractionTypeId::NTypes; t++) {
-      info_cell_pair.offset_[cp][t] = running[t];
-      running[t] += info_cell_pair.size_[cp][t];
-    }
-  }
-}
-
-// ============================================================
-// Helper functors for GPU prefix sum
-// ============================================================
 struct ExtractInteractionCountsFunc {
   onika::cuda::span<const InteractionTypePerCellCounter> counts_;
   // WARNING (TEMPORARY): todo remove mutable
@@ -583,10 +584,62 @@ struct PackInteractionPrefixFunc {
   }
 };
 
+template <typename ExecCtx>
+inline void reconstruct_cell_pair_offsets(
+    ParticlePairStorage& pp_storage, InteractionTypePerCellCounter* count_per_pp, size_t num_particle_pairs,
+    size_t num_cell_pairs, CellPairStorage& info_cell_pair,
+    onika::memory::CudaMMVector<int> (&cp_type_counts)[InteractionTypeId::NTypesPP],
+    onika::memory::CudaMMVector<int> (&cp_type_prefix)[InteractionTypeId::NTypesPP],
+    onika::parallel::ParallelExecutionQueue& queue, int lane, onikaStream_t st, ExecCtx& exec_ctx,
+    const onika::parallel::ParallelForOptions& opts) {
+  using onika::cuda::make_const_span;
+  using onika::cuda::make_span;
+  using onika::cuda::span;
+  using onika::parallel::flush;
+  using onika::parallel::set_lane;
+  auto cp_accessor = info_cell_pair.view();
+
+  for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
+    cp_type_counts[t].resize(num_cell_pairs);
+    cp_type_prefix[t].resize(num_cell_pairs);
+  }
+
+  ResetCellPairCountsFunc reset_func{cp_accessor.offset_, cp_accessor.size_};
+  AccumulateCellPairCountsFunc accumulate_func{to_span(pp_storage.cell_pair_idx_), count_per_pp, cp_accessor.size_};
+  ExtractInteractionCountsFunc extract_func{
+      span<const InteractionTypePerCellCounter>{cp_accessor.size_.data(), num_cell_pairs}, make_span(cp_type_counts[0]),
+      make_span(cp_type_counts[1]), make_span(cp_type_counts[2]), make_span(cp_type_counts[3])};
+
+  queue << set_lane(lane) << parallel_for(num_cell_pairs, reset_func, exec_ctx("nbh_gpu::reset_cell_pair_counts"), opts)
+        << parallel_for(num_particle_pairs, accumulate_func, exec_ctx("nbh_gpu::accumulate_cell_pair_counts"), opts)
+        << parallel_for(num_cell_pairs, extract_func, exec_ctx("nbh_gpu::extract_cell_pair_counts"), opts) << flush;
+
+  // Same stream as `lane` above: stream-ordered after extract_func, no host sync needed here.
+  for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
+    exclusive_scan_device(cp_type_counts[t].data(), cp_type_prefix[t].data(), num_cell_pairs, st);
+  }
+
+  PackInteractionPrefixFunc pack_func{cp_accessor.offset_, make_const_span(cp_type_prefix[0]),
+                                      make_const_span(cp_type_prefix[1]), make_const_span(cp_type_prefix[2]),
+                                      make_const_span(cp_type_prefix[3])};
+  queue << set_lane(lane) << parallel_for(num_cell_pairs, pack_func, exec_ctx("nbh_gpu::pack_cell_pair_prefix"), opts)
+        << flush;
+}
+
 }  // namespace exaDEM
 
 namespace onika {
 namespace parallel {
+template <>
+struct ParallelForFunctorTraits<exaDEM::ResetCellPairCountsFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+template <>
+struct ParallelForFunctorTraits<exaDEM::AccumulateCellPairCountsFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
 template <>
 struct ParallelForFunctorTraits<exaDEM::ExtractInteractionCountsFunc> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;

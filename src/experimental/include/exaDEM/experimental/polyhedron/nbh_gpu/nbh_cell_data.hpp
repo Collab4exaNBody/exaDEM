@@ -86,6 +86,28 @@ struct CopierActiveInteractionFunc {
   }
 };
 
+/// @brief GPU functor backing add_particle_particle_totals: one thread per cell, no cross-cell dependency.
+struct AddParticleParticleTotalsFunc {
+  onika::cuda::span<size_t> number_of_pair_cells_;
+  onika::cuda::span<size_t> start_cell_;
+  onika::cuda::span<InteractionTypePerCellCounter> pp_offset_;
+  onika::cuda::span<InteractionTypePerCellCounter> pp_size_;
+  mutable onika::cuda::span<InteractionTypePerCellCounter> cell_offset_;
+  mutable onika::cuda::span<InteractionTypePerCellCounter> cell_size_;
+
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t cell_idx) const {
+    if (number_of_pair_cells_[cell_idx] == 0) return;
+
+    const size_t first = start_cell_[cell_idx];
+    const size_t last = first + number_of_pair_cells_[cell_idx] - 1;
+    const InteractionTypePerCellCounter pp_start = pp_offset_[first];
+    const InteractionTypePerCellCounter pp_end = pp_offset_[last] + pp_size_[last];
+
+    cell_offset_[cell_idx] = cell_offset_[cell_idx] + pp_start;
+    cell_size_[cell_idx] = cell_size_[cell_idx] + (pp_end - pp_start);
+  }
+};
+
 /**
  * @brief Aggregates CellPairStorage's per-cell-pair particle-particle totals on top of
  * cell_storage's existing (particle-driver) contents, for every cell.
@@ -93,22 +115,23 @@ struct CopierActiveInteractionFunc {
  * @param cell_storage Per-cell storage to aggregate particle-particle totals into.
  * @param info Per-cell cell-pair range boundaries (same indexing as cell_storage).
  * @param pair_storage Cell-pair-level storage, already finalized.
+ * @param queue/lane/exec_ctx/opts Dispatched async on `lane`; the caller is responsible for
+ *   synchronizing before cell_storage.offset_/size_ are read.
  */
+template <typename ExecCtx>
 inline void add_particle_particle_totals(CellStorage& cell_storage, CellInteractionInformation& info,
-                                         CellPairStorage& pair_storage) {
+                                         CellPairStorage& pair_storage, onika::parallel::ParallelExecutionQueue& queue,
+                                         int lane, ExecCtx& exec_ctx, const onika::parallel::ParallelForOptions& opts) {
   const size_t n_cells = info.size();
-#pragma omp parallel for
-  for (size_t cell_idx = 0; cell_idx < n_cells; cell_idx++) {
-    if (info.number_of_pair_cells_[cell_idx] == 0) continue;
+  auto cell_accessor = cell_storage.view();
 
-    const size_t first = info.start_cell_[cell_idx];
-    const size_t last = first + info.number_of_pair_cells_[cell_idx] - 1;
-    const InteractionTypePerCellCounter pp_start = pair_storage.offset_[first];
-    const InteractionTypePerCellCounter pp_end = pair_storage.offset_[last] + pair_storage.size_[last];
+  AddParticleParticleTotalsFunc func{
+      to_span(info.number_of_pair_cells_), to_span(info.start_cell_), to_span(pair_storage.offset_),
+      to_span(pair_storage.size_),         cell_accessor.offset_,     cell_accessor.size_};
 
-    cell_storage.offset_[cell_idx] = cell_storage.offset_[cell_idx] + pp_start;
-    cell_storage.size_[cell_idx] = cell_storage.size_[cell_idx] + (pp_end - pp_start);
-  }
+  queue << onika::parallel::set_lane(lane)
+        << parallel_for(n_cells, func, exec_ctx("nbh_gpu::add_particle_particle_totals"), opts)
+        << onika::parallel::flush;
 }
 
 /**
@@ -123,8 +146,9 @@ inline void add_particle_particle_totals(CellStorage& cell_storage, CellInteract
  */
 template <bool ghost_only, bool active_interaction, bool append = false>
 void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info, CellStorage& cell_storage,
-                              InteractionWrapperAccessor& interaction_classifier_accessor, GridCellParticleInteraction& ges,
-                              const int typeID_start = 0, const int typeID_end = InteractionTypeId::NTypes) {
+                              InteractionWrapperAccessor& interaction_classifier_accessor,
+                              GridCellParticleInteraction& ges, const int typeID_start = 0,
+                              const int typeID_end = InteractionTypeId::NTypes) {
   // Number of non-empty cells to process
   size_t ncells = info.start_cell_.size();
 
@@ -190,7 +214,8 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
           IDispatcher::dispatch(typeID, interaction_classifier_accessor, copier, data_ptr, shift, start, size);
         } else {
           CopierActiveInteractionFunc copier;
-          IDispatcher::dispatch(typeID, interaction_classifier_accessor, copier, to_span(storage.m_data), shift, start, size);
+          IDispatcher::dispatch(typeID, interaction_classifier_accessor, copier, to_span(storage.m_data), shift, start,
+                                size);
         }
       }
     }
@@ -223,3 +248,13 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
   }
 }
 }  // namespace exaDEM
+
+namespace onika {
+namespace parallel {
+template <>
+struct ParallelForFunctorTraits<exaDEM::AddParticleParticleTotalsFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+}  // namespace parallel
+}  // namespace onika

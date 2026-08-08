@@ -29,8 +29,6 @@ struct CellPairStorage {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
 
-  /// @brief Trivially-copyable, kernel-launch-passable view of a CellPairStorage. Build
-  /// via view() right before a kernel launch and pass the result by value.
   struct View {
     // WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const
     mutable onika::cuda::span<InteractionTypePerCellCounter>
@@ -112,8 +110,6 @@ struct CellPairStorage {
     // Reset members (skip flag and arrays)
     ResetCellMembers reset_func = {view()};
 
-    // Parallel execution over all cell pairs. Dispatched async on `lane`; the caller is
-    // responsible for synchronizing (e.g. via a device sync) before offset_/size_/skip_ are read.
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_GUIDED;
     queue << onika::parallel::set_lane(lane)
@@ -121,8 +117,6 @@ struct CellPairStorage {
           << onika::parallel::flush;
   }
 
-  /// @brief Builds a trivially-copyable View, for passing into __global__ kernels. Host-only:
-  /// call this right before a kernel launch and pass the result by value.
   inline View view() const {
     const auto n = owner_cell_.size();
     if (size_.size() != n || offset_.size() != n || skip_.size() != n || ghost_.size() != n ||
@@ -169,17 +163,12 @@ struct CellStorage {
     // Reset members
     ResetCellCounters reset_func = {view()};
 
-    // Parallel execution over all cells. Dispatched async on `lane`; the caller is responsible
-    // for synchronizing (e.g. via a device sync) before offset_/size_ are read.
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_GUIDED;
     queue << onika::parallel::set_lane(lane)
-          << parallel_for(newsize, reset_func, exec_ctx("nbh_gpu::reset_cell_storage"), opts)
-          << onika::parallel::flush;
+          << parallel_for(newsize, reset_func, exec_ctx("nbh_gpu::reset_cell_storage"), opts) << onika::parallel::flush;
   }
 
-  /// @brief Builds a trivially-copyable View, for passing into __global__ kernels. Host-only:
-  /// call this right before a kernel launch and pass the result by value.
   inline View view() const { return View{to_span(offset_), to_span(size_)}; }
 };
 

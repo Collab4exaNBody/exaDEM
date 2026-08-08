@@ -13,8 +13,8 @@ namespace exaDEM {
 typedef onika::oarray_t<int, InteractionTypeId::NTypes> InteractionTypePerCellCounter;
 typedef onika::oarray_t<InteractionWrapper<ParticleParticle>, InteractionTypeId::NTypesPP> InteractionParticleAccessor;
 
-inline InteractionTypePerCellCounter operator+(const InteractionTypePerCellCounter& a,
-                                               const InteractionTypePerCellCounter& b) {
+ONIKA_HOST_DEVICE_FUNC inline InteractionTypePerCellCounter operator+(const InteractionTypePerCellCounter& a,
+                                                                      const InteractionTypePerCellCounter& b) {
   InteractionTypePerCellCounter res;
   for (size_t i = 0; i < InteractionTypeId::NTypes; i++) {
     res[i] = a[i] + b[i];
@@ -22,8 +22,8 @@ inline InteractionTypePerCellCounter operator+(const InteractionTypePerCellCount
   return res;
 }
 
-inline InteractionTypePerCellCounter operator-(const InteractionTypePerCellCounter& a,
-                                               const InteractionTypePerCellCounter& b) {
+ONIKA_HOST_DEVICE_FUNC inline InteractionTypePerCellCounter operator-(const InteractionTypePerCellCounter& a,
+                                                                      const InteractionTypePerCellCounter& b) {
   InteractionTypePerCellCounter res;
   for (size_t i = 0; i < InteractionTypeId::NTypes; i++) {
     res[i] = a[i] - b[i];
