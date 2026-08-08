@@ -24,25 +24,48 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
-#include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/classifier/interaction_wrapper.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
+
+template <InteractionType IT>
+inline void count_classifier_type(Classifier& classifier, int typeID, int& count, int& active_count, int& an,
+                                  int& ghost_count, int& gn) {
+  auto [data, size] = classifier.get_info<IT>(typeID);
+  InteractionWrapper<IT> wrapper(data);
+#pragma omp parallel for reduction(+ : count, active_count, an, ghost_count, gn)
+  for (size_t idx = 0; idx < size; idx++) {
+    const auto I = wrapper(idx);
+    if (I.pair_.ghost_ == InteractionPair::PartnerGhost) {
+      ghost_count++;
+      gn++;
+    } else {
+      count++;
+    }
+    if (I.active()) {
+      active_count++;
+      an++;
+    }
+  }
+}
+
 template <typename GridT, class = AssertGridHasFields<GridT>>
-class StatsInteractions : public OperatorNode {
+class StatsClassifier : public OperatorNode {
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);
-  ADD_SLOT(GridCellParticleInteraction, ges, INPUT, REQUIRED, DocString{"Interaction list"});
+  ADD_SLOT(Classifier, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
 
  public:
   inline std::string documentation() const final {
-    return R"EOF( This operator displays the number of active and ghost interactions per type.)EOF";
+    return R"EOF( This operator displays DEM simulation data (from the classifier) for a given frequency.)EOF";
   }
 
   inline void execute() final {
-    auto& cells = ges->m_data;
+    Classifier& classifier = *ic;
 
     // v vertex, e edge, f face, c cylinder, s surface, b ball, S rShape, sp sticked particles
 
@@ -55,84 +78,36 @@ class StatsInteractions : public OperatorNode {
     int gnvc(0), gnvs(0), gnvb(0), gnSvv(0), gnSve(0), gnSvf(0), gnSee(0), gnSev(0),
         gnSfv(0);  // interaction counters [drivers]
 
-    const exanb::Vec3d null = {0., 0., 0.};
+    count_classifier_type<InteractionType::ParticleParticle>(classifier, InteractionTypeId::VertexVertex, nvv, anvv, an,
+                                                             gnvv, gn);
+    count_classifier_type<InteractionType::ParticleParticle>(classifier, InteractionTypeId::VertexEdge, nve, anve, an,
+                                                             gnve, gn);
+    count_classifier_type<InteractionType::ParticleParticle>(classifier, InteractionTypeId::VertexFace, nvf, anvf, an,
+                                                             gnvf, gn);
+    count_classifier_type<InteractionType::ParticleParticle>(classifier, InteractionTypeId::EdgeEdge, nee, anee, an,
+                                                             gnee, gn);
 
-    auto incr_interaction_counters = [null](const PlaceholderInteraction& I, int& count, int& active_count,
-                                            int& active_global_count, int& ghost_count,
-                                            int& ghost_global_count) -> void {
-      if (I.pair_.ghost_ == InteractionPair::PartnerGhost) {
-        ghost_count++;
-        ghost_global_count++;
-      } else {
-        count++;
-      }
-      if (I.active()) {
-        active_count++;
-        active_global_count++;
-      }
-    };
+    count_classifier_type<InteractionType::ParticleDriver>(classifier, InteractionTypeId::VertexCylinder, nvc, anvc, an,
+                                                           gnvc, gn);
+    count_classifier_type<InteractionType::ParticleDriver>(classifier, InteractionTypeId::VertexSurface, nvs, anvs, an,
+                                                           gnvs, gn);
+    count_classifier_type<InteractionType::ParticleDriver>(classifier, InteractionTypeId::VertexBall, nvb, anvb, an,
+                                                           gnvb, gn);
+    count_classifier_type<InteractionType::ParticleDriver>(classifier, InteractionTypeId::VertexRshapeDriverVertex,
+                                                           nSvv, anSvv, an, gnSvv, gn);
+    count_classifier_type<InteractionType::ParticleDriver>(classifier, InteractionTypeId::VertexRshapeDriverEdge, nSve,
+                                                           anSve, an, gnSve, gn);
+    count_classifier_type<InteractionType::ParticleDriver>(classifier, InteractionTypeId::VertexRshapeDriverFace, nSvf,
+                                                           anSvf, an, gnSvf, gn);
+    count_classifier_type<InteractionType::ParticleDriver>(classifier, InteractionTypeId::EdgeRshapeDriverEdge, nSee,
+                                                           anSee, an, gnSee, gn);
+    count_classifier_type<InteractionType::ParticleDriver>(classifier, InteractionTypeId::EdgeRshapeDriverVertex, nSev,
+                                                           anSev, an, gnSev, gn);
+    count_classifier_type<InteractionType::ParticleDriver>(classifier, InteractionTypeId::FaceRshapeDriverVertex, nSfv,
+                                                           anSfv, an, gnSfv, gn);
 
-#pragma omp parallel for reduction(+ : nvv, nve, nvf, nee, nvvib, an, anvv, anve, anvf, anee, anvvib, gn, gnvv, gnve, \
-                                       gnvf, gnee, gnvvib, nvc, nvs, nvb, nSvv, nSve, nSvf, nSee, nSev, nSfv, anvc,   \
-                                       anvs, anvb, anSvv, anSve, anSvf, anSee, anSev, anSfv, gnvc, gnvs, gnvb, gnSvv, \
-                                       gnSve, gnSvf, gnSee, gnSev, gnSfv)
-    for (size_t i = 0; i < cells.size(); i++) {
-      for (auto& item : cells[i].m_data) {
-        auto type = item.type();
-        // particles
-        switch (type) {
-          case 0:
-            incr_interaction_counters(item, nvv, anvv, an, gnvv, gn);
-            break;
-          case 1:
-            incr_interaction_counters(item, nve, anve, an, gnve, gn);
-            break;
-          case 2:
-            incr_interaction_counters(item, nvf, anvf, an, gnvf, gn);
-            break;
-          case 3:
-            incr_interaction_counters(item, nee, anee, an, gnee, gn);
-            break;
-            // drivers
-            // cylinder
-          case 4:
-            incr_interaction_counters(item, nvc, anvc, an, gnvc, gn);
-            break;
-            // surface
-          case 5:
-            incr_interaction_counters(item, nvs, anvs, an, gnvs, gn);
-            break;
-            // ball
-          case 6:
-            incr_interaction_counters(item, nvb, anvb, an, gnvb, gn);
-            break;
-            // rshape driver
-          case 7:
-            incr_interaction_counters(item, nSvv, anSvv, an, gnSvv, gn);
-            break;
-          case 8:
-            incr_interaction_counters(item, nSve, anSve, an, gnSve, gn);
-            break;
-          case 9:
-            incr_interaction_counters(item, nSvf, anSvf, an, gnSvf, gn);
-            break;
-          case 10:
-            incr_interaction_counters(item, nSee, anSee, an, gnSee, gn);
-            break;
-          case 11:
-            incr_interaction_counters(item, nSev, anSev, an, gnSev, gn);
-            break;
-          case 12:
-            incr_interaction_counters(item, nSfv, anSfv, an, gnSfv, gn);
-            break;
-          case 13:
-            incr_interaction_counters(item, nvvib, anvvib, an, gnvvib, gn);
-            break;
-          default:
-            break;
-        }
-      }
-    }
+    count_classifier_type<InteractionType::InnerBond>(classifier, InteractionTypeId::InnerBond, nvvib, anvvib, an,
+                                                      gnvvib, gn);
 
     std::vector<int> val = {// particle
                             nvv, nve, nvf, nee, nvvib,
@@ -192,8 +167,7 @@ class StatsInteractions : public OperatorNode {
 };
 
 // === register factories ===
-ONIKA_AUTORUN_INIT(stats_interactions) {
-  OperatorNodeFactory::instance()->register_factory("stats_interactions",
-                                                    make_grid_variant_operator<StatsInteractions>);
+ONIKA_AUTORUN_INIT(stats_classifier) {
+  OperatorNodeFactory::instance()->register_factory("stats_classifier", make_grid_variant_operator<StatsClassifier>);
 }
 }  // namespace exaDEM

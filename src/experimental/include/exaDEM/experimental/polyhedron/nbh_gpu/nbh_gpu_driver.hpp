@@ -5,57 +5,11 @@
 #include <exaDEM/polyhedron/vertices.hpp>
 
 namespace exaDEM {
-struct CellDriverGPUAcessor {
-  InteractionTypePerCellCounter* __restrict__ offset_;
-  InteractionTypePerCellCounter* __restrict__ size_;
-};
-
-struct ResetCell {
-  InteractionTypePerCellCounter* __restrict__ offset_;  ///< Pointer to array of offsets per interaction type
-  InteractionTypePerCellCounter* __restrict__ size_;    ///< Pointer to array of sizes per interaction type
-
-  /**
-   * @brief Reset the data for a given cell index.
-   * @param i Index of the cell to reset
-   */
-  ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(size_t i) const {
-    for (size_t j = 0; j < InteractionTypeId::NTypes; j++) {
-      size_[i][j] = 0;
-      offset_[i][j] = 0;
-    }
-  }
-};
-
-struct CellDriverStorage {
-  // Vector type alias using unified memory (GPU/CPU compatible)
-  template <typename T>
-  using VectorT = onika::memory::CudaMMVector<T>;
-  VectorT<InteractionTypePerCellCounter> offset_;  ///< Offset for each inter
-  VectorT<InteractionTypePerCellCounter> size_;    ///< Number of interaction
-
-  // size should be the number of non empty cells
-  template <typename ExecCtx>
-  void resize(size_t newsize, ExecCtx& exec_ctx) {
-    size_.resize(newsize);
-    offset_.resize(newsize);
-
-    // Reset members (skip flag and arrays)
-    ResetCell reset_func = {offset_.data(), size_.data()};
-
-    // Parallel execution over all cells
-    onika::parallel::ParallelForOptions opts;
-    opts.omp_scheduling = onika::parallel::OMP_SCHED_GUIDED;
-    parallel_for(newsize, reset_func, exec_ctx(), opts);
-  }
-  CellDriverGPUAcessor accessor() { return {offset_.data(), size_.data()}; }
-};
-
-// CountNumberOfInteractionParticleDriverFunc = CountIPDFunc
-template <typename TMPLC>
-struct CountIPDFunc {
-  TMPLC cells_;
-  CellDriverGPUAcessor accessor_;
+template <typename CellsT>
+struct CountDriverInteractionsFunc {
+  CellsT cells_;
+  // WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const
+  mutable CellStorage::View cell_storage_accessor_;
   const size_t* const cell_ptr_;
   const double rcut_inc_;
   const shape* const shps_;
@@ -112,42 +66,41 @@ struct CountIPDFunc {
                                quat, shps_);
       }
     }
-    auto& res = accessor_.size_[idx];
+    auto& res = cell_storage_accessor_.size_[idx];
     for (int typeID = get_first_id<InteractionType::ParticleDriver>();
          typeID <= get_last_id<InteractionType::ParticleDriver>(); typeID++) {
       if (func.counter_[typeID] > 0) {
-        // accessor_.skip_driver_[idx] = false;
         ONIKA_CU_ATOMIC_ADD(res[typeID], func.counter_[typeID]);
       }
     }
   }
 };
 
-template <typename TMPLC>
-struct ClassifyIPDFunc {
-  TMPLC cells_;
-  CellDriverGPUAcessor accessor_;
+template <typename CellsT>
+struct ClassifyDriverInteractionsFunc {
+  CellsT cells_;
+  CellStorage::View cell_storage_accessor_;
   const size_t* const cell_ptr_;
   const double rcut_inc_;
   const shape* const shps_;
   VertexField* const vertex_fields_;
   DriversGPUAccessor drvs_;
-  const InteractionWrapperAccessor interactions_;
+  const InteractionWrapperAccessor interaction_classifier_accessor_;
 
   static constexpr InteractionType IT = InteractionType::ParticleDriver;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(long idx) const {
     struct AddInteractionFunc {
-      const InteractionWrapperAccessor& data_;
+      const InteractionWrapperAccessor& interaction_classifier_accessor_;
       InteractionTypePerCellCounter prefix_;
       ONIKA_HOST_DEVICE_FUNC inline void operator()(PlaceholderInteraction& item, int sub_i, int sub_j) {
         item.pair_.pi_.sub_ = sub_i;
         item.pair_.pj_.sub_ = sub_j;
-        auto& container = data_.get_typed_accessor<IT>(item.type());
+        auto& container = interaction_classifier_accessor_.get_typed_accessor<IT>(item.type());
         container.set(prefix_[item.type()]++, item);
       }
     };
-    AddInteractionFunc func = {interactions_, accessor_.offset_[idx]};
+    AddInteractionFunc func = {interaction_classifier_accessor_, cell_storage_accessor_.offset_[idx]};
 
     size_t cell_id = cell_ptr_[idx];
     auto& cell = cells_[cell_id];
@@ -200,13 +153,13 @@ struct ClassifyIPDFunc {
 
 namespace onika {
 namespace parallel {
-template <typename TMPLC>
-struct ParallelForFunctorTraits<exaDEM::CountIPDFunc<TMPLC>> {
+template <typename CellsT>
+struct ParallelForFunctorTraits<exaDEM::CountDriverInteractionsFunc<CellsT>> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;
   static inline constexpr bool CudaCompatible = true;
 };
-template <typename TMPLC>
-struct ParallelForFunctorTraits<exaDEM::ClassifyIPDFunc<TMPLC>> {
+template <typename CellsT>
+struct ParallelForFunctorTraits<exaDEM::ClassifyDriverInteractionsFunc<CellsT>> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;
   static inline constexpr bool CudaCompatible = true;
 };

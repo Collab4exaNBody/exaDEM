@@ -29,15 +29,6 @@ under the License.
 #include <exaDEM/interaction/placeholder_interaction.hpp>
 #include <exaDEM/interface/rupture_criterion.hpp>
 
-// Bookkeeping fields (particle indices, ghost/swap flags) shared by every ClassifierContainer<IT>
-// specialization below AND by InteractionWrapper<IT> (src/interaction/include/exaDEM/classifier/
-// interaction_wrapper.hpp, which includes this header). Declared once here as NEW_TAG (nothing
-// else in the codebase declares these tags). Each specialization keeps this in its OWN tuple
-// member `bk_`, separate from the physics fields' `fm_` (built straight from
-// EXADEM_INTERACTION_FIELDS / EXADEM_INNER_BOND_FIELDS, unmodified): this way no field list needs
-// to be redefined just to merge it with another one -- EXADEM_INTERACTION_(VECTOR_)FIELD_ACCESSOR
-// targets fm_, EXADEM_INTERACTION_(VECTOR_)FIELD_ACCESSOR_BK targets bk_, and each list keeps its
-// own 0-based indices.
 #define EXADEM_INTERACTION_COMMON_FIELDS(X) \
   X(uint64_t, id_i, 0, NEW_TAG)             \
   X(uint64_t, id_j, 1, NEW_TAG)             \
@@ -57,13 +48,6 @@ using exanb::Vec3d;
 /**
  * @brief Structure representing the Structure of Arrays data structure for the interactions in a Discrete Element
  * Method (DEM) simulation.
- *
- * ClassifierContainer<IT> is specialized per InteractionType instead of branching on IT with
- * if constexpr inside a single body: no generic definition is provided, only explicit
- * specializations, one per InteractionType actually used (ParticleParticle, ParticleDriver:
- * both based on Interaction, friction/moment; InnerBond: based on InnerBondInteraction,
- * friction/en/tds/et/dn0/weight/criterion/unbroken). Bookkeeping fields (id_i, cell_i, ...) live
- * in a second tuple `bk_`, built from EXADEM_INTERACTION_COMMON_FIELDS above.
  */
 template <InteractionType IT>
 struct ClassifierContainer;
@@ -559,7 +543,7 @@ struct ClassifierContainer<InteractionType::InnerBond> {
   }
 
   /**
-   *@briefs Updates the fields of a given interaction.
+   * @briefs Updates the fields of a given interaction.
    */
   ONIKA_HOST_DEVICE_FUNC void update(size_t id, PlaceholderInteraction& item) {
     InnerBondInteraction& I = reinterpret_cast<InnerBondInteraction&>(item);

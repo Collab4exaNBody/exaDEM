@@ -95,6 +95,7 @@ class ClassifyInteractions : public OperatorNode {
         for (size_t it = 0; it < n_interactions_in_cell; it++) {
           auto& item = data_ptr[it];
           const int typeID = item.type();
+          assert(typeID <= ntypes);
           tmp[typeID].push_back(item);
           item.reset();
         }

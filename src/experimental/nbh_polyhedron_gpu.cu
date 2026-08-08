@@ -32,12 +32,11 @@ under the License.
 
 #include <cassert>
 #include <cub/cub.cuh>
+#include <exaDEM/experimental/polyhedron/nbh_gpu/interaction_list_layout.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_pccp.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_manager.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
@@ -56,26 +55,32 @@ namespace exaDEM {
 // called. It will be removed in the future and replaced by a more generic scratch space for GPU computations
 struct DataNeighborGPUScratch {
   ParticlePairStorage pp_storage_;
-  onika::memory::CudaMMVector<int> pp_counts_;
-  onika::memory::CudaMMVector<int> pp_offsets_;
+  onika::memory::CudaMMVector<int> pp_counts_;   // only required for PCCP
+  onika::memory::CudaMMVector<int> pp_offsets_;  // only required for PCCP
   onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_counts_;
   onika::memory::CudaMMVector<InteractionTypePerCellCounter> interaction_prefix_;
-  onika::memory::CudaMMVector<int> type_counts_[InteractionTypeId::NTypesPP];
-  onika::memory::CudaMMVector<int> type_prefix_[InteractionTypeId::NTypesPP];
+  onika::memory::CudaMMVector<int> type_counts_[InteractionTypeId::NTypesPP];  // only required for PCCP
+  onika::memory::CudaMMVector<int> type_prefix_[InteractionTypeId::NTypesPP];  // only required for PCCP
+  onika::memory::CudaMMVector<int>
+      cp_type_counts_[InteractionTypeId::NTypesPP];  // reconstruct_cell_pair_offsets scratch
+  onika::memory::CudaMMVector<int>
+      cp_type_prefix_[InteractionTypeId::NTypesPP];  // reconstruct_cell_pair_offsets scratch
+  InteractionHistory history_;
 };
 
-// Pilot constants for GPU kernels. These values are not expected to change, but they can be tuned for performance.
+// Pilot constants for GPU kernels.
+// These values are not expected to change
 constexpr int kNeighborOffsetCount = 27;
 constexpr int kNeighborGridSize = 3;
+// but these one can be tuned for performance.
 constexpr int kParticlePairBlockX = 8;
 constexpr int kParticlePairBlockY = 8;
-constexpr int kScanBlockSize = 256;
 
 // helper functions
 template <typename T>
-void reset(onika::memory::CudaMMVector<T>& vec) {
+void reset(onika::memory::CudaMMVector<T>& vec, onikaStream_t st = 0) {
   if (vec.size() > 0) {
-    ONIKA_CU_MEMSET(vec.data(), 0, vec.size() * sizeof(T));
+    ONIKA_CU_MEMSET(vec.data(), 0, vec.size() * sizeof(T), st);
   }
 }
 
@@ -125,45 +130,38 @@ inline void build_cell_neighbor_metadata(const GridT& grid, const IJK& dims, con
   }
 }
 
-/* Run an exclusive prefix sum on device memory using CUB. */
-template <typename T>
-inline void exclusive_scan_device(const T* input, T* output, size_t count) {
-  void* d_tmp = nullptr;
-  size_t tmp_bytes = 0;
-  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count);
-  cudaMalloc(&d_tmp, tmp_bytes);
-  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count);
-  cudaFree(d_tmp);
-}
-
 /* Initialize the temporary buffers used to store particle-pair counts and offsets. */
 template <typename ScratchT>
-inline void initialize_particle_pair_scratch(ScratchT& scratch, size_t cell_pair_size) {
+inline void initialize_particle_pair_scratch(ScratchT& scratch, size_t cell_pair_size, onikaStream_t st = 0) {
   auto& pp_counts = scratch.pp_counts_;
   auto& pp_offsets = scratch.pp_offsets_;
   pp_offsets.resize(cell_pair_size);
-  reset(pp_offsets);
+  reset(pp_offsets, st);
   pp_counts.resize(cell_pair_size);
-  reset(pp_counts);
+  reset(pp_counts, st);
 }
 
 /* Initialize the temporary buffers used to store interaction counts and prefix offsets. */
 template <typename ScratchT>
-inline void initialize_interaction_scratch(ScratchT& scratch, size_t total_pp) {
+inline void initialize_interaction_scratch(ScratchT& scratch, size_t total_pp, onikaStream_t st = 0) {
   auto& interaction_counts = scratch.interaction_counts_;
   auto& interaction_prefix = scratch.interaction_prefix_;
   interaction_counts.resize(total_pp);
-  reset(interaction_counts);
+  reset(interaction_counts, st);
   interaction_prefix.resize(total_pp);
-  reset(interaction_prefix);
+  reset(interaction_prefix, st);
 }
 
-/* Add persistent driver interactions that were not found in the current classifier contents. */
-template <typename ContainerT, typename WrapperAccessorT, typename CellDriverAccessorT>
+/* Add persistent driver interactions that were not found in the current classifier contents.
+   wrapper_storage backs interaction_classifier_accessor's spans and must be owned by the caller:
+   reassigning it here (rather than to a function-local InteractionWrapperStorage) keeps those
+   spans valid after this function returns, for whatever the caller does next with the accessor. */
+template <typename ContainerT, typename WrapperAccessorT, typename CellStorageAccessorT>
 inline void add_unmatched_persistent_interactions(const InteractionHistory& history, size_t cell_size,
                                                   ContainerT& container,
-                                                  WrapperAccessorT& classifier_interaction_accessor,
-                                                  CellDriverAccessorT& cell_driver_accessor) {
+                                                  WrapperAccessorT& interaction_classifier_accessor,
+                                                  CellStorageAccessorT& cell_storage_accessor,
+                                                  InteractionWrapperStorage& wrapper_storage) {
   std::vector<PlaceholderInteraction> unmatched_persistent;
   for (size_t ci = 0; ci < cell_size; ++ci) {
     size_t hist_begin = history.start_[ci];
@@ -177,9 +175,9 @@ inline void add_unmatched_persistent_interactions(const InteractionHistory& hist
       if (!interaction.persistent()) continue;
 
       auto& wrapper =
-          classifier_interaction_accessor.template get_typed_accessor<InteractionType::ParticleDriver>(type);
-      const int drv_offset = cell_driver_accessor.offset_[ci][type];
-      const int drv_size = cell_driver_accessor.size_[ci][type];
+          interaction_classifier_accessor.template get_typed_accessor<InteractionType::ParticleDriver>(type);
+      const int drv_offset = cell_storage_accessor.offset_[ci][type];
+      const int drv_size = cell_storage_accessor.size_[ci][type];
       bool found = false;
       for (int k = drv_offset; k < drv_offset + drv_size; ++k) {
         if (wrapper.same(k, interaction)) {
@@ -210,8 +208,8 @@ inline void add_unmatched_persistent_interactions(const InteractionHistory& hist
     w.set(old_size, interaction);
   }
 
-  InteractionWrapperStorage wrappers2(container);
-  classifier_interaction_accessor = wrappers2.accessor();
+  wrapper_storage = InteractionWrapperStorage(container);
+  interaction_classifier_accessor = wrapper_storage.accessor();
 }
 
 template <typename GridT, class = AssertGridHasFields<GridT>>
@@ -227,8 +225,12 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
-  ADD_SLOT(NBHManager, nbh_manager, INPUT_OUTPUT, DocString{"Data about packed interactions within classifier."});
+  ADD_SLOT(InteractionListBuildLayout, interaction_list_layout, INPUT_OUTPUT,
+           DocString{"Data about packed interactions within classifier."});
   ADD_SLOT(DataNeighborGPUScratch, scratch, PRIVATE, DocString{"Scratch space for GPU computations"});
+  ADD_SLOT(PersistentInteractionScratch, persistent_interaction_scratch, PRIVATE,
+           DocString{"Scratch space for host-side persistent interaction bookkeeping"});
+  ADD_SLOT(bool, enable_persistent_interactions, INPUT, false, DocString{"Enable persistent interactions"});
 
  public:
   inline std::string documentation() const final {
@@ -243,6 +245,11 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
   inline void execute() final {
     using namespace onika::parallel;
+    using onika::cuda::make_const_span;
+    using onika::cuda::make_span;
+    using onika::cuda::span;
+    using onika::parallel::flush;
+    using onika::parallel::set_lane;
 #ifndef ONIKA_CUDA_VERSION
     color_log::error("nbh_polyhedron_gpu",
                      "This operator only work on GPU.\n"
@@ -257,74 +264,111 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     auto& interaction_container = *ic;
     const DriversGPUAccessor driver_accessor = *drivers;
 
-    auto get_exec_ctx = [this]() { return this->parallel_execution_context(); };
+    auto get_exec_ctx = [this](const char* sub_tag = nullptr) { return this->parallel_execution_context(sub_tag); };
 
-    onikaStream_t st_updateghost, st_history, st_particle, st_driver, st_innerbond;
+    constexpr int kLaneParticleDriver = 0;
+    constexpr int kLaneParticleParticle = 1;
+    constexpr int kLaneHistory = 2;
+    constexpr int kLaneInnerBond = 3;
+    auto& parallel_queue = parallel_execution_queue();
+    onikaStream_t particle_stream = global_cuda_ctx()->getThreadStream(kLaneParticleParticle);
+    onikaStream_t history_stream = global_cuda_ctx()->getThreadStream(kLaneHistory);
+    onikaStream_t driver_stream = global_cuda_ctx()->getThreadStream(kLaneParticleDriver);
+
+    onikaStream_t st_updateghost;
     ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_updateghost);
-    ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_history);
-    ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_particle);
-    ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_driver);
-    ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_innerbond);
 
     NbhCellHostStorage cell_neighbor_host_storage;
-    CellInteractionInformation& cell_interaction_info = nbh_manager->info_cell_;
+    CellInteractionInformation& cell_interaction_info = interaction_list_layout->cell_interaction_info_;
 
+    IgnorePairsGPU& ignore_pairs_gpu = persistent_interaction_scratch->ignore_pairs_gpu_;
+    if (*enable_persistent_interactions) {
+      ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::build_ignore_pairs");
+      // Persistent interactions are already accounted for elsewhere; skip them here so the neighbor search doesn't
+      // rediscover them as plain contacts.
+      // Must run before setup_history_clean_ges(), which resets *ges.
+      ListOfIgnorePairs& ignore_pairs = persistent_interaction_scratch->ignore_pairs_;
+      build_list_of_ignore_pair(ignore_pairs, cell_indices, active_cell_count, *ges);
+      ignore_pairs_gpu.build(ignore_pairs, grid_data.number_of_cells());
+      ONIKA_CU_PROF_RANGE_POP();
+    }
+
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::build_cell_neighbor_metadata");
     build_cell_neighbor_metadata(grid_data, grid_dimensions, cell_indices, active_cell_count,
                                  cell_neighbor_host_storage, cell_interaction_info);
     cell_interaction_info.prefetch_cpu(st_updateghost);
-    CellDriverStorage& cell_driver_storage = nbh_manager->info_cell_driver_;
-    cell_driver_storage.resize(active_cell_count, get_exec_ctx);
-    auto cell_driver_accessor = cell_driver_storage.accessor();
+    CellStorage& cell_storage = interaction_list_layout->cell_storage_;
+    cell_storage.resize(active_cell_count, parallel_queue, kLaneInnerBond, get_exec_ctx);
+    auto cell_storage_accessor = cell_storage.view();
 
-    NbhCellStorage& cell_pair_storage = nbh_manager->info_pair_cell_;
-    cell_pair_storage.reset(cell_neighbor_host_storage, get_exec_ctx);
+    CellPairStorage& cell_pair_storage = interaction_list_layout->cell_pair_storage_;
+    cell_pair_storage.reset(cell_neighbor_host_storage, parallel_queue, kLaneParticleParticle, get_exec_ctx);
 
-    NbhCellAccessor cell_pair_accessor(cell_pair_storage);
+    auto cell_pair_accessor = cell_pair_storage.view();
+    ONIKA_CU_PROF_RANGE_POP();
 
     ParallelForOptions opts;
     opts.omp_scheduling = OMP_SCHED_GUIDED;
     // BlockParallelForOptions bopts;
 
-    CountIPDFunc driver_counter = {grid_cells,         cell_driver_accessor, cell_indices,   *rcut_inc,
-                                   shapes_data.data(), vertex_field_data,    driver_accessor};
+    CountDriverInteractionsFunc driver_counter = {grid_cells,         cell_storage_accessor, cell_indices,   *rcut_inc,
+                                                  shapes_data.data(), vertex_field_data,     driver_accessor};
 
     const auto neighbor_cell_pair_count = cell_neighbor_host_storage.owner_cell_.size();
     ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+    PersistentInnerBonds& persistent_inner_bonds = persistent_interaction_scratch->persistent_inner_bonds_;
+    if (*enable_persistent_interactions) {
+      ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::collect_persistent_inner_bonds");
+      collect_persistent_inner_bonds(persistent_inner_bonds, cell_storage, cell_indices, active_cell_count, *ges);
+      ONIKA_CU_PROF_RANGE_POP();
+    }
 
     // Used in Build particle pairs (PCCP)
     // Place here to avoid several synchronization calls in the middle of the operator.
     auto& particle_pair_counts = scratch->pp_counts_;
     auto& particle_pair_offsets = scratch->pp_offsets_;
-    initialize_particle_pair_scratch(*scratch, neighbor_cell_pair_count);
+    initialize_particle_pair_scratch(*scratch, neighbor_cell_pair_count, particle_stream);
     // end scratch variables
 
-    parallel_for(active_cell_count, driver_counter, parallel_execution_context("nbh_gpu::counter_driver,"), opts);
-    PrefixSumInteractionTypePerCellCounter driver_prefix_sum{cell_driver_accessor.offset_, cell_driver_accessor.size_,
-                                                             active_cell_count};
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::count_driver_interactions");
+    PrefixSumInteractionTypePerCellCounter cell_storage_prefix_sum{cell_storage_accessor.offset_,
+                                                                   cell_storage_accessor.size_, active_cell_count};
 
-    ParallelExecutionSpace<1> parallel_range_fpd = {{get_first_id<InteractionType::ParticleDriver>()},
-                                                    {get_last_id<InteractionType::ParticleDriver>() + 1}};
+    ParallelExecutionSpace<1> prefix_sum_type_range = {{get_first_id<InteractionType::ParticleDriver>()},
+                                                       {get_last_id<InteractionType::InnerBond>() + 1}};
+
+    parallel_queue << set_lane(kLaneParticleDriver)
+                   << parallel_for(active_cell_count, driver_counter,
+                                   parallel_execution_context("nbh_gpu::counter_driver"), opts)
+                   << parallel_for(prefix_sum_type_range, cell_storage_prefix_sum,
+                                   parallel_execution_context("nbh_gpu::cell_storage_prefix_sum"), opts)
+                   << flush;
+    ONIKA_CU_PROF_RANGE_POP();
+
+    InteractionHistory& history = scratch->history_;
+
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::setup_history_clean_ges");
+    setup_history_clean_ges(grid_cells, cell_indices, active_cell_count, *ges, history, history_stream);
 
     ONIKA_CU_DEVICE_SYNCHRONIZE();
-    parallel_for(parallel_range_fpd, driver_prefix_sum, parallel_execution_context("nbh_gpu::func_prefix_driver"),
-                 opts);
-
-    InteractionHistory history;
-
-    setup_history_clean_ges(grid_cells, cell_indices, active_cell_count, *ges, history, st_history);
-
-    ONIKA_CU_DEVICE_SYNCHRONIZE();
+    ONIKA_CU_PROF_RANGE_POP();
 
     // ****** Build particle pairs (PCCP) ******* //
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::build_particle_pairs");
     dim3 pp_block(kParticlePairBlockX, kParticlePairBlockY, 1);
 
-    CountParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY><<<neighbor_cell_pair_count, pp_block>>>(
-        grid_cells, cell_pair_accessor.owner_cell_, cell_pair_accessor.partner_cell_, cell_pair_accessor.ghost_,
-        *rcut_inc, shapes_data.data(), vertex_field_data, particle_pair_counts.data(), neighbor_cell_pair_count);
-    ONIKA_CU_DEVICE_SYNCHRONIZE();
+    CountParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY, true>
+        <<<neighbor_cell_pair_count, pp_block, 0, particle_stream>>>(
+            grid_cells, cell_pair_accessor.owner_cell_.data(), cell_pair_accessor.partner_cell_.data(),
+            cell_pair_accessor.ghost_.data(), *rcut_inc, shapes_data.data(), vertex_field_data,
+            particle_pair_counts.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
+    ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
-    exclusive_scan_device(particle_pair_counts.data(), particle_pair_offsets.data(), neighbor_cell_pair_count);
-    ONIKA_CU_DEVICE_SYNCHRONIZE();
+    exclusive_scan_device(particle_pair_counts.data(), particle_pair_offsets.data(), neighbor_cell_pair_count,
+                          particle_stream);
+    ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
+    ONIKA_CU_PROF_RANGE_POP();
 
     size_t total_pp = 0;
     if (neighbor_cell_pair_count > 0) {
@@ -339,20 +383,24 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     // Place here to avoid several synchronization calls in the middle of the operator.
     auto& interaction_counts_per_pair = scratch->interaction_counts_;
     auto& interaction_prefix_per_pair = scratch->interaction_prefix_;
-    initialize_interaction_scratch(*scratch, total_pp);
+    initialize_interaction_scratch(*scratch, total_pp, particle_stream);
     // end scratch variables
 
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fill_particle_pairs");
     if (total_pp > 0) {
-      FillParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY><<<neighbor_cell_pair_count, pp_block>>>(
-          grid_cells, cell_pair_accessor.owner_cell_, cell_pair_accessor.partner_cell_, cell_pair_accessor.ghost_,
-          *rcut_inc, shapes_data.data(), vertex_field_data, particle_pair_offsets.data(),
-          particle_pair_storage.cell_i_.data(), particle_pair_storage.cell_j_.data(), particle_pair_storage.p_i_.data(),
-          particle_pair_storage.p_j_.data(), particle_pair_storage.ghost_.data(),
-          particle_pair_storage.cell_pair_idx_.data(), neighbor_cell_pair_count);
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
+      FillParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY, true>
+          <<<neighbor_cell_pair_count, pp_block, 0, particle_stream>>>(
+              grid_cells, cell_pair_accessor.owner_cell_.data(), cell_pair_accessor.partner_cell_.data(),
+              cell_pair_accessor.ghost_.data(), *rcut_inc, shapes_data.data(), vertex_field_data,
+              particle_pair_offsets.data(), particle_pair_storage.cell_i_.data(), particle_pair_storage.cell_j_.data(),
+              particle_pair_storage.p_i_.data(), particle_pair_storage.p_j_.data(), particle_pair_storage.ghost_.data(),
+              particle_pair_storage.cell_pair_idx_.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
+      ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
     }
+    ONIKA_CU_PROF_RANGE_POP();
 
     // ****** Count interactions per particle pair (PCCP) ******* //
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::count_interactions_per_pair");
 
     InteractionTypePerCellCounter total_interactions_per_type;
     for (int typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
@@ -360,47 +408,58 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     }
 
     if (total_pp > 0) {
-      CountInteractionsPPKernel<kParticlePairBlockX, kParticlePairBlockY><<<total_pp, pp_block>>>(
+      CountInteractionsPPKernel<kParticlePairBlockX, kParticlePairBlockY><<<total_pp, pp_block, 0, particle_stream>>>(
           grid_cells, vertex_field_data, shapes_data.data(), *rcut_inc, particle_pair_storage.cell_i_.data(),
           particle_pair_storage.cell_j_.data(), particle_pair_storage.p_i_.data(), particle_pair_storage.p_j_.data(),
           interaction_counts_per_pair.data(), total_pp);
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
+      ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
       // GPU prefix sum per interaction type
       auto& interaction_type_counts = scratch->type_counts_;
       auto& interaction_type_prefix = scratch->type_prefix_;
       for (int typeID = 0; typeID < InteractionTypeId::NTypesPP; typeID++) {
         interaction_type_counts[typeID].resize(total_pp);
-        reset(interaction_type_counts[typeID]);
+        reset(interaction_type_counts[typeID], particle_stream);
         interaction_type_prefix[typeID].resize(total_pp);
-        reset(interaction_type_prefix[typeID]);
+        reset(interaction_type_prefix[typeID], particle_stream);
       }
 
-      const int grid_1d = (total_pp + kScanBlockSize - 1) / kScanBlockSize;
+      ExtractInteractionCountsFunc extract_counts{
+          make_const_span(interaction_counts_per_pair), make_span(interaction_type_counts[0]),
+          make_span(interaction_type_counts[1]), make_span(interaction_type_counts[2]),
+          make_span(interaction_type_counts[3])};
+      parallel_queue << set_lane(kLaneParticleParticle)
+                     << parallel_for(total_pp, extract_counts,
+                                     parallel_execution_context("nbh_gpu::extract_interaction_counts"), opts)
+                     << flush;
 
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
-      ExtractInteractionCounts<<<grid_1d, kScanBlockSize>>>(
-          interaction_counts_per_pair.data(), interaction_type_counts[0].data(), interaction_type_counts[1].data(),
-          interaction_type_counts[2].data(), interaction_type_counts[3].data(), total_pp);
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
-
+      // iterate over particle-particle interaction types and compute prefix sum for each type
       for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
-        exclusive_scan_device(interaction_type_counts[t].data(), interaction_type_prefix[t].data(), total_pp);
+        exclusive_scan_device(interaction_type_counts[t].data(), interaction_type_prefix[t].data(), total_pp,
+                              particle_stream);
       }
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-      PackInteractionPrefix<<<grid_1d, kScanBlockSize>>>(
-          interaction_prefix_per_pair.data(), interaction_type_prefix[0].data(), interaction_type_prefix[1].data(),
-          interaction_type_prefix[2].data(), interaction_type_prefix[3].data(), total_pp);
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
+      PackInteractionPrefixFunc pack_prefix{make_span(interaction_prefix_per_pair),
+                                            make_const_span(interaction_type_prefix[0]),
+                                            make_const_span(interaction_type_prefix[1]),
+                                            make_const_span(interaction_type_prefix[2]),
+                                            make_const_span(interaction_type_prefix[3])};
+      parallel_queue << set_lane(kLaneParticleParticle)
+                     << parallel_for(total_pp, pack_prefix,
+                                     parallel_execution_context("nbh_gpu::pack_interaction_prefix"), opts)
+                     << flush;
+      parallel_queue.wait(kLaneParticleParticle);
 
+      // compute total interactions per type
       for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
         total_interactions_per_type[t] =
             interaction_type_prefix[t][total_pp - 1] + interaction_type_counts[t][total_pp - 1];
       }
     }
+    ONIKA_CU_PROF_RANGE_POP();
 
     // ****** Resize Classifier for PP ******* //
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::resize_classifier");
     InteractionParticleAccessor particle_particle_classifier_accessor;
     for (int typeID = get_first_id<InteractionType::ParticleParticle>();
          typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
@@ -410,64 +469,102 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     }
 
     // ****** Resize Classifier for Driver ******* //
+    parallel_queue.wait(kLaneParticleDriver);
+
     for (int typeID = get_first_id<InteractionType::ParticleDriver>();
          typeID <= get_last_id<InteractionType::ParticleDriver>(); typeID++) {
-      size_t newsize = cell_driver_storage.offset_.back()[typeID] + cell_driver_storage.size_.back()[typeID];
+      size_t newsize = cell_storage.offset_.back()[typeID] + cell_storage.size_.back()[typeID];
+      interaction_container.resize(typeID, newsize);
+    }
+
+    // ****** Resize Classifier for InnerBond ******* //
+    for (int typeID = get_first_id<InteractionType::InnerBond>(); typeID <= get_last_id<InteractionType::InnerBond>();
+         typeID++) {
+      size_t newsize = cell_storage.offset_.back()[typeID] + cell_storage.size_.back()[typeID];
       interaction_container.resize(typeID, newsize);
     }
 
     InteractionWrapperStorage wrappers(interaction_container);
     InteractionWrapperAccessor interaction_classifier_accessor = wrappers.accessor();
+    ONIKA_CU_PROF_RANGE_POP();
+
+    if (*enable_persistent_interactions) {
+      ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fill_classifier_persistent_inner_bonds");
+      fill_classifier_persistent_inner_bonds(persistent_inner_bonds, cell_storage_accessor,
+                                             interaction_classifier_accessor);
+      ONIKA_CU_PROF_RANGE_POP();
+    }
 
     // ****** Fill Classifier PP (PCCP) ******* //
+    ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fill_classifier_pp");
     if (total_pp > 0) {
-      FillInteractionsPPKernel<kParticlePairBlockX, kParticlePairBlockY><<<total_pp, pp_block>>>(
+      FillInteractionsPPKernel<kParticlePairBlockX, kParticlePairBlockY><<<total_pp, pp_block, 0, particle_stream>>>(
           grid_cells, vertex_field_data, shapes_data.data(), *rcut_inc, particle_pair_storage.cell_i_.data(),
           particle_pair_storage.cell_j_.data(), particle_pair_storage.p_i_.data(), particle_pair_storage.p_j_.data(),
           particle_pair_storage.ghost_.data(), interaction_prefix_per_pair.data(),
           particle_particle_classifier_accessor, total_pp);
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
 
       reconstruct_cell_pair_offsets(particle_pair_storage, interaction_counts_per_pair.data(), total_pp,
-                                    neighbor_cell_pair_count, cell_pair_storage);
+                                    neighbor_cell_pair_count, cell_pair_storage, scratch->cp_type_counts_,
+                                    scratch->cp_type_prefix_, parallel_queue, kLaneParticleParticle, particle_stream,
+                                    get_exec_ctx, opts);
+      parallel_queue.wait(kLaneParticleParticle);
     }
+    ONIKA_CU_PROF_RANGE_POP();
 
-    ClassifyIPDFunc driver_classifier = {
-        grid_cells,         cell_driver_accessor, cell_indices,    *rcut_inc,
-        shapes_data.data(), vertex_field_data,    driver_accessor, interaction_classifier_accessor};
-    parallel_for(active_cell_count, driver_classifier, parallel_execution_context("nbh_gpu::classify_driver"), opts);
+    // Fold PP totals (cell_pair_storage) into cell_storage's per-cell table.
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fold_pp_totals_and_classify_driver");
+    add_particle_particle_totals(cell_storage, cell_interaction_info, cell_pair_storage, parallel_queue,
+                                 kLaneParticleDriver, get_exec_ctx, opts);
 
-    ONIKA_CU_DEVICE_SYNCHRONIZE();
+    ClassifyDriverInteractionsFunc driver_classifier = {
+        grid_cells,         cell_storage_accessor, cell_indices,    *rcut_inc,
+        shapes_data.data(), vertex_field_data,     driver_accessor, interaction_classifier_accessor};
+    parallel_queue << set_lane(kLaneParticleDriver)
+                   << parallel_for(active_cell_count, driver_classifier,
+                                   parallel_execution_context("nbh_gpu::classify_driver"), opts)
+                   << flush;
+    parallel_queue.wait(kLaneParticleDriver);
+    ONIKA_CU_PROF_RANGE_POP();
 
-    UpdateHistoryFunc history_updater = {history.start_.data(),
-                                         history.size_.data(),
-                                         history.data_.data(),
-                                         cell_interaction_info.start_cell_.data(),
-                                         cell_interaction_info.number_of_pair_cells_.data(),
-                                         cell_pair_accessor,
-                                         cell_driver_accessor,
-                                         interaction_classifier_accessor};
+    history.prefetch_gpu(history_stream);
 
-    parallel_for(history.start_.size(), history_updater, parallel_execution_context(), opts);
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::update_history");
+    UpdateHistoryFunc history_updater = {history.start_.data(), history.size_.data(), history.data_.data(),
+                                         cell_storage_accessor, interaction_classifier_accessor};
+
+    ONIKA_CU_STREAM_SYNCHRONIZE(history_stream);
+    ONIKA_CU_STREAM_SYNCHRONIZE(driver_stream);
+    ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
+
+    parallel_queue << set_lane(kLaneHistory)
+                   << parallel_for(history.start_.size(), history_updater, parallel_execution_context(), opts)
+                   << flush;
+    parallel_queue.wait(kLaneHistory);
+    ONIKA_CU_PROF_RANGE_POP();
 
     // === ADD PERSISTENT INTERACTIONS ===
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::add_unmatched_persistent_interactions");
     add_unmatched_persistent_interactions(history, active_cell_count, interaction_container,
-                                          interaction_classifier_accessor, cell_driver_accessor);
+                                          interaction_classifier_accessor, cell_storage_accessor, wrappers);
+    ONIKA_CU_PROF_RANGE_POP();
 
+    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::transfer_classifier_grid");
     constexpr bool do_ghost_only = true;
     constexpr bool do_active_interaction_only = false;
     transfer_classifier_grid<do_ghost_only, do_active_interaction_only, false>(
-        cell_indices, cell_interaction_info, cell_pair_storage, cell_driver_storage, interaction_classifier_accessor,
-        *ges, get_first_id<InteractionType::ParticleParticle>(), get_last_id<InteractionType::ParticleParticle>());
+        cell_indices, cell_interaction_info, cell_storage, interaction_classifier_accessor, *ges,
+        get_first_id<InteractionType::ParticleParticle>(), get_last_id<InteractionType::ParticleParticle>());
 
     transfer_classifier_grid<do_ghost_only, do_active_interaction_only, true>(
-        cell_indices, cell_interaction_info, cell_pair_storage, cell_driver_storage, interaction_classifier_accessor,
-        *ges, get_first_id<InteractionType::InnerBond>(), get_last_id<InteractionType::InnerBond>());
+        cell_indices, cell_interaction_info, cell_storage, interaction_classifier_accessor, *ges,
+        get_first_id<InteractionType::ParticleDriver>(), get_last_id<InteractionType::ParticleDriver>());
 
-    transfer_classifier_grid<do_ghost_only, do_active_interaction_only, true>(
-        cell_indices, cell_interaction_info, cell_pair_storage, cell_driver_storage, interaction_classifier_accessor,
-        *ges, get_first_id<InteractionType::ParticleDriver>(), get_last_id<InteractionType::ParticleDriver>());
+    // Not required for InnerBond interactions, since they are persistent and already accounted for in the classifier.
 
+    ONIKA_CU_PROF_RANGE_POP();
 #endif
   }
 };

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <onika/parallel/parallel_execution_operators.h>
+#include <onika/parallel/parallel_execution_queue.h>
+
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 
 namespace exaDEM {
@@ -17,43 +20,48 @@ struct NbhCellHostStorage {
 };
 
 /**
- * @brief Functor to reset member arrays per cell.
- */
-struct ResetCellMembers {
-  InteractionTypePerCellCounter* __restrict__ size_;    ///< Pointer to array of sizes per interaction type
-  InteractionTypePerCellCounter* __restrict__ offset_;  ///< Pointer to array of offsets per interaction type
-  uint8_t* __restrict__ skip_;                          ///< Flag array for skipping cells
-
-  /**
-   * @brief Reset the data for a given cell index.
-   * @param i Index of the cell to reset
-   */
-  ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(size_t i) const {
-    skip_[i] = true;  // used by the second pass
-    for (size_t j = 0; j < InteractionTypeId::NTypes; j++) {
-      size_[i][j] = 0;
-      offset_[i][j] = 0;
-    }
-  }
-};
-
-/**
- * @brief Device / unified memory storage for neighborhood cell interactions.
- * Stores per-cell interaction information including size, offsets, owner/partner
+ * @brief Device / unified memory storage for neighborhood cell-pair interactions.
+ * Stores per-cell-pair interaction information including size, offsets, owner/partner
  * mapping and skip flags. Initialized from host-side storage.
  */
-struct NbhCellStorage {
+struct CellPairStorage {
   // Vector type alias using unified memory (GPU/CPU compatible)
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
 
-  VectorT<InteractionTypePerCellCounter> size_;    ///< Number of interactions per type for each cell
-  VectorT<InteractionTypePerCellCounter> offset_;  ///< Offset for each interaction type per cell
-  VectorT<size_t> owner_cell_;                     ///< Owner cell index for each non-empty cell
-  VectorT<size_t> partner_cell_;                   ///< Partner cell index for each non-empty cell
+  struct View {
+    // WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const
+    mutable onika::cuda::span<InteractionTypePerCellCounter>
+        size_;  ///< Number of interactions per type for each cell pair
+    mutable onika::cuda::span<InteractionTypePerCellCounter>
+        offset_;                               ///< Offset for each interaction type per cell pair
+    onika::cuda::span<size_t> owner_cell_;     ///< Owner cell index for each non-empty cell pair
+    onika::cuda::span<size_t> partner_cell_;   ///< Partner cell index for each non-empty cell pair
+    onika::cuda::span<uint8_t> ghost_;         ///< Partner cell is a ghost ?
+    mutable onika::cuda::span<uint8_t> skip_;  ///< Flag to skip a cell pair in second pass
+  };
+
+  /// @brief Functor to reset member arrays per cell pair (size_/offset_/skip_ only --
+  /// owner_cell_/partner_cell_/ghost_ in View are unused here).
+  struct ResetCellMembers {
+    View view_;
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void operator()(size_t i) const {
+      view_.skip_[i] = true;  // used by the second pass
+      for (size_t j = 0; j < InteractionTypeId::NTypes; j++) {
+        view_.size_[i][j] = 0;
+        view_.offset_[i][j] = 0;
+      }
+    }
+  };
+
+  VectorT<InteractionTypePerCellCounter> size_;    ///< Number of interactions per type for each cell pair
+  VectorT<InteractionTypePerCellCounter> offset_;  ///< Offset for each interaction type per cell pair
+  VectorT<size_t> owner_cell_;                     ///< Owner cell index for each non-empty cell pair
+  VectorT<size_t> partner_cell_;                   ///< Partner cell index for each non-empty cell pair
   VectorT<uint8_t> ghost_;                         ///< Flag to skip a partner cell is a ghost
-  VectorT<uint8_t> skip_;                          ///< Flag to skip a cell in the second pass
+  VectorT<uint8_t> skip_;                          ///< Flag to skip a cell pair in the second pass
 
   /**
    * @brief Construct device storage from host-side storage.
@@ -63,15 +71,17 @@ struct NbhCellStorage {
    *
    * @tparam ExecCtx Execution context type for parallel_for
    * @param host Host-side storage
+   * @param queue Queue the reset is dispatched onto (async: caller must synchronize before reading offset_/size_)
+   * @param lane Execution lane to dispatch the reset onto
    * @param exec_ctx Execution context
    */
   template <typename ExecCtx>
-  void reset(NbhCellHostStorage& host, ExecCtx& exec_ctx) {
+  void reset(NbhCellHostStorage& host, onika::parallel::ParallelExecutionQueue& queue, int lane, ExecCtx& exec_ctx) {
     const size_t n_cells = host.owner_cell_.size();
 
     // Consistency check
     if (host.partner_cell_.size() != n_cells) {
-      color_log::mpi_error("NbhCellStorage", "Mismatch in host owner/partner cell sizes.");
+      color_log::mpi_error("CellPairStorage", "Mismatch in host owner/partner cell sizes.");
     }
 
     // Lambda to transfer host vectors to device/unified memory
@@ -98,45 +108,68 @@ struct NbhCellStorage {
     skip_.resize(n_cells);
 
     // Reset members (skip flag and arrays)
-    ResetCellMembers reset_func = {size_.data(), offset_.data(), skip_.data()};
+    ResetCellMembers reset_func = {view()};
 
-    // Parallel execution over all cells
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_GUIDED;
-    parallel_for(n_cells, reset_func, exec_ctx(), opts);
+    queue << onika::parallel::set_lane(lane)
+          << parallel_for(n_cells, reset_func, exec_ctx("nbh_gpu::reset_cell_pair_storage"), opts)
+          << onika::parallel::flush;
+  }
+
+  inline View view() const {
+    const auto n = owner_cell_.size();
+    if (size_.size() != n || offset_.size() != n || skip_.size() != n || ghost_.size() != n ||
+        partner_cell_.size() != n) {
+      color_log::mpi_error("CellPairStorage", "Inconsistent vector sizes.");
+    }
+    return View{to_span(size_),         to_span(offset_), to_span(owner_cell_),
+                to_span(partner_cell_), to_span(ghost_),  to_span(skip_)};
   }
 };
 
-/**
- * @brief Lightweight accessor to NbhCellStorage for fast per-cell access.
- */
-struct NbhCellAccessor {
-  InteractionTypePerCellCounter* __restrict__ size_;    ///< Number of interactions per type for each cell
-  InteractionTypePerCellCounter* __restrict__ offset_;  ///< Offset for each interaction type per cell
-  size_t* __restrict__ owner_cell_;                     ///< Owner cell index for each non-empty cell
-  size_t* __restrict__ partner_cell_;                   ///< Partner cell index for each non-empty cell
-  uint8_t* __restrict__ ghost_;                         ///< Partner cell is a ghost ?
-  uint8_t* __restrict__ skip_;                          ///< Flag to skip a cell in second pass
+struct CellStorage {
+  template <typename T>
+  using VectorT = onika::memory::CudaMMVector<T>;
 
- public:
-  /**
-   * @brief Construct accessor from NbhCellStorage.
-   * @param storage Storage object containing vectors
-   */
-  NbhCellAccessor(NbhCellStorage& storage)
-      : size_(storage.size_.data()),
-        offset_(storage.offset_.data()),
-        owner_cell_(storage.owner_cell_.data()),
-        partner_cell_(storage.partner_cell_.data()),
-        ghost_(storage.ghost_.data()),
-        skip_(storage.skip_.data()) {
-    // Basic consistency check
-    const auto n = storage.owner_cell_.size();
-    if (storage.size_.size() != n || storage.offset_.size() != n || storage.skip_.size() != n ||
-        storage.ghost_.size() != n || storage.partner_cell_.size() != n) {
-      color_log::mpi_error("NbhCellAccessor", "Inconsistent vector sizes in wrapped storage.");
+  struct View {
+    // WARNING (TEMPORARY): mutable workaround for onika::cuda::span's const
+    mutable onika::cuda::span<InteractionTypePerCellCounter> offset_;
+    mutable onika::cuda::span<InteractionTypePerCellCounter> size_;
+  };
+
+  /// @brief Functor to reset the per-type counters of a CellStorage for a given cell.
+  struct ResetCellCounters {
+    View view_;
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void operator()(size_t i) const {
+      for (size_t j = 0; j < InteractionTypeId::NTypes; j++) {
+        view_.size_[i][j] = 0;
+        view_.offset_[i][j] = 0;
+      }
     }
+  };
+
+  VectorT<InteractionTypePerCellCounter> offset_;  ///< Offset (into the classifier) for each interaction type, per cell
+  VectorT<InteractionTypePerCellCounter> size_;    ///< Number of interactions for each interaction type, per cell
+
+  // size should be the number of non empty cells
+  template <typename ExecCtx>
+  void resize(size_t newsize, onika::parallel::ParallelExecutionQueue& queue, int lane, ExecCtx& exec_ctx) {
+    size_.resize(newsize);
+    offset_.resize(newsize);
+
+    // Reset members
+    ResetCellCounters reset_func = {view()};
+
+    onika::parallel::ParallelForOptions opts;
+    opts.omp_scheduling = onika::parallel::OMP_SCHED_GUIDED;
+    queue << onika::parallel::set_lane(lane)
+          << parallel_for(newsize, reset_func, exec_ctx("nbh_gpu::reset_cell_storage"), opts) << onika::parallel::flush;
   }
+
+  inline View view() const { return View{to_span(offset_), to_span(size_)}; }
 };
 
 }  // namespace exaDEM
@@ -144,7 +177,12 @@ struct NbhCellAccessor {
 namespace onika {
 namespace parallel {
 template <>
-struct ParallelForFunctorTraits<exaDEM::NbhCellStorage> {
+struct ParallelForFunctorTraits<exaDEM::CellPairStorage::ResetCellMembers> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+template <>
+struct ParallelForFunctorTraits<exaDEM::CellStorage::ResetCellCounters> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;
   static inline constexpr bool CudaCompatible = true;
 };

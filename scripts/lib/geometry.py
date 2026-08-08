@@ -76,7 +76,7 @@ def order_face_vertices(face_vids, vertices, n):
     v = np.cross(n, u)
 
     angles = [np.arctan2(np.dot(p - center, v), np.dot(p - center, u)) for p in pts]
-    return [face_vids[i] for i in np.argsort(angles)]
+    return [face_vids[i] for i in np.argsort(angles, kind="stable")]
 
 
 def unique_points(points, tol=1e-8):

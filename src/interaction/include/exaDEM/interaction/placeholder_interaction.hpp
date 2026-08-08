@@ -22,10 +22,11 @@ under the License.
 // #include <ostream>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_stream.h>
-#include <exaDEM/interaction/interaction_pair.hpp>
-#include <exaDEM/interaction/interaction.hpp>
-#include <exaDEM/interaction/inner_bond_interaction.hpp>
+
 #include <exaDEM/color_log.hpp>
+#include <exaDEM/interaction/inner_bond_interaction.hpp>
+#include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/interaction/interaction_pair.hpp>
 
 namespace exaDEM {
 
@@ -43,9 +44,7 @@ inline bool filter_duplicates(const InteractionT& I) {
  * [param b] The second constant.
  * [return] The maximum of the two constants.
  */
-static constexpr size_t constexpr_max(std::size_t a, std::size_t b) {
-  return a > b ? a : b;
-}
+static constexpr size_t constexpr_max(std::size_t a, std::size_t b) { return a > b ? a : b; }
 
 /**
  * @brief Compute the maximum size of a set of types.
@@ -66,7 +65,8 @@ static constexpr size_t max_sizeof() {
  * @brief Structure representing an interaction in a Discrete Element Method (DEM) simulation.
  */
 struct PlaceholderInteraction {
-  // Constants to define the size of the PlaceholderInteraction structure based on the interaction sizes (ex: Interaction, InnerBondInteraction ...).
+  // Constants to define the size of the PlaceholderInteraction structure based on the interaction sizes (ex:
+  // Interaction, InnerBondInteraction ...).
   static constexpr int PlaceholderInteractionPairSize = sizeof(InteractionPair);
   static constexpr int PlaceholderInteractionSize =
       max_sizeof<exaDEM::Interaction, exaDEM::InnerBondInteraction, exaDEM::InnerBondInteraction>() -
@@ -76,85 +76,65 @@ struct PlaceholderInteraction {
   static_assert(PlaceholderInteractionSize > 0);
 
   // members
-  InteractionPair pair_;                                             /**< The InteractionPair structure containing information about the interacting particles and the type of interaction. */
-  alignas(MaxAlign) uint8_t data_[PlaceholderInteractionSize] = {};  /**< The data buffer for storing interaction-specific information. */
+  InteractionPair pair_; /**< The InteractionPair structure containing information about the interacting particles and
+                            the type of interaction. */
+  alignas(MaxAlign) uint8_t data_[PlaceholderInteractionSize] =
+      {}; /**< The data buffer for storing interaction-specific information. */
 
   /** @brief Get the first particle location.
    * [return] A reference to the first particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& i() {
-    return pair_.pi_;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& i() { return pair_.pi_; }
 
   /** @brief Get the second particle location.
    * [return] A reference to the second particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& j() {
-    return pair_.pj_;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& j() { return pair_.pj_; }
 
   /** @brief Get the driver particle location.
    * [return] A reference to the driver particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& driver() {
-    return j();
-  }
-
-  /** @brief Get the type of the interaction.
-  * [return] The type of the interaction.
-  */
-  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() {
-    return pair_.type_;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& driver() { return j(); }
 
   /** @brief Get the type of the interaction.
    * [return] The type of the interaction.
    */
-  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() const {
-    return pair_.type_;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() { return pair_.type_; }
+
+  /** @brief Get the type of the interaction.
+   * [return] The type of the interaction.
+   */
+  ONIKA_HOST_DEVICE_FUNC inline uint16_t type() const { return pair_.type_; }
 
   /** @brief Get the cell index.
    * [return] The cell index.
    */
-  ONIKA_HOST_DEVICE_FUNC inline uint32_t cell() {
-    return pair_.owner().cell_;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline uint32_t cell() { return pair_.owner().cell_; }
 
   /** @brief Get the owner particle location.
    * [return] A reference to the owner particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& owner() {
-    return pair_.owner();
-  }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& owner() { return pair_.owner(); }
 
   /** @brief Get the owner particle location.
    * [return] A reference to the owner particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& owner() const {
-    return pair_.owner();
-  }
+  ONIKA_HOST_DEVICE_FUNC inline const ParticleSubLocation& owner() const { return pair_.owner(); }
 
   /** @brief Get the partner particle location.
    * [return] A reference to the partner particle location.
    */
-  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& partner() {
-    return pair_.partner();
-  }
+  ONIKA_HOST_DEVICE_FUNC inline ParticleSubLocation& partner() { return pair_.partner(); }
 
   /** @brief Get the interaction pair information.
    * [return] A reference to the interaction pair information.
    */
-  ONIKA_HOST_DEVICE_FUNC inline InteractionPair& pair_info() {
-    return pair_;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline InteractionPair& pair_info() { return pair_; }
 
   /** @brief Get the interaction pair information.
    * [return] A reference to the interaction pair information.
    */
-  ONIKA_HOST_DEVICE_FUNC inline const InteractionPair& pair_info() const {
-    return pair_;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline const InteractionPair& pair_info() const { return pair_; }
 
   /** @brief Check if the interaction is consistent by verifying the consistency of its InteractionPair.
    * Used for debugging purposes to ensure that the interaction data is well-formed and does not contain invalid values.
@@ -190,16 +170,14 @@ struct PlaceholderInteraction {
    * [param in] The PlaceholderInteraction to copy data from.
    */
   void update(PlaceholderInteraction& in) {
+    assert(pair_ == in.pair_);
     std::memcpy(data_, in.data_, PlaceholderInteractionSize * sizeof(uint8_t));
   }
 
   /** @brief Clears the placeholder interaction data.
    * [return] A reference to the cleared placeholder interaction data.
    */
-  void clear_placeholder() {
-    memset(data_, 0, PlaceholderInteractionSize);
-  }
-
+  void clear_placeholder() { memset(data_, 0, PlaceholderInteractionSize); }
 
   ONIKA_HOST_DEVICE_FUNC bool active() const {
     if (type() < InteractionTypeId::NTypesParticleParticle) {
@@ -217,8 +195,8 @@ struct PlaceholderInteraction {
   }
 
   /** @brief Check if the interaction is persistent.
-   * A persistent interaction is an interaction that should be kept in the InteractionManager list even if it is not active anymore.
-   * [return] True if the interaction is persistent, false otherwise.
+   * A persistent interaction is an interaction that should be kept in the InteractionManager list even if it is not
+   * active anymore. [return] True if the interaction is persistent, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool persistent() {
     if (type() < InteractionTypeId::NTypesParticleParticle) {
@@ -227,22 +205,20 @@ struct PlaceholderInteraction {
       return this->as<InnerBondInteraction>().persistent();
     }
 #ifndef ONIKA_CUDA_VERSION
-    if(type() == InteractionTypeId::Undefined) {
-      color_log::mpi_error("PlaceholderInteraction::persistent",
-                           "The interaction is undefined, please define it.");
+    if (type() == InteractionTypeId::Undefined) {
+      color_log::mpi_error("PlaceholderInteraction::persistent", "The interaction is undefined, please define it.");
     }
     pair_.print();
     color_log::mpi_error("PlaceholderInteraction::persistent",
-                         "The type value of this interaction is invalid: "
-                         + std::to_string(static_cast<int>(type())));
+                         "The type value of this interaction is invalid: " + std::to_string(static_cast<int>(type())));
     std::exit(EXIT_FAILURE);
 #endif
     return false;  // default
   }
 
   /** @brief Check if the interaction is persistent.
-   * A persistent interaction is an interaction that should be kept in the InteractionManager list even if it is not active anymore.
-   * [return] True if the interaction is persistent, false otherwise.
+   * A persistent interaction is an interaction that should be kept in the InteractionManager list even if it is not
+   * active anymore. [return] True if the interaction is persistent, false otherwise.
    */
   ONIKA_HOST_DEVICE_FUNC bool persistent() const {
     if (type() < InteractionTypeId::NTypesParticleParticle) {
@@ -251,18 +227,16 @@ struct PlaceholderInteraction {
       return this->as<InnerBondInteraction>().persistent();
     }
 #ifndef ONIKA_CUDA_VERSION
-    if(type() == InteractionTypeId::Undefined) {
-      color_log::mpi_error("PlaceholderInteraction::persistent",
-                           "The interaction is undefined, please define it.");
+    if (type() == InteractionTypeId::Undefined) {
+      color_log::mpi_error("PlaceholderInteraction::persistent", "The interaction is undefined, please define it.");
     }
     pair_.print();
     color_log::mpi_error("PlaceholderInteraction::persistent",
-                         "The type value of this interaction is invalid: "
-                         + std::to_string(static_cast<int>(type())));
+                         "The type value of this interaction is invalid: " + std::to_string(static_cast<int>(type())));
     std::exit(EXIT_FAILURE);
 #endif
     return false;  // default
-    }
+  }
 
   /** @brief Check if the interaction should ignore other interactions.
    * [return] True if the interaction should ignore other interactions, false otherwise.
@@ -305,9 +279,11 @@ struct PlaceholderInteraction {
   ONIKA_HOST_DEVICE_FUNC T& as() {
     // Ensure that the type T is compatible with the PlaceholderInteraction structure.
     static_assert(std::is_standard_layout_v<T>, "as<T>() requires a standard-layout type");
-    // Ensure that the size of T is at least as large as the InteractionPair, since PlaceholderInteraction contains an InteractionPair as its first member.
+    // Ensure that the size of T is at least as large as the InteractionPair, since PlaceholderInteraction contains an
+    // InteractionPair as its first member.
     static_assert(sizeof(T) >= sizeof(InteractionPair), "Type T must contain at least InteractionPair");
-    // Ensure that the alignment of T does not exceed the alignment of PlaceholderInteraction, since we will be reinterpreting the memory of PlaceholderInteraction as type T.
+    // Ensure that the alignment of T does not exceed the alignment of PlaceholderInteraction, since we will be
+    // reinterpreting the memory of PlaceholderInteraction as type T.
     static_assert(alignof(T) <= alignof(PlaceholderInteraction),
                   "Type T alignment exceeds PlaceholderInteraction alignment");
     return *reinterpret_cast<T*>(this);
@@ -337,7 +313,8 @@ struct PlaceholderInteraction {
       return as<Interaction>();
     } else if constexpr (IT == ParticleDriver) {
       return as<Interaction>();
-    } if constexpr (IT == InnerBond) {
+    }
+    if constexpr (IT == InnerBond) {
       return as<InnerBondInteraction>();
     }
     color_log::mpi_error("PlaceholderInteraction::as<InteractionType>",
@@ -348,33 +325,25 @@ struct PlaceholderInteraction {
    * @param I The other placeholder interaction to compare with.
    * @return True if the interactions are equal, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator==(PlaceholderInteraction& I) {
-    return (pair_ == I.pair_);
-  }
+  ONIKA_HOST_DEVICE_FUNC bool operator==(PlaceholderInteraction& I) { return (pair_ == I.pair_); }
 
   /** @brief Check if two placeholder interactions are equal.
    * @param I The other placeholder interaction to compare with.
    * @return True if the interactions are equal, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator==(const PlaceholderInteraction& I) const {
-    return (pair_ == I.pair_);
-  }
+  ONIKA_HOST_DEVICE_FUNC bool operator==(const PlaceholderInteraction& I) const { return (pair_ == I.pair_); }
 
   /** @brief Check if a placeholder interaction is less than another.
    * @param I The other placeholder interaction to compare with.
    * @return True if this interaction is less than the other, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator<(PlaceholderInteraction& I) {
-    return (pair_ < I.pair_);
-  }
+  ONIKA_HOST_DEVICE_FUNC bool operator<(PlaceholderInteraction& I) { return (pair_ < I.pair_); }
 
   /** @brief Check if a placeholder interaction is less than another.
    * @param I The other placeholder interaction to compare with.
    * @return True if this interaction is less than the other, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC bool operator<(const PlaceholderInteraction& I) const {
-    return (pair_ < I.pair_);
-  }
+  ONIKA_HOST_DEVICE_FUNC bool operator<(const PlaceholderInteraction& I) const { return (pair_ < I.pair_); }
 
   /**
    * @brief Comparison operator used to sort interactions by owner particle index.
@@ -400,12 +369,11 @@ struct PlaceholderInteraction {
    * @param I Source interaction
    * @return Reference to this PlaceholderInteraction
    */
-  ONIKA_HOST_DEVICE_FUNC inline
-      PlaceholderInteraction& operator=(const Interaction& I) {
-        Interaction& AsI = as<Interaction>();
-        AsI = I;
-        return *this;
-      }
+  ONIKA_HOST_DEVICE_FUNC inline PlaceholderInteraction& operator=(const Interaction& I) {
+    Interaction& AsI = as<Interaction>();
+    AsI = I;
+    return *this;
+  }
 
   /**
    * @brief Assign from an InnerBondInteraction.
@@ -416,20 +384,18 @@ struct PlaceholderInteraction {
    * @param I Source inner bond interaction
    * @return Reference to this PlaceholderInteraction
    */
-  ONIKA_HOST_DEVICE_FUNC inline
-      PlaceholderInteraction& operator=(const InnerBondInteraction& I) {
-        InnerBondInteraction& AsI = as<InnerBondInteraction>();
-        AsI = I;
-        return *this;
-      }
+  ONIKA_HOST_DEVICE_FUNC inline PlaceholderInteraction& operator=(const InnerBondInteraction& I) {
+    InnerBondInteraction& AsI = as<InnerBondInteraction>();
+    AsI = I;
+    return *this;
+  }
 };
 
 /** @brief Update the interactions based on their history.
  * @param interactions The vector of interactions to update.
  * @param history The vector of historical interactions.
  */
-inline void update(std::vector<PlaceholderInteraction>& interactions,
-  std::vector<PlaceholderInteraction>& history) {
+inline void update(std::vector<PlaceholderInteraction>& interactions, std::vector<PlaceholderInteraction>& history) {
   for (size_t it = 0; it < interactions.size(); it++) {
     auto& item = interactions[it];
     auto lower = std::lower_bound(history.begin(), history.end(), item);
@@ -440,4 +406,7 @@ inline void update(std::vector<PlaceholderInteraction>& interactions,
     }
   }
 }
+
+// Related to extra_storage tests
+inline bool well_defined(const PlaceholderInteraction& item) { return item.consistent(); }
 }  // namespace exaDEM

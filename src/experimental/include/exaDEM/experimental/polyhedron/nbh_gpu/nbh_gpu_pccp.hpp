@@ -1,9 +1,20 @@
 #pragma once
 #include <cub/cub.cuh>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu.hpp>
+#include <exaDEM/experimental/filter_pair_particle.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 
 namespace exaDEM {
+
+/* Run an exclusive prefix sum on device memory using CUB. */
+template <typename T>
+inline void exclusive_scan_device(const T* input, T* output, size_t count, onikaStream_t st = 0) {
+  void* d_tmp = nullptr;
+  size_t tmp_bytes = 0;
+  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st);
+  cudaMalloc(&d_tmp, tmp_bytes);
+  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st);
+  cudaFree(d_tmp);
+}
 
 /**
  * @brief Storage for particle pairs (output of neighbor search).
@@ -37,15 +48,60 @@ struct ParticlePairStorage {
   }
 };
 
+/**
+ * @brief Packed particle data for detection and initialization.
+ */
+struct ParticleDetectPack {
+  Quaternion quat_;       ///< Particle orientation as a quaternion
+  Vec3d r_;               ///< Particle position
+  uint64_t id_;           ///< Unique particle ID
+  ParticleTypeInt type_;  ///< Particle type (integer code)
+  double radius_;         ///< Particle radius
+  double homothety_;      ///< Scaling factor applied to particle size
+};
+
+/**
+ * @brief Load a ParticleDetectPack from a cell container at index i.
+ * @tparam CellsT Type of the cell container (must support field access via operator[])
+ * @param cell Reference to the cell container
+ * @param i Index of the particle in the cell
+ * @return ParticleDetectPack with all particle information
+ */
+template <typename CellsT>
+ONIKA_HOST_DEVICE_FUNC inline ParticleDetectPack load(CellsT& cell, size_t i) {
+  ParticleDetectPack p;
+
+  // Load orientation
+  p.quat_ = cell[field::orient][i];
+
+  // Load position
+  p.r_.x = cell[field::rx][i];
+  p.r_.y = cell[field::ry][i];
+  p.r_.z = cell[field::rz][i];
+
+  // Load identification and type
+  p.id_ = cell[field::id][i];
+  p.type_ = cell[field::type][i];
+
+  // Load radius and scaling factor
+  p.radius_ = cell[field::radius][i];
+  p.homothety_ = cell[field::homothety][i];
+
+  return p;
+}
+
 // ============================================================
 // Stage 1: Count particle pairs per cell pair
 // 1 block = 1 cell pair, threads iterate particle pairs
 // ============================================================
-template <int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(
-    TMPLC cells, size_t* __restrict__ owner_cells, size_t* __restrict__ partner_cells,
-    uint8_t* __restrict__ ghost_flags, double rcut_inc, const shape* __restrict__ shps,
-    VertexField* __restrict__ vertex_fields, int* __restrict__ pair_counts, size_t num_cell_pairs) {
+template <int BLOCKX, int BLOCKY, bool IGNORE_PAIR, typename CellsT>
+__global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(CellsT cells, size_t* __restrict__ owner_cells,
+                                                                  size_t* __restrict__ partner_cells,
+                                                                  uint8_t* __restrict__ ghost_flags, double rcut_inc,
+                                                                  const shape* __restrict__ shps,
+                                                                  VertexField* __restrict__ vertex_fields,
+                                                                  int* __restrict__ pair_counts, size_t num_cell_pairs,
+                                                                  IgnorePairsGPU::View ignore_pairs) {
   using BlockReduce = cub::BlockReduce<int, BLOCKX, cub::BLOCK_REDUCE_RAKING, BLOCKY>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
@@ -68,6 +124,9 @@ __global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(
     AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
+      if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
+        if (ignore_pairs(cell_a, body_a.id_, cB[field::id][pb])) continue;
+      }
       auto body_b = load(cB, pb);
 
       if (body_a.id_ >= body_b.id_) continue;
@@ -98,15 +157,15 @@ __global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(
 // Stage 2: Fill particle pair arrays
 // 1 block = 1 cell pair
 // ============================================================
-template <int BLOCKX, int BLOCKY, typename TMPLC>
+template <int BLOCKX, int BLOCKY, bool IGNORE_PAIR, typename CellsT>
 __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
-    TMPLC cells, size_t* __restrict__ owner_cells, size_t* __restrict__ partner_cells,
+    CellsT cells, size_t* __restrict__ owner_cells, size_t* __restrict__ partner_cells,
     uint8_t* __restrict__ ghost_flags, double rcut_inc, const shape* __restrict__ shps,
     VertexField* __restrict__ vertex_fields, int* __restrict__ pair_offsets,
     // output
     uint32_t* __restrict__ out_cell_i, uint32_t* __restrict__ out_cell_j, uint16_t* __restrict__ out_p_i,
     uint16_t* __restrict__ out_p_j, uint8_t* __restrict__ out_ghost, uint32_t* __restrict__ out_cell_pair_idx,
-    size_t num_cell_pairs) {
+    size_t num_cell_pairs, IgnorePairsGPU::View ignore_pairs) {
   using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
   __shared__ typename BlockScan::TempStorage temp_storage;
 
@@ -130,6 +189,9 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
     AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
+      if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
+        if (ignore_pairs(cell_a, body_a.id_, cB[field::id][pb])) continue;
+      }
       auto body_b = load(cB, pb);
       // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
       if (body_a.id_ >= body_b.id_) continue;
@@ -158,6 +220,9 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
     AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
+      if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
+        if (ignore_pairs(cell_a, body_a.id_, cB[field::id][pb])) continue;
+      }
       auto body_b = load(cB, pb);
       // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
       if (body_a.id_ >= body_b.id_) continue;
@@ -187,8 +252,8 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
 // Stage 3: Count interactions per particle pair
 // 1 block = 1 particle pair (PCCP)
 // ============================================================
-template <int BLOCKX, int BLOCKY, typename TMPLC>
-__global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__ vertex_fields,
+template <int BLOCKX, int BLOCKY, typename CellsT>
+__global__ void CountInteractionsPPKernel(CellsT cells, VertexField* __restrict__ vertex_fields,
                                           const shape* __restrict__ shps, double rcut_inc,
                                           uint32_t* __restrict__ pp_cell_i, uint32_t* __restrict__ pp_cell_j,
                                           uint16_t* __restrict__ pp_p_i, uint16_t* __restrict__ pp_p_j,
@@ -231,11 +296,13 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
         countVV++;
     }
     for (int j = threadIdx.x; j < neb; j += blockDim.x) {
-      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
+      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
+                             &shpb))
         countVE++;
     }
     for (int j = threadIdx.x; j < nfb; j += blockDim.x) {
-      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
+      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
+                             &shpb))
         countVF++;
     }
   }
@@ -251,11 +318,13 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
   // B→A: reverse VE, VF
   for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
     for (int i = threadIdx.x; i < nea; i += blockDim.x) {
-      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
+      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i,
+                             &shpa))
         countVE++;
     }
     for (int i = threadIdx.x; i < nfa; i += blockDim.x) {
-      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
+      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i,
+                             &shpa))
         countVF++;
     }
   }
@@ -273,9 +342,9 @@ __global__ void CountInteractionsPPKernel(TMPLC cells, VertexField* __restrict__
 // Stage 4: Fill Classifier per particle pair
 // 1 block = 1 particle pair (PCCP)
 // ============================================================
-template <int BLOCKX, int BLOCKY, typename TMPLC>
+template <int BLOCKX, int BLOCKY, typename CellsT>
 __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
-    TMPLC cells, VertexField* __restrict__ vertex_fields, const shape* __restrict__ shps, double rcut_inc,
+    CellsT cells, VertexField* __restrict__ vertex_fields, const shape* __restrict__ shps, double rcut_inc,
     uint32_t* __restrict__ pp_cell_i, uint32_t* __restrict__ pp_cell_j, uint16_t* __restrict__ pp_p_i,
     uint16_t* __restrict__ pp_p_j, uint8_t* __restrict__ pp_ghost,
     InteractionTypePerCellCounter* __restrict__ prefix_data, InteractionParticleAccessor interactions,
@@ -320,10 +389,12 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
                                &shpb))
         count1++;
     for (int j = threadIdx.x; j < neb; j += blockDim.x)
-      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
+      if (filter_vertex_edge(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
+                             &shpb))
         count2++;
     for (int j = threadIdx.x; j < nfb; j += blockDim.x)
-      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j, &shpb))
+      if (filter_vertex_face(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
+                             &shpb))
         count3++;
   }
   for (int i = threadIdx.y; i < nea; i += blockDim.y)
@@ -332,10 +403,12 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
         count4++;
   for (int j = threadIdx.y; j < nvb; j += blockDim.y) {
     for (int i = threadIdx.x; i < nea; i += blockDim.x)
-      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
+      if (filter_vertex_edge(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i,
+                             &shpa))
         count5++;
     for (int i = threadIdx.x; i < nfa; i += blockDim.x)
-      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i, &shpa))
+      if (filter_vertex_face(rcut_inc, vertices_b, body_b.homothety_, j, &shpb, vertices_a, body_a.homothety_, i,
+                             &shpa))
         count6++;
   }
 
@@ -452,62 +525,130 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
   }
 }
 
-inline void reconstruct_cell_pair_offsets(ParticlePairStorage& pp_storage, InteractionTypePerCellCounter* count_per_pp,
-                                          size_t num_particle_pairs, size_t num_cell_pairs,
-                                          NbhCellStorage& info_cell_pair) {
-// Reset (parallel)
-#pragma omp parallel for
-  for (size_t cp = 0; cp < num_cell_pairs; cp++) {
+/// @brief Zeroes info_cell_pair.offset_/size_ for every cell pair, ahead of the atomic accumulation pass.
+struct ResetCellPairCountsFunc {
+  mutable onika::cuda::span<InteractionTypePerCellCounter> offset_;
+  mutable onika::cuda::span<InteractionTypePerCellCounter> size_;
+
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t cp) const {
     for (int t = 0; t < InteractionTypeId::NTypes; t++) {
-      info_cell_pair.offset_[cp][t] = 0;
-      info_cell_pair.size_[cp][t] = 0;
+      offset_[cp][t] = 0;
+      size_[cp][t] = 0;
     }
   }
+};
 
-// Accumulate (parallel with atomics)
-#pragma omp parallel for
-  for (size_t pp = 0; pp < num_particle_pairs; pp++) {
-    uint32_t cp = pp_storage.cell_pair_idx_[pp];
-    for (int t = 0; t < 4; t++) {
-#pragma omp atomic
-      info_cell_pair.size_[cp][t] += count_per_pp[pp][t];
+/// @brief Scatter-adds each particle pair's per-type interaction counts onto its owning cell pair.
+struct AccumulateCellPairCountsFunc {
+  onika::cuda::span<uint32_t> cell_pair_idx_;
+  const InteractionTypePerCellCounter* __restrict__ count_per_pp_;
+  mutable onika::cuda::span<InteractionTypePerCellCounter> size_;
+
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t pp) const {
+    const uint32_t cp = cell_pair_idx_[pp];
+    for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
+      ONIKA_CU_ATOMIC_ADD(size_[cp][t], count_per_pp_[pp][t]);
     }
   }
+};
 
-  // Prefix sum (sequential, but only over cell pairs ~few thousands)
-  InteractionTypePerCellCounter running;
-  for (int t = 0; t < InteractionTypeId::NTypes; t++) running[t] = 0;
+struct ExtractInteractionCountsFunc {
+  onika::cuda::span<const InteractionTypePerCellCounter> counts_;
+  // WARNING (TEMPORARY): todo remove mutable
+  mutable onika::cuda::span<int> vv_;
+  mutable onika::cuda::span<int> ve_;
+  mutable onika::cuda::span<int> vf_;
+  mutable onika::cuda::span<int> ee_;
 
-  for (size_t cp = 0; cp < num_cell_pairs; cp++) {
-    for (int t = 0; t < InteractionTypeId::NTypes; t++) {
-      info_cell_pair.offset_[cp][t] = running[t];
-      running[t] += info_cell_pair.size_[cp][t];
-    }
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t i) const {
+    vv_[i] = counts_[i][0];
+    ve_[i] = counts_[i][1];
+    vf_[i] = counts_[i][2];
+    ee_[i] = counts_[i][3];
   }
-}
+};
 
-// ============================================================
-// Helper kernels for GPU prefix sum
-// ============================================================
-__global__ void ExtractInteractionCounts(const InteractionTypePerCellCounter* __restrict__ counts, int* __restrict__ vv,
-                                         int* __restrict__ ve, int* __restrict__ vf, int* __restrict__ ee, size_t n) {
-  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i >= n) return;
-  vv[i] = counts[i][0];
-  ve[i] = counts[i][1];
-  vf[i] = counts[i][2];
-  ee[i] = counts[i][3];
-}
+struct PackInteractionPrefixFunc {
+  // WARNING (TEMPORARY): todo remove mutable
+  mutable onika::cuda::span<InteractionTypePerCellCounter> prefix_;
+  onika::cuda::span<const int> vv_;
+  onika::cuda::span<const int> ve_;
+  onika::cuda::span<const int> vf_;
+  onika::cuda::span<const int> ee_;
 
-__global__ void PackInteractionPrefix(InteractionTypePerCellCounter* __restrict__ prefix, const int* __restrict__ vv,
-                                      const int* __restrict__ ve, const int* __restrict__ vf,
-                                      const int* __restrict__ ee, size_t n) {
-  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i >= n) return;
-  prefix[i][0] = vv[i];
-  prefix[i][1] = ve[i];
-  prefix[i][2] = vf[i];
-  prefix[i][3] = ee[i];
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t i) const {
+    prefix_[i][0] = vv_[i];
+    prefix_[i][1] = ve_[i];
+    prefix_[i][2] = vf_[i];
+    prefix_[i][3] = ee_[i];
+  }
+};
+
+template <typename ExecCtx>
+inline void reconstruct_cell_pair_offsets(
+    ParticlePairStorage& pp_storage, InteractionTypePerCellCounter* count_per_pp, size_t num_particle_pairs,
+    size_t num_cell_pairs, CellPairStorage& info_cell_pair,
+    onika::memory::CudaMMVector<int> (&cp_type_counts)[InteractionTypeId::NTypesPP],
+    onika::memory::CudaMMVector<int> (&cp_type_prefix)[InteractionTypeId::NTypesPP],
+    onika::parallel::ParallelExecutionQueue& queue, int lane, onikaStream_t st, ExecCtx& exec_ctx,
+    const onika::parallel::ParallelForOptions& opts) {
+  using onika::cuda::make_const_span;
+  using onika::cuda::make_span;
+  using onika::cuda::span;
+  using onika::parallel::flush;
+  using onika::parallel::set_lane;
+  auto cp_accessor = info_cell_pair.view();
+
+  for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
+    cp_type_counts[t].resize(num_cell_pairs);
+    cp_type_prefix[t].resize(num_cell_pairs);
+  }
+
+  ResetCellPairCountsFunc reset_func{cp_accessor.offset_, cp_accessor.size_};
+  AccumulateCellPairCountsFunc accumulate_func{to_span(pp_storage.cell_pair_idx_), count_per_pp, cp_accessor.size_};
+  ExtractInteractionCountsFunc extract_func{
+      span<const InteractionTypePerCellCounter>{cp_accessor.size_.data(), num_cell_pairs}, make_span(cp_type_counts[0]),
+      make_span(cp_type_counts[1]), make_span(cp_type_counts[2]), make_span(cp_type_counts[3])};
+
+  queue << set_lane(lane) << parallel_for(num_cell_pairs, reset_func, exec_ctx("nbh_gpu::reset_cell_pair_counts"), opts)
+        << parallel_for(num_particle_pairs, accumulate_func, exec_ctx("nbh_gpu::accumulate_cell_pair_counts"), opts)
+        << parallel_for(num_cell_pairs, extract_func, exec_ctx("nbh_gpu::extract_cell_pair_counts"), opts) << flush;
+
+  // Same stream as `lane` above: stream-ordered after extract_func, no host sync needed here.
+  for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
+    exclusive_scan_device(cp_type_counts[t].data(), cp_type_prefix[t].data(), num_cell_pairs, st);
+  }
+
+  PackInteractionPrefixFunc pack_func{cp_accessor.offset_, make_const_span(cp_type_prefix[0]),
+                                      make_const_span(cp_type_prefix[1]), make_const_span(cp_type_prefix[2]),
+                                      make_const_span(cp_type_prefix[3])};
+  queue << set_lane(lane) << parallel_for(num_cell_pairs, pack_func, exec_ctx("nbh_gpu::pack_cell_pair_prefix"), opts)
+        << flush;
 }
 
 }  // namespace exaDEM
+
+namespace onika {
+namespace parallel {
+template <>
+struct ParallelForFunctorTraits<exaDEM::ResetCellPairCountsFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+template <>
+struct ParallelForFunctorTraits<exaDEM::AccumulateCellPairCountsFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+template <>
+struct ParallelForFunctorTraits<exaDEM::ExtractInteractionCountsFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+template <>
+struct ParallelForFunctorTraits<exaDEM::PackInteractionPrefixFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+}  // namespace parallel
+}  // namespace onika
