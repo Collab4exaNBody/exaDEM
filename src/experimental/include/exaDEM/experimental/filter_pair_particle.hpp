@@ -5,31 +5,66 @@
 #include <onika/memory/allocator.h>
 
 #include <algorithm>
+#ifdef __GLIBCXX__
+#include <parallel/algorithm>
+#endif
+#include <compare>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <tuple>
 #include <vector>
 
 namespace exaDEM {
 
+struct IgnorePairEntry {
+  uint32_t cell_;
+  uint64_t id_a_;
+  uint64_t id_b_;
+  auto operator<=>(const IgnorePairEntry&) const = default;
+};
+
 struct ListOfIgnorePairs {
-  std::vector<std::tuple<uint32_t, uint64_t, uint64_t>> list_;  // cell, id_i, id_j
+  std::vector<IgnorePairEntry> list_;
 };
 
 inline void build_list_of_ignore_pair(ListOfIgnorePairs& ignore_pairs, const size_t* cell_indices,
                                       size_t active_cell_count, GridCellParticleInteraction& ges) {
-  for (size_t i = 0; i < active_cell_count; i++) {
-    const size_t cell_idx = cell_indices[i];  // compacted index i -> absolute grid cell
-    auto& interactions = ges.m_data[cell_idx].m_data;
-    for (auto& I : interactions) {
-      if (I.persistent()) {
-        ignore_pairs.list_.emplace_back(cell_idx, I.pair_.pi_.id_, I.pair_.pj_.id_);
+  ignore_pairs.list_.clear();
+
+  ONIKA_CU_PROF_RANGE_PUSH("build_list_of_ignore_pair::build");
+  // Order doesn't matter here (the list gets sorted right after), so each thread accumulates
+  // into a private vector and merges it in once it's done, rather than counting cells upfront.
+#pragma omp parallel
+  {
+    std::vector<IgnorePairEntry> local;
+
+#pragma omp for schedule(guided) nowait
+    for (size_t i = 0; i < active_cell_count; i++) {
+      const size_t cell_idx = cell_indices[i];  // compacted index i -> absolute grid cell
+      auto& interactions = ges.m_data[cell_idx].m_data;
+      for (auto& I : interactions) {
+        if (I.persistent()) {
+          local.push_back(IgnorePairEntry{static_cast<uint32_t>(cell_idx), I.pair_.pi_.id_, I.pair_.pj_.id_});
+        }
       }
     }
+
+#pragma omp critical
+    ignore_pairs.list_.insert(ignore_pairs.list_.end(), local.begin(), local.end());
   }
+  ONIKA_CU_PROF_RANGE_POP();
+
+  ONIKA_CU_PROF_RANGE_PUSH("build_list_of_ignore_pair::sort");
+#ifdef __GLIBCXX__
+  __gnu_parallel::sort(ignore_pairs.list_.begin(), ignore_pairs.list_.end());
+#else
   std::sort(ignore_pairs.list_.begin(), ignore_pairs.list_.end());
+#endif
+  ONIKA_CU_PROF_RANGE_POP();
+
+  ONIKA_CU_PROF_RANGE_PUSH("build_list_of_ignore_pair::unique");
   ignore_pairs.list_.erase(std::unique(ignore_pairs.list_.begin(), ignore_pairs.list_.end()), ignore_pairs.list_.end());
+  ONIKA_CU_PROF_RANGE_POP();
 }
 
 struct PersistentInnerBonds {
@@ -41,19 +76,58 @@ struct PersistentInnerBonds {
 inline void collect_persistent_inner_bonds(PersistentInnerBonds& persistent, CellStorage& cell_storage,
                                            const size_t* cell_indices, size_t active_cell_count,
                                            GridCellParticleInteraction& ges) {
+  // Pass 1 (parallel): count persistent inner bonds per cell
+  std::vector<int> counts(active_cell_count, 0);
+
+  auto test = [](PlaceholderInteraction& I) -> bool {
+    return I.type() == InteractionTypeId::InnerBond && I.persistent();
+  };
+
+#pragma omp parallel for schedule(guided)
   for (size_t i = 0; i < active_cell_count; i++) {
-    const size_t cell_idx = cell_indices[i];  // compacted index i -> absolute grid cell
+    const size_t cell_idx = cell_indices[i];
     auto& interactions = ges.m_data[cell_idx].m_data;
-    int local_rank = 0;
+    int count = 0;
     for (auto& I : interactions) {
-      if (I.type() == InteractionTypeId::InnerBond && I.persistent()) {
-        persistent.interactions_.push_back(I);
-        persistent.cell_idx_.push_back(i);
-        persistent.local_rank_.push_back(local_rank++);
+      if (test(I)) {
+        count++;
       }
     }
-    if (local_rank > 0) {
-      cell_storage.size_[i][InteractionTypeId::InnerBond] += local_rank;
+    counts[i] = count;
+    if (count > 0) {
+      cell_storage.size_[i][InteractionTypeId::InnerBond] += count;
+    }
+  }
+
+  // Sequential prefix sum over cells (cheap compared to the two interaction-level passes).
+  std::vector<size_t> offsets(active_cell_count + 1, 0);
+  for (size_t i = 0; i < active_cell_count; i++) {
+    offsets[i + 1] = offsets[i] + counts[i];
+  }
+
+  persistent.interactions_.resize(offsets[active_cell_count]);
+  persistent.cell_idx_.resize(offsets[active_cell_count]);
+  persistent.local_rank_.resize(offsets[active_cell_count]);
+
+  std::cout << "Total persistent inner bonds: " << offsets[active_cell_count] << std::endl;
+
+  // Pass 2 (parallel): each cell writes into its own pre-computed slice.
+#pragma omp parallel for schedule(guided)
+  for (size_t i = 0; i < active_cell_count; i++) {
+    if (counts[i] == 0) {
+      continue;
+    }
+    const size_t cell_idx = cell_indices[i];
+    auto& interactions = ges.m_data[cell_idx].m_data;
+    size_t offset = offsets[i];
+    int local_rank = 0;
+    for (auto& I : interactions) {
+      if (test(I)) {
+        persistent.interactions_[offset] = I;
+        persistent.cell_idx_[offset] = i;
+        persistent.local_rank_[offset] = local_rank++;
+        offset++;
+      }
     }
   }
 }
@@ -63,13 +137,18 @@ inline void fill_classifier_persistent_inner_bonds(const PersistentInnerBonds& p
                                                    InteractionWrapperAccessor& interaction_classifier_accessor) {
   auto& wrapper =
       interaction_classifier_accessor.get_typed_accessor<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
-  for (size_t k = 0; k < persistent.interactions_.size(); k++) {
+  const size_t n = persistent.interactions_.size();
+  size_t total_interactions_copied = 0;
+#pragma omp parallel for schedule(guided) reduction(+ : total_interactions_copied)
+  for (size_t k = 0; k < n; k++) {
     const size_t cell_i = persistent.cell_idx_[k];
     const int idx = cell_storage_accessor.offset_[cell_i][InteractionTypeId::InnerBond] + persistent.local_rank_[k];
     PlaceholderInteraction item = persistent.interactions_[k];
     wrapper.set(idx, item);
     wrapper.update(idx, item);
+    total_interactions_copied++;
   }
+  std::cout << "Total interactions copied: " << total_interactions_copied << std::endl;
 }
 
 struct IgnorePairsGPU {
@@ -145,6 +224,14 @@ struct IgnorePairsGPU {
   }
 
   inline View view() const { return View{to_span(cell_offset_), to_span(pairs_)}; }
+};
+
+// Bundles the host-side scratch containers used to track persistent interactions across calls,
+// so their underlying vectors keep their capacity instead of being reallocated every call.
+struct PersistentInteractionScratch {
+  ListOfIgnorePairs ignore_pairs_;
+  PersistentInnerBonds persistent_inner_bonds_;
+  IgnorePairsGPU ignore_pairs_gpu_;
 };
 
 }  // namespace exaDEM

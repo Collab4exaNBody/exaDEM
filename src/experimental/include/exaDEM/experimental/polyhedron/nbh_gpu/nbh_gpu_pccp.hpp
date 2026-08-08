@@ -549,27 +549,53 @@ inline void reconstruct_cell_pair_offsets(ParticlePairStorage& pp_storage, Inter
 }
 
 // ============================================================
-// Helper kernels for GPU prefix sum
+// Helper functors for GPU prefix sum
 // ============================================================
-__global__ void ExtractInteractionCounts(const InteractionTypePerCellCounter* __restrict__ counts, int* __restrict__ vv,
-                                         int* __restrict__ ve, int* __restrict__ vf, int* __restrict__ ee, size_t n) {
-  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i >= n) return;
-  vv[i] = counts[i][0];
-  ve[i] = counts[i][1];
-  vf[i] = counts[i][2];
-  ee[i] = counts[i][3];
-}
+struct ExtractInteractionCountsFunc {
+  onika::cuda::span<const InteractionTypePerCellCounter> counts_;
+  // WARNING (TEMPORARY): todo remove mutable
+  mutable onika::cuda::span<int> vv_;
+  mutable onika::cuda::span<int> ve_;
+  mutable onika::cuda::span<int> vf_;
+  mutable onika::cuda::span<int> ee_;
 
-__global__ void PackInteractionPrefix(InteractionTypePerCellCounter* __restrict__ prefix, const int* __restrict__ vv,
-                                      const int* __restrict__ ve, const int* __restrict__ vf,
-                                      const int* __restrict__ ee, size_t n) {
-  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i >= n) return;
-  prefix[i][0] = vv[i];
-  prefix[i][1] = ve[i];
-  prefix[i][2] = vf[i];
-  prefix[i][3] = ee[i];
-}
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t i) const {
+    vv_[i] = counts_[i][0];
+    ve_[i] = counts_[i][1];
+    vf_[i] = counts_[i][2];
+    ee_[i] = counts_[i][3];
+  }
+};
+
+struct PackInteractionPrefixFunc {
+  // WARNING (TEMPORARY): todo remove mutable
+  mutable onika::cuda::span<InteractionTypePerCellCounter> prefix_;
+  onika::cuda::span<const int> vv_;
+  onika::cuda::span<const int> ve_;
+  onika::cuda::span<const int> vf_;
+  onika::cuda::span<const int> ee_;
+
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t i) const {
+    prefix_[i][0] = vv_[i];
+    prefix_[i][1] = ve_[i];
+    prefix_[i][2] = vf_[i];
+    prefix_[i][3] = ee_[i];
+  }
+};
 
 }  // namespace exaDEM
+
+namespace onika {
+namespace parallel {
+template <>
+struct ParallelForFunctorTraits<exaDEM::ExtractInteractionCountsFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+template <>
+struct ParallelForFunctorTraits<exaDEM::PackInteractionPrefixFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+}  // namespace parallel
+}  // namespace onika

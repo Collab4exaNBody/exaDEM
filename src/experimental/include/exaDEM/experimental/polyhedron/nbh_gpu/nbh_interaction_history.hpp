@@ -20,26 +20,43 @@ struct InteractionHistory {
 template <typename CellsT>
 void setup_history_clean_ges(CellsT& cells, size_t* idxs, size_t ncells, GridCellParticleInteraction& ges,
                              InteractionHistory& history, onikaStream_t& st) {
+  ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::resize_start_size_history");
   history.start_.resize(ncells);
   history.size_.resize(ncells);
+  ONIKA_CU_PROF_RANGE_POP();
 
   size_t sum = 0;
 
+  ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fill_start_size_history");
 #pragma omp parallel for reduction(+ : sum)
-  for (size_t i = 0; i < ncells; ++i) {
+  for (size_t i = 0; i < ncells; i++) {
     size_t cell_idx = idxs[i];
-    sum += ges.m_data[cell_idx].m_data.size();
-    history.size_[i] = ges.m_data[cell_idx].m_data.size();
+    size_t size = 0;
+    for (size_t j = 0; j < ges.m_data[cell_idx].m_data.size(); j++) {
+      PlaceholderInteraction& I = ges.m_data[cell_idx].m_data[j];
+      // persistent interactions are not stored in the history because they are trivially copier
+      if (!I.persistent() && I.active()) {
+        size++;
+      }
+    }
+    sum += size;
+    history.size_[i] = size;
   }
 
   history.start_[0] = 0;
   for (size_t i = 1; i < ncells; ++i) {
     history.start_[i] = history.start_[i - 1] + history.size_[i - 1];
   }
+  ONIKA_CU_PROF_RANGE_POP();
 
+  ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::resize_history_data");
   history.data_.resize(sum);
+  ONIKA_CU_PROF_RANGE_POP();
 
   PlaceholderInteraction* __restrict__ history_data_ptr = history.data_.data();
+
+  ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fill_history_data");
+
   // reset storage for new data;
 #pragma omp parallel for
   for (size_t i = 0; i < ncells; i++) {
@@ -47,9 +64,12 @@ void setup_history_clean_ges(CellsT& cells, size_t* idxs, size_t ncells, GridCel
     auto& storage = ges.m_data[cell_idx];
     const size_t data_size = storage.m_data.size();
 
-    if (data_size > 0) {
-      PlaceholderInteraction* __restrict__ data_ptr = storage.m_data.data();
-      std::memcpy(history_data_ptr + history.start_[i], data_ptr, data_size * sizeof(PlaceholderInteraction));
+    size_t shift = history.start_[i];
+    for (size_t j = 0; j < data_size; j++) {
+      PlaceholderInteraction& I = storage.m_data[j];
+      if (!I.persistent() && I.active()) {
+        history_data_ptr[shift++] = I;
+      }
     }
 
     size_t n_particles = cells[cell_idx].size();
@@ -63,6 +83,8 @@ void setup_history_clean_ges(CellsT& cells, size_t* idxs, size_t ncells, GridCel
       info_particles[it].pid = id_a[it];
     }
   }
+  ONIKA_CU_PROF_RANGE_POP();
+
   // history.prefetch_gpu(st);
 }
 
@@ -101,3 +123,13 @@ struct UpdateHistoryFunc {
 };
 
 }  // namespace exaDEM
+
+namespace onika {
+namespace parallel {
+template <>
+struct ParallelForFunctorTraits<exaDEM::UpdateHistoryFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+}  // namespace parallel
+}  // namespace onika
