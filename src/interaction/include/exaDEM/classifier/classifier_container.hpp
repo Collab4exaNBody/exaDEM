@@ -58,10 +58,6 @@ ONIKA_HOST_DEVICE_FUNC inline InteractionPair build_interaction_pair(
                          ghost[id]};
 }
 
-/// @brief Writes an InteractionPair's fields at index `id` into the 10 bk_ fields, given as raw
-/// __restrict__ pointers. Symmetric writer to build_interaction_pair(); shared by
-/// ClassifierContainer<IT>::set() (pointers from vector_data()) and
-/// ClassifierContainer<IT>::View::set() (pointers from span::data()).
 ONIKA_HOST_DEVICE_FUNC inline void store_interaction_pair(uint64_t* __restrict__ id_i, uint32_t* __restrict__ cell_i,
                                                           uint16_t* __restrict__ p_i, uint32_t* __restrict__ sub_i,
                                                           uint64_t* __restrict__ id_j, uint32_t* __restrict__ cell_j,
@@ -449,10 +445,6 @@ struct ClassifierContainer<InteractionType::ParticleDriver> {
    * @brief Non-owning, span-based, GPU-callable view over this container, built via view().
    */
   struct View {
-    // Lets CTAD-enabled callers (e.g. WrapperForAll's deduction guide) recover IT from a View
-    // instance: IT itself is not deducible from ClassifierContainer<IT>::View, since a template
-    // parameter appearing only in the nested-name-specifier of a dependent type is a non-deduced
-    // context.
     static constexpr InteractionType kInteractionType = InteractionType::ParticleDriver;
 
     template <typename T>
@@ -511,10 +503,6 @@ struct ClassifierContainer<InteractionType::ParticleDriver> {
     }
   };
 
-  /**
-   * @brief Builds a View over this container, i.e. one onika::cuda::span<T> per field
-   * (via make_span), so it can be passed to GPU kernels/parallel_for functors.
-   */
   inline View view() {
     View v;
     ToSpanFunctor to_span_func;
@@ -672,10 +660,6 @@ struct ClassifierContainer<InteractionType::InnerBond> {
    * @brief Non-owning, span-based, GPU-callable view over this container, built via view().
    */
   struct View {
-    // Lets CTAD-enabled callers (e.g. WrapperForAll's deduction guide) recover IT from a View
-    // instance: IT itself is not deducible from ClassifierContainer<IT>::View, since a template
-    // parameter appearing only in the nested-name-specifier of a dependent type is a non-deduced
-    // context.
     static constexpr InteractionType kInteractionType = InteractionType::InnerBond;
 
     template <typename T>
