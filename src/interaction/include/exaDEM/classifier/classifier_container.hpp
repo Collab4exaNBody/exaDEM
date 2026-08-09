@@ -664,10 +664,6 @@ struct ClassifierContainer<InteractionType::InnerBond> {
    * @brief Non-owning, span-based, GPU-callable view over this container, built via view().
    */
   struct View {
-    // Lets CTAD-enabled callers (e.g. WrapperForAll's deduction guide) recover IT from a View
-    // instance: IT itself is not deducible from ClassifierContainer<IT>::View, since a template
-    // parameter appearing only in the nested-name-specifier of a dependent type is a non-deduced
-    // context.
     static constexpr InteractionType kInteractionType = InteractionType::InnerBond;
 
     template <typename T>
