@@ -58,10 +58,6 @@ ONIKA_HOST_DEVICE_FUNC inline InteractionPair build_interaction_pair(
                          ghost[id]};
 }
 
-/// @brief Writes an InteractionPair's fields at index `id` into the 10 bk_ fields, given as raw
-/// __restrict__ pointers. Symmetric writer to build_interaction_pair(); shared by
-/// ClassifierContainer<IT>::set() (pointers from vector_data()) and
-/// ClassifierContainer<IT>::View::set() (pointers from span::data()).
 ONIKA_HOST_DEVICE_FUNC inline void store_interaction_pair(uint64_t* __restrict__ id_i, uint32_t* __restrict__ cell_i,
                                                           uint16_t* __restrict__ p_i, uint32_t* __restrict__ sub_i,
                                                           uint64_t* __restrict__ id_j, uint32_t* __restrict__ cell_j,
