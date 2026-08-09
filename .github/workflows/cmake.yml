@@ -8,7 +8,9 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
-
+    ## TMP FIX
+    env:
+      UCX_TLS: tcp,self,sm
     steps:
     - uses: actions/checkout@v3
       with:
