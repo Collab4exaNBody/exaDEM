@@ -34,6 +34,9 @@ struct shapes {
   /// @return pointer to device data (const)
   inline const shape* data() const { return onika::cuda::vector_data(data_); }
 
+  /// @return span over data_
+  inline onika::cuda::span<shape> view() { return onika::cuda::make_span(data_); }
+
   /// @return number of shapes stored
   inline size_t size() { return onika::cuda::vector_size(data_); }
 

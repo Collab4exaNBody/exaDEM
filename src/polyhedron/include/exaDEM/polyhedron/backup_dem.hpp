@@ -17,10 +17,13 @@ specific language governing permissions and limitations
 under the License.
 */
 #pragma once
-#include <exanb/compute/reduce_cell_particles.h>
 #include <onika/cuda/cuda.h>
 #include <onika/cuda/cuda_math.h>
+#include <onika/cuda/stl_adaptors.h>
 #include <onika/memory/allocator.h>
+
+// exanb
+#include <exanb/compute/reduce_cell_particles.h>
 
 #include <cmath>
 #include <cstdint>
@@ -34,6 +37,13 @@ struct DEMBackupData {
   DEMBackupVectorData data_;
   DEMBackupVectorIdx index_map_;
   static constexpr size_t components = 7;
+
+  struct View {
+    onika::cuda::span<double> data_;
+    onika::cuda::span<uint32_t> index_map_;
+  };
+
+  inline View view() { return View{onika::cuda::make_span(data_), onika::cuda::make_span(index_map_)}; }
 };
 
 template <typename TMPLC>
@@ -54,17 +64,16 @@ void setup_dem_backup(DEMBackupData& backup_dem, TMPLC& cells, const IJK dims) {
 
 template <bool defbox>
 struct ReduceMaxVertexDisplacementFunctor {
-  const double* backup_data_ = nullptr;
-  const uint32_t* backup_cell_idx_ = nullptr;
+  DEMBackupData::View backup_;
   const double threshold_sqr_ = 0.0;
-  const shape* shps_;
+  onika::cuda::span<shape> shps_;
   Mat3d xform_;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(unsigned long long int& count_over_dist2, IJK cell_loc, size_t cell,
                                                 size_t j, double rx, double ry, double rz, uint32_t type,
                                                 double homothety, const exanb::Quaternion& orientation,
                                                 reduce_thread_local_t = {}) const {
-    const double* __restrict__ rb = backup_data_ + backup_cell_idx_[cell];
+    const double* __restrict__ rb = backup_.data_.data() + backup_.index_map_[cell];
 
     Vec3d new_center = {rx, ry, rz};
     if constexpr (defbox) {

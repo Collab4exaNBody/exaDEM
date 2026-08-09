@@ -107,7 +107,7 @@ struct ComputeStressTensorsLoop {
       const auto [dnp, cpp, fnp, ftp] =
           classifier.contact_state(Type);       // get parameters: get forces (fn, ft) and contact positions
                                                 // (cp) computed into the contact force operators.
-      InteractionWrapper<IT> interactions(Ip);  // get data: interaction
+      typename ClassifierContainer<IT>::View interactions = Ip.view();  // get data: interaction
       ComputeStressTensorFunc<Type, Sym> func;  // get kernel
                                                 // pack data, kernel, and interaction in a wrapper
       WrapperForAll wrapper(interactions, func, cells, dnp, fnp, ftp, cpp);

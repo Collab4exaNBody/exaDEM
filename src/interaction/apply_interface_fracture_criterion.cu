@@ -48,16 +48,16 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
     auto& interfaces = *im;
     int init_value = 0;
     uint64_t number_of_broken_interfaces = 0;
-    InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
+    auto data_view = ic->get_sticked_interaction_wrapper();
     auto [dn, cp, fn, ft] = ic->contact_state(InteractionTypeId::InnerBond);
 
-    ApplyAndReduceInterfaceFractureCriterionFunc func = {data_wrapper, fn, dn};
+    ApplyAndReduceInterfaceFractureCriterionFunc func = {data_view, fn, dn};
 
     number_of_broken_interfaces =
         reduce_interface(interfaces, func, init_value, parallel_execution_context("apply_rupture_criterion"));
 #ifdef APPLY_CRITERION_NO_REDUCTION
     ApplyInterfaceFractureCriterionFunc func = {interfaces.data_.data(), interfaces.break_interface_.data(),
-                                                data_wrapper, fn, dn};
+                                                data_view, fn, dn};
 
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_STATIC;
@@ -71,7 +71,7 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
         /*auto [offset, size] = interfaces.data_[i];
         for (size_t j = 0; j < size; j++) {
           size_t idx = j + offset;
-          data_wrapper[attr::unbroken][idx] = false;
+          data_view[attr::unbroken][idx] = false;
         }*/
         number_of_broken_interfaces++;
       }

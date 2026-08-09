@@ -45,6 +45,41 @@ EXADEM_INTERACTION_FIELD_TAGS(EXADEM_INTERACTION_COMMON_FIELDS)
 
 namespace exaDEM {
 using exanb::Vec3d;
+
+ONIKA_HOST_DEVICE_FUNC inline InteractionPair build_interaction_pair(
+    const uint64_t* __restrict__ id_i, const uint32_t* __restrict__ cell_i, const uint16_t* __restrict__ p_i,
+    const uint32_t* __restrict__ sub_i, const uint64_t* __restrict__ id_j, const uint32_t* __restrict__ cell_j,
+    const uint16_t* __restrict__ p_j, const uint32_t* __restrict__ sub_j, const uint8_t* __restrict__ swap,
+    const uint8_t* __restrict__ ghost, uint64_t id, uint16_t type) {
+  return InteractionPair{{id_i[id], cell_i[id], p_i[id], sub_i[id]},
+                         {id_j[id], cell_j[id], p_j[id], sub_j[id]},
+                         type,
+                         swap[id],
+                         ghost[id]};
+}
+
+/// @brief Writes an InteractionPair's fields at index `id` into the 10 bk_ fields, given as raw
+/// __restrict__ pointers. Symmetric writer to build_interaction_pair(); shared by
+/// ClassifierContainer<IT>::set() (pointers from vector_data()) and
+/// ClassifierContainer<IT>::View::set() (pointers from span::data()).
+ONIKA_HOST_DEVICE_FUNC inline void store_interaction_pair(uint64_t* __restrict__ id_i, uint32_t* __restrict__ cell_i,
+                                                          uint16_t* __restrict__ p_i, uint32_t* __restrict__ sub_i,
+                                                          uint64_t* __restrict__ id_j, uint32_t* __restrict__ cell_j,
+                                                          uint16_t* __restrict__ p_j, uint32_t* __restrict__ sub_j,
+                                                          uint8_t* __restrict__ swap, uint8_t* __restrict__ ghost,
+                                                          uint64_t id, const InteractionPair& pair) {
+  id_i[id] = pair.pi_.id_;
+  cell_i[id] = pair.pi_.cell_;
+  p_i[id] = pair.pi_.p_;
+  sub_i[id] = pair.pi_.sub_;
+  id_j[id] = pair.pj_.id_;
+  cell_j[id] = pair.pj_.cell_;
+  p_j[id] = pair.pj_.p_;
+  sub_j[id] = pair.pj_.sub_;
+  swap[id] = pair.swap_;
+  ghost[id] = pair.ghost_;
+}
+
 /**
  * @brief Structure representing the Structure of Arrays data structure for the interactions in a Discrete Element
  * Method (DEM) simulation.
@@ -111,39 +146,18 @@ struct ClassifierContainer<InteractionType::ParticleParticle> {
   ONIKA_HOST_DEVICE_FUNC inline size_t size() const { return onika::cuda::vector_size((*this)[attr::id_i]); }
   ONIKA_HOST_DEVICE_FUNC inline size_t size() { return onika::cuda::vector_size((*this)[attr::id_i]); }
 
-  template <typename T>
-  ONIKA_HOST_DEVICE_FUNC void setter(VectorT<T>& vec, size_t idx, const T& value) {
-#ifdef ONIKA_CUDA_VERSION
-    auto* __restrict__ ptr = onika::cuda::vector_data(vec);
-    ptr[idx] = value;
-#else
-    vec[idx] = value;
-#endif
-  }
-
   ONIKA_HOST_DEVICE_FUNC void set(size_t idx, exaDEM::PlaceholderInteraction& interaction) {
     auto& I = interaction.as<Interaction>();
     StoreAtIndexFunctor store_func{idx};
     zip_apply_on_flat_tuple(store_func, fm_, I.fm_);
 
-    auto& [pi, pj, _type, _swap, _ghost] = interaction.pair_;
-
-    assert(_type == type_);
-
-    setter((*this)[attr::id_i], idx, pi.id_);
-    setter((*this)[attr::id_j], idx, pj.id_);
-
-    setter((*this)[attr::cell_i], idx, pi.cell_);
-    setter((*this)[attr::cell_j], idx, pj.cell_);
-
-    setter((*this)[attr::p_i], idx, pi.p_);
-    setter((*this)[attr::p_j], idx, pj.p_);
-
-    setter((*this)[attr::sub_i], idx, pi.sub_);
-    setter((*this)[attr::sub_j], idx, pj.sub_);
-
-    setter((*this)[attr::swap], idx, _swap);
-    setter((*this)[attr::ghost], idx, _ghost);
+    assert(interaction.pair_.type_ == type_);
+    using namespace onika::cuda;
+    store_interaction_pair(vector_data((*this)[attr::id_i]), vector_data((*this)[attr::cell_i]),
+                           vector_data((*this)[attr::p_i]), vector_data((*this)[attr::sub_i]),
+                           vector_data((*this)[attr::id_j]), vector_data((*this)[attr::cell_j]),
+                           vector_data((*this)[attr::p_j]), vector_data((*this)[attr::sub_j]),
+                           vector_data((*this)[attr::swap]), vector_data((*this)[attr::ghost]), idx, interaction.pair_);
   }
 
   /**
@@ -186,16 +200,11 @@ struct ClassifierContainer<InteractionType::ParticleParticle> {
    */
   ONIKA_HOST_DEVICE_FUNC auto operator[](uint64_t id) {
     using namespace onika::cuda;
-    InteractionPair ip = {// pi
-                          {vector_data((*this)[attr::id_i])[id], vector_data((*this)[attr::cell_i])[id],
-                           vector_data((*this)[attr::p_i])[id], vector_data((*this)[attr::sub_i])[id]},
-                          // pj
-                          {vector_data((*this)[attr::id_j])[id], vector_data((*this)[attr::cell_j])[id],
-                           vector_data((*this)[attr::p_j])[id], vector_data((*this)[attr::sub_j])[id]},
-                          // type_, swap_, ghost_
-                          type_,
-                          vector_data((*this)[attr::swap])[id],
-                          vector_data((*this)[attr::ghost])[id]};
+    InteractionPair ip = build_interaction_pair(
+        vector_data((*this)[attr::id_i]), vector_data((*this)[attr::cell_i]), vector_data((*this)[attr::p_i]),
+        vector_data((*this)[attr::sub_i]), vector_data((*this)[attr::id_j]), vector_data((*this)[attr::cell_j]),
+        vector_data((*this)[attr::p_j]), vector_data((*this)[attr::sub_j]), vector_data((*this)[attr::swap]),
+        vector_data((*this)[attr::ghost]), id, type_);
 
     exaDEM::Interaction res{ip};
     LoadAtIndexFunctor load_func{id};
@@ -216,6 +225,81 @@ struct ClassifierContainer<InteractionType::ParticleParticle> {
   void display() {
     onika::lout << "ClassifierContainer type is: " << type_;
     onika::lout << " and it contains " << this->size() << " interactions." << std::endl;
+  }
+
+  /**
+   * @brief Non-owning, span-based, GPU-callable view over this container, built via view().
+   */
+  struct View {
+    static constexpr InteractionType kInteractionType = InteractionType::ParticleParticle;
+
+    template <typename T>
+    using VectorT = onika::cuda::span<T>;
+
+    EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_FIELDS) fm_ = {};
+    EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR(EXADEM_INTERACTION_FIELDS)  // friction, moment
+
+    EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_COMMON_FIELDS) bk_ = {};
+    EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR_BK(EXADEM_INTERACTION_COMMON_FIELDS)  // id_i, id_j, cell_i,
+                                                                                   // cell_j, p_i, p_j,
+                                                                                   // sub_i, sub_j, swap, ghost
+
+    uint16_t m_type = InteractionTypeId::Undefined;
+
+    ONIKA_HOST_DEVICE_FUNC inline auto operator()(const uint64_t idx) const {
+      InteractionPair ip = pair(idx);
+      Interaction res{ip};
+      LoadAtIndexSpanFunctor load_func{idx};
+      zip_apply_on_flat_tuple(load_func, res.fm_, fm_);
+      return res;
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) {
+      assert(m_type == item.pair_.type_);
+      store_interaction_pair((*this)[attr::id_i].data(), (*this)[attr::cell_i].data(), (*this)[attr::p_i].data(),
+                             (*this)[attr::sub_i].data(), (*this)[attr::id_j].data(), (*this)[attr::cell_j].data(),
+                             (*this)[attr::p_j].data(), (*this)[attr::sub_j].data(), (*this)[attr::swap].data(),
+                             (*this)[attr::ghost].data(), idx, item.pair_);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline InteractionPair pair(const uint64_t i) const {
+      return build_interaction_pair((*this)[attr::id_i].data(), (*this)[attr::cell_i].data(), (*this)[attr::p_i].data(),
+                                    (*this)[attr::sub_i].data(), (*this)[attr::id_j].data(),
+                                    (*this)[attr::cell_j].data(), (*this)[attr::p_j].data(),
+                                    (*this)[attr::sub_j].data(), (*this)[attr::swap].data(),
+                                    (*this)[attr::ghost].data(), i, m_type);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline bool same(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
+      return item.pair_ == pair(idx);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void update(const uint64_t idx, const exaDEM::Interaction& item) {
+      StoreAtIndexSpanFunctor store_func{idx};
+      zip_apply_on_flat_tuple(store_func, this->fm_, item.fm_);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void update(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) {
+      update(idx, item.as<Interaction>());
+    }
+  };
+
+  /**
+   * @brief Builds a View over this container, i.e. one onika::cuda::span<T> per field
+   * (via make_span), so it can be passed to GPU kernels/parallel_for functors.
+   */
+  inline View view() {
+    View v;
+    ToSpanFunctor to_span_func;
+    zip_apply_on_flat_tuple(to_span_func, v.fm_, fm_);
+    zip_apply_on_flat_tuple(to_span_func, v.bk_, bk_);
+    v.m_type = type_;
+    return v;
   }
 };
 
@@ -280,39 +364,18 @@ struct ClassifierContainer<InteractionType::ParticleDriver> {
   ONIKA_HOST_DEVICE_FUNC inline size_t size() const { return onika::cuda::vector_size((*this)[attr::id_i]); }
   ONIKA_HOST_DEVICE_FUNC inline size_t size() { return onika::cuda::vector_size((*this)[attr::id_i]); }
 
-  template <typename T>
-  ONIKA_HOST_DEVICE_FUNC void setter(VectorT<T>& vec, size_t idx, const T& value) {
-#ifdef ONIKA_CUDA_VERSION
-    auto* __restrict__ ptr = onika::cuda::vector_data(vec);
-    ptr[idx] = value;
-#else
-    vec[idx] = value;
-#endif
-  }
-
   ONIKA_HOST_DEVICE_FUNC void set(size_t idx, exaDEM::PlaceholderInteraction& interaction) {
     auto& I = interaction.as<Interaction>();
     StoreAtIndexFunctor store_func{idx};
     zip_apply_on_flat_tuple(store_func, fm_, I.fm_);
 
-    auto& [pi, pj, _type, _swap, _ghost] = interaction.pair_;
-
-    assert(_type == type_);
-
-    setter((*this)[attr::id_i], idx, pi.id_);
-    setter((*this)[attr::id_j], idx, pj.id_);
-
-    setter((*this)[attr::cell_i], idx, pi.cell_);
-    setter((*this)[attr::cell_j], idx, pj.cell_);
-
-    setter((*this)[attr::p_i], idx, pi.p_);
-    setter((*this)[attr::p_j], idx, pj.p_);
-
-    setter((*this)[attr::sub_i], idx, pi.sub_);
-    setter((*this)[attr::sub_j], idx, pj.sub_);
-
-    setter((*this)[attr::swap], idx, _swap);
-    setter((*this)[attr::ghost], idx, _ghost);
+    assert(interaction.pair_.type_ == type_);
+    using namespace onika::cuda;
+    store_interaction_pair(vector_data((*this)[attr::id_i]), vector_data((*this)[attr::cell_i]),
+                           vector_data((*this)[attr::p_i]), vector_data((*this)[attr::sub_i]),
+                           vector_data((*this)[attr::id_j]), vector_data((*this)[attr::cell_j]),
+                           vector_data((*this)[attr::p_j]), vector_data((*this)[attr::sub_j]),
+                           vector_data((*this)[attr::swap]), vector_data((*this)[attr::ghost]), idx, interaction.pair_);
   }
 
   /**
@@ -355,16 +418,11 @@ struct ClassifierContainer<InteractionType::ParticleDriver> {
    */
   ONIKA_HOST_DEVICE_FUNC auto operator[](uint64_t id) {
     using namespace onika::cuda;
-    InteractionPair ip = {// pi
-                          {vector_data((*this)[attr::id_i])[id], vector_data((*this)[attr::cell_i])[id],
-                           vector_data((*this)[attr::p_i])[id], vector_data((*this)[attr::sub_i])[id]},
-                          // pj
-                          {vector_data((*this)[attr::id_j])[id], vector_data((*this)[attr::cell_j])[id],
-                           vector_data((*this)[attr::p_j])[id], vector_data((*this)[attr::sub_j])[id]},
-                          // type_, swap_, ghost_
-                          type_,
-                          vector_data((*this)[attr::swap])[id],
-                          vector_data((*this)[attr::ghost])[id]};
+    InteractionPair ip = build_interaction_pair(
+        vector_data((*this)[attr::id_i]), vector_data((*this)[attr::cell_i]), vector_data((*this)[attr::p_i]),
+        vector_data((*this)[attr::sub_i]), vector_data((*this)[attr::id_j]), vector_data((*this)[attr::cell_j]),
+        vector_data((*this)[attr::p_j]), vector_data((*this)[attr::sub_j]), vector_data((*this)[attr::swap]),
+        vector_data((*this)[attr::ghost]), id, type_);
 
     exaDEM::Interaction res{ip};
     LoadAtIndexFunctor load_func{id};
@@ -385,6 +443,85 @@ struct ClassifierContainer<InteractionType::ParticleDriver> {
   void display() {
     onika::lout << "ClassifierContainer type is: " << type_;
     onika::lout << " and it contains " << this->size() << " interactions." << std::endl;
+  }
+
+  /**
+   * @brief Non-owning, span-based, GPU-callable view over this container, built via view().
+   */
+  struct View {
+    // Lets CTAD-enabled callers (e.g. WrapperForAll's deduction guide) recover IT from a View
+    // instance: IT itself is not deducible from ClassifierContainer<IT>::View, since a template
+    // parameter appearing only in the nested-name-specifier of a dependent type is a non-deduced
+    // context.
+    static constexpr InteractionType kInteractionType = InteractionType::ParticleDriver;
+
+    template <typename T>
+    using VectorT = onika::cuda::span<T>;
+
+    EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_FIELDS) fm_ = {};
+    EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR(EXADEM_INTERACTION_FIELDS)  // friction, moment
+
+    EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_COMMON_FIELDS) bk_ = {};
+    EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR_BK(EXADEM_INTERACTION_COMMON_FIELDS)  // id_i, id_j, cell_i,
+                                                                                   // cell_j, p_i, p_j,
+                                                                                   // sub_i, sub_j, swap, ghost
+
+    uint16_t m_type = InteractionTypeId::Undefined;
+
+    ONIKA_HOST_DEVICE_FUNC inline auto operator()(const uint64_t idx) const {
+      InteractionPair ip = pair(idx);
+      Interaction res{ip};
+      LoadAtIndexSpanFunctor load_func{idx};
+      zip_apply_on_flat_tuple(load_func, res.fm_, fm_);
+      return res;
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) {
+      assert(m_type == item.pair_.type_);
+      store_interaction_pair((*this)[attr::id_i].data(), (*this)[attr::cell_i].data(), (*this)[attr::p_i].data(),
+                             (*this)[attr::sub_i].data(), (*this)[attr::id_j].data(), (*this)[attr::cell_j].data(),
+                             (*this)[attr::p_j].data(), (*this)[attr::sub_j].data(), (*this)[attr::swap].data(),
+                             (*this)[attr::ghost].data(), idx, item.pair_);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline InteractionPair pair(const uint64_t i) const {
+      return build_interaction_pair((*this)[attr::id_i].data(), (*this)[attr::cell_i].data(), (*this)[attr::p_i].data(),
+                                    (*this)[attr::sub_i].data(), (*this)[attr::id_j].data(),
+                                    (*this)[attr::cell_j].data(), (*this)[attr::p_j].data(),
+                                    (*this)[attr::sub_j].data(), (*this)[attr::swap].data(),
+                                    (*this)[attr::ghost].data(), i, m_type);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline bool same(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
+      return item.pair_ == pair(idx);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void update(const uint64_t idx, const exaDEM::Interaction& item) {
+      StoreAtIndexSpanFunctor store_func{idx};
+      zip_apply_on_flat_tuple(store_func, this->fm_, item.fm_);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void update(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) {
+      update(idx, item.as<Interaction>());
+    }
+  };
+
+  /**
+   * @brief Builds a View over this container, i.e. one onika::cuda::span<T> per field
+   * (via make_span), so it can be passed to GPU kernels/parallel_for functors.
+   */
+  inline View view() {
+    View v;
+    ToSpanFunctor to_span_func;
+    zip_apply_on_flat_tuple(to_span_func, v.fm_, fm_);
+    zip_apply_on_flat_tuple(to_span_func, v.bk_, bk_);
+    v.m_type = type_;
+    return v;
   }
 };
 
@@ -450,39 +587,18 @@ struct ClassifierContainer<InteractionType::InnerBond> {
   ONIKA_HOST_DEVICE_FUNC inline size_t size() const { return onika::cuda::vector_size((*this)[attr::id_i]); }
   ONIKA_HOST_DEVICE_FUNC inline size_t size() { return onika::cuda::vector_size((*this)[attr::id_i]); }
 
-  template <typename T>
-  ONIKA_HOST_DEVICE_FUNC void setter(VectorT<T>& vec, size_t idx, const T& value) {
-#ifdef ONIKA_CUDA_VERSION
-    auto* __restrict__ ptr = onika::cuda::vector_data(vec);
-    ptr[idx] = value;
-#else
-    vec[idx] = value;
-#endif
-  }
-
   ONIKA_HOST_DEVICE_FUNC void set(size_t idx, exaDEM::PlaceholderInteraction& interaction) {
     auto& I = interaction.as<InnerBondInteraction>();
     StoreAtIndexFunctor store_func{idx};
     zip_apply_on_flat_tuple(store_func, fm_, I.fm_);
 
-    auto& [pi, pj, _type, _swap, _ghost] = interaction.pair_;
-
-    assert(_type == type_);
-
-    setter((*this)[attr::id_i], idx, pi.id_);
-    setter((*this)[attr::id_j], idx, pj.id_);
-
-    setter((*this)[attr::cell_i], idx, pi.cell_);
-    setter((*this)[attr::cell_j], idx, pj.cell_);
-
-    setter((*this)[attr::p_i], idx, pi.p_);
-    setter((*this)[attr::p_j], idx, pj.p_);
-
-    setter((*this)[attr::sub_i], idx, pi.sub_);
-    setter((*this)[attr::sub_j], idx, pj.sub_);
-
-    setter((*this)[attr::swap], idx, _swap);
-    setter((*this)[attr::ghost], idx, _ghost);
+    assert(interaction.pair_.type_ == type_);
+    using namespace onika::cuda;
+    store_interaction_pair(vector_data((*this)[attr::id_i]), vector_data((*this)[attr::cell_i]),
+                           vector_data((*this)[attr::p_i]), vector_data((*this)[attr::sub_i]),
+                           vector_data((*this)[attr::id_j]), vector_data((*this)[attr::cell_j]),
+                           vector_data((*this)[attr::p_j]), vector_data((*this)[attr::sub_j]),
+                           vector_data((*this)[attr::swap]), vector_data((*this)[attr::ghost]), idx, interaction.pair_);
   }
 
   /**
@@ -525,16 +641,11 @@ struct ClassifierContainer<InteractionType::InnerBond> {
    */
   ONIKA_HOST_DEVICE_FUNC auto operator[](uint64_t id) {
     using namespace onika::cuda;
-    InteractionPair ip = {// pi
-                          {vector_data((*this)[attr::id_i])[id], vector_data((*this)[attr::cell_i])[id],
-                           vector_data((*this)[attr::p_i])[id], vector_data((*this)[attr::sub_i])[id]},
-                          // pj
-                          {vector_data((*this)[attr::id_j])[id], vector_data((*this)[attr::cell_j])[id],
-                           vector_data((*this)[attr::p_j])[id], vector_data((*this)[attr::sub_j])[id]},
-                          // type_, swap_, ghost_
-                          type_,
-                          vector_data((*this)[attr::swap])[id],
-                          vector_data((*this)[attr::ghost])[id]};
+    InteractionPair ip = build_interaction_pair(
+        vector_data((*this)[attr::id_i]), vector_data((*this)[attr::cell_i]), vector_data((*this)[attr::p_i]),
+        vector_data((*this)[attr::sub_i]), vector_data((*this)[attr::id_j]), vector_data((*this)[attr::cell_j]),
+        vector_data((*this)[attr::p_j]), vector_data((*this)[attr::sub_j]), vector_data((*this)[attr::swap]),
+        vector_data((*this)[attr::ghost]), id, type_);
 
     exaDEM::InnerBondInteraction res{ip};
     LoadAtIndexFunctor load_func{id};
@@ -555,6 +666,86 @@ struct ClassifierContainer<InteractionType::InnerBond> {
   void display() {
     onika::lout << "ClassifierContainer type is: " << type_;
     onika::lout << " and it contains " << this->size() << " interactions." << std::endl;
+  }
+
+  /**
+   * @brief Non-owning, span-based, GPU-callable view over this container, built via view().
+   */
+  struct View {
+    // Lets CTAD-enabled callers (e.g. WrapperForAll's deduction guide) recover IT from a View
+    // instance: IT itself is not deducible from ClassifierContainer<IT>::View, since a template
+    // parameter appearing only in the nested-name-specifier of a dependent type is a non-deduced
+    // context.
+    static constexpr InteractionType kInteractionType = InteractionType::InnerBond;
+
+    template <typename T>
+    using VectorT = onika::cuda::span<T>;
+
+    EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INNER_BOND_FIELDS) fm_ = {};
+    EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR(EXADEM_INNER_BOND_FIELDS)  // friction, en, tds, et, dn0,
+                                                                        // weight, criterion, unbroken
+
+    EXADEM_INTERACTION_VECTOR_TUPLE_TYPE(EXADEM_INTERACTION_COMMON_FIELDS) bk_ = {};
+    EXADEM_INTERACTION_VECTOR_FIELD_ACCESSOR_BK(EXADEM_INTERACTION_COMMON_FIELDS)  // id_i, id_j, cell_i,
+                                                                                   // cell_j, p_i, p_j,
+                                                                                   // sub_i, sub_j, swap, ghost
+
+    uint16_t m_type = InteractionTypeId::Undefined;
+
+    ONIKA_HOST_DEVICE_FUNC inline auto operator()(const uint64_t idx) const {
+      InteractionPair ip = pair(idx);
+      InnerBondInteraction res{ip};
+      LoadAtIndexSpanFunctor load_func{idx};
+      zip_apply_on_flat_tuple(load_func, res.fm_, fm_);
+      return res;
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void set(const uint64_t idx, exaDEM::PlaceholderInteraction& item) {
+      assert(m_type == item.pair_.type_);
+      store_interaction_pair((*this)[attr::id_i].data(), (*this)[attr::cell_i].data(), (*this)[attr::p_i].data(),
+                             (*this)[attr::sub_i].data(), (*this)[attr::id_j].data(), (*this)[attr::cell_j].data(),
+                             (*this)[attr::p_j].data(), (*this)[attr::sub_j].data(), (*this)[attr::swap].data(),
+                             (*this)[attr::ghost].data(), idx, item.pair_);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline InteractionPair pair(const uint64_t i) const {
+      return build_interaction_pair((*this)[attr::id_i].data(), (*this)[attr::cell_i].data(), (*this)[attr::p_i].data(),
+                                    (*this)[attr::sub_i].data(), (*this)[attr::id_j].data(),
+                                    (*this)[attr::cell_j].data(), (*this)[attr::p_j].data(),
+                                    (*this)[attr::sub_j].data(), (*this)[attr::swap].data(),
+                                    (*this)[attr::ghost].data(), i, m_type);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline bool same(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) const {
+      return item.pair_ == pair(idx);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void update(const uint64_t idx, const exaDEM::InnerBondInteraction& item) {
+      StoreAtIndexSpanFunctor store_func{idx};
+      zip_apply_on_flat_tuple(store_func, this->fm_, item.fm_);
+    }
+
+    ONIKA_HOST_DEVICE_FUNC
+    inline void update(const uint64_t idx, const exaDEM::PlaceholderInteraction& item) {
+      update(idx, item.as<InnerBondInteraction>());
+    }
+  };
+
+  /**
+   * @brief Builds a View over this container, i.e. one onika::cuda::span<T> per field
+   * (via make_span), so it can be passed to GPU kernels/parallel_for functors.
+   */
+  inline View view() {
+    View v;
+    ToSpanFunctor to_span_func;
+    zip_apply_on_flat_tuple(to_span_func, v.fm_, fm_);
+    zip_apply_on_flat_tuple(to_span_func, v.bk_, bk_);
+    v.m_type = type_;
+    return v;
   }
 };
 

@@ -11,7 +11,8 @@ namespace exaDEM {
 /** @brief Function to apply the fracture criterion to each interface */
 struct ApplyAndReduceInterfaceFractureCriterionFunc {
   // Warning, interaction_ is mutable.
-  mutable InteractionWrapper<InteractionType::InnerBond> interaction_;  // interactions that compose the interfaces;
+  mutable ClassifierContainer<InteractionType::InnerBond>::View
+      interaction_;  // interactions that compose the interfaces;
   exanb::Vec3d* const fn_;  // list of normal forces for each interaction that compose the interfaces
   double* const dn_;        // list of normal displacements for each interaction that compose the interfaces
 
@@ -20,10 +21,13 @@ struct ApplyAndReduceInterfaceFractureCriterionFunc {
     auto& [offset, size] = interface;
     double En = 0.0, Et = 0.0, S = 0.0;
 
+    const double* __restrict__ en = interaction_[attr::en].data();
+    const double* __restrict__ et = interaction_[attr::et].data();
+
     // Sum of the normal and tangential energy of the interactions that compose the interface
     for (size_t j = offset; j < offset + size; j++) {
-      En += interaction_[attr::en][j];
-      Et += interaction_[attr::et][j];
+      En += en[j];
+      Et += et[j];
       if (dn_[j] > 0.0) S += norm(fn_[j]);
     }
     S /= size;  // average normal force over the interface
@@ -47,8 +51,9 @@ struct ApplyAndReduceInterfaceFractureCriterionFunc {
 
     if (break_interface) {
       broken_interfaces++;
+      uint8_t* __restrict__ unbroken = interaction_[attr::unbroken].data();
       for (size_t j = offset; j < offset + size; j++) {
-        interaction_[attr::unbroken][j] = false;
+        unbroken[j] = false;
       }
     }
   }

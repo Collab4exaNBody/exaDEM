@@ -25,7 +25,6 @@ under the License.
 #include <onika/scg/operator_slot.h>
 
 #include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/classifier/interaction_wrapper.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shapes.hpp>
@@ -36,10 +35,10 @@ template <InteractionType IT>
 inline void count_classifier_type(Classifier& classifier, int typeID, int& count, int& active_count, int& an,
                                   int& ghost_count, int& gn) {
   auto [data, size] = classifier.get_info<IT>(typeID);
-  InteractionWrapper<IT> wrapper(data);
+  typename ClassifierContainer<IT>::View view = data.view();
 #pragma omp parallel for reduction(+ : count, active_count, an, ghost_count, gn)
   for (size_t idx = 0; idx < size; idx++) {
-    const auto I = wrapper(idx);
+    const auto I = view(idx);
     if (I.pair_.ghost_ == InteractionPair::PartnerGhost) {
       ghost_count++;
       gn++;

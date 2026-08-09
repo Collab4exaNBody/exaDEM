@@ -12,7 +12,7 @@ struct CountDriverInteractionsFunc {
   mutable CellStorage::View cell_storage_accessor_;
   const size_t* const cell_ptr_;
   const double rcut_inc_;
-  const shape* const shps_;
+  onika::cuda::span<shape> shps_;
   VertexField* const vertex_fields_;
   DriversGPUAccessor drvs_;
 
@@ -51,19 +51,19 @@ struct CountDriverInteractionsFunc {
       if (drv_type == DRIVER_TYPE::CYLINDER) {
         item.pair_.type_ = InteractionTypeId::VertexCylinder;
         Cylinder& driver = drvs_.get_typed_driver<Cylinder>(drvs_idx);
-        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_);
+        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_.data());
       } else if (drv_type == DRIVER_TYPE::SURFACE) {
         item.pair_.type_ = InteractionTypeId::VertexSurface;
         Surface& driver = drvs_.get_typed_driver<Surface>(drvs_idx);
-        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_);
+        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_.data());
       } else if (drv_type == DRIVER_TYPE::BALL) {
         item.pair_.type_ = InteractionTypeId::VertexBall;
         Ball& driver = drvs_.get_typed_driver<Ball>(drvs_idx);
-        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_);
+        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_.data());
       } else if (drv_type == DRIVER_TYPE::RSHAPE) {
         RShapeDriver& driver = drvs_.get_typed_driver<RShapeDriver>(drvs_idx);
         add_driver_interaction(driver, cell_id, func, item, n_particles, rcut_inc_, t, id, rx, ry, rz, vertex_cell, h,
-                               quat, shps_);
+                               quat, shps_.data());
       }
     }
     auto& res = cell_storage_accessor_.size_[idx];
@@ -82,16 +82,16 @@ struct ClassifyDriverInteractionsFunc {
   CellStorage::View cell_storage_accessor_;
   const size_t* const cell_ptr_;
   const double rcut_inc_;
-  const shape* const shps_;
+  onika::cuda::span<shape> shps_;
   VertexField* const vertex_fields_;
   DriversGPUAccessor drvs_;
-  const InteractionWrapperAccessor interaction_classifier_accessor_;
+  const ClassifierViewAccessor interaction_classifier_accessor_;
 
   static constexpr InteractionType IT = InteractionType::ParticleDriver;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(long idx) const {
     struct AddInteractionFunc {
-      const InteractionWrapperAccessor& interaction_classifier_accessor_;
+      const ClassifierViewAccessor& interaction_classifier_accessor_;
       InteractionTypePerCellCounter prefix_;
       ONIKA_HOST_DEVICE_FUNC inline void operator()(PlaceholderInteraction& item, int sub_i, int sub_j) {
         item.pair_.pi_.sub_ = sub_i;
@@ -132,19 +132,19 @@ struct ClassifyDriverInteractionsFunc {
       if (drv_type == DRIVER_TYPE::CYLINDER) {
         item.pair_.type_ = InteractionTypeId::VertexCylinder;
         Cylinder& driver = drvs_.get_typed_driver<Cylinder>(drvs_idx);
-        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_);
+        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_.data());
       } else if (drv_type == DRIVER_TYPE::SURFACE) {
         item.pair_.type_ = InteractionTypeId::VertexSurface;
         Surface& driver = drvs_.get_typed_driver<Surface>(drvs_idx);
-        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_);
+        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_.data());
       } else if (drv_type == DRIVER_TYPE::BALL) {
         item.pair_.type_ = InteractionTypeId::VertexBall;
         Ball& driver = drvs_.get_typed_driver<Ball>(drvs_idx);
-        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_);
+        add_driver_interaction(driver, func, item, n_particles, rcut_inc_, t, id, vertex_cell, h, shps_.data());
       } else if (drv_type == DRIVER_TYPE::RSHAPE) {
         RShapeDriver& driver = drvs_.get_typed_driver<RShapeDriver>(drvs_idx);
         add_driver_interaction(driver, cell_id, func, item, n_particles, rcut_inc_, t, id, rx, ry, rz, vertex_cell, h,
-                               quat, shps_);
+                               quat, shps_.data());
       }
     }
   }

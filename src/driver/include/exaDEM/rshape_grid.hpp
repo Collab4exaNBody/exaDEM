@@ -36,6 +36,18 @@ struct RShapeDriverGridCellIndexes {
       cells_; /**< List of grid cells with their respective counts of vertices, edges, and faces. */
   onika::memory::CudaMMVector<int> data_; /**< List of vertex, edge, and face indices for all grid cells. */
 
+  /** @brief Non-owning, span-based, host/device-callable view over this grid. */
+  struct View {
+    onika::cuda::span<const RShapeDriverCellIndexes> cells_;
+    onika::cuda::span<const int> data_;
+  };
+
+  ONIKA_HOST_DEVICE_FUNC inline View view() const {
+    using onika::cuda::vector_data;
+    using onika::cuda::vector_size;
+    return View{{vector_data(cells_), vector_size(cells_)}, {vector_data(data_), vector_size(data_)}};
+  }
+
   /** @brief Reset the grid.
    */
   void reset() {
@@ -124,10 +136,10 @@ struct RShapeDriverCellAccessor {
    * @param grid_rshape Grid storing the geometric elements projected for the R-Shape driver.
    */
   ONIKA_HOST_DEVICE_FUNC RShapeDriverCellAccessor(size_t cell_idx, const RShapeDriverGridCellIndexes& grid_rshape) {
-    using onika::cuda::vector_data;
+    const RShapeDriverGridCellIndexes::View view = grid_rshape.view();
 
-    const RShapeDriverCellIndexes& cell_info = vector_data(grid_rshape.cells_)[cell_idx];
-    const int* data_ptr = vector_data(grid_rshape.data_);
+    const RShapeDriverCellIndexes& cell_info = view.cells_[cell_idx];
+    const int* data_ptr = view.data_.data();
     grid_id_vertices_ = data_ptr + cell_info.offset_;
     grid_id_edges_ = grid_id_vertices_ + cell_info.nvertices_;
     grid_id_faces_ = grid_id_edges_ + cell_info.nedges_;

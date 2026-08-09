@@ -5,13 +5,13 @@
 #include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/parallel_for.h>
 
-#include <exaDEM/classifier/interaction_wrapper.hpp>
-#include <exaDEM/classifier/interaction_wrapper_accessor.hpp>
+#include <exaDEM/classifier/classifier_dispatcher.hpp>
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
 typedef onika::oarray_t<int, InteractionTypeId::NTypes> InteractionTypePerCellCounter;
-typedef onika::oarray_t<InteractionWrapper<ParticleParticle>, InteractionTypeId::NTypesPP> InteractionParticleAccessor;
+typedef onika::oarray_t<ClassifierContainer<ParticleParticle>::View, InteractionTypeId::NTypesPP>
+    InteractionParticleAccessor;
 
 ONIKA_HOST_DEVICE_FUNC inline InteractionTypePerCellCounter operator+(const InteractionTypePerCellCounter& a,
                                                                       const InteractionTypePerCellCounter& b) {

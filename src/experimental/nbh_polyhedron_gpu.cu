@@ -154,14 +154,14 @@ inline void initialize_interaction_scratch(ScratchT& scratch, size_t total_pp, o
 
 /* Add persistent driver interactions that were not found in the current classifier contents.
    wrapper_storage backs interaction_classifier_accessor's spans and must be owned by the caller:
-   reassigning it here (rather than to a function-local InteractionWrapperStorage) keeps those
+   reassigning it here (rather than to a function-local ClassifierViewStorage) keeps those
    spans valid after this function returns, for whatever the caller does next with the accessor. */
 template <typename ContainerT, typename WrapperAccessorT, typename CellStorageAccessorT>
 inline void add_unmatched_persistent_interactions(const InteractionHistory& history, size_t cell_size,
                                                   ContainerT& container,
                                                   WrapperAccessorT& interaction_classifier_accessor,
                                                   CellStorageAccessorT& cell_storage_accessor,
-                                                  InteractionWrapperStorage& wrapper_storage) {
+                                                  ClassifierViewStorage& wrapper_storage) {
   std::vector<PlaceholderInteraction> unmatched_persistent;
   for (size_t ci = 0; ci < cell_size; ++ci) {
     size_t hist_begin = history.start_[ci];
@@ -202,13 +202,13 @@ inline void add_unmatched_persistent_interactions(const InteractionHistory& hist
     auto& c = container.template get_data<InteractionType::ParticleDriver>(type);
     const size_t old_size = c.size();
     container.resize(type, old_size + 1);
-    InteractionWrapperStorage wrappers_tmp(container);
-    InteractionWrapperAccessor tmp_accessor = wrappers_tmp.accessor();
+    ClassifierViewStorage wrappers_tmp(container);
+    ClassifierViewAccessor tmp_accessor = wrappers_tmp.accessor();
     auto& w = tmp_accessor.get_typed_accessor<InteractionType::ParticleDriver>(type);
     w.set(old_size, interaction);
   }
 
-  wrapper_storage = InteractionWrapperStorage(container);
+  wrapper_storage = ClassifierViewStorage(container);
   interaction_classifier_accessor = wrapper_storage.accessor();
 }
 
@@ -312,7 +312,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     // BlockParallelForOptions bopts;
 
     CountDriverInteractionsFunc driver_counter = {grid_cells,         cell_storage_accessor, cell_indices,   *rcut_inc,
-                                                  shapes_data.data(), vertex_field_data,     driver_accessor};
+                                                  shapes_data.view(), vertex_field_data,     driver_accessor};
 
     const auto neighbor_cell_pair_count = cell_neighbor_host_storage.owner_cell_.size();
     ONIKA_CU_DEVICE_SYNCHRONIZE();
@@ -465,7 +465,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
          typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
       auto& c = interaction_container.get_data<ParticleParticle>(typeID);
       c.resize(total_interactions_per_type[typeID]);
-      particle_particle_classifier_accessor[typeID] = InteractionWrapper(c);
+      particle_particle_classifier_accessor[typeID] = c.view();
     }
 
     // ****** Resize Classifier for Driver ******* //
@@ -484,8 +484,8 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
       interaction_container.resize(typeID, newsize);
     }
 
-    InteractionWrapperStorage wrappers(interaction_container);
-    InteractionWrapperAccessor interaction_classifier_accessor = wrappers.accessor();
+    ClassifierViewStorage wrappers(interaction_container);
+    ClassifierViewAccessor interaction_classifier_accessor = wrappers.accessor();
     ONIKA_CU_PROF_RANGE_POP();
 
     if (*enable_persistent_interactions) {
@@ -521,7 +521,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     ClassifyDriverInteractionsFunc driver_classifier = {
         grid_cells,         cell_storage_accessor, cell_indices,    *rcut_inc,
-        shapes_data.data(), vertex_field_data,     driver_accessor, interaction_classifier_accessor};
+        shapes_data.view(), vertex_field_data,     driver_accessor, interaction_classifier_accessor};
     parallel_queue << set_lane(kLaneParticleDriver)
                    << parallel_for(active_cell_count, driver_classifier,
                                    parallel_execution_context("nbh_gpu::classify_driver"), opts)
@@ -532,8 +532,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     history.prefetch_gpu(history_stream);
 
     ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::update_history");
-    UpdateHistoryFunc history_updater = {history.start_.data(), history.size_.data(), history.data_.data(),
-                                         cell_storage_accessor, interaction_classifier_accessor};
+    UpdateHistoryFunc history_updater = {history.view(), cell_storage_accessor, interaction_classifier_accessor};
 
     ONIKA_CU_STREAM_SYNCHRONIZE(history_stream);
     ONIKA_CU_STREAM_SYNCHRONIZE(driver_stream);

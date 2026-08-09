@@ -98,7 +98,8 @@ struct StoreAtIndexFunctor {
   size_t idx_;
   template <typename VecT, typename ValueT>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(VecT& vec, const ValueT& value) const {
-    onika::cuda::vector_data(vec)[idx_] = value;
+    auto* __restrict__ ptr = vec.data();
+    ptr[idx_] = value;
   }
 };
 /// @brief zip_apply_on_flat_tuple functor: `value = vec[idx]`, symmetric to StoreAtIndexFunctor.
@@ -106,18 +107,20 @@ struct LoadAtIndexFunctor {
   size_t idx_;
   template <typename ValueT, typename VecT>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(ValueT& value, VecT& vec) const {
-    value = onika::cuda::vector_data(vec)[idx_];
+    auto* __restrict__ ptr = vec.data();
+    value = ptr[idx_];
   }
 };
 
 /// @brief Same as StoreAtIndexFunctor, but indexes via the container's own operator[] instead of
-/// vector_data(...): needed for a onika::cuda::span<T> (InteractionWrapper's `fm_`/`bk_`), whose
-/// operator[] is device-compatible directly (vector_data has no span overload).
+/// vector_data(...): needed for a onika::cuda::span<T> (ClassifierContainer<IT>::View's `fm_`/`bk_`),
+/// whose operator[] is device-compatible directly (vector_data has no span overload).
 struct StoreAtIndexSpanFunctor {
   size_t idx_;
   template <typename VecT, typename ValueT>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(VecT& vec, const ValueT& value) const {
-    vec[idx_] = value;
+    auto* __restrict__ ptr = vec.data();
+    ptr[idx_] = value;
   }
 };
 
@@ -126,17 +129,18 @@ struct LoadAtIndexSpanFunctor {
   size_t idx_;
   template <typename ValueT, typename VecT>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(ValueT& value, VecT& vec) const {
-    value = vec[idx_];
+    auto* __restrict__ ptr = vec.data();
+    value = ptr[idx_];
   }
 };
 
-/// @brief zip_apply_on_flat_tuple functor: `dst = span{vector_data(src), vector_size(src)}`,
-/// used by InteractionWrapper<IT>'s constructors to build a span<T> tuple from a
-/// ClassifierContainer<IT>'s VectorT<T> tuple (same field list/order).
+/// @brief zip_apply_on_flat_tuple functor: `dst = make_span(src)`, used by
+/// ClassifierContainer<IT>::view() to build a span<T> tuple (ClassifierContainer<IT>::View's
+/// `fm_`/`bk_`) from a ClassifierContainer<IT>'s VectorT<T> tuple (same field list/order).
 struct ToSpanFunctor {
   template <typename SpanT, typename VecT>
   inline void operator()(SpanT& dst, VecT& src) const {
-    dst = SpanT{onika::cuda::vector_data(src), onika::cuda::vector_size(src)};
+    dst = onika::cuda::make_span(src);
   }
 };
 }  // namespace exaDEM
@@ -146,8 +150,8 @@ struct ToSpanFunctor {
 //
 // Everything from here to the end of the file is X-macro / token-pasting machinery that
 // generates tags, tuple types, and operator[] overloads for the Interaction/InnerBondInteraction/
-// ClassifierContainer<IT>/InteractionWrapper<IT> field system. It is fragile and easy to break in
-// ways that are hard to diagnose:
+// ClassifierContainer<IT>/ClassifierContainer<IT>::View field system. It is fragile and easy to
+// break in ways that are hard to diagnose:
 //   - Macros here assume specific member names in the *calling* struct (`fm_` or `bk_`), never
 //     passed as an argument, only relied upon by convention -- see EXADEM_INTERACTION_FIELD_ACCESSOR
 //     vs EXADEM_INTERACTION_FIELD_ACCESSOR_BK below. Using the wrong one silently targets the

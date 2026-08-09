@@ -132,7 +132,7 @@ inline void collect_persistent_inner_bonds(PersistentInnerBonds& persistent, Cel
 
 inline void fill_classifier_persistent_inner_bonds(const PersistentInnerBonds& persistent,
                                                    const CellStorage::View& cell_storage_accessor,
-                                                   InteractionWrapperAccessor& interaction_classifier_accessor) {
+                                                   ClassifierViewAccessor& interaction_classifier_accessor) {
   auto& wrapper =
       interaction_classifier_accessor.get_typed_accessor<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
   const size_t n = persistent.interactions_.size();

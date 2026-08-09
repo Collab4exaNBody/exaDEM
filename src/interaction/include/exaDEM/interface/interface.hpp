@@ -19,7 +19,7 @@ under the License.
 
 #include <mpi.h>
 
-#include <exaDEM/classifier/interaction_wrapper.hpp>
+#include <exaDEM/classifier/classifier_container.hpp>
 #include <exaDEM/interaction/placeholder_interaction.hpp>
 
 namespace exaDEM {

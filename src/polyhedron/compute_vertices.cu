@@ -66,7 +66,7 @@ class PolyhedraComputeVertices : public OperatorNode {
 
  public:
   inline void execute() final {
-    const shape* shps = shapes_collection->data();
+    onika::cuda::span<shape> shps = shapes_collection->view();
     bool is_def_box = !domain->xform_is_identity();
     auto& vertex_fields = *cvf;
     const auto cells = grid->cells();

@@ -123,7 +123,7 @@ class ComputeForceMomentDriverOp : public OperatorNode {
           ComputeForceMomentDriverFunc func = {centers.data(), contact_position, fn, ft, forces.data(), moments.data()};
           // Get interactions of this type
           auto [data, size] = classifier.get_info<IT>(typeID);
-          InteractionWrapper<IT> interactions(data);
+          ClassifierContainer<IT>::View interactions = data.view();
           // Configure parallel execution
           ParallelForOptions opts;
           opts.omp_scheduling = OMP_SCHED_STATIC;

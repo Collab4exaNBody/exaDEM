@@ -16,24 +16,28 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
  */
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
-#include <onika/scg/operator_factory.h>
-#include <exanb/core/grid.h>
-#include <onika/math/basic_types.h>
 
-#include <exanb/core/parallel_grid_algorithm.h>
-#include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/grid_fields.h>
+#include <onika/math/basic_types.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
+// exanb
 #include <exanb/core/domain.h>
-#include <exanb/compute/reduce_cell_particles.h>
+#include <exanb/core/grid.h>
+#include <exanb/core/grid_fields.h>
+#include <exanb/core/make_grid_variant_operator.h>
+#include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/mpi/particle_displ_over_async_request.h>
 
+// reduce
+#include <exanb/compute/reduce_cell_particles.h>
 #include <mpi.h>
 
+// exaDEM
 #include <exaDEM/polyhedron/backup_dem.hpp>
-#include <exaDEM/traversal.hpp>
 #include <exaDEM/shapes.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
 template <typename GridT>
@@ -69,7 +73,7 @@ class VertexDisplacementOver : public OperatorNode {
   // -----------------------------------------------
   inline void execute() final {
     MPI_Comm comm = *mpi;
-    const shapes& shps = *shapes_collection;
+    shapes& shps = *shapes_collection;
 
     // interest for auto here, is to be able to easily switch between single and double precision floats if needed.
     const double max_dist = *threshold;
@@ -92,14 +96,12 @@ class VertexDisplacementOver : public OperatorNode {
       auto user_cb = onika::parallel::ParallelExecutionCallback{reduction_end_callback, &(*particle_displ_comm)};
 
       if (defbox) {
-        ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->data_.data(), backup_dem->index_map_.data(), max_dist2, shps.data(),
-                                                         domain->xform()};
+        ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->view(), max_dist2, shps.view(), domain->xform()};
 
         reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
                               parallel_execution_context(), user_cb, rcpo);
       } else {  // defbox
-        ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->data_.data(), backup_dem->index_map_.data(), max_dist2, shps.data(),
-                                                          domain->xform()};
+        ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->view(), max_dist2, shps.view(), domain->xform()};
 
         reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
                               parallel_execution_context(), user_cb, rcpo);
@@ -111,13 +113,12 @@ class VertexDisplacementOver : public OperatorNode {
       if (grid->number_of_cells() > 0) {
         auto user_cb = onika::parallel::ParallelExecutionCallback{};
         if (defbox) {
-          ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->data_.data(), backup_dem->index_map_.data(), max_dist2, shps.data(),
-                                                           domain->xform()};
+          ReduceMaxVertexDisplacementFunctor<true> func = {backup_dem->view(), max_dist2, shps.view(), domain->xform()};
 
           reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
                                 parallel_execution_context(), user_cb, rcpo);
         } else {  // defbox
-          ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->data_.data(), backup_dem->index_map_.data(), max_dist2, shps.data(),
+          ReduceMaxVertexDisplacementFunctor<false> func = {backup_dem->view(), max_dist2, shps.view(),
                                                             domain->xform()};
 
           reduce_cell_particles(*grid, false, func, particle_displ_comm->m_particles_over, reduce_field_set,
