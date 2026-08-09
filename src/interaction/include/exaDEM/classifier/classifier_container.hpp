@@ -503,10 +503,6 @@ struct ClassifierContainer<InteractionType::ParticleDriver> {
     }
   };
 
-  /**
-   * @brief Builds a View over this container, i.e. one onika::cuda::span<T> per field
-   * (via make_span), so it can be passed to GPU kernels/parallel_for functors.
-   */
   inline View view() {
     View v;
     ToSpanFunctor to_span_func;
