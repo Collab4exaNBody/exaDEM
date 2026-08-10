@@ -58,7 +58,7 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
   inline void execute() final {
     auto& interfaces = *im;
     const MultiMatContactParamsTAccessor<ContactParams> cp = multimat_cp->get_multimat_accessor();
-    InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
+    auto data_view = ic->get_sticked_interaction_wrapper();
     auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic->contact_state(InteractionTypeId::InnerBond);
     auto cells = grid->cells();
 
@@ -68,12 +68,15 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
       // If the interface is broken, we need to update the friction of the interactions and break them
       if (interfaces.break_interface_[i] == true) {
         auto [offset, size] = interfaces.data_[i];
-        auto type_a = cells[data_wrapper[attr::cell_i][offset]][exanb::field::group][data_wrapper[attr::p_i][offset]];
-        auto type_b = cells[data_wrapper[attr::cell_j][offset]][exanb::field::group][data_wrapper[attr::p_j][offset]];
+        auto type_a = cells[data_view[attr::cell_i][offset]][exanb::field::group][data_view[attr::p_i][offset]];
+        auto type_b = cells[data_view[attr::cell_j][offset]][exanb::field::group][data_view[attr::p_j][offset]];
+
+        uint8_t* __restrict__ unbroken = data_view[attr::unbroken].data();
+        Vec3d* __restrict__ friction = data_view[attr::friction].data();
 
         for (size_t j = 0; j < size; j++) {
           size_t idx = j + offset;
-          data_wrapper[attr::unbroken][idx] = false;  // mark the interaction as broken.
+          unbroken[idx] = false;  // mark the interaction as broken.
           // Note that broken interactions will be transformed in VertexVertex interactions by the unclassify operator.
           // so we need to use the contact parameters of VertexVertex interactions.
           double ft = exanb::norm(ft_ptr[idx]);
@@ -84,11 +87,11 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
           // If the friction is higher than the threshold.
           // We need to reduce it to the threshold
           if (ft > ft_threshold && ft > 0) {
-            data_wrapper[attr::friction][idx] = ft_ptr[idx] * ft_threshold / ft;
+            friction[idx] = ft_ptr[idx] * ft_threshold / ft;
           }
           // If the normal force is zero, we need to set the friction to zero.
           if (dn_ptr[idx] > 0) {
-            data_wrapper[attr::friction][idx] = Vec3d{0, 0, 0};
+            friction[idx] = Vec3d{0, 0, 0};
           }
         }
       }

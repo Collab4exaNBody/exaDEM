@@ -60,11 +60,11 @@ struct SimulationStateReducFunc {
   void operator()(ClassifierContainer<IT>& container, int coef, const double* const dnp, IOSimInteractionResult& result,
                   PEC& pec) {
     size_t size = container.size();
-    InteractionWrapper<IT> dataWrapper(container);
+    typename ClassifierContainer<IT>::View dataView = container.view();
     IOSimInteractionFunctor func = {dnp, coef};
 
     if (size > 0 && dnp != nullptr) {  // skip it if forces has not been computed
-      reduce_data<IT, IOSimInteractionFunctor, IOSimInteractionResult>(pec(), dataWrapper, func, size, result);
+      reduce_data<IT, IOSimInteractionFunctor, IOSimInteractionResult>(pec(), dataView, func, size, result);
     }
   }
 };

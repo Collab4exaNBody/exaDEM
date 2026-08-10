@@ -301,17 +301,20 @@ class StickPolyhedraOperator : public OperatorNode {
                   const double area = pi.id_ < pj.id_ ? shpi->get_face_area(i, hi) : shpj->get_face_area(j, hj);
                   RuptureCriteria& criterion = item.as<InnerBondInteraction>()[attr::criterion];
                   criterion.mode_ = ibp.mode_;
-                  if (ibp.mode_ == RuptureMode::EnergyMixedMode) {
-                    criterion.energy_criterion() = 2 * area * ibp.crit1_;
-                  } else if (ibp.mode_ == RuptureMode::EnergySeparateMode) {
-                    criterion.energy_normal_criterion() = 2 * area * ibp.crit1_;
-                    criterion.energy_tangential_criterion() = 2 * area * ibp.crit2_;
-                  } else if (ibp.mode_ == RuptureMode::StressEnergySeparateMode) {
-                    criterion.energy_criterion() = 2 * area * ibp.crit1_;
-                    criterion.stress_criterion() = area * ibp.crit2_;  // crit2 = sigma_n (Check surface area factor)
-
-                  } else {
-                    assert(false);
+                  switch (ibp.mode_) {
+                    case RuptureMode::EnergyMixedMode:
+                      criterion.energy_criterion() = 2 * area * ibp.crit1_;
+                      break;
+                    case RuptureMode::EnergySeparateMode:
+                      criterion.energy_normal_criterion() = 2 * area * ibp.crit1_;
+                      criterion.energy_tangential_criterion() = 2 * area * ibp.crit2_;
+                      break;
+                    case RuptureMode::StressEnergySeparateMode:
+                      criterion.energy_criterion() = 2 * area * ibp.crit1_;
+                      criterion.stress_criterion() = area * ibp.crit2_;  // crit2 = sigma_n (Check surface area factor)
+                      break;
+                    default:
+                      assert(false);
                   }
 
                   found = true;

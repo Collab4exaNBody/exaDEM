@@ -35,26 +35,15 @@ template <typename GridT>
 std::stringstream create_buffer(GridT& grid, Classifier& ic) {
   std::stringstream stream;
   auto cells = grid.cells();
-  for (size_t i = 0; i < ic.number_of_waves(); i++) {
-    size_t size = ic.get_size(i);
-    InterationPairWrapper wrapper;
-    if (get_typed(i) == 0) {
-      wrapper.wrap(ic.get_data<ParticleParticle>(i));
-    } else if (get_typed(i) == 1) {
-      wrapper.wrap(ic.get_data<ParticleDriver>(i));
-    } else if (get_typed(i) == 2) {
-      wrapper.wrap(ic.get_data<InnerBond>(i));
-    } else {
-      lout << "skip interaction type: " << i << std::endl;
-      continue;
-    }
 
-    auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.contact_state(i);
-
+  // Writes one row per non-empty interaction, driven only by a ClassifierContainer<IT>::View's
+  // pair-identity fields (id_i, id_j, cell_i, cell_j, p_i, p_j, sub_i, sub_j, swap, ghost); the
+  // type-specific fm_ fields (friction, moment, ...) are not needed here.
+  auto write_wave = [&](auto view, size_t size, double* dn_ptr, Vec3d* cp_ptr, Vec3d* fn_ptr, Vec3d* ft_ptr) {
     for (size_t idx = 0; idx < size; idx++) {
       double dn = dn_ptr[idx];
       double f = exanb::norm(fn_ptr[idx]) + exanb::norm(ft_ptr[idx]);
-      auto [i, j, type, swap, ghost] = wrapper(idx);
+      auto [i, j, type, swap, ghost] = view.pair(idx);
       /** filter empty interactions */
       if (f != 0 || dn < 0 || type == InteractionTypeId::InnerBond) {
         /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
@@ -82,6 +71,21 @@ std::stringstream create_buffer(GridT& grid, Classifier& ic) {
           stream << std::endl;
         }
       }
+    }
+  };
+
+  for (size_t i = 0; i < ic.number_of_waves(); i++) {
+    size_t size = ic.get_size(i);
+    auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.contact_state(i);
+    if (get_typed(i) == 0) {
+      write_wave(ic.get_data<ParticleParticle>(i).view(), size, dn_ptr, cp_ptr, fn_ptr, ft_ptr);
+    } else if (get_typed(i) == 1) {
+      write_wave(ic.get_data<ParticleDriver>(i).view(), size, dn_ptr, cp_ptr, fn_ptr, ft_ptr);
+    } else if (get_typed(i) == 2) {
+      write_wave(ic.get_data<InnerBond>(i).view(), size, dn_ptr, cp_ptr, fn_ptr, ft_ptr);
+    } else {
+      lout << "skip interaction type: " << i << std::endl;
+      continue;
     }
   }
   return stream;

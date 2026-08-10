@@ -10,6 +10,16 @@ struct InteractionHistory {
   VectorT<size_t> size_;
   VectorT<PlaceholderInteraction> data_;
 
+  struct View {
+    onika::cuda::span<size_t> start_;
+    onika::cuda::span<size_t> size_;
+    onika::cuda::span<PlaceholderInteraction> data_;
+  };
+
+  inline View view() {
+    return View{onika::cuda::make_span(start_), onika::cuda::make_span(size_), onika::cuda::make_span(data_)};
+  }
+
   void prefetch_gpu(onikaStream_t& st) {
     ONIKA_PREFETCH(start_.data(), start_.size() * sizeof(size_t), 0, st);
     ONIKA_PREFETCH(size_.data(), size_.size() * sizeof(size_t), 0, st);
@@ -90,30 +100,32 @@ void setup_history_clean_ges(CellsT& cells, size_t* idxs, size_t ncells, GridCel
 
 struct UpdateHistoryImplFunc {
   template <InteractionType IT>
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(InteractionWrapper<IT>& wrapper, const PlaceholderInteraction& I,
-                                                int begin, int end) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(typename ClassifierContainer<IT>::View& interactions_view,
+                                                const PlaceholderInteraction& I, int begin, int end) const {
     for (int j = begin; j < end; j++) {
-      if (wrapper.same(j, I)) {
-        wrapper.update(j, I);
+      if (interactions_view.same(j, I)) {
+        interactions_view.update(j, I);
       }
     }
   }
 };
 
 struct UpdateHistoryFunc {
-  size_t* __restrict__ start_;
-  size_t* __restrict__ size_;
-  PlaceholderInteraction* __restrict__ data_;
+  InteractionHistory::View history_;
   CellStorage::View cell_storage_accessor_;
-  InteractionWrapperAccessor interaction_classifier_accessor_;
+  ClassifierViewAccessor interaction_classifier_accessor_;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(long idx) const {
     const UpdateHistoryImplFunc func;
-    size_t begin = start_[idx];
-    size_t end = begin + size_[idx];
+    const size_t* __restrict__ start = history_.start_.data();
+    const size_t* __restrict__ size = history_.size_.data();
+    const PlaceholderInteraction* __restrict__ data = history_.data_.data();
+
+    size_t begin = start[idx];
+    size_t end = begin + size[idx];
 
     for (size_t i = begin; i < end; i++) {
-      const PlaceholderInteraction& I = data_[i];
+      const PlaceholderInteraction& I = data[i];
       auto type = I.type();
       const int a = cell_storage_accessor_.offset_[idx][type];
       const int b = a + cell_storage_accessor_.size_[idx][type];

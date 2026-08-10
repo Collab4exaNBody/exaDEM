@@ -71,7 +71,7 @@ class StoreBrokenInterfaceOp : public OperatorNode {
   inline void execute() final {
     auto& interfaces = *im;
     long step = *timestep;
-    InteractionWrapper<InteractionType::InnerBond> data_wrapper = ic->get_sticked_interaction_wrapper();
+    auto data_view = ic->get_sticked_interaction_wrapper();
     auto cells = grid->cells();
     auto& shps = *shapes_collection;
 
@@ -86,7 +86,7 @@ class StoreBrokenInterfaceOp : public OperatorNode {
         // If the interface is broken, we need to update the friction of the interactions and break them
         if (interfaces.break_interface_[i] == true) {
           auto [offset, size] = interfaces.data_[i];
-          auto I = data_wrapper(offset);
+          auto I = data_view(offset);
           assert(I.pair_.type_ == InteractionTypeId::InnerBond);
           auto owner_particle = I.pair_.owner();
           auto type_a = exadem_field_value(cells, owner_particle, field::type);
@@ -96,7 +96,7 @@ class StoreBrokenInterfaceOp : public OperatorNode {
           vertices.resize(size);
 
           for (size_t idx = 0; idx < size; idx++) {
-            vertices[idx] = data_wrapper[attr::sub_i][offset + idx];
+            vertices[idx] = data_view[attr::sub_i][offset + idx];
           }
 
           tmp.pos = exadem_field_center(cells, owner_particle);

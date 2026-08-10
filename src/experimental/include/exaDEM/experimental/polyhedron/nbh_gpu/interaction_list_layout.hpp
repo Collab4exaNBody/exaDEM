@@ -13,8 +13,8 @@ struct InteractionListBuildLayout {
 
 inline void classify_interaction_grid(Classifier& classifier, Traversal& traversal, InteractionListBuildLayout& interaction_list_layout,
                                       GridCellParticleInteraction& ges) {
-  InteractionWrapperStorage wrappers(classifier);
-  InteractionWrapperAccessor interaction_classifier_accessor = wrappers.accessor();
+  ClassifierViewStorage wrappers(classifier);
+  ClassifierViewAccessor interaction_classifier_accessor = wrappers.accessor();
   auto [cell_ptr, cell_size] = traversal.info();
 
   constexpr bool do_ghost_only = false;

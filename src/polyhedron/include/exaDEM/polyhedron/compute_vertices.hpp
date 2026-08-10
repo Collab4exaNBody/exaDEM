@@ -28,14 +28,15 @@ struct PolyhedraComputeVerticesFunctor;
 
 template <>
 struct PolyhedraComputeVerticesFunctor<true> {
-  const shape* __restrict__ shps;
+  onika::cuda::span<shape> shps;
   VertexField* __restrict__ pcvf;
   Mat3d xform;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(const size_t cell_idx, const size_t p, const uint32_t type,
                                                 const double& rx, const double& ry, const double& rz, const double& h,
                                                 const exanb::Quaternion& orient) const {
     ParticleVertexView vertices = {p, pcvf[cell_idx]};
-    const auto& shp = shps[type];
+    const shape* __restrict__ shps_ptr = shps.data();
+    const auto& shp = shps_ptr[type];
     const int nv = shp.get_number_of_vertices();
     const Vec3d position = xform * Vec3d{rx, ry, rz};
     for (int i = 0; i < nv; i++) {
@@ -48,13 +49,14 @@ struct PolyhedraComputeVerticesFunctor<true> {
 // économiser les registres de xform
 template <>
 struct PolyhedraComputeVerticesFunctor<false> {
-  const shape* __restrict__ shps;
+  onika::cuda::span<shape> shps;
   VertexField* __restrict__ pcvf;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(const size_t cell_idx, const size_t p, const uint32_t type,
                                                 const double& rx, const double& ry, const double& rz, const double& h,
                                                 const exanb::Quaternion& orient) const {
     ParticleVertexView vertices = {p, pcvf[cell_idx]};
-    const auto& shp = shps[type];
+    const shape* __restrict__ shps_ptr = shps.data();
+    const auto& shp = shps_ptr[type];
     const int nv = shp.get_number_of_vertices();
     const Vec3d position = {rx, ry, rz};
     for (int i = 0; i < nv; i++) {

@@ -22,7 +22,7 @@ under the License.
 namespace exaDEM {
 template <typename FieldT>
 struct poly_div_field_volume {
-  const shape* shps_;
+  onika::cuda::span<shape> shps_;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(const uint32_t type, double homothety, FieldT& value) const {
     const double volume = shps_[type].get_volume(homothety);
     value = value / volume;

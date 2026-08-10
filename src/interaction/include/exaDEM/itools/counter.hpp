@@ -70,9 +70,9 @@ using VectorT = onika::memory::CudaMMVector<T>;
  */
 template <InteractionType IT, class FuncT, class ResultT>
 struct ReduceTFunctor {
-  InteractionWrapper<IT> data_; /**< Pointer to the data to be reduced. */
-  const FuncT func_;            /**< Functor that defines how reduction is performed. */
-  ResultT* reduced_val_;        /**< Pointer to the result of the reduction. */
+  typename ClassifierContainer<IT>::View data_; /**< Pointer to the data to be reduced. */
+  const FuncT func_;                            /**< Functor that defines how reduction is performed. */
+  ResultT* reduced_val_;                        /**< Pointer to the result of the reduction. */
 
   /**
    * @brief Operator to perform the reduction.
@@ -80,7 +80,7 @@ struct ReduceTFunctor {
    */
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const {
     ResultT local_val = ResultT();
-    func_(local_val, i, data_, reduce_thread_local_t{});
+    func_.template operator()<IT>(local_val, i, data_, reduce_thread_local_t{});
 
     ONIKA_CU_BLOCK_SHARED onika::cuda::UnitializedPlaceHolder<ResultT> team_val_place_holder;
     ResultT& team_val = team_val_place_holder.get_ref();
@@ -139,7 +139,7 @@ struct IOSimInteractionFunctor {
    */
   template <InteractionType IT>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult& local, const uint64_t idx,
-                                                const InteractionWrapper<IT>& interactions,
+                                                const typename ClassifierContainer<IT>::View& interactions,
                                                 reduce_thread_local_t = {}) const {
     auto I = interactions(idx);
     if (I.pair_.ghost_ != InteractionPair::PartnerGhost) {
@@ -196,8 +196,8 @@ struct IOSimInteractionFunctor {
  */
 template <InteractionType IT, typename Func, typename ResultT>
 static inline onika::parallel::ParallelExecutionWrapper reduce_data(onika::parallel::ParallelExecutionContext* exec_ctx,
-                                                                    InteractionWrapper<IT>& data, Func& func,
-                                                                    uint64_t size, ResultT& result) {
+                                                                    typename ClassifierContainer<IT>::View& data,
+                                                                    Func& func, uint64_t size, ResultT& result) {
   using namespace onika::parallel;
   using namespace onika::parallel;
   // #     if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)

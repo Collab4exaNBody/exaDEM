@@ -115,19 +115,19 @@ struct AnalysisDataPacker {
  */
 template <InteractionType IT, typename K, typename AnalysisDataPacker, typename... Args>
 struct WrapperContactLawForAll {
-  mutable InteractionWrapper<IT> data_;  // warning, onika::parallel for requires const classes ...
-  const K kernel_;                       /**< Kernel function to be applied. */
-  AnalysisDataPacker packer_;            /**< Kernel function to be applied. */
-  std::tuple<Args...> params_;           /**< Tuple of parameters to be passed to the kernel function. */
+  mutable typename ClassifierContainer<IT>::View data_;  // warning, onika::parallel for requires const classes ...
+  const K kernel_;                                       /**< Kernel function to be applied. */
+  AnalysisDataPacker packer_;                            /**< Kernel function to be applied. */
+  std::tuple<Args...> params_; /**< Tuple of parameters to be passed to the kernel function. */
 
   /**
    * @brief Constructor to initialize the WrapperForAll struct.
    *
-   * @param d Wrapper that contains the array of elements.
+   * @param d View that contains the array of elements.
    * @param k Kernel function to be applied.
    * @param args Additional parameters passed to the kernel function.
    */
-  WrapperContactLawForAll(InteractionWrapper<IT>& d, K& k, AnalysisDataPacker& p, Args... args)
+  WrapperContactLawForAll(typename ClassifierContainer<IT>::View& d, K& k, AnalysisDataPacker& p, Args... args)
       : data_(std::move(d)), kernel_(k), packer_(p), params_(std::tuple<Args...>(args...)) {}
 
   /**
@@ -160,17 +160,17 @@ struct WrapperContactLawForAll {
 /*******************************************/
 template <InteractionType IT, typename K, typename... Args>
 struct WrapperForAll {
-  InteractionWrapper<IT> data_;
+  typename ClassifierContainer<IT>::View data_;
   K kernel_;                    // Kernel function to be applied. */
   std::tuple<Args...> params_;  // Tuple of parameters to be passed to the kernel function. */
 
   /**
    * @brief Constructor to initialize the WrapperForAll struct.
-   * @param d Wrapper that contains the array of elements.
+   * @param d View that contains the array of elements.
    * @param k Kernel function to be applied.
    * @param args Additional parameters passed to the kernel function.
    */
-  WrapperForAll(InteractionWrapper<IT>& d, K& k, Args... args)
+  WrapperForAll(typename ClassifierContainer<IT>::View& d, K& k, Args... args)
       : data_(std::move(d)), kernel_(k), params_(std::tuple<Args...>(args...)) {}
 
   /**
@@ -194,6 +194,13 @@ struct WrapperForAll {
     apply(i, tuple_helper::gen_seq<sizeof...(Args)>{});
   }
 };
+
+template <typename ViewT, typename K, typename AnalysisDataPacker, typename... Args>
+WrapperContactLawForAll(ViewT&, K&, AnalysisDataPacker&, Args...)
+    -> WrapperContactLawForAll<ViewT::kInteractionType, K, AnalysisDataPacker, Args...>;
+
+template <typename ViewT, typename K, typename... Args>
+WrapperForAll(ViewT&, K&, Args...) -> WrapperForAll<ViewT::kInteractionType, K, Args...>;
 }  // namespace exaDEM
 
 namespace onika {
@@ -242,7 +249,7 @@ static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext*
   opts.omp_scheduling = OMP_SCHED_STATIC;
   AnalysisDataPacker packer(ic, type);
   auto [data, size] = ic.get_info<IT>(type);
-  InteractionWrapper<IT> interactions(data);
+  typename ClassifierContainer<IT>::View interactions = data.view();
   WrapperContactLawForAll func(interactions, kernel, packer, args...);
   return parallel_for(size, func, exec_ctx, opts);
 }

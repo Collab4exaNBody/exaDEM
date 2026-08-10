@@ -50,24 +50,24 @@ struct CellInteractionInformation {
 
 struct CopierFunc {
   template <InteractionType IT>
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(InteractionWrapper<IT>& wrapper,
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(typename ClassifierContainer<IT>::View& interactions_view,
                                                 PlaceholderInteraction* __restrict__ data_ptr, size_t& shift, int start,
                                                 int size) const {
     for (int j = start; j < start + size; j++) {
       // printf("CopierFunc::shift %lu\n", shift);
-      data_ptr[shift++] = wrapper(j);
-      // printf("CopierFunc -> shift %lu, id %lu id wrapper %lu\n", shift, data_ptr[shift-1].pair.pi.id,
-      // wrapper(j).pair.pi.id);
+      data_ptr[shift++] = interactions_view(j);
+      // printf("CopierFunc -> shift %lu, id %lu id interactions_view %lu\n", shift, data_ptr[shift-1].pair.pi.id,
+      // interactions_view(j).pair.pi.id);
     }
   }
 };
 
 struct CountActiveInteractionFunc {
   template <InteractionType IT>
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(InteractionWrapper<IT>& wrapper, size_t& count, int start,
-                                                int size) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(typename ClassifierContainer<IT>::View& interactions_view,
+                                                size_t& count, int start, int size) const {
     for (int j = start; j < start + size; j++) {
-      if (wrapper(j).active()) {
+      if (interactions_view(j).active()) {
         // printf("count %lu\n", count);
         count++;
       }
@@ -77,12 +77,12 @@ struct CountActiveInteractionFunc {
 
 struct CopierActiveInteractionFunc {
   template <InteractionType IT>
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(InteractionWrapper<IT>& wrapper,
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(typename ClassifierContainer<IT>::View& interactions_view,
                                                 onika::cuda::span<PlaceholderInteraction> data, size_t& shift,
                                                 int start, int size) const {
     for (int j = start; j < start + size; j++) {
-      if (wrapper(j).active()) {
-        data[shift++] = wrapper(j);
+      if (interactions_view(j).active()) {
+        data[shift++] = interactions_view(j);
       }
     }
   }
@@ -148,7 +148,7 @@ inline void add_particle_particle_totals(CellStorage& cell_storage, CellInteract
  */
 template <bool ghost_only, bool active_interaction, bool append = false>
 void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info, CellStorage& cell_storage,
-                              InteractionWrapperAccessor& interaction_classifier_accessor,
+                              ClassifierViewAccessor& interaction_classifier_accessor,
                               GridCellParticleInteraction& ges, const int typeID_start = 0,
                               const int typeID_end = InteractionTypeId::NTypes) {
   // Number of non-empty cells to process

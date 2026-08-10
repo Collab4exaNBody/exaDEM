@@ -18,13 +18,12 @@ under the License.
 #pragma once
 
 #include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/classifier/interaction_wrapper.hpp>
 
 namespace exaDEM {
-struct InteractionWrapperAccessor {
-  InteractionWrapper<ParticleParticle>* particleparticle_;
-  InteractionWrapper<ParticleDriver>* particledriver_;
-  InteractionWrapper<InnerBond>* innerbond_;
+struct ClassifierViewAccessor {
+  ClassifierContainer<ParticleParticle>::View* particleparticle_;
+  ClassifierContainer<ParticleDriver>::View* particledriver_;
+  ClassifierContainer<InnerBond>::View* innerbond_;
 
   template <InteractionType IT>
   ONIKA_HOST_DEVICE_FUNC auto& get_typed_accessor(int idx) const {
@@ -38,33 +37,33 @@ struct InteractionWrapperAccessor {
   }
 };
 
-struct InteractionWrapperStorage {
+struct ClassifierViewStorage {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
-  VectorT<InteractionWrapper<ParticleParticle>> particleparticle_;
-  VectorT<InteractionWrapper<ParticleDriver>> particledriver_;
-  VectorT<InteractionWrapper<InnerBond>> innerbond_;
+  VectorT<ClassifierContainer<ParticleParticle>::View> particleparticle_;
+  VectorT<ClassifierContainer<ParticleDriver>::View> particledriver_;
+  VectorT<ClassifierContainer<InnerBond>::View> innerbond_;
 
-  InteractionWrapperStorage(Classifier& classifier) {
+  ClassifierViewStorage(Classifier& classifier) {
     particleparticle_.resize(InteractionTypeId::NTypesPP);
     for (size_t i = InteractionTypeId::FirstIdParticle; i <= InteractionTypeId::LastIdParticle; i++) {
       auto& c = classifier.get_data<InteractionType::ParticleParticle>(i);
-      particleparticle_[i] = InteractionWrapper(c);
+      particleparticle_[i] = c.view();
     }
     particledriver_.resize(InteractionTypeId::NTypesParticleDriver);
     for (size_t i = InteractionTypeId::FirstIdDriver; i <= InteractionTypeId::LastIdDriver; i++) {
       auto& c = classifier.get_data<InteractionType::ParticleDriver>(i);
-      particledriver_[i - InteractionTypeId::FirstIdDriver] = InteractionWrapper<InteractionType::ParticleDriver>(c);
+      particledriver_[i - InteractionTypeId::FirstIdDriver] = c.view();
     }
     innerbond_.resize(InteractionTypeId::NTypesStickecParticles);
     for (size_t i = InteractionTypeId::FirstIdInnerBond; i <= InteractionTypeId::LastIdInnerBond; i++) {
       auto& c = classifier.get_data<InteractionType::InnerBond>(i);
-      innerbond_[i - InteractionTypeId::FirstIdInnerBond] = InteractionWrapper(c);
+      innerbond_[i - InteractionTypeId::FirstIdInnerBond] = c.view();
     }
   }
 
-  InteractionWrapperAccessor accessor() {
-    InteractionWrapperAccessor res;
+  ClassifierViewAccessor accessor() {
+    ClassifierViewAccessor res;
     res.particleparticle_ = particleparticle_.data();
     res.particledriver_ = particledriver_.data();
     res.innerbond_ = innerbond_.data();
@@ -72,22 +71,22 @@ struct InteractionWrapperStorage {
   }
 
  private:
-  InteractionWrapperStorage() {}
+  ClassifierViewStorage() {}
 };
 
 template <InteractionType... Types>
-struct InteractionDispatcher {
+struct ClassifierDispatcher {
   template <typename Func, typename... Args>
-  ONIKA_HOST_DEVICE_FUNC static inline void dispatch(uint16_t type, const InteractionWrapperAccessor& iwa,
-                                                     const Func& func, Args&&... args) {
+  ONIKA_HOST_DEVICE_FUNC static inline void dispatch(uint16_t type, const ClassifierViewAccessor& iva, const Func& func,
+                                                     Args&&... args) {
     ((get_typed(type) == static_cast<int>(Types)
-          ? (func.template operator()<Types>(iwa.template get_typed_accessor<Types>(type), std::forward<Args>(args)...),
+          ? (func.template operator()<Types>(iva.template get_typed_accessor<Types>(type), std::forward<Args>(args)...),
              0)
           : 0),
      ...);
   }
 };
 
-using IDispatcher = InteractionDispatcher<InteractionType::ParticleParticle, InteractionType::ParticleDriver,
-                                          InteractionType::InnerBond>;
+using IDispatcher = ClassifierDispatcher<InteractionType::ParticleParticle, InteractionType::ParticleDriver,
+                                         InteractionType::InnerBond>;
 }  // namespace exaDEM

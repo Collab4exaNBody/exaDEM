@@ -53,7 +53,7 @@ class DivStressV : public OperatorNode {
   inline void execute() final {
     if (shapes_collection.has_value())  // polyhedra
     {
-      poly_div_field_volume<exanb::Mat3d> func = {shapes_collection->data()};
+      poly_div_field_volume<exanb::Mat3d> func = {shapes_collection->view()};
       compute_cell_particles(*grid, false, func, compute_field_set_type, parallel_execution_context());
     } else  // spheres
     {

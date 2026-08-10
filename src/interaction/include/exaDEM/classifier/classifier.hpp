@@ -20,7 +20,6 @@ under the License.
 #include <cassert>
 #include <exaDEM/classifier/classifier_container.hpp>
 #include <exaDEM/classifier/contact_state.hpp>
-#include <exaDEM/classifier/interaction_wrapper.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 
@@ -155,13 +154,13 @@ struct Classifier {
     return data[typed_id];
   }
 
-  /** @brief Retrieves a wrapper for the sticked interaction of a specific type.
-   * @return Wrapper for the sticked interaction.
+  /** @brief Retrieves a view for the sticked interaction of a specific type.
+   * @return View over the sticked interaction.
    */
-  InteractionWrapper<InteractionType::InnerBond> get_sticked_interaction_wrapper() {
+  WaveIB::View get_sticked_interaction_wrapper() {
     WaveIB& ib = get_data<InnerBond>(InteractionTypeId::FirstIdInnerBond);
     assert(innerbonds_.size() == InteractionTypeId::NTypesInnerBond);
-    return InteractionWrapper<InteractionType::InnerBond>(ib);  // WARNING here
+    return ib.view();
   }
 
   /** @brief Retrieves the size of the container for a specific interaction type.
@@ -293,4 +292,4 @@ void for_all_interactions(Classifier& classifier, Func& func, Args&&... args) {
 }
 }  // namespace exaDEM
 
-#include <exaDEM/classifier/interaction_wrapper_accessor.hpp>
+#include <exaDEM/classifier/classifier_dispatcher.hpp>
