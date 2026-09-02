@@ -1,0 +1,8 @@
+dump_inspector_target:
+  - dump_inspector:
+     filename: ExaDEMOutputDir/CheckpointFiles/exadem_0000000000.dump
+
+simulation:
+  name: dump_inspector
+  body:
+    - dump_inspector_target

@@ -1,5 +1,7 @@
 enable_testing()
 
+add_subdirectory(tools)
+
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 set(PYTHON_SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
