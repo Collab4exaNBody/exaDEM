@@ -23,21 +23,16 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
+// ExaNBody
 #include <exanb/core/domain.h>
 #include <exanb/io/mpi_file_io.h>
 #include <exanb/io/sim_dump_io.h>
+
 #include <string>
 
 namespace exaDEM {
 using namespace exanb;
 
-/**
- * @brief Reads a .dump checkpoint file's header and prints its content.
- *
- * Only the header is read (particle data is never touched), so this operator does not need to
- * know the field set the dump was written with -- unlike read_dump_particle_interaction and
- * friends, which decode particle data and therefore require a compile-time-known field set.
- */
 class DumpInspectorNode : public OperatorNode {
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"Path to the .dump checkpoint file to inspect."});
@@ -53,7 +48,7 @@ class DumpInspectorNode : public OperatorNode {
         YAML example:
 
           - dump_inspector:
-             filename: CheckpointFiles/exadem_0000012345.dump
+             filename: ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump
       )EOF";
   }
 

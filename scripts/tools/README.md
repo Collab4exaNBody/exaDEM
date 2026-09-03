@@ -20,7 +20,47 @@ CMake also drops a `dump_inspector` launcher in the build directory, right next 
 itself, so it works the same way:
 
 ```bash
-./scripts/tools/dump_inspector.sh CheckpointFiles/exadem_0000012345.dump   # from the source tree
+./scripts/tools/dump_inspector.sh ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump   # from the source tree
 # or, from the build directory:
-./dump_inspector CheckpointFiles/exadem_0000012345.dump
+./dump_inspector ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump
+```
+
+# ConvExaDEMToRockable
+
+## Usage
+
+Exports a `.dump` checkpoint file's particles to a Rockable `.conf` file. Interactions are not
+exported yet.
+
+Without a `.shp` shape file, the particle `name` column is the numeric type index from the
+`.dump` (a `.dump` alone has no shape-name mapping). Pass one as a third argument to map each
+type index to its real shape name (by registration order); it gets copied next to the output
+`.conf` as `shape.shp`, and one `density <group> <value>` header line is added per group actually
+present (`mass / shape.get_volume(homothety)` of the first particle found in that group whose
+shape is known).
+
+Which of the known `.dump` field-set combinations (interaction/fragmentation, with/without a
+`group` field) matches a given dump is auto-detected from its header -- nothing to choose.
+
+`dt` (timestep size) isn't stored in a `.dump` either, so the `.conf`'s `dt` line stays `0`
+unless you pass `--dt=VALUE`.
+
+```bash
+./scripts/tools/ConvExaDEMToRockable ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump conf0.conf   # from the source tree
+./scripts/tools/ConvExaDEMToRockable ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump conf0.conf ExaDEMOutputDir/CheckpointFiles/RestartShapeFile.shp
+# or, from the build directory:
+./ConvExaDEMToRockable ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump conf0.conf
+./ConvExaDEMToRockable ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump conf0.conf ExaDEMOutputDir/CheckpointFiles/RestartShapeFile.shp
+```
+
+**`--last`** picks the highest-iteration `exadem_*.dump` (and `RestartShapeFile.shp`, if present)
+under `<input-dir>/CheckpointFiles/` for you -- `<input-dir>` defaults to `ExaDEMOutputDir`,
+override with `--input-dir=DIR`:
+
+```bash
+./scripts/tools/ConvExaDEMToRockable --last conf0.conf
+./scripts/tools/ConvExaDEMToRockable --last conf0.conf --input-dir=OtherOutputDir
+./scripts/tools/ConvExaDEMToRockable --last conf0.conf --dt=0.0001
+# or, from the build directory:
+./ConvExaDEMToRockable --last conf0.conf
 ```

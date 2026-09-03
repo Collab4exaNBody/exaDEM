@@ -1,0 +1,9 @@
+dump_to_rockable_target:
+  - dump_to_rockable:
+     filename: ExaDEMOutputDir/CheckpointFiles/exadem_0000000000.dump
+     conf_filename: conf0.conf
+
+simulation:
+  name: dump_to_rockable
+  body:
+    - dump_to_rockable_target
