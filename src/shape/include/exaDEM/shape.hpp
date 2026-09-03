@@ -54,10 +54,10 @@ struct shape {
   VectorT<exanb::Vec3d> vertices_;  ///< List of vertices of the shape
   exanb::Vec3d inertia_on_mass_;    ///< Inertia vector divided by mass
   VectorT<OBB> obb_vertices_;       ///< Oriented bounding boxes for each vertex
-                                     ///< (only for RShape drivers)
+                                    ///< (only for RShape drivers)
   VectorT<OBB> obb_edges_;          ///< OBBs for edges (only for RShape drivers)
   VectorT<OBB> obb_faces_;          ///< OBBs for faces (only for RShape drivers)
-  OBB obb_;                           ///< Global OBB of the shape
+  OBB obb_;                         ///< Global OBB of the shape
   VectorT<int> edges_;              ///< List of edges, stored as pairs of vertex indices
   VectorT<int> faces_;              ///< List of faces, stored as sequences of vertex indices
   VectorT<int> offset_faces_;       ///< Offsets for indexing faces in faces_
@@ -65,7 +65,7 @@ struct shape {
   double radius_;                   ///< Radius used for contact detection
   double volume_;                   ///< Volume of the shape
   std::string name_ = "undefined";  ///< Name of the shape
-  OBBtree<subBox> obbtree_;           ///< Optional OBB tree for accelerated collision detection
+  OBBtree<subBox> obbtree_;         ///< Optional OBB tree for accelerated collision detection
 
   /**
    * @brief Default constructor.
