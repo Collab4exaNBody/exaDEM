@@ -35,9 +35,7 @@ exported yet.
 Without a `.shp` shape file, the particle `name` column is the numeric type index from the
 `.dump` (a `.dump` alone has no shape-name mapping). Pass one as a third argument to map each
 type index to its real shape name (by registration order); it gets copied next to the output
-`.conf` as `shape.shp`, and one `density <group> <value>` header line is added per group actually
-present (`mass / shape.get_volume(homothety)` of the first particle found in that group whose
-shape is known).
+`.conf` as `shape.shp`.
 
 Which of the known `.dump` field-set combinations (interaction/fragmentation, with/without a
 `group` field) matches a given dump is auto-detected from its header -- nothing to choose.

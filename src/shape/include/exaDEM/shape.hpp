@@ -148,6 +148,15 @@ struct shape {
   }
 
   /**
+   * @brief Compute the density of a particle using this shape, from its mass.
+   * @param mass Particle mass.
+   * @param h homothety
+   * @return Density (mass / volume at homothety h)
+   */
+  ONIKA_HOST_DEVICE_FUNC
+  inline double get_density(double mass, double h = 1.0) const { return mass / get_volume(h); }
+
+  /**
    * @brief Get the inertia on mass vector.
    * @param h homothety
    * @return Reference to inertia vector

@@ -142,7 +142,7 @@ class DumpToRockableNode : public OperatorNode {
 
   inline void write_conf(bool has_group, bool has_cluster) {
     std::vector<std::string> type_names;
-    shapes shps;  // kept alive for get_volume() (density), not just the name lookup below
+    shapes shps;  // kept alive for get_density(), not just the name lookup below
     const bool have_shapes = shape_filename.has_value();
     if (have_shapes) {
       exaDEM::read_shp(shps, *shape_filename);
@@ -188,7 +188,7 @@ class DumpToRockableNode : public OperatorNode {
         const uint32_t g = group ? group[p] : 0;
         const std::string name = (have_shapes && t < type_names.size()) ? type_names[t] : std::to_string(t);
         if (have_shapes && t < shps.size() && group_density.find(g) == group_density.end()) {
-          group_density[g] = mass[p] / shps[t]->get_volume(h[p]);
+          group_density[g] = shps[t]->get_density(mass[p], h[p]);
         }
         particles_buffer << name << " " << g << " " << (cluster ? cluster[p] : 0) << " " << h[p] << " " << rx[p] << " "
                          << ry[p] << " " << rz[p] << " " << vx[p] << " " << vy[p] << " " << vz[p] << " " << 0 << " "

@@ -15,8 +15,8 @@
 # Without a .shp file, the particle "name" column is the numeric type index from the .dump
 # (a .dump alone has no shape-name mapping). With one, it maps each type index to its shape name
 # (by registration order), copies it next to file.conf as shape.shp, and adds one
-# "density <group> <value>" header line per group actually present (mass / shape volume of the
-# first particle found in that group whose shape is known).
+# "density <group> <value>" header line per group actually present (via shape::get_density(mass,
+# homothety) of the first particle found in that group whose shape is known).
 #
 # Which of the known .dump field-set combinations (interaction/fragmentation, with/without a
 # "group" field) matches this dump is auto-detected by the dump_to_rockable operator itself.
