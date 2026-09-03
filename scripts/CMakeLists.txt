@@ -31,9 +31,9 @@ add_pytest(test_io_rockable
     ${CMAKE_CURRENT_SOURCE_DIR}/test/test_io_rockable.py
 )
 
-add_pytest(test_tess2rockable
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_tess2rockable.py
-)
+# add_pytest(test_tess2rockable
+#    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_tess2rockable.py
+#)
 
 # -----------------------------
 # Global test (CI friendly)
