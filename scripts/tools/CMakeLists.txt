@@ -17,3 +17,13 @@ file(WRITE ${CMAKE_BINARY_DIR}/ConvExaDEMToRockable
   "exec \"${CMAKE_CURRENT_SOURCE_DIR}/ConvExaDEMToRockable\" \"$@\"\n")
 file(CHMOD ${CMAKE_BINARY_DIR}/ConvExaDEMToRockable
   PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+# ConvExaDEMToTxt: same pattern, for scripts/tools/ConvExaDEMToTxt.
+file(WRITE ${CMAKE_BINARY_DIR}/ConvExaDEMToTxt
+  "#!/bin/bash\n"
+  "# ConvExaDEMToTxt: exports a .dump checkpoint file to text. See scripts/tools/ConvExaDEMToTxt\n"
+  "export EXADEM_BIN=\"${CMAKE_BINARY_DIR}/exaDEM\"\n"
+  "export DUMP_TO_TXT_MSP=\"${CMAKE_CURRENT_SOURCE_DIR}/dump_to_txt.msp\"\n"
+  "exec \"${CMAKE_CURRENT_SOURCE_DIR}/ConvExaDEMToTxt\" \"$@\"\n")
+file(CHMOD ${CMAKE_BINARY_DIR}/ConvExaDEMToTxt
+  PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)

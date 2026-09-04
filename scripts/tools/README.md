@@ -62,3 +62,21 @@ override with `--input-dir=DIR`:
 # or, from the build directory:
 ./ConvExaDEMToRockable --last conf0.conf
 ```
+
+# ConvExaDEMToTxt
+
+## Usage
+
+Exports a `.dump` checkpoint file to plain-text column files: `<pattern_name>_particles.txt`
+(one row per particle, columns taken from the dump's own header), `<pattern_name>_interactions.txt`
+(one row per interaction, only written if the dump has any), and `<pattern_name>_summary.txt`.
+
+Whether the dump was written with `read_dump_particle_interaction` or
+`read_dump_particle_fragmentation` (which adds a `cluster` field) is detected automatically from
+the dump's own header -- nothing to choose.
+
+```bash
+./scripts/tools/ConvExaDEMToTxt CheckpointFiles/exadem_0000012345.dump my_export   # from the source tree
+# or, from the build directory:
+./ConvExaDEMToTxt CheckpointFiles/exadem_0000012345.dump my_export
+```

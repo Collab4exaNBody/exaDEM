@@ -1,0 +1,9 @@
+dump_to_txt_target:
+  - dump_to_txt:
+     filename: CheckpointFiles/exadem_0000000000.dump
+     pattern_name: dump_export
+
+simulation:
+  name: dump_to_txt
+  body:
+    - dump_to_txt_target
