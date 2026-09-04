@@ -185,7 +185,6 @@ inline void read_shp(shapes& shps, const std::string file_name, bool big_shape =
     if (line == "<") {
       shape shp = read_shp(input, big_shape);
       shps.add_shape(shp);
-      if (!big_shape) shp.print();
       if (vtk) shp.write_paraview();
     }
   }

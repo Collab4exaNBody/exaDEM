@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# AI GENERATED FILE: DO NOT EDIT, REGENERATE FROM dump_to_rockable.msp INSTEAD.
+# Exports a .dump checkpoint file's particles to a Rockable .conf file. Interactions are not
+# exported yet.
+#
+# Usage:
+#   ./ConvExaDEMToRockable <path/to/file.dump> <path/to/file.conf> [path/to/shapes.shp] [extra exaDEM args]
+#   ./ConvExaDEMToRockable --last <path/to/file.conf> [--input-dir=DIR] [extra exaDEM args]
+#
+# --last finds the highest-iteration exadem_*.dump under <input-dir>/CheckpointFiles/ (default
+# input-dir: ExaDEMOutputDir, matching restart_template.py's convention) and, if present,
+# <input-dir>/CheckpointFiles/RestartShapeFile.shp as the shape file -- so you don't have to look
+# them up yourself.
+#
+# Without a .shp file, the particle "name" column is the numeric type index from the .dump
+# (a .dump alone has no shape-name mapping). With one, it maps each type index to its shape name
+# (by registration order), copies it next to file.conf as shape.shp, and adds one
+# "density <group> <value>" header line per group actually present (via shape::get_density(mass,
+# homothety) of the first particle found in that group whose shape is known).
+#
+# Which of the known .dump field-set combinations (interaction/fragmentation, with/without a
+# "group" field) matches this dump is auto-detected by the dump_to_rockable operator itself.
+#
+# --dt=VALUE sets the .conf's "dt" line (timestep size); not stored in a .dump, so it stays 0
+# unless given here.
+#
+# The exaDEM binary is looked up on PATH by default; set EXADEM_BIN to point at a specific one.
+set -euo pipefail
+
+LAST=false
+INPUT_DIR="ExaDEMOutputDir"
+DT=""
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --last)
+      LAST=true
+      ;;
+    --input-dir=*)
+      INPUT_DIR="${arg#--input-dir=}"
+      ;;
+    --dt=*)
+      DT="${arg#--dt=}"
+      ;;
+    *)
+      ARGS+=("$arg")
+      ;;
+  esac
+done
+set -- "${ARGS[@]+"${ARGS[@]}"}"
+
+if [ "$LAST" = true ]; then
+  if [ $# -lt 1 ]; then
+    echo "Usage: $0 --last <path/to/file.conf> [--input-dir=DIR] [--dt=VALUE] [extra exaDEM args]" >&2
+    exit 1
+  fi
+  CONF_FILE="$1"
+  shift
+
+  CHECKPOINT_DIR="$INPUT_DIR/CheckpointFiles"
+  if [ ! -d "$CHECKPOINT_DIR" ]; then
+    echo "Error: no checkpoint directory found at $CHECKPOINT_DIR (use --input-dir=DIR to override)" >&2
+    exit 1
+  fi
+
+  LAST_ITER=-1
+  for f in "$CHECKPOINT_DIR"/exadem_*.dump; do
+    [ -e "$f" ] || continue
+    base="$(basename "$f")"
+    num="${base#exadem_}"
+    num="${num%.dump}"
+    num=$((10#$num))  # force base 10: these are zero-padded (e.g. 0000012345)
+    [ "$num" -gt "$LAST_ITER" ] && LAST_ITER=$num
+  done
+  if [ "$LAST_ITER" -lt 0 ]; then
+    echo "Error: no exadem_*.dump file found in $CHECKPOINT_DIR" >&2
+    exit 1
+  fi
+
+  DUMP_FILE="$(printf "%s/exadem_%010d.dump" "$CHECKPOINT_DIR" "$LAST_ITER")"
+  echo "Using latest checkpoint: $DUMP_FILE" >&2
+
+  SHAPE_FILE="$CHECKPOINT_DIR/RestartShapeFile.shp"
+  if [ ! -f "$SHAPE_FILE" ]; then
+    echo "No RestartShapeFile.shp found in $CHECKPOINT_DIR, particle names will be numeric type indices." >&2
+    SHAPE_FILE=""
+  fi
+else
+  if [ $# -lt 2 ]; then
+    echo "Usage: $0 <path/to/file.dump> <path/to/file.conf> [path/to/shapes.shp] [--dt=VALUE] [extra exaDEM args]" >&2
+    echo "   or: $0 --last <path/to/file.conf> [--input-dir=DIR] [--dt=VALUE] [extra exaDEM args]" >&2
+    exit 1
+  fi
+  DUMP_FILE="$1"
+  CONF_FILE="$2"
+  shift 2
+
+  SHAPE_FILE=""
+  if [ $# -ge 1 ] && [[ "$1" != --* ]]; then
+    SHAPE_FILE="$1"
+    shift
+  fi
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+EXADEM_BIN="${EXADEM_BIN:-exaDEM}"
+DUMP_TO_ROCKABLE_MSP="${DUMP_TO_ROCKABLE_MSP:-$SCRIPT_DIR/dump_to_rockable.msp}"
+
+TMP_MSP="$(mktemp --suffix=.msp)"
+trap 'rm -f "$TMP_MSP"' EXIT
+
+{
+  echo "dump_to_rockable_target:"
+  echo "  - dump_to_rockable:"
+  echo "     filename: \"$DUMP_FILE\""
+  echo "     conf_filename: \"$CONF_FILE\""
+  if [ -n "$SHAPE_FILE" ]; then
+    echo "     shape_filename: \"$SHAPE_FILE\""
+  fi
+  if [ -n "$DT" ]; then
+    echo "     dt: $DT"
+  fi
+} > "$TMP_MSP"
+
+"$EXADEM_BIN" "$DUMP_TO_ROCKABLE_MSP" "$TMP_MSP" "$@"

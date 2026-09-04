@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AI GENERATED FILE: DO NOT EDIT
+# AI GENERATED FILE: DO NOT EDIT, REGENERATE FROM dump_to_rockable.msp INSTEAD.
 # Prints the header of a .dump checkpoint file, taking the path as a real command-line argument
 # (dump_inspector.msp alone requires editing "dump_inspector_target" by hand or passing an
 # override file; this wrapper generates that override for you).
