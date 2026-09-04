@@ -27,3 +27,14 @@ file(WRITE ${CMAKE_BINARY_DIR}/ConvExaDEMToTxt
   "exec \"${CMAKE_CURRENT_SOURCE_DIR}/ConvExaDEMToTxt\" \"$@\"\n")
 file(CHMOD ${CMAKE_BINARY_DIR}/ConvExaDEMToTxt
   PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+# ConvExaDEMToXYZ: same pattern, for scripts/tools/ConvExaDEMToXYZ.
+file(WRITE ${CMAKE_BINARY_DIR}/ConvExaDEMToXYZ
+  "#!/bin/bash\n"
+  "# ConvExaDEMToXYZ: exports a .dump checkpoint file's particles to a plain XYZ file. See "
+  "scripts/tools/ConvExaDEMToXYZ\n"
+  "export EXADEM_BIN=\"${CMAKE_BINARY_DIR}/exaDEM\"\n"
+  "export DUMP_TO_XYZ_MSP=\"${CMAKE_CURRENT_SOURCE_DIR}/dump_to_xyz.msp\"\n"
+  "exec \"${CMAKE_CURRENT_SOURCE_DIR}/ConvExaDEMToXYZ\" \"$@\"\n")
+file(CHMOD ${CMAKE_BINARY_DIR}/ConvExaDEMToXYZ
+  PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# AI GENERATED FILE: DO NOT EDIT, REGENERATE FROM dump_to_rockable.msp INSTEAD.
 # Exports a .dump checkpoint file to plain-text column files:
 #   <pattern_name>_particles.txt, <pattern_name>_interactions.txt (if any), <pattern_name>_summary.txt
 #
