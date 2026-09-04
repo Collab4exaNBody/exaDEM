@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Exports a .dump checkpoint file to plain-text column files:
+#   <pattern_name>_particles.txt, <pattern_name>_interactions.txt (if any), <pattern_name>_summary.txt
+#
+# Usage:
+#   ./ConvExaDEMToTxt <path/to/file.dump> <pattern_name> [extra exaDEM args]
+#
+# Whether the dump was written with read_dump_particle_interaction or
+# read_dump_particle_fragmentation (which adds a "cluster" field) is auto-detected by the
+# dump_to_txt operator itself, from the dump's own header -- nothing to pick here.
+#
+# The exaDEM binary is looked up on PATH by default; set EXADEM_BIN to point at a specific one.
+set -euo pipefail
+
+if [ $# -lt 2 ]; then
+  echo "Usage: $0 <path/to/file.dump> <pattern_name> [extra exaDEM args]" >&2
+  exit 1
+fi
+
+DUMP_FILE="$1"
+PATTERN_NAME="$2"
+shift 2
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+EXADEM_BIN="${EXADEM_BIN:-exaDEM}"
+DUMP_TO_TXT_MSP="${DUMP_TO_TXT_MSP:-$SCRIPT_DIR/dump_to_txt.msp}"
+
+TMP_MSP="$(mktemp --suffix=.msp)"
+trap 'rm -f "$TMP_MSP"' EXIT
+
+cat > "$TMP_MSP" <<EOF
+dump_to_txt_target:
+  - dump_to_txt:
+     filename: "$DUMP_FILE"
+     pattern_name: "$PATTERN_NAME"
+EOF
+
+"$EXADEM_BIN" "$DUMP_TO_TXT_MSP" "$TMP_MSP" "$@"
