@@ -1,0 +1,9 @@
+dump_to_xyz_target:
+  - dump_to_xyz:
+     filename: ExaDEMOutputDir/CheckpointFiles/exadem_0000000000.dump
+     xyz_filename: out.xyz
+
+simulation:
+  name: dump_to_xyz
+  body:
+    - dump_to_xyz_target

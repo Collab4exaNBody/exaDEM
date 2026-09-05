@@ -80,3 +80,40 @@ the dump's own header -- nothing to choose.
 # or, from the build directory:
 ./ConvExaDEMToTxt CheckpointFiles/exadem_0000012345.dump my_export
 ```
+
+# ConvExaDEMToXYZ
+
+## Usage
+
+Exports a `.dump` checkpoint file's particles to a plain XYZ file: particle count, domain bounds
+upper corner (`x y z`), then one `type x y z` row per particle.
+
+Without a `.shp` shape file, the `type` column is the numeric type index from the `.dump` (a
+`.dump` alone has no shape-name mapping). Pass one as a third argument to map each type index to
+its real shape name (by registration order).
+
+**`--type-map=[S1,S2,S3]`** maps each type index to a name directly (by position), without
+needing a `.shp` file -- handy when you know the names but don't have/want the shape geometry. It
+takes priority over a `.shp` file's names if both are given.
+
+Which of the known `.dump` field-set combinations (interaction/fragmentation, with/without a
+`group` field) matches a given dump is auto-detected from its header -- nothing to choose.
+
+```bash
+./scripts/tools/ConvExaDEMToXYZ ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump out.xyz   # from the source tree
+./scripts/tools/ConvExaDEMToXYZ ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump out.xyz ExaDEMOutputDir/CheckpointFiles/RestartShapeFile.shp
+./scripts/tools/ConvExaDEMToXYZ ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump out.xyz --type-map=[S1,S2,S3]
+# or, from the build directory:
+./ConvExaDEMToXYZ ExaDEMOutputDir/CheckpointFiles/exadem_0000012345.dump out.xyz
+```
+
+**`--last`** picks the highest-iteration `exadem_*.dump` (and `RestartShapeFile.shp`, if present)
+under `<input-dir>/CheckpointFiles/` for you -- `<input-dir>` defaults to `ExaDEMOutputDir`,
+override with `--input-dir=DIR`:
+
+```bash
+./scripts/tools/ConvExaDEMToXYZ --last out.xyz
+./scripts/tools/ConvExaDEMToXYZ --last out.xyz --input-dir=OtherOutputDir
+# or, from the build directory:
+./ConvExaDEMToXYZ --last out.xyz
+```
