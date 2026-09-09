@@ -16,18 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+#include <exaDEM/dump_field_sets.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exanb/extra_storage/sim_dump_reader_es.hpp>
 
 namespace exaDEM {
-using DumpFieldSet = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_mass,
-                              field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot,
-                              field::_arot, field::_inertia, field::_id, field::_type, field::_group>;
-using DumpFragmentationFieldSet =
-    FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_cluster, field::_mass,
-             field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot,
-             field::_inertia, field::_id, field::_type, field::_group>;
-
 template <typename GridT>
 using SimDumpReadParticlesInteractionTmpl = SimDumpReadParticlesES<GridT, exaDEM::PlaceholderInteraction, DumpFieldSet>;
 template <typename GridT>
@@ -35,14 +28,6 @@ using SimDumpReadParticlesFragmentationTmpl =
     SimDumpReadParticlesES<GridT, exaDEM::PlaceholderInteraction, DumpFragmentationFieldSet>;
 
 // Deprecated
-using DumpFieldSetLegacy122 = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz,
-                                       field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom,
-                                       field::_vrot, field::_arot, field::_inertia, field::_id, field::_type>;
-using DumpFragmentationFieldSetLegacy122 =
-    FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_cluster, field::_mass,
-             field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot,
-             field::_inertia, field::_id, field::_type>;
-
 template <typename GridT>
 using SimDumpReadParticlesInteractionTmplLegacy122 =
     SimDumpReadParticlesES<GridT, exaDEM::PlaceholderInteraction, DumpFieldSetLegacy122>;
