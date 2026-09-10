@@ -125,7 +125,7 @@ struct Surface {
   /**
    * @brief Write surface data into a stream.
    */
-  inline void dump_driver(const Driver_params& motion, int id, std::stringstream& stream) {
+  inline void dump_op(const Driver_params& motion, int id, std::stringstream& stream) {
     stream << "  - register_surface:" << std::endl;
     stream << "     id: " << id << std::endl;
     stream << "     state: {offset: " << fields_.offset_;
@@ -136,6 +136,23 @@ struct Surface {
     stream << ", surface: " << fields_.surface_;
     stream << "}" << std::endl;
     motion.dump_driver_params(motion_type_, stream);
+  }
+
+  /**
+   * @brief Write surface data into a stream, in the plain drivers: storage format (see
+   * dump_drivers/read_drivers), as opposed to dump_op()'s register_surface: operator form.
+   */
+  inline void dump_data(const Driver_params& motion, int id, std::stringstream& stream) {
+    stream << "  - type: SURFACE" << std::endl;
+    stream << "    id: " << id << std::endl;
+    stream << "    state: {offset: " << fields_.offset_;
+    stream << ", center: [" << fields_.center_ << "]";
+    stream << ", normal: [" << fields_.normal_ << "]";
+    stream << ", vel: [" << fields_.vel_ << "]";
+    stream << ", vrot: [" << fields_.vrot_ << "]";
+    stream << ", surface: " << fields_.surface_;
+    stream << "}" << std::endl;
+    motion.dump_driver_params(motion_type_, stream, 4);
   }
 
   /**

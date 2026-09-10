@@ -25,49 +25,17 @@ under the License.
 
 // ExaNBody
 #include <exanb/core/domain.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/grid_fields.h>
-#include <exanb/extra_storage/dump_filter_dynamic_data_storage.h>
-#include <exanb/io/grid_memory_compact.h>
-#include <exanb/io/mpi_file_io.h>
-#include <exanb/io/sim_dump_io.h>
-#include <exanb/io/sim_dump_reader.h>
 
 // ExaDEM
-#include <algorithm>
-#include <exaDEM/interaction/grid_cell_interaction.hpp>
-#include <exaDEM/interaction/placeholder_interaction.hpp>
+#include <exaDEM/dump_reader_utils.hpp>
 #include <exaDEM/shape_reader.hpp>
 #include <exaDEM/shapes.hpp>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
 
 namespace exaDEM {
 using namespace exanb;
 
-// TODO add a common .hpp for the 4 FieldSet definitions below (also duplicated in
-// dump_to_rockable.cpp and dump_to_txt.cpp).
-using DumpFieldSet = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_mass,
-                              field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot,
-                              field::_arot, field::_inertia, field::_id, field::_type, field::_group>;
-using DumpFragmentationFieldSet =
-    FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_cluster, field::_mass,
-             field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot,
-             field::_inertia, field::_id, field::_type, field::_group>;
-using DumpFieldSetLegacy122 = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz,
-                                       field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom,
-                                       field::_vrot, field::_arot, field::_inertia, field::_id, field::_type>;
-using DumpFragmentationFieldSetLegacy122 =
-    FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_cluster, field::_mass,
-             field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot,
-             field::_inertia, field::_id, field::_type>;
-
-using DumpToXYZGridT = GridFromFieldSet<FragmentationDEMFieldSet>;
-
 class DumpToXYZNode : public OperatorNode {
-  using GridT = DumpToXYZGridT;
+  using GridT = DumpReaderGridT;
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(std::string, filename, INPUT, REQUIRED, DocString{"The .dump file to convert."});
   ADD_SLOT(std::string, xyz_filename, INPUT, REQUIRED, DocString{"Output .xyz file path."});
@@ -103,44 +71,6 @@ class DumpToXYZNode : public OperatorNode {
       )EOF";
   }
 
-  inline std::vector<std::string> read_dump_field_names() {
-    std::string file_name = onika::data_file_path(*filename);
-    MpiIO file;
-    file.open(*mpi, file_name, "r");
-    SimDumpHeader header = {};
-    file.read(&header);
-    header.post_process();
-    file.close();
-    return std::vector<std::string>(header.m_fields, header.m_fields + header.m_nb_fields);
-  }
-
-  inline void read_particles(bool fragmentation, bool has_group) {
-    if (grid->number_of_cells() == 0) {
-      grid->set_cell_allocator_for_fields(FragmentationDEMFieldSet{});
-      grid->rebuild_particle_offsets();
-    }
-    if (fragmentation && has_group) {
-      ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFragmentationFieldSet> dump_filter = {
-          *ges, *grid};
-      exanb::read_dump(*mpi, ldbg, *grid, *domain, *physical_time, *timestep, *filename, DumpFragmentationFieldSet{},
-                       dump_filter);
-    } else if (fragmentation && !has_group) {
-      ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFragmentationFieldSetLegacy122>
-          dump_filter = {*ges, *grid};
-      exanb::read_dump(*mpi, ldbg, *grid, *domain, *physical_time, *timestep, *filename,
-                       DumpFragmentationFieldSetLegacy122{}, dump_filter);
-    } else if (!fragmentation && has_group) {
-      ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFieldSet> dump_filter = {*ges, *grid};
-      exanb::read_dump(*mpi, ldbg, *grid, *domain, *physical_time, *timestep, *filename, DumpFieldSet{}, dump_filter);
-    } else {
-      ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFieldSetLegacy122> dump_filter = {
-          *ges, *grid};
-      exanb::read_dump(*mpi, ldbg, *grid, *domain, *physical_time, *timestep, *filename, DumpFieldSetLegacy122{},
-                       dump_filter);
-    }
-    exanb::grid_memory_compact(*grid);
-  }
-
   inline void write_xyz() {
     std::vector<std::string> type_names;
     const bool have_type_map = type_map.has_value();
@@ -157,8 +87,6 @@ class DumpToXYZNode : public OperatorNode {
     }
     const bool have_names = have_type_map || have_shapes;
 
-    // Buffered because the particle count (first line) is only known once particles have been
-    // scanned.
     std::ostringstream particles_buffer;
     particles_buffer.precision(13);
     size_t n_particles = 0;
@@ -200,11 +128,11 @@ class DumpToXYZNode : public OperatorNode {
       return;
     }
 
-    const std::vector<std::string> field_names = read_dump_field_names();
-    const bool fragmentation = std::find(field_names.begin(), field_names.end(), "cluster") != field_names.end();
-    const bool has_group = std::find(field_names.begin(), field_names.end(), "group") != field_names.end();
+    const std::vector<std::string> field_names = read_dump_field_names(*mpi, *filename);
+    const bool fragmentation = dump_field_names_have_fragmentation(field_names);
+    const bool has_group = dump_field_names_have_group(field_names);
 
-    read_particles(fragmentation, has_group);
+    read_dump_particles(*mpi, *grid, *domain, *ges, *physical_time, *timestep, *filename, fragmentation, has_group);
     write_xyz();
   }
 };
