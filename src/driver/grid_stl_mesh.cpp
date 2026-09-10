@@ -16,7 +16,12 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-
+#include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
+#include <exanb/core/make_grid_variant_operator.h>
+#include <exanb/core/parallel_grid_algorithm.h>
+#include <mpi.h>
+#include <omp.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <onika/math/basic_types_stream.h>
@@ -24,14 +29,9 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
-// ExaNBody
-#include <exanb/core/domain.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/parallel_grid_algorithm.h>
-
-// ExaDEM
 #include <exaDEM/drivers.hpp>
+#include <iomanip>
+#include <vector>
 
 namespace exaDEM {
 using namespace exanb;
@@ -40,16 +40,13 @@ using namespace exanb;
  * @details This function prints the number of elements in the grid indexes
  * for vertices, edges, and faces.
  */
-inline void
-grid_indexes_summary(std::span<const RShapeDriverCellIndexes> cell_indexes) {
+inline void grid_indexes_summary(std::span<const RShapeDriverCellIndexes> cell_indexes) {
   const size_t size = cell_indexes.size();
-  size_t nb_fill_cells(0), nb_v(0), nb_e(0), nb_f(0), max_v(0), max_e(0),
-      max_f(0);
+  size_t nb_fill_cells(0), nb_v(0), nb_e(0), nb_f(0), max_v(0), max_e(0), max_f(0);
 
-#pragma omp parallel for reduction(+ : nb_fill_cells, nb_v, nb_e, nb_f)        \
-    reduction(max : max_v, max_e, max_f)
+#pragma omp parallel for reduction(+ : nb_fill_cells, nb_v, nb_e, nb_f) reduction(max : max_v, max_e, max_f)
   for (size_t i = 0; i < size; i++) {
-    const RShapeDriverCellIndexes &cell = cell_indexes[i];
+    const RShapeDriverCellIndexes& cell = cell_indexes[i];
     if (cell.nvertices_ == 0 && cell.nedges_ == 0 && cell.nfaces_ == 0) {
       continue;
     }
@@ -63,21 +60,13 @@ grid_indexes_summary(std::span<const RShapeDriverCellIndexes> cell_indexes) {
   }
 
   exanb::lout << "========= R-Shape Grid summary ==" << std::endl;
-  exanb::lout << "Number of emplty cells = " << nb_fill_cells << " / " << size
-              << std::endl;
-  exanb::lout << "Vertices (Total/Max)   = " << nb_v << " / " << max_v
-              << std::endl;
-  exanb::lout << "Edges    (Total/Max)   = " << nb_e << " / " << max_e
-              << std::endl;
-  exanb::lout << "Faces    (Total/Max)   = " << nb_f << " / " << max_f
-              << std::endl;
+  exanb::lout << "Number of emplty cells = " << nb_fill_cells << " / " << size << std::endl;
+  exanb::lout << "Vertices (Total/Max)   = " << nb_v << " / " << max_v << std::endl;
+  exanb::lout << "Edges    (Total/Max)   = " << nb_e << " / " << max_e << std::endl;
+  exanb::lout << "Faces    (Total/Max)   = " << nb_f << " / " << max_f << std::endl;
   exanb::lout << "=================================" << std::endl;
 }
 
-/**
- * @brief Per-cell scratch storage used while projecting an R-Shape driver
- * (vertices/edges/faces) onto the local cell grid.
- */
 struct RShapeDriverListOfElements {
   std::vector<int> vertices_; /**< Indices of vertices in the shape. */
   std::vector<int> edges_;    /**< Indices of edges in the shape. */
@@ -91,29 +80,23 @@ struct RShapeDriverListOfElements {
   }
 };
 
-template <class GridT> class UpdateGridRShapeOperator : public OperatorNode {
+template <class GridT>
+class UpdateGridRShapeOperator : public OperatorNode {
   using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz>;
   static constexpr ComputeFields compute_field_set{};
-  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD,
-           DocString{"MPI communicator for parallel processing."});
-  ADD_SLOT(GridT, grid, INPUT, REQUIRED,
-           DocString{"Grid used for computations."});
-  ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED,
-           DocString{"List of Drivers"});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD, DocString{"MPI communicator for parallel processing."});
+  ADD_SLOT(GridT, grid, INPUT, REQUIRED, DocString{"Grid used for computations."});
+  ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"rcut_max"});
-  ADD_SLOT(bool, force_reset, INPUT, REQUIRED,
-           DocString{"Force to rebuild grid for rshape meshes."});
+  ADD_SLOT(bool, force_reset, INPUT, REQUIRED, DocString{"Force to rebuild grid for rshape meshes."});
   ADD_SLOT(std::vector<Vec3d>, grid_rshape_buffer, PRIVATE);
   ADD_SLOT(std::vector<RShapeDriverListOfElements>, grid_rshape_cache, PRIVATE,
-           DocString{"Cached per-cell projection of the R-Shape driver, reused "
-                     "across executions."});
+           DocString{"Cached per-cell projection of the R-Shape driver, reused across executions."});
   ADD_SLOT(std::vector<omp_lock_t>, grid_rshape_mutexes, PRIVATE,
-           DocString{"OpenMP locks matching grid_rshape_cache, reused across "
-                     "executions."});
-  ADD_SLOT(bool, summary, false, PRIVATE,
-           DocString{"Display the grid summary"});
+           DocString{"OpenMP locks matching grid_rshape_cache, reused across executions."});
+  ADD_SLOT(bool, summary, false, PRIVATE, DocString{"Display the grid summary"});
 
-public:
+ public:
   inline std::string documentation() const final {
     return R"EOF(
       Update the list of information for each cell regarding the vertex,
@@ -121,31 +104,22 @@ public:
     )EOF";
   }
 
-  ~UpdateGridRShapeOperator() {
-    for (auto &m : *grid_rshape_mutexes) {
-      omp_destroy_lock(&m);
-    }
-  }
-
   inline void execute() final {
-    auto &grid_rshape = *grid_rshape_cache;
-    auto &mutexes = *grid_rshape_mutexes;
+    auto& grid_rshape = *grid_rshape_cache;
+    auto& mutexes = *grid_rshape_mutexes;
 
-    const auto &g = *grid;
+    const auto& g = *grid;
     const size_t n_cells = g.number_of_cells();
     const IJK dims = g.dimension();
     const double Rmax = *rcut_max;
     bool ForceResetRShapeGrid = *force_reset;
-    auto &gsb = *grid_rshape_buffer;
+    auto& gsb = *grid_rshape_buffer;
 
     for (size_t id = 0; id < drivers->get_size(); id++) {
       if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
-        exaDEM::RShapeDriver &driver =
-            drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
-        gsb.resize(driver.shp_.get_number_of_vertices()); // we just need to get
-                                                          // the upper size.
-        driver.shp_.compute_prepro_obb(gsb.data(), driver.fields_.center_,
-                                       driver.fields_.quat_);
+        exaDEM::RShapeDriver& driver = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
+        gsb.resize(driver.shp_.get_number_of_vertices());  // we just need to get the upper size.
+        driver.shp_.compute_prepro_obb(gsb.data(), driver.fields_.center_, driver.fields_.quat_);
 
         if (!ForceResetRShapeGrid) {
           if (driver.stationary() && grid_rshape.size() == n_cells) {
@@ -170,14 +144,16 @@ public:
           }
         }
 
+        // ensure that the grid is empty before filling it.
+        // grid can be not empty if there are multiple rshape drivers.
 #pragma omp parallel for
         for (size_t i = 0; i < n_cells; i++) {
           grid_rshape[i].clean();
         }
 
-        auto &obb_v = driver.shp_.obb_vertices_;
-        auto &obb_e = driver.shp_.obb_edges_;
-        auto &obb_f = driver.shp_.obb_faces_;
+        auto& obb_v = driver.shp_.obb_vertices_;
+        auto& obb_e = driver.shp_.obb_edges_;
+        auto& obb_f = driver.shp_.obb_faces_;
 
 #pragma omp parallel
         {
@@ -263,28 +239,23 @@ public:
             }
           }
         }
-        RShapeDriverGridCellIndexes &flat_grid_rshape = driver.grid_indexes_;
+        RShapeDriverGridCellIndexes& flat_grid_rshape = driver.grid_indexes_;
         // resize cell and data members.
-        flat_grid_rshape.initialize(n_cells, total_n_vertices, total_n_edges,
-                                    total_n_faces);
+        flat_grid_rshape.initialize(n_cells, total_n_vertices, total_n_edges, total_n_faces);
 
-        // set offset first, then fill the grid indexes with the list of
-        // vertices, edges, and faces for each cell.
+        // set offset first, then fill the grid indexes with the list of vertices, edges, and faces for each cell.
         int offset = 0;
         for (size_t i = 0; i < n_cells; i++) {
-          const RShapeDriverListOfElements &list = grid_rshape[i];
+          const RShapeDriverListOfElements& list = grid_rshape[i];
           flat_grid_rshape.cells_[i].offset_ = offset;
-          offset +=
-              list.vertices_.size() + list.edges_.size() + list.faces_.size();
+          offset += list.vertices_.size() + list.edges_.size() + list.faces_.size();
         }
 
         // #pragma omp parallel for schedule(guided)
         for (size_t i = 0; i < n_cells; i++) {
-          const RShapeDriverListOfElements &list = grid_rshape[i];
-          // fill the grid indexes with the list of vertices, edges, and faces
-          // for each cell.
-          flat_grid_rshape.fill_cell(i, list.vertices_, list.edges_,
-                                     list.faces_);
+          const RShapeDriverListOfElements& list = grid_rshape[i];
+          // fill the grid indexes with the list of vertices, edges, and faces for each cell.
+          flat_grid_rshape.fill_cell(i, list.vertices_, list.edges_, list.faces_);
         }
 
         // display summary of the grid indexes if requested.
@@ -300,8 +271,7 @@ public:
 template <class GridT>
 using UpdateGridRShapeOperatorTemplate = UpdateGridRShapeOperator<GridT>;
 ONIKA_AUTORUN_INIT(grid_rshape_mesh) {
-  OperatorNodeFactory::instance()->register_factory(
-      "grid_rshape_driver",
-      make_grid_variant_operator<UpdateGridRShapeOperatorTemplate>);
+  OperatorNodeFactory::instance()->register_factory("grid_rshape_driver",
+                                                    make_grid_variant_operator<UpdateGridRShapeOperatorTemplate>);
 }
-} // namespace exaDEM
+}  // namespace exaDEM
