@@ -139,10 +139,12 @@ class AddXYZ : public OperatorNode {
     int n_particles = 0;
 
     std::map<std::string, unsigned int> typeMap;
+    unsigned int nextTypeId = 0;
     if (particle_types.has_value()) {
       for (size_t i = 0; i < particle_types->size(); i++) {
         typeMap[particle_types->at(i).name()] = i;
       }
+      nextTypeId = particle_types->size();
     }
 
     if (shapes_collection.has_value()) {
@@ -150,6 +152,7 @@ class AddXYZ : public OperatorNode {
       for (size_t i = 0; i < shps.size(); i++) {
         typeMap[shps[i]->name_] = i;
       }
+      nextTypeId = std::max(nextTypeId, static_cast<unsigned int>(shps.size()));
     }
 
     // get max ID
@@ -210,6 +213,10 @@ class AddXYZ : public OperatorNode {
             n_filtered_particles++;
             continue;
           }
+        }
+        if (typeMap.find(type) == typeMap.end()) {
+          typeMap[type] = nextTypeId;
+          ++nextTypeId;
         }
         n_particles++;
         particle_data.push_back(ParticleTupleIO(p.x, p.y, p.z, next_id++, typeMap[type]));
