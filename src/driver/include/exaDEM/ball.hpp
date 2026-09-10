@@ -119,13 +119,13 @@ struct Ball {
   /**
    * @brief Write ball data into a stream.
    */
-  void dump_driver(const Driver_params& motion, int id, std::stringstream& stream) {
+  void dump_op(const Driver_params& motion, int id, std::stringstream& stream) {
     stream << "  - register_ball:" << std::endl;
     stream << "     id: " << id << std::endl;
-    stream << "     state: { radius:" << fields_.radius_;
-    stream << ",center: [" << fields_.center_ << "]";
-    stream << ",vel: [" << fields_.vel_ << "]";
-    stream << ",vrot: [" << fields_.vrot_ << "]";
+    stream << "     state: { radius: " << fields_.radius_;
+    stream << ", center: [" << fields_.center_ << "]";
+    stream << ", vel: [" << fields_.vel_ << "]";
+    stream << ", vrot: [" << fields_.vrot_ << "]";
     if (is_compressive(motion_type_)) {
       stream << ",rv: " << fields_.rv_;
     }
@@ -134,6 +134,27 @@ struct Ball {
     }
     stream << "}" << std::endl;
     motion.dump_driver_params(motion_type_, stream);
+  }
+
+  /**
+   * @brief Write ball data into a stream, in the plain drivers: storage format (see
+   * dump_drivers/read_drivers), as opposed to dump_op()'s register_ball: operator form.
+   */
+  void dump_data(const Driver_params& motion, int id, std::stringstream& stream) {
+    stream << "  - type: BALL" << std::endl;
+    stream << "    id: " << id << std::endl;
+    stream << "    state: { radius: " << fields_.radius_;
+    stream << ", center: [" << fields_.center_ << "]";
+    stream << ", vel: [" << fields_.vel_ << "]";
+    stream << ", vrot: [" << fields_.vrot_ << "]";
+    if (is_compressive(motion_type_)) {
+      stream << ",rv: " << fields_.rv_;
+    }
+    if (is_force_motion(motion_type_)) {
+      stream << ",mass: " << fields_.mass_;
+    }
+    stream << "}" << std::endl;
+    motion.dump_driver_params(motion_type_, stream, 4);
   }
 
   /**

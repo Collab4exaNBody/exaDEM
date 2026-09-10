@@ -424,7 +424,7 @@ struct RShapeDriver {
    * @param path The directory path where the shape file should be written.
    * @param stream The output stream to write the YAML information to.
    */
-  void dump_driver(const Driver_params& motion, int id, std::string path, std::stringstream& stream) {
+  void dump_op(const Driver_params& motion, int id, std::string path, std::stringstream& stream) {
     std::string filename = path + shp_.name_ + ".shp";
     stream << "  - register_rshape:" << std::endl;
     stream << "     id: " << id << std::endl;
@@ -447,6 +447,40 @@ struct RShapeDriver {
     }
     stream << "}" << std::endl;
     motion.dump_driver_params(motion_type_, stream);
+    write_shp(shp_, filename);
+  }
+
+  /**
+   * @brief Write R-Shape data into a stream, in the plain drivers: storage format (see
+   * dump_drivers/read_drivers), as opposed to dump_op()'s register_rshape: operator form.
+   * @param motion The motion parameters of the driver to include in the dump.
+   * @param id The identifier of the driver (for labeling in the output).
+   * @param path The directory path where the shape file should be written.
+   * @param stream The output stream to write the YAML information to.
+   */
+  void dump_data(const Driver_params& motion, int id, std::string path, std::stringstream& stream) {
+    std::string filename = path + shp_.name_ + ".shp";
+    stream << "  - type: RSHAPE" << std::endl;
+    stream << "    id: " << id << std::endl;
+    stream << "    filename: " << filename << std::endl;
+    stream << "    minkowski: " << shp_.minkowski() << std::endl;
+    stream << "    state: {";
+    stream << "center: [" << fields_.center_ << "]";
+    stream << ", vel: [" << fields_.vel_ << "]";
+    stream << ", vrot: [" << fields_.vrot_ << "]";
+    if (fields_.surface_ > 0) {
+      stream << ", surface: " << fields_.surface_;
+    }
+    if (fields_.drive_by_mom_) {
+      stream << ", moment: " << fields_.applied_mom_ << ", inertia: " << fields_.inertia_;
+    }
+    stream << ", quat: [" << fields_.quat_.w << "," << fields_.quat_.x << "," << fields_.quat_.y << "," << fields_.quat_.z
+           << "]";
+    if (is_force_motion(motion_type_)) {
+      stream << ",mass: " << fields_.mass_;
+    }
+    stream << "}" << std::endl;
+    motion.dump_driver_params(motion_type_, stream, 4);
     write_shp(shp_, filename);
   }
 };

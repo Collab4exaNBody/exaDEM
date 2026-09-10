@@ -262,9 +262,12 @@ struct Driver_params {
 
   /**
    * @brief Write Driver data into a stream.
+   * @param indent Leading spaces before "params:", so it lines up as a sibling of whichever
+   * keys the caller already wrote (5 for dump_op()'s register_*: nested state, 4 for
+   * dump_data()'s flat type/id/state/params list entry).
    */
-  void dump_driver_params(MotionType motion_type, std::stringstream& stream) const {
-    stream << "     params: {";
+  void dump_driver_params(MotionType motion_type, std::stringstream& stream, int indent = 5) const {
+    stream << std::string(indent, ' ') << "params: {";
     stream << " motion_type: " << motion_type_to_string(motion_type);
     stream << ", motion_vector: [" << motion_vector_ << "]";
     stream << ", motion_start_threshold: " << motion_start_threshold_;

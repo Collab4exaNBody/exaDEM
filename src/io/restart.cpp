@@ -28,6 +28,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 
 // ExaDEM
+#include <exaDEM/driver_reader.hpp>
 #include <exaDEM/dump_reader_utils.hpp>
 #include <exaDEM/shape_reader.hpp>
 #include <exaDEM/shapes.hpp>
@@ -48,6 +49,10 @@ class RestartNode : public OperatorNode {
                      "<dir_name>/CheckpointFiles/."});
   ADD_SLOT(std::string, shape_filename, INPUT, OPTIONAL,
            DocString{"Overrides the default <dir_name>/CheckpointFiles/RestartShapeFile.shp shape file."});
+  ADD_SLOT(std::string, drivers_filename, INPUT, OPTIONAL,
+           DocString{"Overrides the default <dir_name>/CheckpointFiles/drivers_<iteration>.msp drivers storage "
+                     "file (written by dump_drivers). If neither is given nor found, drivers are simply left "
+                     "empty -- not every simulation has any."});
   ADD_SLOT(GridT, grid, INPUT_OUTPUT);
   ADD_SLOT(Domain, domain, INPUT_OUTPUT);
   ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
@@ -55,15 +60,17 @@ class RestartNode : public OperatorNode {
   ADD_SLOT(double, physical_time, INPUT, DocString{"Physical time"});
   ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
   ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT_OUTPUT);
+  ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, DocString{"List of Drivers"});
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
         Finds and reads the files needed to restart a simulation: the latest (or a given)
-        exadem_*.dump checkpoint under <dir_name>/CheckpointFiles/, and, if the simulation uses
-        polyhedra, the matching shape file (RestartShapeFile.shp by default). For spheres there
-        is no shape file at all: if none is given and none is found at the default path, shape
-        loading is simply skipped and particles restart with the radii stored in the dump itself.
+        exadem_*.dump checkpoint under <dir_name>/CheckpointFiles/, the matching shape file
+        (RestartShapeFile.shp by default) if the simulation uses polyhedra, and the matching
+        drivers storage file (drivers_<iteration>.msp, written by dump_drivers) if there are any
+        drivers. For spheres there is no shape file at all, and not every simulation has drivers:
+        if either is missing (not given and not found at its default path), it is simply skipped.
 
         YAML example:
 
@@ -118,8 +125,9 @@ class RestartNode : public OperatorNode {
       color_log::error("restart", "Checkpoint file not found: " + dump_file.string());
     }
 
-    // Spheres have no shape file at all: shp_file is left empty (not an error) when none is
-    // given and none exists at the default path, and shape loading below is simply skipped.
+    // Spheres have no shape file, and not every simulation has drivers: shp_file/drivers_file
+    // are left empty (not an error) when neither given nor found at their default path, and the
+    // corresponding restoration below is simply skipped.
     fs::path shp_file;
     if (shape_filename.has_value()) {
       shp_file = *shape_filename;
@@ -131,6 +139,19 @@ class RestartNode : public OperatorNode {
       if (fs::is_regular_file(default_shp)) shp_file = default_shp;
     }
 
+    fs::path drivers_file;
+    if (drivers_filename.has_value()) {
+      drivers_file = *drivers_filename;
+      if (!fs::is_regular_file(drivers_file)) {
+        color_log::error("restart", "Drivers file not found: " + drivers_file.string());
+      }
+    } else {
+      std::ostringstream drivers_name;
+      drivers_name << "drivers_" << std::setw(10) << std::setfill('0') << iteration << ".msp";
+      fs::path default_drivers = checkpoint_dir / drivers_name.str();
+      if (fs::is_regular_file(default_drivers)) drivers_file = default_drivers;
+    }
+
     lout << "==================== Restart =================" << std::endl;
     lout << "Checkpoint directory: " << checkpoint_dir.string() << std::endl;
     lout << "Checkpoint file:      " << dump_file.string() << std::endl;
@@ -138,6 +159,7 @@ class RestartNode : public OperatorNode {
     if (!shp_file.empty()) {
       lout << "Shape file:           " << shp_file.string() << std::endl;
     }
+    lout << "Drivers file:         " << (drivers_file.empty() ? "none" : drivers_file.string()) << std::endl;
     lout << "=================================================" << std::endl;
 
     if (!shp_file.empty()) {
@@ -146,6 +168,10 @@ class RestartNode : public OperatorNode {
       for (const auto& [name, type] : *particle_type_map) {
         lout << "Shape[" << type << "] is " << name << std::endl;
       }
+    }
+
+    if (!drivers_file.empty()) {
+      exaDEM::read_drivers(drivers_file.string(), *drivers);
     }
 
     const std::vector<std::string> field_names = read_dump_field_names(*mpi, dump_file.string());

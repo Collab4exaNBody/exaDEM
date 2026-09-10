@@ -1,0 +1,54 @@
+includes:
+  - common.msp
+
+io_tree:
+  - io_config:
+     dir_name: "RestartTestDir"
+
+input_data:
+  - init_rcb_grid
+  - common_define_particles
+  - lattice:
+      structure: SC
+      types: [ Sphere1 ]
+      size: [ 1.5 , 1.5 , 1.5 ]
+  - common_setup_particles
+
+setup_drivers:
+  - register_ball:
+     id: 0
+     state: {center: [2,2,0], radius: 20}
+     params: { motion_type: STATIONARY }
+  - register_ball:
+     id: 1
+     state: {center: [2,2,-5], radius: 3}
+     params: { motion_type: LINEAR_MOTION, motion_vector: [0,0,1], const_vel: 0.1 }
+  - register_surface:
+     id: 2
+     state: {offset: -10, normal: [0,0,1]}
+     params: { motion_type: STATIONARY }
+  - register_cylinder:
+     id: 3
+     state: {radius: 15, axis: [0,0,1], center: [3,3,0]}
+     params: { motion_type: SHAKER, omega: 1.0, amplitude: 0.5, shaker_dir: [0,0,1] }
+  - register_rshape:
+     id: 4
+     filename: shape.shp
+     minkowski: 0.01
+     state: {center: [3,3,20]}
+     params: { motion_type: STATIONARY }
+
+domain:
+  cell_size: 2.0
+  periodic: [false,false,false]
+  grid_dims: [3, 3, 3]
+  bounds: [[0,0,0], [6,6,6]]
+  expandable: true
+
+global:
+  simulation_dump_frequency: 5
+  simulation_end_iteration: 5
+  simulation_log_frequency: 5
+  simulation_paraview_frequency: -1
+  dt: 0.0005 s
+  rcut_inc: 0.4

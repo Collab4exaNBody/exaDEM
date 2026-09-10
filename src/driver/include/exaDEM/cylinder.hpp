@@ -119,15 +119,30 @@ struct Cylinder {
   /**
    * @brief Write cylinder information into a stream.
    */
-  void dump_driver(const Driver_params& motion, int id, std::stringstream& stream) {
+  void dump_op(const Driver_params& motion, int id, std::stringstream& stream) {
     stream << "  - register_cylinder:" << std::endl;
     stream << "     id: " << id << std::endl;
     stream << "     state: { radius: " << fields_.radius_;
-    stream << ",axis: [" << fields_.axis_ << "]";
-    stream << ",center: [" << fields_.center_ << "]";
-    stream << ",vel: [" << fields_.vel_ << "]";
-    stream << ",vrot: [" << fields_.vrot_ << "]}" << std::endl;
+    stream << ", axis: [" << fields_.axis_ << "]";
+    stream << ", center: [" << fields_.center_ << "]";
+    stream << ", vel: [" << fields_.vel_ << "]";
+    stream << ", vrot: [" << fields_.vrot_ << "]}" << std::endl;
     motion.dump_driver_params(motion_type_, stream);
+  }
+
+  /**
+   * @brief Write cylinder data into a stream, in the plain drivers: storage format (see
+   * dump_drivers/read_drivers), as opposed to dump_op()'s register_cylinder: operator form.
+   */
+  void dump_data(const Driver_params& motion, int id, std::stringstream& stream) {
+    stream << "  - type: CYLINDER" << std::endl;
+    stream << "    id: " << id << std::endl;
+    stream << "    state: { radius: " << fields_.radius_;
+    stream << ", axis: [" << fields_.axis_ << "]";
+    stream << ", center: [" << fields_.center_ << "]";
+    stream << ", vel: [" << fields_.vel_ << "]";
+    stream << ", vrot: [" << fields_.vrot_ << "]}" << std::endl;
+    motion.dump_driver_params(motion_type_, stream, 4);
   }
 
   /**
