@@ -36,13 +36,13 @@ add_pytest(test_io_rockable
 #)
 
 # -----------------------------
-# Global test (CI friendly)
+# Global test (CI friendly -> nope)
 # -----------------------------
-add_test(
-    NAME pytest_all
-    COMMAND ${Python3_EXECUTABLE} -m pytest -v ${CMAKE_CURRENT_SOURCE_DIR}/test
-)
+#add_test(
+#    NAME pytest_all
+#    COMMAND ${Python3_EXECUTABLE} -m pytest -v ${CMAKE_CURRENT_SOURCE_DIR}/test
+#)
 
-set_tests_properties(pytest_all PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${PYTHON_SCRIPTS_DIR};CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
-)
+#set_tests_properties(pytest_all PROPERTIES
+#    ENVIRONMENT "PYTHONPATH=${PYTHON_SCRIPTS_DIR};CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
+#)
