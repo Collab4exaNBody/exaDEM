@@ -21,6 +21,7 @@ under the License.
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <mpi.h>
+#include <omp.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <onika/math/basic_types_stream.h>
@@ -66,6 +67,19 @@ inline void grid_indexes_summary(std::span<const RShapeDriverCellIndexes> cell_i
   exanb::lout << "=================================" << std::endl;
 }
 
+struct RShapeDriverListOfElements {
+  std::vector<int> vertices_; /**< Indices of vertices in the shape. */
+  std::vector<int> edges_;    /**< Indices of edges in the shape. */
+  std::vector<int> faces_;    /**< Indices of faces in the shape. */
+
+  // Clear all element lists
+  void clean() {
+    vertices_.clear();
+    edges_.clear();
+    faces_.clear();
+  }
+};
+
 template <class GridT>
 class UpdateGridRShapeOperator : public OperatorNode {
   using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz>;
@@ -76,6 +90,10 @@ class UpdateGridRShapeOperator : public OperatorNode {
   ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"rcut_max"});
   ADD_SLOT(bool, force_reset, INPUT, REQUIRED, DocString{"Force to rebuild grid for rshape meshes."});
   ADD_SLOT(std::vector<Vec3d>, grid_rshape_buffer, PRIVATE);
+  ADD_SLOT(std::vector<RShapeDriverListOfElements>, grid_rshape_cache, PRIVATE,
+           DocString{"Cached per-cell projection of the R-Shape driver, reused across executions."});
+  ADD_SLOT(std::vector<omp_lock_t>, grid_rshape_mutexes, PRIVATE,
+           DocString{"OpenMP locks matching grid_rshape_cache, reused across executions."});
   ADD_SLOT(bool, summary, false, PRIVATE, DocString{"Display the grid summary"});
 
  public:
@@ -87,21 +105,8 @@ class UpdateGridRShapeOperator : public OperatorNode {
   }
 
   inline void execute() final {
-    struct RShapeDriverListOfElements {
-      std::vector<int> vertices_; /**< Indices of vertices in the shape. */
-      std::vector<int> edges_;    /**< Indices of edges in the shape. */
-      std::vector<int> faces_;    /**< Indices of faces in the shape. */
-
-      // Clear all element lists
-      void clean() {
-        vertices_.clear();
-        edges_.clear();
-        faces_.clear();
-      }
-    };
-
-    std::vector<RShapeDriverListOfElements> grid_rshape;
-    std::vector<omp_lock_t> mutexes;
+    auto& grid_rshape = *grid_rshape_cache;
+    auto& mutexes = *grid_rshape_mutexes;
 
     const auto& g = *grid;
     const size_t n_cells = g.number_of_cells();
@@ -116,9 +121,6 @@ class UpdateGridRShapeOperator : public OperatorNode {
         gsb.resize(driver.shp_.get_number_of_vertices());  // we just need to get the upper size.
         driver.shp_.compute_prepro_obb(gsb.data(), driver.fields_.center_, driver.fields_.quat_);
 
-        mutexes.resize(n_cells);
-        int total_n_vertices = 0, total_n_edges = 0, total_n_faces = 0;
-
         if (!ForceResetRShapeGrid) {
           if (driver.stationary() && grid_rshape.size() == n_cells) {
             // The grid is already built and didn't change
@@ -126,12 +128,18 @@ class UpdateGridRShapeOperator : public OperatorNode {
           }
         }
 
-        bool resize = grid_rshape.size() != n_cells;
-        if (resize) {
+        int total_n_vertices = 0, total_n_edges = 0, total_n_faces = 0;
+
+        const size_t old_size = grid_rshape.size();
+        if (old_size != n_cells) {
+          for (size_t i = n_cells; i < old_size; i++) {
+            omp_destroy_lock(&mutexes[i]);
+          }
           grid_rshape.resize(n_cells);
+          mutexes.resize(n_cells);
 
 #pragma omp parallel for
-          for (size_t i = 0; i < n_cells; i++) {
+          for (size_t i = old_size; i < n_cells; i++) {
             omp_init_lock(&mutexes[i]);
           }
         }

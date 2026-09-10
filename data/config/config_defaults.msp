@@ -29,7 +29,7 @@ configuration:
 
   profiling:
     exectime: false
-    summary: false
+    summary: false # true
 
   # operator node graph debug
   debug:
