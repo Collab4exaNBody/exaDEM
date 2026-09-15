@@ -22,9 +22,6 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/core/grid_fields.h>
 
-// ExaDEM
-#include <exaDEM/fields.h>
-
 namespace exaDEM {
 using namespace exanb;
 

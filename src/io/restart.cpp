@@ -199,6 +199,7 @@ class RestartNode : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(restart) {
-  OperatorNodeFactory::instance()->register_factory("restart", make_grid_variant_operator<RestartNode>);
+  constexpr auto restart_factory = make_grid_variant_operator<RestartNode>;  // trick to avoid redist
+  OperatorNodeFactory::instance()->register_factory("restart", restart_factory);
 }
 }  // namespace exaDEM

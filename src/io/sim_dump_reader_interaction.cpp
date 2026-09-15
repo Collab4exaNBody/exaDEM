@@ -38,16 +38,16 @@ using SimDumpReadParticlesFragmentationTmplLegacy122 =
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(sim_dump_reader_interaction) {
-  OperatorNodeFactory::instance()->register_factory("read_dump_particle_interaction",
-                                                    make_grid_variant_operator<SimDumpReadParticlesInteractionTmpl>);
-  OperatorNodeFactory::instance()->register_factory("read_dump_particle_fragmentation",
-                                                    make_grid_variant_operator<SimDumpReadParticlesFragmentationTmpl>);
+  constexpr auto read_dump_particle_interaction_factory = make_grid_variant_operator<SimDumpReadParticlesInteractionTmpl>;  // trick to avoid redist
+  constexpr auto read_dump_particle_fragmentation_factory = make_grid_variant_operator<SimDumpReadParticlesFragmentationTmpl>;
+  constexpr auto read_dump_particle_interaction_v122_factory = make_grid_variant_operator<SimDumpReadParticlesInteractionTmplLegacy122>;
+  constexpr auto read_dump_particle_fragmentation_v122_factory = make_grid_variant_operator<SimDumpReadParticlesFragmentationTmplLegacy122>;
+
+  OperatorNodeFactory::instance()->register_factory("read_dump_particle_interaction", read_dump_particle_interaction_factory);
+  OperatorNodeFactory::instance()->register_factory("read_dump_particle_fragmentation", read_dump_particle_fragmentation_factory);
   // Deprecated
-  OperatorNodeFactory::instance()->register_factory(
-      "read_dump_particle_interaction_v122", make_grid_variant_operator<SimDumpReadParticlesInteractionTmplLegacy122>);
-  OperatorNodeFactory::instance()->register_factory(
-      "read_dump_particle_fragmentation_v122",
-      make_grid_variant_operator<SimDumpReadParticlesFragmentationTmplLegacy122>);
+  OperatorNodeFactory::instance()->register_factory("read_dump_particle_interaction_v122", read_dump_particle_interaction_v122_factory);
+  OperatorNodeFactory::instance()->register_factory("read_dump_particle_fragmentation_v122", read_dump_particle_fragmentation_v122_factory);
   // !Deprecated
 }
 }  // namespace exaDEM
