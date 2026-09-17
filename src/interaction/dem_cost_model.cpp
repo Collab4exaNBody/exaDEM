@@ -65,29 +65,31 @@ class DEMCostModel : public OperatorNode {
       GRID_OMP_FOR_BEGIN(dims, i, loc, schedule(static)) {
         const size_t cell_i = grid_ijk_to_index(grid_dims, loc + ghost_layers);
         const size_t N = cells[cell_i].size();
-        double cost = 3 * N + 1;
+        double I = 0.;
         if (!skip_interaction) {
           CellExtraDynamicDataStorageT<PlaceholderInteraction>& storage = interactions[cell_i];
           auto* __restrict__ data = storage.m_data.data();
           size_t size = storage.m_data.size();
-          for (size_t i = 0; i < size; i++) {
-            auto type = data[i].type();
-            if (type == 0) cost += 1;   // vertex - vertex
-            if (type == 1) cost += 3;   // vertex - edge
-            if (type == 2) cost += 5;   // vertex - face
-            if (type == 3) cost += 4;   // edge - edge
-            if (type == 4) cost += 1;   // cylinder
-            if (type == 5) cost += 1;   // wall
-            if (type == 6) cost += 1;   // balls
-            if (type == 7) cost += 1;   // vertex - vertex
-            if (type == 8) cost += 3;   // vertex - edge
-            if (type == 9) cost += 5;   // vertex - face
-            if (type == 10) cost += 4;  // edge - edge
-            if (type == 11) cost += 3;  // edge - vertex
-            if (type == 12) cost += 5;  // face - vertex
-            if (type == 13) cost += 1;  // Inner Bond
+          for (size_t j = 0; j < size; j++) {
+            auto type = data[j].type();
+            if (type == 0) I += 1;   // vertex - vertex
+            if (type == 1) I += 3;   // vertex - edge
+            if (type == 2) I += 5;   // vertex - face
+            if (type == 3) I += 4;   // edge - edge
+            if (type == 4) I += 1;   // cylinder
+            if (type == 5) I += 1;   // wall
+            if (type == 6) I += 1;   // balls
+            if (type == 7) I += 1;   // vertex - vertex
+            if (type == 8) I += 3;   // vertex - edge
+            if (type == 9) I += 5;   // vertex - face
+            if (type == 10) I += 4;  // edge - edge
+            if (type == 11) I += 3;  // edge - vertex
+            if (type == 12) I += 5;  // face - vertex
+            if (type == 13) I += 1;  // Inner Bond
           }
         }
+        double cost = 3 * N + 1;
+        if (N > 0) cost += (I * I) / N;
         cell_costs.m_costs[i] = cost;
       }
       GRID_OMP_FOR_END
