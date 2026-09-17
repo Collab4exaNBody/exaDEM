@@ -59,6 +59,9 @@ class DEMCostModel : public OperatorNode {
     cell_costs.m_costs.resize(n_cells, 0.);
     auto& interactions = ges->m_data;
     bool skip_interaction = interactions.size() == 0 ? true : false;
+    
+    static bool printed = false;
+    if (!printed) { lout << "=== DEM_COST_MODEL VERSION N2 ===" << std::endl; printed = true; }
 
 #   pragma omp parallel
     {
