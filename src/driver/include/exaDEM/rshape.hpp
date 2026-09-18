@@ -125,7 +125,7 @@ struct RShapeDriver {
     exanb::lout << "Driver Type: R-Shape" << std::endl;
     exanb::lout << "Name               = " << shp_.name_ << std::endl;
     exanb::lout << "Center             = " << fields_.center_ << std::endl;
-    exanb::lout << "Minkowski         = " << shp_.minkowski() << std::endl;
+    exanb::lout << "Minkowski          = " << shp_.minkowski() << std::endl;
     exanb::lout << "Velocity           = " << fields_.vel_ << std::endl;
     exanb::lout << "Angular Velocity   = " << fields_.vrot_ << std::endl;
     exanb::lout << "Orientation        = " << fields_.quat_.w << " " << fields_.quat_.x << " " << fields_.quat_.y << " "
@@ -143,7 +143,7 @@ struct RShapeDriver {
     }
     exanb::lout << "Number of faces    = " << shp_.get_number_of_faces() << std::endl;
     exanb::lout << "Number of edges    = " << shp_.get_number_of_edges() << std::endl;
-    exanb::lout << "Number of vertices_ = " << shp_.get_number_of_vertices() << std::endl;
+    exanb::lout << "Number of vertices = " << shp_.get_number_of_vertices() << std::endl;
   }
 
   /**
