@@ -193,7 +193,7 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
 };
 
 // === register factories ===
-ONIKA_AUTORUN_INIT(nbh_polyhedron) {
+ONIKA_AUTORUN_INIT(update_persistent_interactions) {
   OperatorNodeFactory::instance()->register_factory("update_persistent_interactions",
                                                     make_grid_variant_operator<UpdatePersistentInteractionsOperator>);
 }

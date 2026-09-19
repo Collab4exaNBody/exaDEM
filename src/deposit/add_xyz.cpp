@@ -194,7 +194,6 @@ class AddXYZ : public OperatorNode {
       double box_size_y = -1.0;
       double box_size_z = -1.0;
       std::stringstream(line) >> box_size_x >> box_size_y >> box_size_z;
-      std::stringstream(line) >> box_size_x >> box_size_y >> box_size_z;
 
       ldbg << " box: [" << box_size_x << ", " << box_size_y << ", " << box_size_z << "]" << std::endl;
 
@@ -228,7 +227,7 @@ class AddXYZ : public OperatorNode {
 
     MPI_Bcast(&n_particles, 1, MPI_INT, 0, *mpi);
     particle_data.resize(n_particles);
-    MPI_Bcast(particle_data.data(), n_particles * sizeof(ParticleTupleIO), MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(particle_data.data(), n_particles * sizeof(ParticleTupleIO), MPI_BYTE, 0, *mpi);
 
     auto dims = g.dimension();
     long local_particles = 0;

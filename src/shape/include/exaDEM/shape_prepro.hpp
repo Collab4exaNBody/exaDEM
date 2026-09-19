@@ -23,10 +23,9 @@ under the License.
 
 namespace exaDEM {
 //  template<typename Vec>
-inline OBB build_OBB(const std::span<vec3r> vec, double radius) {
+inline OBB build_OBB(const std::span<exanb::Vec3d> vec, double radius) {
   OBB obb;
-  vec3r mu;
-  mat9r C;
+  exanb::Vec3d mu{0.0, 0.0, 0.0};
   for (size_t i = 0; i < vec.size(); i++) {
     mu += vec[i];
   }
@@ -38,7 +37,7 @@ inline OBB build_OBB(const std::span<vec3r> vec, double radius) {
   // portion since the matrix is symmetric
   double cxx = 0.0, cxy = 0.0, cxz = 0.0, cyy = 0.0, cyz = 0.0, czz = 0.0;
   for (size_t i = 0; i < vec.size(); i++) {
-    vec3r p = vec[i];
+    exanb::Vec3d p = vec[i];
     cxx += p.x * p.x - mu.x * mu.x;
     cxy += p.x * p.y - mu.x * mu.y;
     cxz += p.x * p.z - mu.x * mu.z;
@@ -48,33 +47,36 @@ inline OBB build_OBB(const std::span<vec3r> vec, double radius) {
   }
 
   // now build the covariance matrix
-  C.xx = cxx;
-  C.xy = cxy;
-  C.xz = cxz;
-  C.yx = cxy;
-  C.yy = cyy;
-  C.yz = cyz;
-  C.zx = cxz;
-  C.zy = cyz;
-  C.zz = czz;
+  exanb::Mat3d C;
+  C.m11 = cxx;
+  C.m12 = cxy;
+  C.m13 = cxz;
+  C.m21 = cxy;
+  C.m22 = cyy;
+  C.m23 = cyz;
+  C.m31 = cxz;
+  C.m32 = cyz;
+  C.m33 = czz;
 
   // ==== set the OBB parameters from the covariance matrix
   // extract the eigenvalues and eigenvectors from C
-  mat9r eigvec;
-  vec3r eigval;
-  C.sym_eigen(eigvec, eigval);
+  exanb::Vec3d eigvec[3];
+  double eigval[3];
+  exanb::symmetric_matrix_eigensystem(C, eigvec, eigval);
 
   // find the right, up and forward vectors from the eigenvectors
-  vec3r r(eigvec.xx, eigvec.yx, eigvec.zx);
-  vec3r u(eigvec.xy, eigvec.yy, eigvec.zy);
-  vec3r f(eigvec.xz, eigvec.yz, eigvec.zz);
-  r.normalize();
-  u.normalize(), f.normalize();
+  // (order does not matter here, only orthonormality does)
+  exanb::Vec3d r = eigvec[0];
+  exanb::Vec3d u = eigvec[1];
+  exanb::Vec3d f = eigvec[2];
+  r = r / exanb::norm(r);
+  u = u / exanb::norm(u);
+  f = f / exanb::norm(f);
 
   // now build the bounding box extents in the rotated frame
-  vec3r minim(1e20, 1e20, 1e20), maxim(-1e20, -1e20, -1e20);
+  exanb::Vec3d minim{1e20, 1e20, 1e20}, maxim{-1e20, -1e20, -1e20};
   for (size_t i = 0; i < vec.size(); i++) {
-    vec3r p_prime(r * vec[i], u * vec[i], f * vec[i]);
+    exanb::Vec3d p_prime{exanb::dot(r, vec[i]), exanb::dot(u, vec[i]), exanb::dot(f, vec[i])};
     if (minim.x > p_prime.x) minim.x = p_prime.x;
     if (minim.y > p_prime.y) minim.y = p_prime.y;
     if (minim.z > p_prime.z) minim.z = p_prime.z;
@@ -86,7 +88,8 @@ inline OBB build_OBB(const std::span<vec3r> vec, double radius) {
   // set the center of the OBB to be the average of the
   // minimum and maximum, and the extents be half of the
   // difference between the minimum and maximum
-  obb.center = eigvec * (0.5 * (maxim + minim));
+  const exanb::Vec3d half_sum = 0.5 * (maxim + minim);
+  obb.center = r * half_sum.x + u * half_sum.y + f * half_sum.z;
   obb.e1 = r;
   obb.e2 = u;
   obb.e3 = f;
@@ -100,10 +103,10 @@ inline OBB build_obb_from_shape(const shape& shp) {
   size_t nv = shp.get_number_of_vertices();
 
   const double ext = shp.minkowski(1.0);
-  std::vector<vec3r> vbuf;
+  std::vector<exanb::Vec3d> vbuf;
   vbuf.resize(nv);
   for (size_t i = 0; i < nv; i++) {
-    vbuf[i] = conv_to_vec3r(shp.get_vertex(i));
+    vbuf[i] = shp.get_vertex(i);
   }
   OBB res = build_OBB(vbuf, ext);
   return res;
@@ -113,8 +116,7 @@ inline OBB build_obb_from_shape(const shape& shp) {
 // general functon;
 inline OBB build_obb_vertex(const int index, const shape* shp, const exanb::Vec3d* v) {
   const double ext = shp->minkowski();
-  const vec3r vertex = conv_to_vec3r(v[index]);
-  std::array<vec3r, 1> vbuf = {vertex};
+  std::array<exanb::Vec3d, 1> vbuf = {v[index]};
   OBB res = build_OBB(vbuf, ext);
   return res;
 }
@@ -125,7 +127,7 @@ inline OBB build_obb_edge(const exanb::Vec3d& position, const int index, const s
   auto [first, second] = shp->get_edge(index);
   const exanb::Vec3d vf = shp->get_vertex(first, position, 1.0, orientation);
   const exanb::Vec3d vs = shp->get_vertex(second, position, 1.0, orientation);
-  std::array<vec3r, 2> v = {conv_to_vec3r(vf), conv_to_vec3r(vs)};
+  std::array<exanb::Vec3d, 2> v = {vf, vs};
   OBB res = build_OBB(v, ext);
   return res;
 }
@@ -133,9 +135,7 @@ inline OBB build_obb_edge(const exanb::Vec3d& position, const int index, const s
 inline OBB build_obb_edge(const int index, const shape* shp, const exanb::Vec3d* v) {
   const double ext = shp->minkowski();
   auto [first, second] = shp->get_edge(index);
-  const exanb::Vec3d& vf = v[first];
-  const exanb::Vec3d& vs = v[second];
-  std::array<vec3r, 2> vbuf = {conv_to_vec3r(vf), conv_to_vec3r(vs)};
+  std::array<exanb::Vec3d, 2> vbuf = {v[first], v[second]};
   OBB res = build_OBB(vbuf, ext);
   return res;
 }
@@ -144,20 +144,21 @@ inline OBB build_obb_face(const exanb::Vec3d& position, const int index, const s
                           const exanb::Quaternion& orientation) {
   const double ext = shp->minkowski();
   const auto [data, nf] = shp->get_face(index);
-  std::vector<vec3r> v(nf);
+  std::vector<exanb::Vec3d> v(nf);
   for (int i = 0; i < nf; i++) {
-    v[i] = conv_to_vec3r(shp->get_vertex(data[i], position, 1.0, orientation));
+    v[i] = shp->get_vertex(data[i], position, 1.0, orientation);
   }
   OBB res = build_OBB(v, ext);
   return res;
 }
 
-inline OBB build_obb_face(const int index, const shape* shp, const exanb::Vec3d* const v, std::vector<vec3r>& vbuf) {
+inline OBB build_obb_face(const int index, const shape* shp, const exanb::Vec3d* const v,
+                          std::vector<exanb::Vec3d>& vbuf) {
   const double ext = shp->minkowski();
   const auto [data, nf] = shp->get_face(index);
   vbuf.resize(nf);
   for (int i = 0; i < nf; i++) {
-    vbuf[i] = conv_to_vec3r(v[data[i]]);
+    vbuf[i] = v[data[i]];
   }
   OBB res = build_OBB(vbuf, ext);
   return res;
@@ -221,7 +222,7 @@ inline void shape::pre_compute_obb_faces(const exanb::Vec3d* v) {
 
 #pragma omp parallel
   {
-    std::vector<vec3r> vbuf;  // buffer that will contain tmp vertex positions
+    std::vector<exanb::Vec3d> vbuf;  // buffer that will contain tmp vertex positions
 #pragma omp for schedule(static)
     for (size_t i = 0; i < size; i++) {
       obb_faces_[i] = build_obb_face(i, this, v, vbuf);

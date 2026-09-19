@@ -19,9 +19,12 @@
 #include <utility>  // for std::pair
 #include <vector>
 
+#include <onika/math/basic_types.h>
+#include <onika/math/basic_types_operators.h>
+#include <onika/math/math_utils.h>
+#include <onika/math/quaternion_operators.h>
+
 #include "OBB.hpp"
-#include "quat.hpp"
-#include "vec3.hpp"
 
 /**
  * This is simply an OBB with some additional data
@@ -31,7 +34,7 @@ class OBBbundle {
  public:
   OBB obb;
   T data;
-  std::vector<vec3r> points;  // used for fitting sets of 'leafs'
+  std::vector<exanb::Vec3d> points;  // used for fitting sets of 'leafs'
 
   OBBbundle() {}
   OBBbundle(const OBB& obb_) : obb(obb_) {}
@@ -46,12 +49,8 @@ class OBBnode {
   OBBnode* second = nullptr;
   T data;
   OBBnode() : boundary(), first(nullptr), second(nullptr) {}
-  bool isLeaf() {
-    return (first == nullptr && second == nullptr);
-  }
-  bool isLeaf() const {
-    return (first == nullptr && second == nullptr);
-  }
+  bool isLeaf() { return (first == nullptr && second == nullptr); }
+  bool isLeaf() const { return (first == nullptr && second == nullptr); }
 };
 
 template <class T>
@@ -61,6 +60,43 @@ class OBBtree {
 
   OBBtree() : root(nullptr) {}
   ~OBBtree() { reset(root); }
+
+  // exaDEM stores OBBtree as a by-value member of `shape`, which is routinely
+  // copied (shapes::add_shape, container growth). Without an explicit deep
+  // copy, the compiler-generated copy would duplicate the raw `root` pointer
+  // and both instances would later delete the same nodes (double free).
+  OBBtree(const OBBtree& other) : root(cloneTree(other.root)) {}
+
+  OBBtree& operator=(const OBBtree& other) {
+    if (this != &other) {
+      reset(root);
+      root = cloneTree(other.root);
+    }
+    return *this;
+  }
+
+  OBBtree(OBBtree&& other) noexcept : root(other.root) { other.root = nullptr; }
+
+  OBBtree& operator=(OBBtree&& other) noexcept {
+    if (this != &other) {
+      reset(root);
+      root = other.root;
+      other.root = nullptr;
+    }
+    return *this;
+  }
+
+  static OBBnode<T>* cloneTree(const OBBnode<T>* node) {
+    if (node == nullptr) {
+      return nullptr;
+    }
+    OBBnode<T>* copy = new OBBnode<T>();
+    copy->boundary = node->boundary;
+    copy->data = node->data;
+    copy->first = cloneTree(node->first);
+    copy->second = cloneTree(node->second);
+    return copy;
+  }
 
   void reset(OBBnode<T>* node) {
     if (node == nullptr) {
@@ -87,16 +123,19 @@ class OBBtree {
     }
 
     // find the axis of greatest extension
-    mat9r C = OBBtree::getCovarianceMatrix(OBBs);
-    mat9r eigvec;
-    vec3r eigval;
-    C.sorted_sym_eigen(eigvec, eigval);
-    vec3r u(eigvec.xx, eigvec.yx, eigvec.zx);
+    exanb::Mat3d C = OBBtree::getCovarianceMatrix(OBBs);
+    exanb::Vec3d eigvec[3];
+    double eigval[3];
+    // eigenvalues of a covariance matrix are >= 0, so sorting by absolute
+    // value (as symmetric_matrix_eigensystem does, ascending) also sorts
+    // them by value: eigvec[2] is the greatest-variance direction.
+    exanb::symmetric_matrix_eigensystem(C, eigvec, eigval);
+    const exanb::Vec3d& u = eigvec[2];
 
     // project onto this axis
     std::vector<std::pair<double, size_t>> proj;
     for (size_t i = 0; i < OBBs.size(); i++) {
-      proj.push_back(std::make_pair(OBBs[i].obb.center * u, i));
+      proj.push_back(std::make_pair(exanb::dot(OBBs[i].obb.center, u), i));
     }
 
     // By default the sort function sorts the vector elements on basis of first
@@ -114,9 +153,9 @@ class OBBtree {
   }
 
   // Build the covariance matrix with the points in OBB bundles
-  static mat9r getCovarianceMatrix(std::vector<OBBbundle<T>>& OBBs) {
-    vec3r mu;
-    mat9r C;
+  static exanb::Mat3d getCovarianceMatrix(std::vector<OBBbundle<T>>& OBBs) {
+    exanb::Vec3d mu{0.0, 0.0, 0.0};
+    exanb::Mat3d C;
 
     // loop over the points to find the mean point
     // location
@@ -142,7 +181,7 @@ class OBBtree {
 
     for (size_t io = 0; io < OBBs.size(); io++) {
       for (size_t p = 0; p < OBBs[io].points.size(); p++) {
-        vec3r pt = OBBs[io].points[p];
+        exanb::Vec3d pt = OBBs[io].points[p];
         cxx += pt.x * pt.x - mu.x * mu.x;
         cxy += pt.x * pt.y - mu.x * mu.y;
         cxz += pt.x * pt.z - mu.x * mu.z;
@@ -153,15 +192,15 @@ class OBBtree {
     }
 
     // now build the covariance matrix
-    C.xx = cxx;
-    C.xy = cxy;
-    C.xz = cxz;
-    C.yx = cxy;
-    C.yy = cyy;
-    C.yz = cyz;
-    C.zx = cxz;
-    C.zy = cyz;
-    C.zz = czz;
+    C.m11 = cxx;
+    C.m12 = cxy;
+    C.m13 = cxz;
+    C.m21 = cxy;
+    C.m22 = cyy;
+    C.m23 = cyz;
+    C.m31 = cxz;
+    C.m32 = cyz;
+    C.m33 = czz;
 
     return C;
   }
@@ -174,26 +213,29 @@ class OBBtree {
     }
 
     // compute the covariance matrix
-    mat9r C = OBBtree::getCovarianceMatrix(OBBs);
+    exanb::Mat3d C = OBBtree::getCovarianceMatrix(OBBs);
 
     // ==== set the OBB parameters from the covariance matrix
     // extract the eigenvalues and eigenvectors from C
-    mat9r eigvec;
-    vec3r eigval;
-    C.sym_eigen(eigvec, eigval);
+    exanb::Vec3d eigvec[3];
+    double eigval[3];
+    exanb::symmetric_matrix_eigensystem(C, eigvec, eigval);
 
     // find the right, up and forward vectors from the eigenvectors
-    vec3r r(eigvec.xx, eigvec.yx, eigvec.zx);
-    vec3r u(eigvec.xy, eigvec.yy, eigvec.zy);
-    vec3r f(eigvec.xz, eigvec.yz, eigvec.zz);
-    r.normalize();
-    u.normalize(), f.normalize();
+    // (order does not matter here, only orthonormality does)
+    exanb::Vec3d r = eigvec[0];
+    exanb::Vec3d u = eigvec[1];
+    exanb::Vec3d f = eigvec[2];
+    r = r / exanb::norm(r);
+    u = u / exanb::norm(u);
+    f = f / exanb::norm(f);
 
     // now build the bounding box extents in the rotated frame
-    vec3r minim(1e20, 1e20, 1e20), maxim(-1e20, -1e20, -1e20);
+    exanb::Vec3d minim{1e20, 1e20, 1e20}, maxim{-1e20, -1e20, -1e20};
     for (size_t io = 0; io < OBBs.size(); io++) {
       for (size_t p = 0; p < OBBs[io].points.size(); p++) {
-        vec3r p_prime(r * OBBs[io].points[p], u * OBBs[io].points[p], f * OBBs[io].points[p]);
+        exanb::Vec3d p_prime{exanb::dot(r, OBBs[io].points[p]), exanb::dot(u, OBBs[io].points[p]),
+                             exanb::dot(f, OBBs[io].points[p])};
         if (minim.x > p_prime.x) minim.x = p_prime.x;
         if (minim.y > p_prime.y) minim.y = p_prime.y;
         if (minim.z > p_prime.z) minim.z = p_prime.z;
@@ -206,7 +248,8 @@ class OBBtree {
     // set the center of the OBB to be the average of the
     // minimum and maximum, and the extents be half of the
     // difference between the minimum and maximum
-    fittedObb.center = eigvec * (0.5 * (maxim + minim));
+    const exanb::Vec3d half_sum = 0.5 * (maxim + minim);
+    fittedObb.center = r * half_sum.x + u * half_sum.y + f * half_sum.z;
     fittedObb.e1 = r;
     fittedObb.e2 = u;
     fittedObb.e3 = f;
@@ -255,7 +298,7 @@ class OBBtree {
   static void TreeIntersectionIds(const OBBnode<T>* nodeA, const OBBnode<T>* nodeB,
                                   std::vector<std::pair<T, T>>& intersections, const double scaleFactorA,
                                   const double scaleFactorB, const double enlargeValue,
-                                  const vec3r& posB_relativeTo_posA, const quat& QB_relativeTo_QA) {
+                                  const exanb::Vec3d& posB_relativeTo_posA, const exanb::Quaternion& QB_relativeTo_QA) {
     if (nodeA == nullptr || nodeB == nullptr) {
       return;
     }

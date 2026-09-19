@@ -27,7 +27,6 @@ namespace exaDEM {
 struct DriverPushToQuaternionFunctor {
   double dt_;
   double dt_2_;
-  double dt2_2_;
 
   ONIKA_HOST_DEVICE_FUNC
   inline void operator()(exanb::Quaternion& Q, exanb::Vec3d& vrot, const exanb::Vec3d arot) const {

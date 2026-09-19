@@ -217,7 +217,7 @@ static inline onika::parallel::ParallelExecutionWrapper reduce_data(onika::paral
     if (I.pair_.ghost_ != InteractionPair::PartnerGhost) {
       const double& dn = func.dnp_[i];
       n_tot_interaction += func.coef_;
-      if (dn < 0.0) {
+      if (dn < 0.0 || I.active()) {
         n_act_interaction += func.coef_;
         min_dn = std::min(min_dn, dn);
       }
