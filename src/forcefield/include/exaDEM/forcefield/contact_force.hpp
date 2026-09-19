@@ -126,23 +126,6 @@ ONIKA_HOST_DEVICE_FUNC inline void apply_dmt_force(const ContactParams& hkp, dou
   }
 }
 
-ONIKA_HOST_DEVICE_FUNC inline void cohesive_force_core(const double dn, const Vec3d& n, const double dncut,
-                                                       const double fc, Vec3d& f) {
-  if (dncut == 0) {
-    return;
-  }
-
-  if (dn <= dncut) {
-    const double fn_value = (fc / dncut) * dn - fc;
-    const Vec3d fn = fn_value * n;
-
-    // === update forces
-    f.x += fn.x;
-    f.y += fn.y;
-    f.z += fn.z;
-  }
-}
-
 template <ContactLawType ContactLaw, CohesiveLawType CohesiveLaw>
 ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
                                                       const Vec3d& n,  // -normal

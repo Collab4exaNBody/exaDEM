@@ -102,14 +102,14 @@ class CombinedComputeProlog : public OperatorNode {
     if (domain->xform_is_identity()) {
       PushVec3SecondOrderFunctor func1{delta_t, delta_t2_2};
       PushVec3FirstOrderFunctor func2{half_delta_t};
-      PushToQuaternionFunctor func3{delta_t, half_delta_t, delta_t2_2};
+      PushToQuaternionFunctor func3{delta_t, half_delta_t};
       CombinedPrologFunctor func{func1, func2, func3};
       compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     } else {
       const Mat3d inv_xform = domain->inv_xform();
       PushVec3SecondOrderXFormFunctor func1{inv_xform, delta_t, delta_t2_2};
       PushVec3FirstOrderXFormFunctor func2{inv_xform, half_delta_t};
-      PushToQuaternionFunctor func3{delta_t, half_delta_t, delta_t2_2};
+      PushToQuaternionFunctor func3{delta_t, half_delta_t};
       CombinedPrologXFormFunctor func{func1, func2, func3};
       compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }

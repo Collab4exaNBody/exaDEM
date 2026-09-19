@@ -104,18 +104,16 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
 
     // Compute particle OBB
     OBB obb_i = shpi->obb_;
-    quat conv_orient_i = quat{vec3r{orient_i.x, orient_i.y, orient_i.z}, orient_i.w};
-    obb_i.rotate(conv_orient_i);
-    obb_i.translate(vec3r{r.x, r.y, r.z});
+    obb_i.rotate(orient_i);
+    obb_i.translate(r);
     obb_i.enlarge(rVerlet);
 
     // Note:
     // loop i = particle p
     // loop j = rshape mesh
     for (size_t i = 0; i < nv; i++) {
-      vec3r v = conv_to_vec3r(vertices_i[i]);
       OBB obb_v_i;
-      obb_v_i.center = v;
+      obb_v_i.center = vertices_i[i];
       obb_v_i.enlarge(rVerlet + shpi->minkowski(hi));
 
       // convention: 7 for vertex-vertex interaction between particle and rshape driver.

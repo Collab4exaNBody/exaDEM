@@ -36,8 +36,8 @@ struct CountDriverInteractionsFunc {
     auto& pi_c = item.i();
     auto& pd_c = item.driver();
     pi_c.cell_ = cell_id;
-    pd_c.cell_ = 123456;  // Default value [debug]
-    pd_c.p_ = 12345;      // Default value [debug]
+    pd_c.cell_ = decltype(pd_c.cell_)(-1);
+    pd_c.p_ = decltype(pd_c.p_)(-1);
 
     const auto* __restrict__ id = cell[field::id];
     const auto* __restrict__ h = cell[field::homothety];
@@ -113,8 +113,8 @@ struct ClassifyDriverInteractionsFunc {
     auto& pi = item.i();
     auto& pd = item.driver();
     pi.cell_ = cell_id;
-    pd.cell_ = 123456;  // Default value [debug]
-    pd.p_ = 12345;      // Default value [debug]
+    pd.cell_ = decltype(pd.cell_)(-1);
+    pd.p_ = decltype(pd.p_)(-1);
 
     // By default,  if the interaction is between a particle and a driver
     // Data about the particle j is set to -1

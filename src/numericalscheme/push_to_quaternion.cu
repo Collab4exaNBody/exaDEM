@@ -49,9 +49,8 @@ class PushToQuaternion : public OperatorNode {
   inline void execute() final {
     const double dt = *(this->dt);
     const double dt_2 = 0.5 * dt;
-    const double dt2_2 = dt_2 * dt;
     const ComputeCellParticlesOptions ccpo = traversal_real->get_compute_cell_particles_options();
-    PushToQuaternionFunctor func{dt, dt_2, dt2_2};
+    PushToQuaternionFunctor func{dt, dt_2};
     compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
   }
 };

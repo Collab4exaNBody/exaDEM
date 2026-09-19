@@ -42,7 +42,7 @@ struct subBox {
   int nbPoints;
 };
 
-OBB build_OBB(const std::span<vec3r> vec, double radius);
+OBB build_OBB(const std::span<exanb::Vec3d> vec, double radius);
 
 /**
  * @brief Structure representing a polyhedral shape for DEM simulations.
@@ -381,8 +381,8 @@ struct shape {
   inline OBB get_obb_edge(const exanb::Vec3d& position, const size_t index,
                           const exanb::Quaternion& orientation) const {
     OBB res = obb_edges_[index];
-    res.rotate(conv_to_quat(orientation));
-    res.translate(conv_to_vec3r(position));
+    res.rotate(orientation);
+    res.translate(position);
     return res;
   }
 
@@ -397,8 +397,8 @@ struct shape {
   inline OBB get_obb_face(const exanb::Vec3d& position, const size_t index,
                           const exanb::Quaternion& orientation) const {
     OBB res = obb_faces_[index];
-    res.rotate(conv_to_quat(orientation));
-    res.translate(conv_to_vec3r(position));
+    res.rotate(orientation);
+    res.translate(position);
     return res;
   }
 
@@ -620,9 +620,9 @@ struct shape {
     for_all_vertices(scale_vertices, scale);
     volume_ = this->get_volume(scale);
     inertia_on_mass_ = this->get_Im(scale);
-    std::vector<vec3r> vertices;
+    std::vector<exanb::Vec3d> vertices;
     vertices.resize(vertices_.size());
-    for (size_t vid = 0; vid < vertices_.size(); vid++) vertices[vid] = conv_to_vec3r(get_vertex(vid));
+    for (size_t vid = 0; vid < vertices_.size(); vid++) vertices[vid] = get_vertex(vid);
     obb_ = build_OBB(vertices, radius_);
   }
 
@@ -640,10 +640,10 @@ struct shape {
     if (volume_ != 0) {
       volume_ *= (deformation.x * deformation.y * deformation.z);
     }
-    std::vector<vec3r> vertices;
+    std::vector<exanb::Vec3d> vertices;
     vertices.resize(vertices_.size());
     for (size_t vid = 0; vid < vertices_.size(); vid++) {
-      vertices[vid] = conv_to_vec3r(get_vertex(vid));
+      vertices[vid] = get_vertex(vid);
     }
     obb_ = build_OBB(vertices, radius_);
   }
@@ -784,7 +784,7 @@ struct shape {
       bundle.data.isub = face_idx;
       bundle.data.nbPoints = n_vertices;
 
-      for (int vi = 0; vi < n_vertices; vi++) bundle.points.push_back(conv_to_vec3r(vertices_[vertex_ids[vi]]));
+      for (int vi = 0; vi < n_vertices; vi++) bundle.points.push_back(vertices_[vertex_ids[vi]]);
 
       std::vector<OBBbundle<subBox>> single_bundle{bundle};
       bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, radius_);
@@ -797,8 +797,8 @@ struct shape {
       OBBbundle<subBox> bundle;
       bundle.data.isub = edge_idx;
       bundle.data.nbPoints = 2;
-      bundle.points.push_back(conv_to_vec3r(vertices_[v0]));
-      bundle.points.push_back(conv_to_vec3r(vertices_[v1]));
+      bundle.points.push_back(vertices_[v0]);
+      bundle.points.push_back(vertices_[v1]);
 
       std::vector<OBBbundle<subBox>> single_bundle{bundle};
       bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, radius_);
@@ -810,7 +810,7 @@ struct shape {
       OBBbundle<subBox> bundle;
       bundle.data.isub = vert_idx;
       bundle.data.nbPoints = 1;
-      bundle.points.push_back(conv_to_vec3r(vertices_[vert_idx]));
+      bundle.points.push_back(vertices_[vert_idx]);
 
       std::vector<OBBbundle<subBox>> single_bundle{bundle};
       bundle.obb = OBBtree<subBox>::fitOBB(single_bundle, radius_);

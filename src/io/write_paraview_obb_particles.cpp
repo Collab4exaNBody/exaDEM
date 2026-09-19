@@ -63,16 +63,14 @@ inline void build_buffer_obb(const exanb::Vec3d& pos, const uint64_t id, const u
   // add [1] corner [2] lines [3] id [4] type
 
   double homothety = 1;
-  vec3r p = conv_to_vec3r(pos);
   OBB obbi = shp->obb_;
-  quat Q = conv_to_quat(orient);
-  obbi.rotate(Q);
+  obbi.rotate(orient);
   obbi.extent *= homothety;
   obbi.center *= homothety;
-  obbi.center += p;
-  vec3r corner;
+  obbi.center += pos;
+  exanb::Vec3d corner;
 
-  auto add_corner = [&buffers](vec3r& c) { buffers.corners << " " << c[0] << " " << c[1] << " " << c[2]; };
+  auto add_corner = [&buffers](const exanb::Vec3d& c) { buffers.corners << " " << c.x << " " << c.y << " " << c.z; };
   auto add_offset = [&buffers](int incr) {
     buffers.offsets << " " << buffers.off;
     buffers.off += incr;
@@ -80,27 +78,27 @@ inline void build_buffer_obb(const exanb::Vec3d& pos, const uint64_t id, const u
 
   // [1] Add Corners
 
-  vec3r e0 = obbi.e1;  //
-  vec3r e1 = obbi.e2;  //
-  vec3r e2 = obbi.e3;  //
+  exanb::Vec3d e0 = obbi.e1;  //
+  exanb::Vec3d e1 = obbi.e2;  //
+  exanb::Vec3d e2 = obbi.e3;  //
 
-  corner = obbi.center - obbi.extent[0] * e0 - obbi.extent[1] * e1 - obbi.extent[2] * e2;
+  corner = obbi.center - obbi.extent.x * e0 - obbi.extent.y * e1 - obbi.extent.z * e2;
   add_corner(corner);
-  corner += 2.0 * obbi.extent[0] * e0;
+  corner += 2.0 * obbi.extent.x * e0;
   add_corner(corner);
-  corner += 2.0 * obbi.extent[1] * e1;
+  corner += 2.0 * obbi.extent.y * e1;
   add_corner(corner);
-  corner -= 2.0 * obbi.extent[0] * e0;
+  corner -= 2.0 * obbi.extent.x * e0;
   add_corner(corner);
 
-  corner = obbi.center - obbi.extent[0] * e0 - obbi.extent[1] * e1 - obbi.extent[2] * e2;
-  corner += 2.0 * obbi.extent[2] * e2;
+  corner = obbi.center - obbi.extent.x * e0 - obbi.extent.y * e1 - obbi.extent.z * e2;
+  corner += 2.0 * obbi.extent.z * e2;
   add_corner(corner);
-  corner += 2.0 * obbi.extent[0] * e0;
+  corner += 2.0 * obbi.extent.x * e0;
   add_corner(corner);
-  corner += 2.0 * obbi.extent[1] * e1;
+  corner += 2.0 * obbi.extent.y * e1;
   add_corner(corner);
-  corner -= 2.0 * obbi.extent[0] * e0;
+  corner -= 2.0 * obbi.extent.x * e0;
   add_corner(corner);
 
   // [2] add lines

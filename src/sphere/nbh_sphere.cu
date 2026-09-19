@@ -242,10 +242,16 @@ class UpdateContactInteractionSphere : public OperatorNode {
                                                           size_t p_nbh_index) {
                 // default value of the interaction studied (A or i -> B or j)
                 const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+                item.pair_.ghost_ = InteractionPair::NotGhost;
+                item.pair_.swap_ = false;
+
                 if (id_a[p_a] >= id_nbh) {
                   if (!g.is_ghost_cell(cell_b)) {
                     return;
                   }
+                }
+                if (g.is_ghost_cell(cell_b)) {
+                  item.pair_.ghost_ = InteractionPair::OwnerGhost;
                 }
 
                 auto& pi = item.i();  // particle i (id, cell id, particle position, sub vertex)

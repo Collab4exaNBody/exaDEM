@@ -362,7 +362,7 @@ class StickPolyhedraOperator : public OperatorNode {
 };
 
 // === register factories ===
-ONIKA_AUTORUN_INIT(nbh_polyhedron) {
+ONIKA_AUTORUN_INIT(stick_polyhedra) {
   OperatorNodeFactory::instance()->register_factory("stick_polyhedra",
                                                     make_grid_variant_operator<StickPolyhedraOperator>);
 }
