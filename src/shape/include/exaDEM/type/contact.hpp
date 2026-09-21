@@ -2,9 +2,9 @@
 
 namespace exaDEM {
 struct contact {
-  bool is_contact = false;
-  double dn = 0;
-  exanb::Vec3d normal;
-  exanb::Vec3d position;  // contact position
+  bool is_contact = false;  // true if contact is detected
+  double dn = 0;            // normal overlap (positive if penetration, negative if separation)
+  exanb::Vec3d normal;      // contact normal
+  exanb::Vec3d position;    // contact position
 };
 }  // namespace exaDEM

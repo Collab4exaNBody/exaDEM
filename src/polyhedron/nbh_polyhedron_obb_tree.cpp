@@ -216,10 +216,14 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
              is_xform](size_t p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index) {
               // default value of the interaction studied (A or i -> B or j)
               const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+              item.pair_.ghost_ = InteractionPair::NotGhost;
               if (id_a[p_a] >= id_nbh) {
                 if (!g.is_ghost_cell(cell_b)) {
                   return;
                 }
+              }
+              if (g.is_ghost_cell(cell_b)) {
+                item.pair_.ghost_ = InteractionPair::OwnerGhost;
               }
 
               VertexField& vertex_cell_b = vertex_fields[cell_b];
@@ -256,16 +260,14 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
               const shape* shp_nbh = shps[type_nbh];
 
               const Quaternion& orient = orient_a[p_a];
-              quat conv_orient_i = quat{vec3r{orient.x, orient.y, orient.z}, orient.w};
-              quat conv_orient_j = quat{vec3r{orient_nbh.x, orient_nbh.y, orient_nbh.z}, orient_nbh.w};
 
               intersections.clear();
-              vec3r ra = {rx, ry, rz};
-              vec3r rb = {rx_nbh, ry_nbh, rz_nbh};
+              Vec3d ra = {rx, ry, rz};
+              Vec3d rb = {rx_nbh, ry_nbh, rz_nbh};
 
-              quat QAconj = conv_orient_i.get_conjugated();
-              vec3r posB_relativeTo_posA = QAconj * (rb - ra);
-              quat QB_relativeTo_QA = QAconj * conv_orient_j;
+              Quaternion QAconj = get_conjugated(orient);
+              Vec3d posB_relativeTo_posA = QAconj * (rb - ra);
+              Quaternion QB_relativeTo_QA = hamilton_product(QAconj, orient_nbh);
 
               // Fill intersections
               OBBtree<subBox>::TreeIntersectionIds(shp->obbtree_.root, shp_nbh->obbtree_.root, intersections, h, h_nbh,

@@ -44,7 +44,8 @@ inline void build_list_of_ignore_pair(ListOfIgnorePairs& ignore_pairs, const siz
       auto& interactions = ges.m_data[cell_idx].m_data;
       for (auto& I : interactions) {
         if (I.persistent()) {
-          local.push_back(IgnorePairEntry{static_cast<uint32_t>(cell_idx), I.pair_.pi_.id_, I.pair_.pj_.id_});
+          local.push_back(
+              IgnorePairEntry{static_cast<uint32_t>(cell_idx), I.pair_.owner().id_, I.pair_.partner().id_});
         }
       }
     }
