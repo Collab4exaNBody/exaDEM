@@ -44,9 +44,6 @@ inline void build_list_of_ignore_pair(ListOfIgnorePairs& ignore_pairs, const siz
       auto& interactions = ges.m_data[cell_idx].m_data;
       for (auto& I : interactions) {
         if (I.persistent()) {
-          // cell_idx is always the owner's cell; the query side (ignore_pairs(cell_a, owner_id,
-          // partner_id) in the GPU kernels) expects id_a_/id_b_ in owner/partner order, not the
-          // raw pi_/pj_ order (which flips whenever swap_ is set).
           local.push_back(
               IgnorePairEntry{static_cast<uint32_t>(cell_idx), I.pair_.owner().id_, I.pair_.partner().id_});
         }
