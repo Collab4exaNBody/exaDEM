@@ -70,7 +70,7 @@ struct Driver_params {
   ONIKA_HOST_DEVICE_FUNC
   inline bool is_expr(MotionType motion_type, double time) const {
     // do nothing if time < start or time > end;
-    return motion_type == MotionType::EXPRESSION && is_motion_triggered(time);
+    return exaDEM::is_expr(motion_type) && is_motion_triggered(time);
   }
 
   ONIKA_HOST_DEVICE_FUNC
