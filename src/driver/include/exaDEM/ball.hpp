@@ -296,10 +296,12 @@ struct Ball {
   inline void f_ra(const Driver_params& motion, const double dt) {
     if (is_compressive(motion_type_)) {
       constexpr double C = 0.5;  // I don't remember why, ask Lhassan
-      if (motion.mass_ != 0) {
+      // Use the ball's own mass. If it was left at its default/undefined value
+      // (see BallFields::mass_), fall back to half the total system mass.
+      const double m = (fields_.mass_ < 1e100) ? fields_.mass_ : 0.5 * motion.system_mass_;
+      if (m != 0) {
         const double s = surface();
-        // forces and mass are defined in Driver_params
-        fields_.ra_ = (exanb::norm(fields_.forces_) - motion.sigma_ * s - (motion.damprate_ * fields_.rv_)) / (motion.mass_ * C);
+        fields_.ra_ = (exanb::norm(fields_.forces_) - motion.sigma_ * s - (motion.damprate_ * fields_.rv_)) / (m * C);
       }
     }
   }

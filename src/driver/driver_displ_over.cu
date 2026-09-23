@@ -144,7 +144,7 @@ struct DriverDisplOver {
     const exanb::Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp_.vertices_);
     RShapeDriverDisplacementFunctor SVDFunc = {
         r2_, ptr_shp_vertices, a.fields_.center_, a.fields_.quat_, b.fields_.center_, b.fields_.quat_};
-    ReduceMaxRShapeDriverDisplacementFunctor func = {SVDFunc, storage_.get_ptr()};
+    ReduceRShapeDriverDisplacementCountFunctor func = {SVDFunc, storage_.get_ptr()};
 
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_STATIC;

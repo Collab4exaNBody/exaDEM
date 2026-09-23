@@ -165,7 +165,7 @@ struct DriverExtractor {
 
   // Extract data from drivers according to registered trackers
   // (Implementation depends on extraction mechanism)
-  void extract_driver_data(Drivers& driver) {}
+  void extract_driver_data(Drivers& drivers) {}
 
   // Register a new tracker, merging with existing tracker for same driver if present
   void add(extractor::Tracker& tracker) {
