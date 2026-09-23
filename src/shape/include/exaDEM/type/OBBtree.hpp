@@ -14,15 +14,15 @@
 #ifndef OBB_TREE_HPP
 #define OBB_TREE_HPP
 
-#include <algorithm>  // for std::sort
-#include <cmath>
-#include <utility>  // for std::pair
-#include <vector>
-
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <onika/math/math_utils.h>
 #include <onika/math/quaternion_operators.h>
+
+#include <algorithm>  // for std::sort
+#include <cmath>
+#include <utility>  // for std::pair
+#include <vector>
 
 #include "OBB.hpp"
 
@@ -98,7 +98,7 @@ class OBBtree {
     return copy;
   }
 
-  void reset(OBBnode<T>* node) {
+  void reset(OBBnode<T>*& node) {
     if (node == nullptr) {
       return;
     }
