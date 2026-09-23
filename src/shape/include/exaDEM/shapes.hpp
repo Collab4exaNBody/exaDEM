@@ -125,9 +125,7 @@ struct shapes {
  */
 inline void register_shape(exanb::ParticleTypeMap& ptm, shapes& shps, shape& shp) {
   if (ptm.find(shp.name_) != ptm.end()) {
-    shp.name_ = shp.name_ + "X";
-    color_log::warning("register_shape",
-                       "This polyhedron name is already taken, exaDEM has renamed it to: " + shp.name_);
+    color_log::error("register_shape", "This polyhedron name is already taken: " + shp.name_);
   }
   ptm[shp.name_] = shps.size();
   shps.add_shape(&shp);
