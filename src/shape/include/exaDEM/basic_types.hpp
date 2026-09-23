@@ -40,7 +40,7 @@ ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion hamilton_product(const exanb::Qu
 ONIKA_HOST_DEVICE_FUNC inline OBB compute_obb(const OBB& in_obb, const exanb::Vec3d& in_pos,
                                               const exanb::Quaternion& in_q, const double homothety) {
   OBB obb = in_obb;
-  obb.rotate(in_q);
+  obb.rotate_in_place(in_q);
   if (homothety != 1.0) {
     obb.extent *= homothety;
     obb.center *= homothety;

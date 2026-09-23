@@ -312,7 +312,7 @@ class OBBtree {
     movedBoundaryB.center *= scaleFactorB;
     movedBoundaryB.extent *= scaleFactorB;
     movedBoundaryB.enlarge(enlargeValue);
-    movedBoundaryB.rotate(QB_relativeTo_QA);
+    movedBoundaryB.rotate_in_place(QB_relativeTo_QA);
     movedBoundaryB.translate(posB_relativeTo_posA);
 
     if (BoundaryA.intersect(movedBoundaryB) == false) {

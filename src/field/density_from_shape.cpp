@@ -62,7 +62,7 @@ class PolyhedraSetDensity : public OperatorNode {
         const size_t n = cells[i].size();
 #pragma omp simd
         for (size_t j = 0; j < n; j++) {
-          m[j] = d * shps[t[j]]->get_volume(h[j]);
+          m[j] = d * shps[t[j]]->compute_volume(h[j]);
         }
       }
       GRID_OMP_FOR_END

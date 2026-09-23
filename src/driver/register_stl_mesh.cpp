@@ -93,9 +93,9 @@ class RegisterRShapeDriver : public OperatorNode {
       // not optimized
       bool big_shape = true;
       shp = read_shp(output_name, big_shape);
-      if (shp.get_Im() != exanb::Vec3d{0, 0, 0}) {
+      if (shp.compute_Im() != exanb::Vec3d{0, 0, 0}) {
         color_log::warning(operator_name(), "Override inertia using shape I/m");
-        state->inertia_ = shp.get_Im() / state->mass_;
+        state->inertia_ = shp.compute_Im() / state->mass_;
       }
     }
 

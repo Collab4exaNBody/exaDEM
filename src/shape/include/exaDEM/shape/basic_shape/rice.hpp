@@ -30,7 +30,7 @@ shape create_rice(std::string name, double length, double minkowski) {
   // ---------- Normalized Inertia (I/m) ----------
   // Calculated in the local frame where the tube is aligned along the X-axis.
   // We use the decomposition: total_inertia = inertia_cylinder + inertia_sphere
-  const double inv_v_tot = 1.0 / shp.get_volume();
+  const double inv_v_tot = 1.0 / shp.compute_volume();
 
   // X-axis: Rolling (sum of axial inertias)
   double Ix_m = (v_cyl * 0.5 * r * r + v_sph * 0.4 * r * r) * inv_v_tot;
