@@ -92,7 +92,8 @@ iteration_dump_writer:
 iteration_paraview_writer: 
   - dump_data_paraview
 
-final_dump_writer: dump_data_particles
+final_dump_writer:
+  - dump_data_particles
 
 # usefull to cleanly place particles in corresponding cells
 # and/or extend domain, just before a dump
@@ -114,9 +115,9 @@ dump_paraview_if_triggered:
   body:
     - iteration_paraview_writer
 
-final_dump:
-    - cleanup_before_dump
-    - final_dump_writer 
+final_dump:  nop # These files are no longer dumped
+#    - cleanup_before_dump
+#    - final_dump_writer 
 # re add it later
 
 
