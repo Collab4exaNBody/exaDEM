@@ -31,6 +31,7 @@ class SimulationState {
  public:
   inline void set_kinetic_energy(const Vec3d& x) { kinetic_energy_ = x; }
 
+  /// per-axis kinetic energy components; use kinetic_energy_scal() for the scalar total
   inline const Vec3d& kinetic_energy() const { return kinetic_energy_; }
 
   inline double kinetic_energy_scal() const { return kinetic_energy_.x + kinetic_energy_.y + kinetic_energy_.z; }

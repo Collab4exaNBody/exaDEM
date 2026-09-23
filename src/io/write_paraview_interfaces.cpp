@@ -60,7 +60,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
  public:
   inline std::string documentation() const final {
     return R"EOF( 
-      This operator initialize shapes data structure from a shape input file.
+      This operator writes cohesive interfaces to a Paraview file.
 
       YAML example:
 

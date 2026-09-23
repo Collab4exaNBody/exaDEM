@@ -51,7 +51,7 @@ class FreezeFieldsNode : public OperatorNode{
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This operator resets two grid fields : moments and forces.
+        This operator resets forces, moments, velocities and angular velocities to zero.
         )EOF";
   }
 

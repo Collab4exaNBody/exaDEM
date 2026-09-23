@@ -89,7 +89,7 @@ class CheckOwnerPartnerGhosts : public OperatorNode {
         "* Face (Driver) - Vertex    = ", "* Vertice - Vertex (Stick)  = "};
 
     lout << "=====================================================" << std::endl;
-    lout << "* Ghost type of interaction = partner / owner / error" << std::endl;
+    lout << "* Ghost type of interaction = owner / partner / error" << std::endl;
     for (int i = 0; i < 14; i++) {
       lout << names[i] << val[i] << " / " << val[14 + i] << " / " << val[i] - val[14 + i] << std::endl;
     }

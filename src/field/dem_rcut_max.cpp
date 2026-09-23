@@ -37,7 +37,7 @@ class DEMRcutMax : public OperatorNode {
   // ----------- Operator documentation ------------
   inline std::string documentation() const final {
     return R"EOF(
-        Fill rcut_max with the maximum of the radii. 
+        Fill rcut_max with the maximum of the particle diameters (2 * max radius).
 
         YAML example [no option]:
   
