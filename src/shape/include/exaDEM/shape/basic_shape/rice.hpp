@@ -20,7 +20,7 @@ shape create_rice(std::string name, double length, double minkowski) {
   const double pi = M_PI;
   shape shp;
   shp.name_ = name;
-  shp.add_radius(r);
+  shp.set_radius(r);
 
   // ---------- Volume ----------
   const double v_cyl = pi * r * r * c;

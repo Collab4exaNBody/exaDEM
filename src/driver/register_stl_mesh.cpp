@@ -125,7 +125,7 @@ class RegisterRShapeDriver : public OperatorNode {
       }
     }
 
-    shp.add_radius(*minkowski);
+    shp.set_radius(*minkowski);
     // shp.increase_obb(*rcut_inc);
     shp.increase_obb(shp.minkowski());
 

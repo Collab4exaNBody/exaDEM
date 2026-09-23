@@ -478,7 +478,7 @@ struct shape {
    * @brief Set the minkowski radius used for detection.
    * @param radius Minkowsku radius
    */
-  void add_radius(const double radius) { radius_ = radius; }
+  void set_radius(const double radius) { radius_ = radius; }
 
   /**
    * @brief Compute the maximum cutoff radius (distance from origin + Minkowski

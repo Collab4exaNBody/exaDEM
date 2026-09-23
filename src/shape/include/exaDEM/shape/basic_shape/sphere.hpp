@@ -18,7 +18,7 @@ shape create_sphere(std::string name, double minkowski) {
   const double pi = M_PI;
   shape shp;
   shp.name_ = name;
-  shp.add_radius(r);
+  shp.set_radius(r);
 
   // ---------- Volume ----------
   shp.volume_ = 4 / 3 * pi * r * r * r;

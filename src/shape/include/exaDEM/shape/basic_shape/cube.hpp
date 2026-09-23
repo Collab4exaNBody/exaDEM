@@ -18,7 +18,7 @@ shape create_cube(std::string name, double length, double minkowski) {
   const double pi = M_PI;
   shape shp;
   shp.name_ = name;
-  shp.add_radius(r);
+  shp.set_radius(r);
 
   // ---------- Volume ----------
   shp.volume_ = c * c * c + 6.0 * c * c * r + 3.0 * pi * r * r * c + (4.0 / 3.0) * pi * r * r * r;
