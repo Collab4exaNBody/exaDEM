@@ -124,11 +124,11 @@ class ComputeInnerBondForce : public OperatorNode {
     if (is_def_xform) {
       inner_bond_law<LinearXForm> func;
       func.xform = LinearXForm{xform};
-      run_contact_law<InteractionTypeId::InnerBond>(parallel_execution_context(), classifier, func, __params__);
+      run_contact_law<InteractionTypeId::InnerBondId>(parallel_execution_context(), classifier, func, __params__);
     } else {
       inner_bond_law<NullXForm> func;
       func.xform = NullXForm{};
-      run_contact_law<InteractionTypeId::InnerBond>(parallel_execution_context(), classifier, func, __params__);
+      run_contact_law<InteractionTypeId::InnerBondId>(parallel_execution_context(), classifier, func, __params__);
     }
 #undef __params__
   }

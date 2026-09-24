@@ -463,7 +463,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     InteractionParticleAccessor particle_particle_classifier_accessor;
     for (int typeID = get_first_id<InteractionType::ParticleParticle>();
          typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
-      auto& c = interaction_container.get_data<ParticleParticle>(typeID);
+      auto& c = interaction_container.get_data<InteractionType::ParticleParticle>(typeID);
       c.resize(total_interactions_per_type[typeID]);
       particle_particle_classifier_accessor[typeID] = c.view();
     }

@@ -18,17 +18,13 @@ under the License.
  */
 #pragma once
 
-#include <sstream>
 #include <onika/math/basic_types.h>
+
 #include <exaDEM/face.hpp>
+#include <sstream>
 
 namespace exaDEM {
-/**
- * @brief Represents a 3D mesh consisting of faces.
- *
- * The `stl_mesh` struct represents a 3D mesh composed of faces. It provides methods for adding faces to the mesh,
- * accessing the mesh data, and retrieving individual faces.
- */
+
 struct STLMeshReader {
   std::vector<Face> data_; /**< A collection of Face objects representing the mesh. */
 
@@ -36,35 +32,30 @@ struct STLMeshReader {
    * @brief Adds a Face to the mesh.
    * @param face The Face to be added to the mesh.
    */
-  void add_face(Face& face) {
-    data_.push_back(face);
-  }
+  void add_face(Face& face) { data_.push_back(face); }
 
   /**
    * @brief Gets a reference to the mesh data.
    * @return A reference to the vector of Face objects representing the mesh.
    */
-  std::vector<Face>& get_data() {
-    return data_;
-  }
+  std::vector<Face>& get_data() { return data_; }
 
   /**
    * @brief Gets a reference to a specific Face in the mesh.
    * @param idx The index of the Face to retrieve.
    * @return A reference to the specified Face.
    */
-  Face& get_data(const int idx) {
-    return data_[idx];
-  }
+  Face& get_data(const int idx) { return data_[idx]; }
 
   /**
    * @brief Reads mesh data from an STL file and populates the mesh.
    *
-   * The `read_stl` function reads mesh data from an STL file specified by `file_name` and populates the mesh with
+   * This operator reads mesh data from an STL file specified by `file_name` and populates the mesh with
    * vertices and faces. It also calculates the number of vertices and faces in the mesh and provides information about
    * the mesh's characteristics.
    *
    * @param file_name The name of the STL file to read.
+   * @param is_binary Whether the STL file is in binary format (true) or ASCII format (false).
    */
   void operator()(std::string file_name, bool is_binary) {
     std::ifstream input;

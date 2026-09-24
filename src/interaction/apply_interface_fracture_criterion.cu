@@ -49,7 +49,7 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
     int init_value = 0;
     uint64_t number_of_broken_interfaces = 0;
     auto data_view = ic->get_sticked_interaction_wrapper();
-    auto [dn, cp, fn, ft] = ic->contact_state(InteractionTypeId::InnerBond);
+    auto [dn, cp, fn, ft] = ic->contact_state(InteractionTypeId::InnerBondId);
 
     ApplyAndReduceInterfaceFractureCriterionFunc func = {data_view, fn, dn};
 

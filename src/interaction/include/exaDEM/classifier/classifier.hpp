@@ -158,7 +158,7 @@ struct Classifier {
    * @return View over the sticked interaction.
    */
   WaveIB::View get_sticked_interaction_wrapper() {
-    WaveIB& ib = get_data<InnerBond>(InteractionTypeId::FirstIdInnerBond);
+    WaveIB& ib = get_data<InteractionType::InnerBond>(InteractionTypeId::FirstIdInnerBond);
     assert(innerbonds_.size() == InteractionTypeId::NTypesInnerBond);
     return ib.view();
   }

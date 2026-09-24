@@ -230,7 +230,7 @@ bool check_stiked_face(std::vector<exaDEM::PlaceholderInteraction>& interactions
   std::vector<Vec3d> vertices;
   // identify vertices
   for (size_t i = 0; i < interactions.size(); i++) {
-    if (interactions[i].type() == InteractionTypeId::InnerBond) {
+    if (interactions[i].type() == InteractionTypeId::InnerBondId) {
       vertex_id.push_back(interactions[i].pair_.pi_.sub_);
     }
   }

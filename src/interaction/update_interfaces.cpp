@@ -45,7 +45,7 @@ class UpdateInterfaces : public OperatorNode {
     auto& build_manager = *ibm;
     auto& manager = *im;
     ClassifierContainer<InteractionType::InnerBond>& interactions =
-        ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
+        ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBondId);
     build_manager.data_.clear();
     size_t n_interactions = interactions.size();
 
@@ -89,7 +89,7 @@ class UpdateInterfaces : public OperatorNode {
     manager.resize(build_manager.data_.size());
     std::memcpy(manager.data_.data(), build_manager.data_.data(), build_manager.data_.size() * sizeof(Interface));
     assert(check_interface_consistency(build_manager,
-                                       ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond)));
+                                       ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBondId)));
   }
 };
 

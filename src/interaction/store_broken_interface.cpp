@@ -87,7 +87,7 @@ class StoreBrokenInterfaceOp : public OperatorNode {
         if (interfaces.break_interface_[i] == true) {
           auto [offset, size] = interfaces.data_[i];
           auto I = data_view(offset);
-          assert(I.pair_.type_ == InteractionTypeId::InnerBond);
+          assert(I.pair_.type_ == InteractionTypeId::InnerBondId);
           auto owner_particle = I.pair_.owner();
           auto type_a = exadem_field_value(cells, owner_particle, field::type);
 
