@@ -15,17 +15,23 @@ specific language governing permissions and limitations
 under the License.
 */
 
+// Onika
 #include <onika/scg/operator.h>
-#include <onika/scg/operator_slot.h>
 #include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
+// ExaNBody
+// clang-format off
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/compute/reduce_cell_particles.h>
-#include <exanb/grid_cell_particles/particle_region.h>
+// clang-format on
 #include <exanb/core/grid.h>
+#include <exanb/grid_cell_particles/particle_region.h>
 
-#include <exaDEM/traversal.hpp>
+// ExaDEM
 #include <exaDEM/analysis_manager.hpp>
 #include <exaDEM/counter.hpp>
+#include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT, field::_rx, field::_ry, field::_rz, field::_type>>
@@ -92,7 +98,7 @@ class ParticleCounterAnalysis : public OperatorNode {
       uint64_t local(count), global(0);
       MPI_Reduce(&local, &global, 1, MPI_UINT64_T, MPI_SUM, 0, *mpi);
       std::string var_name = "Type[" + std::to_string(type) + "]";
-      manager.add_element(var_name, count, "%d");
+      manager.add_element(var_name, global, "%lu");
     }
     manager.endl();
     manager.write();
