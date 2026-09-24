@@ -6,7 +6,7 @@
 namespace exaDEM {
 namespace basic_shape {
 /**
- * @brief Return a shape of a cuboïde.
+ * @brief Return a shape of a sphere.
  * @param name Shape name.
  * @param minkowski Minkowski radius
  */

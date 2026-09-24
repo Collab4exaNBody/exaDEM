@@ -60,7 +60,7 @@ struct CellPairStorage {
   VectorT<InteractionTypePerCellCounter> offset_;  ///< Offset for each interaction type per cell pair
   VectorT<size_t> owner_cell_;                     ///< Owner cell index for each non-empty cell pair
   VectorT<size_t> partner_cell_;                   ///< Partner cell index for each non-empty cell pair
-  VectorT<uint8_t> ghost_;                         ///< Flag to skip a partner cell is a ghost
+  VectorT<uint8_t> ghost_;                         ///< 1 if the partner cell is a ghost
   VectorT<uint8_t> skip_;                          ///< Flag to skip a cell pair in the second pass
 
   /**
