@@ -33,7 +33,7 @@ class UpdateInterfaces : public OperatorNode {
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This operator copies interactions from GridCellParticleInteraction to the Interaction Classifier.
+        This operator groups already-classified InnerBond interactions into Interface objects.
 
         YAML example [no option]:
 

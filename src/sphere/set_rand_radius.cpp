@@ -118,7 +118,7 @@ Parameters:
       For example, 0.2 means the new radius will vary roughly ±20%
       around the current radius.
 
-  - allow_exceed (bool, optional, default=false):
+  - allow_exceed (bool, optional, default=true):
       If true, the new radius can exceed the current radius.
       Otherwise, it is limited to a maximum equal to the current radius.
 

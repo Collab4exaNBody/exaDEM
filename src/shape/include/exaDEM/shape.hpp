@@ -62,7 +62,8 @@ struct shape {
   VectorT<int> faces_;              ///< List of faces, stored as sequences of vertex indices
   VectorT<int> offset_faces_;       ///< Offsets for indexing faces in faces_
   VectorT<double> face_area_;       ///< Face area
-  double radius_;                   ///< Radius used for contact detection
+  double radius_;                   ///< Minkowski (sphero-polyhedral rounding) radius used for contact detection,
+                                     ///< not the geometric extent of the shape
   double volume_;                   ///< Volume of the shape
   std::string name_ = "undefined";  ///< Name of the shape
   OBBtree<subBox> obbtree_;         ///< Optional OBB tree for accelerated collision detection

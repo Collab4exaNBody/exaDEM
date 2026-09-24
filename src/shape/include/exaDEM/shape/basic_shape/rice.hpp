@@ -6,9 +6,9 @@
 namespace exaDEM {
 namespace basic_shape {
 /**
- * @brief Return a shape of a cuboïde.
+ * @brief Return a shape of a rice grain.
  * @param name Shape name.
- * @param length Cube length
+ * @param length Rice length
  * @param minkowski Minkowski radius
  */
 shape create_rice(std::string name, double length, double minkowski) {

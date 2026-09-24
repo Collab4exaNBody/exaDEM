@@ -60,11 +60,12 @@ struct STLMeshReader {
   /**
    * @brief Reads mesh data from an STL file and populates the mesh.
    *
-   * The `read_stl` function reads mesh data from an STL file specified by `file_name` and populates the mesh with
+   * This operator reads mesh data from an STL file specified by `file_name` and populates the mesh with
    * vertices and faces. It also calculates the number of vertices and faces in the mesh and provides information about
    * the mesh's characteristics.
    *
    * @param file_name The name of the STL file to read.
+   * @param is_binary Whether the STL file is in binary format (true) or ASCII format (false).
    */
   void operator()(std::string file_name, bool is_binary) {
     std::ifstream input;
