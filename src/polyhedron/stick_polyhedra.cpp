@@ -224,7 +224,7 @@ class StickPolyhedraOperator : public OperatorNode {
               const InnerBondParams& ibp = ibpa(g_i[p_i], groupj);
 
               // Add interactions
-              item.pair_.type_ = InteractionTypeId::InnerBond;
+              item.pair_.type_ = InteractionTypeId::InnerBondId;
 
               // particle i (id, cell id, particle position, sub vertex)
               auto& pi = item.i();

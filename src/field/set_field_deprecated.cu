@@ -299,8 +299,8 @@ class SetFieldsDeprecated : public OperatorNode {
           color_log::error(operator_name(), "We can't find the shape related to the type " + type_name +
                                                 ". Please verify that you have load all shape files.");
         }
-        m = d * shp->get_volume(h);
-        inertia = m * shp->get_Im(h);
+        m = d * shp->compute_volume(h);
+        inertia = m * shp->compute_Im(h);
 
         if (mat.set_r) {
           color_log::warning(operator_name(),

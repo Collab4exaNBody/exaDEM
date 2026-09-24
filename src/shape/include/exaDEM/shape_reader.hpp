@@ -58,7 +58,7 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
     } else if (key == "radius") {
       double r;
       input >> r;
-      shp.add_radius(r);
+      shp.set_radius(r);
     } else if (key == "volume") {
       input >> shp.volume_;
     } else if (key == "I/m") {

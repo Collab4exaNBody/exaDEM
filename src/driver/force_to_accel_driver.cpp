@@ -35,11 +35,11 @@ struct ForceToAccelDriverFunc {
   inline void operator()(T& arg, Driver_params& motion) {
     static_assert(get_type<T>() != DRIVER_TYPE::UNDEFINED);
     if constexpr (std::is_same_v<std::remove_cv_t<T>, Ball>) {
-      motion.mass_ = mass_;
+      motion.system_mass_ = mass_;
       arg.f_ra(motion, dt_);
     }
     if constexpr (std::is_same_v<std::remove_cv_t<T>, Surface>) {
-      motion.mass_ = mass_;
+      motion.system_mass_ = mass_;
     }
     arg.force_to_accel(motion);
   }

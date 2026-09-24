@@ -81,7 +81,7 @@ inline void collect_persistent_inner_bonds(PersistentInnerBonds& persistent, Cel
   std::vector<int> counts(active_cell_count, 0);
 
   auto test = [](PlaceholderInteraction& I) -> bool {
-    return I.type() == InteractionTypeId::InnerBond && I.persistent();
+    return I.type() == InteractionTypeId::InnerBondId && I.persistent();
   };
 
 #pragma omp parallel for schedule(guided)
@@ -96,7 +96,7 @@ inline void collect_persistent_inner_bonds(PersistentInnerBonds& persistent, Cel
     }
     counts[i] = count;
     if (count > 0) {
-      cell_storage.size_[i][InteractionTypeId::InnerBond] += count;
+      cell_storage.size_[i][InteractionTypeId::InnerBondId] += count;
     }
   }
 
@@ -135,13 +135,13 @@ inline void fill_classifier_persistent_inner_bonds(const PersistentInnerBonds& p
                                                    const CellStorage::View& cell_storage_accessor,
                                                    ClassifierViewAccessor& interaction_classifier_accessor) {
   auto& wrapper =
-      interaction_classifier_accessor.get_typed_accessor<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
+      interaction_classifier_accessor.get_typed_accessor<InteractionType::InnerBond>(InteractionTypeId::InnerBondId);
   const size_t n = persistent.interactions_.size();
   size_t total_interactions_copied = 0;
 #pragma omp parallel for schedule(guided) reduction(+ : total_interactions_copied)
   for (size_t k = 0; k < n; k++) {
     const size_t cell_i = persistent.cell_idx_[k];
-    const int idx = cell_storage_accessor.offset_[cell_i][InteractionTypeId::InnerBond] + persistent.local_rank_[k];
+    const int idx = cell_storage_accessor.offset_[cell_i][InteractionTypeId::InnerBondId] + persistent.local_rank_[k];
     PlaceholderInteraction item = persistent.interactions_[k];
     wrapper.set(idx, item);
     wrapper.update(idx, item);

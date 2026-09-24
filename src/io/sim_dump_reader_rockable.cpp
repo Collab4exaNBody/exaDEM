@@ -230,8 +230,8 @@ class DumpReaderConfRockable : public OperatorNode {
         max_group = std::max(max_group, static_cast<uint32_t>(rp.group));
         const auto& shp = shps[ptio[field::type]];
         double d = manager.densities[ptio[field::type]];
-        ptio[field::mass] = d * shp->get_volume(rp.homothety);
-        ptio[field::inertia] = ptio[field::mass] * shp->get_Im(rp.homothety);
+        ptio[field::mass] = d * shp->compute_volume(rp.homothety);
+        ptio[field::inertia] = ptio[field::mass] * shp->compute_Im(rp.homothety);
         ptio[field::radius] = shp->compute_max_rcut();
 
         // boundaries

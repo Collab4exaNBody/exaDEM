@@ -16,15 +16,15 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+#include <exanb/core/cell_costs.h>
+#include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
+#include <exanb/core/grid_fields.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
-#include <exanb/core/cell_costs.h>
-#include <exanb/core/domain.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/grid_fields.h>
 
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction.hpp>
@@ -59,11 +59,8 @@ class DEMCostModel : public OperatorNode {
     cell_costs.m_costs.resize(n_cells, 0.);
     auto& interactions = ges->m_data;
     bool skip_interaction = interactions.size() == 0 ? true : false;
-    
-    static bool printed = false;
-    if (!printed) { lout << "=== DEM_COST_MODEL VERSION N2 ===" << std::endl; printed = true; }
 
-#   pragma omp parallel
+#pragma omp parallel
     {
       GRID_OMP_FOR_BEGIN(dims, i, loc, schedule(static)) {
         const size_t cell_i = grid_ijk_to_index(grid_dims, loc + ghost_layers);

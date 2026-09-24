@@ -60,7 +60,7 @@ class PolyhedraUpdateInertia : public OperatorNode {
         const size_t n = cells[i].size();
 #pragma omp simd
         for (size_t j = 0; j < n; j++) {
-          inertia[j] = m[j] * sphs[t[j]]->get_Im(h[j]);
+          inertia[j] = m[j] * sphs[t[j]]->compute_Im(h[j]);
         }
       }
       GRID_OMP_FOR_END

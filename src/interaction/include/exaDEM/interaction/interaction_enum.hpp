@@ -19,11 +19,12 @@ under the License.
 #pragma once
 
 namespace exaDEM {
-enum InteractionType { ParticleParticle, ParticleDriver, InnerBond };
+enum class InteractionType { ParticleParticle, ParticleDriver, InnerBond };
 
 struct InteractionTypeId {
-  // classic
   static constexpr int NTypesParticleParticle = 13;
+
+  // particle
   static constexpr int VertexVertex = 0;
   static constexpr int VertexEdge = 1;
   static constexpr int VertexFace = 2;
@@ -36,22 +37,24 @@ struct InteractionTypeId {
   static constexpr int VertexCylinder = 4;
   static constexpr int VertexSurface = 5;
   static constexpr int VertexBall = 6;
-  static constexpr int FirstIdDriver = VertexCylinder;
   static constexpr int VertexRshapeDriverVertex = 7;
   static constexpr int VertexRshapeDriverEdge = 8;
   static constexpr int VertexRshapeDriverFace = 9;
   static constexpr int EdgeRshapeDriverEdge = 10;
   static constexpr int EdgeRshapeDriverVertex = 11;
   static constexpr int FaceRshapeDriverVertex = 12;
-  static constexpr int LastIdDriver = 12;
+  static constexpr int FirstIdDriver = VertexCylinder;
+  static constexpr int LastIdDriver = FaceRshapeDriverVertex;
   static constexpr int NTypesParticleDriver = LastIdDriver - FirstIdDriver + 1;
+
   // fragmentation
   static constexpr int NTypesStickecParticles = 1;
-  static constexpr int InnerBond = 13;
-  static constexpr int FirstIdInnerBond = InnerBond;
-  static constexpr int LastIdInnerBond = InnerBond;
+  static constexpr int InnerBondId = 13;
+  static constexpr int FirstIdInnerBond = InnerBondId;
+  static constexpr int LastIdInnerBond = InnerBondId;
   static constexpr int NTypesInnerBond = LastIdInnerBond - FirstIdInnerBond + 1;
   static constexpr int NTypes = NTypesPP + NTypesParticleDriver + NTypesInnerBond;
+
   // control initialization
   static constexpr int Undefined = 666;
 };

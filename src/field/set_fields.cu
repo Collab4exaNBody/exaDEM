@@ -364,8 +364,8 @@ class SetFields : public OperatorNode {
                                                 ". Please verify that you have load all shape files.");
         }
         const auto& shp = shps[type_id];
-        t.mass = d * shp->get_volume(t.homothety);
-        t.inertia = t.mass * shp->get_Im(t.homothety);
+        t.mass = d * shp->compute_volume(t.homothety);
+        t.inertia = t.mass * shp->compute_Im(t.homothety);
         if (radius.has_value()) {
           color_log::warning(operator_name(),
                              "The radius slot is ignored when using polyhedra, "

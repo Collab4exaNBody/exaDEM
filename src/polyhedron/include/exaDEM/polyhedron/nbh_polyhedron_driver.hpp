@@ -104,7 +104,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
 
     // Compute particle OBB
     OBB obb_i = shpi->obb_;
-    obb_i.rotate(orient_i);
+    obb_i.rotate_in_place(orient_i);
     obb_i.translate(r);
     obb_i.enlarge(rVerlet);
 
