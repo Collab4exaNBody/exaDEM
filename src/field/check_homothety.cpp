@@ -94,7 +94,7 @@ class CheckHomothety : public OperatorNode {
 };
 
 // === register factories ===
-ONIKA_AUTORUN_INIT(check_rcut) {
+ONIKA_AUTORUN_INIT(check_homothety) {
   OperatorNodeFactory::instance()->register_factory("check_homothety", make_grid_variant_operator<CheckHomothety>);
 }
 }  // namespace exaDEM
