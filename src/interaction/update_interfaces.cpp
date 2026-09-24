@@ -26,18 +26,25 @@ under the License.
 namespace exaDEM {
 class UpdateInterfaces : public OperatorNode {
   ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
-  ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{""});
-  ADD_SLOT(InterfaceBuildManager, ibm, PRIVATE, DocString{""});
+  ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{"Interfaces built from the InnerBond interactions"});
+  ADD_SLOT(InterfaceBuildManager, ibm, PRIVATE, DocString{"Temporary buffer used to build the interfaces"});
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This operator groups already-classified InnerBond interactions into Interface objects.
+        This operator groups InnerBond interactions into Interface objects.
 
         YAML example [no option]:
 
           - update_interfaces
+
+        Developer details:
+
+          InnerBond interactions sharing the same pair of particles (id_i, id_j) are stored
+          contiguously and form one Interface, described by the index of its first interaction
+          and its number of interactions. Interfaces managed by another MPI process (partner
+          ghosts) are skipped.
       )EOF";
   }
 
