@@ -105,7 +105,7 @@ class StatsClassifier : public OperatorNode {
     count_classifier_type<InteractionType::ParticleDriver>(classifier, InteractionTypeId::FaceRshapeDriverVertex, nSfv,
                                                            anSfv, an, gnSfv, gn);
 
-    count_classifier_type<InteractionType::InnerBond>(classifier, InteractionTypeId::InnerBond, nvvib, anvvib, an,
+    count_classifier_type<InteractionType::InnerBond>(classifier, InteractionTypeId::InnerBondId, nvvib, anvvib, an,
                                                       gnvvib, gn);
 
     std::vector<int> val = {// particle

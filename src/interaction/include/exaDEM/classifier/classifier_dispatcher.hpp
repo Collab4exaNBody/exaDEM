@@ -21,9 +21,9 @@ under the License.
 
 namespace exaDEM {
 struct ClassifierViewAccessor {
-  ClassifierContainer<ParticleParticle>::View* particleparticle_;
-  ClassifierContainer<ParticleDriver>::View* particledriver_;
-  ClassifierContainer<InnerBond>::View* innerbond_;
+  ClassifierContainer<InteractionType::ParticleParticle>::View* particleparticle_;
+  ClassifierContainer<InteractionType::ParticleDriver>::View* particledriver_;
+  ClassifierContainer<InteractionType::InnerBond>::View* innerbond_;
 
   template <InteractionType IT>
   ONIKA_HOST_DEVICE_FUNC auto& get_typed_accessor(int idx) const {
@@ -40,9 +40,9 @@ struct ClassifierViewAccessor {
 struct ClassifierViewStorage {
   template <typename T>
   using VectorT = onika::memory::CudaMMVector<T>;
-  VectorT<ClassifierContainer<ParticleParticle>::View> particleparticle_;
-  VectorT<ClassifierContainer<ParticleDriver>::View> particledriver_;
-  VectorT<ClassifierContainer<InnerBond>::View> innerbond_;
+  VectorT<ClassifierContainer<InteractionType::ParticleParticle>::View> particleparticle_;
+  VectorT<ClassifierContainer<InteractionType::ParticleDriver>::View> particledriver_;
+  VectorT<ClassifierContainer<InteractionType::InnerBond>::View> innerbond_;
 
   ClassifierViewStorage(Classifier& classifier) {
     particleparticle_.resize(InteractionTypeId::NTypesPP);

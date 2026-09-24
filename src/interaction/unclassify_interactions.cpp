@@ -79,7 +79,7 @@ struct UnclassifyFunc {
             item2.update(item1);
             // DIAGNOSTIC: item2's type_ must still be a valid interaction type right after this write.
             if (item2.type() >= InteractionTypeId::NTypesParticleParticle &&
-                item2.type() != InteractionTypeId::InnerBond) {
+                item2.type() != InteractionTypeId::InnerBondId) {
               item2.print();
               color_log::error(
                   "unclassify",

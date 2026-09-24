@@ -64,7 +64,7 @@ inline void build_buffer_obb(const exanb::Vec3d& pos, const uint64_t id, const u
 
   double homothety = 1;
   OBB obbi = shp->obb_;
-  obbi.rotate(orient);
+  obbi.rotate_in_place(orient);
   obbi.extent *= homothety;
   obbi.center *= homothety;
   obbi.center += pos;

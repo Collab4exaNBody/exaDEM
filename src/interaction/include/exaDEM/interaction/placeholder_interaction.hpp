@@ -151,7 +151,7 @@ struct PlaceholderInteraction {
   void print() {
     if (type() < InteractionTypeId::NTypesParticleParticle) {
       return this->as<Interaction>().print();
-    } else if (type() == InteractionTypeId::InnerBond) {
+    } else if (type() == InteractionTypeId::InnerBondId) {
       return this->as<InnerBondInteraction>().print();
     }
   }
@@ -161,7 +161,7 @@ struct PlaceholderInteraction {
   void print() const {
     if (type() < InteractionTypeId::NTypesParticleParticle) {
       this->as<Interaction>().print();
-    } else if (type() == InteractionTypeId::InnerBond) {
+    } else if (type() == InteractionTypeId::InnerBondId) {
       this->as<InnerBondInteraction>().print();
     }
   }
@@ -182,7 +182,7 @@ struct PlaceholderInteraction {
   ONIKA_HOST_DEVICE_FUNC bool active() const {
     if (type() < InteractionTypeId::NTypesParticleParticle) {
       return this->as<Interaction>().active();
-    } else if (type() == InteractionTypeId::InnerBond) {
+    } else if (type() == InteractionTypeId::InnerBondId) {
       return this->as<InnerBondInteraction>().active();
     }
 #ifndef ONIKA_CUDA_VERSION
@@ -201,7 +201,7 @@ struct PlaceholderInteraction {
   ONIKA_HOST_DEVICE_FUNC bool persistent() {
     if (type() < InteractionTypeId::NTypesParticleParticle) {
       return this->as<Interaction>().persistent();
-    } else if (type() == InteractionTypeId::InnerBond) {
+    } else if (type() == InteractionTypeId::InnerBondId) {
       return this->as<InnerBondInteraction>().persistent();
     }
 #ifndef ONIKA_CUDA_VERSION
@@ -223,7 +223,7 @@ struct PlaceholderInteraction {
   ONIKA_HOST_DEVICE_FUNC bool persistent() const {
     if (type() < InteractionTypeId::NTypesParticleParticle) {
       return this->as<Interaction>().persistent();
-    } else if (type() == InteractionTypeId::InnerBond) {
+    } else if (type() == InteractionTypeId::InnerBondId) {
       return this->as<InnerBondInteraction>().persistent();
     }
 #ifndef ONIKA_CUDA_VERSION
@@ -244,7 +244,7 @@ struct PlaceholderInteraction {
   ONIKA_HOST_DEVICE_FUNC bool ignore_other_interactions() {
     if (type() < InteractionTypeId::NTypesParticleParticle) {
       return this->as<Interaction>().ignore_other_interactions();
-    } else if (type() == InteractionTypeId::InnerBond) {
+    } else if (type() == InteractionTypeId::InnerBondId) {
       return this->as<InnerBondInteraction>().ignore_other_interactions();
     }
 #ifndef ONIKA_CUDA_VERSION
@@ -260,7 +260,7 @@ struct PlaceholderInteraction {
     // Do not use it via a placeholder_interaction
     if (type() < InteractionTypeId::NTypesParticleParticle) {
       this->as<Interaction>().reset();
-    } else if (type() == InteractionTypeId::InnerBond) {
+    } else if (type() == InteractionTypeId::InnerBondId) {
       this->as<InnerBondInteraction>().reset();
     }
 #ifndef ONIKA_CUDA_VERSION
@@ -309,12 +309,12 @@ struct PlaceholderInteraction {
    */
   template <InteractionType IT>
   auto& convert() {
-    if constexpr (IT == ParticleParticle) {
+    if constexpr (IT == InteractionType::ParticleParticle) {
       return as<Interaction>();
-    } else if constexpr (IT == ParticleDriver) {
+    } else if constexpr (IT == InteractionType::ParticleDriver) {
       return as<Interaction>();
     }
-    if constexpr (IT == InnerBond) {
+    if constexpr (IT == InteractionType::InnerBond) {
       return as<InnerBondInteraction>();
     }
     color_log::mpi_error("PlaceholderInteraction::as<InteractionType>",

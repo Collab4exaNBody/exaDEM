@@ -64,7 +64,8 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
 
   inline void execute() final {
     constexpr uint64_t InvalidId = -1;
-    const double Rmax = 2 * (*rcut_max);
+    // Dmax = 2 * rcut_max (a diameter): used as half-size of the box around a particle to look for its partner cell.
+    const double Dmax = 2 * (*rcut_max);
     auto& g = *grid;
     const auto cells = g.cells();
     const IJK dims = g.dimension();
@@ -148,7 +149,7 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
           {
             // looking for both cell and p values in current and other cells
             Vec3d r = {rx_a[particle_loc_a.p_], ry_a[particle_loc_a.p_], rz_a[particle_loc_a.p_]};
-            AABB cover_particle = {r - Rmax, r + Rmax};
+            AABB cover_particle = {r - Dmax, r + Dmax};
             IJK max = g.locate_cell(cover_particle.bmax);
             IJK min = g.locate_cell(cover_particle.bmin);
             bool do_continue = true;

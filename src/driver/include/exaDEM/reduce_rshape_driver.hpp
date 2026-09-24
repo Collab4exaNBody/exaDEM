@@ -52,7 +52,7 @@ struct RShapeDriverDisplacementFunctor {
   }
 };
 
-struct ReduceMaxRShapeDriverDisplacementFunctor {
+struct ReduceRShapeDriverDisplacementCountFunctor {
   const RShapeDriverDisplacementFunctor func_;
   int* reduced_val_;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const {
@@ -82,7 +82,7 @@ struct ReduceMaxRShapeDriverDisplacementFunctor {
 namespace onika {
 namespace parallel {
 template <>
-struct ParallelForFunctorTraits<exaDEM::ReduceMaxRShapeDriverDisplacementFunctor> {
+struct ParallelForFunctorTraits<exaDEM::ReduceRShapeDriverDisplacementCountFunctor> {
   static inline constexpr bool CudaCompatible = true;
 };
 }  // namespace parallel

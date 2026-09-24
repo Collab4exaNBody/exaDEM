@@ -138,12 +138,13 @@ struct shape {
                           const exanb::Quaternion& particle_quat);
 
   /**
-   * @brief Get the volume of the shape.
+   * @brief Computes the volume of the shape at the given homothety (recomputed on every call,
+   * not a cached accessor).
    * @param h homothety
    * @return Volume (asserts if not initialized)
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline double get_volume(double h = 1.0) const {
+  inline double compute_volume(double h = 1.0) const {
     assert(volume_ != 0 && "wrong initialisation");
     return h * h * h * volume_;
   }
@@ -155,23 +156,23 @@ struct shape {
    * @return Density (mass / volume at homothety h)
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline double get_density(double mass, double h = 1.0) const { return mass / get_volume(h); }
+  inline double compute_density(double mass, double h = 1.0) const { return mass / compute_volume(h); }
 
   /**
-   * @brief Get the inertia on mass vector.
+   * @brief Computes the inertia on mass vector at the given homothety (recomputed on every call).
    * @param h homothety
-   * @return Reference to inertia vector
+   * @return Inertia on mass vector (by value)
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline const exanb::Vec3d get_Im(double h = 1.0) { return h * h * inertia_on_mass_; }
+  inline const exanb::Vec3d compute_Im(double h = 1.0) { return h * h * inertia_on_mass_; }
 
   /**
-   * @brief Get the inertia on mass vector (const version).
+   * @brief Computes the inertia on mass vector at the given homothety (const version, recomputed on every call).
    * @param h homothety
-   * @return Reference to inertia vector
+   * @return Inertia on mass vector (by value)
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline const exanb::Vec3d get_Im(double h = 1.0) const { return h * h * inertia_on_mass_; }
+  inline const exanb::Vec3d compute_Im(double h = 1.0) const { return h * h * inertia_on_mass_; }
 
   /**
    * @brief Get number of vertices.
@@ -382,7 +383,7 @@ struct shape {
   inline OBB get_obb_edge(const exanb::Vec3d& position, const size_t index,
                           const exanb::Quaternion& orientation) const {
     OBB res = obb_edges_[index];
-    res.rotate(orientation);
+    res.rotate_in_place(orientation);
     res.translate(position);
     return res;
   }
@@ -398,7 +399,7 @@ struct shape {
   inline OBB get_obb_face(const exanb::Vec3d& position, const size_t index,
                           const exanb::Quaternion& orientation) const {
     OBB res = obb_faces_[index];
-    res.rotate(orientation);
+    res.rotate_in_place(orientation);
     res.translate(position);
     return res;
   }
@@ -479,7 +480,7 @@ struct shape {
    * @brief Set the minkowski radius used for detection.
    * @param radius Minkowsku radius
    */
-  void add_radius(const double radius) { radius_ = radius; }
+  void set_radius(const double radius) { radius_ = radius; }
 
   /**
    * @brief Compute the maximum cutoff radius (distance from origin + Minkowski
@@ -619,8 +620,8 @@ struct shape {
 
     auto scale_vertices = [](exanb::Vec3d& v, double s) { v = s * v; };
     for_all_vertices(scale_vertices, scale);
-    volume_ = this->get_volume(scale);
-    inertia_on_mass_ = this->get_Im(scale);
+    volume_ = this->compute_volume(scale);
+    inertia_on_mass_ = this->compute_Im(scale);
     std::vector<exanb::Vec3d> vertices;
     vertices.resize(vertices_.size());
     for (size_t vid = 0; vid < vertices_.size(); vid++) vertices[vid] = get_vertex(vid);

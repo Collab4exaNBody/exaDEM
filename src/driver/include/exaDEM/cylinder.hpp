@@ -220,7 +220,7 @@ struct Cylinder {
    *
    * @return exanb::Vec3d A normalized vector perpendicular to the constructed plane.
    */
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d get_normal() {
+  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d compute_normal() {
     exanb::Vec3d p1 = {1,1,1};
     exanb::Vec3d p2 = {-1,-1,-1};
     exanb::Vec3d p3 = {-1,1,1};

@@ -45,7 +45,7 @@ std::stringstream create_buffer(GridT& grid, Classifier& ic) {
       double f = exanb::norm(fn_ptr[idx]) + exanb::norm(ft_ptr[idx]);
       auto [i, j, type, swap, ghost] = view.pair(idx);
       /** filter empty interactions */
-      if (f != 0 || dn < 0 || type == InteractionTypeId::InnerBond) {
+      if (f != 0 || dn < 0 || type == InteractionTypeId::InnerBondId) {
         /** Note that an interaction between two particles present on two sub-domains should not be counted twice. */
         if (ghost != InteractionPair::PartnerGhost) {
           stream << i.id_ << "," << j.id_ << ",";
@@ -78,11 +78,11 @@ std::stringstream create_buffer(GridT& grid, Classifier& ic) {
     size_t size = ic.get_size(i);
     auto [dn_ptr, cp_ptr, fn_ptr, ft_ptr] = ic.contact_state(i);
     if (get_typed(i) == 0) {
-      write_wave(ic.get_data<ParticleParticle>(i).view(), size, dn_ptr, cp_ptr, fn_ptr, ft_ptr);
+      write_wave(ic.get_data<InteractionType::ParticleParticle>(i).view(), size, dn_ptr, cp_ptr, fn_ptr, ft_ptr);
     } else if (get_typed(i) == 1) {
-      write_wave(ic.get_data<ParticleDriver>(i).view(), size, dn_ptr, cp_ptr, fn_ptr, ft_ptr);
+      write_wave(ic.get_data<InteractionType::ParticleDriver>(i).view(), size, dn_ptr, cp_ptr, fn_ptr, ft_ptr);
     } else if (get_typed(i) == 2) {
-      write_wave(ic.get_data<InnerBond>(i).view(), size, dn_ptr, cp_ptr, fn_ptr, ft_ptr);
+      write_wave(ic.get_data<InteractionType::InnerBond>(i).view(), size, dn_ptr, cp_ptr, fn_ptr, ft_ptr);
     } else {
       lout << "skip interaction type: " << i << std::endl;
       continue;

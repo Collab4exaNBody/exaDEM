@@ -10,7 +10,7 @@
 
 namespace exaDEM {
 typedef onika::oarray_t<int, InteractionTypeId::NTypes> InteractionTypePerCellCounter;
-typedef onika::oarray_t<ClassifierContainer<ParticleParticle>::View, InteractionTypeId::NTypesPP>
+typedef onika::oarray_t<ClassifierContainer<InteractionType::ParticleParticle>::View, InteractionTypeId::NTypesPP>
     InteractionParticleAccessor;
 
 ONIKA_HOST_DEVICE_FUNC inline InteractionTypePerCellCounter operator+(const InteractionTypePerCellCounter& a,

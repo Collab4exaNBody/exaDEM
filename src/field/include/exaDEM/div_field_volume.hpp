@@ -24,7 +24,7 @@ template <typename FieldT>
 struct poly_div_field_volume {
   onika::cuda::span<shape> shps_;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(const uint32_t type, double homothety, FieldT& value) const {
-    const double volume = shps_[type].get_volume(homothety);
+    const double volume = shps_[type].compute_volume(homothety);
     value = value / volume;
   }
 };

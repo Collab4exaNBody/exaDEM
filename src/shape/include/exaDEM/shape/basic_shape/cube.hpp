@@ -18,7 +18,7 @@ shape create_cube(std::string name, double length, double minkowski) {
   const double pi = M_PI;
   shape shp;
   shp.name_ = name;
-  shp.add_radius(r);
+  shp.set_radius(r);
 
   // ---------- Volume ----------
   shp.volume_ = c * c * c + 6.0 * c * c * r + 3.0 * pi * r * r * c + (4.0 / 3.0) * pi * r * r * r;
@@ -42,7 +42,7 @@ shape create_cube(std::string name, double length, double minkowski) {
   I += (8.0 / 15.0) * pi * std::pow(r, 5);
 
   // ---------- I / m ----------
-  shp.inertia_on_mass_ = I / shp.get_volume() * exanb::Vec3d{1, 1, 1};
+  shp.inertia_on_mass_ = I / shp.compute_volume() * exanb::Vec3d{1, 1, 1};
 
   shp.add_vertex({-0.5, -0.5, -0.5});  // v0
   shp.add_vertex({0.5, -0.5, -0.5});   // v1

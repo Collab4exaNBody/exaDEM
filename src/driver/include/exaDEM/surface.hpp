@@ -228,11 +228,15 @@ struct Surface {
     if (is_compressive(motion_type_)) {
       constexpr double C = 0.5;
 
-      if (motion.mass_ != 0) {
+      // Use the surface's own mass. If it was left at its default/undefined value
+      // (see SurfaceFields::mass_), fall back to half the total system mass.
+      const double mass = (fields_.mass_ < 1e100) ? fields_.mass_ : 0.5 * motion.system_mass_;
+
+      if (mass != 0) {
         const double contact_surface = fields_.surface_;
 
         // Net force vector: F_contact - σ·S·n
-        exanb::Vec3d tmp = (fields_.forces_ - motion.sigma_ * contact_surface * motion.motion_vector_) / (motion.mass_ * C);
+        exanb::Vec3d tmp = (fields_.forces_ - motion.sigma_ * contact_surface * motion.motion_vector_) / (mass * C);
 
         // Project onto motion axis → scalar acceleration (Surface driver, unlike Vec3d in particle driver)
         fields_.acc_ = exanb::dot(tmp, motion.motion_vector_);

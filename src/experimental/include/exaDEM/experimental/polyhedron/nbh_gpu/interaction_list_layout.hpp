@@ -11,6 +11,19 @@ struct InteractionListBuildLayout {
   CellStorage cell_storage_;  // per-cell counts/offsets, all interaction types (PP + driver)
 };
 
+/**
+ * @brief Copies the active interactions from the Classifier back into the grid interaction storage.
+ *
+ * Despite its name, this is the inverse of a classification: the interactions are read from the
+ * Classifier (grouped by type) and written into the per-cell storage `ges`, following the layout
+ * described by `interaction_list_layout`. Only active interactions are transferred (ghost-only
+ * filtering is disabled).
+ *
+ * @param classifier Source: interactions classified by type.
+ * @param traversal Non-empty cells of the current grid.
+ * @param interaction_list_layout Per-cell counts and offsets of the packed interactions.
+ * @param ges Destination: grid cell interaction storage.
+ */
 inline void classify_interaction_grid(Classifier& classifier, Traversal& traversal, InteractionListBuildLayout& interaction_list_layout,
                                       GridCellParticleInteraction& ges) {
   ClassifierViewStorage wrappers(classifier);

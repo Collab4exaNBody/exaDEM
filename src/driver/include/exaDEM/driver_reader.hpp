@@ -73,7 +73,7 @@ inline void read_drivers(const std::string& filename, Drivers& drivers) {
       // Mirrors register_stl_mesh's .shp construction sequence: fresh geometry + minkowski
       // radius applied on top (the shape geometry itself carries no minkowski radius).
       shape shp = exaDEM::read_shp(entry["filename"].as<std::string>(), /*big_shape=*/true);
-      shp.add_radius(entry["minkowski"].as<double>());
+      shp.set_radius(entry["minkowski"].as<double>());
       shp.increase_obb(shp.minkowski());
 
       RShapeDriver driver = {entry["state"].as<RShapeDriverFields>(), params.input_motion_type_};

@@ -17,13 +17,13 @@
 /// @author Vincent Richefeu <Vincent.Richefeu@3sr-grenoble.fr>,
 /// Lab 3SR, Grenoble University
 
-#include <cfloat>
-#include <cmath>
-
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_operators.h>
 #include <onika/math/basic_types_stream.h>
 #include <onika/math/quaternion_operators.h>
+
+#include <cfloat>
+#include <cmath>
 
 /// @ingroup Bounding_Volumes
 /// @brief Oriented Bounding Box
@@ -57,9 +57,13 @@ class OBB {
   ONIKA_HOST_DEVICE_FUNC
   void translate(const exanb::Vec3d& v) { center += v; }
 
-  // rotates the box axes AND its center (not just its orientation)
+  /**
+   * @brief Rotates the box in place by applying Q to the axes e1/e2/e3 AND to `center`
+   * (as if the box's center were also a point rotated about the origin), not just to its orientation.
+   * @param Q Rotation quaternion.
+   */
   ONIKA_HOST_DEVICE_FUNC
-  void rotate(const exanb::Quaternion& Q) {
+  void rotate_in_place(const exanb::Quaternion& Q) {
     e1 = Q * e1;
     e2 = Q * e2;
     e3 = Q * e3;
@@ -235,8 +239,7 @@ inline exanb::AABB conv_to_aabb(const OBB& obb) {
     return exanb::Vec3d{std::abs(in.x), std::abs(in.y), std::abs(in.z)};
   };
 
-  exanb::Vec3d abs =
-      my_abs(obb.e1) * obb.extent.x + my_abs(obb.e2) * obb.extent.y + my_abs(obb.e3) * obb.extent.z;
+  exanb::Vec3d abs = my_abs(obb.e1) * obb.extent.x + my_abs(obb.e2) * obb.extent.y + my_abs(obb.e3) * obb.extent.z;
   exanb::AABB res = {exanb::Vec3d{obb.center.x - abs.x, obb.center.y - abs.y, obb.center.z - abs.z},
                      exanb::Vec3d{obb.center.x + abs.x, obb.center.y + abs.y, obb.center.z + abs.z}};
 

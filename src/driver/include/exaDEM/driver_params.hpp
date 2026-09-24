@@ -19,15 +19,15 @@ under the License.
 
 #pragma once
 
-#include <climits>
-#include <chrono>
-#include <thread>
 #include <onika/physics/units.h>
 
+#include <chrono>
+#include <climits>
 #include <exaDEM/color_log.hpp>
-#include <exaDEM/normalize.hpp>
 #include <exaDEM/expr.hpp>
 #include <exaDEM/motion_type.hpp>
+#include <exaDEM/normalize.hpp>
+#include <thread>
 
 namespace exaDEM {
 struct Driver_params {
@@ -41,9 +41,11 @@ struct Driver_params {
   double const_force_ = 0;
 
   // Motion: Compression
-  double sigma_ = 0;         /**< used for compressive force */
-  double damprate_ = 0;      /**< used for compressive force */
-  double mass_ = 0;          /**< mass_ of the driver */
+  double sigma_ = 0;       /**< used for compressive force */
+  double damprate_ = 0;    /**< used for compressive force */
+  double system_mass_ = 0; /**< Total mass of all particles in the system. Used as a fallback
+                                (halved) for compressive-motion drivers whose own mass is left
+                                at its default/undefined value. */
 
   // Motion: Tabulated
   std::vector<double> tab_time_;
@@ -66,20 +68,19 @@ struct Driver_params {
   MotionType input_motion_type_ = MotionType::STATIONARY;
 
   ONIKA_HOST_DEVICE_FUNC
-      inline bool is_expr(MotionType motion_type, double time) const {
-        // do nothing if time < start or time > end;
-        return motion_type == MotionType::EXPRESSION && is_motion_triggered(time);
-      }
+  inline bool is_expr(MotionType motion_type, double time) const {
+    // do nothing if time < start or time > end;
+    return exaDEM::is_expr(motion_type) && is_motion_triggered(time);
+  }
 
   ONIKA_HOST_DEVICE_FUNC
-      inline void update_forces(MotionType motion_type, exanb::Vec3d& forces) const {
-        if (motion_type == LINEAR_FORCE_MOTION) {
-          forces = (exanb::dot(forces, motion_vector_) + const_force_) * motion_vector_;
-        } else if (motion_type != MotionType::PARTICLE) {
-          forces = exanb::Vec3d{0, 0, 0};
-        }
-      }
-
+  inline void update_forces(MotionType motion_type, exanb::Vec3d& forces) const {
+    if (motion_type == LINEAR_FORCE_MOTION) {
+      forces = (exanb::dot(forces, motion_vector_) + const_force_) * motion_vector_;
+    } else if (motion_type != MotionType::PARTICLE) {
+      forces = exanb::Vec3d{0, 0, 0};
+    }
+  }
 
   ONIKA_HOST_DEVICE_FUNC bool is_motion_triggered(double time) const {
     return ((time >= motion_start_threshold_) && (time <= motion_end_threshold_));
@@ -106,7 +107,6 @@ struct Driver_params {
     }
   }
 
-
   bool check_motion_coherence(MotionType motion_type) {
     if (is_shaker(motion_type) || is_pendulum(motion_type)) {
       if (amplitude_ <= 0.0) {
@@ -125,22 +125,22 @@ struct Driver_params {
           exanb::Vec3d old = shaker_dir_;
           _normalize(shaker_dir_);
           color_log::warning("Driver_params::check_motion_coherence", "Your shaker_dir vector [" + std::to_string(old) +
-                             "} has been normalized to [" +
-                             std::to_string(shaker_dir_) + "]");
+                                                                          "} has been normalized to [" +
+                                                                          std::to_string(shaker_dir_) + "]");
         }
       } else if (is_pendulum(motion_type)) {
         if (pendulum_anchor_point_ == pendulum_initial_position_) {
           color_log::error("Driver_params::check_motion_coherence",
                            "The point defined in pendulum_anchor_point and the one in pendulum_initial_position are "
                            "the same. It is impossible to define a motion type PENDULUM_MOTION. Point: [" +
-                           std::to_string(pendulum_anchor_point_) + "]");
+                               std::to_string(pendulum_anchor_point_) + "]");
         }
         if (exanb::dot(pendulum_swing_dir_, pendulum_swing_dir_) - 1 >= 1e-14) {
           exanb::Vec3d old = pendulum_swing_dir_;
           _normalize(pendulum_swing_dir_);
           color_log::warning("Driver_params::check_motion_coherence",
                              "Your pendulum_swing_dir vector [" + std::to_string(old) + "} has been normalized to [" +
-                             std::to_string(pendulum_swing_dir_) + "]");
+                                 std::to_string(pendulum_swing_dir_) + "]");
         }
       }
     }
@@ -173,10 +173,12 @@ struct Driver_params {
     if (is_linear(motion_type)) {
       // Check if motion vector is zero (invalid for linear motion)
       if (motion_vector_ == exanb::Vec3d{0, 0, 0}) {
-        exanb::lout << ansi::yellow("Your motion type is a \"Linear Mode\" that requires a motion vector.") << std::endl;
-        exanb::lout << ansi::yellow(
-            "Please, define motion vector by adding \"motion_vector: [1,0,0]. It is defined to [0,0,0] by "
-            "default.")
+        exanb::lout << ansi::yellow("Your motion type is a \"Linear Mode\" that requires a motion vector.")
+                    << std::endl;
+        exanb::lout
+            << ansi::yellow(
+                   "Please, define motion vector by adding \"motion_vector: [1,0,0]. It is defined to [0,0,0] by "
+                   "default.")
             << std::endl;
         return false;
       }
@@ -185,8 +187,8 @@ struct Driver_params {
         exanb::Vec3d old = motion_vector_;
         _normalize(motion_vector_);
         color_log::warning("Driver_params::check_motion_coherence", "Your motion vector [" + std::to_string(old) +
-                           "} has been normalized to [" +
-                           std::to_string(motion_vector_) + "]");
+                                                                        "} has been normalized to [" +
+                                                                        std::to_string(motion_vector_) + "]");
       }
       if (motion_type == LINEAR_MOTION && const_vel_ == 0) {
         color_log::warning("Driver_params::check_motion_coherence",
@@ -228,8 +230,8 @@ struct Driver_params {
     if (!is_stationary(motion_type)) {
       if (motion_start_threshold_ != 0 || motion_end_threshold_ != std::numeric_limits<double>::max()) {
         if (motion_end_threshold_ != std::numeric_limits<double>::max()) {
-          exanb::lout << "Motion duration    : [ " << motion_start_threshold_ << "s , " << motion_end_threshold_ << "s ]"
-              << std::endl;
+          exanb::lout << "Motion duration    : [ " << motion_start_threshold_ << "s , " << motion_end_threshold_
+                      << "s ]" << std::endl;
         } else {
           exanb::lout << "Motion duration    : [ " << motion_start_threshold_ << "s ,  inf s )" << std::endl;
         }
@@ -342,9 +344,7 @@ struct Driver_params {
   }
 
   /* Shaker routines */
-  exanb::Vec3d shaker_direction() const {
-    return shaker_dir_;
-  }
+  exanb::Vec3d shaker_direction() const { return shaker_dir_; }
 
   double shaker_signal(double time) const {
     assert(motion_start_threshold_ >= 0);
@@ -359,13 +359,9 @@ struct Driver_params {
   }
 
   /* Pendulum routines */
-  exanb::Vec3d pendulum_direction() const {
-    return pendulum_swing_dir_;
-  }
+  exanb::Vec3d pendulum_direction() const { return pendulum_swing_dir_; }
 
-  exanb::Vec3d pendulum_velocity(double time) const {
-    return {0, 0, 0};
-  }
+  exanb::Vec3d pendulum_velocity(double time) const { return {0, 0, 0}; }
 
   std::pair<double, exanb::Vec3d> compute_offset_normal_pendulum_motion(double time) const {
     if (time < motion_start_threshold_) {
@@ -397,7 +393,7 @@ struct Driver_params {
   }
 
   // Expression routines
-  exanb::Vec3d driver_expr_v(double time) const{
+  exanb::Vec3d driver_expr_v(double time) const {
     assert(motion_start_threshold_ >= 0);
     time -= motion_start_threshold_;
     return expr_.expr_v(time);

@@ -79,9 +79,9 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
     auto cells = grid->cells();
     InterfaceManager& interfaces = *im;
     Classifier& classifier = *ic;
-    auto& interactions = classifier.get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBond);
+    auto& interactions = classifier.get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBondId);
     auto& shps = *shapes_collection;
-    auto [dn, cp, fn, ft] = ic->contact_state(InteractionTypeId::InnerBond);
+    auto [dn, cp, fn, ft] = ic->contact_state(InteractionTypeId::InnerBondId);
     paraview_interface_helper buffers = {*mpi_rank};  // it contains streams
 
     if (rank == 0) {
