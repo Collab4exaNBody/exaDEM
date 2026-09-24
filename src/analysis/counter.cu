@@ -21,9 +21,11 @@ under the License.
 #include <onika/scg/operator_slot.h>
 
 // ExaNBody
-#include <exanb/compute/reduce_cell_particles.h>
-#include <exanb/core/grid.h>
+// clang-format off
 #include <exanb/core/make_grid_variant_operator.h>
+#include <exanb/compute/reduce_cell_particles.h>
+// clang-format on
+#include <exanb/core/grid.h>
 #include <exanb/grid_cell_particles/particle_region.h>
 
 // ExaDEM
