@@ -57,6 +57,7 @@ class OBB {
   ONIKA_HOST_DEVICE_FUNC
   void translate(const exanb::Vec3d& v) { center += v; }
 
+  // rotates the box axes AND its center (not just its orientation)
   ONIKA_HOST_DEVICE_FUNC
   void rotate(const exanb::Quaternion& Q) {
     e1 = Q * e1;

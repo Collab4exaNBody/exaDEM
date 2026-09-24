@@ -23,6 +23,10 @@ under the License.
 #include <onika/math/quaternion_operators.h>
 
 namespace exaDEM {
+/**
+ * @brief Integrates the orientation quaternion Q from the angular velocity vrot,
+ * and also updates vrot in place from the angular acceleration arot.
+ */
 struct PushToQuaternionFunctor {
   double m_dt;
   double m_dt_2;

@@ -81,12 +81,12 @@ class GetAvgVelMass : public OperatorNode {
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
-  ADD_SLOT(Vec3d, out, OUTPUT, DocString("Sum[v_i*m_i] / mass_{systeme}"));
+  ADD_SLOT(Vec3d, out, OUTPUT, DocString("- Sum[v_i*m_i] / mass_{systeme} (note the sign: opposite of the average velocity)"));
   // Remark : do not hesite to use rebind to rename the output variable
 
   inline std::string documentation() const final {
     return R"EOF(
-        This operator returns out = Sum_{particles p}(v_p*m_p) / mass_{systeme}.
+        This operator returns out = - Sum_{particles p}(v_p*m_p) / mass_{systeme} (the opposite of the average velocity).
         Remark: do not hesite to use rebind to rename the output variable
 
         YAML example [no option]:
@@ -117,7 +117,7 @@ class GetAvgVelMass : public OperatorNode {
     Vec3d v_m = {global[1] / global[0], global[2] / global[0], global[3] / global[0]};
 
     // Set the result into the output slot
-    *out = -v_m;  //
+    *out = -v_m;  // intentionally negated, see `out` DocString
   }
 };
 

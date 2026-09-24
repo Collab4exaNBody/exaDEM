@@ -36,7 +36,7 @@ class DriversContactParams : public OperatorNode {
   ADD_SLOT(std::vector<uint32_t>, group, INPUT, OPTIONAL, DocString{"List of particle group indices."});
   ADD_SLOT(std::vector<int>, driver_id, INPUT, OPTIONAL, DocString{"List of drivers."});
   ADD_SLOT(std::vector<double>, dncut, INPUT, OPTIONAL, DocString{"List of dncut values."});
-  ADD_SLOT(std::vector<double>, kn, INPUT, OPTIONAL, DocString{"List of ln values."});
+  ADD_SLOT(std::vector<double>, kn, INPUT, OPTIONAL, DocString{"List of kn values."});
   ADD_SLOT(std::vector<double>, kt, INPUT, OPTIONAL, DocString{"List of kt values."});
   ADD_SLOT(std::vector<double>, kr, INPUT, OPTIONAL, DocString{"List of kr values."});
   ADD_SLOT(std::vector<double>, mu, INPUT, OPTIONAL, DocString{"List of mu values."});

@@ -221,7 +221,7 @@ struct ContactLawDriverFunc {
    * @brief Functor for applying contact law interactions driven by drivers.
    *
    * This functor applies contact law interactions between particles or cells, driven by
-   * specified drivers (`drvs`). It uses interaction parameters (`hkp`), precomputed shapes
+   * specified drivers (`drvs`). It uses interaction parameters (`cpa`), precomputed shapes
    * (`shps`), and a time increment (`dt`) for simulation.
    *
    * @tparam TMPLC Type of the cells or particles container.
@@ -230,7 +230,7 @@ struct ContactLawDriverFunc {
    * @param item Reference to the Interaction object representing the interaction details.
    * @param cells Pointer to the cells or particles container.
    * @param drvs Pointer to the Drivers object providing driving forces.
-   * @param hkp Reference to the ContactParams object containing interaction parameters.
+   * @param cpa Contact force parameters accessor containing interaction parameters.
    * @param shps Pointer to the shapes array providing shape information for interactions.
    * @param dt Time increment for the simulation step.
    */
