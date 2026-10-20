@@ -1,0 +1,86 @@
+# =====================================================================
+# Traction pilotee en force sur un petit bloc DEM-BCM (cellules de Voronoi liees)
+#   cadre bas (BOT) : fixe
+#   cadre haut (TOP) : force imposee en y (rampe lineaire), x et z bloques,
+#                      calculee par compute_frame_velocity (corps rigide virtuel)
+#
+# Bloc 10 x 20 x 5 mm, 37 cellules :
+#   python3 generate_voronoi_block.py --lx 10 --ly 20 --lz 5 --h 3 --dmin 0.8 --lloyd 5
+# BOT et TOP contiennent exactement les cellules touchant les faces y = 0 (6) et y = 20 (5)
+# Parametres d'interface et de contact = essais Nooru-Mohamed (traction pure)
+# Unites : mm, ms, g -> forces en N
+# =====================================================================
+
+includes:
+  - config_fragmentation.msp
+
+io_tree:
+  - io_config:
+     dir_name: "TractionForceBlockDir"
+
+particle_regions:
+  - BOT: { bounds: [ [ -5. , -5. , -5. ] , [ 15. ,  3. , 10. ] ] }
+  - TOP: { bounds: [ [ -5. , 17. , -5. ] , [ 15. , 25. , 10. ] ] }
+
+frame_traction:
+  - compute_frame_velocity:
+      region: TOP
+      control_mode: [ velocity , force , velocity ]   # x, y, z
+      target_force: [ 0. , 150. , 0. ]                 # force de la machine SUR le cadre (+y = traction)
+      imposed_velocity: [ 0. , 0. , 0. ]
+      force_ramp_start: 0
+      force_ramp_steps: 100000                        # 0.75 N / 500 pas
+      frame_mass: 60.
+      frame_damping: 3500.                            # ~ amortissement critique 2 sqrt(K M), K ~ 5e4 N/mm
+      frame_max_velocity: 0.02                        # limite la fuite du cadre apres rupture
+      frame_log_frequency: 5000
+  - freeze_particles: { region: TOP }
+  - apply_frame_velocity:
+      rebind: { value: frame_velocity }
+      body:
+        - set_velocity: { region: TOP }
+  - freeze_particles: { region: BOT }
+
+input_data:
+  - read_conf_rockable:
+     filename: voronoi_block.txt
+     verbosity: false
+     vtk: false
+     bounds_mode: DOMAIN
+     bounds: [[-5, -5, -5], [25, 25, 10]]
+  - density_from_shape:
+     density: 0.001
+  - inertia_from_shape
+  - set_velocity:
+     value: [0., 0., 0.]
+  - multimat_contact_params:
+     default_config: { rcut: 0.0 m , dncut: 0.0 m, kn: 1.e4, kt: 8e3, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 7.3975840075643506e-01}
+  - inner_bond_params:
+     default_config: { kn: 4.e4, kt: 3.2e4, damp_rate: 0.1, gn: 5e-4, gt: 2e-3 }
+     verbosity: false
+
+compute_force:
+  - gravity_force:
+     gravity: [0., 0., 0.]
+  - contact_multimat_polyhedron
+  - inner_bond_polyhedron
+  - frame_traction
+
+domain:
+  cell_size: 15
+  periodic: [false, false, false]
+  grid_dims: [2, 2, 1]
+  bounds: [[-5, -5, -5], [25, 25, 10]]
+  expandable: true
+
+global:
+  symetric: true
+  simulation_end_iteration: 120000
+  simulation_log_frequency: 20000
+  simulation_dump_frequency: -1
+  simulation_paraview_frequency: 10000
+  analysis_interaction_dump_frequency: -1
+  apply_particle_sticking: true
+  enable_contact_network: true
+  sticking_threshold: 0.1
+  rcut_inc: 0.05

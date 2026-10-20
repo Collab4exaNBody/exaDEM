@@ -75,3 +75,15 @@ This example demonstrates the use of a driver extractor in a rotating drum simul
 The operator used to add trackers is: `register_driver_extractor`.
 To manage the frequency use: `simulation_driver_extractor_frequency: 10`.
 
+## Force-controlled Rigid Frame
+
+This example shows how to drive a group of particles as a rigid frame with the `compute_frame_velocity` operator: `impose_frame/movable_frame_force.msp`.
+
+Spheres are placed in a box made of rigid surfaces. The particles located in the `FRAME` region (top layer) are frozen and move together as a rigid body. Each velocity component of the frame is either imposed (`velocity`) or computed from a virtual rigid body driven by a target force (`force`):
+
+M dv/dt = F_target(t) + F_specimen - c v
+
+where F_specimen is the sum of the forces of the frame particles. Here, x and y are velocity-controlled (zero velocity) and z is force-controlled: a target force of -72 (0.5 x 144, i.e. a pressure applied on the top of the sample) compresses the sample from above.
+
+The operator only computes `frame_velocity`; it is applied with `freeze_particles` and `set_velocity` (value rebound to `frame_velocity`). Optional parameters: `force_ramp_start` / `force_ramp_steps` (linear force ramp), `frame_mass`, `frame_damping`, `frame_max_velocity` (velocity cap) and `frame_log_frequency` (prints the target force, the specimen force and the frame velocity).
+
