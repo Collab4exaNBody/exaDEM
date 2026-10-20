@@ -32,7 +32,8 @@ under the License.
 // must reference it as SHARED_TAG and keep it at the same tuple index (0).
 #define EXADEM_INTERACTION_FIELDS(X)    \
   X(exanb::Vec3d, friction, 0, NEW_TAG) \
-  X(exanb::Vec3d, moment, 1, NEW_TAG)
+  X(exanb::Vec3d, moment, 1, NEW_TAG)   \
+  X(double, weight, 2, NEW_TAG) /* scales both kn_ and kt_ in the contact law, default 1.0 */
 
 EXADEM_INTERACTION_FIELD_TAGS(EXADEM_INTERACTION_FIELDS)
 
@@ -98,12 +99,14 @@ struct Interaction {
   ONIKA_HOST_DEVICE_FUNC inline const InteractionPair& pair_info() const { return pair_; }
 
   /**
-   * @brief Resets the Interaction structure by setting friction and moment vectors to zero.
+   * @brief Resets the Interaction structure by setting friction and moment vectors to zero
+   * and weight back to its neutral value (1.0, i.e. no kn_/kt_ scaling).
    */
   ONIKA_HOST_DEVICE_FUNC void reset() {
     constexpr exanb::Vec3d null = {0, 0, 0};
     (*this)[attr::friction] = null;
     (*this)[attr::moment] = null;
+    (*this)[attr::weight] = 1.0;
   }
 
   /** @brief Check if the interaction is persistent.
