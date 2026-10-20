@@ -28,19 +28,6 @@ under the License.
 
 namespace exaDEM {
 
-struct field_manager {
-  bool set_t = false;  // type
-  bool set_d = false;  // density
-  bool set_v = false;  // velocity
-  bool set_rnd_v = false;
-  bool set_r = false;  // radius
-  bool set_q = false;  // quaternion
-  bool set_rnd_q = false;
-  bool set_i = true;  // inertia (should be to true)
-  bool set_ang_v = false;
-  bool set_rnd_ang_v = false;
-};
-
 template <typename GridT, class = AssertGridHasFields<GridT, field::_type>>
 class ParticleType : public OperatorNode {
   ADD_SLOT(ParticleTypeMap, particle_type_map, INPUT_OUTPUT);
