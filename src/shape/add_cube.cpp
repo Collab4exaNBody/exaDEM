@@ -16,6 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+#include <algorithm>
 #include <vector>
 #include <iomanip>
 #include <onika/scg/operator.h>
@@ -36,6 +37,7 @@ class AddShapeCubeOperator : public OperatorNode {
   ADD_SLOT(double, length, INPUT, 1.0, DocString{"Define cube length. "});
   ADD_SLOT(std::string, name, INPUT, "cube", DocString{"Set Shape name."});
   ADD_SLOT(double, minkowski, INPUT, 0.01, DocString{"Set Minkowski value."});
+  ADD_SLOT(double, rcut_max, INPUT_OUTPUT, 0.0, DocString{"rcut_max"});
 
  public:
   inline std::string documentation() const override final {
@@ -56,6 +58,7 @@ class AddShapeCubeOperator : public OperatorNode {
     lout << "Add Shape: " << *name << " length: " << *length << " minkowski: " << *minkowski << std::endl;
     shape shp = basic_shape::create_cube(*name, *length, *minkowski);
     register_shape(ptm, *shapes_collection, shp);
+    *rcut_max = std::max(*rcut_max, 2 * shp.compute_max_rcut());
   };
 };
 

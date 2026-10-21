@@ -68,7 +68,7 @@ class AddXYZ : public OperatorNode {
   ADD_SLOT(std::string, file, INPUT, REQUIRED);
   ADD_SLOT(Domain, domain, INPUT);
   ADD_SLOT(AABB, filter, INPUT, OPTIONAL, DocString{"Filter particles."});
-  ADD_SLOT(Vec3d, shift, INPUT, OPTIONAL, DocString{"shift the positions."});
+  ADD_SLOT(Vec3d, shift, INPUT, Vec3d{0, 0, 0}, DocString{"shift the positions."});
   ADD_SLOT(double, rcut_max, INPUT, REQUIRED, DocString{"rcut_max"});
   ADD_SLOT(ParticleTypes, particle_types, INPUT, OPTIONAL);
   ADD_SLOT(shapes, shapes_collection, INPUT, OPTIONAL, DocString{"Collection of shapes"});

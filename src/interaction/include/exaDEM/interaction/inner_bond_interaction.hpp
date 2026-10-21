@@ -28,15 +28,20 @@ under the License.
 #include <iostream>
 
 // Single source of truth for InnerBondInteraction's per-interaction fields.
-// 'friction' reuses the tag already declared (NEW_TAG) by Interaction in interaction.hpp,
-// hence SHARED_TAG here; it must keep the same tuple index (0) as there.
+// 'friction' and 'weight' reuse tags already declared (NEW_TAG) by Interaction in
+// interaction.hpp, hence SHARED_TAG here; 'friction' must keep the same tuple index
+// (0) as there (so its value survives a raw conversion to a plain Interaction, see
+// broke_interaction()). 'weight' is a different concept here (bond force/moment
+// scaling factor, vs. the contact kn_/kt_ scaling factor on Interaction) and keeps
+// its own, different local index (5) -- only the tag name/type is shared, not the
+// value or its meaning.
 #define EXADEM_INNER_BOND_FIELDS(X)         \
   X(exanb::Vec3d, friction, 0, SHARED_TAG)  \
   X(double, en, 1, NEW_TAG)                 \
   X(exanb::Vec3d, tds, 2, NEW_TAG)          \
   X(double, et, 3, NEW_TAG)                 \
   X(double, dn0, 4, NEW_TAG)                \
-  X(double, weight, 5, NEW_TAG)             \
+  X(double, weight, 5, SHARED_TAG)          \
   X(RuptureCriteria, criterion, 6, NEW_TAG) \
   X(uint8_t, unbroken, 7, NEW_TAG)
 

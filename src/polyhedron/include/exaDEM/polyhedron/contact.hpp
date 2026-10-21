@@ -18,12 +18,12 @@ under the License.
 */
 #pragma once
 
-#include <tuple>
 #include <exaDEM/drivers.hpp>
+#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
-#include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
+#include <tuple>
 
 namespace exaDEM {
 namespace polyhedron {
@@ -35,9 +35,7 @@ namespace polyhedron {
  * @param val Reference to the double variable to be modified.
  * @param add Value to add atomically to the variable.
  */
-ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(double& val, double add) {
-  ONIKA_CU_ATOMIC_ADD(val, add);
-}
+ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(double& val, double add) { ONIKA_CU_ATOMIC_ADD(val, add); }
 
 /**
  * @brief Atomically adds components of a Vec3d to another Vec3d variable.
@@ -163,7 +161,12 @@ struct ContactLawFunc {
     Vec3d fn = {0, 0, 0};
 
     // === Contact Force parameters
-    const auto& cp = cpa(group_i, group_j);
+    // local copy (not a reference) so kn_/kt_ can be scaled down for particle
+    // pairs with several simultaneous active contacts (see item[attr::weight],
+    // computed per-step by the optional number_weight_contact_polyhedron operator).
+    ContactParams cp = cpa(group_i, group_j);
+    cp.kn_ *= item[attr::weight];
+    cp.kt_ *= item[attr::weight];
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
     /** if cohesive force */
@@ -182,9 +185,9 @@ struct ContactLawFunc {
       const double meff = compute_effective_mass(m_i, m_j);
       const double reff = compute_effective_mass(rad_i, rad_j);
 
-      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position, ri, vi, f,
-                                                  item[attr::moment], vrot_i,  // particle 1
-                                                  rj, vj, vrot_j);      // particle nbh
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position, ri,
+                                                  vi, f, item[attr::moment], vrot_i,  // particle 1
+                                                  rj, vj, vrot_j);                    // particle nbh
 
       fn = f - item[attr::friction];
 
@@ -279,9 +282,10 @@ struct ContactLawDriverFunc {
       const Vec3d v = {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
       const double meff = cell[field::mass][p];
       const double reff = shp.minkowski(h);
-      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position, r, v, f,
-                                                  item[attr::moment], vrot,                              // particle i
-                                                  driver.position(), driver.velocity(), driver.angular_velocity());  // particle j
+      contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position, r,
+                                                  v, f, item[attr::moment], vrot,  // particle i
+                                                  driver.position(), driver.velocity(),
+                                                  driver.angular_velocity());  // particle j
 
       // === for analysis
       fn = f - item[attr::friction];
@@ -388,9 +392,10 @@ struct ContactLawRShapeDriverFunc {
 
       // i to j
       if constexpr (interaction_type <= 10 && interaction_type >= 7) {
-        contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position, r_i,
-                                                    v_i, f, item[attr::moment], vrot_i,              // particle i
-                                                    driver.position(), driver.velocity(), driver.angular_velocity());  // particle driver
+        contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position,
+                                                    r_i, v_i, f, item[attr::moment], vrot_i,  // particle i
+                                                    driver.position(), driver.velocity(),
+                                                    driver.angular_velocity());  // particle driver
 
         // === used for analysis
         fn = f - item[attr::friction];
@@ -408,8 +413,8 @@ struct ContactLawRShapeDriverFunc {
       if constexpr (interaction_type <= 12 && interaction_type >= 11) {
         contact_force_core<ContactLaw, CohesiveLaw>(dn, n, dt, cp, meff, reff, item[attr::friction], contact_position,
                                                     driver.position(), driver.velocity(), f, item[attr::moment],
-                                                    driver.angular_velocity(), // particle j
-                                                    r_i, v_i, vrot_i);  // particle i
+                                                    driver.angular_velocity(),  // particle j
+                                                    r_i, v_i, vrot_i);          // particle i
 
         // === used for analysis
         fn = item[attr::friction] - f;
