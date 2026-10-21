@@ -25,8 +25,8 @@ struct DriverExtractFunc {
     const exanb::Vec3d center = driver.position();        // Center position
     const exanb::Vec3d vel = driver.velocity();           // Linear velocity
     const exanb::Vec3d vrot = driver.angular_velocity();  // Angular velocity
-    const exanb::Vec3d force = driver.forces();           // Accumulated forces
-    const exanb::Vec3d mom = driver.moment();             // Accumulated moment
+    const exanb::Vec3d force = driver.forces();           // Accumulated forces (MPI-reduced)
+    const exanb::Vec3d moment = driver.moment();          // Accumulated moment (MPI-reduced)
     // Driver type identifier
     if (field == Dictionnary::type) {
       stream += print(driver.get_type());
@@ -65,11 +65,11 @@ struct DriverExtractFunc {
     }
     // Moment components (momx, momy, momz)
     else if (field == Dictionnary::momx) {
-      stream += std::to_string(mom.x);
+      stream += std::to_string(moment.x);
     } else if (field == Dictionnary::momy) {
-      stream += std::to_string(mom.y);
+      stream += std::to_string(moment.y);
     } else if (field == Dictionnary::momz) {
-      stream += std::to_string(mom.z);
+      stream += std::to_string(moment.z);
     }
   }
 };

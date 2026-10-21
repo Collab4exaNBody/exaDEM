@@ -19,6 +19,7 @@ under the License.
 
 #include <exaDEM/atomic.h>
 #include <exanb/core/grid.h>
+#include <mpi.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
@@ -29,6 +30,7 @@ under the License.
 #include <exaDEM/drivers.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/traversal.hpp>
+#include <vector>
 
 // Functor to accumulate forces and moments from particle-driver interactions
 struct ComputeForceMomentDriverFunc {
@@ -79,6 +81,7 @@ using vector_t = onika::memory::CudaMMVector<T>;
 class ComputeForceMomentDriverOp : public OperatorNode {
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(Drivers, drivers, INPUT, OPTIONAL, DocString{"List of Drivers"});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD, DocString{"MPI communicator for parallel processing."});
 
  public:
   inline std::string documentation() const final {
@@ -135,6 +138,24 @@ class ComputeForceMomentDriverOp : public OperatorNode {
       }
 
       ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+      if (drvs.get_size() > 0) {
+        std::vector<double> pack(drvs.get_size() * 6);
+        for (size_t i = 0; i < drvs.get_size(); i++) {
+          pack[i * 6 + 0] = forces[i].x;
+          pack[i * 6 + 1] = forces[i].y;
+          pack[i * 6 + 2] = forces[i].z;
+          pack[i * 6 + 3] = moments[i].x;
+          pack[i * 6 + 4] = moments[i].y;
+          pack[i * 6 + 5] = moments[i].z;
+        }
+        std::vector<double> unpack(pack.size());
+        MPI_Allreduce(pack.data(), unpack.data(), pack.size(), MPI_DOUBLE, MPI_SUM, *mpi);
+        for (size_t i = 0; i < drvs.get_size(); i++) {
+          forces[i] = {unpack[i * 6 + 0], unpack[i * 6 + 1], unpack[i * 6 + 2]};
+          moments[i] = {unpack[i * 6 + 3], unpack[i * 6 + 4], unpack[i * 6 + 5]};
+        }
+      }
 
       // Apply accumulated forces and moments to each driver
       for (size_t i = 0; i < drvs.get_size(); i++) {
