@@ -1,0 +1,67 @@
+# Hooke verification, test 3 (adapted from Chung & Ooi 2011, test 3):
+# normal impact of 4 identical spheres on a rigid plane, one group per
+# damp_rate (target e = 0.9, 0.7, 0.5, 0.3). Spheres start touching the
+# plane (zero gap) at 3.9 m/s and never touch each other.
+# damp_rate = zeta from e = exp(-zeta pi / sqrt(1 - zeta^2))
+# (scripts/tools/compute_damp_rate.py, checked by verify_damp_rate.py).
+# Analytical solution: damped linear oscillator, with exaDEM's clamp
+# Fn = max(0, kn delta + c ddelta/dt) -- see README.md.
+# Checked by check_hooke.py, plotted by plot_curves.py.
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "VerifHookeTest3Dir"
+
+input_data:
+  - particle_type:
+     type: [ Sphere0, Sphere1, Sphere2, Sphere3 ]
+  - read_xyz:
+     file: test3_restitution_sweep.xyz
+     bounds_mode: FILE
+  - set_fields:
+     polyhedra: false
+     type:     [        Sphere0,        Sphere1,        Sphere2,        Sphere3 ]
+     group:    [              0,              1,              2,              3 ]
+     radius:   [         0.0025,         0.0025,         0.0025,         0.0025 ]
+     density:  [           4000,           4000,           4000,           4000 ]
+     velocity: [ [0,0,-3.9],     [0,0,-3.9],     [0,0,-3.9],     [0,0,-3.9]     ]
+  # no particle-particle contact in this test
+  - multimat_contact_params:
+     default_config: { kn: 1.e5, kt: 0, kr: 0, mu: 0, damp_rate: 0 }
+  - drivers_contact_params:
+     group:     [        0,         1,         2,         3 ]
+     driver_id: [        0,         0,         0,         0 ]
+     kn:        [    1.e5,      1.e5,      1.e5,      1.e5 ]
+     kt:        [        0,         0,         0,         0 ]
+     kr:        [        0,         0,         0,         0 ]
+     mu:        [        0,         0,         0,         0 ]
+     damprate:  [ 0.033518,  0.112808,  0.215454,  0.357857 ]  # e = 0.9, 0.7, 0.5, 0.3 (scripts/tools/compute_damp_rate.py)
+
+setup_drivers:
+  - register_surface:
+     id: 0
+     state: { normal: [0, 0, 1], offset: 0 }
+     params: { motion_type: STATIONARY }
+
+compute_force:
+  # no gravity (as in the paper)
+  - contact_multimat_sphere:
+     symetric: true
+
+domain:
+  cell_size: 0.01 m
+  periodic: [false, false, false]
+  grid_dims: [9, 2, 2]
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 600
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 5
+  analysis_interaction_dump_frequency: 1
+  dt: 5.e-7 s
+  rcut_inc: 0.0005 m
