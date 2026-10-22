@@ -87,3 +87,7 @@ where F_specimen is the sum of the forces of the frame particles. Here, x and y 
 
 The operator only computes `frame_velocity`; it is applied with `freeze_particles` and `set_velocity` (value rebound to `frame_velocity`). Optional parameters: `force_ramp_start` / `force_ramp_steps` (linear force ramp), `frame_mass`, `frame_damping`, `frame_max_velocity` (velocity cap) and `frame_log_frequency` (prints the target force, the specimen force and the frame velocity).
 
+## Hooke Contact Law Verification
+
+Single-impact tests adapted from Chung & Ooi, *"Benchmark tests for verifying discrete element modelling codes at particle impact level"*, Granular Matter 13, 643-656 (2011), to the linear (Hooke) contact law: elastic impact of two identical spheres, elastic impact of a sphere on a rigid plane, damped impacts with different restitution coefficients. The results (velocity, normal force vs overlap and vs time) are checked against the exact analytical solution as non-regression tests. See [`verif_hooke/README.md`](verif_hooke/README.md).
+

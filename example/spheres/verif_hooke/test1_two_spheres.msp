@@ -1,0 +1,58 @@
+# Hooke verification, test 1 (adapted from Chung & Ooi 2011, test 1):
+# elastic (e=1) head-on impact of two identical spheres, two independent
+# pairs (group 0: Glass, group 1: Limestone). Each pair starts in contact
+# (zero gap) with a 20 m/s closing speed.
+# Analytical solution (linear spring, meff = m/2): delta(t) = v/w sin(w t),
+# w = sqrt(kn/meff), Fn = kn delta, tc = pi/w; velocities are exchanged.
+# Checked by check_hooke.py, plotted by plot_curves.py.
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "VerifHookeTest1Dir"
+
+input_data:
+  - particle_type:
+     type: [ GlassA, GlassB, LimeA, LimeB ]
+  - read_xyz:
+     file: test1_two_spheres.xyz
+     bounds_mode: FILE
+  - set_fields:
+     polyhedra: false
+     type:     [     GlassA,      GlassB,       LimeA,       LimeB ]
+     group:    [          0,           0,           1,           1 ]
+     radius:   [       0.01,        0.01,        0.01,        0.01 ]
+     density:  [       2800,        2800,        2500,        2500 ]
+     velocity: [ [10, 0, 0], [-10, 0, 0], [10, 0, 0], [-10, 0, 0] ]
+  - multimat_contact_params:
+     group1:   [          0,           1 ]
+     group2:   [          0,           1 ]
+     kn:       [ 3.902369e7, 1.929993e7 ]
+     kt:       [          0,           0 ]
+     kr:       [          0,           0 ]
+     mu:       [          0,           0 ]
+     damprate: [          0,           0 ]
+
+compute_force:
+  # no gravity (as in the paper)
+  - contact_multimat_sphere:
+     symetric: true
+
+domain:
+  cell_size: 0.02 m
+  periodic: [false, false, false]
+  bounds: [[0, 0, 0], [0.08, 0.14, 0.04]]
+  # explicit grid_dims: bounds/cell_size is truncated, not rounded
+  grid_dims: [4, 7, 2]
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 700
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 5
+  analysis_interaction_dump_frequency: 1
+  dt: 1.e-7 s
+  rcut_inc: 0.002 m

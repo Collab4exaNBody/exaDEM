@@ -1,0 +1,57 @@
+# Hooke verification, test 2 (adapted from Chung & Ooi 2011, test 2):
+# elastic (e=1) normal impact of a sphere (Al. alloy) on a rigid plane.
+# The sphere starts touching the plane (zero gap) at 0.2 m/s.
+# Analytical solution (linear spring, meff = m): delta(t) = v/w sin(w t),
+# w = sqrt(kn/m), Fn = kn delta, tc = pi/w; the velocity is reversed.
+# Checked by check_hooke.py, plotted by plot_curves.py.
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_spheres.msp
+
+io_tree:
+  - io_config:
+     dir_name: "VerifHookeTest2Dir"
+
+input_data:
+  - particle_type:
+     type: [ Sphere ]
+  - read_xyz:
+     file: test2_sphere_plane.xyz
+     bounds_mode: DOMAIN
+  - set_fields:
+     polyhedra: false
+     type:     [        Sphere ]
+     group:    [             0 ]
+     radius:   [           0.1 ]
+     density:  [          2699 ]
+     velocity: [ [0, 0, -0.2] ]
+
+setup_drivers:
+  - register_surface:
+     id: 0
+     state: { normal: [0, 0, 1], offset: 0 }
+     params: { motion_type: STATIONARY }
+
+compute_force:
+  # no gravity (as in the paper)
+  - contact_sphere:
+     symetric: true
+     config: { kn: 2.286908e8, kt: 0, kr: 0, mu: 0, damp_rate: 0 }
+     config_driver: { kn: 2.286908e8, kt: 0, kr: 0, mu: 0, damp_rate: 0 }
+
+domain:
+  # cell_size must be well above 2*radius
+  cell_size: 0.25 m
+  periodic: [false, false, false]
+  bounds: [[0, 0, 0], [0.5, 0.5, 0.5]]
+  grid_dims: [2, 2, 2]
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 1000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 10
+  analysis_interaction_dump_frequency: 1
+  dt: 1.e-6 s
+  rcut_inc: 0.002 m
