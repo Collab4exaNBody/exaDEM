@@ -23,6 +23,7 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <exaDEM/classifier/classifier.hpp>
@@ -30,6 +31,10 @@ under the License.
 #include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shapes.hpp>
+
+#ifdef ONIKA_CUDA_VERSION
+#include <cub/cub.cuh>
+#endif
 
 namespace exaDEM {
 
@@ -40,6 +45,18 @@ struct NumberWeightScratch {
   onika::memory::CudaMMVector<uint64_t> key_hi;  ///< max(id_i, id_j) per interaction
   onika::memory::CudaMMVector<uint8_t> active;   ///< 1 if dn < 0 (contact currently active)
   onika::memory::CudaMMVector<uint32_t> count;   ///< N_ij, broadcast back to every active interaction of a pair
+
+  onika::memory::CudaMMVector<uint32_t>
+      order;                 ///< permutation buffer for the (key_lo, key_hi)-sorted order of the interactions
+  size_t cached_total = 0;   ///< number of entries `order` currently holds a valid sort for
+  bool order_valid = false;  ///< true once `order` holds a correct sort for `cached_total` entries
+
+  // GPU-only scratch for the 2-pass stable radix sort (cub::DeviceRadixSort), unused on the CPU path.
+  onika::memory::CudaMMVector<uint32_t> sort_val_a;
+  onika::memory::CudaMMVector<uint32_t> sort_val_b;
+  onika::memory::CudaMMVector<uint64_t> sort_key_a;
+  onika::memory::CudaMMVector<uint64_t> sort_key_b;
+  onika::memory::CudaMMVector<uint8_t> cub_temp;
 };
 
 /** @brief Pass 1 (GPU): detects contact and writes dn/pair-key/active into the scratch buffers. */
@@ -81,25 +98,64 @@ struct DetectPairFunc {
   }
 };
 
-/** @brief Pass 2 (GPU): counts active interactions sharing the same particle pair (O(n) scan per interaction). */
-struct CountPairsFunc {
+/** @brief GPU-only: fills a permutation buffer with the identity, `order[i] = i`. */
+struct IotaFunc {
+  mutable onika::cuda::span<uint32_t> order;  // permutation buffer to fill with the identity
+
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const { order[i] = uint32_t(i); }
+};
+
+/**
+ * @brief GPU-only: gathers key_lo into the order produced by the 1st radix-sort pass (by
+ * key_hi), so the 2nd pass can stable-sort by key_lo while keeping key_hi as the tie-breaker.
+ */
+struct GatherFunc {
+  onika::cuda::span<const uint32_t> order;  // permutation from the 1st radix sort pass (by key_hi)
+  onika::cuda::span<const uint64_t> key_lo;
+  mutable onika::cuda::span<uint64_t> key_lo_gathered;
+
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const { key_lo_gathered[i] = key_lo[order[i]]; }
+};
+
+/**
+ * @brief Pass 2 (GPU/CPU): counts active interactions sharing the same particle pair. `order`
+ * groups equal (key_lo, key_hi) entries into a contiguous run, so for each sorted position the
+ * run is found by expanding left/right until the key changes -- bounded by the actual number of
+ * simultaneous sub-contacts for that pair (a small geometry-bound constant), not by the total
+ * number of interactions in the whole domain.
+ */
+struct CountRunsFunc {
+  onika::cuda::span<const uint32_t> order;    // (key_lo,key_hi)-sorted permutation, size total
   onika::cuda::span<const uint64_t> key_lo;   // min(id_i, id_j) per interaction
   onika::cuda::span<const uint64_t> key_hi;   // max(id_i, id_j) per interaction
   onika::cuda::span<const uint8_t> active;    // 1 if dn < 0 (contact currently active)
-  mutable onika::cuda::span<uint32_t> count;  // see DetectPairFunc's comment on why this needs mutable
+  mutable onika::cuda::span<uint32_t> count;  // indexed by original interaction index, see DetectPairFunc
+
+  ONIKA_HOST_DEVICE_FUNC inline bool same_key(uint32_t oa, uint32_t ob) const {
+    return key_lo[oa] == key_lo[ob] && key_hi[oa] == key_hi[ob];
+  }
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t g) const {
-    if (!active[g]) {
+    const uint32_t orig = order[g];
+    if (!active[orig]) {
       return;
     }
+    const size_t n = order.size();
+    size_t lo = g;
+    while (lo > 0 && same_key(order[lo - 1], orig)) {
+      lo--;
+    }
+    size_t hi = g;
+    while (hi + 1 < n && same_key(order[hi + 1], orig)) {
+      hi++;
+    }
     uint32_t c = 0;
-    const size_t n = active.size();
-    for (size_t h = 0; h < n; h++) {
-      if (active[h] && key_lo[h] == key_lo[g] && key_hi[h] == key_hi[g]) {
+    for (size_t h = lo; h <= hi; h++) {
+      if (active[order[h]]) {
         c++;
       }
     }
-    count[g] = c;
+    count[orig] = c;
   }
 };
 
@@ -147,7 +203,19 @@ struct ParallelForFunctorTraits<exaDEM::DetectPairFunc<type, TMPLC, TMPLV>> {
 };
 
 template <>
-struct ParallelForFunctorTraits<exaDEM::CountPairsFunc> {
+struct ParallelForFunctorTraits<exaDEM::IotaFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+
+template <>
+struct ParallelForFunctorTraits<exaDEM::GatherFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+
+template <>
+struct ParallelForFunctorTraits<exaDEM::CountRunsFunc> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;
   static inline constexpr bool CudaCompatible = true;
 };
@@ -167,21 +235,15 @@ struct ParallelForFunctorTraits<exaDEM::WrapperUpdateForAll<IT, K>> {
 }  // namespace onika
 
 namespace exaDEM {
-
-/**
- * @brief "NumberWeight" strategy: sets item[attr::weight] = 1/N_ij for every active
- * particle-particle polyhedron contact, N_ij being the number of simultaneously active
- * contacts between the same pair (i, j). Used by contact_polyhedron to scale kn/kt down
- * for pairs with several simultaneous sub-contacts (e.g. two fragments still touching at
- * several points right after their bond breaks). Only needed for fragmentation setups;
- * add it to the pipeline before contact_polyhedron only where it matters.
- */
 template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>>
 class ComputeContactNumberWeightPolyhedron : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
   ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
+  ADD_SLOT(bool, must_resort, INPUT, true,
+           DocString{"True (default) re-sorts active pairs by (id_i, id_j) every step. Rebind it to the "
+                     "pipeline's neighbor-list-rebuild trigger (e.g. trigger_move_particles)"});
   ADD_SLOT(NumberWeightScratch, scratch, PRIVATE, DocString{"Persistent buffers for the pair-counting pass"});
 
   // particle-particle polyhedron contact type ids (VertexVertex, VertexEdge, VertexFace, EdgeEdge)
@@ -214,6 +276,11 @@ class ComputeContactNumberWeightPolyhedron : public OperatorNode {
         YAML example [no option]:
 
           - number_weight_contact_polyhedron
+
+        YAML example [skip the sort between neighbor list rebuilds]:
+
+          - number_weight_contact_polyhedron:
+              must_resort: trigger_move_particles
       )EOF";
   }
 
@@ -260,7 +327,6 @@ class ComputeContactNumberWeightPolyhedron : public OperatorNode {
     }
   }
 
-  /** @brief Runs the 3 GPU passes (detect, count, write weight) for every polyhedron pair. */
   inline void execute() final {
     if (grid->number_of_cells() == 0) {
       return;
@@ -293,13 +359,64 @@ class ComputeContactNumberWeightPolyhedron : public OperatorNode {
     detect_pairs<poly_type_start>(classifier, cells, vertex_fields, shps, offsets, s);
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-    // Pass 2 (GPU): count, per interaction, how many active interactions
-    // share its particle pair. Plain O(n) scan per interaction (not a
-    // sort/hash-based grouping) -- see CountPairsFunc's comment -- but
-    // stays entirely on device, no host round-trip.
+    // Pass 2 (GPU/CPU)
+    s.order.resize(total);
+    const bool need_sort = *must_resort || !s.order_valid || s.cached_total != total;
+    if (need_sort) {
+#ifdef ONIKA_CUDA_VERSION
+      s.sort_val_a.resize(total);
+      s.sort_val_b.resize(total);
+      s.sort_key_a.resize(total);
+      s.sort_key_b.resize(total);
+      {
+        IotaFunc func = {onika::cuda::make_span(s.sort_val_a)};
+        ParallelForOptions opts;
+        opts.omp_scheduling = OMP_SCHED_STATIC;
+        parallel_for(total, func, parallel_execution_context(), opts);
+      }
+      ONIKA_CU_DEVICE_SYNCHRONIZE();
+      size_t cub_bytes = 0;
+      cub::DeviceRadixSort::SortPairs(nullptr, cub_bytes, s.key_hi.data(), s.sort_key_a.data(), s.sort_val_a.data(),
+                                      s.sort_val_b.data(), int(total));
+      s.cub_temp.resize(cub_bytes);
+      // Pass 1: stable sort by key_hi (secondary key) -> sort_val_b = indices ordered by key_hi.
+      cub::DeviceRadixSort::SortPairs(s.cub_temp.data(), cub_bytes, s.key_hi.data(), s.sort_key_a.data(),
+                                      s.sort_val_a.data(), s.sort_val_b.data(), int(total));
+      ONIKA_CU_DEVICE_SYNCHRONIZE();
+      {
+        GatherFunc func = {onika::cuda::make_const_span(s.sort_val_b), onika::cuda::make_const_span(s.key_lo),
+                           onika::cuda::make_span(s.sort_key_a)};
+        ParallelForOptions opts;
+        opts.omp_scheduling = OMP_SCHED_STATIC;
+        parallel_for(total, func, parallel_execution_context(), opts);
+      }
+      ONIKA_CU_DEVICE_SYNCHRONIZE();
+      // Pass 2: stable sort by key_lo (primary key); ties stay in the key_hi order from pass 1
+      // (radix sort is stable) -> s.order = final (key_lo, key_hi)-ascending permutation.
+      cub::DeviceRadixSort::SortPairs(s.cub_temp.data(), cub_bytes, s.sort_key_a.data(), s.sort_key_b.data(),
+                                      s.sort_val_b.data(), s.order.data(), int(total));
+      ONIKA_CU_DEVICE_SYNCHRONIZE();
+#else
+      uint32_t* const obuf = s.order.data();
+      const uint64_t* const klo = s.key_lo.data();
+      const uint64_t* const khi = s.key_hi.data();
+      for (size_t i = 0; i < total; i++) {
+        obuf[i] = uint32_t(i);
+      }
+      std::sort(obuf, obuf + total, [klo, khi](uint32_t a, uint32_t b) {
+        if (klo[a] != klo[b]) {
+          return klo[a] < klo[b];
+        }
+        return khi[a] < khi[b];
+      });
+#endif
+      s.order_valid = true;
+      s.cached_total = total;
+    }
     {
-      CountPairsFunc func = {onika::cuda::make_const_span(s.key_lo), onika::cuda::make_const_span(s.key_hi),
-                             onika::cuda::make_const_span(s.active), onika::cuda::make_span(s.count)};
+      CountRunsFunc func = {onika::cuda::make_const_span(s.order), onika::cuda::make_const_span(s.key_lo),
+                            onika::cuda::make_const_span(s.key_hi), onika::cuda::make_const_span(s.active),
+                            onika::cuda::make_span(s.count)};
       ParallelForOptions opts;
       opts.omp_scheduling = OMP_SCHED_STATIC;
       parallel_for(total, func, parallel_execution_context(), opts);
