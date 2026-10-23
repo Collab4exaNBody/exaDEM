@@ -327,6 +327,62 @@ class ComputeContactNumberWeightPolyhedron : public OperatorNode {
     }
   }
 
+  /** @brief Host sort: s.order = permutation of [0, total) sorted by (key_lo, key_hi). */
+  void host_sort(NumberWeightScratch& s, size_t total) {
+    uint32_t* const obuf = s.order.data();
+    const uint64_t* const klo = s.key_lo.data();
+    const uint64_t* const khi = s.key_hi.data();
+    for (size_t i = 0; i < total; i++) {
+      obuf[i] = uint32_t(i);
+    }
+    std::sort(obuf, obuf + total, [klo, khi](uint32_t a, uint32_t b) {
+      if (klo[a] != klo[b]) {
+        return klo[a] < klo[b];
+      }
+      return khi[a] < khi[b];
+    });
+  }
+
+  /** @brief Device sort (2-pass stable cub radix sort), same result as host_sort. Requires a CUDA device. */
+  void gpu_sort(NumberWeightScratch& s, size_t total) {
+#ifdef ONIKA_CUDA_VERSION
+    s.sort_val_a.resize(total);
+    s.sort_val_b.resize(total);
+    s.sort_key_a.resize(total);
+    s.sort_key_b.resize(total);
+    {
+      IotaFunc func = {onika::cuda::make_span(s.sort_val_a)};
+      ParallelForOptions opts;
+      opts.omp_scheduling = OMP_SCHED_STATIC;
+      parallel_for(total, func, parallel_execution_context(), opts);
+    }
+    ONIKA_CU_DEVICE_SYNCHRONIZE();
+    size_t cub_bytes = 0;
+    cub::DeviceRadixSort::SortPairs(nullptr, cub_bytes, s.key_hi.data(), s.sort_key_a.data(), s.sort_val_a.data(),
+                                    s.sort_val_b.data(), int(total));
+    s.cub_temp.resize(cub_bytes);
+    // Pass 1: stable sort by key_hi (secondary key) -> sort_val_b = indices ordered by key_hi.
+    cub::DeviceRadixSort::SortPairs(s.cub_temp.data(), cub_bytes, s.key_hi.data(), s.sort_key_a.data(),
+                                    s.sort_val_a.data(), s.sort_val_b.data(), int(total));
+    ONIKA_CU_DEVICE_SYNCHRONIZE();
+    {
+      GatherFunc func = {onika::cuda::make_const_span(s.sort_val_b), onika::cuda::make_const_span(s.key_lo),
+                         onika::cuda::make_span(s.sort_key_a)};
+      ParallelForOptions opts;
+      opts.omp_scheduling = OMP_SCHED_STATIC;
+      parallel_for(total, func, parallel_execution_context(), opts);
+    }
+    ONIKA_CU_DEVICE_SYNCHRONIZE();
+    // Pass 2: stable sort by key_lo (primary key); ties stay in the key_hi order from pass 1
+    // (radix sort is stable) -> s.order = final (key_lo, key_hi)-ascending permutation.
+    cub::DeviceRadixSort::SortPairs(s.cub_temp.data(), cub_bytes, s.sort_key_a.data(), s.sort_key_b.data(),
+                                    s.sort_val_b.data(), s.order.data(), int(total));
+    ONIKA_CU_DEVICE_SYNCHRONIZE();
+#else
+    host_sort(s, total);
+#endif
+  }
+
   inline void execute() final {
     if (grid->number_of_cells() == 0) {
       return;
@@ -364,52 +420,16 @@ class ComputeContactNumberWeightPolyhedron : public OperatorNode {
     const bool need_sort = *must_resort || !s.order_valid || s.cached_total != total;
     if (need_sort) {
 #ifdef ONIKA_CUDA_VERSION
-      s.sort_val_a.resize(total);
-      s.sort_val_b.resize(total);
-      s.sort_key_a.resize(total);
-      s.sort_key_b.resize(total);
-      {
-        IotaFunc func = {onika::cuda::make_span(s.sort_val_a)};
-        ParallelForOptions opts;
-        opts.omp_scheduling = OMP_SCHED_STATIC;
-        parallel_for(total, func, parallel_execution_context(), opts);
-      }
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
-      size_t cub_bytes = 0;
-      cub::DeviceRadixSort::SortPairs(nullptr, cub_bytes, s.key_hi.data(), s.sort_key_a.data(), s.sort_val_a.data(),
-                                      s.sort_val_b.data(), int(total));
-      s.cub_temp.resize(cub_bytes);
-      // Pass 1: stable sort by key_hi (secondary key) -> sort_val_b = indices ordered by key_hi.
-      cub::DeviceRadixSort::SortPairs(s.cub_temp.data(), cub_bytes, s.key_hi.data(), s.sort_key_a.data(),
-                                      s.sort_val_a.data(), s.sort_val_b.data(), int(total));
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
-      {
-        GatherFunc func = {onika::cuda::make_const_span(s.sort_val_b), onika::cuda::make_const_span(s.key_lo),
-                           onika::cuda::make_span(s.sort_key_a)};
-        ParallelForOptions opts;
-        opts.omp_scheduling = OMP_SCHED_STATIC;
-        parallel_for(total, func, parallel_execution_context(), opts);
-      }
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
-      // Pass 2: stable sort by key_lo (primary key); ties stay in the key_hi order from pass 1
-      // (radix sort is stable) -> s.order = final (key_lo, key_hi)-ascending permutation.
-      cub::DeviceRadixSort::SortPairs(s.cub_temp.data(), cub_bytes, s.sort_key_a.data(), s.sort_key_b.data(),
-                                      s.sort_val_b.data(), s.order.data(), int(total));
-      ONIKA_CU_DEVICE_SYNCHRONIZE();
+      // CUDA build may still run without any device: cub needs one, fall back to the host sort.
+      const bool use_gpu_sort = global_cuda_ctx() != nullptr && global_cuda_ctx()->has_devices();
 #else
-      uint32_t* const obuf = s.order.data();
-      const uint64_t* const klo = s.key_lo.data();
-      const uint64_t* const khi = s.key_hi.data();
-      for (size_t i = 0; i < total; i++) {
-        obuf[i] = uint32_t(i);
-      }
-      std::sort(obuf, obuf + total, [klo, khi](uint32_t a, uint32_t b) {
-        if (klo[a] != klo[b]) {
-          return klo[a] < klo[b];
-        }
-        return khi[a] < khi[b];
-      });
+      const bool use_gpu_sort = false;
 #endif
+      if (use_gpu_sort) {
+        gpu_sort(s, total);
+      } else {
+        host_sort(s, total);
+      }
       s.order_valid = true;
       s.cached_total = total;
     }
