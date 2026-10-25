@@ -1,50 +1,9 @@
-# define when log must be printed
+# define when dump files must be written
+# paraview outputs are defined in config_paraview.msp
 trigger_dump_data:
   rebind: { freq: simulation_dump_frequency , result: trigger_dump_data }
   body:
     - nth_timestep: { first: false }
-
-trigger_dump_paraview:
-  rebind: { freq: simulation_paraview_frequency , result: trigger_dump_paraview }
-  body:
-    - nth_timestep: { first: false }
-
-trigger_dump_contact_network_paraview:
-  rebind: { freq: simulation_contact_network_paraview_frequency , result: trigger_contact_network_dump_paraview }
-  body:
-    - nth_timestep: { first: false }
-
-write_paraview_generic_fields:
-  - write_paraview:
-     binary: true
-     write_ghost: false
-     write_box: true
-     fields: ["processor_id", "radius", "type","velocity", "id", "orient", "stress"]
-
-contact_network: nop
-
-contact_network_paraview:
-  condition: enable_contact_network
-  body:
-    - timestep_paraview_file: "ParaviewOutputFiles/contact_network_%010d"
-    - contact_network
-
-
-# Defined in config_spheres and config_polyhedra
-# config_spheres -> write_paraview_generic
-# config_polyhedra -> write_paraview_generic and write_paraview_obb_particles 
-particle_write_paraview_generic: nop
-
-dump_data_paraview:
-  - timestep_paraview_file: "ParaviewOutputFiles/exadem_%010d"
-  - message: { mesg: "Write paraview " , endl: false }
-  - print_dump_file:
-      rebind: { mesg: filename }
-      body:
-        - message: { endl: true }
-  - particle_write_paraview_generic
-  - paraview_driver
-  - contact_network_paraview
 
 compute_volume:
   - domain_volume
@@ -89,9 +48,6 @@ dump_data_particles:
 iteration_dump_writer: 
   - dump_data_particles
 
-iteration_paraview_writer: 
-  - dump_data_paraview
-
 final_dump_writer:
   - dump_data_particles
 
@@ -108,12 +64,6 @@ dump_data_if_triggered:
   body:
     - cleanup_before_dump
     - iteration_dump_writer
-
-# define how to print log
-dump_paraview_if_triggered:
-  condition: trigger_dump_paraview
-  body:
-    - iteration_paraview_writer
 
 final_dump:  nop # These files are no longer dumped
 #    - cleanup_before_dump
