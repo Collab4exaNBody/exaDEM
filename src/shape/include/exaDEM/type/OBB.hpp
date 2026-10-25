@@ -46,14 +46,6 @@ class OBB {
     extent.z += more;
   }
 
-  void rescale(const double scale) {
-    e1 = scale * e1;
-    e2 = scale * e2;
-    e3 = scale * e3;
-    extent = scale * extent;
-    center = scale * center;
-  }
-
   ONIKA_HOST_DEVICE_FUNC
   void translate(const exanb::Vec3d& v) { center += v; }
 

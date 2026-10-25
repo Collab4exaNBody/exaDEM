@@ -23,12 +23,16 @@
 
 enable_testing()
 
+# plugin headers include each other (e.g. forcefield -> driver), all of them are visible
+file(GLOB EXADEM_PLUGIN_INCLUDE_DIRS LIST_DIRECTORIES true ${CMAKE_SOURCE_DIR}/src/*/include)
+
 function(exadem_add_unit_test PluginName TestName)
   set(TargetName exaDEM_test_${PluginName}_${TestName})
   add_executable(${TargetName} ${CMAKE_CURRENT_SOURCE_DIR}/test_${TestName}.cpp)
   target_include_directories(${TargetName} PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/common
     ${CMAKE_SOURCE_DIR}/src/${PluginName}/include
+    ${EXADEM_PLUGIN_INCLUDE_DIRS}
     ${XNB_INCLUDE_DIRECTORIES})
   target_compile_definitions(${TargetName} PRIVATE ${XNB_COMPILE_DEFINITIONS})
   target_link_libraries(${TargetName} PRIVATE exanbCore)

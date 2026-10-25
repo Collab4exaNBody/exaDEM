@@ -102,6 +102,14 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/data/config DESTINATION data)
 # =============================
 add_subdirectory(example)
 
+# ===================================
+# === unit tests sorted by plugin ===
+# ===================================
+option(EXADEM_BUILD_TESTS "Build unit tests (tests/<plugin>)" ON)
+if(EXADEM_BUILD_TESTS)
+  add_subdirectory(tests)
+endif()
+
 # =======================================
 # === contributed tools and libraries ===
 # =======================================
