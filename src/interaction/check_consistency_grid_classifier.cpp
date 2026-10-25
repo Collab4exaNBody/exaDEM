@@ -52,9 +52,7 @@ class CheckConsistencyGridClassifier : public OperatorNode {
         )EOF";
   }
 
-  std::string operator_name() {
-    return "check_consistency_grid_classifier";
-  }
+  std::string operator_name() { return "check_consistency_grid_classifier"; }
 
   inline void execute() final {
     auto& classifier = *ic;

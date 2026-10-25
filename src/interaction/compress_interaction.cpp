@@ -44,11 +44,9 @@ class CompressInteraction : public OperatorNode {
 
   inline void execute() final {
     auto& cell_interactions = ges->m_data;
-    auto save = [](const PlaceholderInteraction& interaction) -> bool {
-      return interaction.active();
-    };
+    auto save = [](const PlaceholderInteraction& interaction) -> bool { return interaction.active(); };
 
-#   pragma omp parallel for
+#pragma omp parallel for
     for (size_t current_cell = 0; current_cell < cell_interactions.size(); current_cell++) {
       auto& storage = cell_interactions[current_cell];
       storage.compress_data(save);

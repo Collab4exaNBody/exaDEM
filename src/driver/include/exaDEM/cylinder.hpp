@@ -70,7 +70,7 @@ namespace exaDEM {
 
 /**
  * @brief Cylindrical driver for DEM simulations.
- * 
+ *
  * Represents a cylinder-shaped rigid body driver that can interact with particles.
  * Currently supports only stationary motion type. The cylinder is defined by a radius,
  * an axis direction, and a center position.
@@ -83,17 +83,14 @@ struct Cylinder {
    * @brief Get the type of the driver (in this case, CYLINDER).
    * @return The type of the driver.
    */
-  constexpr DRIVER_TYPE get_type() {
-    return DRIVER_TYPE::CYLINDER;
-  }
+  constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::CYLINDER; }
 
   /**
    * @brief Initialize the cylinder.
    * @details This function asserts that the radius of the cylinder is greater than 0.
    */
   inline void initialize(Driver_params& motion) {
-    const std::vector<MotionType> cylinder_valid_motion_types = {
-      STATIONARY,SHAKER};
+    const std::vector<MotionType> cylinder_valid_motion_types = {STATIONARY, SHAKER};
 
     if (!is_valid_motion_type(motion_type_, cylinder_valid_motion_types)) {
       std::exit(EXIT_FAILURE);
@@ -151,9 +148,7 @@ struct Cylinder {
    *          This placeholder maintains interface compatibility.
    * @param motion Driver motion parameters.
    */
-  ONIKA_HOST_DEVICE_FUNC inline void force_to_accel(const Driver_params& motion) {
-    /** not implemented */
-  }
+  ONIKA_HOST_DEVICE_FUNC inline void force_to_accel(const Driver_params& motion) { /** not implemented */ }
 
   /**
    * @brief Update position and velocity (not implemented for cylinder).
@@ -161,9 +156,7 @@ struct Cylinder {
    * @param motion Driver motion parameters.
    * @param dt Time step.
    */
-  ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const Driver_params& motion, const double dt) {
-    /** not implemented */
-  }
+  ONIKA_HOST_DEVICE_FUNC inline void push_f_v(const Driver_params& motion, const double dt) { /** not implemented */ }
 
   /**
    * @brief Update position, velocity.
@@ -173,14 +166,13 @@ struct Cylinder {
    * @param dt Time step.
    */
   inline void push_f_v_r(const Driver_params& motion, const double time, const double dt) {
-        if (!is_stationary(motion_type_)) {
-
+    if (!is_stationary(motion_type_)) {
       if (motion_type_ == MotionType::SHAKER) {
         // Shaker motion: displacement is driven by the waveform signal difference
         const double signal_next = motion.shaker_signal(time + dt);
         const double signal_current = motion.shaker_signal(time);
         const double displ = (signal_next - signal_current);
-        
+
         fields_.center_ += displ * motion.shaker_direction();
         fields_.vel_ = motion.shaker_velocity(time + dt);
       }
@@ -221,12 +213,12 @@ struct Cylinder {
    * @return exanb::Vec3d A normalized vector perpendicular to the constructed plane.
    */
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d compute_normal() {
-    exanb::Vec3d p1 = {1,1,1};
-    exanb::Vec3d p2 = {-1,-1,-1};
-    exanb::Vec3d p3 = {-1,1,1};
-    p3 = p3 * fields_.axis_; // projection
-    p1 = p1 * fields_.axis_ - p3; // projection
-    p2 = p2 * fields_.axis_ - p3; // projection
+    exanb::Vec3d p1 = {1, 1, 1};
+    exanb::Vec3d p2 = {-1, -1, -1};
+    exanb::Vec3d p3 = {-1, 1, 1};
+    p3 = p3 * fields_.axis_;       // projection
+    p1 = p1 * fields_.axis_ - p3;  // projection
+    p2 = p2 * fields_.axis_ - p3;  // projection
     exanb::Vec3d normal = exanb::cross(p1, p2);
     return normal / exanb::norm(normal);
   }
@@ -267,49 +259,46 @@ struct Cylinder {
    */
   // rcut = r shape
   ONIKA_HOST_DEVICE_FUNC
-      inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& pi) {
-        // === project the vertex in the plan as the cylinder center
-        const exanb::Vec3d proj = pi * fields_.axis_;
+  inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& pi) {
+    // === project the vertex in the plan as the cylinder center
+    const exanb::Vec3d proj = pi * fields_.axis_;
 
-        // === direction
-        const exanb::Vec3d dir = fields_.center_ - proj;
+    // === direction
+    const exanb::Vec3d dir = fields_.center_ - proj;
 
-        // === interpenetration
-        const double d = exanb::norm(dir);
+    // === interpenetration
+    const double d = exanb::norm(dir);
 
-        // === compute interpenetration
-        const double dn = fields_.radius_ - (rcut + d);
+    // === compute interpenetration
+    const double dn = fields_.radius_ - (rcut + d);
 
-        if (dn > 0) {
-          return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
-        } else {
-          // === compute contact normal
-          const exanb::Vec3d n = dir / d;
+    if (dn > 0) {
+      return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
+    } else {
+      // === compute contact normal
+      const exanb::Vec3d n = dir / d;
 
-          // === compute contact point
-          const exanb::Vec3d contact_position = pi - n * (rcut + 0.5 * dn);
+      // === compute contact point
+      const exanb::Vec3d contact_position = pi - n * (rcut + 0.5 * dn);
 
-          return {true, dn, n, contact_position};
-        }
-      }
+      return {true, dn, n, contact_position};
+    }
+  }
 };
 
-template<>
+template <>
 struct DriverProperty<Cylinder> {
   static constexpr bool use_moment = false;
   static constexpr bool use_quaternion = false;
 };
 }  // namespace exaDEM
 
-
 namespace onika {
 namespace memory {
 
 template <>
 struct MemoryUsage<exaDEM::Cylinder> {
-  static inline size_t memory_bytes(const exaDEM::Cylinder& obj) {
-    return onika::memory::memory_bytes(obj);
-  }
+  static inline size_t memory_bytes(const exaDEM::Cylinder& obj) { return onika::memory::memory_bytes(obj); }
 };
 
 }  // namespace memory

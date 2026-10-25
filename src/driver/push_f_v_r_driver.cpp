@@ -28,7 +28,7 @@ using namespace exanb;
 struct PushFVRDriverFunc {
   double time_;
   double delta_t_;
-  template<typename VectorT>
+  template <typename VectorT>
   void operator()(VectorT& driver, const Driver_params& motion) {
     if (motion.is_motion_triggered(time_ + delta_t_)) {
       driver.push_f_v_r(motion, time_, delta_t_);
@@ -36,7 +36,7 @@ struct PushFVRDriverFunc {
   }
 };
 
-template<>
+template <>
 struct ApplyDriverFunctorTraits<PushFVRDriverFunc> {
   static constexpr bool use_motion = true;
 };
@@ -45,7 +45,7 @@ class PushAccVelocityToPositionDriver : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(double, physical_time, INPUT, REQUIRED);
   ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
-  ADD_SLOT(double, dt_scale, INPUT , 1.0);
+  ADD_SLOT(double, dt_scale, INPUT, 1.0);
 
  public:
   inline std::string documentation() const final {

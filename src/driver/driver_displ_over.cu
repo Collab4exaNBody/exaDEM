@@ -60,12 +60,12 @@ struct Accumulator {
 template <class ParallelExecutionContextFunctor>
 struct DriverDisplOver {
   ParallelExecutionContextFunctor parallel_execution_context_;  ///< Parallel execution context
-  const double r2_;                                               ///< Squared distance
-  MPI_Comm& comm_;                                                ///< MPI communicator
-  Drivers& bcpd_;                                                 ///< Backup drivers
-  const size_t bd_idx_;                                           ///< Backup driver index
-  Driver_params& motion_;                                         ///< Driver Motion reference
-  Accumulator storage_;                                           ///< Result accumulator
+  const double r2_;                                             ///< Squared distance
+  MPI_Comm& comm_;                                              ///< MPI communicator
+  Drivers& bcpd_;                                               ///< Backup drivers
+  const size_t bd_idx_;                                         ///< Backup driver index
+  Driver_params& motion_;                                       ///< Driver Motion reference
+  Accumulator storage_;                                         ///< Result accumulator
 
   inline int operator()(exaDEM::Cylinder& a) {
     return 0;  // WARNING should not move

@@ -246,7 +246,8 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                         const uint32_t type_nbh = cells[cell_b][field::type][p_b];
                                         const double h_nbh = cells[cell_b][field::homothety][p_b];
                                         const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
-                                        Vec3d r_nbh = {cells[cell_b][field::rx][p_b], cells[cell_b][field::ry][p_b], cells[cell_b][field::rz][p_b]};
+                                        Vec3d r_nbh = {cells[cell_b][field::rx][p_b], cells[cell_b][field::ry][p_b],
+                                                       cells[cell_b][field::rz][p_b]};
                                         Vec3d r = {rx_a[p_a], ry_a[p_a], rz_a[p_a]};
                                         const double hi = h_a[p_a];
 

@@ -12,7 +12,7 @@ namespace exaDEM {
 struct ApplyAndReduceInterfaceFractureCriterionFunc {
   // Warning, interaction_ is mutable.
   mutable ClassifierContainer<InteractionType::InnerBond>::View
-      interaction_;  // interactions that compose the interfaces;
+      interaction_;         // interactions that compose the interfaces;
   exanb::Vec3d* const fn_;  // list of normal forces for each interaction that compose the interfaces
   double* const dn_;        // list of normal displacements for each interaction that compose the interfaces
 

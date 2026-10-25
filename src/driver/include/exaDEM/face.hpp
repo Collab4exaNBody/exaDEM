@@ -45,7 +45,7 @@ struct Box {
 struct Face {
   std::vector<exanb::Vec3d> vertices_; /**< The vertices_ of the face. */
   exanb::Vec3d normal_;                /**< The normal_ vector of the face. */
-  double offset_;               /**< The offset_ of the face. */
+  double offset_;                      /**< The offset_ of the face. */
 
   /**
    * @brief Constructor for the Face struct.
@@ -78,7 +78,7 @@ struct Face {
    *         - `Vec3d` contact_position: The contact position if an intersection occurs (otherwise, it is {0,0,0}).
    */
   std::tuple<bool, bool, exanb::Vec3d> contact_face_sphere(const double rx, const double ry, const double rz,
-                                                    const double rad) const {
+                                                           const double rad) const {
     // printf("CONTACT FACE SPHERE\n");
     const exanb::Vec3d center = {rx, ry, rz};
     const exanb::Vec3d default_contact_point = {0, 0, 0};  // won't be used
@@ -137,7 +137,7 @@ struct Face {
       }
     }
 
-    if (intersections == 1) {  // ODD
+    if (intersections == 1) {                // ODD
       contact_position = normal_ * offset_;  // we need dot(conatct_position, normal_)
       face_contact = true;
     }
@@ -160,7 +160,7 @@ struct Face {
    *         - `Vec3d` contact_position: The contact position if an intersection occurs (otherwise, it is {0,0,0}).
    */
   std::tuple<bool, exanb::Vec3d> contact_edge_sphere(const double rx, const double ry, const double rz,
-                                              const double rad) const {
+                                                     const double rad) const {
     // already tested if  exanb::dot(center,normal_) - offset_ < rad
     // test if the sphere intersects an edge
     const exanb::Vec3d center = {rx, ry, rz};
@@ -183,7 +183,7 @@ struct Face {
   }
 
   std::tuple<bool, exanb::Vec3d, int> intersect_sphere(const double rx, const double ry, const double rz,
-                                                const double rad) const {
+                                                       const double rad) const {
     exanb::Vec3d center = {rx, ry, rz};
     const exanb::Vec3d default_norm = {0, 0, 0};
 
@@ -233,7 +233,7 @@ struct Face {
       }
     }
 
-    if (intersections == 1) {  // ODD
+    if (intersections == 1) {                             // ODD
       exanb::Vec3d contact_position = normal_ * offset_;  // we need dot(conatct_position, normal_)
       return std::make_tuple(true, contact_position, 0);
     }

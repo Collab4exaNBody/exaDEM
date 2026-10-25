@@ -26,9 +26,7 @@ struct UndefinedDriver {
    * @brief Get the type of the driver (in this case, UNDEFINED).
    * @return The type of the driver.
    */
-  constexpr DRIVER_TYPE get_type() {
-    return DRIVER_TYPE::UNDEFINED;
-  }
+  constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::UNDEFINED; }
 
   void force_to_accel() {}
   void push_f_v_r(const double dt) {}
@@ -36,8 +34,6 @@ struct UndefinedDriver {
   /**
    * @brief Print information about the undefined driver.
    */
-  void print() {
-    exanb::lout << "Driver Type: UNDEFINED" << std::endl;
-  }
+  void print() { exanb::lout << "Driver Type: UNDEFINED" << std::endl; }
 };
 }  // namespace exaDEM

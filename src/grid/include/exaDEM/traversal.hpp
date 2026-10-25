@@ -23,11 +23,7 @@ under the License.
 #include <tuple>
 
 namespace exaDEM {
-enum REORDER {
-  NONE,
-  MORTON,
-  HILBERT
-};
+enum REORDER { NONE, MORTON, HILBERT };
 
 struct Traversal {
   static constexpr size_t EXADEM_BLOCK_UNIT = 32;
@@ -38,17 +34,11 @@ struct Traversal {
 
   bool iterator = false;
 
-  size_t* __restrict__ data() {
-    return onika::cuda::vector_data(m_data);
-  }
+  size_t* __restrict__ data() { return onika::cuda::vector_data(m_data); }
 
-  size_t size() {
-    return onika::cuda::vector_size(m_data);
-  }
+  size_t size() { return onika::cuda::vector_size(m_data); }
 
-  size_t get_max_block_size() {
-    return (m_max_block_size / EXADEM_BLOCK_UNIT + 1) * EXADEM_BLOCK_UNIT;
-  }
+  size_t get_max_block_size() { return (m_max_block_size / EXADEM_BLOCK_UNIT + 1) * EXADEM_BLOCK_UNIT; }
 
   exanb::ComputeCellParticlesOptions get_compute_cell_particles_options() {
     exanb::ComputeCellParticlesOptions ccpo;

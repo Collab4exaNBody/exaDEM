@@ -49,49 +49,44 @@ class CheckHomothety : public OperatorNode {
       )EOF";
   }
 
-  inline std::string operator_name() {
-    return "check_homothety";
-  }
+  inline std::string operator_name() { return "check_homothety"; }
 
  public:
-
   inline void execute() final {
     MPI_Comm comm = *mpi;
     double th = *threshold;
 
     if (th < 0.0) {
-      color_log::error(operator_name(), "Slot [threshold=" + std::to_string(th) +"] should be positive.");
+      color_log::error(operator_name(), "Slot [threshold=" + std::to_string(th) + "] should be positive.");
     }
 
     auto& gridAccessor = *grid;
     auto cells = gridAccessor.cells();
     const IJK dims = gridAccessor.dimension();
     uint64_t n_particles = 0;
-#   pragma omp parallel
-    {
-      GRID_OMP_FOR_BEGIN(dims, i, loc, schedule(dynamic) reduction(+: n_particles)){
-        if(gridAccessor.is_ghost_cell(i)) {
-          continue;
-        }
-        double* __restrict__ h = cells[i][field::homothety];
-        const size_t n = cells[i].size();
-#       pragma omp simd
-        for (size_t j = 0; j < n; j++) {
-          if (h[j] <= th) {
-            n_particles++;
-          } 
-        }
-      }
-      GRID_OMP_FOR_END
+#pragma omp parallel
+    {GRID_OMP_FOR_BEGIN(dims, i, loc,
+                        schedule(dynamic) reduction(+ : n_particles)){if (gridAccessor.is_ghost_cell(i)){continue;
+  }
+  double* __restrict__ h = cells[i][field::homothety];
+  const size_t n = cells[i].size();
+#pragma omp simd
+  for (size_t j = 0; j < n; j++) {
+    if (h[j] <= th) {
+      n_particles++;
     }
+  }
+} GRID_OMP_FOR_END
+}  // namespace exaDEM
 
-    MPI_Allreduce(MPI_IN_PLACE, &n_particles, 1, MPI_UINT64_T, MPI_SUM, comm);
+MPI_Allreduce(MPI_IN_PLACE, &n_particles, 1, MPI_UINT64_T, MPI_SUM, comm);
 
-    if (n_particles > 0) {
-      color_log::error(operator_name(), std::to_string(n_particles) + " particles are not defined corretly.");
-    }
-  }  
-};
+if (n_particles > 0) {
+  color_log::error(operator_name(), std::to_string(n_particles) + " particles are not defined corretly.");
+}
+}
+}
+;
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(check_homothety) {

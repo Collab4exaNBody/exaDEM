@@ -27,42 +27,39 @@ under the License.
 #include <exanb/grid_cell_particles/particle_region.h>
 #include <exaDEM/color_log.hpp>
 
-
 namespace exaDEM {
 struct RandomizeRadiusFunctor {
-  double relative_deviation; 
+  double relative_deviation;
   bool allow_exceed;
   const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
 
   // random generator
   double randomize_function(double current_radius) const {
-      static std::normal_distribution<double> dist(0.0, relative_deviation * current_radius / 3.0);
-      static std::default_random_engine seed;
-      double r = current_radius + dist(seed);
-      double min_radius = current_radius * (1.0 - relative_deviation);
-      double max_radius = allow_exceed ? current_radius * (1.0 + relative_deviation) : current_radius;
+    static std::normal_distribution<double> dist(0.0, relative_deviation * current_radius / 3.0);
+    static std::default_random_engine seed;
+    double r = current_radius + dist(seed);
+    double min_radius = current_radius * (1.0 - relative_deviation);
+    double max_radius = allow_exceed ? current_radius * (1.0 + relative_deviation) : current_radius;
 
-      if (r <= min_radius) { 
-        return min_radius;
-      } else if (r >= max_radius) {
-        return max_radius;
-      }
-      return r;
+    if (r <= min_radius) {
+      return min_radius;
+    } else if (r >= max_radius) {
+      return max_radius;
+    }
+    return r;
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline
-    void compute(double& mass, double& radius, Vec3d& inertia) const {
-    double density = mass /(4./3. * (4*atan(1)) * radius * radius * radius);  // deduce the density
+  ONIKA_HOST_DEVICE_FUNC inline void compute(double& mass, double& radius, Vec3d& inertia) const {
+    double density = mass / (4. / 3. * (4 * atan(1)) * radius * radius * radius);  // deduce the density
     radius = randomize_function(radius);
-    double volume = 4./3. * (4*atan(1)) * radius * radius * radius;
+    double volume = 4. / 3. * (4 * atan(1)) * radius * radius * radius;
     mass = density * volume;
     const double inertia_value = 0.4 * mass * radius * radius;
     inertia = {inertia_value, inertia_value, inertia_value};
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline
-      void operator()(double& mass, double& radius, Vec3d& inertia) const {
-        compute(mass, radius, inertia);
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(double& mass, double& radius, Vec3d& inertia) const {
+    compute(mass, radius, inertia);
   }
   // If the region feature is activated
   ONIKA_HOST_DEVICE_FUNC inline void operator()(const double rx, const double ry, const double rz, const uint64_t id,
@@ -96,7 +93,8 @@ class RandomizeRadiusOp : public OperatorNode {
 
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
   ADD_SLOT(double, relative_deviation, INPUT, REQUIRED, DocString{"Relative deviation for radius, e.g., 0.2 for ±20%"});
-  ADD_SLOT(bool, allow_exceed, INPUT, OPTIONAL, DocString{"Allow the new radius to exceed the current radius"}, true);  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
+  ADD_SLOT(bool, allow_exceed, INPUT, OPTIONAL, DocString{"Allow the new radius to exceed the current radius"}, true);
+  ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
   ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
  public:
@@ -139,18 +137,15 @@ YAML example:
 )EOF";
   }
 
-  std::string operator_name() {
-    return "randomize_radius";
-  }
+  std::string operator_name() { return "randomize_radius"; }
 
-bool check_slot() {
+  bool check_slot() {
     if (*relative_deviation <= 0.0 || *relative_deviation > 1.0) {
-        color_log::error(operator_name(),
-                         "relative_deviation must be in (0, 1]");
-        return false;
+      color_log::error(operator_name(), "relative_deviation must be in (0, 1]");
+      return false;
     }
     return true;
-}
+  }
 
   inline void execute() final {
     if (!check_slot()) {

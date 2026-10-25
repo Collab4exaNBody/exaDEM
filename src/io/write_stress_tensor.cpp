@@ -43,9 +43,7 @@ class WriteStressTensor : public OperatorNode {
   ADD_SLOT(double, dt, INPUT, REQUIRED);
 
  public:
-  inline std::string documentation() const final {
-    return R"EOF( Write the average stensor tensor. )EOF";
-  }
+  inline std::string documentation() const final { return R"EOF( Write the average stensor tensor. )EOF"; }
 
   inline void execute() final {
     namespace fs = std::filesystem;

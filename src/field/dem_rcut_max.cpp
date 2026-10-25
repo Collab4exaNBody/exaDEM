@@ -51,20 +51,21 @@ class DEMRcutMax : public OperatorNode {
     auto cells = grid->cells();
     const IJK dims = grid->dimension();
     double rcm = 0;
-#   pragma omp parallel
+#pragma omp parallel
     {GRID_OMP_FOR_BEGIN(dims, i, loc,
                         schedule(dynamic) reduction(max : rcm)){double* __restrict__ r = cells[i][field::radius];
-      const size_t n = cells[i].size();
-#   pragma omp simd
-      for (size_t j = 0; j < n; j++) {
-        rcm = std::max(rcm, 2 * r[j]);
-      }
+    const size_t n = cells[i].size();
+#pragma omp simd
+    for (size_t j = 0; j < n; j++) {
+      rcm = std::max(rcm, 2 * r[j]);
     }
-    GRID_OMP_FOR_END
-    } MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, *mpi);
-    rmax = std::max(rmax, rcm);
   }
-};
+  GRID_OMP_FOR_END
+} MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, *mpi);
+rmax = std::max(rmax, rcm);
+}  // namespace exaDEM
+}
+;
 // === register factories ===
 ONIKA_AUTORUN_INIT(dem_rcut_max) {
   OperatorNodeFactory::instance()->register_factory("dem_rcut_max", make_grid_variant_operator<DEMRcutMax>);

@@ -27,13 +27,13 @@ using namespace onika::scg;
 struct PushForceVeloctyDriverFunc {
   const double dt_;
 
-  template<typename DriverT>
+  template <typename DriverT>
   inline void operator()(DriverT& arg, const Driver_params& motion) const {
     arg.push_f_v(motion, dt_);
   }
 };
 
-template<>
+template <>
 struct ApplyDriverFunctorTraits<PushForceVeloctyDriverFunc> {
   static constexpr bool use_motion = true;
 };
