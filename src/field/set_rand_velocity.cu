@@ -121,7 +121,6 @@ class SetRandVelocity : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(set_rand_velocity) {
-  OperatorNodeFactory::instance()->register_factory("set_rand_velocity",
-                                                    make_grid_variant_operator<SetRandVelocity>);
+  OperatorNodeFactory::instance()->register_factory("set_rand_velocity", make_grid_variant_operator<SetRandVelocity>);
 }
 }  // namespace exaDEM

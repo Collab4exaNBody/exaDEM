@@ -32,8 +32,7 @@ struct PushToQuaternionFunctor {
   double m_dt_2;
 
   ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(exanb::Quaternion& Q, exanb::Vec3d& vrot,
-                         const exanb::Vec3d arot) const {
+  inline void operator()(exanb::Quaternion& Q, exanb::Vec3d& vrot, const exanb::Vec3d arot) const {
     Q = Q + dot(Q, vrot) * m_dt;
     Q = normalize(Q);
     vrot += m_dt_2 * arot;

@@ -143,7 +143,7 @@ struct Driver {
   virtual std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double, const exanb::Vec3d&);
 };
 
-template<typename DriverT>
+template <typename DriverT>
 struct DriverProperty {
   static constexpr bool use_moment = false;
   static constexpr bool use_quaternion = false;

@@ -79,13 +79,13 @@ class PolyhedraComputeVertices : public OperatorNode {
       if (!(*minimize_memory_footprint)) {
         int max_number_of_vertices = shapes_collection->max_number_of_vertices();
         ldbg << "[compute_vertices] max number of vertices: " << max_number_of_vertices << std::endl;
-#        pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(guided)
         for (size_t cell_id = 0; cell_id < n_cells; cell_id++) {
           size_t np = cells[cell_id].size();
           vertex_fields.resize(cell_id, np, max_number_of_vertices);
         }
       } else {
-#       pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(guided)
         for (size_t cell_id = 0; cell_id < n_cells; cell_id++) {
           const auto* __restrict__ type = cells[cell_id][field::type];
           size_t np = cells[cell_id].size();

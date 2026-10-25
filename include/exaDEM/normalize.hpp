@@ -24,24 +24,18 @@ namespace exaDEM {
  * @param v The input vector.
  * @return The length of the vector.
  */
-ONIKA_HOST_DEVICE_FUNC inline double length(exanb::Vec3d& v) {
-  return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-}
+ONIKA_HOST_DEVICE_FUNC inline double length(exanb::Vec3d& v) { return sqrt(v.x * v.x + v.y * v.y + v.z * v.z); }
 
 /**
  * @brief Calculate the length of a const 3D vector.
  * @param v The input vector.
  * @return The length of the vector.
  */
-ONIKA_HOST_DEVICE_FUNC inline double length(const exanb::Vec3d& v) {
-  return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-}
+ONIKA_HOST_DEVICE_FUNC inline double length(const exanb::Vec3d& v) { return sqrt(v.x * v.x + v.y * v.y + v.z * v.z); }
 
 /**
  * @brief Normalize a 3D vector.
  * @param v The input vector to be normalized.
  */
-ONIKA_HOST_DEVICE_FUNC inline void _normalize(exanb::Vec3d& v) {
-  v = v / exanb::norm(v);
-}
-}  // namespace exanb
+ONIKA_HOST_DEVICE_FUNC inline void _normalize(exanb::Vec3d& v) { v = v / exanb::norm(v); }
+}  // namespace exaDEM

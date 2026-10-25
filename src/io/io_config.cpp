@@ -45,9 +45,7 @@ class IOConfigNode : public OperatorNode {
       )EOF";
   }
 
-  inline bool is_sink() const final {
-    return true;
-  }
+  inline bool is_sink() const final { return true; }
 
   inline void execute() final {
     std::string dirName = *dir_name;

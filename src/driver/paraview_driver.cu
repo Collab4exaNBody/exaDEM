@@ -63,10 +63,12 @@ class ParaviewDriver : public OperatorNode {
         balls.push_back({static_cast<int>(id), ball.fields_.center_, ball.fields_.radius_, ball.fields_.vel_});
       } else if (drivers->type(id) == DRIVER_TYPE::SURFACE) {
         exaDEM::Surface& surface = drivers->get_typed_driver<exaDEM::Surface>(id);
-        surfaces.push_back({static_cast<int>(id), surface.fields_.normal_, surface.fields_.offset_, surface.fields_.vel_});
+        surfaces.push_back(
+            {static_cast<int>(id), surface.fields_.normal_, surface.fields_.offset_, surface.fields_.vel_});
       } else if (drivers->type(id) == DRIVER_TYPE::CYLINDER) {
         exaDEM::Cylinder& cylinder = drivers->get_typed_driver<exaDEM::Cylinder>(id);
-        cylinders.push_back({static_cast<int>(id), cylinder.fields_.center_, cylinder.compute_normal(), cylinder.fields_.radius_});
+        cylinders.push_back(
+            {static_cast<int>(id), cylinder.fields_.center_, cylinder.compute_normal(), cylinder.fields_.radius_});
       } else if (drivers->type(id) == DRIVER_TYPE::RSHAPE) {
         exaDEM::RShapeDriver& mesh = drivers->get_typed_driver<exaDEM::RShapeDriver>(id);
         mesh.shp_.write_move_paraview(path, *timestep, mesh.fields_.center_, mesh.fields_.quat_);

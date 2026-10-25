@@ -160,9 +160,8 @@ struct inner_bond_law {
 
     Vec3d fi;  // set by force_law_core
     force_law_core(dn, n, item[attr::dn0], item[attr::weight], dt, ibp, meff, item[attr::en], item[attr::tds],
-                   item[attr::et], item[attr::friction],
-                   contact_position, ri, vi, fi, vroti,  // particle 1
-                   rj, vj, vrotj);                       // particle nbh
+                   item[attr::et], item[attr::friction], contact_position, ri, vi, fi, vroti,  // particle 1
+                   rj, vj, vrotj);                                                             // particle nbh
 
     const Vec3d fn = fi - item[attr::friction];
 

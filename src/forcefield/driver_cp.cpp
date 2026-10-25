@@ -67,9 +67,7 @@ class DriversContactParams : public OperatorNode {
         )EOF";
   }
 
-  inline std::string operator_name() {
-    return "drivers_contact_params";
-  }
+  inline std::string operator_name() { return "drivers_contact_params"; }
 
  public:
   inline void execute() final {
@@ -97,7 +95,7 @@ class DriversContactParams : public OperatorNode {
     cp.setup_drivers(driver_map, params);
 
     // check input slots
-    if (group.has_value()) {  /** not default config */
+    if (group.has_value()) { /** not default config */
       auto& particle_groups = *group;
       auto& drv_id = *driver_id;
       auto& normal_coeffs = *kn;

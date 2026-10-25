@@ -6,9 +6,7 @@ namespace exaDEM {
 template <typename ContactParamsT>
 struct SingleMatContactParamsTAccessor {
   const ContactParamsT cpt_;
-  ONIKA_HOST_DEVICE_FUNC inline const ContactParamsT& operator()(int typeA, int typeB) const {
-    return cpt_;
-  }
+  ONIKA_HOST_DEVICE_FUNC inline const ContactParamsT& operator()(int typeA, int typeB) const { return cpt_; }
 };
 
 template <typename ContactParamsT>

@@ -24,7 +24,8 @@ struct InteractionListBuildLayout {
  * @param interaction_list_layout Per-cell counts and offsets of the packed interactions.
  * @param ges Destination: grid cell interaction storage.
  */
-inline void classify_interaction_grid(Classifier& classifier, Traversal& traversal, InteractionListBuildLayout& interaction_list_layout,
+inline void classify_interaction_grid(Classifier& classifier, Traversal& traversal,
+                                      InteractionListBuildLayout& interaction_list_layout,
                                       GridCellParticleInteraction& ges) {
   ClassifierViewStorage wrappers(classifier);
   ClassifierViewAccessor interaction_classifier_accessor = wrappers.accessor();
@@ -34,6 +35,7 @@ inline void classify_interaction_grid(Classifier& classifier, Traversal& travers
   constexpr bool do_active_interaction_only = true;
 
   transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
-      cell_ptr, interaction_list_layout.cell_interaction_info_, interaction_list_layout.cell_storage_, interaction_classifier_accessor, ges);
+      cell_ptr, interaction_list_layout.cell_interaction_info_, interaction_list_layout.cell_storage_,
+      interaction_classifier_accessor, ges);
 }
 }  // namespace exaDEM

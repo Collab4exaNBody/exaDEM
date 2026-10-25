@@ -440,8 +440,8 @@ struct RShapeDriver {
     if (fields_.drive_by_mom_) {
       stream << ", moment: " << fields_.applied_mom_ << ", inertia: " << fields_.inertia_;
     }
-    stream << ", quat: [" << fields_.quat_.w << "," << fields_.quat_.x << "," << fields_.quat_.y << "," << fields_.quat_.z
-           << "]";
+    stream << ", quat: [" << fields_.quat_.w << "," << fields_.quat_.x << "," << fields_.quat_.y << ","
+           << fields_.quat_.z << "]";
     if (is_force_motion(motion_type_)) {
       stream << ",mass: " << fields_.mass_;
     }
@@ -474,8 +474,8 @@ struct RShapeDriver {
     if (fields_.drive_by_mom_) {
       stream << ", moment: " << fields_.applied_mom_ << ", inertia: " << fields_.inertia_;
     }
-    stream << ", quat: [" << fields_.quat_.w << "," << fields_.quat_.x << "," << fields_.quat_.y << "," << fields_.quat_.z
-           << "]";
+    stream << ", quat: [" << fields_.quat_.w << "," << fields_.quat_.x << "," << fields_.quat_.y << ","
+           << fields_.quat_.z << "]";
     if (is_force_motion(motion_type_)) {
       stream << ",mass: " << fields_.mass_;
     }

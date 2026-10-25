@@ -42,7 +42,8 @@ struct SphereFrictionFunctor {
   }
 };
 
-template <class GridT> using SphereFluidFriction = FluidFriction<GridT, SphereFrictionFunctor, FieldSet<field::_radius>>;
+template <class GridT>
+using SphereFluidFriction = FluidFriction<GridT, SphereFrictionFunctor, FieldSet<field::_radius>>;
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(sphere_fluid_friction) {

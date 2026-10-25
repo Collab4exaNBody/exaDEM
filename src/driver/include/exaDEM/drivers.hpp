@@ -95,8 +95,7 @@ struct Drivers {
 
   template <class FuncT>
   inline auto apply(int idx, FuncT& func) {
-    assert(idx >= 0 && idx < static_cast<int>(type_index_cpu_.size()) &&
-           type_index_cpu_.size() == type_index_.size());
+    assert(idx >= 0 && idx < static_cast<int>(type_index_cpu_.size()) && type_index_cpu_.size() == type_index_.size());
     DRIVER_TYPE t = type_index_cpu_[idx].type_;
     assert(t != DRIVER_TYPE::UNDEFINED);
     if constexpr (ApplyDriverFunctorTraits<FuncT>::use_motion) {
@@ -130,8 +129,7 @@ struct Drivers {
 
   template <class FuncT>
   inline auto apply(const int idx, const FuncT& func) {
-    assert(idx >= 0 && idx < static_cast<int>(type_index_cpu_.size()) &&
-           type_index_cpu_.size() == type_index_.size());
+    assert(idx >= 0 && idx < static_cast<int>(type_index_cpu_.size()) && type_index_cpu_.size() == type_index_.size());
     DRIVER_TYPE t = type_index_cpu_[idx].type_;
     assert(t != DRIVER_TYPE::UNDEFINED);
     if (t == DRIVER_TYPE::CYLINDER) {
@@ -302,9 +300,9 @@ struct DriversGPUAccessor {
       : nb_drivers_(drvs.type_index_.size()),
         type_index_(drvs.type_index_.data()),
         data_({drvs.data_.get_nth<0>().data(), drvs.data_.get_nth<1>().data(), drvs.data_.get_nth<2>().data(),
-                drvs.data_.get_nth<3>().data()}),
+               drvs.data_.get_nth<3>().data()}),
         data_size_({drvs.data_.get_nth<0>().size(), drvs.data_.get_nth<1>().size(), drvs.data_.get_nth<2>().size(),
-                     drvs.data_.get_nth<3>().size()}) {}
+                    drvs.data_.get_nth<3>().size()}) {}
 
   template <class T>
   ONIKA_HOST_DEVICE_FUNC inline T& get_typed_driver(const int idx) const {

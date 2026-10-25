@@ -92,10 +92,11 @@ class DumpWriterConfRockable : public OperatorNode {
           all_shapes.add_shape(D.shp_);
         }
         sdriver << D.shp_.name_ << " " << 0 /* group */ << " " << 0 /* cluster */ << " " << 1 /* homothety */ << " "
-                << D.fields_.center_.x << " " << D.fields_.center_.y << " " << D.fields_.center_.z << " " << D.fields_.vel_.x << " " << D.fields_.vel_.y << " "
-                << D.fields_.vel_.z << " " << D.fields_.acc_.x << " " << D.fields_.acc_.y << " " << D.fields_.acc_.z << " " << D.fields_.quat_.w << " " << D.fields_.quat_.x
-                << " " << D.fields_.quat_.y << " " << D.fields_.quat_.z << " " << D.fields_.vrot_.x << " " << D.fields_.vrot_.y << " " << D.fields_.vrot_.z << " "
-                << 0 << " " << 0 << " " << 0; /* arot */
+                << D.fields_.center_.x << " " << D.fields_.center_.y << " " << D.fields_.center_.z << " "
+                << D.fields_.vel_.x << " " << D.fields_.vel_.y << " " << D.fields_.vel_.z << " " << D.fields_.acc_.x
+                << " " << D.fields_.acc_.y << " " << D.fields_.acc_.z << " " << D.fields_.quat_.w << " "
+                << D.fields_.quat_.x << " " << D.fields_.quat_.y << " " << D.fields_.quat_.z << " " << D.fields_.vrot_.x
+                << " " << D.fields_.vrot_.y << " " << D.fields_.vrot_.z << " " << 0 << " " << 0 << " " << 0; /* arot */
         sdriver << std::endl;
       }
     }
@@ -130,7 +131,7 @@ class DumpWriterConfRockable : public OperatorNode {
     IJK dims = grid->dimension();
     const ssize_t gl = grid->ghost_layers();
 
-#   pragma omp parallel
+#pragma omp parallel
     {
       std::vector<rockable::Particle> TLS_particles;
       GRID_OMP_FOR_BEGIN(dims - 2 * gl, _, loc_no_gl) {

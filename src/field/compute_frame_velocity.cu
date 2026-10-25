@@ -47,8 +47,8 @@ namespace exaDEM {
 // Reduction: sum of the forces of the particles located in the region
 // ---------------------------------------------------------------------------
 struct FrameForceValue {
-  Vec3d f;          // sum of the forces
-  double count;     // number of particles (check)
+  Vec3d f;       // sum of the forces
+  double count;  // number of particles (check)
 };
 
 ONIKA_HOST_DEVICE_FUNC inline void FRAME_ATOMIC_ADD(Vec3d& a, const Vec3d& b) {
@@ -61,9 +61,8 @@ struct ReduceFrameForceFunctor {
   const ParticleRegionCSGShallowCopy region_;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(FrameForceValue& local, const double rx, const double ry,
-                                                const double rz, const uint64_t id, const double fx,
-                                                const double fy, const double fz,
-                                                reduce_thread_local_t = {}) const {
+                                                const double rz, const uint64_t id, const double fx, const double fy,
+                                                const double fz, reduce_thread_local_t = {}) const {
     Vec3d r = {rx, ry, rz};
     if (region_.contains(r, id)) {
       local.f += Vec3d{fx, fy, fz};
@@ -113,7 +112,8 @@ class ComputeFrameVelocityNode : public OperatorNode {
   // control parameters
   ADD_SLOT(std::vector<std::string>, control_mode, INPUT, std::vector<std::string>{"velocity", "velocity", "velocity"},
            DocString{"Control mode per component: 'velocity' or 'force'"});
-  ADD_SLOT(Vec3d, imposed_velocity, INPUT, Vec3d{0, 0, 0}, DocString{"Imposed velocity (velocity-controlled components)"});
+  ADD_SLOT(Vec3d, imposed_velocity, INPUT, Vec3d{0, 0, 0},
+           DocString{"Imposed velocity (velocity-controlled components)"});
   ADD_SLOT(Vec3d, target_force, INPUT, Vec3d{0, 0, 0},
            DocString{"Target force applied BY THE MACHINE ON THE FRAME (force-controlled components)"});
   ADD_SLOT(long, force_ramp_start, INPUT, 0, DocString{"Timestep at which the force ramp starts"});
@@ -213,8 +213,8 @@ class ComputeFrameVelocityNode : public OperatorNode {
 
     // 4) log
     if (*frame_log_frequency > 0 && (*timestep % *frame_log_frequency) == 0) {
-      lout << "compute_frame_velocity step " << *timestep << " n=" << long(global[3])
-           << " F_target=(" << Ft[0] << "," << Ft[1] << "," << Ft[2] << ")"
+      lout << "compute_frame_velocity step " << *timestep << " n=" << long(global[3]) << " F_target=(" << Ft[0] << ","
+           << Ft[1] << "," << Ft[2] << ")"
            << " F_specimen=(" << Fs[0] << "," << Fs[1] << "," << Fs[2] << ")"
            << " v=(" << v[0] << "," << v[1] << "," << v[2] << ")" << std::endl;
     }

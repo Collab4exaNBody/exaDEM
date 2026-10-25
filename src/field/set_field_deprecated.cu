@@ -383,6 +383,7 @@ class SetFieldsDeprecated : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(set_fields_deprecated) {
-  OperatorNodeFactory::instance()->register_factory("set_fields_deprecated", make_grid_variant_operator<SetFieldsDeprecated>);
+  OperatorNodeFactory::instance()->register_factory("set_fields_deprecated",
+                                                    make_grid_variant_operator<SetFieldsDeprecated>);
 }
 }  // namespace exaDEM

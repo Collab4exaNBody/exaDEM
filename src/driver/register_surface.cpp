@@ -46,8 +46,8 @@ class RegisterSurface : public OperatorNode {
 
   inline void execute() final {
     exaDEM::Surface driver = {*state, params->input_motion_type_};  //
-    driver.initialize(*params);  // initialize some values from input parameters such as the projected center of the surface
-                                 // (normal line)
+    driver.initialize(*params);  // initialize some values from input parameters such as the projected center of the
+                                 // surface (normal line)
     drivers->add_driver(*id, driver, *params);
   }
 };

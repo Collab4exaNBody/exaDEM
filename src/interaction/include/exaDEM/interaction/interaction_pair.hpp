@@ -64,8 +64,8 @@ struct InteractionPair {
   ParticleSubLocation pi_;                       /**< Sub-location of the first particle in the interaction. */
   ParticleSubLocation pj_;                       /**< Sub-location of the second particle in the interaction. */
   uint16_t type_ = InteractionTypeId::Undefined; /**< Type of the interaction (e.g., contact type). */
-  uint8_t swap_ = false; /**< Flag indicating whether the order of the particles is swapped (i.e., if true, pi and pj are
-                           swapped). */
+  uint8_t swap_ = false; /**< Flag indicating whether the order of the particles is swapped (i.e., if true, pi and pj
+                           are swapped). */
   uint8_t ghost_ =
       NotGhost; /**< Flag indicating the ghost status of the interaction (e.g., whether it involves ghost particles). */
 

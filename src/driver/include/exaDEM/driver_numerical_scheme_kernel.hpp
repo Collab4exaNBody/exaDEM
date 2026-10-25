@@ -50,8 +50,8 @@ struct DriverPushToAngularAccelerationFunctor {
     const auto omega = Qinv * vrot;  // Express omega in the body framework
     const auto M = Qinv * mom;       // Express torque in the body framework
     exanb::Vec3d domega{(M.x - (inertia.z - inertia.y) * omega.y * omega.z) / inertia.x,
-                 (M.y - (inertia.x - inertia.z) * omega.z * omega.x) / inertia.y,
-                 (M.z - (inertia.y - inertia.x) * omega.x * omega.y) / inertia.z};
+                        (M.y - (inertia.x - inertia.z) * omega.z * omega.x) / inertia.y,
+                        (M.z - (inertia.y - inertia.x) * omega.x * omega.y) / inertia.z};
     arot = Q * domega;  // Express arot in the global framework
   }
 };
