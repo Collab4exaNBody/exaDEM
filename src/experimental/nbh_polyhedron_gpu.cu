@@ -598,8 +598,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
   }
 
   inline void execute() final {
-    color_log::error("nbh_polyhedron_gpu", "This operator only work on GPU.\n"
-                                           "                     Please use nbh_polyhedron.");
+    color_log::error("nbh_polyhedron_gpu",
+                     "This operator only work on GPU.\n"
+                     "                     Please use nbh_polyhedron.");
   }
 };
 
