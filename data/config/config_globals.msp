@@ -3,30 +3,32 @@
 
 # default global values
 global:
-  dt: 1.0e-4 s
-  rcut_inc: 0.0 m   # additional distance so that we d'ont have to rebuild neighbor list each time step
-  compute_loop_continue: true
-  simulation_end_iteration: 10000
-  simulation_log_frequency: 10
-  simulation_load_balance_frequency: 10000
-  simulation_dump_frequency: 1000         # 0 means no dump at all
-  simulation_dump_thermo_frequency: -1
-  simulation_generator_frequency: -1
-  simulation_analyses_frequency: -1
-  simulation_driver_extractor_frequency: 100 
-  timestep: 0
-  physical_time: 0.
-  enable_domain_extension: true
-  enable_load_balance: true
-  enable_task_graph: false
+  dt: 1.0e-4 s                              # time step
+  rcut_inc: 0.0 m                           # additional distance so that we d'ont have to rebuild neighbor list each time step
+  compute_loop_continue: true               # the compute loop runs while this is true
+  simulation_end_iteration: 10000           # last iteration
+  simulation_log_frequency: 10              # print log every N iterations
+  simulation_load_balance_frequency: 10000  # load balance every N iterations
+  simulation_dump_frequency: 1000           # 0 means no dump at all
+  simulation_dump_thermo_frequency: -1      # thermodynamic state output, -1 means never
+  simulation_generator_frequency: -1        # particle generator, -1 means never
+  simulation_analyses_frequency: -1         # analyses, -1 means never
+  simulation_driver_extractor_frequency: 100  # driver extractor output every N iterations
+  timestep: 0                               # current iteration
+  physical_time: 0.                         # current simulated time
+  enable_domain_extension: true             # allow the domain to be extended
+  enable_load_balance: true                 # allow load balancing
+  enable_task_graph: false                  # use the task graph
   #amr_z_curve: false
-  enable_grid_compact: true
-  enable_contact_network: false
-  trigger_generator: false
-  analysis_interaction_dump_frequency: -1 
-  analysis_dump_stress_tensor_frequency: -1
-  active_interaction_checker: false
-  dump_broken_interface: false
+  enable_grid_compact: true                 # compact the grid memory
+  enable_contact_network: false             # write the contact network
+  trigger_generator: false                  # force a particle generator call
+  analysis_interaction_dump_frequency: -1   # interaction dump, -1 means never
+  analysis_dump_stress_tensor_frequency: -1 # stress tensor dump, -1 means never
+  active_interaction_checker: false         # check interaction consistency when dumping
+  dump_broken_interface: false              # store broken interfaces (fragmentation)
+  disable_gpu_pipeline: false               # true: never use the GPU pipeline (interaction lists), even if a GPU is available
+  use_gpu_pipeline: false                   # computed by detect_gpu_pipeline (GPU available AND NOT disable_gpu_pipeline)
 
 # default grid variant we use
 grid_flavor: grid_flavor_dem

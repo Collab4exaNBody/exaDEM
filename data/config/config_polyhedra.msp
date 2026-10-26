@@ -8,14 +8,16 @@ evaluate_particle_displ:
   body: 
     - vertex_displ_over
 
-chunk_neighbors_impl:
-  - chunk_neighbors_contact
-  - do_update_persistent_interactions_if_required
-  - nbh_polyhedron
+chunk_neighbors_search:
+  - nbh_polyhedron_auto
   - update_interaction_ghost
 #  - check_owner_partner_ghosts
-  - classify_interactions
+  - classify_interactions_auto
 #  - check_owner_partner_ghosts
+
+chunk_neighbors_impl:
+  - chunk_neighbors_contact_cpu_only
+  - chunk_neighbors_search
 
 migrate_particles:
   - migrate_cell_particles_interaction
@@ -27,6 +29,8 @@ cost_model: dem_cost_model
 move_particles_extra_data: move_particles_interaction
 
 compute_new_vertices: 
+  - do_update_persistent_interactions_if_required # a nop unless config_fragmentation is included
+  - prefetch_all_fields_gpu_only
   - compute_vertices:
      resize_vertex: true
 compute_fast_vertices: 
