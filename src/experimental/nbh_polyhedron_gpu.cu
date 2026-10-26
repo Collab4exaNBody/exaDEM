@@ -572,4 +572,41 @@ ONIKA_AUTORUN_INIT(nbh_polyhedron_gpu) {
                                                     make_grid_variant_operator<UpdateClassifierPolyhedronGPUPCCP>);
 }
 }  // namespace exaDEM
+#else
+// Without CUDA, the operator is still registered so that msp files referencing it (blocks executed only if
+// use_gpu_pipeline is true) can be loaded. It is never executed on CPU.
+#include <exanb/core/grid.h>
+#include <exanb/core/make_grid_variant_operator.h>
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
+#include <exaDEM/color_log.hpp>
+
+namespace exaDEM {
+using namespace exanb;
+template <typename GridT>
+class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(bool, enable_persistent_interactions, INPUT, false, DocString{"Enable persistent interactions"});
+
+ public:
+  inline std::string documentation() const final {
+    return R"EOF(
+        GPU only: this operator is not available in a build without CUDA. Please use nbh_polyhedron.
+       )EOF";
+  }
+
+  inline void execute() final {
+    color_log::error("nbh_polyhedron_gpu", "This operator only work on GPU.\n"
+                                           "                     Please use nbh_polyhedron.");
+  }
+};
+
+// === register factories ===
+ONIKA_AUTORUN_INIT(nbh_polyhedron_gpu) {
+  OperatorNodeFactory::instance()->register_factory("nbh_polyhedron_gpu",
+                                                    make_grid_variant_operator<UpdateClassifierPolyhedronGPUPCCP>);
+}
+}  // namespace exaDEM
 #endif
