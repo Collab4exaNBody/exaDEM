@@ -86,7 +86,6 @@ struct Cylinder {
    * @return The type of the driver.
    */
   constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::CYLINDER; }
-<<<<<<< HEAD
 
   /**
    * @brief Check that an axis is a component mask: exactly one component equal to 0 and the two others equal to 1.
@@ -101,8 +100,6 @@ struct Cylinder {
     }
     return zeros == 1 && ones == 2;
   }
-=======
->>>>>>> origin/main
 
   /**
    * @brief Initialize the cylinder.
@@ -227,17 +224,7 @@ struct Cylinder {
    * @return exanb::Vec3d The normalized direction of the cylinder axis.
    */
   ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d compute_normal() {
-<<<<<<< HEAD
     const exanb::Vec3d normal = exanb::Vec3d{1, 1, 1} - fields_.axis_;
-=======
-    exanb::Vec3d p1 = {1, 1, 1};
-    exanb::Vec3d p2 = {-1, -1, -1};
-    exanb::Vec3d p3 = {-1, 1, 1};
-    p3 = p3 * fields_.axis_;       // projection
-    p1 = p1 * fields_.axis_ - p3;  // projection
-    p2 = p2 * fields_.axis_ - p3;  // projection
-    exanb::Vec3d normal = exanb::cross(p1, p2);
->>>>>>> origin/main
     return normal / exanb::norm(normal);
   }
 
