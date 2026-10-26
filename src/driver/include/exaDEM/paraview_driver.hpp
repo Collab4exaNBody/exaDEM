@@ -28,41 +28,36 @@ namespace exaDEM {
  * @struct info_ball
  * @brief Stores driver properties.
  */
-struct info_ball
-{
-  int id_;         /**< Unique identifier of the driver */
-  exanb::Vec3d center_;   /**< Center position of the sphere */
-  double radius_;  /**< Radius of the sphere */
-  exanb::Vec3d vel_;      /**< Velocity of the sphere */
+struct info_ball {
+  int id_;              /**< Unique identifier of the driver */
+  exanb::Vec3d center_; /**< Center position of the sphere */
+  double radius_;       /**< Radius of the sphere */
+  exanb::Vec3d vel_;    /**< Velocity of the sphere */
 };
 
 /**
  * @struct info_surface
  * @brief Represents a planar surfar.
  */
-struct info_surface
-{
-  int id_;         /**< Unique identifier of the surface */
-  exanb::Vec3d normal_;   /**< Unit normal vector defining the plane orientation */
-  double offset_;  /**< Plane offset in equation n · x = offset */
-  exanb::Vec3d vel_;      /**< Velocity of the surface */
+struct info_surface {
+  int id_;              /**< Unique identifier of the surface */
+  exanb::Vec3d normal_; /**< Unit normal vector defining the plane orientation */
+  double offset_;       /**< Plane offset in equation n · x = offset */
+  exanb::Vec3d vel_;    /**< Velocity of the surface */
 };
 
 /**
  * @struct info_cylinder
  * @brief Describes a cylindrical geometry.
  */
-struct info_cylinder
-{
-  int id_;         /**< Unique identifier of the cylinder */
-  exanb::Vec3d center_;   /**< A point on the cylinder axis */
-  exanb::Vec3d normal_;   /**< Axis direction of the cylinder (should be unit length) */
-  double radius_;  /**< Radius of the cylinder */
+struct info_cylinder {
+  int id_;              /**< Unique identifier of the cylinder */
+  exanb::Vec3d center_; /**< A point on the cylinder axis */
+  exanb::Vec3d normal_; /**< Axis direction of the cylinder (should be unit length) */
+  double radius_;       /**< Radius of the cylinder */
 };
 
-std::tuple<bool, bool, exanb::Vec3d> intersect(exanb::Vec3d& n,
-                                               double offset,
-                                               exanb::Vec3d& corner1,
+std::tuple<bool, bool, exanb::Vec3d> intersect(exanb::Vec3d& n, double offset, exanb::Vec3d& corner1,
                                                exanb::Vec3d& corner2) {
   exanb::Vec3d c1 = corner1 - offset * n;
   exanb::Vec3d c2 = corner2 - offset * n;
@@ -79,26 +74,24 @@ std::tuple<bool, bool, exanb::Vec3d> intersect(exanb::Vec3d& n,
   return {true, false, point};
 }
 
-std::vector<exanb::Vec3d> compute_intersections(exanb::Domain& domain,
-                                                exanb::Vec3d& normal,
-                                                double offset) {
+std::vector<exanb::Vec3d> compute_intersections(exanb::Domain& domain, exanb::Vec3d& normal, double offset) {
   std::vector<exanb::Vec3d> points;
   auto [inf, sup] = domain.bounds();
   std::array<exanb::Vec3d, 8> corners = {
-    exanb::Vec3d{inf.x, inf.y, inf.z},  // Corner 0
-    exanb::Vec3d{sup.x, inf.y, inf.z},  // Corner 1
-    exanb::Vec3d{sup.x, sup.y, inf.z},  // Corner 2
-    exanb::Vec3d{inf.x, sup.y, inf.z},  // Corner 3
-    exanb::Vec3d{inf.x, inf.y, sup.z},  // Corner 4
-    exanb::Vec3d{sup.x, inf.y, sup.z},  // Corner 5
-    exanb::Vec3d{sup.x, sup.y, sup.z},  // Corner 6
-    exanb::Vec3d{inf.x, sup.y, sup.z}   // Corner 7
+      exanb::Vec3d{inf.x, inf.y, inf.z},  // Corner 0
+      exanb::Vec3d{sup.x, inf.y, inf.z},  // Corner 1
+      exanb::Vec3d{sup.x, sup.y, inf.z},  // Corner 2
+      exanb::Vec3d{inf.x, sup.y, inf.z},  // Corner 3
+      exanb::Vec3d{inf.x, inf.y, sup.z},  // Corner 4
+      exanb::Vec3d{sup.x, inf.y, sup.z},  // Corner 5
+      exanb::Vec3d{sup.x, sup.y, sup.z},  // Corner 6
+      exanb::Vec3d{inf.x, sup.y, sup.z}   // Corner 7
   };
 
   std::vector<std::pair<int, int>> edges = {
-    {0, 1}, {1, 2}, {2, 3}, {3, 0},  // Base inférieure
-    {4, 5}, {5, 6}, {6, 7}, {7, 4},  // Base supérieure
-    {0, 4}, {1, 5}, {2, 6}, {3, 7}   // Arêtes verticales
+      {0, 1}, {1, 2}, {2, 3}, {3, 0},  // Base inférieure
+      {4, 5}, {5, 6}, {6, 7}, {7, 4},  // Base supérieure
+      {0, 4}, {1, 5}, {2, 6}, {3, 7}   // Arêtes verticales
   };
 
   for (size_t idx = 0; idx < edges.size(); idx++) {
@@ -159,9 +152,7 @@ std::vector<exanb::Vec3d> compute_intersections(exanb::Domain& domain,
   return points;
 }
 
-void write_surfaces_paraview(exanb::Domain& domain,
-                             std::vector<info_surface>& surfaces,
-                             std::filesystem::path path,
+void write_surfaces_paraview(exanb::Domain& domain, std::vector<info_surface>& surfaces, std::filesystem::path path,
                              std::string filename) {
   std::string full_path = path.string() + "/" + filename;
   if (!std::filesystem::exists(full_path)) {
@@ -272,7 +263,6 @@ void write_balls_paraview(std::vector<info_ball>& balls, std::filesystem::path p
   file << vels.rdbuf() << std::endl;
 }
 
-
 ////////////// Cylinder /////////////
 
 /**
@@ -288,14 +278,8 @@ void write_balls_paraview(std::vector<info_ball>& balls, std::filesystem::path p
  * @note Cylinders are discretized into a surface mesh.
  * @warning High resolutions may increase memory and I/O cost.
  */
-void write_cylinder_paraview(
-    exanb::Domain& domain,
-    std::vector<info_cylinder>& cylinders,
-    std::filesystem::path path,
-    const std::string& filename,
-    int n_theta = 64,
-    int n_t = 300)
-{
+void write_cylinder_paraview(exanb::Domain& domain, std::vector<info_cylinder>& cylinders, std::filesystem::path path,
+                             const std::string& filename, int n_theta = 64, int n_t = 300) {
   std::string full_path = path.string() + "/" + filename;
   if (!std::filesystem::exists(full_path)) {
     std::filesystem::create_directories(path);
@@ -304,8 +288,7 @@ void write_cylinder_paraview(
   std::ofstream file;
   file.open(full_path);
   if (!file) {
-    color_log::error("write_cylinder_paraview",
-                     "Impossible to create the output file: " + full_path, false);
+    color_log::error("write_cylinder_paraview", "Impossible to create the output file: " + full_path, false);
     return;
   }
 
@@ -325,16 +308,10 @@ void write_cylinder_paraview(
   file << "ASCII\n";
   file << "DATASET POLYDATA\n";
 
-  std::vector<exanb::Vec3d> corners = {
-    {box.bmin.x, box.bmin.y, box.bmin.z},
-    {box.bmin.x, box.bmin.y, box.bmax.z},
-    {box.bmin.x, box.bmax.y, box.bmin.z},
-    {box.bmin.x, box.bmax.y, box.bmax.z},
-    {box.bmax.x, box.bmin.y, box.bmin.z},
-    {box.bmax.x, box.bmin.y, box.bmax.z},
-    {box.bmax.x, box.bmax.y, box.bmin.z},
-    {box.bmax.x, box.bmax.y, box.bmax.z}
-  };
+  std::vector<exanb::Vec3d> corners = {{box.bmin.x, box.bmin.y, box.bmin.z}, {box.bmin.x, box.bmin.y, box.bmax.z},
+                                       {box.bmin.x, box.bmax.y, box.bmin.z}, {box.bmin.x, box.bmax.y, box.bmax.z},
+                                       {box.bmax.x, box.bmin.y, box.bmin.z}, {box.bmax.x, box.bmin.y, box.bmax.z},
+                                       {box.bmax.x, box.bmax.y, box.bmin.z}, {box.bmax.x, box.bmax.y, box.bmax.z}};
 
   for (auto [id, center, normal, radius] : cylinders) {
     _normalize(normal);
@@ -346,11 +323,10 @@ void write_cylinder_paraview(
       t_max = std::max(t_max, t);
     }
 
-    exanb::Vec3d tmp = (std::abs(normal.x) < 0.9) ? exanb::Vec3d{1,0,0} : exanb::Vec3d{0,1,0};
+    exanb::Vec3d tmp = (std::abs(normal.x) < 0.9) ? exanb::Vec3d{1, 0, 0} : exanb::Vec3d{0, 1, 0};
     exanb::Vec3d u = exanb::cross(normal, tmp);
     _normalize(u);
     exanb::Vec3d v = exanb::cross(normal, u);
-
 
     for (int i = 0; i < n_theta; ++i) {
       double theta = 2.0 * M_PI * i / n_theta;
@@ -358,10 +334,7 @@ void write_cylinder_paraview(
       for (int j = 0; j < n_t; ++j) {
         double t = t_min + (t_max - t_min) * j / (n_t - 1);
 
-        exanb::Vec3d p = center
-            + normal * t
-            + u * (radius * std::cos(theta))
-            + v * (radius * std::sin(theta));
+        exanb::Vec3d p = center + normal * t + u * (radius * std::cos(theta)) + v * (radius * std::sin(theta));
 
         if (exanb::is_inside(box, p)) {
           points.push_back(p);
@@ -383,15 +356,12 @@ void write_cylinder_paraview(
         int id2 = i_next * n_t + j + 1;
         int id3 = i * n_t + j + 1;
 
-        if (!std::isnan(points[id0].x) &&
-            !std::isnan(points[id1].x) &&
-            !std::isnan(points[id2].x) &&
+        if (!std::isnan(points[id0].x) && !std::isnan(points[id1].x) && !std::isnan(points[id2].x) &&
             !std::isnan(points[id3].x)) {
           quads.push_back({id0, id1, id2, id3});
         }
       }
     }
-
 
     npoint += points.size();
     for (auto& p : points) {

@@ -439,11 +439,10 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
                               particle_stream);
       }
 
-      PackInteractionPrefixFunc pack_prefix{make_span(interaction_prefix_per_pair),
-                                            make_const_span(interaction_type_prefix[0]),
-                                            make_const_span(interaction_type_prefix[1]),
-                                            make_const_span(interaction_type_prefix[2]),
-                                            make_const_span(interaction_type_prefix[3])};
+      PackInteractionPrefixFunc pack_prefix{
+          make_span(interaction_prefix_per_pair), make_const_span(interaction_type_prefix[0]),
+          make_const_span(interaction_type_prefix[1]), make_const_span(interaction_type_prefix[2]),
+          make_const_span(interaction_type_prefix[3])};
       parallel_queue << set_lane(kLaneParticleParticle)
                      << parallel_for(total_pp, pack_prefix,
                                      parallel_execution_context("nbh_gpu::pack_interaction_prefix"), opts)
@@ -539,8 +538,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
     parallel_queue << set_lane(kLaneHistory)
-                   << parallel_for(history.start_.size(), history_updater, parallel_execution_context(), opts)
-                   << flush;
+                   << parallel_for(history.start_.size(), history_updater, parallel_execution_context(), opts) << flush;
     parallel_queue.wait(kLaneHistory);
     ONIKA_CU_PROF_RANGE_POP();
 

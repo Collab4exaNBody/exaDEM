@@ -27,9 +27,7 @@ namespace exaDEM {
 struct PushToAngularVelocityFunctor {
   double m_dt_2;
   ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(exanb::Vec3d& vrot, const exanb::Vec3d& arot) const {
-    vrot += arot * m_dt_2;
-  }
+  inline void operator()(exanb::Vec3d& vrot, const exanb::Vec3d& arot) const { vrot += arot * m_dt_2; }
 };
 }  // namespace exaDEM
 

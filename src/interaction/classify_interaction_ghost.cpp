@@ -46,7 +46,7 @@ class ClassificationInteractionGhost : public OperatorNode {
 
   inline void execute() final {
     constexpr int ntypes = InteractionTypeId::NTypes;
-    using InteractionBuffer  = std::vector<PlaceholderInteraction>;
+    using InteractionBuffer = std::vector<PlaceholderInteraction>;
     using InteractionBuffers = std::array<InteractionBuffer, ntypes>;
 
     // Get slots
@@ -59,13 +59,13 @@ class ClassificationInteractionGhost : public OperatorNode {
     ClassifierContainerCopierFunc interaction_copier;
 
     size_t n_threads;
-#  pragma omp parallel
+#pragma omp parallel
     {
       n_threads = omp_get_num_threads();
     }
 
     InteractionBuffers buffer;
-    std::vector<std::array<std::pair<size_t, size_t>, ntypes> > bounds;
+    std::vector<std::array<std::pair<size_t, size_t>, ntypes>> bounds;
     bounds.resize(n_threads);
     std::array<size_t, ntypes> old_size;
     for (int typeID = 0; typeID < ntypes; typeID++) {
@@ -77,23 +77,23 @@ class ClassificationInteractionGhost : public OperatorNode {
     {
       size_t threads = omp_get_thread_num();
       InteractionBuffers TmpBuff;
-#     pragma omp for nowait
+#pragma omp for nowait
       for (size_t i = 0; i < g.number_of_cells(); i++) {
         if (!g.is_ghost_cell(i)) {
           continue;
         }
         CellExtraDynamicDataStorageT<PlaceholderInteraction>& storage = interaction_cells[i];
         auto& data = storage.m_data;
-        for (size_t i = 0 ; i < data.size() ; i++) {
+        for (size_t i = 0; i < data.size(); i++) {
           TmpBuff[data[i].type()].push_back(data[i]);
         }
       }
 
-      for (int typeID = 0 ; typeID < ntypes; typeID++) {
+      for (int typeID = 0; typeID < ntypes; typeID++) {
         bounds[threads][typeID].second = TmpBuff[typeID].size();
       }
 
-#   pragma omp barrier
+#pragma omp barrier
 
       auto& bound = bounds[threads];
       for (int typeID = 0; typeID < ntypes; typeID++) {
@@ -104,24 +104,22 @@ class ClassificationInteractionGhost : public OperatorNode {
         bound[typeID].first = start + old_size[typeID];
       }
 
-#   pragma omp barrier
+#pragma omp barrier
       // Partial
-#   pragma omp for
+#pragma omp for
       for (int typeID = 0; typeID < ntypes; typeID++) {
-        size_t size = bounds[n_threads-1][typeID].first + bounds[n_threads-1][typeID].second;
+        size_t size = bounds[n_threads - 1][typeID].first + bounds[n_threads - 1][typeID].second;
         CDispatcher::dispatch(typeID, classifier, resize, size);
       }
 
-#   pragma omp barrier
+#pragma omp barrier
       // All
       for (int typeID = 0; typeID < ntypes; typeID++) {
         size_t start = bound[typeID].first;
         size_t size = bound[typeID].second;
-        CDispatcher::dispatch(typeID, classifier, interaction_copier,
-                              TmpBuff[typeID], start, size, typeID);
+        CDispatcher::dispatch(typeID, classifier, interaction_copier, TmpBuff[typeID], start, size, typeID);
       }
     }
-    
   }
 };
 

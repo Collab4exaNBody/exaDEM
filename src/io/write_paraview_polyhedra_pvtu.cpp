@@ -21,8 +21,7 @@ under the License.
 
 // onika
 #include <onika/math/basic_types.h>
-#include <onika/math/basic_types_operators.h>
-#include <onika/math/basic_types_stream.h>
+#include <onika/math/quaternion_operators.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
@@ -32,106 +31,34 @@ under the License.
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/core/xform.h>
 
-#include <cstdlib>
+// exaDEM
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/shapes.hpp>
+#include <exaDEM/vtk_data_array.hpp>
+
+// C++ standard library
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <iomanip>
-#include <iostream>
 #include <regex>
-#include <sstream>
-#include <utility>
+#include <string>
+#include <vector>
 
 namespace exaDEM {
 using namespace exanb;
-
-// Maps a C++ type onto its VTK XML "type" attribute and number of components.
-template <typename T>
-struct vtk_type_info;
-
-template <>
-struct vtk_type_info<int32_t> {
-  static constexpr const char* name = "Int32";
-  static constexpr int ncomp = 1;
-};
-
-template <>
-struct vtk_type_info<int64_t> {
-  static constexpr const char* name = "Int64";
-  static constexpr int ncomp = 1;
-};
-
-template <>
-struct vtk_type_info<double> {
-  static constexpr const char* name = "Float64";
-  static constexpr int ncomp = 1;
-};
-
-template <>
-struct vtk_type_info<Vec3d> {
-  static constexpr const char* name = "Float64";
-  static constexpr int ncomp = 3;
-};
-
-template <>
-struct vtk_type_info<Mat3d> {
-  static constexpr const char* name = "Float64";
-  static constexpr int ncomp = 9;
-};
-
-inline void append_value(std::stringstream& out, int32_t v) { out << " " << v; }
-inline void append_value(std::stringstream& out, int64_t v) { out << " " << v; }
-inline void append_value(std::stringstream& out, double v) { out << " " << v; }
-inline void append_value(std::stringstream& out, const Vec3d& v) { out << " " << v.x << " " << v.y << " " << v.z; }
-inline void append_value(std::stringstream& out, const Mat3d& m) {
-  out << " " << m.m11 << " " << m.m12 << " " << m.m13 << " " << m.m21 << " " << m.m22 << " " << m.m23 << " " << m.m31
-      << " " << m.m32 << " " << m.m33;
-}
-
-// One projected cell data array: its output name, whether it is selected for output,
-// and the per-cell values accumulated so far.
-template <typename T>
-struct CellDataField {
-  std::string name;
-  bool write = false;
-  std::stringstream buffer;
-
-  explicit CellDataField(std::string field_name) : name(std::move(field_name)) {}
-
-  inline void append(const T& value) {
-    if (write) append_value(buffer, value);
-  }
-};
-
-template <typename T>
-inline void write_cell_data_array(std::ofstream& outFile, const CellDataField<T>& field) {
-  if (!field.write) return;
-  outFile << "        <DataArray type=\"" << vtk_type_info<T>::name << "\" Name=\"" << field.name
-          << "\" NumberOfComponents=\"" << vtk_type_info<T>::ncomp << "\" format=\"ascii\">" << std::endl;
-  outFile << field.buffer.rdbuf() << std::endl;
-  outFile << "        </DataArray>" << std::endl;
-}
-
-template <typename T>
-inline void write_pcell_data_array(std::ofstream& outFile, const CellDataField<T>& field) {
-  if (!field.write) return;
-  outFile << "      <PDataArray type=\"" << vtk_type_info<T>::name << "\" Name=\"" << field.name
-          << "\" NumberOfComponents=\"" << vtk_type_info<T>::ncomp << "\"/>" << std::endl;
-}
 
 struct par_vtu_poly_helper {
   int n_vertices = 0;
   int n_cells = 0;
   int64_t connectivity_offset = 0;
   int64_t face_offset = 0;
-  std::stringstream vertices;
-  std::stringstream connectivity;
-  std::stringstream offsets;
-  std::stringstream faces;
-  std::stringstream faceoffsets;
+  std::vector<double> vertices;
+  std::vector<int64_t> connectivity;
+  std::vector<int64_t> offsets;
+  std::vector<int64_t> faces;
+  std::vector<int64_t> faceoffsets;
 
   CellDataField<int64_t> id{"id"};
   CellDataField<int32_t> type{"type"};
@@ -158,7 +85,7 @@ inline void build_buffer_vtu_polyhedron(const exanb::Vec3d& pos, const shape* sh
   auto writer_vertex = [&buffers](const exanb::Vec3d& v, const exanb::Vec3d& p, const double& h,
                                   const exanb::Quaternion& q) {
     exanb::Vec3d new_pos = p + q * (h * v);
-    buffers.vertices << " " << new_pos.x << " " << new_pos.y << " " << new_pos.z;
+    append_value(buffers.vertices, new_pos);
   };
 
   shp->for_all_vertices(writer_vertex, pos, h, orient);
@@ -167,24 +94,24 @@ inline void build_buffer_vtu_polyhedron(const exanb::Vec3d& pos, const shape* sh
 
   const int n_faces = shp->get_number_of_faces();
   for (int vid = 0; vid < n_vertices; vid++) {
-    buffers.connectivity << " " << vertex_base + vid;
+    buffers.connectivity.push_back(vertex_base + vid);
   }
   buffers.connectivity_offset += n_vertices;
-  buffers.offsets << " " << buffers.connectivity_offset;
+  buffers.offsets.push_back(buffers.connectivity_offset);
 
-  buffers.faces << " " << n_faces;
+  buffers.faces.push_back(n_faces);
   buffers.face_offset += 1;
 
   for (int face_idx = 0; face_idx < n_faces; face_idx++) {
     auto [face_vertices, face_size] = shp->get_face(face_idx);
     buffers.face_offset += face_size + 1;
 
-    buffers.faces << " " << face_size;
+    buffers.faces.push_back(face_size);
     for (int it = 0; it < face_size; it++) {
-      buffers.faces << " " << vertex_base + face_vertices[it];
+      buffers.faces.push_back(vertex_base + face_vertices[it]);
     }
   }
-  buffers.faceoffsets << " " << buffers.face_offset;
+  buffers.faceoffsets.push_back(buffers.face_offset);
 
   // Cell data (one entry per polyhedron, not per vertex). Each append() is a no-op
   // unless the corresponding field was selected via the "fields" slot.
@@ -204,7 +131,7 @@ inline void build_buffer_vtu_polyhedron(const exanb::Vec3d& pos, const shape* sh
   buffers.n_cells += 1;
 }
 
-inline void write_vtu_polyhedron(const std::string& name, par_vtu_poly_helper& buffers) {
+inline void write_vtu_polyhedron(const std::string& name, par_vtu_poly_helper& buffers, const vtk_output_mode& mode) {
   std::ofstream outFile(name);
   if (!outFile) {
     color_log::error("write_vtu_polyhedron", "Impossible to open the file: " + name, false);
@@ -212,50 +139,36 @@ inline void write_vtu_polyhedron(const std::string& name, par_vtu_poly_helper& b
   }
 
   outFile << "<?xml version=\"1.0\"?>" << std::endl;
-  outFile << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
+  outFile << "<VTKFile type=\"UnstructuredGrid\" " << vtk_file_attributes(mode) << ">" << std::endl;
   outFile << "  <UnstructuredGrid>" << std::endl;
   outFile << "    <Piece NumberOfPoints=\"" << buffers.n_vertices << "\" NumberOfCells=\"" << buffers.n_cells << "\">"
           << std::endl;
   outFile << "      <PointData>" << std::endl;
   outFile << "      </PointData>" << std::endl;
   outFile << "      <Points>" << std::endl;
-  outFile << "        <DataArray type=\"Float64\" Name=\"\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
-  outFile << buffers.vertices.rdbuf() << std::endl;
-  outFile << "        </DataArray>" << std::endl;
+  write_vtk_data_array(outFile, "Float64", "", 3, buffers.vertices, mode);
   outFile << "      </Points>" << std::endl;
   outFile << "      <CellData>" << std::endl;
-  write_cell_data_array(outFile, buffers.id);
-  write_cell_data_array(outFile, buffers.type);
-  write_cell_data_array(outFile, buffers.velocity);
-  write_cell_data_array(outFile, buffers.vrot);
-  write_cell_data_array(outFile, buffers.arot);
-  write_cell_data_array(outFile, buffers.mass);
-  write_cell_data_array(outFile, buffers.radius);
-  write_cell_data_array(outFile, buffers.inertia);
-  write_cell_data_array(outFile, buffers.stress);
-  write_cell_data_array(outFile, buffers.cluster);
-  write_cell_data_array(outFile, buffers.group);
-  write_cell_data_array(outFile, buffers.mpi_rank);
+  write_cell_data_array(outFile, buffers.id, mode);
+  write_cell_data_array(outFile, buffers.type, mode);
+  write_cell_data_array(outFile, buffers.velocity, mode);
+  write_cell_data_array(outFile, buffers.vrot, mode);
+  write_cell_data_array(outFile, buffers.arot, mode);
+  write_cell_data_array(outFile, buffers.mass, mode);
+  write_cell_data_array(outFile, buffers.radius, mode);
+  write_cell_data_array(outFile, buffers.inertia, mode);
+  write_cell_data_array(outFile, buffers.stress, mode);
+  write_cell_data_array(outFile, buffers.cluster, mode);
+  write_cell_data_array(outFile, buffers.group, mode);
+  write_cell_data_array(outFile, buffers.mpi_rank, mode);
   outFile << "      </CellData>" << std::endl;
   outFile << "      <Cells>" << std::endl;
-  outFile << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
-  outFile << buffers.connectivity.rdbuf() << std::endl;
-  outFile << "        </DataArray>" << std::endl;
-  outFile << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
-  outFile << buffers.offsets.rdbuf() << std::endl;
-  outFile << "        </DataArray>" << std::endl;
-  outFile << "        <DataArray type=\"Int32\" Name=\"faces\" format=\"ascii\">" << std::endl;
-  outFile << buffers.faces.rdbuf() << std::endl;
-  outFile << "        </DataArray>" << std::endl;
-  outFile << "        <DataArray type=\"Int32\" Name=\"faceoffsets\" format=\"ascii\">" << std::endl;
-  outFile << buffers.faceoffsets.rdbuf() << std::endl;
-  outFile << "        </DataArray>" << std::endl;
-  outFile << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
-  for (int i = 0; i < buffers.n_cells; ++i) {
-    outFile << " 42";
-  }
-  outFile << std::endl;
-  outFile << "        </DataArray>" << std::endl;
+  write_vtk_data_array(outFile, "Int64", "connectivity", 0, buffers.connectivity, mode);
+  write_vtk_data_array(outFile, "Int64", "offsets", 0, buffers.offsets, mode);
+  write_vtk_data_array(outFile, "Int64", "faces", 0, buffers.faces, mode);
+  write_vtk_data_array(outFile, "Int64", "faceoffsets", 0, buffers.faceoffsets, mode);
+  const std::vector<uint8_t> types(buffers.n_cells, 42);  // VTK_POLYHEDRON
+  write_vtk_data_array(outFile, "UInt8", "types", 0, types, mode);
   outFile << "      </Cells>" << std::endl;
   outFile << "    </Piece>" << std::endl;
   outFile << "  </UnstructuredGrid>" << std::endl;
@@ -272,7 +185,7 @@ inline void write_pvtu_polyhedron(const std::string& filename, size_t number_of_
   }
 
   outFile << "<?xml version=\"1.0\"?>" << std::endl;
-  outFile << "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
+  outFile << "<VTKFile type=\"PUnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\">" << std::endl;
   outFile << "  <PUnstructuredGrid>" << std::endl;
   outFile << "    <PPointData>" << std::endl;
   outFile << "    </PPointData>" << std::endl;
@@ -294,10 +207,10 @@ inline void write_pvtu_polyhedron(const std::string& filename, size_t number_of_
   write_pcell_data_array(outFile, buffers.mpi_rank);
   outFile << "    </PCellData>" << std::endl;
   outFile << "    <PCells>" << std::endl;
-  outFile << "      <PDataArray type=\"Int32\" Name=\"connectivity\" NumberOfComponents=\"1\"/>" << std::endl;
-  outFile << "      <PDataArray type=\"Int32\" Name=\"offsets\" NumberOfComponents=\"1\"/>" << std::endl;
-  outFile << "      <PDataArray type=\"Int32\" Name=\"faces\" NumberOfComponents=\"1\"/>" << std::endl;
-  outFile << "      <PDataArray type=\"Int32\" Name=\"faceoffsets\" NumberOfComponents=\"1\"/>" << std::endl;
+  outFile << "      <PDataArray type=\"Int64\" Name=\"connectivity\" NumberOfComponents=\"1\"/>" << std::endl;
+  outFile << "      <PDataArray type=\"Int64\" Name=\"offsets\" NumberOfComponents=\"1\"/>" << std::endl;
+  outFile << "      <PDataArray type=\"Int64\" Name=\"faces\" NumberOfComponents=\"1\"/>" << std::endl;
+  outFile << "      <PDataArray type=\"Int64\" Name=\"faceoffsets\" NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "      <PDataArray type=\"UInt8\" Name=\"types\" NumberOfComponents=\"1\"/>" << std::endl;
   outFile << "    </PCells>" << std::endl;
 
@@ -326,6 +239,10 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
   ADD_SLOT(long, timestep, INPUT, REQUIRED, DocString{"Iteration number"});
   ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
   ADD_SLOT(bool, mpi_rank, INPUT, false, DocString{"Add a field containing the mpi rank."});
+  ADD_SLOT(bool, binary_mode, INPUT, true,
+           DocString{"Write data arrays as zlib-compressed binary data (true) or as ascii (false)."});
+  ADD_SLOT(std::string, compression, INPUT, "default",
+           DocString{"Compression level used in binary mode: default (medium, zlib level 6), min, max or [0-9]."});
 
  public:
   inline std::string documentation() const final {
@@ -339,12 +256,24 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
       By default (".*"), every available field is written, and the .pvtu file
       only declares the fields that are actually selected.
 
-      YAML example:
+      By default, data arrays are written in binary mode: they are zlib-compressed and
+      base64-encoded with a medium compression level ("default", i.e. zlib level 6).
+      The "compression" slot changes this level: "min" (0, no compression), "max" (9)
+      or any digit in [0-9]. To write human-readable ascii files instead, set
+      "binary_mode: false" (the "compression" slot is then ignored).
+
+      YAML example (binary, default compression):
 
         - write_paraview_polyhedra_pvtu:
            filename: "output_directory"
            mpi_rank: true
            fields: ["id", "type", "velocity"]
+
+      YAML example (ascii):
+
+        - write_paraview_polyhedra_pvtu:
+           filename: "output_directory"
+           binary_mode: false
                 )EOF";
   }
 
@@ -441,12 +370,18 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
 
     std::string file = *filename + "/%06d.vtu";
     file = onika::format_string(file, rank);
-    write_vtu_polyhedron(file, buffers);
+    vtk_output_mode mode;
+    mode.binary = *binary_mode;
+    mode.compression_level = vtk_compression_level(*compression);
+    write_vtu_polyhedron(file, buffers, mode);
   }
 };
 
 ONIKA_AUTORUN_INIT(write_paraview_polyhedra_pvtu2) {
   OperatorNodeFactory::instance()->register_factory("write_paraview_polyhedra_pvtu",
+                                                    make_grid_variant_operator<WriteParaviewPolyhedraPVTU2Operator>);
+  // alias
+  OperatorNodeFactory::instance()->register_factory("write_paraview_polyhedra",
                                                     make_grid_variant_operator<WriteParaviewPolyhedraPVTU2Operator>);
 }
 }  // namespace exaDEM

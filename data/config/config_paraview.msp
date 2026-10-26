@@ -1,0 +1,53 @@
+# This file contains default paraview outputs (particles, drivers, contact network).
+# Outputs of quantities projected onto a cartesian grid are defined in config_cell_projection.msp.
+
+# define when paraview files must be written
+trigger_dump_paraview:
+  rebind: { freq: simulation_paraview_frequency , result: trigger_dump_paraview }
+  body:
+    - nth_timestep: { first: false }
+
+trigger_dump_contact_network_paraview:
+  rebind: { freq: simulation_contact_network_paraview_frequency , result: trigger_contact_network_dump_paraview }
+  body:
+    - nth_timestep: { first: false }
+
+write_paraview_generic_fields:
+  - write_paraview:
+     binary: true
+     write_ghost: false
+     write_box: true
+     fields: ["processor_id", "radius", "type","velocity", "id", "orient", "stress"]
+
+# Defined in config_spheres and config_polyhedra
+contact_network: nop
+
+contact_network_paraview:
+  condition: enable_contact_network
+  body:
+    - timestep_paraview_file: "ParaviewOutputFiles/contact_network_%010d"
+    - contact_network
+
+# Defined in config_spheres and config_polyhedra
+# config_spheres -> write_paraview_generic
+# config_polyhedra -> write_paraview_generic and write_paraview_obb_particles
+particle_write_paraview_generic: nop
+
+dump_data_paraview:
+  - timestep_paraview_file: "ParaviewOutputFiles/exadem_%010d"
+  - message: { mesg: "Write paraview " , endl: false }
+  - print_dump_file:
+      rebind: { mesg: filename }
+      body:
+        - message: { endl: true }
+  - particle_write_paraview_generic
+  - paraview_driver
+  - contact_network_paraview
+
+iteration_paraview_writer:
+  - dump_data_paraview
+
+dump_paraview_if_triggered:
+  condition: trigger_dump_paraview
+  body:
+    - iteration_paraview_writer

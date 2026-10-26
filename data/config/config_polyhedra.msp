@@ -37,8 +37,7 @@ reorder_extra_data: nop
 
 ### IO
 particle_write_paraview_generic:
-#  - write_paraview_polyhedra
-  - write_paraview_generic_fields
+  - write_paraview_polyhedra_pvtu
   - write_paraview_obb_particles
 
 # read_dump_particle_interaction [input file]

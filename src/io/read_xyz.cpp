@@ -54,9 +54,7 @@ struct ParticleType {
     std::strncpy(m_name, s.c_str(), MAX_STR_LEN);
     m_name[MAX_STR_LEN - 1] = '\0';
   }
-  inline std::string name() const {
-    return m_name;
-  }
+  inline std::string name() const { return m_name; }
 };
 
 using ParticleTypes = onika::memory::CudaMMVector<ParticleType>;

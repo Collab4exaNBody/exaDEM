@@ -36,11 +36,10 @@ class ResetForceMomentNode : public OperatorNode {
   ADD_SLOT(ParticleRegions, particle_regions, INPUT, OPTIONAL);
   ADD_SLOT(ParticleRegionCSG, region, INPUT, OPTIONAL);
 
-  using ComputeFields = field_accessor_tuple_from_field_set_t<
-                        FieldSet<field::_fx, field::_fy, field::_fz, field::_mom>>;
+  using ComputeFields =
+      field_accessor_tuple_from_field_set_t<FieldSet<field::_fx, field::_fy, field::_fz, field::_mom>>;
   using ComputeRegionFields = field_accessor_tuple_from_field_set_t<
-                        FieldSet<field::_rx, field::_ry, field::_rz, field::_id,
-                                 field::_fx, field::_fy, field::_fz, field::_mom>>;
+      FieldSet<field::_rx, field::_ry, field::_rz, field::_id, field::_fx, field::_fy, field::_fz, field::_mom>>;
 
   static constexpr ComputeFields compute_field_set{};
   static constexpr ComputeRegionFields compute_region_field_set{};
@@ -69,7 +68,7 @@ class ResetForceMomentNode : public OperatorNode {
       SetFunctor<double, double, double, Vec3d> func = {{0.0, 0.0, 0.0, Vec3d{0.0, 0.0, 0.0}}};
       compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context(), ccpo);
     }
-	}
+  }
 };
 // === register factories ===
 ONIKA_AUTORUN_INIT(reset_force_moment) {

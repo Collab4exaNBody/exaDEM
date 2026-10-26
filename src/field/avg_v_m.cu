@@ -81,7 +81,8 @@ class GetAvgVelMass : public OperatorNode {
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
-  ADD_SLOT(Vec3d, out, OUTPUT, DocString("- Sum[v_i*m_i] / mass_{systeme} (note the sign: opposite of the average velocity)"));
+  ADD_SLOT(Vec3d, out, OUTPUT,
+           DocString("- Sum[v_i*m_i] / mass_{systeme} (note the sign: opposite of the average velocity)"));
   // Remark : do not hesite to use rebind to rename the output variable
 
   inline std::string documentation() const final {

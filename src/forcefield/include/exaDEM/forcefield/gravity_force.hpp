@@ -28,7 +28,7 @@ struct GravityForceDriverFunctor {
   template <typename T>
   inline void operator()(T& drv) const {
     if constexpr (std::is_same_v<std::remove_cv_t<T>, exaDEM::RShapeDriver>) {
-      if(drv.motion_type_ == MotionType::PARTICLE) {
+      if (drv.motion_type_ == MotionType::PARTICLE) {
         drv.fields_.forces_ += g_ * drv.fields_.mass_;
       }
     }
@@ -37,12 +37,11 @@ struct GravityForceDriverFunctor {
 
 struct GravityForceFunctor {
   exanb::Vec3d g_ = {0.0, 0.0, -9.807};
-  ONIKA_HOST_DEVICE_FUNC inline
-      void operator()(double mass, double& fx, double& fy, double& fz) const {
-        fx += g_.x * mass;
-        fy += g_.y * mass;
-        fz += g_.z * mass;
-      }
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(double mass, double& fx, double& fy, double& fz) const {
+    fx += g_.x * mass;
+    fy += g_.y * mass;
+    fz += g_.z * mass;
+  }
 };
 }  // namespace exaDEM
 

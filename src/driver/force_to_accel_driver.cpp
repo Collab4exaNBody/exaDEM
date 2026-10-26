@@ -45,7 +45,7 @@ struct ForceToAccelDriverFunc {
   }
 };
 
-template<>
+template <>
 struct ApplyDriverFunctorTraits<ForceToAccelDriverFunc> {
   static constexpr bool use_motion = true;
 };
@@ -79,7 +79,7 @@ struct GatherForcesMomentDriverFunc {
   }
 };
 
-template<>
+template <>
 struct ApplyDriverFunctorTraits<GatherForcesMomentDriverFunc> {
   static constexpr bool use_motion = true;
 };

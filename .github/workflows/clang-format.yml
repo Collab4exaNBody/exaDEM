@@ -1,0 +1,61 @@
+name: Clang Format
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+
+env:
+  # Keep in sync with the version used by developers (scripts/clang_format_google.sh)
+  CLANG_FORMAT_VERSION: 21.1.8
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+        # full history is needed to compute the diff against the base commit
+        fetch-depth: 0
+
+    - name: Install clang-format
+      run: |
+        python3 -m pip install --user clang-format==${{ env.CLANG_FORMAT_VERSION }}
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Select base commit
+      id: base
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        PUSH_BEFORE: ${{ github.event.before }}
+      run: |
+        if [ "$EVENT_NAME" = "pull_request" ]; then
+          BASE="$PR_BASE_SHA"
+        elif [ -n "$PUSH_BEFORE" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "$PUSH_BEFORE^{commit}" 2>/dev/null; then
+          BASE="$PUSH_BEFORE"
+        else
+          # new branch: compare with main
+          BASE=$(git merge-base origin/main HEAD)
+        fi
+        echo "Base commit: $BASE"
+        echo "sha=$BASE" >> $GITHUB_OUTPUT
+
+    # Only the lines modified since the base commit are checked, the existing code
+    # is not fully formatted yet.
+    - name: Check formatting of modified lines
+      env:
+        BASE_SHA: ${{ steps.base.outputs.sha }}
+      run: |
+        clang-format --version
+        DIFF=$(git clang-format --binary "$(which clang-format)" --style=file \
+               --extensions cpp,hpp,h,cu,cuh --diff "$BASE_SHA" -- src include contribs || true)
+        if [ -z "$DIFF" ] || echo "$DIFF" | grep -qE "^(no modified files to format|clang-format did not modify any files)$"; then
+          echo "Formatting is correct."
+        else
+          echo "$DIFF"
+          echo "::error::Some modified lines are not clang-formatted. Run: git clang-format $BASE_SHA"
+          exit 1
+        fi

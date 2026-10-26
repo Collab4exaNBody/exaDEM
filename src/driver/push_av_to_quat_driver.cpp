@@ -35,7 +35,7 @@ struct PushAVToQuatFunc {
   }
 };
 
-template<>
+template <>
 struct ApplyDriverFunctorTraits<PushAVToQuatFunc> {
   static constexpr bool use_motion = true;
 };
@@ -44,7 +44,7 @@ class PushAngularVelocityToQuaternionDriver : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(double, physical_time, INPUT, REQUIRED);
   ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"dt is the time increment of the timeloop"});
-  ADD_SLOT(double, dt_scale, INPUT , 1.0);
+  ADD_SLOT(double, dt_scale, INPUT, 1.0);
 
  public:
   inline std::string documentation() const final {
@@ -59,7 +59,7 @@ class PushAngularVelocityToQuaternionDriver : public OperatorNode {
 
   inline void execute() final {
     double time = *physical_time;
-    double delta_t = (*dt)*(*dt_scale);
+    double delta_t = (*dt) * (*dt_scale);
     PushAVToQuatFunc func = {time, delta_t};
     for (size_t id = 0; id < drivers->get_size(); id++) {
       drivers->apply(id, func);

@@ -25,18 +25,18 @@
 namespace exaDEM {
 // Data fields for a spherical driver (ball)
 struct BallFields {
-  double radius_;                                        /**< Radius of the ball. */
-  exanb::Vec3d center_;                                  /**< Center position of the ball in 3D space. */
-  exanb::Vec3d vel_ = exanb::Vec3d{0, 0, 0};             /**< Linear velocity of the ball. */
-  exanb::Vec3d vrot_ = exanb::Vec3d{0, 0, 0};            /**< Angular velocity (rotation) of the ball. */
-  exanb::Vec3d forces_ = {0, 0, 0};                      /**< Accumulated forces applied to the ball from interactions. */
-  exanb::Vec3d mom_ = {0, 0, 0};                         /**< Accumulated moments (torques) applied to the ball. */
+  double radius_;                             /**< Radius of the ball. */
+  exanb::Vec3d center_;                       /**< Center position of the ball in 3D space. */
+  exanb::Vec3d vel_ = exanb::Vec3d{0, 0, 0};  /**< Linear velocity of the ball. */
+  exanb::Vec3d vrot_ = exanb::Vec3d{0, 0, 0}; /**< Angular velocity (rotation) of the ball. */
+  exanb::Vec3d forces_ = {0, 0, 0};           /**< Accumulated forces applied to the ball from interactions. */
+  exanb::Vec3d mom_ = {0, 0, 0};              /**< Accumulated moments (torques) applied to the ball. */
   double mass_ = std::numeric_limits<double>::max() / 4; /**< Mass of the ball (default: infinite/fixed). */
   double rv_ = 0;                                        /**< Radius velocity for compressive/expanding motion. */
 
   /** Derived quantities (not persisted) */
-  exanb::Vec3d acc_ = {0, 0, 0};                         /**< Linear acceleration of the ball. */
-  double ra_ = 0;                                        /**< Radius acceleration for compressive/expanding motion. */
+  exanb::Vec3d acc_ = {0, 0, 0}; /**< Linear acceleration of the ball. */
+  double ra_ = 0;                /**< Radius acceleration for compressive/expanding motion. */
 };
 }  // namespace exaDEM
 
@@ -81,7 +81,7 @@ namespace exaDEM {
 
 /**
  * @brief Spherical driver (ball) for DEM simulations.
- * 
+ *
  * Represents a ball-shaped rigid body driver that can interact with particles.
  * Supports various motion types: stationary, linear, compressive force, and tabulated motion.
  */
@@ -95,9 +95,7 @@ struct Ball {
    * @brief Get the type of the driver (in this case, BALL).
    * @return The type of the driver.
    */
-  constexpr DRIVER_TYPE get_type() {
-    return DRIVER_TYPE::BALL;
-  }
+  constexpr DRIVER_TYPE get_type() { return DRIVER_TYPE::BALL; }
 
   /**
    * @brief Print information about the ball.
@@ -163,11 +161,7 @@ struct Ball {
    * @details This function asserts that the radius of the ball is greater than 0.
    */
   inline void initialize(Driver_params& motion) {
-    const std::vector<MotionType> ball_valid_motion_types = {
-      STATIONARY,
-      LINEAR_MOTION,
-      COMPRESSIVE_FORCE,
-      TABULATED};
+    const std::vector<MotionType> ball_valid_motion_types = {STATIONARY, LINEAR_MOTION, COMPRESSIVE_FORCE, TABULATED};
 
     if (!is_valid_motion_type(motion_type_, ball_valid_motion_types)) {
       color_log::error("Ball::initialize", "Invalid Motion Type.");
@@ -289,7 +283,7 @@ struct Ball {
     const double pi = 4 * atan(1);
     return 4.0 / 3.0 * pi * fields_.radius_ * fields_.radius_ * fields_.radius_;
   }
-  
+
   /**
    * @brief Update the "velocity radius" of the ball.
    * @param t The time step.
@@ -330,28 +324,28 @@ struct Ball {
    *         - The contact position on the surface of the ball.
    */
   ONIKA_HOST_DEVICE_FUNC
-      inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& p) {
-        exanb::Vec3d point_to_center = fields_.center_ - p;
-        double d = norm(point_to_center);
-        double dn;
-        exanb::Vec3d n = point_to_center / d;
-        if (d > fields_.radius_) {
-          dn = d - fields_.radius_ - rcut;
-          n = (-1) * n;
-        } else {
-          dn = fields_.radius_ - d - rcut;
-        }
+  inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& p) {
+    exanb::Vec3d point_to_center = fields_.center_ - p;
+    double d = norm(point_to_center);
+    double dn;
+    exanb::Vec3d n = point_to_center / d;
+    if (d > fields_.radius_) {
+      dn = d - fields_.radius_ - rcut;
+      n = (-1) * n;
+    } else {
+      dn = fields_.radius_ - d - rcut;
+    }
 
-        if (dn > 0) {
-          return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
-        } else {
-          exanb::Vec3d contact_position = p - n * (rcut + 0.5 * dn);
-          return {true, dn, n, contact_position};
-        }
-      }
+    if (dn > 0) {
+      return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
+    } else {
+      exanb::Vec3d contact_position = p - n * (rcut + 0.5 * dn);
+      return {true, dn, n, contact_position};
+    }
+  }
 };
 
-template<>
+template <>
 struct DriverProperty<Ball> {
   static constexpr bool use_moment = false;
   static constexpr bool use_quaternion = false;
@@ -363,9 +357,7 @@ namespace memory {
 
 template <>
 struct MemoryUsage<exaDEM::Ball> {
-  static inline size_t memory_bytes(const exaDEM::Ball& obj) {
-    return onika::memory::memory_bytes(obj);
-  }
+  static inline size_t memory_bytes(const exaDEM::Ball& obj) { return onika::memory::memory_bytes(obj); }
 };
 
 }  // namespace memory

@@ -88,8 +88,7 @@ class SetRandVrotArot : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(set_rand_avrot_arot) {
-  OperatorNodeFactory::instance()->register_factory("set_rand_vrot_arot",
-                                                    make_grid_variant_operator<SetRandVrotArot>);
+  OperatorNodeFactory::instance()->register_factory("set_rand_vrot_arot", make_grid_variant_operator<SetRandVrotArot>);
 }
 
 }  // namespace exaDEM

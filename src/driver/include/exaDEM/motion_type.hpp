@@ -89,29 +89,19 @@ inline MotionType string_to_motion_type(const std::string& str) {
 }
 
 ONIKA_HOST_DEVICE_FUNC
-inline bool is_stationary(MotionType motion_type) {
-  return motion_type == MotionType::STATIONARY;
-}
+inline bool is_stationary(MotionType motion_type) { return motion_type == MotionType::STATIONARY; }
 
 ONIKA_HOST_DEVICE_FUNC
-inline bool is_tabulated(MotionType motion_type) {
-  return motion_type == MotionType::TABULATED;
-}
+inline bool is_tabulated(MotionType motion_type) { return motion_type == MotionType::TABULATED; }
 
 ONIKA_HOST_DEVICE_FUNC
-inline bool is_shaker(MotionType motion_type) {
-  return motion_type == MotionType::SHAKER;
-}
+inline bool is_shaker(MotionType motion_type) { return motion_type == MotionType::SHAKER; }
 
 ONIKA_HOST_DEVICE_FUNC
-inline bool is_pendulum(MotionType motion_type) {
-  return motion_type == MotionType::PENDULUM_MOTION;
-}
+inline bool is_pendulum(MotionType motion_type) { return motion_type == MotionType::PENDULUM_MOTION; }
 
 ONIKA_HOST_DEVICE_FUNC
-inline bool is_expr(MotionType motion_type) {
-  return motion_type == MotionType::EXPRESSION;
-}
+inline bool is_expr(MotionType motion_type) { return motion_type == MotionType::EXPRESSION; }
 
 ONIKA_HOST_DEVICE_FUNC
 inline bool is_linear(MotionType motion_type) {
@@ -137,7 +127,8 @@ inline bool need_forces(MotionType motion_type) {
   // Need for PARTICLE
   // Need for COMPRESSIVE_FORCE
   // Need for LINEAR_COMPRESSIVE_MOTION
-  return is_compressive(motion_type) || motion_type == MotionType::PARTICLE || motion_type == MotionType::LINEAR_FORCE_MOTION;
+  return is_compressive(motion_type) || motion_type == MotionType::PARTICLE ||
+         motion_type == MotionType::LINEAR_FORCE_MOTION;
 }
 
 // Checks

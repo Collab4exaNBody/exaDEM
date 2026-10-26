@@ -53,9 +53,7 @@ class CheckRadius : public OperatorNode {
       )EOF";
   }
 
-  inline std::string operator_name() {
-    return "check_rcut";
-  }
+  inline std::string operator_name() { return "check_rcut"; }
 
  public:
   void check_slots() {
@@ -69,54 +67,49 @@ class CheckRadius : public OperatorNode {
     MPI_Comm comm = *mpi;
     double rmax = *rcut_max;
 
-    double half_cell_size =  0.5 * grid->cell_size();
+    double half_cell_size = 0.5 * grid->cell_size();
     auto cells = grid->cells();
     const IJK dims = grid->dimension();
     double rcm = 0.0;
     uint64_t count_oversize_particles = 0;
     uint64_t count_unsuitable_particle_grid = 0;
 
-#   pragma omp parallel
-    {
-      GRID_OMP_FOR_BEGIN(dims, i, loc,
-                         schedule(dynamic) reduction(max : rcm)
-                         reduction(+: count_oversize_particles,
-                                   count_unsuitable_particle_grid) ){
+#pragma omp parallel
+    {GRID_OMP_FOR_BEGIN(dims, i, loc,
+                        schedule(dynamic) reduction(max : rcm)
+                            reduction(+ : count_oversize_particles, count_unsuitable_particle_grid)){
         double* __restrict__ r = cells[i][field::radius];
-        const size_t n = cells[i].size();
-#       pragma omp simd
-        for (size_t j = 0; j < n; j++) {
-          if (r[j]>rmax) {
-            count_oversize_particles++;
-          }
-          if (r[j]>half_cell_size) {
-            count_unsuitable_particle_grid++;
-          }
-          rcm = std::max(rcm, r[j]);
-        }
+    const size_t n = cells[i].size();
+#pragma omp simd
+    for (size_t j = 0; j < n; j++) {
+      if (r[j] > rmax) {
+        count_oversize_particles++;
       }
-      GRID_OMP_FOR_END
-    }
-
-    MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, comm);
-    MPI_Allreduce(MPI_IN_PLACE, &count_oversize_particles, 1, MPI_UINT64_T, MPI_SUM, comm);
-    MPI_Allreduce(MPI_IN_PLACE, &count_unsuitable_particle_grid, 1, MPI_UINT64_T, MPI_SUM, comm);
-
-    if (count_unsuitable_particle_grid>0) {
-      color_log::error(operator_name(),
-                       std::to_string(count_unsuitable_particle_grid)
-                       + " particles are larger than 1/2 cell size: "
-                       + std::to_string(half_cell_size));
-    }
-
-    if (count_oversize_particles>0) {
-      color_log::error(operator_name(),
-                       std::to_string(count_oversize_particles)
-                       + " particles are larger than rmax: "
-                       + std::to_string(rmax));
+      if (r[j] > half_cell_size) {
+        count_unsuitable_particle_grid++;
+      }
+      rcm = std::max(rcm, r[j]);
     }
   }
-};  // namespace exaDEM
+  GRID_OMP_FOR_END
+}
+
+MPI_Allreduce(MPI_IN_PLACE, &rcm, 1, MPI_DOUBLE, MPI_MAX, comm);
+MPI_Allreduce(MPI_IN_PLACE, &count_oversize_particles, 1, MPI_UINT64_T, MPI_SUM, comm);
+MPI_Allreduce(MPI_IN_PLACE, &count_unsuitable_particle_grid, 1, MPI_UINT64_T, MPI_SUM, comm);
+
+if (count_unsuitable_particle_grid > 0) {
+  color_log::error(operator_name(), std::to_string(count_unsuitable_particle_grid) +
+                                        " particles are larger than 1/2 cell size: " + std::to_string(half_cell_size));
+}
+
+if (count_oversize_particles > 0) {
+  color_log::error(operator_name(), std::to_string(count_oversize_particles) +
+                                        " particles are larger than rmax: " + std::to_string(rmax));
+}
+}  // namespace exaDEM
+}
+;  // namespace exaDEM
 
 template <class GridT>
 using CheckRadiusTmpl = CheckRadius<GridT>;

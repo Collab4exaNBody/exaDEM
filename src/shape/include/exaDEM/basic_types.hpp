@@ -31,10 +31,9 @@ namespace exaDEM {
 // composition, used to express one particle's orientation relative to another's (OBB tree).
 ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion hamilton_product(const exanb::Quaternion& q1,
                                                                  const exanb::Quaternion& q2) {
-  return exanb::Quaternion{q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z,
-                           q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y,
-                           q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x,
-                           q1.w * q2.z + q1.x * q2.y - q1.y * q2.x + q1.z * q2.w};
+  return exanb::Quaternion{
+      q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z, q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y,
+      q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x, q1.w * q2.z + q1.x * q2.y - q1.y * q2.x + q1.z * q2.w};
 }
 
 ONIKA_HOST_DEVICE_FUNC inline OBB compute_obb(const OBB& in_obb, const exanb::Vec3d& in_pos,

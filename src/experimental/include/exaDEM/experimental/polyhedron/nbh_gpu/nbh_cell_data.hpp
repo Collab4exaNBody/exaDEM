@@ -148,9 +148,8 @@ inline void add_particle_particle_totals(CellStorage& cell_storage, CellInteract
  */
 template <bool ghost_only, bool active_interaction, bool append = false>
 void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info, CellStorage& cell_storage,
-                              ClassifierViewAccessor& interaction_classifier_accessor,
-                              GridCellParticleInteraction& ges, const int typeID_start = 0,
-                              const int typeID_end = InteractionTypeId::NTypes) {
+                              ClassifierViewAccessor& interaction_classifier_accessor, GridCellParticleInteraction& ges,
+                              const int typeID_start = 0, const int typeID_end = InteractionTypeId::NTypes) {
   // Number of non-empty cells to process
   size_t ncells = info.start_cell_.size();
 
