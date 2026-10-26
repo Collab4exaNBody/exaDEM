@@ -41,3 +41,4 @@ endfunction()
 
 add_subdirectory(shape)
 add_subdirectory(forcefield)
+add_subdirectory(driver)

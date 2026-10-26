@@ -1,0 +1,8 @@
+exadem_add_unit_test(driver motion_type)
+exadem_add_unit_test(driver driver_params)
+exadem_add_unit_test(driver tabulated_motion)
+exadem_add_unit_test(driver ball)
+exadem_add_unit_test(driver cylinder)
+exadem_add_unit_test(driver surface)
+exadem_add_unit_test(driver drivers)
+exadem_add_unit_test(driver rshape)

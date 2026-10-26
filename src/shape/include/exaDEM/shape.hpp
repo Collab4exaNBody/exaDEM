@@ -62,9 +62,9 @@ struct shape {
   VectorT<int> faces_;              ///< List of faces, stored as sequences of vertex indices
   VectorT<int> offset_faces_;       ///< Offsets for indexing faces in faces_
   VectorT<double> face_area_;       ///< Face area
-  double radius_;                   ///< Minkowski (sphero-polyhedral rounding) radius used for contact detection,
-                                     ///< not the geometric extent of the shape
-  double volume_;                   ///< Volume of the shape
+  double radius_ = 0;               ///< Minkowski (sphero-polyhedral rounding) radius used for contact detection,
+                                    ///< not the geometric extent of the shape
+  double volume_ = 0;               ///< Volume of the shape (0 if undefined, e.g. a mesh)
   std::string name_ = "undefined";  ///< Name of the shape
   OBBtree<subBox> obbtree_;         ///< Optional OBB tree for accelerated collision detection
 
@@ -665,7 +665,7 @@ struct shape {
       assert(face_size >= 1);
       const exanb::Vec3d& v0 = vertices_[vertices_ptr[0]];
 
-      if (face_size == 3) {
+      if (face_size >= 3) {
         for (int j = 1; j < face_size - 1; j++) {
           const size_t k = j + 1;
           const exanb::Vec3d v1 = vertices_[vertices_ptr[j]] - v0;

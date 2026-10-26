@@ -69,7 +69,8 @@ struct convert<exaDEM::BallFields> {
     }
     if (check(node, "density") && !check(node, "mass")) {
       const double pi = 4 * atan(1);
-      v.mass_ = 4 / 3 * pi * v.radius_ * v.radius_ * v.radius_;
+      const double density = node["density"].as<Quantity>().convert();
+      v.mass_ = density * 4.0 / 3.0 * pi * v.radius_ * v.radius_ * v.radius_;
     }
     return true;
   }
@@ -286,7 +287,7 @@ struct Ball {
    */
   double volume() {
     const double pi = 4 * atan(1);
-    return 4 / 3 * pi * fields_.radius_ * fields_.radius_ * fields_.radius_;
+    return 4.0 / 3.0 * pi * fields_.radius_ * fields_.radius_ * fields_.radius_;
   }
   
   /**

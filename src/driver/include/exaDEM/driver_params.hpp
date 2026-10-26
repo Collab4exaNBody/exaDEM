@@ -121,7 +121,7 @@ struct Driver_params {
       }
 
       if (is_shaker(motion_type)) {
-        if (exanb::dot(shaker_dir_, shaker_dir_) - 1 >= 1e-14) {
+        if (std::fabs(exanb::dot(shaker_dir_, shaker_dir_) - 1) >= 1e-14) {
           exanb::Vec3d old = shaker_dir_;
           _normalize(shaker_dir_);
           color_log::warning("Driver_params::check_motion_coherence", "Your shaker_dir vector [" + std::to_string(old) +
@@ -135,7 +135,7 @@ struct Driver_params {
                            "the same. It is impossible to define a motion type PENDULUM_MOTION. Point: [" +
                                std::to_string(pendulum_anchor_point_) + "]");
         }
-        if (exanb::dot(pendulum_swing_dir_, pendulum_swing_dir_) - 1 >= 1e-14) {
+        if (std::fabs(exanb::dot(pendulum_swing_dir_, pendulum_swing_dir_) - 1) >= 1e-14) {
           exanb::Vec3d old = pendulum_swing_dir_;
           _normalize(pendulum_swing_dir_);
           color_log::warning("Driver_params::check_motion_coherence",
@@ -183,7 +183,7 @@ struct Driver_params {
         return false;
       }
       // Normalize motion vector if its magnitude is not equal to 1
-      if (dot(motion_vector_, motion_vector_) - 1 >= 1e-14) {
+      if (std::fabs(exanb::dot(motion_vector_, motion_vector_) - 1) >= 1e-14) {
         exanb::Vec3d old = motion_vector_;
         _normalize(motion_vector_);
         color_log::warning("Driver_params::check_motion_coherence", "Your motion vector [" + std::to_string(old) +
@@ -315,11 +315,12 @@ struct Driver_params {
     auto ite = std::lower_bound(tab_time_.begin(), tab_time_.end(), time);
     if (ite == tab_time_.end()) {
       return tab_pos_.back();
+    } else if (ite == tab_time_.begin()) {  // time <= tab_time_[0]
+      return tab_pos_.front();
     } else {
       size_t idx_lower = ite - tab_time_.begin() - 1;
       size_t idx_upper = idx_lower + 1;
-      assert(tab_time_[idx_lower] >= time);
-      if (idx_upper >= tab_time_.size()) return tab_pos_.back();
+      assert(tab_time_[idx_lower] <= time);
       double Dt = (time - tab_time_[idx_lower]) / (tab_time_[idx_upper] - tab_time_[idx_lower]);
       exanb::Vec3d P = (tab_pos_[idx_upper] - tab_pos_[idx_lower]) * Dt + tab_pos_[idx_lower];
       return P;
@@ -332,10 +333,13 @@ struct Driver_params {
     if (ite == tab_time_.end()) {
       return exanb::Vec3d(0, 0, 0);  // stationnary
     } else {
+      if (ite == tab_time_.begin()) {  // time <= tab_time_[0]: velocity of the first interval
+        if (tab_time_.size() < 2) return exanb::Vec3d(0, 0, 0);
+        ++ite;
+      }
       size_t idx_lower = ite - tab_time_.begin() - 1;
       size_t idx_upper = idx_lower + 1;
-      assert(tab_time_[idx_lower] >= time);
-      if (idx_upper >= tab_time_.size()) return exanb::Vec3d(0, 0, 0);
+      assert(tab_time_[idx_lower] <= time || idx_lower == 0);
       double Dt = tab_time_[idx_upper] - tab_time_[idx_lower];
       assert(Dt != 0.0);
       exanb::Vec3d V = (tab_pos_[idx_upper] - tab_pos_[idx_lower]) / Dt;
@@ -372,9 +376,10 @@ struct Driver_params {
     exanb::Vec3d v2 = pendulum_initial_position_;
     exanb::Vec3d v3 = pendulum_initial_position_ + pendulum_direction() * pendulum_signal(time);
 
-    // warning, if v2 = v3, we return an offset of  0 and the pendulum direction
-    if (exanb::dot(v3, v2) < 1e-16) {
-      return {0.0, pendulum_direction()};
+    // at rest (v2 = v3), the plane contains the anchor and its normal is the swing direction
+    const exanb::Vec3d displ = v3 - v2;
+    if (exanb::dot(displ, displ) < 1e-32) {
+      return {exanb::dot(v1, pendulum_direction()), pendulum_direction()};
     }
 
     exanb::Vec3d v1v3 = v3 - v1;

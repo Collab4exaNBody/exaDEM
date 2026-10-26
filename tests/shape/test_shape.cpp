@@ -129,6 +129,8 @@ UNIT_TEST(default_shape_is_empty) {
   CHECK(shp.get_number_of_edges() == 0);
   CHECK(shp.get_number_of_faces() == 0);
   CHECK(shp.name_ == "undefined");
+  CHECK_NEAR(shp.minkowski(), 0.0, 0.0);
+  CHECK_NEAR(shp.volume_, 0.0, 0.0);
 }
 
 UNIT_TEST(add_vertices_and_edges) {

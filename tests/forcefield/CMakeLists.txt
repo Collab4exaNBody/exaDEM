@@ -1,0 +1,3 @@
+exadem_add_unit_test(forcefield gravity)
+exadem_add_unit_test(forcefield common_kernels)
+exadem_add_unit_test(forcefield contact_force)

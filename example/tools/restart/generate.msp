@@ -29,7 +29,7 @@ setup_drivers:
      params: { motion_type: STATIONARY }
   - register_cylinder:
      id: 3
-     state: {radius: 15, axis: [0,0,1], center: [3,3,0]}
+     state: {radius: 15, axis: [1,1,0], center: [3,3,0]}
      params: { motion_type: SHAKER, omega: 1.0, amplitude: 0.5, shaker_dir: [0,0,1] }
   - register_rshape:
      id: 4

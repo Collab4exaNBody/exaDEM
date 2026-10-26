@@ -21,10 +21,10 @@ shape create_sphere(std::string name, double minkowski) {
   shp.set_radius(r);
 
   // ---------- Volume ----------
-  shp.volume_ = 4 / 3 * pi * r * r * r;
+  shp.volume_ = 4.0 / 3.0 * pi * r * r * r;
 
   // ---------- I / m ----------
-  shp.inertia_on_mass_ = 0.5 * r * r * Vec3d{1, 1, 1};
+  shp.inertia_on_mass_ = 0.4 * r * r * Vec3d{1, 1, 1};  // solid sphere: 2/5 r^2
 
   shp.add_vertex({0., 0., 0.});  // v0
 
