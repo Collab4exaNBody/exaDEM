@@ -41,6 +41,13 @@ class RegisterSurface : public OperatorNode {
   inline std::string documentation() const final {
     return R"EOF(
         This operator add a surface to the drivers list.
+
+        YAML example (wall at x = 11, particles at x < 11):
+
+          - register_surface:
+             id: 4
+             state: { normal: [1,0,0], offset: 11, surface: 144 }
+             params: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [1,0,0], sigma: 0.5, damprate: 0.999 }
         )EOF";
   }
 

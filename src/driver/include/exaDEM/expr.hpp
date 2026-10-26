@@ -36,52 +36,32 @@ struct Driver_expr {
   std::string expr_momy_ = "0";
   std::string expr_momz_ = "0";
 
+  /**
+   * @brief Compiles and evaluates an expression of the variable t.
+   * @return The value of the expression, NaN if the expression is invalid.
+   */
+  static double expr_eval(const std::string& expr, double time) {
+    te_variable the_t[] = {{"t", &time}};
+    int err;
+    te_expr* compiled_expr = te_compile(expr.c_str(), the_t, 1, &err);
+    const double res = te_eval(compiled_expr);
+    te_free(compiled_expr);
+    return res;
+  }
+
   exanb::Vec3d expr_v(double time) const {
     assert(expr_use_v_);
-    exanb::Vec3d res;
-    te_variable the_t[] = {{"t", &time}};
-
-    int err;
-    te_expr* te_expr_vx = te_compile(expr_vx_.c_str(), the_t, 1, &err);
-    te_expr* te_expr_vy = te_compile(expr_vy_.c_str(), the_t, 1, &err);
-    te_expr* te_expr_vz = te_compile(expr_vz_.c_str(), the_t, 1, &err);
-
-    res.x = te_eval(te_expr_vx);
-    res.y = te_eval(te_expr_vy);
-    res.z = te_eval(te_expr_vz);
-    return res;
+    return {expr_eval(expr_vx_, time), expr_eval(expr_vy_, time), expr_eval(expr_vz_, time)};
   }
 
   exanb::Vec3d expr_vrot(double time) const {
     assert(expr_use_vrot_);
-    exanb::Vec3d res;
-    te_variable the_t[] = {{"t", &time}};
-
-    int err;
-    te_expr* te_expr_vrotx = te_compile(expr_vrotx_.c_str(), the_t, 1, &err);
-    te_expr* te_expr_vroty = te_compile(expr_vroty_.c_str(), the_t, 1, &err);
-    te_expr* te_expr_vrotz = te_compile(expr_vrotz_.c_str(), the_t, 1, &err);
-
-    res.x = te_eval(te_expr_vrotx);
-    res.y = te_eval(te_expr_vroty);
-    res.z = te_eval(te_expr_vrotz);
-    return res;
+    return {expr_eval(expr_vrotx_, time), expr_eval(expr_vroty_, time), expr_eval(expr_vrotz_, time)};
   }
 
   exanb::Vec3d expr_mom(double time) const {
     assert(expr_use_mom_);
-    exanb::Vec3d res;
-    te_variable the_t[] = {{"t", &time}};
-
-    int err;
-    te_expr* te_expr_momx = te_compile(expr_momx_.c_str(), the_t, 1, &err);
-    te_expr* te_expr_momy = te_compile(expr_momy_.c_str(), the_t, 1, &err);
-    te_expr* te_expr_momz = te_compile(expr_momz_.c_str(), the_t, 1, &err);
-
-    res.x = te_eval(te_expr_momx);
-    res.y = te_eval(te_expr_momy);
-    res.z = te_eval(te_expr_momz);
-    return res;
+    return {expr_eval(expr_momx_, time), expr_eval(expr_momy_, time), expr_eval(expr_momz_, time)};
   }
 
   template <typename Stream>

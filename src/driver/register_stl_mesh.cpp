@@ -55,7 +55,16 @@ class RegisterRShapeDriver : public OperatorNode {
   inline std::string documentation() const final {
     return R"EOF(
         This operator add a R-Shape driver to the drivers list.
-        )EOF";
+
+        YAML example (piston above the particles):
+
+          - register_stl_mesh:
+             id: 2
+             filename: piston_haut.stl
+             minkowski: 0.001
+             state: { center: [0.0, 0.0, 9.], quat: [1,0,0,0], mass: 1, surface: 161.47 }
+             params: { motion_type: LINEAR_COMPRESSIVE_MOTION, motion_vector: [0,0,-1], sigma: 0.5, damprate: 0.5 }
+             )EOF";
   }
 
   inline std::string operator_name() { return "register_stl_mesh/rshape"; }
@@ -94,8 +103,12 @@ class RegisterRShapeDriver : public OperatorNode {
       bool big_shape = true;
       shp = read_shp(output_name, big_shape);
       if (shp.compute_Im() != exanb::Vec3d{0, 0, 0}) {
-        color_log::warning(operator_name(), "Override inertia using shape I/m");
-        state->inertia_ = shp.compute_Im() / state->mass_;
+        if (state->mass_ < 1e100) {  // mass defined by the user (see RShapeDriverFields::mass_)
+          color_log::warning(operator_name(), "Override inertia using shape I/m");
+          state->inertia_ = shp.compute_Im() * state->mass_;
+        } else {
+          color_log::warning(operator_name(), "Shape I/m is ignored because the mass is not defined");
+        }
       }
     }
 

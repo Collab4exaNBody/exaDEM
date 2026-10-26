@@ -68,7 +68,7 @@ inline void write_shp(const shape& shp, std::stringstream& output) {
   output << "obb.e3 " << shp.obb_.e3 << std::endl;
   output << "obb.center " << shp.obb_.center << std::endl;
   output << "orientation 1.0 0.0 0.0 0.0" << std::endl;
-  output << "volume " << shp.compute_volume() << std::endl;
+  output << "volume " << shp.volume_ << std::endl;  // may be 0 for a mesh (RShape driver)
   auto inertia_over_mass = shp.compute_Im();
   output << "I/m " << inertia_over_mass.x << " " << inertia_over_mass.y << " " << inertia_over_mass.z << std::endl;
   output << ">" << std::endl;

@@ -32,7 +32,8 @@ class RegisterCylinder : public OperatorNode {
   ADD_SLOT(CylinderFields, state, INPUT, REQUIRED,
            DocString{
                "Current cylinder state, default is {radius: REQUIRED, axis: REQUIRED, center: REQUIRED, vel: [0,0,0], "
-               "vrot: [0,0,0], rv: 0, ra: 0}. You need to specify the radius and center"});
+               "vrot: [0,0,0], rv: 0, ra: 0}. You need to specify the radius and center. axis is a component mask: "
+               "[0,1,1] (x), [1,0,1] (y) or [1,1,0] (z)."});
   ADD_SLOT(Driver_params, params, INPUT, default_params,
            DocString{"List of params, motion type, motion vectors .... Default is { motion_type: STATIONARY}."});
 
@@ -40,6 +41,16 @@ class RegisterCylinder : public OperatorNode {
   inline std::string documentation() const final {
     return R"EOF(
         This operator add a cylinder to the drivers list.
+
+        axis is a component mask, not a direction: the component set to 0 is the cylinder axis,
+        i.e. [0,1,1] for x, [1,0,1] for y and [1,1,0] for z. Other values are rejected.
+
+        YAML example (cylinder along y):
+
+          - register_cylinder:
+             id: 0
+             state: {center: [10, 3.75, 10], axis: [1, 0, 1], radius: 16}
+             params: { motion_type: STATIONARY }
         )EOF";
   }
 

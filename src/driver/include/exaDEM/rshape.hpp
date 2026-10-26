@@ -225,9 +225,9 @@ struct RShapeDriver {
       if (fields_.mass_ != 0) {
         const double surface = fields_.surface_;
 
-        // Force balance along the compression axis:
         exanb::Vec3d tmp =
-            (fields_.forces_ - motion.sigma_ * surface - (motion.damprate_ * fields_.vel_)) / (fields_.mass_ * C);
+            (fields_.forces_ + motion.sigma_ * surface * motion.motion_vector_ - (motion.damprate_ * fields_.vel_)) /
+            (fields_.mass_ * C);
 
         // Project acceleration onto the motion axis: only the component along
         // motion_vector is physically meaningful for a uniaxial compression.
@@ -306,10 +306,10 @@ struct RShapeDriver {
       }
 
       if (motion_type_ == MotionType::SHAKER) {
-        // Shaker motion: recompute velocity from the waveform at (time + dt)
-        // and project it onto the shaker direction.
+        // Shaker motion: recompute velocity from the waveform at (time + dt),
+        // shaker_velocity is already oriented along the shaker direction.
         // Acceleration is reset to zero because the shaker imposes kinematics directly.
-        fields_.vel_ = motion.shaker_velocity(time + dt) * motion.shaker_direction();
+        fields_.vel_ = motion.shaker_velocity(time + dt);
         fields_.acc_ = exanb::Vec3d{0, 0, 0};  // reset acc
       }
 

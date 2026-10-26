@@ -173,7 +173,7 @@ struct Surface {
         fields_.center_ = motion.pendulum_anchor_point_;
       }
       exanb::Vec3d axis = motion.pendulum_anchor_point_ - motion.pendulum_initial_position_;
-      if (exanb::dot(axis, motion.pendulum_swing_dir_) >= 1e-14) {
+      if (std::fabs(exanb::dot(axis, motion.pendulum_swing_dir_)) >= 1e-14) {
         color_log::error("register_surface",
                          "The vector from pendulum_anchor_point to pendulum_initial_position must be orthogonal to "
                          "pendulum_swing_dir.");
@@ -181,10 +181,11 @@ struct Surface {
     }
 
     // checks
-    if (exanb::dot(fields_.center_ - fields_.center_proj_, fields_.normal_) >= 1e-14) {
+    // the center must lie on the plane: it is projected on it (its tangential coordinates are kept)
+    const double center_distance = exanb::dot(fields_.center_ - fields_.center_proj_, fields_.normal_);
+    if (std::fabs(center_distance) >= 1e-14) {
       color_log::warning("register_surface", "The Center point (surface) is not correctly defined");
-      fields_.center_ =
-          exanb::dot(fields_.center_proj_ - fields_.center_, fields_.normal_) * fields_.normal_ + fields_.center_proj_;
+      fields_.center_ = fields_.center_ - center_distance * fields_.normal_;
       color_log::warning("register_surface",
                          "center is re-computed because it doesn't fit with offset, new center is: [" +
                              std::to_string(fields_.center_) + "] and center_proj is: [" +
