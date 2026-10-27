@@ -110,6 +110,48 @@ ONIKA_HOST_DEVICE_FUNC inline ParticleDetectPack load(CellsT& cell, size_t i) {
   return p;
 }
 
+/**
+ * @brief Tells whether the particle `pb` of the cell `cB` must be paired with the particle `a`.
+ *
+ * Used by the counting pass and by the filling pass, so that they always agree.
+ * The tests are ordered from the cheapest to the most expensive: each one only reads the data it needs,
+ * and the orientation / shape of the particle b are only loaded for the pairs which reach the OBB test.
+ *
+ * @param cell_a Cell of the particle a (key of the ignored pairs).
+ * @param body_a Data of the particle a.
+ * @param aabb_a Bounding box of the particle a, enlarged by rcut_inc.
+ * @param obb_a OBB of the particle a, enlarged by rcut_inc.
+ */
+template <bool IGNORE_PAIR, typename CellT>
+ONIKA_HOST_DEVICE_FUNC inline bool is_candidate_pair(CellT& cB, size_t pb, uint32_t cell_a,
+                                                     const ParticleDetectPack& body_a, const AABB& aabb_a,
+                                                     const OBB& obb_a, double rcut_inc, const shape* __restrict__ shps,
+                                                     const IgnorePairsGPU::View& ignore_pairs) {
+  // each pair is kept once, from the cell of the particle with the smallest id
+  const uint64_t id_b = cB[field::id][pb];
+  if (body_a.id_ >= id_b) return false;
+
+  Vec3d r_b;
+  r_b.x = cB[field::rx][pb];
+  r_b.y = cB[field::ry][pb];
+  r_b.z = cB[field::rz][pb];
+  const double radius_b = cB[field::radius][pb];
+  if (!is_inside_threshold(aabb_a, r_b, radius_b * radius_b)) return false;
+
+  const Vec3d r = r_b - body_a.r_;
+  const double rmax = body_a.radius_ + radius_b + rcut_inc;
+  if (exanb::dot(r, r) > rmax * rmax) return false;
+
+  if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
+    if (ignore_pairs(cell_a, body_a.id_, id_b)) return false;
+  }
+
+  // OBB test
+  const auto& shpb = shps[cB[field::type][pb]];
+  const OBB obb_b = compute_obb(shpb.obb_, r_b, cB[field::orient][pb], cB[field::homothety][pb]);
+  return obb_a.intersect(obb_b);
+}
+
 // ============================================================
 // Stage 1: Count particle pairs per cell pair
 // 1 block = 1 cell pair, threads iterate particle pairs
@@ -138,33 +180,15 @@ __global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(CellsT cells, 
   int count = 0;
 
   for (size_t pa = threadIdx.y; pa < nA; pa += blockDim.y) {
-    auto body_a = load(cA, pa);
-    const auto& shpa = shps[body_a.type_];
-
-    AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
+    const auto body_a = load(cA, pa);
+    const AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
+    OBB obb_a = compute_obb(shps[body_a.type_].obb_, body_a.r_, body_a.quat_, body_a.homothety_);
+    obb_a.enlarge(rcut_inc);
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
-      if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
-        if (ignore_pairs(cell_a, body_a.id_, cB[field::id][pb])) continue;
-      }
-      auto body_b = load(cB, pb);
-
-      if (body_a.id_ >= body_b.id_) continue;
-
-      if (!is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
-
-      Vec3d r = body_b.r_ - body_a.r_;
-      double rmax = body_a.radius_ + body_b.radius_ + rcut_inc;
-      if (exanb::dot(r, r) > rmax * rmax) continue;
-
-      // OBB test
-      const auto& shpb = shps[body_b.type_];
-      OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
-      obb_a.enlarge(rcut_inc);
-      OBB obb_b = compute_obb(shpb.obb_, body_b.r_, body_b.quat_, body_b.homothety_);
-      if (obb_a.intersect(obb_b)) {
-        count++;
-      }
+      if (!is_candidate_pair<IGNORE_PAIR>(cB, pb, cell_a, body_a, aabb_a, obb_a, rcut_inc, shps, ignore_pairs))
+        continue;
+      count++;
     }
   }
 
@@ -204,26 +228,15 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
 
   // First pass: count (for BlockScan)
   for (size_t pa = threadIdx.y; pa < nA; pa += blockDim.y) {
-    auto body_a = load(cA, pa);
-    const auto& shpa = shps[body_a.type_];
-    AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
+    const auto body_a = load(cA, pa);
+    const AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
+    OBB obb_a = compute_obb(shps[body_a.type_].obb_, body_a.r_, body_a.quat_, body_a.homothety_);
+    obb_a.enlarge(rcut_inc);
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
-      if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
-        if (ignore_pairs(cell_a, body_a.id_, cB[field::id][pb])) continue;
-      }
-      auto body_b = load(cB, pb);
-      // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
-      if (body_a.id_ >= body_b.id_) continue;
-      if (!is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
-      Vec3d r = body_b.r_ - body_a.r_;
-      double rmax = body_a.radius_ + body_b.radius_ + rcut_inc;
-      if (exanb::dot(r, r) > rmax * rmax) continue;
-      const auto& shpb = shps[body_b.type_];
-      OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
-      obb_a.enlarge(rcut_inc);
-      OBB obb_b = compute_obb(shpb.obb_, body_b.r_, body_b.quat_, body_b.homothety_);
-      if (obb_a.intersect(obb_b)) count++;
+      if (!is_candidate_pair<IGNORE_PAIR>(cB, pb, cell_a, body_a, aabb_a, obb_a, rcut_inc, shps, ignore_pairs))
+        continue;
+      count++;
     }
   }
 
@@ -235,35 +248,22 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
   // Second pass: fill
   int write_idx = 0;
   for (size_t pa = threadIdx.y; pa < nA; pa += blockDim.y) {
-    auto body_a = load(cA, pa);
-    const auto& shpa = shps[body_a.type_];
-    AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
+    const auto body_a = load(cA, pa);
+    const AABB aabb_a = {body_a.r_ - body_a.radius_ - rcut_inc, body_a.r_ + body_a.radius_ + rcut_inc};
+    OBB obb_a = compute_obb(shps[body_a.type_].obb_, body_a.r_, body_a.quat_, body_a.homothety_);
+    obb_a.enlarge(rcut_inc);
 
     for (size_t pb = threadIdx.x; pb < nB; pb += blockDim.x) {
-      if constexpr (IGNORE_PAIR) {  // Skip pairs that are flagged to be ignored
-        if (ignore_pairs(cell_a, body_a.id_, cB[field::id][pb])) continue;
-      }
-      auto body_b = load(cB, pb);
-      // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
-      if (body_a.id_ >= body_b.id_) continue;
-      if (!is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
-      Vec3d r = body_b.r_ - body_a.r_;
-      double rmax = body_a.radius_ + body_b.radius_ + rcut_inc;
-      if (exanb::dot(r, r) > rmax * rmax) continue;
-      const auto& shpb = shps[body_b.type_];
-      OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
-      obb_a.enlarge(rcut_inc);
-      OBB obb_b = compute_obb(shpb.obb_, body_b.r_, body_b.quat_, body_b.homothety_);
-      if (obb_a.intersect(obb_b)) {
-        int pos = prefix + write_idx;
-        out_cell_i[pos] = cell_a;
-        out_cell_j[pos] = cell_b;
-        out_p_i[pos] = static_cast<uint16_t>(pa);
-        out_p_j[pos] = static_cast<uint16_t>(pb);
-        out_ghost[pos] = ghost_flag;
-        out_cell_pair_idx[pos] = static_cast<uint32_t>(idx);
-        write_idx++;
-      }
+      if (!is_candidate_pair<IGNORE_PAIR>(cB, pb, cell_a, body_a, aabb_a, obb_a, rcut_inc, shps, ignore_pairs))
+        continue;
+      int pos = prefix + write_idx;
+      out_cell_i[pos] = cell_a;
+      out_cell_j[pos] = cell_b;
+      out_p_i[pos] = static_cast<uint16_t>(pa);
+      out_p_j[pos] = static_cast<uint16_t>(pb);
+      out_ghost[pos] = ghost_flag;
+      out_cell_pair_idx[pos] = static_cast<uint32_t>(idx);
+      write_idx++;
     }
   }
 }
@@ -306,9 +306,6 @@ __global__ void CountInteractionsPPKernel(CellsT cells, VertexField* __restrict_
   int countVV = 0, countVE = 0, countVF = 0, countEE = 0;
 
   // A→B: vertex tests
-  OBB obb_b = compute_obb(shpb.obb_, body_b.r_, body_b.quat_, body_b.homothety_);
-  obb_b.enlarge(rcut_inc);
-
   for (int i = threadIdx.y; i < nva; i += blockDim.y) {
     for (int j = threadIdx.x; j < nvb; j += blockDim.x) {
       if (filter_vertex_vertex(rcut_inc, vertices_a, body_a.homothety_, i, &shpa, vertices_b, body_b.homothety_, j,
