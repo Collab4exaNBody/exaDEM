@@ -65,10 +65,10 @@ struct CellPairStorage {
   VectorT<uint8_t> skip_;                          ///< Flag to skip a cell pair in the second pass
 
   /**
-   * @brief Construct device storage from host-side storage.
+   * @brief Fill the device storage from host-side storage.
    *
-   * Copies owner and partner cell vectors from host, initializes size, offset, and skip arrays.
-   * Performs a parallel reset of members.
+   * Resizes the vectors, copies owner, partner and ghost vectors from host, then resets the size, offset, and skip
+   * arrays with a parallel_for.
    *
    * @tparam ExecCtx Execution context type for parallel_for
    * @param host Host-side storage
@@ -77,7 +77,8 @@ struct CellPairStorage {
    * @param exec_ctx Execution context
    */
   template <typename ExecCtx>
-  void reset(NbhCellHostStorage& host, onika::parallel::ParallelExecutionQueue& queue, int lane, ExecCtx& exec_ctx) {
+  void initialize(NbhCellHostStorage& host, onika::parallel::ParallelExecutionQueue& queue, int lane,
+                  ExecCtx& exec_ctx) {
     const size_t n_cells = host.owner_cell_.size();
 
     // Consistency check
@@ -114,7 +115,7 @@ struct CellPairStorage {
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_GUIDED;
     queue << onika::parallel::set_lane(lane)
-          << parallel_for(n_cells, reset_func, exec_ctx("nbh_gpu::reset_cell_pair_storage"), opts)
+          << parallel_for(n_cells, reset_func, exec_ctx("pipeline_interaction_gpu::reset_cell_pair_storage"), opts)
           << onika::parallel::flush;
   }
 
@@ -155,9 +156,9 @@ struct CellStorage {
   VectorT<InteractionTypePerCellCounter> offset_;  ///< Offset (into the classifier) for each interaction type, per cell
   VectorT<InteractionTypePerCellCounter> size_;    ///< Number of interactions for each interaction type, per cell
 
-  // size should be the number of non empty cells
+  // Resizes the counters and sets them to zero (asynchronous). `newsize` should be the number of non empty cells.
   template <typename ExecCtx>
-  void resize(size_t newsize, onika::parallel::ParallelExecutionQueue& queue, int lane, ExecCtx& exec_ctx) {
+  void resize_and_reset(size_t newsize, onika::parallel::ParallelExecutionQueue& queue, int lane, ExecCtx& exec_ctx) {
     size_.resize(newsize);
     offset_.resize(newsize);
 
@@ -167,7 +168,8 @@ struct CellStorage {
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_GUIDED;
     queue << onika::parallel::set_lane(lane)
-          << parallel_for(newsize, reset_func, exec_ctx("nbh_gpu::reset_cell_storage"), opts) << onika::parallel::flush;
+          << parallel_for(newsize, reset_func, exec_ctx("pipeline_interaction_gpu::reset_cell_storage"), opts)
+          << onika::parallel::flush;
   }
 
   inline View view() const { return View{to_span(offset_), to_span(size_)}; }

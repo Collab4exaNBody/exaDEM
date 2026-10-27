@@ -118,7 +118,7 @@ inline void add_particle_particle_totals(CellStorage& cell_storage, CellInteract
       to_span(pair_storage.size_),         cell_accessor.offset_,     cell_accessor.size_};
 
   queue << onika::parallel::set_lane(lane)
-        << parallel_for(n_cells, func, exec_ctx("nbh_gpu::add_particle_particle_totals"), opts)
+        << parallel_for(n_cells, func, exec_ctx("pipeline_interaction_gpu::add_particle_particle_totals"), opts)
         << onika::parallel::flush;
 }
 

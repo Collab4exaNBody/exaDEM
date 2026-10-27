@@ -613,8 +613,10 @@ inline void reconstruct_cell_pair_offsets(ParticlePairStorage& pp_storage, Inter
   ResetCellPairCountsFunc reset_func{cp_accessor.offset_, cp_accessor.size_};
   AccumulateCellPairCountsFunc accumulate_func{to_span(pp_storage.cell_pair_idx_), count_per_pp, cp_accessor.size_};
 
-  queue << set_lane(lane) << parallel_for(num_cell_pairs, reset_func, exec_ctx("nbh_gpu::reset_cell_pair_counts"), opts)
-        << parallel_for(num_particle_pairs, accumulate_func, exec_ctx("nbh_gpu::accumulate_cell_pair_counts"), opts)
+  queue << set_lane(lane)
+        << parallel_for(num_cell_pairs, reset_func, exec_ctx("pipeline_interaction_gpu::reset_cell_pair_counts"), opts)
+        << parallel_for(num_particle_pairs, accumulate_func,
+                        exec_ctx("pipeline_interaction_gpu::accumulate_cell_pair_counts"), opts)
         << flush;
 
   // Same stream as `lane` above: stream-ordered after accumulate_func, no host sync needed here.
