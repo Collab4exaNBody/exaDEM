@@ -1,18 +1,50 @@
 #pragma once
 #include <cub/cub.cuh>
+
+#include <vector>
 #include <exaDEM/pipeline_interaction_gpu/persistent_interactions.hpp>
 
 namespace exaDEM {
 
+/**
+ * @brief Temporary device buffers of the CUB scans, released later.
+ *
+ * cudaFree synchronizes the device: freeing each buffer right after its scan breaks the overlap between the lanes.
+ * The buffers are allocated by the scans and only released by release() (or by the destructor), once the work using
+ * them is complete, e.g. at the end of the operator.
+ */
+struct DeferredFreeList {
+  std::vector<void*> pointers_;
+
+  DeferredFreeList() = default;
+  DeferredFreeList(const DeferredFreeList&) = delete;
+  DeferredFreeList& operator=(const DeferredFreeList&) = delete;
+  ~DeferredFreeList() { release(); }
+
+  void* allocate(size_t bytes) {
+    void* ptr = nullptr;
+    cudaMalloc(&ptr, bytes);
+    pointers_.push_back(ptr);
+    return ptr;
+  }
+
+  /// @brief Frees all the buffers. The caller must make sure that the work using them is complete.
+  void release() {
+    for (void* ptr : pointers_) {
+      cudaFree(ptr);
+    }
+    pointers_.clear();
+  }
+};
+
 /* Run an exclusive prefix sum on device memory using CUB. */
 template <typename T>
-inline void exclusive_scan_device(const T* input, T* output, size_t count, onikaStream_t st = 0) {
-  void* d_tmp = nullptr;
+inline void exclusive_scan_device(const T* input, T* output, size_t count, DeferredFreeList& tmp,
+                                  onikaStream_t st = 0) {
+  if (count == 0) return;
   size_t tmp_bytes = 0;
-  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st);
-  cudaMalloc(&d_tmp, tmp_bytes);
-  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st);
-  cudaFree(d_tmp);
+  cub::DeviceScan::ExclusiveSum(nullptr, tmp_bytes, input, output, count, st);
+  cub::DeviceScan::ExclusiveSum(tmp.allocate(tmp_bytes), tmp_bytes, input, output, count, st);
 }
 
 /// @brief Scan operator: adds two per-type counters.
@@ -25,15 +57,13 @@ struct AddInteractionCounters {
 
 /* Run an exclusive prefix sum of per-type counters (all the interaction types at once) on device memory using CUB. */
 inline void exclusive_scan_counters(const InteractionTypePerCellCounter* input, InteractionTypePerCellCounter* output,
-                                    size_t count, onikaStream_t st = 0) {
+                                    size_t count, DeferredFreeList& tmp, onikaStream_t st = 0) {
   if (count == 0) return;
   const InteractionTypePerCellCounter zero{};
-  void* d_tmp = nullptr;
   size_t tmp_bytes = 0;
-  cub::DeviceScan::ExclusiveScan(d_tmp, tmp_bytes, input, output, AddInteractionCounters{}, zero, count, st);
-  cudaMalloc(&d_tmp, tmp_bytes);
-  cub::DeviceScan::ExclusiveScan(d_tmp, tmp_bytes, input, output, AddInteractionCounters{}, zero, count, st);
-  cudaFree(d_tmp);
+  cub::DeviceScan::ExclusiveScan(nullptr, tmp_bytes, input, output, AddInteractionCounters{}, zero, count, st);
+  cub::DeviceScan::ExclusiveScan(tmp.allocate(tmp_bytes), tmp_bytes, input, output, AddInteractionCounters{}, zero,
+                                 count, st);
 }
 
 /**
@@ -573,7 +603,7 @@ struct AccumulateCellPairCountsFunc {
 template <typename ExecCtx>
 inline void reconstruct_cell_pair_offsets(ParticlePairStorage& pp_storage, InteractionTypePerCellCounter* count_per_pp,
                                           size_t num_particle_pairs, size_t num_cell_pairs,
-                                          CellPairStorage& info_cell_pair,
+                                          CellPairStorage& info_cell_pair, DeferredFreeList& scan_tmp,
                                           onika::parallel::ParallelExecutionQueue& queue, int lane, onikaStream_t st,
                                           ExecCtx& exec_ctx, const onika::parallel::ParallelForOptions& opts) {
   using onika::parallel::flush;
@@ -588,7 +618,7 @@ inline void reconstruct_cell_pair_offsets(ParticlePairStorage& pp_storage, Inter
         << flush;
 
   // Same stream as `lane` above: stream-ordered after accumulate_func, no host sync needed here.
-  exclusive_scan_counters(cp_accessor.size_.data(), cp_accessor.offset_.data(), num_cell_pairs, st);
+  exclusive_scan_counters(cp_accessor.size_.data(), cp_accessor.offset_.data(), num_cell_pairs, scan_tmp, st);
 }
 
 }  // namespace exaDEM

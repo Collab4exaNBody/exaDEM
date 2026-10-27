@@ -269,6 +269,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     onikaStream_t history_stream = global_cuda_ctx()->getThreadStream(kLaneHistory);
     onikaStream_t driver_stream = global_cuda_ctx()->getThreadStream(kLaneParticleDriver);
 
+    // buffers of the CUB scans: released at the end of the operator (cudaFree synchronizes the device)
+    DeferredFreeList scan_tmp;
+
     onikaStream_t st_updateghost;
     ONIKA_CU_CREATE_STREAM_NON_BLOCKING(st_updateghost);
 
@@ -359,9 +362,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
               cell_pair_accessor.ghost_.data(), *rcut_inc, shapes_data.data(), vertex_field_data,
               particle_pair_counts.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
     }
-    ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
-    exclusive_scan_device(particle_pair_counts.data(), particle_pair_offsets.data(), neighbor_cell_pair_count,
+    // the scan runs on the same stream as the kernel above: no synchronization needed in between
+    exclusive_scan_device(particle_pair_counts.data(), particle_pair_offsets.data(), neighbor_cell_pair_count, scan_tmp,
                           particle_stream);
     ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
     ONIKA_CU_PROF_RANGE_POP();
@@ -391,7 +394,6 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
               particle_pair_offsets.data(), particle_pair_storage.cell_i_.data(), particle_pair_storage.cell_j_.data(),
               particle_pair_storage.p_i_.data(), particle_pair_storage.p_j_.data(), particle_pair_storage.ghost_.data(),
               particle_pair_storage.cell_pair_idx_.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
-      ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
     }
     ONIKA_CU_PROF_RANGE_POP();
 
@@ -408,11 +410,10 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
           grid_cells, vertex_field_data, shapes_data.data(), *rcut_inc, particle_pair_storage.cell_i_.data(),
           particle_pair_storage.cell_j_.data(), particle_pair_storage.p_i_.data(), particle_pair_storage.p_j_.data(),
           interaction_counts_per_pair.data(), total_pp);
-      ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
       // GPU prefix sum of the interaction counters (all the interaction types at once)
       exclusive_scan_counters(interaction_counts_per_pair.data(), interaction_prefix_per_pair.data(), total_pp,
-                              particle_stream);
+                              scan_tmp, particle_stream);
       ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
       // compute total interactions per type
@@ -478,8 +479,8 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
           particle_particle_classifier_accessor, total_pp);
 
       reconstruct_cell_pair_offsets(particle_pair_storage, interaction_counts_per_pair.data(), total_pp,
-                                    neighbor_cell_pair_count, cell_pair_storage, parallel_queue, kLaneParticleParticle,
-                                    particle_stream, get_exec_ctx, opts);
+                                    neighbor_cell_pair_count, cell_pair_storage, scan_tmp, parallel_queue,
+                                    kLaneParticleParticle, particle_stream, get_exec_ctx, opts);
       parallel_queue.wait(kLaneParticleParticle);
     }
     ONIKA_CU_PROF_RANGE_POP();
@@ -538,6 +539,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     ONIKA_CU_STREAM_SYNCHRONIZE(st_updateghost);
     ONIKA_CU_DESTROY_STREAM(st_updateghost);
+    scan_tmp.release();
 #endif
   }
 };
