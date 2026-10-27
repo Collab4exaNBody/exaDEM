@@ -1,7 +1,7 @@
 #pragma once
 
 #include <exaDEM/drivers.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_storage.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
 
 namespace exaDEM {

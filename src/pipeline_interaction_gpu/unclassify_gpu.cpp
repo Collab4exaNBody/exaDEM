@@ -17,27 +17,29 @@ specific language governing permissions and limitations
 under the License.
 */
 
-#define DEBUG_NBH_GPU 1
-
-#include <exanb/core/domain.h>
-#include <exanb/core/grid.h>
-#include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/parallel_grid_algorithm.h>
+// onika
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
+// exaNBody
+#include <exanb/core/domain.h>
+#include <exanb/core/grid.h>
+#include <exanb/core/make_grid_variant_operator.h>
+#include <exanb/core/parallel_grid_algorithm.h>
+
+// exaDEM
 #include <cassert>
 #include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/interaction_list_layout.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/interaction_list_layout.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_cell_data.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {

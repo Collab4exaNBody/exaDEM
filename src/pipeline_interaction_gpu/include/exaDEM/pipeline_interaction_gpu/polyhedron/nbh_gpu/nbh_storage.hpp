@@ -3,7 +3,7 @@
 #include <onika/parallel/parallel_execution_operators.h>
 #include <onika/parallel/parallel_execution_queue.h>
 
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_utils.hpp>
 
 namespace exaDEM {
 /**

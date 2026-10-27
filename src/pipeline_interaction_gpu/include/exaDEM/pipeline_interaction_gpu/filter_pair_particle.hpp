@@ -9,8 +9,8 @@
 #include <parallel/algorithm>
 #endif
 #include <compare>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <vector>
 

@@ -18,7 +18,6 @@ under the License.
 */
 
 #ifdef ONIKA_CUDA_VERSION
-#define DEBUG_NBH_GPU 1
 
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
@@ -32,18 +31,18 @@ under the License.
 
 #include <cassert>
 #include <cub/cub.cuh>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/interaction_list_layout.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_pccp.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/interaction_enum.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/interaction_list_layout.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_cell_data.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_gpu_pccp.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/polyhedron/nbh_polyhedron_driver.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/shapes.hpp>

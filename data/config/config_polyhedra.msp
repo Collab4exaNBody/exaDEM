@@ -30,7 +30,7 @@ move_particles_extra_data: move_particles_interaction
 
 compute_new_vertices: 
   - do_update_persistent_interactions_if_required # a nop unless config_fragmentation is included
-  - prefetch_all_fields_gpu_only
+  - prefetch_grid_fields_gpu_only
   - compute_vertices:
      resize_vertex: true
 compute_fast_vertices: 

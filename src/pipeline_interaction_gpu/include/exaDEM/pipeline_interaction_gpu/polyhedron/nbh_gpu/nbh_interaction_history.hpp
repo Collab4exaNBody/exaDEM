@@ -1,6 +1,6 @@
 #pragma once
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
+#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_storage.hpp>
 
 namespace exaDEM {
 struct InteractionHistory {
