@@ -41,9 +41,9 @@ under the License.
 #include <exaDEM/interaction/interaction_enum.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
+#include <exaDEM/pipeline_interaction_gpu/interaction_history.hpp>
 #include <exaDEM/pipeline_interaction_gpu/interaction_list_layout.hpp>
 #include <exaDEM/pipeline_interaction_gpu/particle_pair_kernels.hpp>
-#include <exaDEM/pipeline_interaction_gpu/interaction_history.hpp>
 #include <exaDEM/polyhedron/nbh_polyhedron_driver.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/shapes.hpp>
@@ -358,11 +358,13 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::build_particle_pairs");
     dim3 pp_block(kParticlePairBlockX, kParticlePairBlockY, 1);
 
-    CountParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY, true>
-        <<<neighbor_cell_pair_count, pp_block, 0, particle_stream>>>(
-            grid_cells, cell_pair_accessor.owner_cell_.data(), cell_pair_accessor.partner_cell_.data(),
-            cell_pair_accessor.ghost_.data(), *rcut_inc, shapes_data.data(), vertex_field_data,
-            particle_pair_counts.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
+    if (neighbor_cell_pair_count > 0) {
+      CountParticlePairsKernel<kParticlePairBlockX, kParticlePairBlockY, true>
+          <<<neighbor_cell_pair_count, pp_block, 0, particle_stream>>>(
+              grid_cells, cell_pair_accessor.owner_cell_.data(), cell_pair_accessor.partner_cell_.data(),
+              cell_pair_accessor.ghost_.data(), *rcut_inc, shapes_data.data(), vertex_field_data,
+              particle_pair_counts.data(), neighbor_cell_pair_count, ignore_pairs_gpu.view());
+    }
     ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
     exclusive_scan_device(particle_pair_counts.data(), particle_pair_offsets.data(), neighbor_cell_pair_count,
@@ -472,14 +474,20 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     for (int typeID = get_first_id<InteractionType::ParticleDriver>();
          typeID <= get_last_id<InteractionType::ParticleDriver>(); typeID++) {
-      size_t newsize = cell_storage.offset_.back()[typeID] + cell_storage.size_.back()[typeID];
+      size_t newsize = 0;
+      if (active_cell_count > 0) {
+        newsize = cell_storage.offset_.back()[typeID] + cell_storage.size_.back()[typeID];
+      }
       interaction_container.resize(typeID, newsize);
     }
 
     // ****** Resize Classifier for InnerBond ******* //
     for (int typeID = get_first_id<InteractionType::InnerBond>(); typeID <= get_last_id<InteractionType::InnerBond>();
          typeID++) {
-      size_t newsize = cell_storage.offset_.back()[typeID] + cell_storage.size_.back()[typeID];
+      size_t newsize = 0;
+      if (active_cell_count > 0) {
+        newsize = cell_storage.offset_.back()[typeID] + cell_storage.size_.back()[typeID];
+      }
       interaction_container.resize(typeID, newsize);
     }
 
@@ -543,10 +551,12 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_PROF_RANGE_POP();
 
     // === ADD PERSISTENT INTERACTIONS ===
-    ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::add_unmatched_persistent_interactions");
-    add_unmatched_persistent_interactions(history, active_cell_count, interaction_container,
-                                          interaction_classifier_accessor, cell_storage_accessor, wrappers);
-    ONIKA_CU_PROF_RANGE_POP();
+    // Disabled: it looks for persistent particle-driver interactions in the history, but persistent() is only true for
+    // inner bonds and persistent interactions are not stored in the history, so this call can't add anything.
+    // ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::add_unmatched_persistent_interactions");
+    // add_unmatched_persistent_interactions(history, active_cell_count, interaction_container,
+    //                                       interaction_classifier_accessor, cell_storage_accessor, wrappers);
+    // ONIKA_CU_PROF_RANGE_POP();
 
     ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::transfer_classifier_grid");
     constexpr bool do_ghost_only = true;
@@ -562,6 +572,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     // Not required for InnerBond interactions, since they are persistent and already accounted for in the classifier.
 
     ONIKA_CU_PROF_RANGE_POP();
+
+    ONIKA_CU_STREAM_SYNCHRONIZE(st_updateghost);
+    ONIKA_CU_DESTROY_STREAM(st_updateghost);
 #endif
   }
 };

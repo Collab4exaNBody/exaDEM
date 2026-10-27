@@ -24,19 +24,22 @@ under the License.
 
 #include <onika/log.h>
 
+#include <mpi.h>
+
 namespace exaDEM {
 using namespace exanb;
 
 class DetectGPUPipeline : public OperatorNode {
   ADD_SLOT(bool, disable_gpu_pipeline, INPUT, false,
            DocString{"Global flag: if true, the GPU pipeline is never used, even if a GPU is available."});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(bool, use_gpu_pipeline, OUTPUT, DocString{"true if the GPU pipeline (interaction lists) must be used."});
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
         This operator sets the boolean 'use_gpu_pipeline'. It is true only if the code has been compiled with CUDA,
-        a GPU device is available for this MPI process, and the global flag 'disable_gpu_pipeline' is false.
+        a GPU device is available for every MPI process, and the global flag 'disable_gpu_pipeline' is false.
         It is meant to be used in 'condition:' fields of msp blocks.
 
         YAML example [no option]:
@@ -46,12 +49,17 @@ class DetectGPUPipeline : public OperatorNode {
   }
 
   inline void execute() final {
-    const bool gpu_available = (global_cuda_ctx() != nullptr) && global_cuda_ctx()->has_devices();
-    *use_gpu_pipeline = gpu_available && !(*disable_gpu_pipeline);
+    const bool local_gpu_available = (global_cuda_ctx() != nullptr) && global_cuda_ctx()->has_devices();
+    // All MPI processes must use the same pipeline (e.g. with mpi_even_only, only some processes own a GPU).
+    int local_flag = (local_gpu_available && !(*disable_gpu_pipeline)) ? 1 : 0;
+    int global_flag = 0;
+    MPI_Allreduce(&local_flag, &global_flag, 1, MPI_INT, MPI_MIN, *mpi);
+    *use_gpu_pipeline = (global_flag == 1);
     if (*disable_gpu_pipeline) {
       lout << "GPU pipeline disabled by the global flag disable_gpu_pipeline" << std::endl;
     } else {
-      lout << "GPU pipeline: " << (*use_gpu_pipeline ? "enabled" : "disabled (no GPU device)") << std::endl;
+      lout << "GPU pipeline: "
+           << (*use_gpu_pipeline ? "enabled" : "disabled (no GPU device on at least one MPI process)") << std::endl;
     }
   }
 };

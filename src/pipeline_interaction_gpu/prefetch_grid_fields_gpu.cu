@@ -21,11 +21,11 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <omp.h>
-#include <onika/cuda/cuda_context.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
+#include <exaDEM/pipeline_interaction_gpu/gpu_utils.hpp>
 #include <exaDEM/traversal.hpp>
 #include <vector>
 

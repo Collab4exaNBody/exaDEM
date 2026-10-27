@@ -34,6 +34,11 @@ void setup_history_clean_ges(CellsT& cells, size_t* idxs, size_t ncells, GridCel
   history.size_.resize(ncells);
   ONIKA_CU_PROF_RANGE_POP();
 
+  if (ncells == 0) {
+    history.data_.resize(0);
+    return;
+  }
+
   size_t sum = 0;
 
   ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fill_start_size_history");
