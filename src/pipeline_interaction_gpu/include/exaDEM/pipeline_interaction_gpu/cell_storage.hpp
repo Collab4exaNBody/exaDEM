@@ -3,6 +3,7 @@
 #include <onika/parallel/parallel_execution_operators.h>
 #include <onika/parallel/parallel_execution_queue.h>
 
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/pipeline_interaction_gpu/gpu_utils.hpp>
 
 namespace exaDEM {

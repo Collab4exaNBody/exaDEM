@@ -25,6 +25,7 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/pipeline_interaction_gpu/gpu_utils.hpp>
 #include <exaDEM/traversal.hpp>
 #include <vector>

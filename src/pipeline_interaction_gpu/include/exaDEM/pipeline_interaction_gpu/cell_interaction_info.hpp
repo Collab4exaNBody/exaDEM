@@ -1,6 +1,7 @@
 #pragma once
 #include <omp.h>
 
+#include <exaDEM/color_log.hpp>
 #include <exaDEM/pipeline_interaction_gpu/driver_interactions.hpp>
 
 namespace exaDEM {
