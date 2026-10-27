@@ -10,7 +10,6 @@
 #endif
 #include <compare>
 #include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_storage.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <vector>
 

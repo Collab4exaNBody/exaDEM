@@ -2,7 +2,6 @@
 #include <omp.h>
 
 #include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_storage.hpp>
 
 static inline onikaError_t ONIKA_PREFETCH(const void* ptr, size_t size, int device, onikaStream_t stream) {
 #ifdef ONIKA_CUDA_VERSION

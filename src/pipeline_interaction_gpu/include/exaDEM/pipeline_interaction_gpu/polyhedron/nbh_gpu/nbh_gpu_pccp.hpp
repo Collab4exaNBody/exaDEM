@@ -1,7 +1,6 @@
 #pragma once
 #include <cub/cub.cuh>
 #include <exaDEM/pipeline_interaction_gpu/filter_pair_particle.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_storage.hpp>
 
 namespace exaDEM {
 

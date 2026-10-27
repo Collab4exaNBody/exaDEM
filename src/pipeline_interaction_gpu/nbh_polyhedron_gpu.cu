@@ -19,30 +19,31 @@ under the License.
 
 #ifdef ONIKA_CUDA_VERSION
 
+// onika
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_factory.h>
+#include <onika/scg/operator_slot.h>
+
+// exaNBody
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
-#include <onika/scg/operator.h>
-#include <onika/scg/operator_factory.h>
-#include <onika/scg/operator_slot.h>
 
 #include <cassert>
 #include <cub/cub.cuh>
+
+// exaDEM
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/interaction_enum.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/interaction_list_layout.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_cell_data.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 #include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_gpu_pccp.hpp>
 #include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_storage.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/polyhedron/nbh_polyhedron_driver.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/shapes.hpp>
@@ -572,8 +573,7 @@ ONIKA_AUTORUN_INIT(nbh_polyhedron_gpu) {
 }
 }  // namespace exaDEM
 #else
-// Without CUDA, the operator is still registered so that msp files referencing it (blocks executed only if
-// use_gpu_pipeline is true) can be loaded. It is never executed on CPU.
+
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
 #include <onika/scg/operator.h>

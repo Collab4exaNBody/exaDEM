@@ -36,10 +36,6 @@ under the License.
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/interaction_list_layout.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_cell_data.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_storage.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
