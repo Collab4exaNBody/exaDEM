@@ -1,6 +1,6 @@
 #pragma once
 
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_cell_data.hpp>
+#include <exaDEM/pipeline_interaction_gpu/cell_interaction_info.hpp>
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {

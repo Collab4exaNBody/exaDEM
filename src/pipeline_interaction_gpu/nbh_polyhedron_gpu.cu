@@ -41,9 +41,9 @@ under the License.
 #include <exaDEM/interaction/interaction_enum.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/interaction_list_layout.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_gpu_pccp.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
+#include <exaDEM/pipeline_interaction_gpu/interaction_list_layout.hpp>
+#include <exaDEM/pipeline_interaction_gpu/particle_pair_kernels.hpp>
+#include <exaDEM/pipeline_interaction_gpu/interaction_history.hpp>
 #include <exaDEM/polyhedron/nbh_polyhedron_driver.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/shapes.hpp>

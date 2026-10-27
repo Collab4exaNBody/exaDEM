@@ -1,5 +1,5 @@
 #pragma once
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
+#include <exaDEM/pipeline_interaction_gpu/driver_interactions.hpp>
 
 namespace exaDEM {
 struct InteractionHistory {

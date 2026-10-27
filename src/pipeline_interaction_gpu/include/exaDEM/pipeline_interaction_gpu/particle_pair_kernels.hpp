@@ -1,6 +1,6 @@
 #pragma once
 #include <cub/cub.cuh>
-#include <exaDEM/pipeline_interaction_gpu/filter_pair_particle.hpp>
+#include <exaDEM/pipeline_interaction_gpu/persistent_interactions.hpp>
 
 namespace exaDEM {
 

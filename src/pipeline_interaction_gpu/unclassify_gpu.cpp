@@ -35,7 +35,7 @@ under the License.
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
-#include <exaDEM/pipeline_interaction_gpu/polyhedron/nbh_gpu/interaction_list_layout.hpp>
+#include <exaDEM/pipeline_interaction_gpu/interaction_list_layout.hpp>
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
