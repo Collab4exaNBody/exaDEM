@@ -40,6 +40,7 @@ evaluate_particle_displ:
 global: 
   apply_particle_sticking: false
   sticking_threshold: 2.e-05
+  enable_persistent_interactions: true # used by nbh_polyhedron_gpu
 
 prepro_fragmentation:
   condition: apply_particle_sticking
@@ -69,14 +70,10 @@ init_update_particle_neighbors:
   - amr_grid_pairs
   - chunk_neighbors_contact
   - prepro_fragmentation
-  - nbh_polyhedron
-#  - nbh_polyhedron_obb_tree
-  - do_update_persistent_interactions_if_required
-  - update_interaction_ghost
-  - classify_interactions
-#  - check_classifier_interaction_pair
+  - chunk_neighbors_search
   - update_interfaces
-  - stats_interactions
+  - do_update_persistent_interactions_if_required
+  - stats_classifier
 
 +chunk_neighbors_impl:
   - update_interfaces

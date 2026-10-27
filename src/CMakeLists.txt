@@ -31,7 +31,7 @@ add_subdirectory(io)
 add_subdirectory(sphere)
 add_subdirectory(polyhedron)
 add_subdirectory(deposit)
-add_subdirectory(experimental)
+add_subdirectory(pipeline_interaction_gpu)
 
 if(USE_RSA)
 	add_subdirectory(rsa)
