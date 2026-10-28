@@ -66,9 +66,6 @@ class ComputeContactClassifierSphereHertz : public OperatorNode {
   ADD_SLOT(MultiMatParamsT<HertzParams>, multimat_hertz_cp, INPUT, REQUIRED,
            DocString{"List of contact parameters for simulations with multiple materials, see multimat_contact_params_hertz and drivers_contact_params_hertz"});
   ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"Time step value"});
-  ADD_SLOT(bool, symetric, INPUT_OUTPUT, true,
-           DocString{"Symetric feature of the contact law (each interaction is computed once, for both particles). "
-                     "It is mandatory with the Hertz law."});
   ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   // analysis
@@ -97,7 +94,8 @@ class ComputeContactClassifierSphereHertz : public OperatorNode {
       Naming system :
       contact_sphere_hertz_[CohesiveLaw]
       [CohesiveLaw] : None or Cohesive or DMT
-      The symetric mode is mandatory (symetric: true, default).
+      The contact law is always symetric: each interaction is computed once, for both particles (nbh_sphere builds
+      symetric interactions).
 
       YAML example:
         - multimat_contact_params_hertz:
@@ -110,13 +108,14 @@ class ComputeContactClassifierSphereHertz : public OperatorNode {
            mu:       [ 0.9 ]
            damprate: [ 0.9 ]
 
-        - contact_sphere_hertz_none:
-           symetric: true
+        - contact_sphere_hertz_none
       )EOF";
   }
 
-  template <bool is_sym, typename XFormT>
+  template <typename XFormT>
   void core(XFormT& xform) {
+    // the contact laws of spheres are always symetric: each interaction is computed once, for both particles
+    constexpr bool is_sym = true;
     auto exec_ctx = [this]() { return this->parallel_execution_context(); };
     const DriversGPUAccessor drvs = *drivers;
     auto* cells = grid->cells();
@@ -138,11 +137,6 @@ class ComputeContactClassifierSphereHertz : public OperatorNode {
 
   void check_slots() {
     bool pw = true;
-    if (!(*symetric)) {
-      color_log::error(opertor_name(),
-                       "The Hertz contact law is only available in symetric mode: please set \"symetric: true\" "
-                       "(and use the symetric mode of the neighbor search, nbh_sphere).");
-    }
     /** polyhedron interactions are defined while the contact sphere operator is used */
     sphere::check_no_polyhedron_interactions(*ic, opertor_name());
 
@@ -182,14 +176,12 @@ class ComputeContactClassifierSphereHertz : public OperatorNode {
       return;
     }
 
-    // the Hertz law is only available in symetric mode
-    constexpr bool is_sym = true;
     if (!domain->xform_is_identity()) {
       LinearXForm cp_xform = {domain->xform()};
-      core<is_sym>(cp_xform);
+      core(cp_xform);
     } else {
       NullXForm cp_xform;
-      core<is_sym>(cp_xform);
+      core(cp_xform);
     }
     save_results();
   }
