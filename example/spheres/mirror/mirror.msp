@@ -29,7 +29,6 @@ input_data:
 compute_force:
   - gravity_force
   - contact_sphere:
-     symetric: true
      config: { kn: 1000, kt: 1000, kr: 0.0, mu: 0.2, damp_rate: 0.999 } 
 
 domain:

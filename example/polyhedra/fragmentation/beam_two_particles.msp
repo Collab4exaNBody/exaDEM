@@ -60,7 +60,6 @@ analyses:
      fields: [ id, velocity, fx, fy, fz, vrot, arot, cluster, mass ]
 
 global:
-  symetric: true
   simulation_end_iteration: 5000
   simulation_end_iteration: 1000
   simulation_log_frequency: 100
