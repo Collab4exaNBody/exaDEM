@@ -1,0 +1,211 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
+
+#include <onika/scg/operator.h>
+#include <onika/scg/operator_slot.h>
+#include <onika/scg/operator_factory.h>
+
+#include <exanb/core/make_grid_variant_operator.h>
+#include <exanb/core/parallel_grid_algorithm.h>
+#include <exanb/core/grid.h>
+#include <exanb/core/domain.h>
+#include <exanb/core/xform.h>
+
+
+#include <exaDEM/forcefield/contact_parameters.hpp>
+#include <exaDEM/forcefield/contact_force.hpp>
+#include <exaDEM/forcefield/hertz_parameters.hpp>
+#include <exaDEM/forcefield/multimat_parameters.hpp>
+#include <exaDEM/drivers.hpp>
+#include <exaDEM/sphere/contact_force_sphere_common.hpp>
+#include <exaDEM/sphere/contact_sphere.hpp>
+#include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/classifier/classifier_for_all.hpp>
+#include <exaDEM/itools/itools.hpp>
+#include <exaDEM/shapes.hpp>
+#include <exaDEM/shape_detection.hpp>
+#include <exaDEM/shape_detection_driver.hpp>
+
+namespace exaDEM {
+/**
+ * Contact forces between spheres, and between spheres and drivers, with the Hertz contact law
+ * (HertzParams). The materials (Young modulus, Poisson ratio) are defined per group, with
+ * multimat_contact_params_hertz and drivers_contact_params_hertz: there is no single-material version.
+ * See contact_force_sphere_hooke.cu.in for the Hooke law.
+ */
+template <CohesiveLawType CohesiveLaw, typename GridT,
+          class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz, field::_mom, field::_orient,
+                                      field::_vrot, field::_radius>>
+class ComputeContactClassifierSphereHertz : public OperatorNode {
+  // attributes processed during computation
+  using ComputeFields = FieldSet<field::_vrot, field::_arot>;
+  static constexpr ComputeFields compute_field_set{};
+
+  static constexpr ContactLawType ContactLaw = ContactLawType::Hertz;
+  using ContactParamsT = HertzParams;
+
+  ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);
+  ADD_SLOT(Domain, domain, INPUT, REQUIRED);
+  ADD_SLOT(MultiMatParamsT<HertzParams>, multimat_hertz_cp, INPUT, REQUIRED,
+           DocString{"List of contact parameters for simulations with multiple materials, see multimat_contact_params_hertz and drivers_contact_params_hertz"});
+  ADD_SLOT(double, dt, INPUT, REQUIRED, DocString{"Time step value"});
+  ADD_SLOT(bool, symetric, INPUT_OUTPUT, true,
+           DocString{"Symetric feature of the contact law (each interaction is computed once, for both particles). "
+                     "It is mandatory with the Hertz law."});
+  ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
+  ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
+  // analysis
+  ADD_SLOT(long, timestep, INPUT, REQUIRED);
+  ADD_SLOT(long, analysis_interaction_dump_frequency, INPUT, REQUIRED, DocString{"Write an interaction dump file"});
+  ADD_SLOT(std::string, dir_name, INPUT, REQUIRED, DocString{"Output directory name."});
+  ADD_SLOT(std::string, interaction_basename, INPUT, REQUIRED,
+           DocString{"Write an Output file containing interactions."});
+  // private
+  ADD_SLOT(bool, print_warning, PRIVATE, true,
+           DocString{"This variable is used to ensure that warning messages are displayed only once."});
+
+ public:
+  inline std::string opertor_name() {
+    return "contact_sphere";
+  }
+
+  inline std::string documentation() const final {
+    return R"EOF(
+      This operator computes forces between spheres and spheres/drivers using the Hertz contact law:
+      Fn = 4/3 E* sqrt(R*) delta^(3/2) (+ viscous damping, + Coulomb friction with a constant kt).
+      The reduced Young modulus E* is computed from the Young modulus and the Poisson ratio of the materials.
+      The parameters are HertzParams (no kn), defined per group (material) with the operators
+      multimat_contact_params_hertz and drivers_contact_params_hertz. There is no single-material version.
+
+      Naming system :
+      contact_sphere_hertz_[CohesiveLaw]
+      [CohesiveLaw] : None or Cohesive or DMT
+      The symetric mode is mandatory (symetric: true, default).
+
+      YAML example:
+        - multimat_contact_params_hertz:
+           group1:   [ 0 ]
+           group2:   [ 0 ]
+           young:    [ 70e9 ]
+           poisson:  [ 0.33 ]
+           kt:       [ 100000 ]
+           kr:       [ 0.1 ]
+           mu:       [ 0.9 ]
+           damprate: [ 0.9 ]
+
+        - contact_sphere_hertz_none:
+           symetric: true
+      )EOF";
+  }
+
+  template <bool is_sym, typename XFormT>
+  void core(XFormT& xform) {
+    auto exec_ctx = [this]() { return this->parallel_execution_context(); };
+    const DriversGPUAccessor drvs = *drivers;
+    auto* cells = grid->cells();
+    const double time = *dt;
+    auto& classifier = *ic;
+
+    const auto& contact_parameters = *multimat_hertz_cp;
+    const MultiMatContactParamsTAccessor<ContactParamsT> cp = contact_parameters.get_multimat_accessor();
+    const MultiMatContactParamsTAccessor<ContactParamsT> cp_drvs = contact_parameters.get_drivers_accessor();
+    sphere::run_sphere_contact_laws<is_sym, ContactLaw, CohesiveLaw>(exec_ctx, classifier, xform, cells, drvs, cp,
+                                                                     cp_drvs, time);
+  }
+
+  /** Analysis */
+  void save_results() {
+    sphere::save_interactions(*grid, *ic, *timestep, *analysis_interaction_dump_frequency, *dir_name,
+                              *interaction_basename);
+  }
+
+  void check_slots() {
+    bool pw = true;
+    if (!(*symetric)) {
+      color_log::error(opertor_name(),
+                       "The Hertz contact law is only available in symetric mode: please set \"symetric: true\" "
+                       "(and use the symetric mode of the neighbor search, nbh_sphere).");
+    }
+    /** polyhedron interactions are defined while the contact sphere operator is used */
+    sphere::check_no_polyhedron_interactions(*ic, opertor_name());
+
+    check_hertz_parameters();
+    *print_warning = pw;
+  }
+
+  /** checks that the reduced Young modulus is defined */
+  void check_hertz_parameters() {
+    for (size_t i = 0; i < multimat_hertz_cp->multimat_cp_.size(); i++) {
+      if (multimat_hertz_cp->multimat_cp_[i].estar_ <= 0.0) {
+        color_log::error(opertor_name(), "The reduced Young modulus (estar) of the pair of groups " +
+                                             std::to_string(i) +
+                                             " is not defined. Please define \"young\" and \"poisson\" in "
+                                             "multimat_contact_params_hertz.");
+      }
+    }
+    for (size_t i = 0; i < multimat_hertz_cp->drivers_cp_.size(); i++) {
+      if (multimat_hertz_cp->drivers_cp_[i].estar_ <= 0.0) {
+        color_log::warning(opertor_name(), "The reduced Young modulus (estar) of the pair (group, driver) " +
+                                               std::to_string(i) + " is not defined.");
+      }
+    }
+  }
+
+  /** Estimates the critical time step of the Hertz law. */
+  void scan_hertz_dt() {
+    // TODO: estimate the critical time step of the Hertz law (e.g. Rayleigh and Hertz time steps, like LIGGGHTS
+    // fix check/timestep/gran) and give it to check_dt_critical.
+  }
+
+  inline void execute() final {
+    check_slots();
+    scan_hertz_dt();
+
+    if (grid->number_of_cells() == 0) {
+      return;
+    }
+
+    // the Hertz law is only available in symetric mode
+    constexpr bool is_sym = true;
+    if (!domain->xform_is_identity()) {
+      LinearXForm cp_xform = {domain->xform()};
+      core<is_sym>(cp_xform);
+    } else {
+      NullXForm cp_xform;
+      core<is_sym>(cp_xform);
+    }
+    save_results();
+  }
+};
+
+// ComputeContactMultiMatSphereHertz = CCMMSHertz
+template <class GridT>
+using CCMMSHertzNoneTmpl = ComputeContactClassifierSphereHertz<CohesiveLawType::None, GridT>;
+template <class GridT>
+using CCMMSHertzDmtTmpl = ComputeContactClassifierSphereHertz<CohesiveLawType::DMT, GridT>;
+template <class GridT>
+using CCMMSHertzCohesiveTmpl = ComputeContactClassifierSphereHertz<CohesiveLawType::Cohesive, GridT>;
+
+// === register factories ===
+ONIKA_AUTORUN_INIT(contact_force_sphere_@LAW@_@MODEL@_@MAT@)  // see CMakeLists.txt
+{
+  @REGISTRATIONS@
+}
+}  // namespace exaDEM
