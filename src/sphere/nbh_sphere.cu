@@ -46,19 +46,18 @@ class UpdateContactInteractionSphere : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(double, rcut_inc, INPUT, REQUIRED,
            DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
-  ADD_SLOT(bool, symetric, INPUT, REQUIRED, DocString{"Activate the use of symetric feature (contact law)"});
   ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This operator build the interactions lists.
+        This operator build the interactions lists. The interactions are symetric: an interaction between two
+        spheres is stored once (the contact law computes the force of both spheres).
 
-        YAML example:
+        YAML example [no option]:
 
-          - nbh_sphere:
-             symetric: true)EOF";
+          - nbh_sphere)EOF";
   }
 
   inline void execute() final {
@@ -68,7 +67,6 @@ class UpdateContactInteractionSphere : public OperatorNode {
     const IJK dims = g.dimension();
     auto& interactions = ges->m_data;
     double rVerlet = *rcut_inc;
-    bool sym = *symetric;
     // if grid structure (dimensions) changed, we invalidate thie whole data
     if (interactions.size() != n_cells) {
       ldbg << "number of cells has changed, reset friction data" << std::endl;
@@ -235,70 +233,37 @@ class UpdateContactInteractionSphere : public OperatorNode {
         item.pair_.type_ = InteractionTypeId::VertexVertex;
 
         // We add interactions between spheres of the cell and spheres of the neighboring cells.
-        if (sym) {  // if symetric is true, we add interactions between two spheres only once.
-          apply_cell_particle_neighbors(
-              *grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-              [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b,
-                                                          size_t p_nbh_index) {
-                // default value of the interaction studied (A or i -> B or j)
-                const uint64_t id_nbh = cells[cell_b][field::id][p_b];
-                item.pair_.ghost_ = InteractionPair::NotGhost;
-                item.pair_.swap_ = false;
+        // symetric interactions: an interaction between two spheres is added only once.
+        apply_cell_particle_neighbors(
+            *grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
+            [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b, size_t p_nbh_index) {
+              // default value of the interaction studied (A or i -> B or j)
+              const uint64_t id_nbh = cells[cell_b][field::id][p_b];
+              item.pair_.ghost_ = InteractionPair::NotGhost;
+              item.pair_.swap_ = false;
 
-                if (id_a[p_a] >= id_nbh) {
-                  if (!g.is_ghost_cell(cell_b)) {
-                    return;
-                  }
-                }
-                if (g.is_ghost_cell(cell_b)) {
-                  item.pair_.ghost_ = InteractionPair::OwnerGhost;
-                }
-
-                auto& pi = item.i();  // particle i (id, cell id, particle position, sub vertex)
-                auto& pj = item.j();  // particle i (id, cell id, particle position, sub vertex)
-
-                // Add interactions
-                pi.id_ = id_a[p_a];
-                pi.p_ = p_a;
-                pi.sub_ = 0;
-                pj.id_ = id_nbh;
-                pj.p_ = p_b;
-                pj.cell_ = cell_b;
-                pj.sub_ = 0;
-                manager.add_item(item);
-              });
-        } else {  // If symetric is false, we add interactions between two spheres twice, once for each order (A or i ->
-                  // B or j and B or j -> A or i).
-          apply_cell_particle_neighbors(
-              *grid, *chunk_neighbors, cell_a, loc_a, std::false_type() /* not symetric */,
-              [&g, &manager, &cells, cell_a, &item, id_a](int p_a, size_t cell_b, unsigned int p_b,
-                                                          size_t p_nbh_index) {
-                // default value of the interaction studied (A or i -> B or j)
-                const uint64_t id_nbh = cells[cell_b][field::id][p_b];
-                item.pair_.ghost_ = InteractionPair::NotGhost;
-                item.pair_.swap_ = false;
-
-                if (id_a[p_a] >= id_nbh) {
+              if (id_a[p_a] >= id_nbh) {
+                if (!g.is_ghost_cell(cell_b)) {
                   return;
                 }
-                if (g.is_ghost_cell(cell_b)) {
-                  item.pair_.ghost_ = InteractionPair::OwnerGhost;
-                }
+              }
+              if (g.is_ghost_cell(cell_b)) {
+                item.pair_.ghost_ = InteractionPair::OwnerGhost;
+              }
 
-                auto& pi = item.i();  // particle i (id, cell id, particle position, sub vertex)
-                auto& pj = item.j();  // particle i (id, cell id, particle position, sub vertex)
+              auto& pi = item.i();  // particle i (id, cell id, particle position, sub vertex)
+              auto& pj = item.j();  // particle i (id, cell id, particle position, sub vertex)
 
-                // Add interactions
-                pi.id_ = id_a[p_a];
-                pi.p_ = p_a;
-                pi.sub_ = 0;
-                pj.id_ = id_nbh;
-                pj.p_ = p_b;
-                pj.cell_ = cell_b;
-                pj.sub_ = 0;
-                manager.add_item(item);
-              });
-        }
+              // Add interactions
+              pi.id_ = id_a[p_a];
+              pi.p_ = p_a;
+              pi.sub_ = 0;
+              pj.id_ = id_nbh;
+              pj.p_ = p_b;
+              pj.cell_ = cell_b;
+              pj.sub_ = 0;
+              manager.add_item(item);
+            });
 
         // We update the interaction storage with the new interactions identified by the manager
         manager.update_extra_storage<true>(storage);

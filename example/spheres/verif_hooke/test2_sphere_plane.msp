@@ -36,7 +36,6 @@ setup_drivers:
 compute_force:
   # no gravity (as in the paper)
   - contact_sphere:
-     symetric: true
      config: { kn: 2.286908e8, kt: 0, kr: 0, mu: 0, damp_rate: 0 }
      config_driver: { kn: 2.286908e8, kt: 0, kr: 0, mu: 0, damp_rate: 0 }
 

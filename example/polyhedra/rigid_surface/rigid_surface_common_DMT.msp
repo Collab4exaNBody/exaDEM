@@ -15,6 +15,5 @@ set_mono_mat:
 compute_force:
   - gravity_force
   - contact_singlemat_polyhedron_hooke_dmt:
-     symetric: true
      config: { kn: 10000, kt: 10000, kr: 0.0, mu: 0.1, damp_rate: 0.999, gamma: 100.} 
      config_driver: { kn: 10000, kt: 10000, kr: 0.0, mu: 0.3, damp_rate: 0.999, gamma:100.} 

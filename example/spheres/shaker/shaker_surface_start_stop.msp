@@ -43,7 +43,6 @@ setup_drivers:
 compute_force:
   - gravity_force
   - contact_sphere:
-     symetric: true
      config: { kn: 100000, kt: 100000, kr: 0.1, mu: 0.0, damp_rate: 0.9} 
      config_driver: { kn: 100000, kt: 90000, kr: 0.1, mu: 0.0, damp_rate: 0.9} 
 

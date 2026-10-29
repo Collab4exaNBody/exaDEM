@@ -40,8 +40,7 @@ setup_drivers:
 
 compute_force:
   - gravity_force
-  - contact_multimat_sphere:
-     symetric: true
+  - contact_multimat_sphere
 
 domain:
   cell_size: 2 m

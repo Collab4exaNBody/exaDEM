@@ -1,0 +1,68 @@
+## Same as rotating-drum-periodic.msp with the Hertz contact law
+## Define:
+# config_spheres.msp
+# common_define_particles
+# common_setup_particles
+# CYL1 area
+# gravity
+includes:
+  - rotating-drum-common.msp
+
+io_tree:
+  - io_config:
+     dir_name: "RotatingDrumPeriodicHertzDir"
+
+input_data:
+  - init_rcb_grid
+  - common_define_particles
+  - lattice:
+      structure: SC
+      types: [ Sphere1 ]
+      size: [ 1.0 , 1.0 , 1.0 ]
+      region: CYL1
+  - common_setup_particles
+  # E and nu chosen so that the Hertz stiffness 2 E* sqrt(R* delta) is close to kn = 1000
+  # of the Hooke version for an overlap delta ~ 1e-3
+  - multimat_contact_params_hertz:
+     group1:   [    0 ]
+     group2:   [    0 ]
+     young:    [ 6.e4 ]
+     poisson:  [  0.3 ]
+     kt:       [ 1000 ]
+     kr:       [  0.0 ]
+     mu:       [  0.1 ]
+     damprate: [ 0.999 ]
+  - drivers_contact_params_hertz:
+     group:          [     0 ]
+     driver_id:      [     0 ]
+     kt:             [   800 ]
+     kr:             [   0.0 ]
+     mu:             [   0.3 ]
+     damprate:       [ 0.999 ]
+     driver_young:   [  6.e4 ]
+     driver_poisson: [   0.3 ]
+
+setup_drivers:
+  - register_cylinder:
+     id: 0
+     state: {radius: 10, center: [10,10,10], axis: [1,0,1], vrot: [0,0.5,0]}
+     params: { motion_type: STATIONARY }
+
++compute_force:
+  - contact_sphere_hertz_none
+
+domain:
+  cell_size: 4
+  periodic: [false,true,false]
+  grid_dims: [5, 5, 5]
+  bounds: [ [0 ,0, 0] , [20, 20, 20]]
+  expandable: true
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 10000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: 5000
+  dt: 0.0005 s
+  rcut_inc: 0.4
+  enable_contact_network: true

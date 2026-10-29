@@ -51,7 +51,6 @@ transverse_velocity_slab:
 compute_force:
   - gravity_force  
   - contact_sphere:
-     symetric: true
      config: { kn: 1000, kt: 800, kr: 0, mu: 0.3, damp_rate: 0.9}
   - transverse_velocity_slab
 
