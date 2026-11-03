@@ -232,6 +232,53 @@ struct Drivers {
   }
 
   /**
+   * @brief Checks whether every driver in the collection is stationary.
+   * @return True if all drivers were set up with a STATIONARY motion type,
+   * false otherwise. An empty collection is considered stationary.
+   */
+  inline bool is_stationary() const {
+    for (size_t i = 0; i < type_index_cpu_.size(); i++) {
+      if (type_index_cpu_[i].type_ == DRIVER_TYPE::UNDEFINED) continue;
+      if (!exaDEM::is_stationary(motion_[i].input_motion_type_)) return false;
+    }
+    return true;
+  }
+
+  /**
+   * @brief Checks that the host-side cache used by is_stationary() (i.e.
+   * motion_[i].input_motion_type_) still matches the motion type effectively
+   * stored on each driver in data_ (the one GPU kernels read/write through
+   * DriversGPUAccessor).
+   * @return True if every driver agrees, false if at least one mismatch is found
+   * (details are printed to exanb::lout).
+   */
+  inline bool check_motion_type_coherence() const {
+    bool coherent = true;
+    for (size_t i = 0; i < type_index_cpu_.size(); i++) {
+      DRIVER_TYPE t = type_index_cpu_[i].type_;
+      MotionType effective;
+      if (t == DRIVER_TYPE::CYLINDER) {
+        effective = data_.get_nth_const<DRIVER_TYPE::CYLINDER>()[type_index_cpu_[i].index_].motion_type_;
+      } else if (t == DRIVER_TYPE::SURFACE) {
+        effective = data_.get_nth_const<DRIVER_TYPE::SURFACE>()[type_index_cpu_[i].index_].motion_type_;
+      } else if (t == DRIVER_TYPE::BALL) {
+        effective = data_.get_nth_const<DRIVER_TYPE::BALL>()[type_index_cpu_[i].index_].motion_type_;
+      } else if (t == DRIVER_TYPE::RSHAPE) {
+        effective = data_.get_nth_const<DRIVER_TYPE::RSHAPE>()[type_index_cpu_[i].index_].motion_type_;
+      } else {
+        continue;  // UNDEFINED driver, nothing to compare
+      }
+      if (effective != motion_[i].input_motion_type_) {
+        exanb::lout << "Driver [" << i << "]: motion type mismatch between the CPU cache ("
+                    << motion_type_to_string(motion_[i].input_motion_type_) << ") and the driver data ("
+                    << motion_type_to_string(effective) << ")" << std::endl;
+        coherent = false;
+      }
+    }
+    return coherent;
+  }
+
+  /**
    * @brief Prints Drivers informations.
    */
   inline void print_drivers() const {

@@ -220,6 +220,12 @@ class DriverDisplacementOver : public OperatorNode {
       return;
     }
 
+    // all drivers are stationary, they cannot have moved since the backup
+    if (drvs.is_stationary()) {
+      *result = false;
+      return;
+    }
+
     // get backup
     Drivers& bcpd_ = *backup_drvs;
     size_t bcpd_size = bcpd_.get_size();
