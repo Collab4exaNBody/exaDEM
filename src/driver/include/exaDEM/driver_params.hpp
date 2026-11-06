@@ -216,49 +216,55 @@ struct Driver_params {
     return true;  // Return true if the motion is coherent
   }
 
-  void print_driver_params(MotionType motion_type) const {
-    exanb::lout << "Motion type        : " << motion_type_to_string(motion_type) << std::endl;
+  void print_driver_params(MotionType motion_type) const { print_driver_params(motion_type, exanb::lout); }
+
+  /**
+   * @brief Print driver motion parameters into the given stream.
+   */
+  template <class StreamT>
+  void print_driver_params(MotionType motion_type, StreamT& out) const {
+    out << "Motion type        : " << motion_type_to_string(motion_type) << std::endl;
 
     if (is_tabulated(motion_type)) {
       std::stringstream times;
       std::stringstream positions;
       tabulations_to_stream(motion_type, times, positions);
-      exanb::lout << times.rdbuf() << std::endl;
-      exanb::lout << positions.rdbuf() << std::endl;
+      out << times.rdbuf() << std::endl;
+      out << positions.rdbuf() << std::endl;
     }
 
     if (!is_stationary(motion_type)) {
       if (motion_start_threshold_ != 0 || motion_end_threshold_ != std::numeric_limits<double>::max()) {
         if (motion_end_threshold_ != std::numeric_limits<double>::max()) {
-          exanb::lout << "Motion duration    : [ " << motion_start_threshold_ << "s , " << motion_end_threshold_
-                      << "s ]" << std::endl;
+          out << "Motion duration    : [ " << motion_start_threshold_ << "s , " << motion_end_threshold_
+              << "s ]" << std::endl;
         } else {
-          exanb::lout << "Motion duration    : [ " << motion_start_threshold_ << "s ,  inf s )" << std::endl;
+          out << "Motion duration    : [ " << motion_start_threshold_ << "s ,  inf s )" << std::endl;
         }
       }
       if (is_linear(motion_type)) {
-        exanb::lout << "Motion vector      : " << motion_vector_ << std::endl;
+        out << "Motion vector      : " << motion_vector_ << std::endl;
         if (motion_type == LINEAR_MOTION) {
-          exanb::lout << "Velocity (constant): " << const_vel_ << std::endl;
+          out << "Velocity (constant): " << const_vel_ << std::endl;
         }
         if (motion_type == LINEAR_FORCE_MOTION) {
-          exanb::lout << "Force (constant)   : " << const_force_ << std::endl;
+          out << "Force (constant)   : " << const_force_ << std::endl;
         }
       }
       if (is_compressive(motion_type)) {
-        exanb::lout << "Sigma              : " << sigma_ << std::endl;
-        exanb::lout << "Damprate           : " << damprate_ << std::endl;
+        out << "Sigma              : " << sigma_ << std::endl;
+        out << "Damprate           : " << damprate_ << std::endl;
       }
     }
 
     if (is_shaker(motion_type)) {
-      exanb::lout << "Shaker.Omega       : " << omega_ << std::endl;
-      exanb::lout << "Shaker.Amplitude   : " << amplitude_ << std::endl;
-      exanb::lout << "Shaker.Direction   : [" << shaker_dir_ << "]" << std::endl;
+      out << "Shaker.Omega       : " << omega_ << std::endl;
+      out << "Shaker.Amplitude   : " << amplitude_ << std::endl;
+      out << "Shaker.Direction   : [" << shaker_dir_ << "]" << std::endl;
     }
 
     if (exaDEM::is_expr(motion_type)) {
-      expr_.expr_display(exanb::lout);
+      expr_.expr_display(out);
     }
   }
 

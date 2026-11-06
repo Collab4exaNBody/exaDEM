@@ -20,17 +20,29 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
+#include <filesystem>
+#include <fstream>
+#include <mpi.h>
+
 #include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
 using namespace onika::scg;
+
+// Above this number of drivers, the per-driver table no longer fits readably on screen,
+// so the detailed listing is written to a file instead.
+static constexpr size_t PRINT_DRIVERS_TABLE_MAX = 10;
+
 class PrintDrivers : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
+  ADD_SLOT(std::string, dir_name, INPUT, "ExaDEMOutputDir", DocString{"Main output directory."});
+  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
-        This operator prints drivers.
+        This operator prints drivers. If there are more than 10 drivers, the detailed
+        listing is written to <dir_name>/drivers.txt instead of being printed as a table.
         )EOF";
   }
 
@@ -42,7 +54,21 @@ class PrintDrivers : public OperatorNode {
     lout << "===== Summary" << std::endl;
     drvs.stats_drivers();
     lout << "===== List Of Drivers" << std::endl;
-    drvs.print_drivers();
+    if (drvs.get_size() > PRINT_DRIVERS_TABLE_MAX) {
+      int rank = 0;
+      MPI_Comm_rank(*mpi, &rank);
+      if (rank == 0) {
+        namespace fs = std::filesystem;
+        fs::create_directories(*dir_name);
+        std::string full_path = *dir_name + "/drivers.txt";
+        std::ofstream file(full_path);
+        drvs.print_drivers_detailed(file);
+        lout << "More than " << PRINT_DRIVERS_TABLE_MAX << " drivers: full driver list written to " << full_path
+             << std::endl;
+      }
+    } else {
+      drvs.print_drivers_table();
+    }
     lout << "=================================================================" << std::endl;
   }
 };

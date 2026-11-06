@@ -121,29 +121,35 @@ struct RShapeDriver {
 
   /** @brief Print information about the R-Shape.
    */
-  inline void print() const {
-    exanb::lout << "Driver Type: R-Shape" << std::endl;
-    exanb::lout << "Name               = " << shp_.name_ << std::endl;
-    exanb::lout << "Center             = " << fields_.center_ << std::endl;
-    exanb::lout << "Minkowski          = " << shp_.minkowski() << std::endl;
-    exanb::lout << "Velocity           = " << fields_.vel_ << std::endl;
-    exanb::lout << "Angular Velocity   = " << fields_.vrot_ << std::endl;
-    exanb::lout << "Orientation        = " << fields_.quat_.w << " " << fields_.quat_.x << " " << fields_.quat_.y << " "
-                << fields_.quat_.z << std::endl;
+  inline void print() const { print(exanb::lout); }
+
+  /**
+   * @brief Print information about the R-Shape into the given stream.
+   */
+  template <class StreamT>
+  inline void print(StreamT& out) const {
+    out << "Driver Type: R-Shape" << std::endl;
+    out << "Name               = " << shp_.name_ << std::endl;
+    out << "Center             = " << fields_.center_ << std::endl;
+    out << "Minkowski          = " << shp_.minkowski() << std::endl;
+    out << "Velocity           = " << fields_.vel_ << std::endl;
+    out << "Angular Velocity   = " << fields_.vrot_ << std::endl;
+    out << "Orientation        = " << fields_.quat_.w << " " << fields_.quat_.x << " " << fields_.quat_.y << " "
+        << fields_.quat_.z << std::endl;
     if (fields_.surface_ > 0.0) {
-      exanb::lout << "Surface            = " << fields_.surface_ << std::endl;
+      out << "Surface            = " << fields_.surface_ << std::endl;
     }
     if (fields_.drive_by_mom_) {
-      exanb::lout << "Applied moment     = " << fields_.applied_mom_ << std::endl;
-      exanb::lout << "Inertia            = " << fields_.inertia_ << std::endl;
-      exanb::lout << "normal(moment)     = " << fields_.mom_axis_ << std::endl;
+      out << "Applied moment     = " << fields_.applied_mom_ << std::endl;
+      out << "Inertia            = " << fields_.inertia_ << std::endl;
+      out << "normal(moment)     = " << fields_.mom_axis_ << std::endl;
     } else if (motion_type_ == PARTICLE) {
-      exanb::lout << "Mass               = " << fields_.mass_ << std::endl;
-      exanb::lout << "Inertia            = " << fields_.inertia_ << std::endl;
+      out << "Mass               = " << fields_.mass_ << std::endl;
+      out << "Inertia            = " << fields_.inertia_ << std::endl;
     }
-    exanb::lout << "Number of faces    = " << shp_.get_number_of_faces() << std::endl;
-    exanb::lout << "Number of edges    = " << shp_.get_number_of_edges() << std::endl;
-    exanb::lout << "Number of vertices = " << shp_.get_number_of_vertices() << std::endl;
+    out << "Number of faces    = " << shp_.get_number_of_faces() << std::endl;
+    out << "Number of edges    = " << shp_.get_number_of_edges() << std::endl;
+    out << "Number of vertices = " << shp_.get_number_of_vertices() << std::endl;
   }
 
   /**

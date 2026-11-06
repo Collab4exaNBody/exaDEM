@@ -109,16 +109,22 @@ struct Surface {
   /**
    * @brief Print information about the surface.
    */
-  inline void print() const {
-    exanb::lout << "Driver Type: Surface" << std::endl;
-    exanb::lout << "Offset: " << fields_.offset_ << std::endl;
-    exanb::lout << "Normal: " << fields_.normal_ << std::endl;
-    exanb::lout << "Center: " << fields_.center_ << std::endl;
-    exanb::lout << "Vel   : " << fields_.vel_ << std::endl;
-    exanb::lout << "AngVel: " << fields_.vrot_ << std::endl;
+  inline void print() const { print(exanb::lout); }
+
+  /**
+   * @brief Print information about the surface into the given stream.
+   */
+  template <class StreamT>
+  inline void print(StreamT& out) const {
+    out << "Driver Type: Surface" << std::endl;
+    out << "Offset: " << fields_.offset_ << std::endl;
+    out << "Normal: " << fields_.normal_ << std::endl;
+    out << "Center: " << fields_.center_ << std::endl;
+    out << "Vel   : " << fields_.vel_ << std::endl;
+    out << "AngVel: " << fields_.vrot_ << std::endl;
     if (is_compressive(motion_type_)) {
-      exanb::lout << "Acceleration: " << fields_.acc_ << std::endl;
-      exanb::lout << "Surface Value [>0]: " << fields_.surface_ << std::endl;
+      out << "Acceleration: " << fields_.acc_ << std::endl;
+      out << "Surface Value [>0]: " << fields_.surface_ << std::endl;
     }
   }
 
