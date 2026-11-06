@@ -126,13 +126,19 @@ struct Cylinder {
   /**
    * @brief Print information about the cylinder.
    */
-  inline void print() const {
-    exanb::lout << "Driver Type: Cylinder" << std::endl;
-    exanb::lout << "Radius: " << fields_.radius_ << std::endl;
-    exanb::lout << "Axis  : " << fields_.axis_ << std::endl;
-    exanb::lout << "Center: " << fields_.center_ << std::endl;
-    exanb::lout << "Vel   : " << fields_.vel_ << std::endl;
-    exanb::lout << "AngVel: " << fields_.vrot_ << std::endl;
+  inline void print() const { print(exanb::lout); }
+
+  /**
+   * @brief Print information about the cylinder into the given stream.
+   */
+  template <class StreamT>
+  inline void print(StreamT& out) const {
+    out << "Driver Type: Cylinder" << std::endl;
+    out << "Radius: " << fields_.radius_ << std::endl;
+    out << "Axis  : " << fields_.axis_ << std::endl;
+    out << "Center: " << fields_.center_ << std::endl;
+    out << "Vel   : " << fields_.vel_ << std::endl;
+    out << "AngVel: " << fields_.vrot_ << std::endl;
   }
 
   /**

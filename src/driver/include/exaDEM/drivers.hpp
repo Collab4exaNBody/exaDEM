@@ -20,12 +20,18 @@ under the License.
 
 #include <onika/flat_tuple.h>
 
+#include <algorithm>
+#include <array>
 #include <exaDEM/ball.hpp>
 #include <exaDEM/cylinder.hpp>
 #include <exaDEM/driver_base.hpp>
 #include <exaDEM/rshape.hpp>
 #include <exaDEM/surface.hpp>
 #include <exaDEM/undefined_driver.hpp>
+#include <iomanip>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace exaDEM {
 template <typename FuncT>
@@ -51,7 +57,7 @@ struct Drivers {
   std::vector<DriverTypeAndIndex> type_index_cpu_; /**< Vector storing the types of drivers. */
   // vector_t<Driver_params> motion_; /**< Vector storing the motion drivers parameters. */
   std::vector<Driver_params> motion_; /**< Vector storing the motion data drivers. */
-  onika::FlatTuple<vector_t<Cylinder>, vector_t<Surface>, vector_t<Ball>, vector_t<RShapeDriver> > data_;
+  onika::FlatTuple<vector_t<Cylinder>, vector_t<Surface>, vector_t<Ball>, vector_t<RShapeDriver>> data_;
 
   /**
    * @brief Get the size of the Drivers collection.
@@ -279,40 +285,145 @@ struct Drivers {
   }
 
   /**
-   * @brief Prints Drivers informations.
+   * @brief Prints Drivers informations (one detailed block per driver) into the given stream.
    */
-  inline void print_drivers() const {
+  template <class StreamT>
+  inline void print_drivers_detailed(StreamT& out) const {
     for (size_t i = 0; i < this->get_size(); i++) {
       auto t = type_index_cpu_[i].type_;
       if (t != DRIVER_TYPE::UNDEFINED) {
-        exanb::lout << "Driver [" << i << "]:" << std::endl;
+        out << "Driver [" << i << "]:" << std::endl;
         MotionType motion_type;
         if (t == DRIVER_TYPE::CYLINDER) {
           auto& driver = data_.get_nth_const<DRIVER_TYPE::CYLINDER>()[type_index_cpu_[i].index_];
-          driver.print();
+          driver.print(out);
           motion_type = driver.motion_type_;
         } else if (t == DRIVER_TYPE::SURFACE) {
           auto& driver = data_.get_nth_const<DRIVER_TYPE::SURFACE>()[type_index_cpu_[i].index_];
-          driver.print();
+          driver.print(out);
           motion_type = driver.motion_type_;
         } else if (t == DRIVER_TYPE::BALL) {
           auto& driver = data_.get_nth_const<DRIVER_TYPE::BALL>()[type_index_cpu_[i].index_];
-          driver.print();
+          driver.print(out);
           motion_type = driver.motion_type_;
         } else if (t == DRIVER_TYPE::RSHAPE) {
           auto& driver = data_.get_nth_const<DRIVER_TYPE::RSHAPE>()[type_index_cpu_[i].index_];
-          driver.print();
+          driver.print(out);
           motion_type = driver.motion_type_;
         } else {
           continue;
         }
-        motion_[i].print_driver_params(motion_type);
+        motion_[i].print_driver_params(motion_type, out);
       }
     }
   }
 
   /**
-   * @brief Prints statistics about the drivers in the collection.
+   * @brief Prints Drivers informations, one detailed block per driver, to exanb::lout.
+   */
+  inline void print_drivers() const { print_drivers_detailed(exanb::lout); }
+
+  /**
+   * @brief Prints a compact table of the drivers (one column per driver, one label column) to exanb::lout.
+   * @details Rows that do not apply to a given driver type are filled with "-".
+   */
+  inline void print_drivers_table() const {
+    const size_t n = this->get_size();
+    if (n == 0) {
+      return;
+    }
+
+    static constexpr std::array<const char*, 11> row_labels = {
+        "Index", "Type", "Motion Type", "Center", "Velocity", "AngVel", "Radius", "Axis", "Offset", "Normal", "Name"};
+
+    std::vector<std::array<std::string, 11>> columns(n);
+    for (size_t i = 0; i < n; i++) {
+      auto& col = columns[i];
+      col.fill("-");
+      col[0] = std::to_string(i);
+      auto t = type_index_cpu_[i].type_;
+      col[1] = print(t);
+      if (t == DRIVER_TYPE::UNDEFINED) {
+        continue;
+      }
+      MotionType motion_type;
+      std::ostringstream oss;
+      auto fmt = [&oss](const auto& v) -> std::string {
+        oss.str("");
+        oss << v;
+        return oss.str();
+      };
+      if (t == DRIVER_TYPE::CYLINDER) {
+        auto& d = data_.get_nth_const<DRIVER_TYPE::CYLINDER>()[type_index_cpu_[i].index_];
+        motion_type = d.motion_type_;
+        col[3] = fmt(d.fields_.center_);
+        col[4] = fmt(d.fields_.vel_);
+        col[5] = fmt(d.fields_.vrot_);
+        col[6] = fmt(d.fields_.radius_);
+        col[7] = fmt(d.fields_.axis_);
+      } else if (t == DRIVER_TYPE::SURFACE) {
+        auto& d = data_.get_nth_const<DRIVER_TYPE::SURFACE>()[type_index_cpu_[i].index_];
+        motion_type = d.motion_type_;
+        col[3] = fmt(d.fields_.center_);
+        col[4] = fmt(d.fields_.vel_);
+        col[5] = fmt(d.fields_.vrot_);
+        col[8] = fmt(d.fields_.offset_);
+        col[9] = fmt(d.fields_.normal_);
+      } else if (t == DRIVER_TYPE::BALL) {
+        auto& d = data_.get_nth_const<DRIVER_TYPE::BALL>()[type_index_cpu_[i].index_];
+        motion_type = d.motion_type_;
+        col[3] = fmt(d.fields_.center_);
+        col[4] = fmt(d.fields_.vel_);
+        col[5] = fmt(d.fields_.vrot_);
+        col[6] = fmt(d.fields_.radius_);
+      } else if (t == DRIVER_TYPE::RSHAPE) {
+        auto& d = data_.get_nth_const<DRIVER_TYPE::RSHAPE>()[type_index_cpu_[i].index_];
+        motion_type = d.motion_type_;
+        col[3] = fmt(d.fields_.center_);
+        col[4] = fmt(d.fields_.vel_);
+        col[5] = fmt(d.fields_.vrot_);
+        col[10] = d.shp_.name_;
+      } else {
+        continue;
+      }
+      col[2] = motion_type_to_string(motion_type);
+    }
+
+    size_t label_w = 0;
+    for (auto* label : row_labels) {
+      label_w = std::max(label_w, std::string(label).size());
+    }
+    std::vector<size_t> col_w(n, 0);
+    for (size_t i = 0; i < n; i++) {
+      for (size_t r = 0; r < row_labels.size(); r++) {
+        col_w[i] = std::max(col_w[i], columns[i][r].size());
+      }
+    }
+
+    std::ostringstream table;
+    auto print_separator = [&]() {
+      table << "+" << std::string(label_w + 2, '-');
+      for (size_t i = 0; i < n; i++) {
+        table << "+" << std::string(col_w[i] + 2, '-');
+      }
+      table << "+" << std::endl;
+    };
+
+    print_separator();
+    for (size_t r = 0; r < row_labels.size(); r++) {
+      table << "| " << std::left << std::setw(static_cast<int>(label_w)) << row_labels[r] << " ";
+      for (size_t i = 0; i < n; i++) {
+        table << "| " << std::left << std::setw(static_cast<int>(col_w[i])) << columns[i][r] << " ";
+      }
+      table << "|" << std::endl;
+    }
+    print_separator();
+
+    exanb::lout << table.str();
+  }
+
+  /**
+   * @brief Prints statistics about the drivers in the collection on a single line.
    * @details This function prints the total number of drivers and the count of
    * each driver type.
    */
@@ -324,11 +435,14 @@ struct Drivers {
     for (const auto& it : type_index_cpu_) {
       ++Count[it.type_];
     }
-    exanb::lout << "Drivers Stats" << std::endl;
-    exanb::lout << "Number of drivers: " << type_index_cpu_.size() << std::endl;
+    exanb::lout << "Drivers Stats: " << type_index_cpu_.size() << " drivers (";
     for (size_t t = 0; t < DRIVER_TYPE_SIZE; t++) {
-      exanb::lout << "Number of " << print(DRIVER_TYPE(t)) << "s: " << Count[t] << std::endl;
+      if (t != 0) {
+        exanb::lout << ", ";
+      }
+      exanb::lout << print(DRIVER_TYPE(t)) << "s: " << Count[t];
     }
+    exanb::lout << ")" << std::endl;
   }
 };
 
