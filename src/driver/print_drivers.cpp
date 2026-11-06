@@ -16,15 +16,14 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+#include <mpi.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
+#include <exaDEM/drivers.hpp>
 #include <filesystem>
 #include <fstream>
-#include <mpi.h>
-
-#include <exaDEM/drivers.hpp>
 
 namespace exaDEM {
 using namespace onika::scg;

@@ -18,21 +18,20 @@ under the License.
 */
 #pragma once
 
-#include <algorithm>
-#include <array>
-#include <iomanip>
-#include <sstream>
-#include <string>
-#include <vector>
-
 #include <onika/flat_tuple.h>
 
+#include <algorithm>
+#include <array>
 #include <exaDEM/ball.hpp>
 #include <exaDEM/cylinder.hpp>
 #include <exaDEM/driver_base.hpp>
 #include <exaDEM/rshape.hpp>
 #include <exaDEM/surface.hpp>
 #include <exaDEM/undefined_driver.hpp>
+#include <iomanip>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace exaDEM {
 template <typename FuncT>
@@ -58,7 +57,7 @@ struct Drivers {
   std::vector<DriverTypeAndIndex> type_index_cpu_; /**< Vector storing the types of drivers. */
   // vector_t<Driver_params> motion_; /**< Vector storing the motion drivers parameters. */
   std::vector<Driver_params> motion_; /**< Vector storing the motion data drivers. */
-  onika::FlatTuple<vector_t<Cylinder>, vector_t<Surface>, vector_t<Ball>, vector_t<RShapeDriver> > data_;
+  onika::FlatTuple<vector_t<Cylinder>, vector_t<Surface>, vector_t<Ball>, vector_t<RShapeDriver>> data_;
 
   /**
    * @brief Get the size of the Drivers collection.

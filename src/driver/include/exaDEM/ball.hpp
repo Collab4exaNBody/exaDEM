@@ -17,8 +17,9 @@
 
 #pragma once
 
-#include <onika/physics/units.h>
 #include <onika/math/basic_types.h>
+#include <onika/physics/units.h>
+
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_base.hpp>
 

@@ -236,8 +236,8 @@ struct Driver_params {
     if (!is_stationary(motion_type)) {
       if (motion_start_threshold_ != 0 || motion_end_threshold_ != std::numeric_limits<double>::max()) {
         if (motion_end_threshold_ != std::numeric_limits<double>::max()) {
-          out << "Motion duration    : [ " << motion_start_threshold_ << "s , " << motion_end_threshold_
-              << "s ]" << std::endl;
+          out << "Motion duration    : [ " << motion_start_threshold_ << "s , " << motion_end_threshold_ << "s ]"
+              << std::endl;
         } else {
           out << "Motion duration    : [ " << motion_start_threshold_ << "s ,  inf s )" << std::endl;
         }
