@@ -172,6 +172,7 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
         auto add_contact = [&manager](PlaceholderInteraction& item, int sub_i, int sub_j) -> void {
           item.pair_.pi_.sub_ = sub_i;
           item.pair_.pj_.sub_ = sub_j;
+          item[attr::weight] = 1.0;
           manager.add_item(item);
         };
 
