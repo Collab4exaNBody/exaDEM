@@ -96,7 +96,7 @@ struct ClassifyDriverInteractionsFunc {
       ONIKA_HOST_DEVICE_FUNC inline void operator()(PlaceholderInteraction& item, int sub_i, int sub_j) {
         item.pair_.pi_.sub_ = sub_i;
         item.pair_.pj_.sub_ = sub_j;
-        item[attr::weight] = 1.0;
+        item.reset();
         auto& container = interaction_classifier_accessor_.get_typed_accessor<IT>(item.type());
         container.set(prefix_[item.type()]++, item);
       }

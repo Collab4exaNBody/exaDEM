@@ -444,7 +444,7 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.pj_.sub_ = j;
             item.pair_.type_ = InteractionTypeId::VertexVertex;
             item.pair_.swap_ = false;
-            item[attr::weight] = 1.0;
+            item.reset();
             interactions[InteractionTypeId::VertexVertex].set(prefix[0]++, item);
           }
         }
@@ -457,7 +457,7 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.pj_.sub_ = j;
             item.pair_.type_ = InteractionTypeId::VertexEdge;
             item.pair_.swap_ = false;
-            item[attr::weight] = 1.0;
+            item.reset();
             interactions[InteractionTypeId::VertexEdge].set(prefix[1]++, item);
           }
         }
@@ -470,7 +470,7 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.pj_.sub_ = j;
             item.pair_.type_ = InteractionTypeId::VertexFace;
             item.pair_.swap_ = false;
-            item[attr::weight] = 1.0;
+            item.reset();
             interactions[InteractionTypeId::VertexFace].set(prefix[2]++, item);
           }
         }
@@ -488,7 +488,7 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
           item.pair_.pj_.sub_ = j;
           item.pair_.type_ = InteractionTypeId::EdgeEdge;
           item.pair_.swap_ = false;
-          item[attr::weight] = 1.0;
+          item.reset();
           interactions[InteractionTypeId::EdgeEdge].set(prefix[3]++, item);
         }
       }
@@ -510,7 +510,7 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.pi_.sub_ = j;
             item.pair_.pj_.sub_ = i;
             item.pair_.type_ = InteractionTypeId::VertexEdge;
-            item[attr::weight] = 1.0;
+            item.reset();
             interactions[InteractionTypeId::VertexEdge].set(prefix[1]++, item);
           }
         }
@@ -522,7 +522,7 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.pi_.sub_ = j;
             item.pair_.pj_.sub_ = i;
             item.pair_.type_ = InteractionTypeId::VertexFace;
-            item[attr::weight] = 1.0;
+            item.reset();
             interactions[InteractionTypeId::VertexFace].set(prefix[2]++, item);
           }
         }
