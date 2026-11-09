@@ -1,6 +1,5 @@
 #pragma once
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/pipeline_interaction_gpu/driver_interactions.hpp>
 
 namespace exaDEM {
 struct InteractionHistory {
@@ -30,14 +29,19 @@ struct InteractionHistory {
 template <typename CellsT>
 void setup_history_clean_ges(CellsT& cells, size_t* idxs, size_t ncells, GridCellParticleInteraction& ges,
                              InteractionHistory& history, onikaStream_t& st) {
-  ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::resize_start_size_history");
+  ONIKA_CU_PROF_RANGE_PUSH("pipeline_interaction_gpu::resize_start_size_history");
   history.start_.resize(ncells);
   history.size_.resize(ncells);
   ONIKA_CU_PROF_RANGE_POP();
 
+  if (ncells == 0) {
+    history.data_.resize(0);
+    return;
+  }
+
   size_t sum = 0;
 
-  ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fill_start_size_history");
+  ONIKA_CU_PROF_RANGE_PUSH("pipeline_interaction_gpu::fill_start_size_history");
 #pragma omp parallel for reduction(+ : sum)
   for (size_t i = 0; i < ncells; i++) {
     size_t cell_idx = idxs[i];
@@ -59,13 +63,13 @@ void setup_history_clean_ges(CellsT& cells, size_t* idxs, size_t ncells, GridCel
   }
   ONIKA_CU_PROF_RANGE_POP();
 
-  ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::resize_history_data");
+  ONIKA_CU_PROF_RANGE_PUSH("pipeline_interaction_gpu::resize_history_data");
   history.data_.resize(sum);
   ONIKA_CU_PROF_RANGE_POP();
 
   PlaceholderInteraction* __restrict__ history_data_ptr = history.data_.data();
 
-  ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::fill_history_data");
+  ONIKA_CU_PROF_RANGE_PUSH("pipeline_interaction_gpu::fill_history_data");
 
   // reset storage for new data;
 #pragma omp parallel for

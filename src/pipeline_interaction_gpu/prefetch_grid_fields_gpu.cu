@@ -25,7 +25,8 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
+#include <exaDEM/color_log.hpp>
+#include <exaDEM/pipeline_interaction_gpu/gpu_utils.hpp>
 #include <exaDEM/traversal.hpp>
 #include <vector>
 
@@ -53,7 +54,7 @@ inline void prefetch_grid_cells(GridCellsT* grid_cells, const size_t* cell_indic
 static constexpr unsigned int kPrefetchLaneBase = 64;
 
 template <typename GridT>
-class PrefetchAllFieldsGPU : public OperatorNode {
+class PrefetchGridFieldsGPU : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
@@ -62,13 +63,13 @@ class PrefetchAllFieldsGPU : public OperatorNode {
     return R"EOF(
         YAML example:
 
-          - prefetch_all_fields_gpu
+          - prefetch_grid_fields_gpu
        )EOF";
   }
 
   inline void execute() final {
 #ifndef ONIKA_CUDA_VERSION
-    color_log::error("prefetch_all_fields_gpu", "This operator only works on GPU.");
+    color_log::error("prefetch_grid_fields_gpu", "This operator only works on GPU.");
 #else
     auto grid_cells = grid->cells();
     auto [cell_indices, active_cell_count] = traversal_real->info();
@@ -90,7 +91,7 @@ class PrefetchAllFieldsGPU : public OperatorNode {
 
 // === register factories ===
 ONIKA_AUTORUN_INIT(prefetch_grid_fields_gpu) {
-  OperatorNodeFactory::instance()->register_factory("prefetch_all_fields_gpu",
-                                                    make_grid_variant_operator<PrefetchAllFieldsGPU>);
+  OperatorNodeFactory::instance()->register_factory("prefetch_grid_fields_gpu",
+                                                    make_grid_variant_operator<PrefetchGridFieldsGPU>);
 }
 }  // namespace exaDEM

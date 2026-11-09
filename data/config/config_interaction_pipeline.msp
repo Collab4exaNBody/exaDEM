@@ -1,0 +1,72 @@
+######### Interaction lists pipeline: CPU / GPU blocks ####################
+#
+# The GPU pipeline is used only if:   use_gpu_pipeline = GPU available AND NOT global.disable_gpu_pipeline
+# (see detect_gpu_pipeline and config_globals.msp).
+#
+# This file provides blocks which hide the difference between the CPU and the GPU pipeline.
+# Particle modes (config_polyhedra, config_fragmentation...) use them in their own chains
+# as if they were regular operators, and don't have to deal with the GPU.
+
+############ blocks ############
+nbh_polyhedron_gpu_if_enabled:
+  condition: use_gpu_pipeline
+  body:
+    - nbh_polyhedron_gpu
+
+nbh_polyhedron_cpu_if_enabled:
+  condition: not use_gpu_pipeline
+  body:
+    - nbh_polyhedron
+
+# neighbor search of polyhedra
+nbh_polyhedron_auto:
+  - nbh_polyhedron_gpu_if_enabled
+  - nbh_polyhedron_cpu_if_enabled
+
+classify_interactions_gpu_if_enabled:
+  condition: use_gpu_pipeline
+  body:
+    - classify_interaction_ghost
+
+classify_interactions_cpu_if_enabled:
+  condition: not use_gpu_pipeline
+  body:
+    - classify_interactions
+
+# interactions -> classifier
+classify_interactions_auto:
+  - classify_interactions_gpu_if_enabled
+  - classify_interactions_cpu_if_enabled
+
+unclassify_interactions_gpu_if_enabled:
+  condition: use_gpu_pipeline
+  body:
+    - unclassify_gpu
+
+unclassify_interactions_cpu_if_enabled:
+  condition: not use_gpu_pipeline
+  body:
+    - unclassify_interactions
+
+# classifier -> interactions
+unclassify_interactions_auto:
+  - unclassify_interactions_gpu_if_enabled
+  - unclassify_interactions_cpu_if_enabled
+
+# steps which are only required by the CPU pipeline
+chunk_neighbors_contact_cpu_only:
+  condition: not use_gpu_pipeline
+  body:
+    - chunk_neighbors_contact
+
+compress_data_cpu_only:
+  condition: not use_gpu_pipeline
+  body:
+    - compress_interaction
+    - interaction_consistency_checker
+
+# only works (and is only useful) with the GPU pipeline
+prefetch_grid_fields_gpu_only:
+  condition: use_gpu_pipeline
+  body:
+    - prefetch_grid_fields_gpu

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <onika/cuda/cuda_context.h>
 #include <onika/oarray.h>
 #include <onika/parallel/block_parallel_for.h>
 #include <onika/parallel/parallel_execution_context.h>
@@ -7,6 +8,21 @@
 
 #include <exaDEM/classifier/classifier_dispatcher.hpp>
 #include <exaDEM/shapes.hpp>
+
+/// @brief Prefetches [ptr, ptr+size) to `device` (cudaCpuDeviceId for the host). Does nothing without CUDA.
+static inline onikaError_t ONIKA_PREFETCH(const void* ptr, size_t size, int device, onikaStream_t stream) {
+#ifdef ONIKA_CUDA_VERSION
+#if CUDART_VERSION >= 13000
+  cudaMemLocation loc = {(device == cudaCpuDeviceId) ? cudaMemLocationTypeHost : cudaMemLocationTypeDevice,
+                         (device == cudaCpuDeviceId) ? 0 : device};
+  return cudaMemPrefetchAsync(ptr, size, loc, 0, stream);
+#else
+  return cudaMemPrefetchAsync(ptr, size, device, stream);
+#endif
+#else
+  return onikaError_t(0);
+#endif
+}
 
 namespace exaDEM {
 typedef onika::oarray_t<int, InteractionTypeId::NTypes> InteractionTypePerCellCounter;

@@ -9,9 +9,8 @@
 #include <parallel/algorithm>
 #endif
 #include <compare>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_utils.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <exaDEM/pipeline_interaction_gpu/cell_storage.hpp>
 #include <vector>
 
 namespace exaDEM {
@@ -44,7 +43,13 @@ inline void build_list_of_ignore_pair(ListOfIgnorePairs& ignore_pairs, const siz
       auto& interactions = ges.m_data[cell_idx].m_data;
       for (auto& I : interactions) {
         if (I.persistent()) {
-          local.push_back(IgnorePairEntry{static_cast<uint32_t>(cell_idx), I.pair_.owner().id_, I.pair_.partner().id_});
+          const auto& owner = I.pair_.owner();
+          const auto& partner = I.pair_.partner();
+          if (owner.id_ < partner.id_) {
+            local.push_back(IgnorePairEntry{static_cast<uint32_t>(cell_idx), owner.id_, partner.id_});
+          } else {
+            local.push_back(IgnorePairEntry{static_cast<uint32_t>(partner.cell_), partner.id_, owner.id_});
+          }
         }
       }
     }

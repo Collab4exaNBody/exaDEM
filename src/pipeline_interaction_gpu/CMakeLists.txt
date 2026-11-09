@@ -14,7 +14,7 @@
 # kind, either express or implied.  see the license for the
 # specific language governing permissions and limitations
 # under the license.
-set(exadem_experimental_LINK_LIBRARIES
+set(exadem_pipeline_interaction_gpu_LINK_LIBRARIES
 	exanbCompute
 	exanbGridCellParticles
 	exanbExtraStorage
@@ -24,4 +24,4 @@ set(exadem_experimental_LINK_LIBRARIES
 	exadem_grid
 	exadem_interaction
 	exadem_polyhedron)
-xnb_add_plugin(exadem_experimental ${CMAKE_CURRENT_SOURCE_DIR})
+xnb_add_plugin(exadem_pipeline_interaction_gpu ${CMAKE_CURRENT_SOURCE_DIR})

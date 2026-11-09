@@ -1,22 +1,8 @@
 #pragma once
 #include <omp.h>
 
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
-
-static inline onikaError_t ONIKA_PREFETCH(const void* ptr, size_t size, int device, onikaStream_t stream) {
-#ifdef ONIKA_CUDA_VERSION
-#if CUDART_VERSION >= 13000
-  cudaMemLocation loc = {(device == cudaCpuDeviceId) ? cudaMemLocationTypeHost : cudaMemLocationTypeDevice,
-                         (device == cudaCpuDeviceId) ? 0 : device};
-  return cudaMemPrefetchAsync(ptr, size, loc, 0, stream);
-#else
-  return cudaMemPrefetchAsync(ptr, size, device, stream);
-#endif
-#else
-  return onikaError_t(0);
-#endif
-}
+#include <exaDEM/color_log.hpp>
+#include <exaDEM/pipeline_interaction_gpu/driver_interactions.hpp>
 
 namespace exaDEM {
 // Stores information about non-empty cells (GPU/CPU friendly)
@@ -132,7 +118,7 @@ inline void add_particle_particle_totals(CellStorage& cell_storage, CellInteract
       to_span(pair_storage.size_),         cell_accessor.offset_,     cell_accessor.size_};
 
   queue << onika::parallel::set_lane(lane)
-        << parallel_for(n_cells, func, exec_ctx("nbh_gpu::add_particle_particle_totals"), opts)
+        << parallel_for(n_cells, func, exec_ctx("pipeline_interaction_gpu::add_particle_particle_totals"), opts)
         << onika::parallel::flush;
 }
 
@@ -145,11 +131,12 @@ inline void add_particle_particle_totals(CellStorage& cell_storage, CellInteract
  * @param classifier Classifier providing access to interactions per type.
  * @param ges GridCellParticleInteraction storage for the grid.
  * @param ghost_only If true, only transfers interactions flagged as ghost.
+ * @param typeID_start/typeID_end Range of interaction type ids to transfer, both inclusive.
  */
 template <bool ghost_only, bool active_interaction, bool append = false>
 void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info, CellStorage& cell_storage,
                               ClassifierViewAccessor& interaction_classifier_accessor, GridCellParticleInteraction& ges,
-                              const int typeID_start = 0, const int typeID_end = InteractionTypeId::NTypes) {
+                              const int typeID_start = 0, const int typeID_end = InteractionTypeId::NTypes - 1) {
   // Number of non-empty cells to process
   size_t ncells = info.start_cell_.size();
 
@@ -198,6 +185,13 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
     }
 
     if (number_of_interactions == 0) {
+      if constexpr (!append) {
+        // storage.m_data is now empty: the per-particle ranges must not keep stale offsets/sizes
+        for (auto& [_offset, _size, _pid] : info_particles) {
+          _offset = 0;
+          _size = 0;
+        }
+      }
       continue;
     }
 
