@@ -91,3 +91,7 @@ The operator only computes `frame_velocity`; it is applied with `freeze_particle
 
 Single-impact tests adapted from Chung & Ooi, *"Benchmark tests for verifying discrete element modelling codes at particle impact level"*, Granular Matter 13, 643-656 (2011), to the linear (Hooke) contact law: elastic impact of two identical spheres, elastic impact of a sphere on a rigid plane, damped impacts with different restitution coefficients. The results (velocity, normal force vs overlap and vs time) are checked against the exact analytical solution as non-regression tests. See [`verif_hooke/README.md`](verif_hooke/README.md).
 
+## Hertz Contact Law Verification
+
+Normal impact tests 1, 2 and 3 of Chung & Ooi (2011) with the Hertz contact law (spheres only, `contact_sphere_hertz_[none|cohesive|dmt]`) and the materials of the paper: elastic impact of two identical spheres (glass, limestone), elastic impact of a sphere on a rigid plane, impacts with different restitution coefficients. The maximal overlap, force and contact time match Table 3 of the paper, and the results are checked against the solution of the Hertz impact as non-regression tests. See [`verif_hertz/README.md`](verif_hertz/README.md).
+

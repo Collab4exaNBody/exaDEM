@@ -83,17 +83,16 @@ struct SimulationStateNode : public OperatorNode {
 
   // DEM data
   ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
-  ADD_SLOT(bool, symetric, INPUT, REQUIRED, DocString{"Use of symetric feature (contact law)"});
   ADD_SLOT(InterfaceManager, im, INPUT, OPTIONAL, DocString{"List of interfaces"});
 
   static constexpr FieldSet<field::_vx, field::_vy, field::_vz, field::_vrot, field::_mass> reduce_field_set{};
 
-  /** @brief Reduces simulation I/O for a given classifier and symmetry flag.
+  /** @brief Reduces simulation I/O for a given classifier.
+   * The contact laws are symetric: a particle-particle interaction is stored once for both particles.
    * @param classifier The classifier containing interaction lists.
-   * @param symetric The symmetry flag.
    * @return The reduced simulation I/O result.
    */
-  inline IOSimInteractionResult reduce_sim_io(Classifier& classifier, bool symetric) {
+  inline IOSimInteractionResult reduce_sim_io(Classifier& classifier) {
     IOSimInteractionResult res;
     VectorT<IOSimInteractionResult> results;
     int types = classifier.number_of_waves();
@@ -105,10 +104,8 @@ struct SimulationStateNode : public OperatorNode {
         assert(typeID < static_cast<int>(classifier.contact_state_.size()));
         const auto& buffs = classifier.contact_state_[typeID];  // get buffers for this interaction type
         const double* const dnp = onika::cuda::vector_data(buffs.dn_);
-        int coef = 1;
-        if (typeID < InteractionTypeId::NTypesPP && symetric) {
-          coef *= 2;
-        }
+        // symetric contact laws: a particle-particle interaction counts for both particles
+        const int coef = (typeID < InteractionTypeId::NTypesPP) ? 2 : 1;
         CDispatcher::dispatch(typeID, classifier, func, coef, dnp, results[typeID], pec);
       }
     }  // synchronize
@@ -135,7 +132,7 @@ struct SimulationStateNode : public OperatorNode {
 
     // get interaction informations
     Classifier& classifier = *ic;
-    exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier, *symetric);
+    exaDEM::itools::IOSimInteractionResult red = reduce_sim_io(classifier);
 
     // reduce partial sums and share the result
     uint64_t active_interactions, total_interactions;

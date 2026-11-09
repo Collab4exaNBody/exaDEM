@@ -17,8 +17,9 @@
 
 #pragma once
 
-#include <onika/physics/units.h>
 #include <onika/math/basic_types.h>
+#include <onika/physics/units.h>
+
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_base.hpp>
 
@@ -100,18 +101,24 @@ struct Ball {
   /**
    * @brief Print information about the ball.
    */
-  inline void print() const {
-    exanb::lout << "Driver Type: Ball" << std::endl;
-    exanb::lout << "Radius: " << fields_.radius_ << std::endl;
-    exanb::lout << "Center: " << fields_.center_ << std::endl;
-    exanb::lout << "Vel   : " << fields_.vel_ << std::endl;
-    exanb::lout << "AngVel: " << fields_.vrot_ << std::endl;
+  inline void print() const { print(exanb::lout); }
+
+  /**
+   * @brief Print information about the ball into the given stream.
+   */
+  template <class StreamT>
+  inline void print(StreamT& out) const {
+    out << "Driver Type: Ball" << std::endl;
+    out << "Radius: " << fields_.radius_ << std::endl;
+    out << "Center: " << fields_.center_ << std::endl;
+    out << "Vel   : " << fields_.vel_ << std::endl;
+    out << "AngVel: " << fields_.vrot_ << std::endl;
     if (is_compressive(motion_type_)) {
-      exanb::lout << "Radius acceleration: " << fields_.ra_ << std::endl;
-      exanb::lout << "Radius velocity: " << fields_.rv_ << std::endl;
+      out << "Radius acceleration: " << fields_.ra_ << std::endl;
+      out << "Radius velocity: " << fields_.rv_ << std::endl;
     }
     if (is_force_motion(motion_type_)) {
-      exanb::lout << "Mass: " << fields_.mass_ << std::endl;
+      out << "Mass: " << fields_.mass_ << std::endl;
     }
   }
 

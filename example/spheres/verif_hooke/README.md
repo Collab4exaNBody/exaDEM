@@ -10,7 +10,7 @@ verifying discrete element modelling codes at particle impact level"*,
 Granular Matter 13, 643-656 (2011),
 https://doi.org/10.1007/s10035-011-0277-0, and **adapted to the Hooke
 model**. The paper's reference solutions use Hertz-Mindlin contact theory,
-which exaDEM does not implement; here the geometry, materials and impact
+whose normal part (Hertz law, spheres only) is verified in `../verif_hertz`; here the geometry, materials and impact
 velocities of the paper are kept, but every reference curve is the exact
 solution of the linear contact law that exaDEM actually solves.
 

@@ -1,3 +1,5 @@
 exadem_add_unit_test(forcefield gravity)
 exadem_add_unit_test(forcefield common_kernels)
 exadem_add_unit_test(forcefield contact_force)
+exadem_add_unit_test(forcefield hertz_kernels)
+exadem_add_unit_test(forcefield contact_force_hertz)

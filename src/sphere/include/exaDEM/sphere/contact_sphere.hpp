@@ -122,7 +122,6 @@ struct ContactLawFunc {
   ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(Interaction& item, TMPLC* cells,
                                                                                    const TCFPA& cpa,
                                                                                    const double time) const {
-    using ContactParamsT = ContactParams;
     auto& i = item.i();  // id for particle id, cell for cell id, p for position, sub for vertex id
     auto& j = item.j();  // id for particle id, cell for cell id, p for position, sub for vertex id
     auto& cell_i = cells[i.cell_];
@@ -149,7 +148,7 @@ struct ContactLawFunc {
     const auto& t_j = cell_j[field::group][j.p_];
 
     // === Contact Parameters
-    const ContactParamsT& cp = cpa(t_i, t_j);
+    const auto& cp = cpa(t_i, t_j);  // ContactParams (Hooke) or HertzParams (Hertz), given by the accessor
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
     /** if cohesive force */
@@ -234,7 +233,6 @@ struct ContactLawDriverFunc {
                                                                                    const TCFPA& cpa,
                                                                                    const double time) const {
     auto& i = item.i();  // id for particle id, cell for cell id, p for position, sub for vertex id
-    using ContactParamsT = ContactParams;
     const int driver_idx = item.driver_id();
     TMPLD& driver = drvs.get_typed_driver<TMPLD>(driver_idx);
     auto& cell = cells[i.cell_];
@@ -254,7 +252,7 @@ struct ContactLawDriverFunc {
     const auto& type = cell[field::group][i.p_];
 
     // === Contact Parameters
-    const ContactParamsT& cp = cpa(type, driver_idx);
+    const auto& cp = cpa(type, driver_idx);  // ContactParams (Hooke) or HertzParams (Hertz), given by the accessor
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
     /** if cohesive force */
@@ -326,7 +324,6 @@ struct ContactLawRShapeDriverFunc {
                                                                                    const double time) const {
     auto& i = item.i();  // id for particle id, cell for cell id, p for position, sub for vertex id
     auto& d = item.driver();
-    using ContactParamsT = ContactParams;
     const int driver_idx = item.driver_id();
     RShapeDriver& driver = drvs.get_typed_driver<RShapeDriver>(driver_idx);
     auto& cell = cells[item.cell()];
@@ -351,7 +348,7 @@ struct ContactLawRShapeDriverFunc {
     const auto& type = cell[field::group][i.p_];
 
     // === Contact Parameters
-    const ContactParamsT& cp = cpa(type, driver_idx);
+    const auto& cp = cpa(type, driver_idx);  // ContactParams (Hooke) or HertzParams (Hertz), given by the accessor
     constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
 
     /** if cohesive force */

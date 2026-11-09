@@ -52,7 +52,6 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
   ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT, OPTIONAL,
            DocString{"List of contact parameters for simulations with multiple materials"});
   ADD_SLOT(double, dt, INPUT, REQUIRED);
-  ADD_SLOT(bool, symetric, INPUT_OUTPUT, true, DocString{"Activate the use of symetric feature (contact law)"});
   ADD_SLOT(Drivers, drivers, INPUT, OPTIONAL, DocString{"List of Drivers {Cylinder, Surface, Ball, Mesh}"});
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
@@ -89,29 +88,22 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
 
       YAML example:
         - contact_polyhedron:
-           symetric: true
            config: { kn: 100000, kt: 100000, kr: 0.1, mu: 0.9, damp_rate: 0.9}
 
         - contact_singlemat_polyhedron_hooke:
-           symetric: true
            config: { kn: 100000, kt: 100000, kr: 0.1, mu: 0.9, damp_rate: 0.9}
 
         - contact_singlemat_polyhedron_hooke_cohesive:
-           symetric: true
            config: { dncut: 0.1 m, kn: 100000, kt: 100000, kr: 0.1, fc: 0.05, mu: 0.9, damp_rate: 0.9}
 
         - contact_singlemat_polyhedron_hooke_dmt:
-           symetric: true
            config: { dncut: 0.1 m, kn: 100000, kt: 100000, kr: 0.1, mu: 0.9, damp_rate: 0.9, gamma: 0.05}
 
-        - contact_multimat_polyhedron_hooke_none:
-           symetric: true
+        - contact_multimat_polyhedron_hooke_none
 
-        - contact_multimat_polyhedron_hooke_dmt:
-           symetric: true
+        - contact_multimat_polyhedron_hooke_dmt
 
-        - contact_multimat_polyhedron_hooke_cohesive:
-           symetric: true
+        - contact_multimat_polyhedron_hooke_cohesive
       )EOF";
   }
 
@@ -246,11 +238,6 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
 
   void check_slots() {
     bool pw = *print_warning;
-
-    if (*symetric == false) {
-      color_log::error("contact_polyhedron",
-                       "The parameter symetric in contact classifier polyhedron has to be set to true.");
-    }
 
     constexpr auto LawCombo = makeLawCombo(ContactLawT, CohesiveLawT);
 

@@ -20,116 +20,37 @@ under the License.
 
 #include <onika/math/basic_types.h>
 
-#include <exaDEM/forcefield/common_kernels.hpp>
-#include <exaDEM/forcefield/contact_parameters.hpp>
-
-enum class ContactLawType {
-  Hooke
-  // Hertz
-  // ...
-};
-
-enum class CohesiveLawType {
-  None,
-  Cohesive,
-  DMT
-  // JKR
-  // stick ...
-};
-
-enum class LawComboType {
-  Hooke_None,
-  Hooke_Cohesive,
-  Hooke_DMT,
-
-  // Hertz, JKR, stick, ...
-  // Hertz_None,
-  // Hertz_Cohesive,
-  // ...
-};
-
-template <LawComboType>
-struct LawComboTraits;
-
-// ===== Hooke - None =====
-template <>
-struct LawComboTraits<LawComboType::Hooke_None> {
-  static constexpr bool hooke = true;
-  static constexpr bool cohesive = false;
-  static constexpr bool dmt = false;
-};
-
-// ===== Hooke - Cohesive =====
-template <>
-struct LawComboTraits<LawComboType::Hooke_Cohesive> {
-  static constexpr bool hooke = true;
-  static constexpr bool cohesive = true;
-  static constexpr bool dmt = false;
-};
-
-// ===== Hooke - DMT =====
-template <>
-struct LawComboTraits<LawComboType::Hooke_DMT> {
-  static constexpr bool hooke = true;
-  static constexpr bool cohesive = false;
-  static constexpr bool dmt = true;
-};
-
-constexpr LawComboType makeLawCombo(ContactLawType c, CohesiveLawType h) {
-  switch (c) {
-    case ContactLawType::Hooke:
-      switch (h) {
-        case CohesiveLawType::None:
-          return LawComboType::Hooke_None;
-        case CohesiveLawType::Cohesive:
-          return LawComboType::Hooke_Cohesive;
-        case CohesiveLawType::DMT:
-          return LawComboType::Hooke_DMT;
-      }
-      break;
-
-      // case ContactLawType::Hertz:
-      //     ...
-  }
-
-  throw std::logic_error("Unsupported law combination");
-}
+#include <exaDEM/forcefield/contact_force_common.hpp>
+#include <exaDEM/forcefield/contact_force_hertz.hpp>
+#include <exaDEM/forcefield/contact_force_hooke.hpp>
 
 namespace exaDEM {
 
-ONIKA_HOST_DEVICE_FUNC inline void reset(Vec3d& in) { in = Vec3d{0.0, 0.0, 0.0}; }
+/** Parameters of a contact law: ContactParams for the Hooke law, HertzParams for the Hertz law. */
+template <ContactLawType ContactLaw>
+struct ContactLawParams;
+
+template <>
+struct ContactLawParams<ContactLawType::Hooke> {
+  using type = ContactParams;
+};
+
+template <>
+struct ContactLawParams<ContactLawType::Hertz> {
+  using type = HertzParams;
+};
+
+template <ContactLawType ContactLaw>
+using ContactLawParamsT = typename ContactLawParams<ContactLaw>::type;
 
 /**
- * @brief Applies the DMT (Derjaguin–Muller–Toporov) adhesion force to a contact.
- *
- * This function computes and adds the attractive DMT contribution when two
- * particles or surfaces are in contact (i.e., when the normal overlap `dn`
- * is negative).
-
- * @param hkp   Contact parameters, including the surface energy `gamma`.
- * @param reff  Effective contact radius used in the DMT formulation.
- * @param dn    Normal overlap. The force is applied only when `dn < 0`.
- * @param n     Unit normal vector at the contact point, oriented from j to i.
- * @param f_i   Reference to the resulting force applied to particle i.
+ * @brief Computes the contact force of the contact law ContactLaw (see contact_force_hooke.hpp and
+ * contact_force_hertz.hpp), `hkp` being the parameters of the law (ContactLawParamsT<ContactLaw>).
  */
-ONIKA_HOST_DEVICE_FUNC inline void apply_dmt_force(const ContactParams& hkp, double reff, double dn, const Vec3d& n,
-                                                   Vec3d& f_i) {
-  // Disabled if gamma <= 0
-  if (hkp.gamma_ <= 0.0) return;
-
-  // DMT : attractive force only if  contact (dn < 0)
-  if (dn < 0.0) {
-    double F_dmt = 2.0 * M_PI * reff * hkp.gamma_;
-
-    // attractive force : -F_dmt * n
-    f_i -= F_dmt * n;
-  }
-}
-
-template <ContactLawType ContactLaw, CohesiveLawType CohesiveLaw>
+template <ContactLawType ContactLaw, CohesiveLawType CohesiveLaw, typename ParamsT>
 ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
                                                       const Vec3d& n,  // -normal
-                                                      const double dt, const ContactParams& hkp, const double meff,
+                                                      const double dt, const ParamsT& hkp, const double meff,
                                                       const double reff,
                                                       Vec3d& ft,  // tangential force between particle i and j
                                                       const Vec3d& contact_position,
@@ -142,78 +63,13 @@ ONIKA_HOST_DEVICE_FUNC inline void contact_force_core(const double dn,
                                                       const Vec3d& vel_j,   // velocities j
                                                       const Vec3d& vrot_j   // angular velocities j
 ) {
-  constexpr auto LawCombo = makeLawCombo(ContactLaw, CohesiveLaw);
-
-  // === Cohesive law : before contact
-  if constexpr (LawComboTraits<LawCombo>::cohesive) {
-    if (dn >= 0)  // dn <= hkp.dncut_ if contact
-    {
-      const double fn_value = (hkp.fc_ / hkp.dncut_) * dn - hkp.fc_;
-      f_i += fn_value * n;
-      ft = {0, 0, 0};
-      return;
-    }
+  static_assert(std::is_same_v<ParamsT, ContactLawParamsT<ContactLaw>>, "wrong parameters for this contact law");
+  if constexpr (ContactLaw == ContactLawType::Hooke) {
+    hooke_contact_force_core<CohesiveLaw>(dn, n, dt, hkp, meff, reff, ft, contact_position, pos_i, vel_i, f_i, mom_i,
+                                          vrot_i, pos_j, vel_j, vrot_j);
+  } else {
+    hertz_contact_force_core<CohesiveLaw>(dn, n, dt, hkp, meff, reff, ft, contact_position, pos_i, vel_i, f_i, mom_i,
+                                          vrot_i, pos_j, vel_j, vrot_j);
   }
-
-  // === Compute damping coefficient
-  const double damp = compute_damp(hkp.damp_rate_, hkp.kn_, meff);
-
-  // === Relative velocity (j relative to i)
-  auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
-
-  // === Compute relative velocity
-  const double vn = exanb::dot(vel, n);
-  Vec3d fn;  // normal force
-
-  // === Compute Contact forces
-
-  // Hooke
-  if constexpr (LawComboTraits<LawCombo>::hooke) {
-    // - Normal force (elastic contact + viscous damping)
-    fn = compute_normal_force<LawComboTraits<LawCombo>::cohesive>(hkp.kn_, hkp.fc_, damp, dn, vn, n);
-
-    // - Tangential force (friction)
-    ft += exaDEM::compute_tangential_force(hkp.kt_, dt, vn, n, vel);
-
-    double threshold_ft;
-
-    // - Fit tangential force
-    if constexpr (!LawComboTraits<LawCombo>::cohesive) {
-      threshold_ft = exaDEM::compute_threshold_ft(hkp.mu_, hkp.kn_, dn);
-    } else {
-      threshold_ft = exaDEM::compute_threshold_ft_with_cohesive_force(hkp.mu_, exanb::dot(fn, n), hkp.fc_);
-    }
-    exaDEM::fit_tangential_force(threshold_ft, ft);
-  }
-
-  // Other contact laws can be added here
-  // if constexpr (ContactLaw == ContactLawType::Hertz)
-  // (...)
-
-  // === Sum forces
-  f_i = fn + ft;
-
-  // === Adhesion Laws
-
-  // DMT adhesive force
-  if constexpr (LawComboTraits<LawCombo>::dmt) {
-    apply_dmt_force(hkp, reff, dn, n, f_i);
-  }
-  // Other adhesion laws can be added here
-  // if constexpr (LawComboTraits<LawCombo>::jkr)
-
-  // === update moments
-  mom_i += hkp.kr_ * (vrot_j - vrot_i) * dt;
-
-  Vec3d branch = contact_position - pos_i;
-  double r = (exanb::dot(branch, vrot_i)) / (exanb::dot(vrot_i, vrot_i));
-  branch -= r * vrot_i;
-
-  constexpr double mur = 0;
-  double threshold_mom = std::abs(mur * exanb::norm(branch) * exanb::norm(fn));  // even without fabs, the value should
-                                                                                 // be positive
-  double mom_square = exanb::dot(mom_i, mom_i);
-  if (mom_square > 0.0 && mom_square > threshold_mom * threshold_mom)
-    mom_i = mom_i * (threshold_mom / sqrt(mom_square));
 }
 }  // namespace exaDEM

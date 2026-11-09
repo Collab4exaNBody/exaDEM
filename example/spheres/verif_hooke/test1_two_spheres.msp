@@ -38,8 +38,7 @@ input_data:
 
 compute_force:
   # no gravity (as in the paper)
-  - contact_multimat_sphere:
-     symetric: true
+  - contact_multimat_sphere
 
 domain:
   cell_size: 0.02 m

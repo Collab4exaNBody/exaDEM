@@ -45,7 +45,6 @@ domain:
   expandable: true
 
 global:
-  symetric: true
   simulation_dump_frequency: -1
   simulation_end_iteration: 1800000
   simulation_log_frequency: 1000

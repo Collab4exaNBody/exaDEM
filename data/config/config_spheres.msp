@@ -6,8 +6,7 @@ save_shapes: nop
 
 chunk_neighbors_impl:
   - chunk_neighbors_contact
-  - nbh_sphere:
-     symetric: true
+  - nbh_sphere
   - update_interaction_ghost
   - classify_interactions
 

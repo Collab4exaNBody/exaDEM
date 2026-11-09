@@ -25,7 +25,6 @@ compute_force:
      cx: 0.38
      mu: 0.0000015
   - contact_sphere:
-     symetric: true
      config: { kn: 100000, kt: 100000, kr: 0.1, mu: 0.5, damp_rate: 0.9} 
 
 domain:

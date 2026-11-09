@@ -25,6 +25,7 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
+#include <exaDEM/drivers.hpp>
 #include <exaDEM/forcefield/contact_parameters.hpp>
 #include <exaDEM/forcefield/multimat_parameters.hpp>
 
@@ -192,9 +193,179 @@ class MultiMatContactParams : public OperatorNode {
   }
 };
 
+class DriversContactParams : public OperatorNode {
+  ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT_OUTPUT, REQUIRED,
+           DocString{"List of contact parameters for simulations with multiple materials"});
+  ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
+  ADD_SLOT(std::vector<uint32_t>, group, INPUT, OPTIONAL, DocString{"List of particle group indices."});
+  ADD_SLOT(std::vector<int>, driver_id, INPUT, OPTIONAL, DocString{"List of drivers."});
+  ADD_SLOT(std::vector<double>, dncut, INPUT, OPTIONAL, DocString{"List of dncut values."});
+  ADD_SLOT(std::vector<double>, kn, INPUT, OPTIONAL, DocString{"List of kn values."});
+  ADD_SLOT(std::vector<double>, kt, INPUT, OPTIONAL, DocString{"List of kt values."});
+  ADD_SLOT(std::vector<double>, kr, INPUT, OPTIONAL, DocString{"List of kr values."});
+  ADD_SLOT(std::vector<double>, mu, INPUT, OPTIONAL, DocString{"List of mu values."});
+  ADD_SLOT(std::vector<double>, fc, INPUT, OPTIONAL, DocString{"List of fc values."});
+  ADD_SLOT(std::vector<double>, gamma, INPUT, OPTIONAL, DocString{"List of gamma values."});
+  ADD_SLOT(std::vector<double>, damprate, INPUT, OPTIONAL, DocString{"List of damprate values."});
+  ADD_SLOT(ContactParams, default_config, INPUT, OPTIONAL,
+           DocString{"Contact parameters for sphere interactions"});  // can be re-used for to dump contact network
+  ADD_SLOT(bool, verbosity, INPUT, false, DocString{"Print force field parameter details"});
+
+  // -----------------------------------------------
+  // ----------- Operator documentation ------------
+  inline std::string documentation() const final {
+    return R"EOF(
+        This operator fills the list of contact parameters between particles and drivers. 
+
+        YAML example:
+
+          - drivers_contact_params:
+             group:     [      0,     1 ]
+             driver_id: [      0,     0 ]
+             kn:        [  10000, 15000 ]
+             kt:        [   8000, 12000 ]
+             kr:        [    0.0,   0.1 ]
+             mu:        [    0.5,   0.5 ]
+             damprate:  [  0.999, 0.999 ]
+
+        )EOF";
+  }
+
+  inline std::string operator_name() { return "drivers_contact_params"; }
+
+ public:
+  inline void execute() final {
+    MultiMatParamsT<ContactParams>& cp = *multimat_cp;
+
+    // We use the same data map to for drivers
+    ParticleTypeMap driver_map;
+    Drivers& drvs = *drivers;
+
+    /** Build the driver map */
+    for (int i = 0; i < int(drvs.get_size()); i++) {
+      auto driver_type = drvs.type(i);
+      std::string driver_name;
+      if (driver_type == DRIVER_TYPE::RSHAPE) {
+        RShapeDriver& D = drvs.get_typed_driver<RShapeDriver>(i);
+        driver_name = D.shp_.name_;
+      } else {
+        driver_name = print(driver_type) + "_" + std::to_string(i);
+      }
+      driver_map[driver_name] = i;
+    }
+
+    ContactParams params;
+    if (default_config.has_value()) params = *default_config;
+    cp.setup_drivers(driver_map, params);
+
+    // check input slots
+    if (group.has_value()) { /** not default config */
+      auto& particle_groups = *group;
+      auto& drv_id = *driver_id;
+      auto& normal_coeffs = *kn;
+      auto& tangential_coeffs = *kt;
+      auto& rotational_coeffs = *kr;
+      auto& frictional_coeffs = *mu;
+      auto& damping_coeffs = *damprate;
+
+      std::vector<double> cohesion_coeffs;
+      std::vector<double> dncut_coeffs;
+      std::vector<double> gamma_coeffs;
+
+      int number_of_pairs = particle_groups.size();
+
+      auto check_lengths_match = [number_of_pairs, this]<typename Vec>(Vec& list, std::string cp_field_name) -> bool {
+        if (number_of_pairs != int(list.size())) {
+          std::string msg = "The length of the field \"" + cp_field_name;
+          msg += "\" does not match the size of the other fields. ";
+          msg += "group.size() = " + std::to_string(number_of_pairs);
+          msg += ", while " + cp_field_name + ".size() = " + std::to_string(list.size());
+          color_log::error(this->operator_name(), msg);
+        }
+        return true;
+      };
+
+      check_lengths_match(drv_id, "drvs");
+      check_lengths_match(normal_coeffs, "kn");
+      check_lengths_match(tangential_coeffs, "kt");
+      check_lengths_match(rotational_coeffs, "kr");
+      check_lengths_match(frictional_coeffs, "mu");
+      check_lengths_match(damping_coeffs, "damprate");
+
+      bool fill_cohesion_part = false;
+
+      if (fc.has_value() && dncut.has_value()) {
+        cohesion_coeffs = *fc;
+        dncut_coeffs = *dncut;
+        check_lengths_match(cohesion_coeffs, "fc");
+        check_lengths_match(dncut_coeffs, "dncut");
+        fill_cohesion_part = true;
+      }
+
+      bool fill_DMT_part = false;
+
+      if (gamma.has_value()) {
+        gamma_coeffs = *gamma;
+        check_lengths_match(gamma_coeffs, "gamma");
+        fill_DMT_part = true;
+      }
+
+      /** Check input driver indexes */
+      for (auto did : drv_id) {
+        if (did >= int(drvs.get_size())) {
+          color_log::error(operator_name(),
+                           "driver id: " + std::to_string(did) +
+                               " is out of range of the driver list: " + std::to_string(drvs.get_size()));
+        }
+        auto driver_type = drvs.type(did);
+        if (driver_type == DRIVER_TYPE::UNDEFINED) {
+          color_log::error(operator_name(), "The driver type is undefined for id: " + std::to_string(did));
+        }
+      }
+
+      for (int p = 0; p < number_of_pairs; p++) {
+        uint32_t grp = particle_groups[p];
+        int64_t drv = drv_id[p];
+        params.kn_ = normal_coeffs[p];
+        params.kt_ = tangential_coeffs[p];
+        params.kr_ = rotational_coeffs[p];
+        params.mu_ = frictional_coeffs[p];
+        params.damp_rate_ = damping_coeffs[p];
+
+        if (fill_cohesion_part) {
+          params.fc_ = cohesion_coeffs[p];
+          params.dncut_ = dncut_coeffs[p];
+        } else {
+          params.fc_ = 0.0;
+          params.dncut_ = 0.0;
+        }
+
+        if (fill_DMT_part) {
+          params.gamma_ = gamma_coeffs[p];
+        } else {
+          params.gamma_ = 0.0;
+        }
+        cp.register_driver(grp, drv, params);
+      }
+    }
+
+    bool multimat_mode = false;
+    bool driver_mode = true;
+
+    cp.check_completeness(multimat_mode, driver_mode);
+    if (*verbosity) {
+      cp.display(multimat_mode, driver_mode);
+    }
+  }
+};
+
 // === register factories ===
 ONIKA_AUTORUN_INIT(multimat_contact_params) {
   OperatorNodeFactory::instance()->register_factory("multimat_contact_params",
                                                     make_simple_operator<MultiMatContactParams>);
+}
+ONIKA_AUTORUN_INIT(drivers_contact_params) {
+  OperatorNodeFactory::instance()->register_factory("drivers_contact_params",
+                                                    make_simple_operator<DriversContactParams>);
 }
 }  // namespace exaDEM

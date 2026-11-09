@@ -146,7 +146,7 @@ struct MultiMatParamsT {
    * @param mat2 The index of the second material.
    * @return The calculated index for the material-to-material contact parameter.
    */
-  ONIKA_HOST_DEVICE_FUNC inline int get_idx_multimat(int group1, int group2) {
+  ONIKA_HOST_DEVICE_FUNC inline int get_idx_multimat(int group1, int group2) const {
     assert(group1 < number_of_groups_);
     assert(group2 < number_of_groups_);
     return group1 * number_of_groups_ + group2;
@@ -162,7 +162,7 @@ struct MultiMatParamsT {
    * @param driver The index of the driver.
    * @return The calculated index for the driver-to-material contact parameter.
    */
-  ONIKA_HOST_DEVICE_FUNC inline int get_idx_drivers(int group, int driver) {
+  ONIKA_HOST_DEVICE_FUNC inline int get_idx_drivers(int group, int driver) const {
     assert(group < number_of_groups_);
     assert(driver < number_of_drivers_);
     return group * number_of_drivers_ + driver;

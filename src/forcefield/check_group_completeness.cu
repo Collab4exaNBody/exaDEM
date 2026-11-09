@@ -32,6 +32,7 @@ under the License.
 
 // exaDEM
 #include <exaDEM/forcefield/contact_parameters.hpp>
+#include <exaDEM/forcefield/hertz_parameters.hpp>
 #include <exaDEM/forcefield/multimat_parameters.hpp>
 #include <exaDEM/traversal.hpp>
 
@@ -71,6 +72,8 @@ class CheckGroupCompleteness : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);
   ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, INPUT, OPTIONAL,
            DocString{"List of contact parameters for simulations with multiple materials"});
+  ADD_SLOT(MultiMatParamsT<HertzParams>, multimat_hertz_cp, INPUT, OPTIONAL,
+           DocString{"List of Hertz contact parameters for simulations with multiple materials"});
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
 
   // -----------------------------------------------
@@ -91,7 +94,7 @@ class CheckGroupCompleteness : public OperatorNode {
 
  public:
   inline void execute() final {
-    if (!multimat_cp.has_value()) {
+    if (!multimat_cp.has_value() && !multimat_hertz_cp.has_value()) {
       return;
     }
 
@@ -108,11 +111,11 @@ class CheckGroupCompleteness : public OperatorNode {
     MPI_Allreduce(&local, &max_group, 1, MPI_UNSIGNED, MPI_MAX, *mpi);
     const uint32_t n_groups_field = max_group + 1;
 
-    const int n_groups_cp = multimat_cp->size_groups();
+    const int n_groups_cp = multimat_cp.has_value() ? multimat_cp->size_groups() : multimat_hertz_cp->size_groups();
     if (n_groups_field > static_cast<uint32_t>(n_groups_cp)) {
       color_log::error(operator_name(),
                        "The 'group' particle field contains group index " + std::to_string(n_groups_field - 1) +
-                           ", but multimat_cp was only set up for " + std::to_string(n_groups_cp) +
+                           ", but the contact parameters were only set up for " + std::to_string(n_groups_cp) +
                            " group(s). Increase n_groups in multimat_contact_params / drivers_contact_params.");
     }
   }
