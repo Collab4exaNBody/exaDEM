@@ -94,6 +94,7 @@ class CheckGroupCompleteness : public OperatorNode {
 
  public:
   inline void execute() final {
+    set_gpu_enabled(false);  // Warning
     if (!multimat_cp.has_value() && !multimat_hertz_cp.has_value()) {
       return;
     }

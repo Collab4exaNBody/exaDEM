@@ -89,6 +89,7 @@ class SetGroupOperator : public OperatorNode {
   }
 
   inline void execute() final {
+    set_gpu_enabled(false);  // Warning
     const auto& type_map = *particle_type_map;
     const auto& type_names = *type;
     const auto& group_values = *group;
