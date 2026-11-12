@@ -67,6 +67,12 @@ inline onika::cuda::span<T> to_span(const onika::memory::CudaMMVector<T>& vec) {
   return {onika::cuda::vector_data(v), onika::cuda::vector_size(v)};
 }
 
+template <typename T>
+inline onika::cuda::span<T> to_span(const std::vector<T>& vec) {
+  auto& v = const_cast<std::vector<T>&>(vec);
+  return {v.data(),v.size()};
+}
+
 /**
  * @brief Swap two values on host or device.
  * @tparam T Type of the variables to swap
