@@ -29,6 +29,7 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
+#include <onika/parallel/block_parallel_for.h>
 
 #include <cassert>
 #include <cub/cub.cuh>
@@ -538,7 +539,7 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
     parallel_queue << set_lane(kLaneHistory)
-                   << parallel_for(history.start_.size(), history_updater, parallel_execution_context(), opts) << flush;
+                   << block_parallel_for(history.start_.size(), history_updater, parallel_execution_context(), onika::parallel::BlockParallelForOptions{}) << flush;
     parallel_queue.wait(kLaneHistory);
     ONIKA_CU_PROF_RANGE_POP();
 
