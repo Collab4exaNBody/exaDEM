@@ -21,6 +21,7 @@ under the License.
 #include <exaDEM/shape.hpp>
 #include <exaDEM/stl_mesh_reader.hpp>
 #include <vector>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 
@@ -47,7 +48,7 @@ inline shape build_shape(STLMeshReader& mesh, std::string name) {
 #pragma omp parallel
   {
     // first get vertices
-    std::vector<exanb::Vec3d> v;
+    std::vector<Vec3d> v;
 #pragma omp for
     for (int i = 0; i < n_faces; i++) {
       Face& face = mesh.get_data(i);

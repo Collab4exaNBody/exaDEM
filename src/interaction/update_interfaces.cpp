@@ -24,6 +24,7 @@ under the License.
 #include <exaDEM/interface/interface.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 class UpdateInterfaces : public OperatorNode {
   ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{"Interfaces built from the InnerBond interactions"});

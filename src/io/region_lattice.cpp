@@ -20,6 +20,7 @@ under the License.
 #include <exanb/grid_cell_particles/legacy_lattice_generator.h>
 
 namespace exaDEM {
+using namespace exanb;
 template <class GridT>
 using RegionLatticeTmpl = exanb::RegionLattice<GridT, field::_type>;
 template <class GridT>

@@ -29,6 +29,7 @@ under the License.
 #include <exaDEM/push_to_quaternion.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_orient, field::_vrot, field::_arot>>
 class PushToQuaternion : public OperatorNode {
   // attributes processed during computation

@@ -29,6 +29,7 @@ under the License.
 #include <exaDEM/forcefield/multimat_parameters.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 class InnerBondParamsOp : public OperatorNode {
   ADD_SLOT(MultiMatParamsT<InnerBondParams>, multimat_ibp, OUTPUT,

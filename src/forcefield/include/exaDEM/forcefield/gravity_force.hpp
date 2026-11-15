@@ -21,10 +21,11 @@ under the License.
 #include <onika/math/basic_types.h>
 #include <onika/parallel/parallel_for.h>
 #include <exanb/compute/compute_cell_particles.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 struct GravityForceDriverFunctor {
-  exanb::Vec3d g_ = {0.0, 0.0, -9.807};
+  Vec3d g_ = {0.0, 0.0, -9.807};
   template <typename T>
   inline void operator()(T& drv) const {
     if constexpr (std::is_same_v<std::remove_cv_t<T>, exaDEM::RShapeDriver>) {
@@ -36,7 +37,7 @@ struct GravityForceDriverFunctor {
 };
 
 struct GravityForceFunctor {
-  exanb::Vec3d g_ = {0.0, 0.0, -9.807};
+  Vec3d g_ = {0.0, 0.0, -9.807};
   ONIKA_HOST_DEVICE_FUNC inline void operator()(double mass, double& fx, double& fy, double& fz) const {
     fx += g_.x * mass;
     fy += g_.y * mass;

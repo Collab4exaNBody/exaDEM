@@ -20,9 +20,9 @@ under the License.
 
 #include <onika/math/basic_types.h>
 #include <onika/cuda/cuda.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
-using exanb::Vec3d;
 
 ONIKA_HOST_DEVICE_FUNC
 inline double compute_damp(const double damp_rate, const double kn, const double meff) {
@@ -34,8 +34,8 @@ ONIKA_HOST_DEVICE_FUNC
 inline Vec3d compute_relative_velocity(const Vec3d& contact_position, const Vec3d& pos_i, const Vec3d& vel_i,
                                        const Vec3d& vrot_i, const Vec3d& pos_j, const Vec3d& vel_j,
                                        const Vec3d& vrot_j) {
-  const auto contribution_i = vel_i - exanb::cross(contact_position - pos_i, vrot_i);
-  const auto contribution_j = vel_j - exanb::cross(contact_position - pos_j, vrot_j);
+  const auto contribution_i = vel_i - cross(contact_position - pos_i, vrot_i);
+  const auto contribution_j = vel_j - cross(contact_position - pos_j, vrot_j);
   const auto ret = contribution_j - contribution_i;
   return ret;
 }
@@ -128,7 +128,7 @@ inline double compute_threshold_ft_with_cohesive_force(const double mu, const do
 
 ONIKA_HOST_DEVICE_FUNC
 inline void fit_tangential_force(const double threshold_ft, Vec3d& ft) {
-  double ft_square = exanb::dot(ft, ft);
+  double ft_square = dot(ft, ft);
   if (ft_square > 0.0 && ft_square > threshold_ft * threshold_ft) {
     ft *= (threshold_ft / sqrt(ft_square));
   }
@@ -140,7 +140,7 @@ ONIKA_HOST_DEVICE_FUNC inline Vec3d compute_moments(const Vec3d& contact_positio
                                                     const Vec3d& m)  // I.mom
 {
   const auto Ci = (contact_position - p);
-  const auto Pimoment = exanb::cross(Ci, f) + m;
+  const auto Pimoment = cross(Ci, f) + m;
   return Pimoment;
 }
 };  // namespace exaDEM

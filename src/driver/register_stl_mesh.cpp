@@ -47,7 +47,7 @@ class RegisterRShapeDriver : public OperatorNode {
   ADD_SLOT(bool, binary, INPUT, false,
            DocString{"Binary mode, it only works if the shape is composed of triangles. Default is false."});
   ADD_SLOT(double, scale, INPUT, OPTIONAL, DocString{"Rescale your RShapeDriver"});
-  ADD_SLOT(exanb::Vec3d, deform, INPUT, OPTIONAL, DocString{"Deform your shape [uniaxial]. Usage: deform: [x, y, z]"});
+  ADD_SLOT(Vec3d, deform, INPUT, OPTIONAL, DocString{"Deform your shape [uniaxial]. Usage: deform: [x, y, z]"});
   ADD_SLOT(double, rcut_inc, INPUT,
            DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
 
@@ -102,7 +102,7 @@ class RegisterRShapeDriver : public OperatorNode {
       // not optimized
       bool big_shape = true;
       shp = read_shp(output_name, big_shape);
-      if (shp.compute_Im() != exanb::Vec3d{0, 0, 0}) {
+      if (shp.compute_Im() != Vec3d{0, 0, 0}) {
         if (state->mass_ < 1e100) {  // mass defined by the user (see RShapeDriverFields::mass_)
           color_log::warning(operator_name(), "Override inertia using shape I/m");
           state->inertia_ = shp.compute_Im() * state->mass_;
@@ -126,7 +126,7 @@ class RegisterRShapeDriver : public OperatorNode {
     }
 
     if (deform.has_value()) {
-      const exanb::Vec3d d = *deform;
+      const Vec3d d = *deform;
 
       if (d.x <= 0.0 || d.y <= 0.0 || d.z <= 0.0) {
         color_log::error(operator_name(), "Impossible to deform: factors must be strictly positive (x,y,z > 0).");

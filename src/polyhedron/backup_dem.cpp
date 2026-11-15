@@ -29,6 +29,7 @@ under the License.
 #include <exaDEM/polyhedron/backup_dem.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT>
 struct DEMBackupNode : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);

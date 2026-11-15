@@ -32,6 +32,7 @@ under the License.
 #include <exaDEM/push_to_quaternion.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 struct CombinedPrologFunctor {
   PushVec3SecondOrderFunctor push_f_v_r;
   PushVec3FirstOrderFunctor push_f_v;

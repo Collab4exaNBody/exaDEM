@@ -30,6 +30,7 @@ under the License.
 #include <exaDEM/random_quaternion.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_orient>>
 class SetQuaternion : public OperatorNode {

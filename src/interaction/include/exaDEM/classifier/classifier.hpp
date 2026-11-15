@@ -46,7 +46,7 @@ struct Classifier {
    * Initializes the waves vector to hold interactions for each type.
    */
   Classifier() {
-    ldbg << "Initialize Classifier" << std::endl;
+    exanb::ldbg << "Initialize Classifier" << std::endl;
     initialize();
   }
 
@@ -293,3 +293,4 @@ void for_all_interactions(Classifier& classifier, Func& func, Args&&... args) {
 }  // namespace exaDEM
 
 #include <exaDEM/classifier/classifier_dispatcher.hpp>
+#include <exaDEM/basic_type.hpp>

@@ -80,7 +80,7 @@ struct ReduceTFunctor {
    */
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const {
     ResultT local_val = ResultT();
-    func_.template operator()<IT>(local_val, i, data_, reduce_thread_local_t{});
+    func_.template operator()<IT>(local_val, i, data_, exanb::reduce_thread_local_t{});
 
     ONIKA_CU_BLOCK_SHARED onika::cuda::UnitializedPlaceHolder<ResultT> team_val_place_holder;
     ResultT& team_val = team_val_place_holder.get_ref();
@@ -91,12 +91,12 @@ struct ReduceTFunctor {
     ONIKA_CU_BLOCK_SYNC();
 
     if (ONIKA_CU_THREAD_IDX != 0) {
-      func_(team_val, local_val, reduce_thread_block_t{});
+      func_(team_val, local_val, exanb::reduce_thread_block_t{});
     }
     ONIKA_CU_BLOCK_SYNC();
 
     if (ONIKA_CU_THREAD_IDX == 0) {
-      func_(*reduced_val_, team_val, reduce_global_t{});
+      func_(*reduced_val_, team_val, exanb::reduce_global_t{});
     }
   }
 };
@@ -132,7 +132,7 @@ struct IOSimInteractionFunctor {
    * @param local The local result.
    * @param idx The index of the interaction.
    * @param interactions Pointer to the interaction data.
-   * @param reduce_thread_local_t Tag for thread-local reduction.
+   * @param exanb::reduce_thread_local_t Tag for thread-local reduction.
    *
    * This operator processes individual particle interactions, filtering out duplicates
    * and counting active interactions where particles are overlapping (dn < 0).
@@ -140,7 +140,7 @@ struct IOSimInteractionFunctor {
   template <InteractionType IT>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult& local, const uint64_t idx,
                                                 const typename ClassifierContainer<IT>::View& interactions,
-                                                reduce_thread_local_t = {}) const {
+                                                exanb::reduce_thread_local_t = {}) const {
     auto I = interactions(idx);
     if (I.pair_.ghost_ != InteractionPair::PartnerGhost) {
       const double& dn = dnp_[idx];
@@ -157,10 +157,10 @@ struct IOSimInteractionFunctor {
    *
    * @param global The global result.
    * @param local The local result.
-   * @param reduce_thread_block_t Tag for block-level reduction.
+   * @param exanb::reduce_thread_block_t Tag for block-level reduction.
    */
   ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult& global, IOSimInteractionResult& local,
-                                                reduce_thread_block_t) const {
+                                                exanb::reduce_thread_block_t) const {
     ONIKA_CU_ATOMIC_ADD(global.n_act_interaction_, local.n_act_interaction_);
     ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction_, local.n_tot_interaction_);
     EXADEM_CU_ATOMIC_MIN(global.min_dn_, local.min_dn_);
@@ -171,10 +171,10 @@ struct IOSimInteractionFunctor {
    *
    * @param global The global result.
    * @param local The local result.
-   * @param reduce_global_t Tag for global reduction.
+   * @param exanb::reduce_global_t Tag for global reduction.
    */
   ONIKA_HOST_DEVICE_FUNC inline void operator()(IOSimInteractionResult& global, IOSimInteractionResult& local,
-                                                reduce_global_t) const {
+                                                exanb::reduce_global_t) const {
     ONIKA_CU_ATOMIC_ADD(global.n_act_interaction_, local.n_act_interaction_);
     ONIKA_CU_ATOMIC_ADD(global.n_tot_interaction_, local.n_tot_interaction_);
     EXADEM_CU_ATOMIC_MIN(global.min_dn_, local.min_dn_);
@@ -199,10 +199,9 @@ static inline onika::parallel::ParallelExecutionWrapper reduce_data(onika::paral
                                                                     typename ClassifierContainer<IT>::View& data,
                                                                     Func& func, uint64_t size, ResultT& result) {
   using namespace onika::parallel;
-  using namespace onika::parallel;
   // #     if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #ifdef ONIKA_CUDA_VERSION
-  ParallelForOptions opts;
+  onika::parallel::ParallelForOptions opts;
   opts.omp_scheduling = OMP_SCHED_STATIC;
   ReduceTFunctor<IT, Func, ResultT> kernel = {data, func, &result};
   return parallel_for(size, kernel, exec_ctx, opts);
@@ -228,7 +227,7 @@ static inline onika::parallel::ParallelExecutionWrapper reduce_data(onika::paral
   result.min_dn_ = min_dn;
 
   // useless but it avoid bugs, TODO LATER
-  ParallelForOptions opts;
+  onika::parallel::ParallelForOptions opts;
   opts.omp_scheduling = OMP_SCHED_STATIC;
   ReduceTFunctor<IT, Func, ResultT> kernel = {data, func, &result};
   return parallel_for(0, kernel, exec_ctx, opts);

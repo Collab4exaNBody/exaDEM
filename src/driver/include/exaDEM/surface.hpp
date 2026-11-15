@@ -23,25 +23,26 @@ under the License.
 
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_base.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 // Data fields for a planar surface/wall driver
 struct SurfaceFields {
   /** Required geometry parameters */
   double offset_ = 0;               /**< Offset distance from origin along the normal vector. */
-  exanb::Vec3d normal_ = {0, 0, 1}; /**< Normalized normal vector of the surface plane. */
-  exanb::Vec3d center_ = {0, 0, 0}; /**< Reference center position of the surface. */
+  Vec3d normal_ = {0, 0, 1};        /**< Normalized normal vector of the surface plane. */
+  Vec3d center_ = {0, 0, 0};        /**< Reference center position of the surface. */
 
   /** Optional motion parameters */
-  exanb::Vec3d vel_ = {0, 0, 0};              /**< Linear velocity of the surface. */
-  exanb::Vec3d vrot_ = exanb::Vec3d{0, 0, 0}; /**< Angular velocity (rotation) of the surface. */
-  exanb::Vec3d forces_ = {0, 0, 0};           /**< Accumulated forces applied to the surface from interactions. */
-  exanb::Vec3d mom_ = {0, 0, 0};              /**< Accumulated moments (torques) applied to the surface. */
+  Vec3d vel_ = {0, 0, 0};       /**< Linear velocity of the surface. */
+  Vec3d vrot_ = Vec3d{0, 0, 0}; /**< Angular velocity (rotation) of the surface. */
+  Vec3d forces_ = {0, 0, 0};    /**< Accumulated forces applied to the surface from interactions. */
+  Vec3d mom_ = {0, 0, 0};       /**< Accumulated moments (torques) applied to the surface. */
   double mass_ = std::numeric_limits<double>::max() / 4; /**< Mass of the surface. */
   double surface_ = -1;                                  /**< Contact surface area (for compressive motion). */
 
   /** Derived quantities (not persisted) */
-  exanb::Vec3d center_proj_; /**< Center position projected onto the normal (offset * normal). */
+  Vec3d center_proj_;        /**< Center position projected onto the normal (offset * normal). */
   double acc_ = 0;           /**< Scalar acceleration along the normal direction. */
 };
 }  // namespace exaDEM
@@ -178,8 +179,8 @@ struct Surface {
                            "Surface center is update to [" + std::to_string(motion.pendulum_anchor_point_) + "]");
         fields_.center_ = motion.pendulum_anchor_point_;
       }
-      exanb::Vec3d axis = motion.pendulum_anchor_point_ - motion.pendulum_initial_position_;
-      if (std::fabs(exanb::dot(axis, motion.pendulum_swing_dir_)) >= 1e-14) {
+      Vec3d axis = motion.pendulum_anchor_point_ - motion.pendulum_initial_position_;
+      if (std::fabs(dot(axis, motion.pendulum_swing_dir_)) >= 1e-14) {
         color_log::error("register_surface",
                          "The vector from pendulum_anchor_point to pendulum_initial_position must be orthogonal to "
                          "pendulum_swing_dir.");
@@ -188,7 +189,7 @@ struct Surface {
 
     // checks
     // the center must lie on the plane: it is projected on it (its tangential coordinates are kept)
-    const double center_distance = exanb::dot(fields_.center_ - fields_.center_proj_, fields_.normal_);
+    const double center_distance = dot(fields_.center_ - fields_.center_proj_, fields_.normal_);
     if (std::fabs(center_distance) >= 1e-14) {
       color_log::warning("register_surface", "The Center point (surface) is not correctly defined");
       fields_.center_ = fields_.center_ - center_distance * fields_.normal_;
@@ -243,10 +244,10 @@ struct Surface {
         const double contact_surface = fields_.surface_;
 
         // Net force vector: F_contact - σ·S·n
-        exanb::Vec3d tmp = (fields_.forces_ - motion.sigma_ * contact_surface * motion.motion_vector_) / (mass * C);
+        Vec3d tmp = (fields_.forces_ - motion.sigma_ * contact_surface * motion.motion_vector_) / (mass * C);
 
         // Project onto motion axis → scalar acceleration (Surface driver, unlike Vec3d in particle driver)
-        fields_.acc_ = exanb::dot(tmp, motion.motion_vector_);
+        fields_.acc_ = dot(tmp, motion.motion_vector_);
 
       } else {
         fields_.acc_ = 0;  // zero mass: reset to avoid stale values
@@ -290,7 +291,7 @@ struct Surface {
       if (motion_type_ == MotionType::LINEAR_MOTION) {
         // Sanity check: for linear motion the velocity must match the prescribed
         // 1e-12 is an arbitrary small number to account for numerical precision issues.
-        assert(exanb::norm(fields_.vel_ - motion.const_vel_ * motion.motion_vector_) < 1e-12);
+        assert(norm(fields_.vel_ - motion.const_vel_ * motion.motion_vector_) < 1e-12);
       }
 
       if (motion_type_ == MotionType::PENDULUM_MOTION) {
@@ -306,13 +307,13 @@ struct Surface {
 
       // Default Velocity Verlet displacement along the wall normal:
       // This may be overridden below for shaker motion.
-      double displ = dt * exanb::dot(fields_.vel_, fields_.normal_) + 0.5 * dt * dt * fields_.acc_;
+      double displ = dt * dot(fields_.vel_, fields_.normal_) + 0.5 * dt * dt * fields_.acc_;
 
       if (motion_type_ == MotionType::SHAKER) {
         // Shaker motion: displacement is driven by the waveform signal difference
         const double signal_next = motion.shaker_signal(time + dt);
         const double signal_current = motion.shaker_signal(time);
-        const double angle_factor = exanb::dot(motion.shaker_direction(), fields_.normal_);
+        const double angle_factor = dot(motion.shaker_direction(), fields_.normal_);
         displ = (signal_next - signal_current) * angle_factor;
         fields_.vel_ = motion.shaker_velocity(time + dt);
       }
@@ -328,15 +329,15 @@ struct Surface {
    * @brief Field accessors for position, velocity, forces, and moments.
    */
   // Position (center) getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields_.center_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& position() { return fields_.center_; }
   // Linear velocity getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields_.vel_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& velocity() { return fields_.vel_; }
   // Accumulated forces getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields_.forces_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& forces() { return fields_.forces_; }
   // Accumulated moment (torque) getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields_.mom_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& moment() { return fields_.mom_; }
   // Angular velocity getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields_.vrot_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& angular_velocity() { return fields_.vrot_; }
 
   /**
    * @brief Check if a point is close enough to the surface for potential interaction.
@@ -345,8 +346,8 @@ struct Surface {
    * @param p The point to check.
    * @return True if the point is within cut-off radius of the surface, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const exanb::Vec3d& p) {
-    exanb::Vec3d proj = dot(p, fields_.normal_) * fields_.normal_;
+  ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const Vec3d& p) {
+    Vec3d proj = dot(p, fields_.normal_) * fields_.normal_;
     double d = norm(proj - fields_.center_proj_);
     return d <= rcut;
   }
@@ -363,16 +364,16 @@ struct Surface {
    *         - Vec3d: contact position on the surface plane.
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& p) {
-    exanb::Vec3d proj = dot(p, fields_.normal_) * fields_.normal_;
-    exanb::Vec3d surface_to_point = -(fields_.center_proj_ - proj);
-    double d = exanb::norm(surface_to_point);
+  inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d& p) {
+    Vec3d proj = dot(p, fields_.normal_) * fields_.normal_;
+    Vec3d surface_to_point = -(fields_.center_proj_ - proj);
+    double d = norm(surface_to_point);
     double dn = d - rcut;
     if (dn > 0) {
-      return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
+      return {false, dn, Vec3d(), Vec3d()};
     } else {
-      exanb::Vec3d n = surface_to_point / d;
-      exanb::Vec3d contact_position = p - n * (rcut + 0.5 * dn);
+      Vec3d n = surface_to_point / d;
+      Vec3d contact_position = p - n * (rcut + 0.5 * dn);
       return {true, dn, n, contact_position};
     }
   }

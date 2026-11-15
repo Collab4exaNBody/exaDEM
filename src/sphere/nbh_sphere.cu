@@ -39,6 +39,7 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT>
 class UpdateContactInteractionSphere : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);

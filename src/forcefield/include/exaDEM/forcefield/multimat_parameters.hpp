@@ -38,8 +38,8 @@ template <typename ContactParamsT>
 struct MultiMatParamsT {
   vector_t<ContactParamsT> multimat_cp_;       //< Contact parameters between material pairs
   vector_t<ContactParamsT> drivers_cp_;        //< Contact parameters between drivers and materials
-  ParticleTypeMap type_map_;                   //< Maps particle types to material indices
-  ParticleTypeMap driver_map_;                 //< Maps driver types to driver indices
+  exanb::ParticleTypeMap type_map_;            //< Maps particle types to material indices
+  exanb::ParticleTypeMap driver_map_;          //< Maps driver types to driver indices
   ReverseParticleTypeMap reverse_type_map_;    //< Maps material indices back to particle type names
   ReverseParticleTypeMap reverse_driver_map_;  //< Maps driver indices back to driver type names
   int number_of_groups_;                       //< Number of unique groups in the simulation
@@ -110,7 +110,7 @@ struct MultiMatParamsT {
     multimat_cp_.resize(number_of_groups_ * number_of_groups_, cp);
   }
 
-  void setup_multimat(const ParticleTypeMap& input_map, ContactParamsT cp = {}) {
+  void setup_multimat(const exanb::ParticleTypeMap& input_map, ContactParamsT cp = {}) {
     type_map_ = input_map;
     for (auto it : type_map_) {
       reverse_type_map_[it.second] = it.first;
@@ -129,7 +129,7 @@ struct MultiMatParamsT {
    * @param cp Initial contact parameters for each driver-material interaction (default is a default-constructed
    * object).
    */
-  void setup_drivers(const ParticleTypeMap& input_map, ContactParamsT cp = {}) {
+  void setup_drivers(const exanb::ParticleTypeMap& input_map, ContactParamsT cp = {}) {
     driver_map_ = input_map;
     for (auto it : driver_map_) {
       reverse_driver_map_[it.second] = it.first;

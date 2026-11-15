@@ -27,6 +27,7 @@ under the License.
 #include <exaDEM/set_fields.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>>
 class SetRadius : public OperatorNode {

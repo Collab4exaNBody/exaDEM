@@ -41,6 +41,7 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class UnclassifyGPU : public OperatorNode {
   ADD_SLOT(Domain, domain, INPUT, REQUIRED);

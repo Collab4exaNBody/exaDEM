@@ -39,8 +39,10 @@ under the License.
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
 #include <exaDEM/polyhedron/contact.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <bool multimat, ContactLawType ContactLawT, CohesiveLawType CohesiveLawT, typename GridT,
           class = AssertGridHasFields<GridT, field::_radius>>
 class ComputeContactClassifierPolyhedron : public OperatorNode {

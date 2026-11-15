@@ -25,6 +25,7 @@ under the License.
 #include <exaDEM/interaction/interaction_decoration.hpp>
 #include <exaDEM/interaction/interaction_pair.hpp>
 #include <iostream>
+#include <exaDEM/basic_type.hpp>
 
 // Single source of truth for Interaction's per-interaction fields: type, name, tuple index, mode.
 // Add a field by adding one line here; the tags and the backing FlatTuple type are derived from it.
@@ -103,7 +104,7 @@ struct Interaction {
    * and weight back to its neutral value (1.0, i.e. no kn_/kt_ scaling).
    */
   ONIKA_HOST_DEVICE_FUNC void reset() {
-    constexpr exanb::Vec3d null = {0, 0, 0};
+    constexpr Vec3d null = {0, 0, 0};
     (*this)[attr::friction] = null;
     (*this)[attr::moment] = null;
     (*this)[attr::weight] = 1.0;
@@ -133,7 +134,7 @@ struct Interaction {
     if (!pair_.active()) {
       return false;
     }
-    constexpr exanb::Vec3d null = {0, 0, 0};
+    constexpr Vec3d null = {0, 0, 0};
     bool res = (((*this)[attr::moment] != null) || ((*this)[attr::friction] != null));
     return res;
   }

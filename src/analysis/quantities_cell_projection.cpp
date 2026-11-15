@@ -32,6 +32,7 @@ under the License.
 #include <exaDEM/color_log.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <class GridT>
 class QuantitiesCellProjection : public OperatorNode {
   using StringList = std::vector<std::string>;

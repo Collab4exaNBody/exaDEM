@@ -25,6 +25,7 @@ under the License.
 #include <random>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_vrot, field::_arot>>
 class SetRandVrotArot : public OperatorNode {

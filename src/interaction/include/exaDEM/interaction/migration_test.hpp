@@ -24,7 +24,7 @@ under the License.
 namespace exaDEM {
 namespace interaction_test {
 using UIntType = uint64_t;
-using InfoType = ExtraStorageInfo;
+using InfoType = exanb::ExtraStorageInfo;
 
 /** @brief This function checks the consistency of the extra interaction storage by verifying that the particle ids in
  * the interaction list match the particle ids in the info array.

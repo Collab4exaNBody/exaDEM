@@ -26,6 +26,8 @@ under the License.
 #include <exaDEM/interface/interface.hpp>
 
 namespace exaDEM {
+using namespace exanb;
+using namespace onika::parallel;
 class ApplyInterfaceFractureCriterion : public OperatorNode {
   // attributes processed during computation
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);

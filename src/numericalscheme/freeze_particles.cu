@@ -29,6 +29,7 @@ under the License.
 #include <exaDEM/set_fields.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz, field::_mom>>
 class FreezeFieldsNode : public OperatorNode {
 #define FREEZE_TMPL double, double, double, Vec3d, double, double, double, Vec3d

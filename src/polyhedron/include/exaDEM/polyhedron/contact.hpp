@@ -24,39 +24,11 @@ under the License.
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
 #include <tuple>
+#include <exanb/core/grid_fields.h>
+#include <exaDEM/atomic.h>
 
 namespace exaDEM {
 namespace polyhedron {
-/**
- * @brief Atomically adds a value to a double variable.
- *
- * This function atomically adds the specified value to the given double variable.
- *
- * @param val Reference to the double variable to be modified.
- * @param add Value to add atomically to the variable.
- */
-ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(double& val, double add) { ONIKA_CU_ATOMIC_ADD(val, add); }
-
-/**
- * @brief Atomically adds components of a Vec3d to another Vec3d variable.
- *
- * @param val Reference to the destination Vec3d variable.
- * @param add Rvalue reference to the source Vec3d whose components are to be added.
- */
-ONIKA_HOST_DEVICE_FUNC
-inline void lockAndAdd(Vec3d& val, Vec3d& add) {
-  ONIKA_CU_ATOMIC_ADD(val.x, add.x);
-  ONIKA_CU_ATOMIC_ADD(val.y, add.y);
-  ONIKA_CU_ATOMIC_ADD(val.z, add.z);
-}
-
-ONIKA_HOST_DEVICE_FUNC
-inline void lockAndAdd(Vec3d& val, Vec3d&& add) {
-  ONIKA_CU_ATOMIC_ADD(val.x, add.x);
-  ONIKA_CU_ATOMIC_ADD(val.y, add.y);
-  ONIKA_CU_ATOMIC_ADD(val.z, add.z);
-}
-
 /**
  * @struct ContactLawFunc
  * @brief Structure defining contact law interactions for particles (polyhedra).
@@ -194,17 +166,17 @@ struct ContactLawFunc {
       // === update particle informations
       // ==== Particle i
       auto& mom_i = cell_i[field::mom][pi.p_];
-      lockAndAdd(mom_i, compute_moments(contact_position, ri, f, item[attr::moment]));
-      lockAndAdd(cell_i[field::fx][pi.p_], f.x);
-      lockAndAdd(cell_i[field::fy][pi.p_], f.y);
-      lockAndAdd(cell_i[field::fz][pi.p_], f.z);
+      EXADEM_CU_ATOMIC_ADD(mom_i, compute_moments(contact_position, ri, f, item[attr::moment]));
+      EXADEM_CU_ATOMIC_ADD(cell_i[field::fx][pi.p_], f.x);
+      EXADEM_CU_ATOMIC_ADD(cell_i[field::fy][pi.p_], f.y);
+      EXADEM_CU_ATOMIC_ADD(cell_i[field::fz][pi.p_], f.z);
 
       // ==== Particle j
       auto& mom_j = cell_j[field::mom][pj.p_];
-      lockAndAdd(mom_j, compute_moments(contact_position, rj, -f, -item[attr::moment]));
-      lockAndAdd(cell_j[field::fx][pj.p_], -f.x);
-      lockAndAdd(cell_j[field::fy][pj.p_], -f.y);
-      lockAndAdd(cell_j[field::fz][pj.p_], -f.z);
+      EXADEM_CU_ATOMIC_ADD(mom_j, compute_moments(contact_position, rj, -f, -item[attr::moment]));
+      EXADEM_CU_ATOMIC_ADD(cell_j[field::fx][pj.p_], -f.x);
+      EXADEM_CU_ATOMIC_ADD(cell_j[field::fy][pj.p_], -f.y);
+      EXADEM_CU_ATOMIC_ADD(cell_j[field::fz][pj.p_], -f.z);
     } else {
       item.reset();
       dn = 0;
@@ -291,13 +263,13 @@ struct ContactLawDriverFunc {
       fn = f - item[attr::friction];
 
       // === update informations
-      lockAndAdd(mom, compute_moments(contact_position, r, f, item[attr::moment]));
-      lockAndAdd(cell[field::fx][p], f.x);
-      lockAndAdd(cell[field::fy][p], f.y);
-      lockAndAdd(cell[field::fz][p], f.z);
+      EXADEM_CU_ATOMIC_ADD(mom, compute_moments(contact_position, r, f, item[attr::moment]));
+      EXADEM_CU_ATOMIC_ADD(cell[field::fx][p], f.x);
+      EXADEM_CU_ATOMIC_ADD(cell[field::fy][p], f.y);
+      EXADEM_CU_ATOMIC_ADD(cell[field::fz][p], f.z);
 
       if (need_forces(driver.motion_type_)) {
-        lockAndAdd(driver.forces(), -f);
+        EXADEM_CU_ATOMIC_ADD(driver.forces(), -f);
       }
     } else {
       item.reset();
@@ -400,12 +372,12 @@ struct ContactLawRShapeDriverFunc {
         // === used for analysis
         fn = f - item[attr::friction];
         // === update informations
-        lockAndAdd(mom, compute_moments(contact_position, r_i, f, item[attr::moment]));
-        lockAndAdd(cell[field::fx][pi.p_], f.x);
-        lockAndAdd(cell[field::fy][pi.p_], f.y);
-        lockAndAdd(cell[field::fz][pi.p_], f.z);
+        EXADEM_CU_ATOMIC_ADD(mom, compute_moments(contact_position, r_i, f, item[attr::moment]));
+        EXADEM_CU_ATOMIC_ADD(cell[field::fx][pi.p_], f.x);
+        EXADEM_CU_ATOMIC_ADD(cell[field::fy][pi.p_], f.y);
+        EXADEM_CU_ATOMIC_ADD(cell[field::fz][pi.p_], f.z);
         if (need_forces(driver.motion_type_)) {
-          lockAndAdd(driver.forces(), -f);
+          EXADEM_CU_ATOMIC_ADD(driver.forces(), -f);
         }
       }
 
@@ -419,13 +391,13 @@ struct ContactLawRShapeDriverFunc {
         // === used for analysis
         fn = item[attr::friction] - f;
         // === update informations
-        lockAndAdd(mom, compute_moments(contact_position, r_i, -f, -item[attr::moment]));
-        lockAndAdd(cell[field::fx][pi.p_], -f.x);
-        lockAndAdd(cell[field::fy][pi.p_], -f.y);
-        lockAndAdd(cell[field::fz][pi.p_], -f.z);
+        EXADEM_CU_ATOMIC_ADD(mom, compute_moments(contact_position, r_i, -f, -item[attr::moment]));
+        EXADEM_CU_ATOMIC_ADD(cell[field::fx][pi.p_], -f.x);
+        EXADEM_CU_ATOMIC_ADD(cell[field::fy][pi.p_], -f.y);
+        EXADEM_CU_ATOMIC_ADD(cell[field::fz][pi.p_], -f.z);
         item[attr::friction] = -item[attr::friction];
         if (need_forces(driver.motion_type_)) {
-          lockAndAdd(driver.forces(), f);
+          EXADEM_CU_ATOMIC_ADD(driver.forces(), f);
         }
       }
     } else {

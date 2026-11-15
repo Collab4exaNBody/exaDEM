@@ -32,6 +32,7 @@ under the License.
 #include <exaDEM/angular_velocity.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 struct CombinedEpilogFunctor {
   PushToAngularAccelerationFunctor angular_accel;
   PushToAngularVelocityFunctor angular_vel;

@@ -73,35 +73,35 @@ struct DriverDisplOver {
 
   inline int operator()(exaDEM::Surface& a) {
     exaDEM::Surface& b = bcpd_.get_typed_driver<exaDEM::Surface>(bd_idx_);
-    exanb::Vec3d d = a.fields_.center_proj_ - b.fields_.center_proj_;
+    Vec3d d = a.fields_.center_proj_ - b.fields_.center_proj_;
 
     if (b.motion_type_ == PENDULUM_MOTION) {
       // Utility function: compute the intersection between a line and a plane
-      auto intersect_line_plane = [](const exanb::Vec3d& plane_point,   // A point lying on the plane (pendulum anchor)
-                                     const exanb::Vec3d& plane_normal,  // Plane normal vector
-                                     const exanb::Vec3d& line_point,    // Starting point of the line (initial
-                                                                        // pendulum position)
-                                     const exanb::Vec3d& line_dir       // Direction vector of the line
-                                     ) -> exanb::Vec3d {
+      auto intersect_line_plane = [](const Vec3d& plane_point,   // A point lying on the plane (pendulum anchor)
+                                     const Vec3d& plane_normal,  // Plane normal vector
+                                     const Vec3d& line_point,    // Starting point of the line (initial
+                                                                 // pendulum position)
+                                     const Vec3d& line_dir       // Direction vector of the line
+                                     ) -> Vec3d {
         // Ensure the line is not parallel to the plane
-        assert(std::abs(exanb::dot(plane_normal, line_dir)) >= 1e-12);
+        assert(std::abs(dot(plane_normal, line_dir)) >= 1e-12);
         // Vector from line_point to plane_point
-        exanb::Vec3d delta = plane_point - line_point;
+        Vec3d delta = plane_point - line_point;
         // Scalar parameter t of the intersection
-        double t = exanb::dot(delta, plane_normal) / exanb::dot(line_dir, plane_normal);
+        double t = dot(delta, plane_normal) / dot(line_dir, plane_normal);
         // Intersection point
         return line_point + t * line_dir;
       };
 
       // Project the initial pendulum positions onto their respective planes
-      exanb::Vec3d proj_a = intersect_line_plane(motion_.pendulum_anchor_point_, a.fields_.normal_,
-                                                 motion_.pendulum_initial_position_, motion_.pendulum_direction());
-      exanb::Vec3d proj_b = intersect_line_plane(motion_.pendulum_anchor_point_, b.fields_.normal_,
-                                                 motion_.pendulum_initial_position_, motion_.pendulum_direction());
+      Vec3d proj_a = intersect_line_plane(motion_.pendulum_anchor_point_, a.fields_.normal_,
+                                          motion_.pendulum_initial_position_, motion_.pendulum_direction());
+      Vec3d proj_b = intersect_line_plane(motion_.pendulum_anchor_point_, b.fields_.normal_,
+                                          motion_.pendulum_initial_position_, motion_.pendulum_direction());
       d = proj_b - proj_a;
     }
 
-    if (exanb::dot(d, d) >= r2_) {
+    if (dot(d, d) >= r2_) {
       return 1;
     } else {
       return 0;
@@ -110,9 +110,9 @@ struct DriverDisplOver {
 
   inline int operator()(exaDEM::Ball& a) {
     exaDEM::Ball& b = bcpd_.get_typed_driver<exaDEM::Ball>(bd_idx_);
-    exanb::Vec3d d = a.fields_.center_ - b.fields_.center_;
+    Vec3d d = a.fields_.center_ - b.fields_.center_;
     if (is_compressive(a.motion_type_)) {
-      if (exanb::dot(d, d) >= 1e-12) {
+      if (dot(d, d) >= 1e-12) {
         color_log::error("driver_displ_over", "Ball with compressive motion type should not move");
       }
       double r_diff = a.fields_.radius_ - b.fields_.radius_;
@@ -123,7 +123,7 @@ struct DriverDisplOver {
       }
     }
 
-    if (exanb::dot(d, d) >= r2_) {
+    if (dot(d, d) >= r2_) {
       return 1;
     } else {
       return 0;
@@ -141,7 +141,7 @@ struct DriverDisplOver {
 #ifdef ONIKA_CUDA_VERSION
     storage_.reset();
     size_t size = a.shp_.get_number_of_vertices();
-    const exanb::Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp_.vertices_);
+    const Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp_.vertices_);
     RShapeDriverDisplacementFunctor SVDFunc = {
         r2_, ptr_shp_vertices, a.fields_.center_, a.fields_.quat_, b.fields_.center_, b.fields_.quat_};
     ReduceRShapeDriverDisplacementCountFunctor func = {SVDFunc, storage_.get_ptr()};
@@ -153,9 +153,9 @@ struct DriverDisplOver {
 #else
     int sum = 0;
     // check each vertex
-    auto check_dist = [](exanb::Vec3d& v1, exanb::Vec3d& v2, double r2) -> bool {
-      exanb::Vec3d d = v1 - v2;
-      if (exanb::dot(d, d) >= r2) return true;
+    auto check_dist = [](Vec3d& v1, Vec3d& v2, double r2) -> bool {
+      Vec3d d = v1 - v2;
+      if (dot(d, d) >= r2) return true;
       return false;
     };
     auto& shp_a = a.shp_;
@@ -174,8 +174,8 @@ struct DriverDisplOver {
     constexpr double homothety = 1.0;
 #pragma omp parallel for reduction(+ : sum)
     for (size_t i = start; i < end; i++) {
-      exanb::Vec3d va = shp_a.get_vertex(i, a.fields_.center_, homothety, a.fields_.quat_);
-      exanb::Vec3d vb = shp_a.get_vertex(i, b.fields_.center_, homothety, b.fields_.quat_);
+      Vec3d va = shp_a.get_vertex(i, a.fields_.center_, homothety, a.fields_.quat_);
+      Vec3d vb = shp_a.get_vertex(i, b.fields_.center_, homothety, b.fields_.quat_);
       if (check_dist(va, vb, r2_)) {
         sum++;
       }

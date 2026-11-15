@@ -21,6 +21,7 @@ under the License.
 #include <exanb/extra_storage/sim_dump_reader_es.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT>
 using SimDumpReadParticlesInteractionTmpl = SimDumpReadParticlesES<GridT, exaDEM::PlaceholderInteraction, DumpFieldSet>;
 template <typename GridT>

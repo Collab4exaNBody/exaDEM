@@ -30,6 +30,7 @@ under the License.
 #include <vector>
 
 namespace exaDEM {
+using namespace exanb;
 
 /**
  * @brief Prefetches the whole storage of every cell in cell_indices[0..n_cells) to `device`.

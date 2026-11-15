@@ -44,7 +44,6 @@ under the License.
 EXADEM_INTERACTION_FIELD_TAGS(EXADEM_INTERACTION_COMMON_FIELDS)
 
 namespace exaDEM {
-using exanb::Vec3d;
 
 ONIKA_HOST_DEVICE_FUNC inline InteractionPair build_interaction_pair(
     const uint64_t* __restrict__ id_i, const uint32_t* __restrict__ cell_i, const uint16_t* __restrict__ p_i,

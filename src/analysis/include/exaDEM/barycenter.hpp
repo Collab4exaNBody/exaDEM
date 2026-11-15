@@ -22,6 +22,7 @@ under the License.
 #include <exanb/grid_cell_particles/particle_region.h>
 #include <onika/flat_tuple.h>
 #include <onika/math/basic_types.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 struct ParticleBarycenterTypeValue {
@@ -34,11 +35,11 @@ struct ParticleBarycenterTypeValue {
 };
 
 struct ReduceParticleBarycenterTypeFunctor {
-  const ParticleRegionCSGShallowCopy region_;
+  const exanb::ParticleRegionCSGShallowCopy region_;
   const uint16_t filter_type_;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(ParticleBarycenterTypeValue& local, const double rx, const double ry,
                                                 const double rz, const uint16_t type,
-                                                reduce_thread_local_t = {}) const {
+                                                exanb::reduce_thread_local_t = {}) const {
     Vec3d r = {rx, ry, rz};
     if (region_.contains(r)) {
       if (type == filter_type_) {
@@ -48,7 +49,8 @@ struct ReduceParticleBarycenterTypeFunctor {
   }
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(ParticleBarycenterTypeValue& global,
-                                                const ParticleBarycenterTypeValue& local, reduce_thread_block_t) const {
+                                                const ParticleBarycenterTypeValue& local,
+                                                exanb::reduce_thread_block_t) const {
     ONIKA_CU_ATOMIC_ADD(global.count_, local.count_);
     ONIKA_CU_ATOMIC_ADD(global.barycenter_.x, local.barycenter_.x);
     ONIKA_CU_ATOMIC_ADD(global.barycenter_.y, local.barycenter_.y);
@@ -56,7 +58,8 @@ struct ReduceParticleBarycenterTypeFunctor {
   }
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(ParticleBarycenterTypeValue& global,
-                                                const ParticleBarycenterTypeValue& local, reduce_global_t) const {
+                                                const ParticleBarycenterTypeValue& local,
+                                                exanb::reduce_global_t) const {
     ONIKA_CU_ATOMIC_ADD(global.count_, local.count_);
     ONIKA_CU_ATOMIC_ADD(global.barycenter_.x, local.barycenter_.x);
     ONIKA_CU_ATOMIC_ADD(global.barycenter_.y, local.barycenter_.y);

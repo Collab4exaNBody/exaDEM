@@ -26,6 +26,7 @@ under the License.
 #include <mpi.h>
 
 namespace exaDEM {
+using namespace exanb;
 template <class GridT, class FieldSubSetT = typename GridT::field_set_t>
 struct InitGridFlavorNode : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT_OUTPUT);

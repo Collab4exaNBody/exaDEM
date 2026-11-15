@@ -22,6 +22,7 @@ under the License.
 #include <exaDEM/interaction/interaction.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT>
 using MovePaticlesWithInteractionTmpl = exanb::MovePaticlesWithES<GridT, exaDEM::PlaceholderInteraction>;
 

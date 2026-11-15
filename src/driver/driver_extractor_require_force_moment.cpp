@@ -45,7 +45,6 @@ class DriverExtractorRequireForceMomentOp : public OperatorNode {
   }
 
   inline void execute() final {
-    using exanb::Vec3d;
     if (driver_extractor.has_value()) {
       if (driver_extractor->require_interaction()) {
         *trigger_driver_force_moment_update = true;

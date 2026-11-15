@@ -21,6 +21,7 @@ under the License.
 
 #include <onika/math/quaternion_operators.h>
 #include <onika/math/basic_types_operators.h>
+#include <exaDEM/basic_type.hpp>
 
 // These kernels are closed / idenitcal to the kernels defined whithin the numerical scheme plugin
 namespace exaDEM {
@@ -29,7 +30,7 @@ struct DriverPushToQuaternionFunctor {
   double dt_2_;
 
   ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(exanb::Quaternion& Q, exanb::Vec3d& vrot, const exanb::Vec3d arot) const {
+  inline void operator()(Quaternion& Q, Vec3d& vrot, const Vec3d arot) const {
     Q = Q + dot(Q, vrot) * dt_;
     Q = normalize(Q);
     vrot += dt_2_ * arot;
@@ -39,19 +40,19 @@ struct DriverPushToQuaternionFunctor {
 struct DriverPushToAngularVelocityFunctor {
   double dt_2_;
   ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(exanb::Vec3d& vrot, const exanb::Vec3d& arot) const { vrot += arot * dt_2_; }
+  inline void operator()(Vec3d& vrot, const Vec3d& arot) const { vrot += arot * dt_2_; }
 };
 
 struct DriverPushToAngularAccelerationFunctor {
   ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(const exanb::Quaternion& Q, const exanb::Vec3d& mom, const exanb::Vec3d& vrot,
-                         exanb::Vec3d& arot, const exanb::Vec3d& inertia) const {
-    exanb::Quaternion Qinv = get_conjugated(Q);
+  inline void operator()(const Quaternion& Q, const Vec3d& mom, const Vec3d& vrot, Vec3d& arot,
+                         const Vec3d& inertia) const {
+    Quaternion Qinv = get_conjugated(Q);
     const auto omega = Qinv * vrot;  // Express omega in the body framework
     const auto M = Qinv * mom;       // Express torque in the body framework
-    exanb::Vec3d domega{(M.x - (inertia.z - inertia.y) * omega.y * omega.z) / inertia.x,
-                        (M.y - (inertia.x - inertia.z) * omega.z * omega.x) / inertia.y,
-                        (M.z - (inertia.y - inertia.x) * omega.x * omega.y) / inertia.z};
+    Vec3d domega{(M.x - (inertia.z - inertia.y) * omega.y * omega.z) / inertia.x,
+                 (M.y - (inertia.x - inertia.z) * omega.z * omega.x) / inertia.y,
+                 (M.z - (inertia.y - inertia.x) * omega.x * omega.y) / inertia.z};
     arot = Q * domega;  // Express arot in the global framework
   }
 };

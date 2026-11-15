@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <exaDEM/shape.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 namespace basic_shape {
@@ -11,8 +12,6 @@ namespace basic_shape {
  * @param minkowski Minkowski radius
  */
 shape create_sphere(std::string name, double minkowski) {
-  using exanb::Quaternion;
-  using exanb::Vec3d;
   // rename
   const double r = minkowski;
   const double pi = M_PI;

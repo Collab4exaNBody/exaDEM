@@ -31,24 +31,25 @@ under the License.
 #include <exaDEM/shape_reader.hpp>
 #include <exaDEM/shape_writer.hpp>
 #include <filesystem>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 // Data fields_ for a rigid shape driver (polyhedron or complex geometry)
 struct RShapeDriverFields {
-  exanb::Vec3d center_ = exanb::Vec3d{0, 0, 0}; /**< Center position of the shape. */
-  exanb::Vec3d vel_ = exanb::Vec3d{0, 0, 0};    /**< Linear velocity of the shape. */
-  exanb::Vec3d vrot_ = exanb::Vec3d{0, 0, 0};   /**< Angular velocity (rotation) of the shape. */
-  exanb::Vec3d forces_ = exanb::Vec3d{0, 0, 0}; /**< Accumulated forces applied to the shape from interactions. */
-  exanb::Quaternion quat_ = {1, 0, 0, 0};       /**< Orientation quaternion of the shape. */
-  exanb::Vec3d acc_ = {0, 0, 0};                /**< Linear acceleration of the shape. */
+  Vec3d center_ = Vec3d{0, 0, 0};               /**< Center position of the shape. */
+  Vec3d vel_ = Vec3d{0, 0, 0};                  /**< Linear velocity of the shape. */
+  Vec3d vrot_ = Vec3d{0, 0, 0};                 /**< Angular velocity (rotation) of the shape. */
+  Vec3d forces_ = Vec3d{0, 0, 0};               /**< Accumulated forces applied to the shape from interactions. */
+  Quaternion quat_ = {1, 0, 0, 0};              /**< Orientation quaternion of the shape. */
+  Vec3d acc_ = {0, 0, 0};                       /**< Linear acceleration of the shape. */
   double surface_ = -1;                         /**< Contact surface area (for compressive motion). */
   double mass_ = std::numeric_limits<double>::max() / 4; /**< Mass of the shape. */
   // Moment (torque) control mode
   bool drive_by_mom_ = false;                    /**< Whether shape is driven by applied moment. */
-  exanb::Vec3d applied_mom_;                     /**< Applied moment input (for moment-driven motion). */
-  exanb::Vec3d mom_;                             /**< Accumulated moment from interactions. */
-  exanb::Vec3d inertia_ = exanb::Vec3d{0, 0, 0}; /**< Moment of inertia tensor components. */
-  exanb::Vec3d mom_axis_;                        /**< Normalized axis along which moment is applied. */
+  Vec3d applied_mom_;                            /**< Applied moment input (for moment-driven motion). */
+  Vec3d mom_;                                    /**< Accumulated moment from interactions. */
+  Vec3d inertia_ = Vec3d{0, 0, 0};               /**< Moment of inertia tensor components. */
+  Vec3d mom_axis_;                               /**< Normalized axis along which moment is applied. */
 };
 }  // namespace exaDEM
 
@@ -109,8 +110,7 @@ struct RShapeDriver {
   RShapeDriverFields fields_; /**< Contains specific driver parameters */
   MotionType motion_type_;    /**< Contains motion type parameters */
   shape shp_;                 /**< Shape of the R-Shape. */
-  onika::memory::CudaMMVector<exanb::Vec3d>
-      vertices_;                             /**< Collection of vertices_ (computed from shp_, quat, and center). */
+  onika::memory::CudaMMVector<Vec3d> vertices_; /**< Collection of vertices_ (computed from shp_, quat, and center). */
   RShapeDriverGridCellIndexes grid_indexes_; /**< Grid indexes for vertices_, edges, and faces of the shape. */
 
   /**
@@ -204,7 +204,7 @@ struct RShapeDriver {
 
     bool special_case = motion.expr_.expr_use_mom_;
     if (need_moment() || special_case) {
-      if (fields_.inertia_ == exanb::Vec3d{0, 0, 0}) {
+      if (fields_.inertia_ == Vec3d{0, 0, 0}) {
         color_log::error("RShape::initialize", "Inertia should be defined, either params, either in a shape file.");
       }
     }
@@ -231,13 +231,13 @@ struct RShapeDriver {
       if (fields_.mass_ != 0) {
         const double surface = fields_.surface_;
 
-        exanb::Vec3d tmp =
+        Vec3d tmp =
             (fields_.forces_ + motion.sigma_ * surface * motion.motion_vector_ - (motion.damprate_ * fields_.vel_)) /
             (fields_.mass_ * C);
 
         // Project acceleration onto the motion axis: only the component along
         // motion_vector is physically meaningful for a uniaxial compression.
-        fields_.acc_ = exanb::dot(tmp, motion.motion_vector_) * motion.motion_vector_;
+        fields_.acc_ = dot(tmp, motion.motion_vector_) * motion.motion_vector_;
       }
 
     } else if (is_force_motion(motion_type_)) {
@@ -272,7 +272,7 @@ struct RShapeDriver {
    */
   inline void push_f_v(const Driver_params& motion, const double dt) {
     if (is_stationary(motion_type_)) {
-      fields_.vel_ = exanb::Vec3d{0, 0, 0};
+      fields_.vel_ = Vec3d{0, 0, 0};
     } else {
       if (is_force_motion(motion_type_)) {
         fields_.vel_ += fields_.acc_ * dt;
@@ -308,7 +308,7 @@ struct RShapeDriver {
       if (motion_type_ == MotionType::LINEAR_MOTION) {
         // Sanity check: for purely linear motion the speed must remain constant.
         [[maybe_unused]] constexpr double VEL_TOLERANCE = 1e-12;
-        assert(std::abs(exanb::norm(fields_.vel_) - motion.const_vel_) < VEL_TOLERANCE);
+        assert(std::abs(norm(fields_.vel_) - motion.const_vel_) < VEL_TOLERANCE);
       }
 
       if (motion_type_ == MotionType::SHAKER) {
@@ -316,7 +316,7 @@ struct RShapeDriver {
         // shaker_velocity is already oriented along the shaker direction.
         // Acceleration is reset to zero because the shaker imposes kinematics directly.
         fields_.vel_ = motion.shaker_velocity(time + dt);
-        fields_.acc_ = exanb::Vec3d{0, 0, 0};  // reset acc
+        fields_.acc_ = Vec3d{0, 0, 0};  // reset acc
       }
 
       if (motion.is_expr(motion_type_, time)) {
@@ -349,17 +349,17 @@ struct RShapeDriver {
       if (motion.is_expr(motion_type_, time)) {
         if (motion.expr_.expr_use_mom_) {
           fields_.applied_mom_ = motion.driver_expr_mom(time);
-          double mom_norm = exanb::norm(fields_.applied_mom_);
+          double mom_norm = norm(fields_.applied_mom_);
           if (mom_norm > 1e-12) {
             fields_.mom_axis_ = fields_.applied_mom_ / mom_norm;
           } else {
-            fields_.mom_axis_ = exanb::Vec3d{0, 0, 0};
+            fields_.mom_axis_ = Vec3d{0, 0, 0};
           }
         }
       }
 
-      exanb::Vec3d project_mom;
-      exanb::Vec3d arot;
+      Vec3d project_mom;
+      Vec3d arot;
 
       // do not use applied_mom direction if the motion type is PARTICLE
       if (motion_type_ == MotionType::PARTICLE) {
@@ -393,17 +393,17 @@ struct RShapeDriver {
    * @brief Field accessors for position, velocity, forces, moments, and orientation.
    */
   // Position getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields_.center_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& position() { return fields_.center_; }
   // Linear velocity getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields_.vel_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& velocity() { return fields_.vel_; }
   // Accumulated forces getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields_.forces_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& forces() { return fields_.forces_; }
   // Accumulated moment (torque) getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields_.mom_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& moment() { return fields_.mom_; }
   // Angular velocity getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields_.vrot_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& angular_velocity() { return fields_.vrot_; }
   // Orientation (quaternion) getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion& orientation() { return fields_.quat_; }
+  ONIKA_HOST_DEVICE_FUNC inline Quaternion& orientation() { return fields_.quat_; }
 
   /**
    * @brief Check if moment-based rotation is enabled for this shape.
@@ -422,7 +422,7 @@ struct RShapeDriver {
    * @brief Check if the shape is completely stationary (no linear or angular motion).
    * @return true if motion_type_ is STATIONARY and angular velocity is zero.
    */
-  inline bool stationary() const { return is_stationary(motion_type_) && (fields_.vrot_ == exanb::Vec3d{0, 0, 0}); }
+  inline bool stationary() const { return is_stationary(motion_type_) && (fields_.vrot_ == Vec3d{0, 0, 0}); }
 
   /** @brief Dump driver information to a stream.
    * @param motion The motion parameters of the driver to include in the dump.

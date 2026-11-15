@@ -25,6 +25,7 @@ under the License.
 #include <exaDEM/interface/interface.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename TMPLC>
 struct CheckClassifierInteractionPairFunc {

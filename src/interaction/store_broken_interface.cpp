@@ -44,6 +44,7 @@ struct BrokenInterfaceDetails {
 };
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class StoreBrokenInterfaceOp : public OperatorNode {
   // attributes processed during computation
@@ -158,7 +159,7 @@ class StoreBrokenInterfaceOp : public OperatorNode {
 
         file << d.iteration << " " << d.id_a << " " << d.id_b << " " << nb_vertices;
         for (int v = 0; v < nb_vertices; v++) {
-          exanb::Vec3d vertex = shp->get_vertex(vidx[v], d.pos, d.homothety, d.quat);
+          Vec3d vertex = shp->get_vertex(vidx[v], d.pos, d.homothety, d.quat);
           file << " " << vertex.x << " " << vertex.y << " " << vertex.z;
         }
         file << std::endl;

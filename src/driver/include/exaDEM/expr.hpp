@@ -20,6 +20,7 @@ under the License.
 #pragma once
 
 #include "tinyexpr.h"
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 struct Driver_expr {
@@ -49,17 +50,17 @@ struct Driver_expr {
     return res;
   }
 
-  exanb::Vec3d expr_v(double time) const {
+  Vec3d expr_v(double time) const {
     assert(expr_use_v_);
     return {expr_eval(expr_vx_, time), expr_eval(expr_vy_, time), expr_eval(expr_vz_, time)};
   }
 
-  exanb::Vec3d expr_vrot(double time) const {
+  Vec3d expr_vrot(double time) const {
     assert(expr_use_vrot_);
     return {expr_eval(expr_vrotx_, time), expr_eval(expr_vroty_, time), expr_eval(expr_vrotz_, time)};
   }
 
-  exanb::Vec3d expr_mom(double time) const {
+  Vec3d expr_mom(double time) const {
     assert(expr_use_mom_);
     return {expr_eval(expr_momx_, time), expr_eval(expr_momy_, time), expr_eval(expr_momz_, time)};
   }

@@ -20,6 +20,7 @@ under the License.
 
 #include <exaDEM/forcefield/contact_force_common.hpp>
 #include <exaDEM/forcefield/contact_parameters.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 
@@ -71,7 +72,7 @@ ONIKA_HOST_DEVICE_FUNC inline void hooke_contact_force_core(const double dn,
   auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
 
   // === Compute relative velocity
-  const double vn = exanb::dot(vel, n);
+  const double vn = dot(vel, n);
 
   // === Compute Contact forces
   // - Normal force (elastic contact + viscous damping)
@@ -85,7 +86,7 @@ ONIKA_HOST_DEVICE_FUNC inline void hooke_contact_force_core(const double dn,
   if constexpr (!cohesive) {
     threshold_ft = exaDEM::compute_threshold_ft(hkp.mu_, hkp.kn_, dn);
   } else {
-    threshold_ft = exaDEM::compute_threshold_ft_with_cohesive_force(hkp.mu_, exanb::dot(fn, n), hkp.fc_);
+    threshold_ft = exaDEM::compute_threshold_ft_with_cohesive_force(hkp.mu_, dot(fn, n), hkp.fc_);
   }
   exaDEM::fit_tangential_force(threshold_ft, ft);
 

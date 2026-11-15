@@ -30,6 +30,7 @@ under the License.
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <InteractionType IT>
 inline void count_classifier_type(Classifier& classifier, int typeID, int& count, int& active_count, int& an,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 /** @brief Helper struct for creating Paraview-compatible interface files */
@@ -156,12 +157,12 @@ void order_face_vertices(std::vector<Vec3d>& vertices) {
   Vec3d normal = {0, 0, 1};  // Default value to prevent faillure
 
   Vec3d b = vertices[1] - centroid;
-  normal = exanb::cross(a, b);
-  normal = normal / exanb::norm(normal);
+  normal = cross(a, b);
+  normal = normal / norm(normal);
 
   Vec3d u = (vertices[0] - centroid);
-  u = u / exanb::norm(u);  // Normalize u
-  Vec3d v = exanb::cross(normal, u);
+  u = u / norm(u);  // Normalize u
+  Vec3d v = cross(normal, u);
 
   // Sort by polar angle around the centroid
   std::sort(vertices.begin(), vertices.end(), [centroid, u, v](const Vec3d& a, const Vec3d& b) {
@@ -169,11 +170,11 @@ void order_face_vertices(std::vector<Vec3d>& vertices) {
     Vec3d db = b - centroid;
 
     // Project on local plan to get 2D coordonates
-    double xA = exanb::dot(da, u);
-    double yA = exanb::dot(da, v);
+    double xA = dot(da, u);
+    double yA = dot(da, v);
 
-    double xB = exanb::dot(db, u);
-    double yB = exanb::dot(db, v);
+    double xB = dot(db, u);
+    double yB = dot(db, v);
 
     double angleA = std::atan2(yA, xA);
     double angleB = std::atan2(yB, xB);
@@ -184,7 +185,7 @@ void order_face_vertices(std::vector<Vec3d>& vertices) {
     }
 
     // Tie-breaker
-    return exanb::dot(da, da) < exanb::dot(db, db);
+    return dot(da, da) < dot(db, db);
   });
 }
 }  // namespace exaDEM

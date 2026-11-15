@@ -19,6 +19,7 @@ under the License.
 
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 /** @brief A manager for handling interactions between particles.
@@ -83,10 +84,10 @@ struct InteractionManager {
 
   /** @brief Update the extra storage with interactions from the manager.
    * This function updates the provided storage with interactions from the manager, optionally including historical
-   * data. [param storage] The CellExtraDynamicDataStorageT to update.
+   * data. [param storage] The exanb::CellExtraDynamicDataStorageT to update.
    */
   template <bool use_history>
-  void update_extra_storage(CellExtraDynamicDataStorageT<PlaceholderInteraction>& storage) {
+  void update_extra_storage(exanb::CellExtraDynamicDataStorageT<PlaceholderInteraction>& storage) {
     const size_t total_size = this->get_size();
     size_t offset = 0;
     auto& info = storage.m_info;
@@ -163,10 +164,11 @@ struct InteractionManager {
 /** @brief Update persistent interactions in the manager list from the storage data.
  * This function iterates over the interactions stored in the provided storage, identifies those that are marked as
  * persistent. [param manager] The InteractionManager instance to update with persistent interactions. [param storage]
- * The CellExtraDynamicDataStorageT containing PlaceholderInteraction data to extract persistent interactions from.
+ * The exanb::CellExtraDynamicDataStorageT containing PlaceholderInteraction data to extract persistent interactions
+ * from.
  */
 inline void update_persistent_interactions(InteractionManager& manager,
-                                           CellExtraDynamicDataStorageT<PlaceholderInteraction>& storage) {
+                                           exanb::CellExtraDynamicDataStorageT<PlaceholderInteraction>& storage) {
   size_t n_interactions = storage.m_data.size();
   for (size_t i = 0; i < n_interactions; i++) {
     PlaceholderInteraction& I = storage.m_data[i];
@@ -256,13 +258,13 @@ bool check_stiked_face(std::vector<exaDEM::PlaceholderInteraction>& interactions
 
   bool res = true;
 
-  Vec3d normal = exanb::cross(va, vb);
+  Vec3d normal = cross(va, vb);
   constexpr double tol = 1.e-10;  // tolerance for coplanarity check.
 
   // Check that remaining vertices belong to the same plane
   for (size_t j = 3; j < vertices.size(); j++) {
     Vec3d vj = vertices[j] - vertices[0];
-    double distance_to_plane = std::abs(exanb::dot(vj, normal));
+    double distance_to_plane = std::abs(dot(vj, normal));
 
     if (distance_to_plane > tol) {
       color_log::warning("interaction_manager::check_sticked_face",

@@ -22,21 +22,22 @@
 
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_base.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 // Data fields for a spherical driver (ball)
 struct BallFields {
   double radius_;                             /**< Radius of the ball. */
-  exanb::Vec3d center_;                       /**< Center position of the ball in 3D space. */
-  exanb::Vec3d vel_ = exanb::Vec3d{0, 0, 0};  /**< Linear velocity of the ball. */
-  exanb::Vec3d vrot_ = exanb::Vec3d{0, 0, 0}; /**< Angular velocity (rotation) of the ball. */
-  exanb::Vec3d forces_ = {0, 0, 0};           /**< Accumulated forces applied to the ball from interactions. */
-  exanb::Vec3d mom_ = {0, 0, 0};              /**< Accumulated moments (torques) applied to the ball. */
+  Vec3d center_;                              /**< Center position of the ball in 3D space. */
+  Vec3d vel_ = Vec3d{0, 0, 0};                /**< Linear velocity of the ball. */
+  Vec3d vrot_ = Vec3d{0, 0, 0};               /**< Angular velocity (rotation) of the ball. */
+  Vec3d forces_ = {0, 0, 0};                  /**< Accumulated forces applied to the ball from interactions. */
+  Vec3d mom_ = {0, 0, 0};                     /**< Accumulated moments (torques) applied to the ball. */
   double mass_ = std::numeric_limits<double>::max() / 4; /**< Mass of the ball (default: infinite/fixed). */
   double rv_ = 0;                                        /**< Radius velocity for compressive/expanding motion. */
 
   /** Derived quantities (not persisted) */
-  exanb::Vec3d acc_ = {0, 0, 0}; /**< Linear acceleration of the ball. */
+  Vec3d acc_ = {0, 0, 0};        /**< Linear acceleration of the ball. */
   double ra_ = 0;                /**< Radius acceleration for compressive/expanding motion. */
 };
 }  // namespace exaDEM
@@ -203,15 +204,15 @@ struct Ball {
    * @brief Field accessors for position, velocity, forces, and rotation.
    */
   // Position getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields_.center_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& position() { return fields_.center_; }
   // Linear velocity getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields_.vel_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& velocity() { return fields_.vel_; }
   // Accumulated forces getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields_.forces_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& forces() { return fields_.forces_; }
   // Accumulated moment (torque) getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields_.mom_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& moment() { return fields_.mom_; }
   // Angular velocity getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields_.vrot_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& angular_velocity() { return fields_.vrot_; }
 
   /**
    * @brief Update ball kinematics (position, velocity, radius).
@@ -303,7 +304,7 @@ struct Ball {
       const double m = (fields_.mass_ < 1e100) ? fields_.mass_ : 0.5 * motion.system_mass_;
       if (m != 0) {
         const double s = surface();
-        fields_.ra_ = (exanb::norm(fields_.forces_) - motion.sigma_ * s - (motion.damprate_ * fields_.rv_)) / (m * C);
+        fields_.ra_ = (norm(fields_.forces_) - motion.sigma_ * s - (motion.damprate_ * fields_.rv_)) / (m * C);
       }
     }
   }
@@ -314,8 +315,8 @@ struct Ball {
    * @param p The point to check.
    * @return True if the point is within the cut-off radius of the ball, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const exanb::Vec3d& p) {
-    const exanb::Vec3d dist = fields_.center_ - p;
+  ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const Vec3d& p) {
+    const Vec3d dist = fields_.center_ - p;
     double d = fields_.radius_ - norm(dist);
     return std::fabs(d) <= rcut;
   }
@@ -331,11 +332,11 @@ struct Ball {
    *         - The contact position on the surface of the ball.
    */
   ONIKA_HOST_DEVICE_FUNC
-  inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& p) {
-    exanb::Vec3d point_to_center = fields_.center_ - p;
+  inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d& p) {
+    Vec3d point_to_center = fields_.center_ - p;
     double d = norm(point_to_center);
     double dn;
-    exanb::Vec3d n = point_to_center / d;
+    Vec3d n = point_to_center / d;
     if (d > fields_.radius_) {
       dn = d - fields_.radius_ - rcut;
       n = (-1) * n;
@@ -344,9 +345,9 @@ struct Ball {
     }
 
     if (dn > 0) {
-      return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
+      return {false, dn, Vec3d(), Vec3d()};
     } else {
-      exanb::Vec3d contact_position = p - n * (rcut + 0.5 * dn);
+      Vec3d contact_position = p - n * (rcut + 0.5 * dn);
       return {true, dn, n, contact_position};
     }
   }

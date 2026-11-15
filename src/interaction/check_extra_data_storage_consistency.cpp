@@ -21,6 +21,7 @@ under the License.
 #include <exanb/extra_storage/check_extra_data_storage_consistency.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <class GridT>
 using CheckInfoInteractionConsistencyTmpl = CheckInfoConsistency<GridT, GridCellParticleInteraction>;
 

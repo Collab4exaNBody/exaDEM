@@ -20,15 +20,15 @@ under the License.
 
 #include <onika/math/basic_types.h>
 #include <exanb/compute/compute_cell_particles.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
-using namespace exanb;
 struct QuadraticForceFunctor {
   double cx_mu_;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(double& fx, double& fy, double& fz, const double vx, const double vy,
                                                 const double vz) const {
     Vec3d v = {vx, vy, vz};
-    double vel = exanb::norm(v);
+    double vel = norm(v);
     fx -= cx_mu_ * vel * vx;
     fy -= cx_mu_ * vel * vy;
     fz -= cx_mu_ * vel * vz;

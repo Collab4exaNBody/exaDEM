@@ -2,6 +2,7 @@
 #include <cub/cub.cuh>
 #include <exaDEM/experimental/filter_pair_particle.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
 
@@ -55,7 +56,7 @@ struct ParticleDetectPack {
   Quaternion quat_;       ///< Particle orientation as a quaternion
   Vec3d r_;               ///< Particle position
   uint64_t id_;           ///< Unique particle ID
-  ParticleTypeInt type_;  ///< Particle type (integer code)
+  exanb::ParticleTypeInt type_;  ///< Particle type (integer code)
   double radius_;         ///< Particle radius
   double homothety_;      ///< Scaling factor applied to particle size
 };
@@ -131,11 +132,11 @@ __global__ __launch_bounds__(64, 8) void CountParticlePairsKernel(CellsT cells, 
 
       if (body_a.id_ >= body_b.id_) continue;
 
-      if (!is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
+      if (!exanb::is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
 
       Vec3d r = body_b.r_ - body_a.r_;
       double rmax = body_a.radius_ + body_b.radius_ + rcut_inc;
-      if (exanb::dot(r, r) > rmax * rmax) continue;
+      if (dot(r, r) > rmax * rmax) continue;
 
       // OBB test
       const auto& shpb = shps[body_b.type_];
@@ -195,10 +196,10 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
       auto body_b = load(cB, pb);
       // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
       if (body_a.id_ >= body_b.id_) continue;
-      if (!is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
+      if (!exanb::is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
       Vec3d r = body_b.r_ - body_a.r_;
       double rmax = body_a.radius_ + body_b.radius_ + rcut_inc;
-      if (exanb::dot(r, r) > rmax * rmax) continue;
+      if (dot(r, r) > rmax * rmax) continue;
       const auto& shpb = shps[body_b.type_];
       OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
       obb_a.enlarge(rcut_inc);
@@ -226,10 +227,10 @@ __global__ __launch_bounds__(64, 8) void FillParticlePairsKernel(
       auto body_b = load(cB, pb);
       // if (body_a.id_ >= body_b.id_ && ghost_flag == 0) continue;
       if (body_a.id_ >= body_b.id_) continue;
-      if (!is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
+      if (!exanb::is_inside_threshold(aabb_a, body_b.r_, body_b.radius_)) continue;
       Vec3d r = body_b.r_ - body_a.r_;
       double rmax = body_a.radius_ + body_b.radius_ + rcut_inc;
-      if (exanb::dot(r, r) > rmax * rmax) continue;
+      if (dot(r, r) > rmax * rmax) continue;
       const auto& shpb = shps[body_b.type_];
       OBB obb_a = compute_obb(shpa.obb_, body_a.r_, body_a.quat_, body_a.homothety_);
       obb_a.enlarge(rcut_inc);

@@ -26,6 +26,7 @@ under the License.
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
 /** @brief Structure to store force information for each contact in the network. */
@@ -112,7 +113,7 @@ struct NetworkFunctor {
     for (size_t i = 0; i < size; i++) {
       const Vec3d fni = fn[i];
       const Vec3d fti = ft[i];
-      const double f = exanb::norm(fni + fti);
+      const double f = norm(fni + fti);
       if (f != 0) {
         auto I = interactions[i];
         if (filter_duplicates(I)) {

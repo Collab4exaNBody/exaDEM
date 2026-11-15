@@ -27,6 +27,7 @@ under the License.
 #include <exanb/grid_cell_particles/particle_region.h>
 
 namespace exaDEM {
+using namespace exanb;
 struct UpdateIntertiaSphereFunctor {
   const ParticleRegionCSGShallowCopy region; /**< Shallow copy of a particle region. */
 
@@ -55,7 +56,6 @@ struct ComputeCellParticlesTraits<exaDEM::UpdateIntertiaSphereFunctor> {
 }  // namespace exanb
 
 namespace exaDEM {
-using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_inertia, field::_radius, field::_mass>>
 class UpdateInertia : public OperatorNode {

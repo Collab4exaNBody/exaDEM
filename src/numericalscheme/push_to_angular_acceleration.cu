@@ -30,6 +30,7 @@ under the License.
 #include <exaDEM/angular_acceleration.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT,
           class = AssertGridHasFields<GridT, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia>>
 class PushToAngularAcceleration : public OperatorNode {

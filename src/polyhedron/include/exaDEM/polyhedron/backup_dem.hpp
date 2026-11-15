@@ -29,6 +29,7 @@ under the License.
 #include <cstdint>
 #include <exaDEM/shapes.hpp>
 #include <vector>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 struct DEMBackupData {
@@ -71,8 +72,8 @@ struct ReduceMaxVertexDisplacementFunctor {
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(unsigned long long int& count_over_dist2, IJK cell_loc, size_t cell,
                                                 size_t j, double rx, double ry, double rz, uint32_t type,
-                                                double homothety, const exanb::Quaternion& orientation,
-                                                reduce_thread_local_t = {}) const {
+                                                double homothety, const Quaternion& orientation,
+                                                exanb::reduce_thread_local_t = {}) const {
     const double* __restrict__ rb = backup_.data_.data() + backup_.index_map_[cell];
 
     Vec3d new_center = {rx, ry, rz};
@@ -91,18 +92,18 @@ struct ReduceMaxVertexDisplacementFunctor {
       const Vec3d old_vertex = shp.get_vertex(v, old_center, homothety, old_orientation);
       const Vec3d new_vertex = shp.get_vertex(v, new_center, homothety, orientation);
       const Vec3d dr = new_vertex - old_vertex;
-      if (exanb::dot(dr, dr) >= threshold_sqr_) {
+      if (dot(dr, dr) >= threshold_sqr_) {
         ++count_over_dist2;
       }
     }
   }
   ONIKA_HOST_DEVICE_FUNC inline void operator()(unsigned long long int& count_over_dist2, unsigned long long int value,
-                                                reduce_thread_block_t) const {
+                                                exanb::reduce_thread_block_t) const {
     ONIKA_CU_BLOCK_ATOMIC_ADD(count_over_dist2, value);
   }
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(unsigned long long int& count_over_dist2, unsigned long long int value,
-                                                reduce_global_t) const {
+                                                exanb::reduce_global_t) const {
     if (value > 0) {
       ONIKA_CU_ATOMIC_ADD(count_over_dist2, value);
     }

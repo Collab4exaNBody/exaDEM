@@ -27,6 +27,7 @@ under the License.
 #include <mpi.h>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>>
 class DEMRcutMax : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);

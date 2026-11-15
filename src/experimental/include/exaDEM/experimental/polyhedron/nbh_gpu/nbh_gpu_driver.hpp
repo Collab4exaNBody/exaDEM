@@ -3,6 +3,7 @@
 #include <exaDEM/drivers.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
+#include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
 template <typename CellsT>

@@ -37,6 +37,8 @@ under the License.
 #include <exaDEM/classifier/classifier_for_all.hpp>
 
 namespace exaDEM {
+using namespace exanb;
+using namespace onika::parallel;
 template <int type, bool sym>
 struct ComputeStressTensorFunc {
   /** @brief Compute the stress tensor for a given interaction

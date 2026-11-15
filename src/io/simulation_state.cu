@@ -43,6 +43,7 @@ under the License.
 
 // ================== Thermodynamic state compute operator ======================
 namespace exaDEM {
+using namespace exanb;
 using namespace exaDEM::itools;
 
 // used by the classifier dispatcher
