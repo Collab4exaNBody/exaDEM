@@ -31,6 +31,7 @@ under the License.
 #include <exaDEM/classifier/classifier.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class ClassificationInteractionGhost : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);

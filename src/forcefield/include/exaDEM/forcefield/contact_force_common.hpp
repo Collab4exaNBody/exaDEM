@@ -24,6 +24,7 @@ under the License.
 #include <stdexcept>
 
 #include <exaDEM/forcefield/common_kernels.hpp>
+#include <exaDEM/basic_type.hpp>
 
 // === Contact laws
 
@@ -147,13 +148,13 @@ ONIKA_HOST_DEVICE_FUNC inline void update_rolling_moment(const double kr, const 
   mom_i += kr * (vrot_j - vrot_i) * dt;
 
   Vec3d branch = contact_position - pos_i;
-  double r = (exanb::dot(branch, vrot_i)) / (exanb::dot(vrot_i, vrot_i));
+  double r = (dot(branch, vrot_i)) / (dot(vrot_i, vrot_i));
   branch -= r * vrot_i;
 
   constexpr double mur = 0;
-  double threshold_mom = std::abs(mur * exanb::norm(branch) * exanb::norm(fn));  // even without fabs, the value should
-                                                                                 // be positive
-  double mom_square = exanb::dot(mom_i, mom_i);
+  double threshold_mom = std::abs(mur * norm(branch) * norm(fn));  // even without fabs, the value should
+                                                                   // be positive
+  double mom_square = dot(mom_i, mom_i);
   if (mom_square > 0.0 && mom_square > threshold_mom * threshold_mom)
     mom_i = mom_i * (threshold_mom / sqrt(mom_square));
 }

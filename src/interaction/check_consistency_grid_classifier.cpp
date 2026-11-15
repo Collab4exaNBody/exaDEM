@@ -28,6 +28,7 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 class CheckConsistencyGridClassifier : public OperatorNode {
   // attributes processed during computation
   using ComputeFields = FieldSet<field::_vrot, field::_arot>;

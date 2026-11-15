@@ -20,24 +20,27 @@ under the License.
 
 #include <onika/cuda/cuda.h>
 #include <onika/math/basic_types.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
+/**
+ * @brief Atomically adds a value to a double (thread safe on CPU and GPU, see Onika).
+ */
 ONIKA_HOST_DEVICE_FUNC
-static void lockAndAdd(exanb::Vec3d& val, const exanb::Vec3d& add) {
+inline void atomic_add(double& val, double add) { ONIKA_CU_ATOMIC_ADD(val, add); }
+
+/**
+ * @brief Atomically adds each component of a Vec3d to another Vec3d.
+ */
+ONIKA_HOST_DEVICE_FUNC
+inline void atomic_add(Vec3d& val, const Vec3d& add) {
   ONIKA_CU_ATOMIC_ADD(val.x, add.x);
   ONIKA_CU_ATOMIC_ADD(val.y, add.y);
   ONIKA_CU_ATOMIC_ADD(val.z, add.z);
 }
 
 ONIKA_HOST_DEVICE_FUNC
-static inline void lockAndAdd(exanb::Vec3d& val, const exanb::Vec3d&& add) {
-  ONIKA_CU_ATOMIC_ADD(val.x, add.x);
-  ONIKA_CU_ATOMIC_ADD(val.y, add.y);
-  ONIKA_CU_ATOMIC_ADD(val.z, add.z);
-}
-
-ONIKA_HOST_DEVICE_FUNC
-static inline void mat3d_atomic_add_contribution(exanb::Mat3d& dst, const exanb::Mat3d& src) {
+static inline void mat3d_atomic_add_contribution(Mat3d& dst, const Mat3d& src) {
   ONIKA_CU_ATOMIC_ADD(dst.m11, src.m11);
   ONIKA_CU_ATOMIC_ADD(dst.m12, src.m12);
   ONIKA_CU_ATOMIC_ADD(dst.m13, src.m13);
@@ -50,7 +53,7 @@ static inline void mat3d_atomic_add_contribution(exanb::Mat3d& dst, const exanb:
 }
 
 ONIKA_HOST_DEVICE_FUNC
-static inline void mat3d_atomic_add_block_contribution(exanb::Mat3d& dst, const exanb::Mat3d& src) {
+static inline void mat3d_atomic_add_block_contribution(Mat3d& dst, const Mat3d& src) {
   ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m11, src.m11);
   ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m12, src.m12);
   ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m13, src.m13);
@@ -62,3 +65,6 @@ static inline void mat3d_atomic_add_block_contribution(exanb::Mat3d& dst, const 
   ONIKA_CU_BLOCK_ATOMIC_ADD(dst.m33, src.m33);
 }
 }  // namespace exaDEM
+
+/// Atomic add for double and Vec3d values (mirrors ONIKA_CU_ATOMIC_ADD).
+#define EXADEM_CU_ATOMIC_ADD(x, a) ::exaDEM::atomic_add((x), (a))

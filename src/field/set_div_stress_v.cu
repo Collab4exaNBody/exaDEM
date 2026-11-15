@@ -29,6 +29,7 @@ under the License.
 #include <exaDEM/div_field_volume.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_stress>>
 class DivStressV : public OperatorNode {
   using ComputeFieldType = FieldSet<field::_type, field::_homothety, field::_stress>;
@@ -53,11 +54,11 @@ class DivStressV : public OperatorNode {
   inline void execute() final {
     if (shapes_collection.has_value())  // polyhedra
     {
-      poly_div_field_volume<exanb::Mat3d> func = {shapes_collection->view()};
+      poly_div_field_volume<Mat3d> func = {shapes_collection->view()};
       compute_cell_particles(*grid, false, func, compute_field_set_type, parallel_execution_context());
     } else  // spheres
     {
-      sphere_div_field_volume<exanb::Mat3d> func = {};
+      sphere_div_field_volume<Mat3d> func = {};
       compute_cell_particles(*grid, false, func, compute_field_set_radius, parallel_execution_context());
     }
   }

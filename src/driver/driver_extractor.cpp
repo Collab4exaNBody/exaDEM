@@ -47,7 +47,6 @@ class DriverExtractorOp : public OperatorNode {
   }
 
   inline void execute() final {
-    using exanb::Vec3d;
     if (driver_extractor.has_value()) {
       auto& extractor = *driver_extractor;
       int rank;

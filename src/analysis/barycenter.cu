@@ -31,6 +31,7 @@ under the License.
 #include <exaDEM/barycenter.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_rx, field::_ry, field::_rz, field::_type>>
 class ParticleBarycenterAnalysis : public OperatorNode {

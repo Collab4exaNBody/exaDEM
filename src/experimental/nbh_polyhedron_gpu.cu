@@ -51,6 +51,8 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+using namespace exanb;
+using namespace onika::parallel;
 
 // temporary storage for GPU computations. Avoid allocating and deallocating memory on GPU every time the operator is
 // called. It will be removed in the future and replaced by a more generic scratch space for GPU computations

@@ -24,20 +24,20 @@ under the License.
 
 #include <exaDEM/type/OBB.hpp>
 #include <exaDEM/type/OBBtree.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
-// exanb::Quaternion's operator*(Quaternion, Quaternion) is a componentwise product, not the
+// Quaternion's operator*(Quaternion, Quaternion) is a componentwise product, not the
 // Hamilton product, so it cannot be used to compose two rotations. This is the correct
 // composition, used to express one particle's orientation relative to another's (OBB tree).
-ONIKA_HOST_DEVICE_FUNC inline exanb::Quaternion hamilton_product(const exanb::Quaternion& q1,
-                                                                 const exanb::Quaternion& q2) {
-  return exanb::Quaternion{
+ONIKA_HOST_DEVICE_FUNC inline Quaternion hamilton_product(const Quaternion& q1, const Quaternion& q2) {
+  return Quaternion{
       q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z, q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y,
       q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x, q1.w * q2.z + q1.x * q2.y - q1.y * q2.x + q1.z * q2.w};
 }
 
-ONIKA_HOST_DEVICE_FUNC inline OBB compute_obb(const OBB& in_obb, const exanb::Vec3d& in_pos,
-                                              const exanb::Quaternion& in_q, const double homothety) {
+ONIKA_HOST_DEVICE_FUNC inline OBB compute_obb(const OBB& in_obb, const Vec3d& in_pos, const Quaternion& in_q,
+                                              const double homothety) {
   OBB obb = in_obb;
   obb.rotate_in_place(in_q);
   if (homothety != 1.0) {

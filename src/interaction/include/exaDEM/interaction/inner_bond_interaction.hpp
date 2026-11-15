@@ -26,6 +26,7 @@ under the License.
 #include <exaDEM/interaction/interaction_pair.hpp>
 #include <exaDEM/interface/rupture_criterion.hpp>
 #include <iostream>
+#include <exaDEM/basic_type.hpp>
 
 // Single source of truth for InnerBondInteraction's per-interaction fields.
 // 'friction' and 'weight' reuse tags already declared (NEW_TAG) by Interaction in
@@ -104,7 +105,7 @@ struct InnerBondInteraction {
   /** @brief Resets the Interaction structure by setting friction and moment vectors to zero.
    */
   ONIKA_HOST_DEVICE_FUNC void reset() {
-    constexpr exanb::Vec3d null = {0, 0, 0};
+    constexpr Vec3d null = {0, 0, 0};
     (*this)[attr::friction] = null;
     (*this)[attr::dn0] = 0;
     (*this)[attr::en] = 0;
@@ -210,7 +211,7 @@ ONIKA_HOST_DEVICE_FUNC inline Interaction broke_interaction(const InnerBondInter
   res.pair_ = I.pair_;
   res.pair_.type_ = InteractionTypeId::VertexVertex;
   res[attr::friction] = I[attr::friction];
-  res[attr::moment] = exanb::Vec3d{0, 0, 0};
+  res[attr::moment] = Vec3d{0, 0, 0};
   return res;
 }
 

@@ -29,6 +29,7 @@ under the License.
 #include <exaDEM/angular_velocity.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_vrot, field::_arot>>
 class PushToAngularVelocity : public OperatorNode {
   // attributes processed during computation

@@ -6,6 +6,7 @@
 
 #include <exaDEM/interface/interface.hpp>
 #include <exaDEM/interface/reduce_interface.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 /** @brief Function to apply the fracture criterion to each interface */
@@ -13,11 +14,11 @@ struct ApplyAndReduceInterfaceFractureCriterionFunc {
   // Warning, interaction_ is mutable.
   mutable ClassifierContainer<InteractionType::InnerBond>::View
       interaction_;         // interactions that compose the interfaces;
-  exanb::Vec3d* const fn_;  // list of normal forces for each interaction that compose the interfaces
+  Vec3d* const fn_;         // list of normal forces for each interaction that compose the interfaces
   double* const dn_;        // list of normal displacements for each interaction that compose the interfaces
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(int& broken_interfaces, Interface& interface, uint8_t& break_interface,
-                                                reduce_thread_local_t = {}) const {
+                                                exanb::reduce_thread_local_t = {}) const {
     auto& [offset, size] = interface;
     double En = 0.0, Et = 0.0, S = 0.0;
 
@@ -58,11 +59,11 @@ struct ApplyAndReduceInterfaceFractureCriterionFunc {
     }
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(int& global, const int& local, reduce_thread_block_t) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(int& global, const int& local, exanb::reduce_thread_block_t) const {
     if (local > 0) ONIKA_CU_ATOMIC_ADD(global, local);
   }
 
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(int& global, const int& local, reduce_global_t) const {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(int& global, const int& local, exanb::reduce_global_t) const {
     if (local > 0) ONIKA_CU_ATOMIC_ADD(global, local);
   }
 };

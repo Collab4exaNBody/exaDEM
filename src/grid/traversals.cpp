@@ -25,6 +25,7 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class UpdateTraversal : public OperatorNode {
   using ComputeFields = FieldSet<>;

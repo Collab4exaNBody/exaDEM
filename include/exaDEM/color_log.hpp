@@ -58,26 +58,25 @@ inline std::string to_string(const onika::math::Vec3d& v) {
 }  // namespace std
 
 namespace color_log {
-using namespace ansi;
 
 inline void highlight(const std::string& operator_name, const std::string& text) {
   std::string full_text = "[" + operator_name + "] " + text;
-  onika::lout << green(full_text) << std::endl;
+  onika::lout << ansi::green(full_text) << std::endl;
 }
 
 inline void warning(const std::string& operator_name, const std::string& text) {
   std::string full_text = "[WARNING, " + operator_name + "] " + text;
-  onika::lout << yellow(full_text) << std::endl;
+  onika::lout << ansi::yellow(full_text) << std::endl;
 }
 
 inline void debug(const std::string& operator_name, const std::string& text) {
   std::string full_text = "[DEBUG, " + operator_name + "] " + text;
-  onika::ldbg << magenta(full_text) << std::endl;
+  onika::ldbg << ansi::magenta(full_text) << std::endl;
 }
 
 inline void error(const std::string& operator_name, const std::string& text, bool stop_execution = true) {
   std::string full_text = "[ERROR, " + operator_name + "] " + text;
-  onika::lout << red(full_text) << std::endl;
+  onika::lout << ansi::red(full_text) << std::endl;
   if (stop_execution) std::exit(EXIT_FAILURE);
 }
 
@@ -85,7 +84,7 @@ inline void error(const std::string& operator_name, const std::string& text, boo
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   std::string full_text = "[ERROR, rank " + std::to_string(rank) + ", " + operator_name + "] " + text;
-  std::cout << red(full_text) << std::endl;
+  std::cout << ansi::red(full_text) << std::endl;
   std::exit(EXIT_FAILURE);
 }
 }  // namespace color_log

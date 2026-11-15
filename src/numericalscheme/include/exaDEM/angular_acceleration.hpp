@@ -22,14 +22,13 @@ under the License.
 #include <exanb/compute/compute_cell_particles.h>
 #include <onika/math/basic_types_operators.h>
 #include <onika/cuda/cuda.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 struct PushToAngularAccelerationFunctor {
   ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(const exanb::Quaternion& Q, const exanb::Vec3d& mom, const exanb::Vec3d& vrot,
-                         exanb::Vec3d& arot, const exanb::Vec3d& inertia) const {
-    using exanb::Quaternion;
-    using exanb::Vec3d;
+  inline void operator()(const Quaternion& Q, const Vec3d& mom, const Vec3d& vrot, Vec3d& arot,
+                         const Vec3d& inertia) const {
     Quaternion Qinv = get_conjugated(Q);
     const auto omega = Qinv * vrot;  // Express omega in the body framework
     const auto M = Qinv * mom;       // Express torque in the body framework

@@ -40,6 +40,7 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT>
 class VertexDisplacementOver : public OperatorNode {
   static constexpr FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_homothety, field::_orient>

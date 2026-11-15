@@ -46,9 +46,9 @@ struct ReduceInterfaceFunctor {
   ONIKA_HOST_DEVICE_FUNC inline void operator()(uint64_t i) const {
     ResultT local_val = ResultT();
     if constexpr (!ReduceInterfaceTraits<FuncT>::RequireBreakInterfaceMember) {
-      func_(local_val, interface_[i], reduce_thread_local_t{});
+      func_(local_val, interface_[i], exanb::reduce_thread_local_t{});
     } else {
-      func_(local_val, interface_[i], break_interface_[i], reduce_thread_local_t{});
+      func_(local_val, interface_[i], break_interface_[i], exanb::reduce_thread_local_t{});
     }
 
     ONIKA_CU_BLOCK_SHARED onika::cuda::UnitializedPlaceHolder<ResultT> team_val_place_holder;
@@ -60,12 +60,12 @@ struct ReduceInterfaceFunctor {
     ONIKA_CU_BLOCK_SYNC();
 
     if (ONIKA_CU_THREAD_IDX != 0) {
-      func_(team_val, local_val, reduce_thread_block_t{});
+      func_(team_val, local_val, exanb::reduce_thread_block_t{});
     }
     ONIKA_CU_BLOCK_SYNC();
 
     if (ONIKA_CU_THREAD_IDX == 0) {
-      func_(*reduced_val_, team_val, reduce_global_t{});
+      func_(*reduced_val_, team_val, exanb::reduce_global_t{});
     }
   }
 };
@@ -74,7 +74,7 @@ template <typename FuncT, typename ResultT>
 static inline ResultT reduce_interface(InterfaceManager& interface, FuncT& func, ResultT& init,
                                        onika::parallel::ParallelExecutionContext* exec_ctx) {
   using namespace onika::parallel;
-  ParallelForOptions opts;
+  onika::parallel::ParallelForOptions opts;
   opts.omp_scheduling = OMP_SCHED_STATIC;
   onika::memory::CudaMMVector<ResultT> array(1);
   array[0] = init;

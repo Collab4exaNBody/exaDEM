@@ -28,6 +28,7 @@ under the License.
 #include <exaDEM/force_to_accel.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_mass, field::_fx, field::_fy, field::_fz>>
 class ForceToAccel : public OperatorNode {
   // attributes processed during computation

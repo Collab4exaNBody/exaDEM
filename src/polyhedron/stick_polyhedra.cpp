@@ -38,8 +38,9 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 Vec3d normalize(Vec3d&& in) {
-  const double inv_norm = 1.0 / exanb::norm(in);
+  const double inv_norm = 1.0 / norm(in);
   return in * inv_norm;
 }
 
@@ -256,7 +257,7 @@ class StickPolyhedraOperator : public OperatorNode {
                 Vec3d vj0 = vertices_j[vj[0]];
                 Vec3d vj1 = vertices_j[vj[1]];
                 Vec3d vj2 = vertices_j[vj[2]];
-                nj_cache[j] = normalize(exanb::cross(vj1 - vj0, vj2 - vj0));
+                nj_cache[j] = normalize(cross(vj1 - vj0, vj2 - vj0));
               }
 
               for (int i = 0; i < nfi && !found; i++) {
@@ -268,7 +269,7 @@ class StickPolyhedraOperator : public OperatorNode {
                 Vec3d vi1 = vertices_i[vi[1]];
                 Vec3d vi2 = vertices_i[vi[2]];
 
-                Vec3d ni = normalize(exanb::cross(vi1 - vi0, vi2 - vi0));
+                Vec3d ni = normalize(cross(vi1 - vi0, vi2 - vi0));
                 const double area_i = shpi->get_face_area(i);
 
                 for (int j = 0; j < nfj && !found; j++) {
@@ -287,8 +288,8 @@ class StickPolyhedraOperator : public OperatorNode {
                   }
 
                   const Vec3d& nj = nj_cache[j];
-                  Vec3d nij = exanb::cross(ni, nj);
-                  double dotij = exanb::norm(nij);
+                  Vec3d nij = cross(ni, nj);
+                  double dotij = norm(nij);
 
                   if (dotij > 1.e-10) {
                     continue;

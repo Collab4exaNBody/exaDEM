@@ -26,6 +26,7 @@ under the License.
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_prepro.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 // -> First Filters
@@ -40,11 +41,11 @@ struct filter_driver {
 
 // API
 template <typename Driver>
-ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_driver(Driver& driver, const double rcut, const exanb::Vec3d& pi,
+ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_driver(Driver& driver, const double rcut, const Vec3d& pi,
                                                         const double hi, const int i, const shape* shpi,
-                                                        const exanb::Quaternion& oi) {
+                                                        const Quaternion& oi) {
   filter_driver<Driver> filter = {driver};
-  const exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
+  const Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
   return filter(rcut + shpi->minkowski(hi), vi);
 }
 
@@ -60,31 +61,31 @@ template <typename Driver>
 struct detector_driver {
   Driver& driver;
   template <typename... Args>
-  ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> operator()(Args&&... args) {
+  ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> operator()(Args&&... args) {
     return driver.detector(std::forward<Args>(args)...);
   }
 };
 
 // API
 template <typename Driver>
-ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector_vertex_driver(
-    Driver& driver, const exanb::Vec3d& pi, const double hi, const int i, const shape* shpi,
-    const exanb::Quaternion& oi) {
+ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector_vertex_driver(
+    Driver& driver, const Vec3d& pi, const double hi, const int i, const shape* shpi, const Quaternion& oi) {
   detector_driver<Driver> detector = {driver};
-  const exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
+  const Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
   return detector(shpi->minkowski(hi), vi);
 }
 
 template <typename Driver, typename VertexType>
-ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector_vertex_driver(
+ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector_vertex_driver(
     Driver& driver, const VertexType& vertexes, const double hi, const int i, const shape* shpi) {
   detector_driver<Driver> detector = {driver};
   return detector(shpi->minkowski(hi), vertexes[i]);
 }
 
 template <typename Driver>
-ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector_vertex_driver(
-    Driver& driver, const exanb::Vec3d& position, const double radius) {
+ONIKA_HOST_DEVICE_FUNC inline std::tuple<bool, double, Vec3d, Vec3d> detector_vertex_driver(Driver& driver,
+                                                                                            const Vec3d& position,
+                                                                                            const double radius) {
   detector_driver<Driver> detector = {driver};
   return detector(radius, position);
 }

@@ -26,6 +26,7 @@ under the License.
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT,
           class = AssertGridHasFields<GridT, field::_inertia, field::_radius, field::_mass, field::_homothety>>
 class PolyhedraUpdateInertia : public OperatorNode {

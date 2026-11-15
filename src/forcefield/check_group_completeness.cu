@@ -37,6 +37,7 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 /** Reduces the maximum value of the 'group' particle field. */
 struct ReduceMaxGroupFunctor {
@@ -64,7 +65,6 @@ struct ReduceCellParticlesTraits<exaDEM::ReduceMaxGroupFunctor> {
 }  // namespace exanb
 
 namespace exaDEM {
-using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_group>>
 class CheckGroupCompleteness : public OperatorNode {

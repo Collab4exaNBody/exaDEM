@@ -32,6 +32,7 @@ under the License.
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class ContactNetwork : public OperatorNode {
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);

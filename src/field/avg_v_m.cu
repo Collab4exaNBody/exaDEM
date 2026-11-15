@@ -28,6 +28,7 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 ONIKA_HOST_DEVICE_FUNC inline void ATOMIC_ADD(Vec3d& a, const Vec3d& b) {
   ONIKA_CU_ATOMIC_ADD(a.x, b.x);
   ONIKA_CU_ATOMIC_ADD(a.y, b.y);
@@ -72,7 +73,6 @@ struct ReduceCellParticlesTraits<exaDEM::ReduceParticleVelMassFunctor> {
 }  // namespace exanb
 
 namespace exaDEM {
-using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz, field::_mass>>
 class GetAvgVelMass : public OperatorNode {

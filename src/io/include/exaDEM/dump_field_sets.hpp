@@ -23,27 +23,28 @@ under the License.
 #include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
-using namespace exanb;
 
 // A .dump's header names its own fields, so which of these 4 known exaDEM field-set
-using DumpFieldSet = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_mass,
-                              field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot,
-                              field::_arot, field::_inertia, field::_id, field::_type, field::_group>;
+using DumpFieldSet =
+    exanb::FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_mass,
+                    field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot,
+                    field::_inertia, field::_id, field::_type, field::_group>;
 using DumpFragmentationFieldSet =
-    FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_cluster, field::_mass,
-             field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot,
-             field::_inertia, field::_id, field::_type, field::_group>;
+    exanb::FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_cluster,
+                    field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot,
+                    field::_arot, field::_inertia, field::_id, field::_type, field::_group>;
 // Deprecated: older dumps (pre-"group" field) written by read_dump_particle_interaction_v122 /
 // read_dump_particle_fragmentation_v122.
-using DumpFieldSetLegacy122 = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz,
-                                       field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom,
-                                       field::_vrot, field::_arot, field::_inertia, field::_id, field::_type>;
+using DumpFieldSetLegacy122 =
+    exanb::FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_mass,
+                    field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot,
+                    field::_inertia, field::_id, field::_type>;
 using DumpFragmentationFieldSetLegacy122 =
-    FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_cluster, field::_mass,
-             field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot,
-             field::_inertia, field::_id, field::_type>;
+    exanb::FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_cluster,
+                    field::_mass, field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot,
+                    field::_arot, field::_inertia, field::_id, field::_type>;
 
 // Superset grid type able to hold particles read with any of the 4 field sets above.
-using DumpReaderGridT = GridFromFieldSet<FragmentationDEMFieldSet>;
+using DumpReaderGridT = exanb::GridFromFieldSet<FragmentationDEMFieldSet>;
 
 }  // namespace exaDEM

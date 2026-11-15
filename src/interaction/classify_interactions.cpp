@@ -26,6 +26,7 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 class ClassifyInteractions : public OperatorNode {
   // attributes processed during computation
   using ComputeFields = FieldSet<field::_vrot, field::_arot>;

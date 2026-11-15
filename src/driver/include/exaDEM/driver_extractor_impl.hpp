@@ -1,5 +1,7 @@
 #pragma once
 
+#include <exaDEM/basic_type.hpp>
+
 namespace exaDEM {
 // Functor to extract specified fields from a driver and format them as a string
 struct DriverExtractFunc {
@@ -22,11 +24,11 @@ struct DriverExtractFunc {
   void extract(extractor::Dictionnary field, DriverT& driver) {
     using exaDEM::extractor::Dictionnary;
     // Cache commonly accessed driver properties
-    const exanb::Vec3d center = driver.position();        // Center position
-    const exanb::Vec3d vel = driver.velocity();           // Linear velocity
-    const exanb::Vec3d vrot = driver.angular_velocity();  // Angular velocity
-    const exanb::Vec3d force = driver.forces();           // Accumulated forces (MPI-reduced)
-    const exanb::Vec3d moment = driver.moment();          // Accumulated moment (MPI-reduced)
+    const Vec3d center = driver.position();        // Center position
+    const Vec3d vel = driver.velocity();           // Linear velocity
+    const Vec3d vrot = driver.angular_velocity();  // Angular velocity
+    const Vec3d force = driver.forces();           // Accumulated forces (MPI-reduced)
+    const Vec3d moment = driver.moment();          // Accumulated moment (MPI-reduced)
     // Driver type identifier
     if (field == Dictionnary::type) {
       stream += print(driver.get_type());

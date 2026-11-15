@@ -24,6 +24,7 @@ under the License.
 #include <filesystem>
 #include <fstream>
 #include <regex>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 /**
@@ -35,12 +36,10 @@ namespace exaDEM {
  * @return shape      Fully populated shape object.
  */
 inline shape read_shp(std::ifstream& input, bool big_shape = false) {
-  using exanb::Quaternion;
-  using exanb::Vec3d;
   shape shp;
   std::string key, line;
   std::vector<int> face_indices_buffer;
-  exanb::Vec3d position = {0, 0, 0};
+  Vec3d position = {0, 0, 0};
   while (input >> key) {
     if (key == "name") {
       input >> shp.name_;
@@ -62,7 +61,7 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
     } else if (key == "volume") {
       input >> shp.volume_;
     } else if (key == "I/m") {
-      exanb::Vec3d Im;
+      Vec3d Im;
       input >> Im.x >> Im.y >> Im.z;
       shp.inertia_on_mass_ = Im;
     } else if (key == "position") {
@@ -73,7 +72,7 @@ inline shape read_shp(std::ifstream& input, bool big_shape = false) {
       assert(num_vertices != 0);
       for (int i = 0; i < num_vertices; i++) {
         getline(input, line);
-        exanb::Vec3d vertex;
+        Vec3d vertex;
         input >> vertex.x >> vertex.y >> vertex.z;
         vertex = {vertex.x, vertex.y, vertex.z};
         shp.add_vertex(vertex);
@@ -196,12 +195,12 @@ inline void read_shp(shapes& shps, const std::string file_name, bool big_shape =
  * @param file_name Path to the file (std::string_view for efficiency).
  * @return Map associating each shape name with its Vec3d position.
  */
-inline std::map<std::string, exanb::Vec3d> scan_shape_position(std::string_view file_name) {
-  std::map<std::string, exanb::Vec3d> res;
+inline std::map<std::string, Vec3d> scan_shape_position(std::string_view file_name) {
+  std::map<std::string, Vec3d> res;
   std::ifstream input(file_name.data());
   for (std::string line; getline(input, line);) {
     if (line == "<") {
-      exanb::Vec3d position = {0, 0, 0};  // default value
+      Vec3d position = {0, 0, 0};  // default value
       std::string type_name = "error";
       std::string key;
       // Read until closing '>'

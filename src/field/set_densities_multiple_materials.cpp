@@ -24,6 +24,7 @@ under the License.
 #include <exanb/core/grid.h>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_mass>>
 class SetDensities : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);

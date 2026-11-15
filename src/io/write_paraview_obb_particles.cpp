@@ -47,6 +47,7 @@ under the License.
 #include <vector>
 
 namespace exaDEM {
+using namespace exanb;
 
 struct par_obb_helper {
   int count = 0;  // use to count the number of corners
@@ -58,8 +59,8 @@ struct par_obb_helper {
   std::stringstream types;
 };
 
-inline void build_buffer_obb(const exanb::Vec3d& pos, const uint64_t id, const uint16_t type, const shape* shp,
-                             const exanb::Quaternion& orient, par_obb_helper& buffers) {
+inline void build_buffer_obb(const Vec3d& pos, const uint64_t id, const uint16_t type, const shape* shp,
+                             const Quaternion& orient, par_obb_helper& buffers) {
   // add [1] corner [2] lines [3] id [4] type
 
   double homothety = 1;
@@ -68,9 +69,9 @@ inline void build_buffer_obb(const exanb::Vec3d& pos, const uint64_t id, const u
   obbi.extent *= homothety;
   obbi.center *= homothety;
   obbi.center += pos;
-  exanb::Vec3d corner;
+  Vec3d corner;
 
-  auto add_corner = [&buffers](const exanb::Vec3d& c) { buffers.corners << " " << c.x << " " << c.y << " " << c.z; };
+  auto add_corner = [&buffers](const Vec3d& c) { buffers.corners << " " << c.x << " " << c.y << " " << c.z; };
   auto add_offset = [&buffers](int incr) {
     buffers.offsets << " " << buffers.off;
     buffers.off += incr;
@@ -78,9 +79,9 @@ inline void build_buffer_obb(const exanb::Vec3d& pos, const uint64_t id, const u
 
   // [1] Add Corners
 
-  exanb::Vec3d e0 = obbi.e1;  //
-  exanb::Vec3d e1 = obbi.e2;  //
-  exanb::Vec3d e2 = obbi.e3;  //
+  Vec3d e0 = obbi.e1;  //
+  Vec3d e1 = obbi.e2;  //
+  Vec3d e2 = obbi.e3;  //
 
   corner = obbi.center - obbi.extent.x * e0 - obbi.extent.y * e1 - obbi.extent.z * e2;
   add_corner(corner);
@@ -270,7 +271,7 @@ class WriteParaviewOBBParticlesOperator : public OperatorNode {
       auto* __restrict__ type = cells[cell_a][field::type];
       auto* __restrict__ orient = cells[cell_a][field::orient];
       for (int j = 0; j < n_particles; j++) {
-        exanb::Vec3d pos{rx[j], ry[j], rz[j]};
+        Vec3d pos{rx[j], ry[j], rz[j]};
         const shape* shp = shps[type[j]];
         build_buffer_obb(pos, id[j], type[j], shp, orient[j], buffers);
       }

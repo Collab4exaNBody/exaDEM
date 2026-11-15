@@ -28,6 +28,7 @@ under the License.
 #include <exaDEM/color_log.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 struct RandomizeRadiusFunctor {
   double relative_deviation;
   bool allow_exceed;
@@ -81,7 +82,6 @@ struct ComputeCellParticlesTraits<exaDEM::RandomizeRadiusFunctor> {
 }  // namespace exanb
 
 namespace exaDEM {
-using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_inertia, field::_radius, field::_mass>>
 class RandomizeRadiusOp : public OperatorNode {

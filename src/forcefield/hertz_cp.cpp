@@ -32,6 +32,7 @@ under the License.
 #include <exaDEM/forcefield/multimat_parameters.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 namespace hertz_cp_detail {
 /** Optional list of values: the value of the pair p, or the default value if the list is not defined. */

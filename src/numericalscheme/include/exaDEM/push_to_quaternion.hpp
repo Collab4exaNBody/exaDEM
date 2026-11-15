@@ -21,6 +21,7 @@ under the License.
 #include <exanb/core/grid.h>
 #include <exanb/compute/compute_cell_particles.h>
 #include <onika/math/quaternion_operators.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 /**
@@ -32,7 +33,7 @@ struct PushToQuaternionFunctor {
   double m_dt_2;
 
   ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(exanb::Quaternion& Q, exanb::Vec3d& vrot, const exanb::Vec3d arot) const {
+  inline void operator()(Quaternion& Q, Vec3d& vrot, const Vec3d arot) const {
     Q = Q + dot(Q, vrot) * m_dt;
     Q = normalize(Q);
     vrot += m_dt_2 * arot;

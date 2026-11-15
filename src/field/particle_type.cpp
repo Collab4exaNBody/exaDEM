@@ -27,6 +27,7 @@ under the License.
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_type>>
 class ParticleType : public OperatorNode {

@@ -30,6 +30,7 @@ under the License.
 #include <exaDEM/polyhedron/compute_vertices.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_type, field::_homothety, field::_orient>>
 class PolyhedraComputeVertices : public OperatorNode {
   using ComputeFields = field_accessor_tuple_from_field_set_t<

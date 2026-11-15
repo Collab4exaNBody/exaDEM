@@ -26,6 +26,7 @@ under the License.
 #include <exaDEM/color_log.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT>
 class CheckDTCritical : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);

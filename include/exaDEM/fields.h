@@ -26,6 +26,7 @@ under the License.
 
 #include <onika/math/basic_types_def.h>
 #include <onika/math/quaternion.h>
+#include <exaDEM/basic_type.hpp>
 #include <onika/oarray.h>
 
 #include <cstdint>
@@ -44,22 +45,22 @@ XNB_DECLARE_FIELD(::exanb::Vec3d, inertia, "inertia values (same value in the di
 XNB_DECLARE_FIELD(::exanb::Mat3d, stress, "stress tensor");  //
 
 namespace exaDEM {
-using namespace ::exanb;
+namespace field = ::exanb::field;
 
 // DEM model field set
-using DEMFieldSet = FieldSet<
+using DEMFieldSet = ::exanb::FieldSet<
     // rx, ry and rz are added implicitly
     field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_mass, field::_homothety,
     field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type,
     field::_group, field::_stress>;
-using FragmentationDEMFieldSet = FieldSet<
+using FragmentationDEMFieldSet = ::exanb::FieldSet<
     // rx, ry and rz are added implicitly
     field::_cluster, field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_mass,
     field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia,
     field::_id, field::_type, field::_group, field::_stress>;
 
 // retrocompatibility with exanb::grid_flavor::DEM
-using DEMFieldSetV121 = FieldSet<
+using DEMFieldSetV121 = ::exanb::FieldSet<
     // rx, ry and rz are added implicitly
     field::_vx, field::_vy, field::_vz, field::_fx, field::_fy, field::_fz, field::_mass, field::_homothety,
     field::_radius, field::_orient, field::_mom, field::_vrot, field::_arot, field::_inertia, field::_id, field::_type,

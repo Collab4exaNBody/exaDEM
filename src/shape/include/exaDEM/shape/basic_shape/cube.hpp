@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <exaDEM/shape.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 namespace basic_shape {
@@ -42,7 +43,7 @@ shape create_cube(std::string name, double length, double minkowski) {
   I += (8.0 / 15.0) * pi * std::pow(r, 5);
 
   // ---------- I / m ----------
-  shp.inertia_on_mass_ = I / shp.compute_volume() * exanb::Vec3d{1, 1, 1};
+  shp.inertia_on_mass_ = I / shp.compute_volume() * Vec3d{1, 1, 1};
 
   shp.add_vertex({-0.5, -0.5, -0.5});  // v0
   shp.add_vertex({0.5, -0.5, -0.5});   // v1
@@ -53,7 +54,7 @@ shape create_cube(std::string name, double length, double minkowski) {
   shp.add_vertex({0.5, 0.5, 0.5});     // v6
   shp.add_vertex({-0.5, 0.5, 0.5});    // v7
 
-  auto func = [c](exanb::Vec3d& v) -> void { v *= c; };
+  auto func = [c](Vec3d& v) -> void { v *= c; };
   shp.for_all_vertices(func);
 
   shp.add_edge(0, 1);  // below
@@ -79,8 +80,8 @@ shape create_cube(std::string name, double length, double minkowski) {
 
   shp.compute_face_areas();
   shp.obb_ = build_obb_from_shape(shp);
-  shp.pre_compute_obb_edges(exanb::Vec3d{0, 0, 0}, exanb::Quaternion{1, 0, 0, 0});
-  shp.pre_compute_obb_faces(exanb::Vec3d{0, 0, 0}, exanb::Quaternion{1, 0, 0, 0});
+  shp.pre_compute_obb_edges(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
+  shp.pre_compute_obb_faces(Vec3d{0, 0, 0}, Quaternion{1, 0, 0, 0});
   return shp;
 }
 }  // namespace basic_shape

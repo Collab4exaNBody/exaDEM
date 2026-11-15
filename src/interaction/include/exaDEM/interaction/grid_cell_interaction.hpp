@@ -33,20 +33,20 @@ namespace exaDEM {
  * @brief Struct representing interactions in DEM simulation.
  * It contains a memory-managed vector storing extra dynamic data storage for interactions.
  */
-typedef GridExtraDynamicDataStorageT<PlaceholderInteraction> GridCellParticleInteraction;
+typedef exanb::GridExtraDynamicDataStorageT<PlaceholderInteraction> GridCellParticleInteraction;
 
 /**
  * @brief Alias for the migration helper for interactions.
  */
-typedef ExtraDynamicDataStorageMigrationHelper<PlaceholderInteraction> InteractionMigrationHelper;
+typedef exanb::ExtraDynamicDataStorageMigrationHelper<PlaceholderInteraction> InteractionMigrationHelper;
 
 /**
  * @brief Alias for the cell move buffer for interactions.
  */
-typedef ExtraDynamicDataStorageCellMoveBufferT<PlaceholderInteraction> InteractionCellMoveBuffer;
+typedef exanb::ExtraDynamicDataStorageCellMoveBufferT<PlaceholderInteraction> InteractionCellMoveBuffer;
 
 /**
  * @brief Alias for the grid move buffer for interactions.
  */
-typedef ExtraDynamicStorageDataGridMoveBufferT<PlaceholderInteraction> InteractionGridMoveBuffer;
+typedef exanb::ExtraDynamicStorageDataGridMoveBufferT<PlaceholderInteraction> InteractionGridMoveBuffer;
 }  // namespace exaDEM

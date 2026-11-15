@@ -27,6 +27,7 @@ under the License.
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_prepro.hpp>
 #include <exaDEM/type/contact.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 
@@ -40,30 +41,30 @@ namespace exaDEM {
  * @return True if the distance between the vertices is less than or equal to
  * the Verlet radius + shape radii, false otherwise.
  */
-ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex(const double rVerlet, const exanb::Vec3d& vi, double ri,
-                                                        const exanb::Vec3d& vj, double rj) {
+ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_vertex(const double rVerlet, const Vec3d& vi, double ri,
+                                                        const Vec3d& vj, double rj) {
   // sphero-polyhedron
   double R = ri + rj + rVerlet;
 
   // === compute distance
-  const exanb::Vec3d dist = vi - vj;
+  const Vec3d dist = vi - vj;
 
-  const double d2 = exanb::dot(dist, dist);
+  const double d2 = dot(dist, dist);
   return d2 <= R * R;
 }
 
 // This function returns : if there is a contact, interpenetration value, normal
 // vector, and the contact position
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex_core(const exanb::Vec3d& pi, double ri,
-                                                                   const exanb::Vec3d& pj, double rj) {
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex_core(const Vec3d& pi, double ri, const Vec3d& pj,
+                                                                   double rj) {
   // sphero-polyhedron
   double R = ri + rj;
 
   // === compute distance
-  const exanb::Vec3d dist = pi - pj;
+  const Vec3d dist = pi - pj;
 
   // === compute norm
-  const double dist_norm = exanb::norm(dist);
+  const double dist_norm = norm(dist);
 
   // === inv norm
   const double inv_dist_norm = 1.0 / dist_norm;
@@ -72,32 +73,31 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_vertex_core(const exanb::
   const double dn = dist_norm - R;
 
   // === normal vector
-  const exanb::Vec3d n = dist * inv_dist_norm;
+  const Vec3d n = dist * inv_dist_norm;
 
   // === compute contact position
-  const exanb::Vec3d contact_position = pi - n * (ri + 0.5 * dn);
+  const Vec3d contact_position = pi - n * (ri + 0.5 * dn);
 
   return {dn < 0, dn, n, contact_position};
 }
 
-ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge_core(const double rVerlet, const exanb::Vec3d& vi,
-                                                           const double ri, const exanb::Vec3d& vf,
-                                                           const exanb::Vec3d& vs, const double rj) {
+ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge_core(const double rVerlet, const Vec3d& vi, const double ri,
+                                                           const Vec3d& vf, const Vec3d& vs, const double rj) {
   // === compute distances
-  const exanb::Vec3d distfs = vs - vf;
-  const exanb::Vec3d distfi = vi - vf;
-  double r = (exanb::dot(distfs, distfi)) / (exanb::dot(distfs, distfs));
+  const Vec3d distfs = vs - vf;
+  const Vec3d distfi = vi - vf;
+  double r = (dot(distfs, distfi)) / (dot(distfs, distfs));
   if (r < -rVerlet || r > 1.0 + rVerlet) {
     return false;
   }
 
   // === compute minimal distance between the vertex and the edge
-  exanb::Vec3d dist = distfi - distfs * r;
+  Vec3d dist = distfi - distfs * r;
 
   // === r max
   const double Rmax = ri + rj + rVerlet;
 
-  return (exanb::dot(dist, dist) < (Rmax * Rmax));
+  return (dot(dist, dist) < (Rmax * Rmax));
 }
 
 /**
@@ -119,20 +119,19 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_edge_core(const double rVerlet,
  *         - The normal vector of the contact.
  *         - The contact position.
  */
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_edge_core(const exanb::Vec3d& vi, const double ri,
-                                                                 const exanb::Vec3d& vf, const exanb::Vec3d& vs,
-                                                                 const double rj) {
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_edge_core(const Vec3d& vi, const double ri, const Vec3d& vf,
+                                                                 const Vec3d& vs, const double rj) {
   // === compute distances
-  const exanb::Vec3d distfs = vs - vf;
-  const exanb::Vec3d distfi = vi - vf;
-  double r = (exanb::dot(distfs, distfi)) / (exanb::dot(distfs, distfs));
+  const Vec3d distfs = vs - vf;
+  const Vec3d distfi = vi - vf;
+  double r = (dot(distfs, distfi)) / (dot(distfs, distfs));
   if (r <= 0 || r >= 1.0) return contact();
 
   // === compute normal direction
-  exanb::Vec3d n = distfi - distfs * r;
+  Vec3d n = distfi - distfs * r;
 
   // === compute overlap in dn
-  const double dn = exanb::norm(n) - (ri + rj);
+  const double dn = norm(n) - (ri + rj);
 
   if (dn > 0) {
     return contact();
@@ -141,37 +140,37 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_edge_core(const exanb::Ve
     _normalize(n);
 
     // === compute contact position
-    const exanb::Vec3d contact_position = vi - n * (ri + 0.5 * dn);
+    const Vec3d contact_position = vi - n * (ri + 0.5 * dn);
 
     return {true, dn, n, contact_position};
   }
 }
 
 ONIKA_HOST_DEVICE_FUNC
-inline contact detection_vertex_face(const exanb::Vec3d& pi, const double radius, const exanb::Vec3d& pj,
-                                     const double hj, const int j, const shape* shpj, const exanb::Quaternion& oj) {
+inline contact detection_vertex_face(const Vec3d& pi, const double radius, const Vec3d& pj, const double hj,
+                                     const int j, const shape* shpj, const Quaternion& oj) {
   double ri = radius;
   double rj = shpj->minkowski(hj);
 
   // === compute vertices
-  const exanb::Vec3d vi = pi;
+  const Vec3d vi = pi;
   auto [data, nf] = shpj->get_face(j);
   assert(nf >= 3);
-  exanb::Vec3d va = shpj->get_vertex(data[0], pj, hj, oj);
-  exanb::Vec3d vb = shpj->get_vertex(data[1], pj, hj, oj);
-  const exanb::Vec3d vc = shpj->get_vertex(data[nf - 1], pj, hj, oj);
+  Vec3d va = shpj->get_vertex(data[0], pj, hj, oj);
+  Vec3d vb = shpj->get_vertex(data[1], pj, hj, oj);
+  const Vec3d vc = shpj->get_vertex(data[nf - 1], pj, hj, oj);
 
-  const exanb::Vec3d v = vi - va;
-  exanb::Vec3d v1 = vb - va;
-  exanb::Vec3d v2 = vc - va;
+  const Vec3d v = vi - va;
+  Vec3d v1 = vb - va;
+  Vec3d v2 = vc - va;
   _normalize(v1);
 
   // === compute normal vector
-  exanb::Vec3d n = cross(v1, v2);
+  Vec3d n = cross(v1, v2);
   _normalize(n);
 
   // === eliminate possibility
-  double dist = exanb::dot(n, v);
+  double dist = dot(n, v);
 
   if (dist < 0) {
     n = n * (-1);
@@ -182,12 +181,12 @@ inline contact detection_vertex_face(const exanb::Vec3d& pi, const double radius
     return contact();
   }
 
-  const exanb::Vec3d P = vi - n * dist;
+  const Vec3d P = vi - n * dist;
 
   int ODD = 0;
   v2 = cross(n, v1);
-  double ori1 = exanb::dot(P, v1);
-  double ori2 = exanb::dot(P, v2);
+  double ori1 = dot(P, v1);
+  double ori2 = dot(P, v2);
   double pa1, pa2;
   double pb1, pb2;
   int iva, ivb;
@@ -196,10 +195,10 @@ inline contact detection_vertex_face(const exanb::Vec3d& pi, const double radius
     if (ivb == nf) ivb = 0;
     va = shpj->get_vertex(data[iva], pj, hj, oj);
     vb = shpj->get_vertex(data[ivb], pj, hj, oj);
-    pa1 = exanb::dot(va, v1);
-    pb1 = exanb::dot(vb, v1);
-    pa2 = exanb::dot(va, v2);
-    pb2 = exanb::dot(vb, v2);
+    pa1 = dot(va, v1);
+    pb1 = dot(vb, v1);
+    pa2 = dot(va, v2);
+    pb2 = dot(vb, v2);
 
     // @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
     // @see http://alienryderflex.com/polygon/
@@ -214,17 +213,17 @@ inline contact detection_vertex_face(const exanb::Vec3d& pi, const double radius
   const double dn = dist - (ri + rj);
 
   // === compute contact position
-  const exanb::Vec3d contact_position = vi - n * (ri + 0.5 * dn);
+  const Vec3d contact_position = vi - n * (ri + 0.5 * dn);
 
   return {ODD == 1, dn, n, contact_position};
 }
 
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face(const exanb::Vec3d& pi, const double hi, const int i,
-                                                            const shape* shpi, const exanb::Quaternion& oi,
-                                                            const exanb::Vec3d& pj, const double hj, const int j,
-                                                            const shape* shpj, const exanb::Quaternion& oj) {
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face(const Vec3d& pi, const double hi, const int i,
+                                                            const shape* shpi, const Quaternion& oi, const Vec3d& pj,
+                                                            const double hj, const int j, const shape* shpj,
+                                                            const Quaternion& oj) {
   double ri = shpi->minkowski(hi);
-  const exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
+  const Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
   return detection_vertex_face(vi, ri, pj, hj, j, shpj, oj);
 }
 /**
@@ -243,27 +242,27 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face(const exanb::Vec3d& 
  *         - The contact position.
  */
 template <typename VertexType>
-ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(const double rVerlet, const exanb::Vec3d& vi, const double& ri,
+ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(const double rVerlet, const Vec3d& vi, const double& ri,
                                                       const VertexType& vaj, const double hj, const int j,
                                                       const shape* shpj) {
   double rj = shpj->minkowski(hj);
   // === compute vertices
   auto [data, nf] = shpj->get_face(j);
   assert(nf >= 3);
-  const exanb::Vec3d& va = vaj[data[0]];
-  const exanb::Vec3d& vb = vaj[data[1]];
-  const exanb::Vec3d& vc = vaj[data[nf - 1]];
-  const exanb::Vec3d v = vi - va;
-  exanb::Vec3d v1 = vb - va;
-  exanb::Vec3d v2 = vc - va;
+  const Vec3d& va = vaj[data[0]];
+  const Vec3d& vb = vaj[data[1]];
+  const Vec3d& vc = vaj[data[nf - 1]];
+  const Vec3d v = vi - va;
+  Vec3d v1 = vb - va;
+  Vec3d v2 = vc - va;
   _normalize(v1);
 
   // === compute normal vector
-  exanb::Vec3d n = cross(v1, v2);
+  Vec3d n = cross(v1, v2);
   _normalize(n);
 
   // === eliminate possibility
-  double dist = exanb::dot(n, v);
+  double dist = dot(n, v);
 
   if (dist < 0) {
     n = n * (-1);
@@ -274,24 +273,24 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(const double rVerlet, cons
     return false;
   }
 
-  const exanb::Vec3d P = vi - n * dist;
+  const Vec3d P = vi - n * dist;
 
   int ODD = 0;
   v2 = cross(n, v1);
-  double ori1 = exanb::dot(P, v1);
-  double ori2 = exanb::dot(P, v2);
+  double ori1 = dot(P, v1);
+  double ori2 = dot(P, v2);
   double pa1, pa2;
   double pb1, pb2;
   int iva, ivb;
   for (iva = 0; iva < nf; ++iva) {
     ivb = iva + 1;
     if (ivb == nf) ivb = 0;
-    const exanb::Vec3d& _va = vaj[data[iva]];
-    const exanb::Vec3d& _vb = vaj[data[ivb]];
-    pa1 = exanb::dot(_va, v1);
-    pb1 = exanb::dot(_vb, v1);
-    pa2 = exanb::dot(_va, v2);
-    pb2 = exanb::dot(_vb, v2);
+    const Vec3d& _va = vaj[data[iva]];
+    const Vec3d& _vb = vaj[data[ivb]];
+    pa1 = dot(_va, v1);
+    pb1 = dot(_vb, v1);
+    pa2 = dot(_va, v2);
+    pb2 = dot(_vb, v2);
 
     // @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
     // @see http://alienryderflex.com/polygon/
@@ -309,31 +308,31 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_vertex_face(const double rVerlet, cons
 }
 
 ONIKA_HOST_DEVICE_FUNC
-inline bool filter_vertex_face_core(const double rVerlet, const exanb::Vec3d& pi, const double hi, const int i,
-                                    const shape* shpi, const exanb::Quaternion& oi, const exanb::Vec3d& pj,
-                                    const double hj, const int j, const shape* shpj, const exanb::Quaternion& oj) {
+inline bool filter_vertex_face_core(const double rVerlet, const Vec3d& pi, const double hi, const int i,
+                                    const shape* shpi, const Quaternion& oi, const Vec3d& pj, const double hj,
+                                    const int j, const shape* shpj, const Quaternion& oj) {
   double ri = shpi->minkowski(hi);
   double rj = shpj->minkowski(hj);
 
-  const exanb::Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
+  const Vec3d vi = shpi->get_vertex(i, pi, hi, oi);
 
   // === compute vertices
   auto [data, nf] = shpj->get_face(j);
   assert(nf >= 3);
-  const exanb::Vec3d& va = shpj->get_vertex(data[0], pj, hj, oj);
-  const exanb::Vec3d& vb = shpj->get_vertex(data[1], pj, hj, oj);
-  const exanb::Vec3d& vc = shpj->get_vertex(data[nf - 1], pj, hj, oj);
-  const exanb::Vec3d v = vi - va;
-  exanb::Vec3d v1 = vb - va;
-  exanb::Vec3d v2 = vc - va;
+  const Vec3d& va = shpj->get_vertex(data[0], pj, hj, oj);
+  const Vec3d& vb = shpj->get_vertex(data[1], pj, hj, oj);
+  const Vec3d& vc = shpj->get_vertex(data[nf - 1], pj, hj, oj);
+  const Vec3d v = vi - va;
+  Vec3d v1 = vb - va;
+  Vec3d v2 = vc - va;
   _normalize(v1);
 
   // === compute normal vector
-  exanb::Vec3d n = cross(v1, v2);
+  Vec3d n = cross(v1, v2);
   _normalize(n);
 
   // === eliminate possibility
-  double dist = exanb::dot(n, v);
+  double dist = dot(n, v);
 
   if (dist < 0) {
     n = n * (-1);
@@ -344,12 +343,12 @@ inline bool filter_vertex_face_core(const double rVerlet, const exanb::Vec3d& pi
     return false;
   }
 
-  const exanb::Vec3d P = vi - n * dist;
+  const Vec3d P = vi - n * dist;
 
   int ODD = 0;
   v2 = cross(n, v1);
-  double ori1 = exanb::dot(P, v1);
-  double ori2 = exanb::dot(P, v2);
+  double ori1 = dot(P, v1);
+  double ori2 = dot(P, v2);
   double pa1, pa2;
   double pb1, pb2;
   int iva, ivb;
@@ -358,12 +357,12 @@ inline bool filter_vertex_face_core(const double rVerlet, const exanb::Vec3d& pi
     if (ivb == nf) {
       ivb = 0;
     }
-    const exanb::Vec3d& _va = shpj->get_vertex(data[iva], pj, hj, oj);
-    const exanb::Vec3d& _vb = shpj->get_vertex(data[ivb], pj, hj, oj);
-    pa1 = exanb::dot(_va, v1);
-    pb1 = exanb::dot(_vb, v1);
-    pa2 = exanb::dot(_va, v2);
-    pb2 = exanb::dot(_vb, v2);
+    const Vec3d& _va = shpj->get_vertex(data[iva], pj, hj, oj);
+    const Vec3d& _vb = shpj->get_vertex(data[ivb], pj, hj, oj);
+    pa1 = dot(_va, v1);
+    pb1 = dot(_vb, v1);
+    pa2 = dot(_va, v2);
+    pb2 = dot(_vb, v2);
 
     // @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
     // @see http://alienryderflex.com/polygon/
@@ -395,7 +394,7 @@ inline bool filter_vertex_face_core(const double rVerlet, const exanb::Vec3d& pi
  *         - The contact position.
  */
 template <typename VertexType>
-ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face_core(const exanb::Vec3d& vi, const double ri,
+ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face_core(const Vec3d& vi, const double ri,
                                                                  const VertexType& vaj, const double hj, const int j,
                                                                  const shape* shpj) {
   double rj = shpj->minkowski(hj);
@@ -403,21 +402,21 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face_core(const exanb::Ve
   // === compute vertices
   auto [data, nf] = shpj->get_face(j);
   assert(nf >= 3);
-  const exanb::Vec3d& va = vaj[data[0]];
-  const exanb::Vec3d& vb = vaj[data[1]];
-  const exanb::Vec3d& vc = vaj[data[nf - 1]];
-  const exanb::Vec3d v = vi - va;
-  exanb::Vec3d v1 = vb - va;
-  exanb::Vec3d v2 = vc - va;
+  const Vec3d& va = vaj[data[0]];
+  const Vec3d& vb = vaj[data[1]];
+  const Vec3d& vc = vaj[data[nf - 1]];
+  const Vec3d v = vi - va;
+  Vec3d v1 = vb - va;
+  Vec3d v2 = vc - va;
   _normalize(v1);
   //      v2 = _normalize(v2);
 
   // === compute normal vector
-  exanb::Vec3d n = cross(v1, v2);
+  Vec3d n = cross(v1, v2);
   _normalize(n);
 
   // === eliminate possibility
-  double dist = exanb::dot(n, v);
+  double dist = dot(n, v);
 
   if (dist < 0) {
     n = n * (-1);
@@ -428,24 +427,24 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face_core(const exanb::Ve
     return contact();
   }
 
-  const exanb::Vec3d P = vi - n * dist;
+  const Vec3d P = vi - n * dist;
 
   int ODD = 0;
   v2 = cross(n, v1);
-  double ori1 = exanb::dot(P, v1);
-  double ori2 = exanb::dot(P, v2);
+  double ori1 = dot(P, v1);
+  double ori2 = dot(P, v2);
   double pa1, pa2;
   double pb1, pb2;
   int iva, ivb;
   for (iva = 0; iva < nf; ++iva) {
     ivb = iva + 1;
     if (ivb == nf) ivb = 0;
-    const exanb::Vec3d& _va = vaj[data[iva]];
-    const exanb::Vec3d& _vb = vaj[data[ivb]];
-    pa1 = exanb::dot(_va, v1);
-    pb1 = exanb::dot(_vb, v1);
-    pa2 = exanb::dot(_va, v2);
-    pb2 = exanb::dot(_vb, v2);
+    const Vec3d& _va = vaj[data[iva]];
+    const Vec3d& _vb = vaj[data[ivb]];
+    pa1 = dot(_va, v1);
+    pb1 = dot(_vb, v1);
+    pa2 = dot(_va, v2);
+    pb2 = dot(_vb, v2);
 
     // @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
     // @see http://alienryderflex.com/polygon/
@@ -460,44 +459,43 @@ ONIKA_HOST_DEVICE_FUNC inline contact detection_vertex_face_core(const exanb::Ve
   const double dn = dist - (ri + rj);
 
   // === compute contact position
-  const exanb::Vec3d contact_position = vi - n * (ri + 0.5 * dn);
+  const Vec3d contact_position = vi - n * (ri + 0.5 * dn);
 
   return {ODD == 1, dn, n, contact_position};
 }
 
-ONIKA_HOST_DEVICE_FUNC inline bool filter_edge_edge_core(const double rVerlet, const exanb::Vec3d& vfi,
-                                                         const exanb::Vec3d& vsi, const double ri,
-                                                         const exanb::Vec3d& vfj, const exanb::Vec3d& vsj,
+ONIKA_HOST_DEVICE_FUNC inline bool filter_edge_edge_core(const double rVerlet, const Vec3d& vfi, const Vec3d& vsi,
+                                                         const double ri, const Vec3d& vfj, const Vec3d& vsj,
                                                          const double rj) {
 #define _EPSILON_VALUE_ 1.0e-12
   const double R = ri + rj + rVerlet;
 
-  const exanb::Vec3d Ei = vsi - vfi;
-  const exanb::Vec3d Ej = vsj - vfj;
-  const exanb::Vec3d v = vfi - vfj;
+  const Vec3d Ei = vsi - vfi;
+  const Vec3d Ej = vsj - vfj;
+  const Vec3d v = vfi - vfj;
 
-  const double c = exanb::dot(Ei, Ei);
-  const double d = exanb::dot(Ej, Ej);
-  const double e = exanb::dot(Ei, Ej);
+  const double c = dot(Ei, Ei);
+  const double d = dot(Ej, Ej);
+  const double e = dot(Ei, Ej);
   double f = (c * d) - (e * e);
   double s, t;
   if (fabs(f) > _EPSILON_VALUE_) {
     f = 1.0 / f;
-    const double a = exanb::dot(Ei, v);
-    const double b = exanb::dot(Ej, v);
+    const double a = dot(Ei, v);
+    const double b = dot(Ej, v);
     s = (e * b - a * d) * f;  // for edge i
     t = (c * b - e * a) * f;  // for edge j
     if (s <= 0.0 || s >= 1.0 || t <= 0.0 || t >= 1.0) {
       return false;
     }
 
-    exanb::Vec3d pi = vfi + Ei * s;
-    exanb::Vec3d pj = vfj + Ej * t;
+    Vec3d pi = vfi + Ei * s;
+    Vec3d pj = vfj + Ej * t;
 
-    exanb::Vec3d n = pi - pj;  // from j to i
+    Vec3d n = pi - pj;  // from j to i
 
     // === compute overlap in dn
-    return (exanb::dot(n, n) <= (R * R));
+    return (dot(n, n) <= (R * R));
   }
   return false;
 #undef _EPSILON_VALUE_
@@ -518,37 +516,37 @@ ONIKA_HOST_DEVICE_FUNC inline bool filter_edge_edge_core(const double rVerlet, c
  *         - The contact position.
  */
 ONIKA_HOST_DEVICE_FUNC
-inline contact detection_edge_edge_core(const exanb::Vec3d& vfi, const exanb::Vec3d& vsi, const double ri,
-                                        const exanb::Vec3d& vfj, const exanb::Vec3d& vsj, const double rj) {
+inline contact detection_edge_edge_core(const Vec3d& vfi, const Vec3d& vsi, const double ri, const Vec3d& vfj,
+                                        const Vec3d& vsj, const double rj) {
 #define _EPSILON_VALUE_ 1.0e-12
   const double R = ri + rj;
 
-  const exanb::Vec3d Ei = vsi - vfi;
-  const exanb::Vec3d Ej = vsj - vfj;
-  const exanb::Vec3d v = vfi - vfj;
+  const Vec3d Ei = vsi - vfi;
+  const Vec3d Ej = vsj - vfj;
+  const Vec3d v = vfi - vfj;
 
-  const double c = exanb::dot(Ei, Ei);
-  const double d = exanb::dot(Ej, Ej);
-  const double e = exanb::dot(Ei, Ej);
+  const double c = dot(Ei, Ei);
+  const double d = dot(Ej, Ej);
+  const double e = dot(Ei, Ej);
   double f = (c * d) - (e * e);
   double s, t;
   if (fabs(f) > _EPSILON_VALUE_) {
     f = 1.0 / f;
-    const double a = exanb::dot(Ei, v);
-    const double b = exanb::dot(Ej, v);
+    const double a = dot(Ei, v);
+    const double b = dot(Ej, v);
     s = (e * b - a * d) * f;  // for edge i
     t = (c * b - e * a) * f;  // for edge j
     if (s <= 0.0 || s >= 1.0 || t <= 0.0 || t >= 1.0) {
       return contact();
     }
 
-    exanb::Vec3d pi = vfi + Ei * s;
-    exanb::Vec3d pj = vfj + Ej * t;
+    Vec3d pi = vfi + Ei * s;
+    Vec3d pj = vfj + Ej * t;
 
-    exanb::Vec3d n = pi - pj;  // from j to i
+    Vec3d n = pi - pj;  // from j to i
 
     // === compute overlap in dn
-    const double dn = exanb::norm(n) - R;
+    const double dn = norm(n) - R;
 
     if (dn > 0) {
       return contact();
@@ -557,7 +555,7 @@ inline contact detection_edge_edge_core(const exanb::Vec3d& vfi, const exanb::Ve
       _normalize(n);
 
       // === compute contact position
-      const exanb::Vec3d contact_position = pi - n * (ri + 0.5 * dn);
+      const Vec3d contact_position = pi - n * (ri + 0.5 * dn);
       return {dn <= 0, dn, n, contact_position};
     }
   }

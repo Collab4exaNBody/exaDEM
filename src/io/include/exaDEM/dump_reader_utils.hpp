@@ -34,9 +34,9 @@ under the License.
 #include <exaDEM/dump_field_sets.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/placeholder_interaction.hpp>
+#include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
-using namespace exanb;
 
 /**
  * @brief Reads a .dump's header and returns its field names, without reading any particle data.
@@ -46,9 +46,9 @@ using namespace exanb;
  */
 inline std::vector<std::string> read_dump_field_names(MPI_Comm mpi, const std::string& filename) {
   std::string file_name = onika::data_file_path(filename);
-  MpiIO file;
+  exanb::MpiIO file;
   file.open(mpi, file_name, "r");
-  SimDumpHeader header = {};
+  exanb::SimDumpHeader header = {};
   file.read(&header);
   header.post_process();
   file.close();
@@ -77,7 +77,7 @@ inline bool dump_field_names_have_group(const std::vector<std::string>& field_na
  * needed, so GridT must be able to hold any of the 4 (see DumpReaderGridT).
  * @param mpi MPI communicator used for the collective read.
  * @param grid Grid to read particles into.
- * @param domain Domain, updated from the dump's header.
+ * @param domain exanb::Domain, updated from the dump's header.
  * @param ges Interaction storage, updated from the dump's extra data.
  * @param physical_time Updated from the dump's header.
  * @param timestep Updated from the dump's header.
@@ -86,7 +86,7 @@ inline bool dump_field_names_have_group(const std::vector<std::string>& field_na
  * @param has_group Whether the dump has a "group" field (see dump_field_names_have_group).
  */
 template <typename GridT>
-inline void read_dump_particles(MPI_Comm mpi, GridT& grid, Domain& domain, GridCellParticleInteraction& ges,
+inline void read_dump_particles(MPI_Comm mpi, GridT& grid, exanb::Domain& domain, GridCellParticleInteraction& ges,
                                 double& physical_time, long& timestep, const std::string& filename, bool fragmentation,
                                 bool has_group) {
   if (grid.number_of_cells() == 0) {
@@ -94,22 +94,24 @@ inline void read_dump_particles(MPI_Comm mpi, GridT& grid, Domain& domain, GridC
     grid.rebuild_particle_offsets();
   }
   if (fragmentation && has_group) {
-    ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFragmentationFieldSet> dump_filter = {
-        ges, grid};
-    exanb::read_dump(mpi, ldbg, grid, domain, physical_time, timestep, filename, DumpFragmentationFieldSet{},
+    exanb::ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFragmentationFieldSet>
+        dump_filter = {ges, grid};
+    exanb::read_dump(mpi, exanb::ldbg, grid, domain, physical_time, timestep, filename, DumpFragmentationFieldSet{},
                      dump_filter);
   } else if (fragmentation && !has_group) {
-    ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFragmentationFieldSetLegacy122>
+    exanb::ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFragmentationFieldSetLegacy122>
         dump_filter = {ges, grid};
-    exanb::read_dump(mpi, ldbg, grid, domain, physical_time, timestep, filename, DumpFragmentationFieldSetLegacy122{},
-                     dump_filter);
+    exanb::read_dump(mpi, exanb::ldbg, grid, domain, physical_time, timestep, filename,
+                     DumpFragmentationFieldSetLegacy122{}, dump_filter);
   } else if (!fragmentation && has_group) {
-    ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFieldSet> dump_filter = {ges, grid};
-    exanb::read_dump(mpi, ldbg, grid, domain, physical_time, timestep, filename, DumpFieldSet{}, dump_filter);
+    exanb::ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFieldSet> dump_filter = {ges,
+                                                                                                              grid};
+    exanb::read_dump(mpi, exanb::ldbg, grid, domain, physical_time, timestep, filename, DumpFieldSet{}, dump_filter);
   } else {
-    ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFieldSetLegacy122> dump_filter = {ges,
-                                                                                                                grid};
-    exanb::read_dump(mpi, ldbg, grid, domain, physical_time, timestep, filename, DumpFieldSetLegacy122{}, dump_filter);
+    exanb::ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFieldSetLegacy122> dump_filter = {
+        ges, grid};
+    exanb::read_dump(mpi, exanb::ldbg, grid, domain, physical_time, timestep, filename, DumpFieldSetLegacy122{},
+                     dump_filter);
   }
   exanb::grid_memory_compact(grid);
 }
@@ -119,7 +121,7 @@ inline void read_dump_particles(MPI_Comm mpi, GridT& grid, Domain& domain, GridC
  * (has a "cluster" field): no allocator bootstrap, only group/legacy122 is picked at runtime.
  * @param mpi MPI communicator used for the collective read.
  * @param grid Grid to read particles into; must support field::_cluster.
- * @param domain Domain, updated from the dump's header.
+ * @param domain exanb::Domain, updated from the dump's header.
  * @param ges Interaction storage, updated from the dump's extra data.
  * @param physical_time Updated from the dump's header.
  * @param timestep Updated from the dump's header.
@@ -127,19 +129,19 @@ inline void read_dump_particles(MPI_Comm mpi, GridT& grid, Domain& domain, GridC
  * @param has_group Whether the dump has a "group" field (see dump_field_names_have_group).
  */
 template <typename GridT>
-inline void read_dump_particles_fragmentation(MPI_Comm mpi, GridT& grid, Domain& domain,
+inline void read_dump_particles_fragmentation(MPI_Comm mpi, GridT& grid, exanb::Domain& domain,
                                               GridCellParticleInteraction& ges, double& physical_time, long& timestep,
                                               const std::string& filename, bool has_group) {
   if (has_group) {
-    ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFragmentationFieldSet> dump_filter = {
-        ges, grid};
-    exanb::read_dump(mpi, ldbg, grid, domain, physical_time, timestep, filename, DumpFragmentationFieldSet{},
+    exanb::ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFragmentationFieldSet>
+        dump_filter = {ges, grid};
+    exanb::read_dump(mpi, exanb::ldbg, grid, domain, physical_time, timestep, filename, DumpFragmentationFieldSet{},
                      dump_filter);
   } else {
-    ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFragmentationFieldSetLegacy122>
+    exanb::ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFragmentationFieldSetLegacy122>
         dump_filter = {ges, grid};
-    exanb::read_dump(mpi, ldbg, grid, domain, physical_time, timestep, filename, DumpFragmentationFieldSetLegacy122{},
-                     dump_filter);
+    exanb::read_dump(mpi, exanb::ldbg, grid, domain, physical_time, timestep, filename,
+                     DumpFragmentationFieldSetLegacy122{}, dump_filter);
   }
   exanb::grid_memory_compact(grid);
 }
@@ -149,7 +151,7 @@ inline void read_dump_particles_fragmentation(MPI_Comm mpi, GridT& grid, Domain&
  * (no "cluster" field): no allocator bootstrap, only group/legacy122 is picked at runtime.
  * @param mpi MPI communicator used for the collective read.
  * @param grid Grid to read particles into.
- * @param domain Domain, updated from the dump's header.
+ * @param domain exanb::Domain, updated from the dump's header.
  * @param ges Interaction storage, updated from the dump's extra data.
  * @param physical_time Updated from the dump's header.
  * @param timestep Updated from the dump's header.
@@ -157,16 +159,18 @@ inline void read_dump_particles_fragmentation(MPI_Comm mpi, GridT& grid, Domain&
  * @param has_group Whether the dump has a "group" field (see dump_field_names_have_group).
  */
 template <typename GridT>
-inline void read_dump_particles_interaction(MPI_Comm mpi, GridT& grid, Domain& domain, GridCellParticleInteraction& ges,
-                                            double& physical_time, long& timestep, const std::string& filename,
-                                            bool has_group) {
+inline void read_dump_particles_interaction(MPI_Comm mpi, GridT& grid, exanb::Domain& domain,
+                                            GridCellParticleInteraction& ges, double& physical_time, long& timestep,
+                                            const std::string& filename, bool has_group) {
   if (has_group) {
-    ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFieldSet> dump_filter = {ges, grid};
-    exanb::read_dump(mpi, ldbg, grid, domain, physical_time, timestep, filename, DumpFieldSet{}, dump_filter);
+    exanb::ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFieldSet> dump_filter = {ges,
+                                                                                                              grid};
+    exanb::read_dump(mpi, exanb::ldbg, grid, domain, physical_time, timestep, filename, DumpFieldSet{}, dump_filter);
   } else {
-    ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFieldSetLegacy122> dump_filter = {ges,
-                                                                                                                grid};
-    exanb::read_dump(mpi, ldbg, grid, domain, physical_time, timestep, filename, DumpFieldSetLegacy122{}, dump_filter);
+    exanb::ParticleDumpFilterWithExtraDataStorage<GridT, PlaceholderInteraction, DumpFieldSetLegacy122> dump_filter = {
+        ges, grid};
+    exanb::read_dump(mpi, exanb::ldbg, grid, domain, physical_time, timestep, filename, DumpFieldSetLegacy122{},
+                     dump_filter);
   }
   exanb::grid_memory_compact(grid);
 }

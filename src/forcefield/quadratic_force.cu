@@ -28,6 +28,7 @@ under the License.
 #include <exaDEM/forcefield/quadratic_force.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT,
           class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz, field::_vx, field::_vy, field::_vz>>

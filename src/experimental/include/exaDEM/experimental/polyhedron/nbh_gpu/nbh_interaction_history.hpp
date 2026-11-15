@@ -1,6 +1,7 @@
 #pragma once
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
 struct InteractionHistory {

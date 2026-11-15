@@ -23,37 +23,11 @@ under the License.
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <tuple>
+#include <exanb/core/grid_fields.h>
+#include <exaDEM/atomic.h>
 
 namespace exaDEM {
 namespace polyhedron {
-/**
- * @brief Atomically adds a value to a double variable.
- *
- * This function atomically adds the specified value to the given double variable.
- *
- * @param val Reference to the double variable to be modified.
- * @param add Value to add atomically to the variable.
- */
-ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(double& val, double add) { ONIKA_CU_ATOMIC_ADD(val, add); }
-
-/**
- * @brief Atomically adds components of a Vec3d to another Vec3d variable.
- *
- * @param val Reference to the destination Vec3d variable.
- * @param add Rvalue reference to the source Vec3d whose components are to be added.
- */
-ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(Vec3d& val, Vec3d& add) {
-  ONIKA_CU_ATOMIC_ADD(val.x, add.x);
-  ONIKA_CU_ATOMIC_ADD(val.y, add.y);
-  ONIKA_CU_ATOMIC_ADD(val.z, add.z);
-}
-
-ONIKA_HOST_DEVICE_FUNC inline void lockAndAdd(Vec3d& val, Vec3d&& add) {
-  ONIKA_CU_ATOMIC_ADD(val.x, add.x);
-  ONIKA_CU_ATOMIC_ADD(val.y, add.y);
-  ONIKA_CU_ATOMIC_ADD(val.z, add.z);
-}
-
 /**
  * @struct inner_bond_law
  * @brief Structure defining contact law interactions for particles (polyhedra).
@@ -168,17 +142,17 @@ struct inner_bond_law {
     // === update particle informations
     // ==== Particle i
     auto& momi = celli[field::mom][pi.p_];
-    lockAndAdd(momi, compute_moments(contact_position, ri, fi, Vec3d{}));
-    lockAndAdd(celli[field::fx][pi.p_], fi.x);
-    lockAndAdd(celli[field::fy][pi.p_], fi.y);
-    lockAndAdd(celli[field::fz][pi.p_], fi.z);
+    EXADEM_CU_ATOMIC_ADD(momi, compute_moments(contact_position, ri, fi, Vec3d{}));
+    EXADEM_CU_ATOMIC_ADD(celli[field::fx][pi.p_], fi.x);
+    EXADEM_CU_ATOMIC_ADD(celli[field::fy][pi.p_], fi.y);
+    EXADEM_CU_ATOMIC_ADD(celli[field::fz][pi.p_], fi.z);
 
     // ==== Particle j
     auto& momj = cellj[field::mom][pj.p_];
-    lockAndAdd(momj, compute_moments(contact_position, rj, -fi, Vec3d{}));
-    lockAndAdd(cellj[field::fx][pj.p_], -fi.x);
-    lockAndAdd(cellj[field::fy][pj.p_], -fi.y);
-    lockAndAdd(cellj[field::fz][pj.p_], -fi.z);
+    EXADEM_CU_ATOMIC_ADD(momj, compute_moments(contact_position, rj, -fi, Vec3d{}));
+    EXADEM_CU_ATOMIC_ADD(cellj[field::fx][pj.p_], -fi.x);
+    EXADEM_CU_ATOMIC_ADD(cellj[field::fy][pj.p_], -fi.y);
+    EXADEM_CU_ATOMIC_ADD(cellj[field::fz][pj.p_], -fi.z);
 
     return {dn, contact_position, fn, item[attr::friction]};
   }

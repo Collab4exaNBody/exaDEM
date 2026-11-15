@@ -30,6 +30,7 @@ under the License.
 #include <exaDEM/forcefield/multimat_parameters.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 class MultiMatContactParams : public OperatorNode {
   ADD_SLOT(MultiMatParamsT<ContactParams>, multimat_cp, OUTPUT,

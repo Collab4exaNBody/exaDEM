@@ -31,6 +31,7 @@ under the License.
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 struct jammy_deprecated {
   jammy_deprecated(double var) { dist = std::normal_distribution<>(0, var); }

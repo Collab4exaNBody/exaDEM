@@ -23,18 +23,19 @@ under the License.
 
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/driver_base.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 // Data fields for a cylindrical driver
 struct CylinderFields {
   double radius_ = -1;              /**< Radius of the cylinder. */
-  exanb::Vec3d axis_ = {1, 0, 1};   /**< Component mask (not a direction): the component set to 0 is the cylinder
-                                         axis, e.g. {1, 0, 1} for a cylinder along y. */
-  exanb::Vec3d center_ = {0, 0, 0}; /**< Center position of the cylinder in 3D space. */
-  exanb::Vec3d vel_ = {0, 0, 0};    /**< Linear velocity of the cylinder. */
-  exanb::Vec3d vrot_ = {0, 0, 0};   /**< Angular velocity (rotation) of the cylinder. */
-  exanb::Vec3d forces_ = {0, 0, 0}; /**< Accumulated forces applied to the cylinder from interactions. */
-  exanb::Vec3d mom_ = {0, 0, 0};    /**< Accumulated moments (torques) applied to the cylinder. */
+  Vec3d axis_ = {1, 0, 1};          /**< Component mask (not a direction): the component set to 0 is the cylinder
+                                                axis, e.g. {1, 0, 1} for a cylinder along y. */
+  Vec3d center_ = {0, 0, 0};        /**< Center position of the cylinder in 3D space. */
+  Vec3d vel_ = {0, 0, 0};           /**< Linear velocity of the cylinder. */
+  Vec3d vrot_ = {0, 0, 0};          /**< Angular velocity (rotation) of the cylinder. */
+  Vec3d forces_ = {0, 0, 0};        /**< Accumulated forces applied to the cylinder from interactions. */
+  Vec3d mom_ = {0, 0, 0};           /**< Accumulated moments (torques) applied to the cylinder. */
 };
 }  // namespace exaDEM
 
@@ -92,7 +93,7 @@ struct Cylinder {
    * @param axis The axis mask, e.g. {1, 0, 1} for a cylinder along y.
    * @return True if the mask is valid.
    */
-  static inline bool is_valid_axis_mask(const exanb::Vec3d& axis) {
+  static inline bool is_valid_axis_mask(const Vec3d& axis) {
     int zeros = 0, ones = 0;
     for (double c : {axis.x, axis.y, axis.z}) {
       zeros += (c == 0.0);
@@ -211,15 +212,15 @@ struct Cylinder {
    * @brief Field accessors for position, velocity, forces, and rotation.
    */
   // Position getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& position() { return fields_.center_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& position() { return fields_.center_; }
   // Linear velocity getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& velocity() { return fields_.vel_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& velocity() { return fields_.vel_; }
   // Accumulated forces getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& forces() { return fields_.forces_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& forces() { return fields_.forces_; }
   // Accumulated moment (torque) getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& moment() { return fields_.mom_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& moment() { return fields_.mom_; }
   // Angular velocity getter
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d& angular_velocity() { return fields_.vrot_; }
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d& angular_velocity() { return fields_.vrot_; }
 
   /**
    * @brief Compute the direction of the cylinder axis.
@@ -227,11 +228,11 @@ struct Cylinder {
    * axis_ is a component mask: the masked component (0) is the cylinder axis,
    * e.g. axis_ = {1, 0, 1} gives a cylinder along y.
    *
-   * @return exanb::Vec3d The normalized direction of the cylinder axis.
+   * @return Vec3d The normalized direction of the cylinder axis.
    */
-  ONIKA_HOST_DEVICE_FUNC inline exanb::Vec3d compute_normal() {
-    const exanb::Vec3d normal = exanb::Vec3d{1, 1, 1} - fields_.axis_;
-    return normal / exanb::norm(normal);
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d compute_normal() {
+    const Vec3d normal = Vec3d{1, 1, 1} - fields_.axis_;
+    return normal / norm(normal);
   }
 
   /**
@@ -240,14 +241,14 @@ struct Cylinder {
    * @param vi The vector representing the point to check.
    * @return True if the point is within the cut-off radius of the cylinder, false otherwise.
    */
-  ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const exanb::Vec3d& vi) {
-    const exanb::Vec3d proj = vi * fields_.axis_;
+  ONIKA_HOST_DEVICE_FUNC inline bool filter(const double rcut, const Vec3d& vi) {
+    const Vec3d proj = vi * fields_.axis_;
 
     // === direction
-    const exanb::Vec3d dir = proj - fields_.center_;
+    const Vec3d dir = proj - fields_.center_;
 
     // === interpenetration
-    const double d = exanb::norm(dir);
+    const double d = norm(dir);
     const double dn = fields_.radius_ - (d + rcut);
     return dn <= 0;
   }
@@ -270,27 +271,27 @@ struct Cylinder {
    */
   // rcut = r shape
   ONIKA_HOST_DEVICE_FUNC
-  inline std::tuple<bool, double, exanb::Vec3d, exanb::Vec3d> detector(const double rcut, const exanb::Vec3d& pi) {
+  inline std::tuple<bool, double, Vec3d, Vec3d> detector(const double rcut, const Vec3d& pi) {
     // === project the vertex in the plan as the cylinder center
-    const exanb::Vec3d proj = pi * fields_.axis_;
+    const Vec3d proj = pi * fields_.axis_;
 
     // === direction
-    const exanb::Vec3d dir = fields_.center_ - proj;
+    const Vec3d dir = fields_.center_ - proj;
 
     // === interpenetration
-    const double d = exanb::norm(dir);
+    const double d = norm(dir);
 
     // === compute interpenetration
     const double dn = fields_.radius_ - (rcut + d);
 
     if (dn > 0) {
-      return {false, dn, exanb::Vec3d(), exanb::Vec3d()};
+      return {false, dn, Vec3d(), Vec3d()};
     } else {
       // === compute contact normal
-      const exanb::Vec3d n = dir / d;
+      const Vec3d n = dir / d;
 
       // === compute contact point
-      const exanb::Vec3d contact_position = pi - n * (rcut + 0.5 * dn);
+      const Vec3d contact_position = pi - n * (rcut + 0.5 * dn);
 
       return {true, dn, n, contact_position};
     }
