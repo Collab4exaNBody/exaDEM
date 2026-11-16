@@ -187,6 +187,7 @@ class UpdateContactInteractionSphere : public OperatorNode {
                 if (driver.filter(rVerletMax, r)) {
                   pi.p_ = p;
                   pi.id_ = id_a[p];
+                  item.reset();
                   manager.add_item(item);
                 }
               }
@@ -200,6 +201,7 @@ class UpdateContactInteractionSphere : public OperatorNode {
                 if (driver.filter(rVerletMax, r)) {
                   pi.p_ = p;
                   pi.id_ = id_a[p];
+                  item.reset();
                   manager.add_item(item);
                 }
               }
@@ -213,6 +215,7 @@ class UpdateContactInteractionSphere : public OperatorNode {
                 if (driver.filter(rVerletMax, r)) {
                   pi.p_ = p;
                   pi.id_ = id_a[p];
+                  item.reset();
                   manager.add_item(item);
                 }
               }
@@ -262,6 +265,7 @@ class UpdateContactInteractionSphere : public OperatorNode {
               pj.p_ = p_b;
               pj.cell_ = cell_b;
               pj.sub_ = 0;
+              item.reset();
               manager.add_item(item);
             });
 

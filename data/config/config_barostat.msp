@@ -1,0 +1,66 @@
+### Triaxial, diagonal (no shear) stress-controlled periodic compression,
+### driven by a dynamical periodic-cell barostat (cell_barostat_prolog /
+### cell_barostat_epilog, see src/barostat/cell_barostat.cpp), same design as
+### Rockable's PeriodicCell + DrivingSystem::cellControl. The domain's diagonal
+### xform entries (Rockable's Cell.h) behave as a genuine dynamical degree of
+### freedom (with a mass and damping, Rockable's Cell.mass/Cell.damping),
+### integrated with the same leapfrog splitting as particle positions/
+### velocities, rather than being rescaled instantaneously.
+###
+### Opt-in: add this file to your simulation's own includes (alongside e.g.
+### config_polyhedra.msp), then override compute_barostat in your simulation
+### file to set the target stress and tuning, e.g.:
+###
+###   compute_barostat:
+###     - domain_volume
+###     - avg_stress_tensor
+###     - cell_barostat_epilog:
+###        cell_sig:     [ 1000.0, 1000.0, 1000.0 ]  # imposed normal stress per
+###                                                   # axis (this codebase's
+###                                                   # virial convention:
+###                                                   # compressive = positive,
+###                                                   # Rockable's cellControl.Sig)
+###        cell_mass:    1.0     # fictive mass of the cell DoF (bigger = slower,
+###                              # more inertial response)
+###        cell_damping: 10.0    # viscous damping on the cell velocity (0 =
+###                              # undamped, will oscillate around the target
+###                              # stress)
+###
+### cell_sig must be set this way (inline on the operator), not via a plain
+### global: entry: global:'s dynamically-typed keys parse a bracketed list as
+### vector<double> by default, which is incompatible with cell_sig's Vec3d slot
+### type and fails at graph-wiring time. cell_mass/cell_damping (plain scalars)
+### don't have this issue and may be set via global: if you prefer, but are
+### shown here inline for consistency.
+###
+### Both cell_mass and cell_damping need empirical tuning for your system (no
+### general formula is provided here, same as Rockable's PeriodicCell).
+### Non-periodic axes are left untouched.
+
+compute_barostat:
+  - domain_volume
+  - avg_stress_tensor
+  - cell_barostat_epilog:
+     cell_sig: [ 0., 0., 0. ]
+     cell_mass: 1.0
+     cell_damping: 0.0
+
+numerical_scheme_verlet_macro:
+  name: scheme
+  body:
+    - combined_compute_prolog
+    - push_f_v_r_driver: { dt_scale: 1.0 }
+    - push_f_v_driver: { dt_scale: 0.5 }
+    - push_av_to_quat_driver : { dt_scale: 1.0 }
+    - cell_barostat_prolog
+    - check_and_update_particles
+    - reset_force_driver
+    - reset_force_moment
+    - compute_force
+    - freeze
+    - compute_stress_tensor
+    - compute_barostat
+    - force_to_accel
+    - force_to_accel_driver
+    - push_f_v_driver: { dt_scale: 0.5 }
+    - combined_compute_epilog
