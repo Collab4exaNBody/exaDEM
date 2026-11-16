@@ -88,6 +88,7 @@ chunk_neighbors_impl:
   - prefetch_classifier_gpu
 
 compress_data:
+#  - prefetch_classifier_cpu
   - unclassify_gpu
 
 compute_new_vertices: 

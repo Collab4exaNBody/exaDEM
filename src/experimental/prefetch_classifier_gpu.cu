@@ -22,45 +22,10 @@ under the License.
 #include <onika/scg/operator_slot.h>
 
 #include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
+#include <exaDEM/experimental/prefetch_classifier.hpp>
 
 namespace exaDEM {
 using namespace exanb;
-
-/// @brief Prefetches one classifier field vector (bk_/fm_/contact state entry) to `device`.
-template <typename VecT>
-inline void prefetch_classifier_vector(VecT& vec, int device, onikaStream_t& st) {
-  if (!vec.empty()) {
-    ONIKA_PREFETCH(vec.data(), vec.size() * sizeof(typename VecT::value_type), device, st);
-  }
-}
-
-/// @brief Applies prefetch_classifier_vector to every field vector of a ClassifierContainer<IT>.
-struct PrefetchClassifierFieldFunctor {
-  int device_;
-  onikaStream_t stream_;
-  template <typename VecT>
-  inline void operator()(VecT& vec) {
-    prefetch_classifier_vector(vec, device_, stream_);
-  }
-};
-
-/// @brief Prefetches every buffer (particle-particle, particle-driver, inner-bond, contact
-/// state) of a Classifier to `device`. `device` may be cudaCpuDeviceId to prefetch back to host.
-inline void prefetch_classifier(Classifier& classifier, int device, onikaStream_t& st) {
-  PrefetchClassifierFieldFunctor func{device, st};
-
-  for (auto& container : classifier.particles_) container.apply_on_fields(func);
-  for (auto& container : classifier.drivers_) container.apply_on_fields(func);
-  for (auto& container : classifier.innerbonds_) container.apply_on_fields(func);
-
-  for (auto& state : classifier.contact_state_) {
-    prefetch_classifier_vector(state.dn_, device, st);
-    prefetch_classifier_vector(state.cp_, device, st);
-    prefetch_classifier_vector(state.fn_, device, st);
-    prefetch_classifier_vector(state.ft_, device, st);
-  }
-}
 
 class PrefetchClassifierGPU : public OperatorNode {
   ADD_SLOT(Classifier, ic, INPUT, REQUIRED, DocString{"Interaction lists classified according to their types"});
