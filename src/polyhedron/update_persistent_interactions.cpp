@@ -138,6 +138,12 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
                                "The particle with the particle id " + std::to_string(id) +
                                    " is not located in the cell " + std::to_string(cell_a));
             }
+
+            // Only cache a validated lookup: on failure, invalidate so a repeated occurrence of
+            // this id retries (and re-reports the error) instead of silently reusing an
+            // unvalidated position.
+            previous_a_id = find ? id : InvalidId;
+            previous_a_p = p_a;
           }
 
           // reuse data from the previous interaction if it shares the same partner particle.
@@ -181,14 +187,15 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
                   "update_persistent_interactions",
                   "The particle b with the particle id " + std::to_string(particle_loc_b.id_) + " has not been found");
             }
+
+            // Only cache a validated lookup (see rationale above for the owner cache): on
+            // failure, particle_loc_b.cell_/p_ are stale (never assigned above), so they must
+            // not be reused by a later interaction sharing the same (failed) id.
+            previous_b_id = do_continue ? InvalidId : particle_loc_b.id_;
+            previous_b_cell = particle_loc_b.cell_;
+            previous_b_p = particle_loc_b.p_;
+            previous_b_ghost = item.pair_.ghost_;
           }
-          // update previous_ab_id and cached locations
-          previous_a_id = particle_loc_a.id_;
-          previous_a_p = particle_loc_a.p_;
-          previous_b_id = particle_loc_b.id_;
-          previous_b_cell = particle_loc_b.cell_;
-          previous_b_p = particle_loc_b.p_;
-          previous_b_ghost = item.pair_.ghost_;
         }
       }  //    GRID_OMP_FOR_END
     }
