@@ -25,6 +25,7 @@ under the License.
 
 #include <algorithm>
 #include <cmath>
+#include <exaDEM/barostat/cell_barostat.hpp>
 #include <exaDEM/color_log.hpp>
 
 namespace exaDEM {
@@ -99,12 +100,7 @@ class CellBarostatEpilogNode : public OperatorNode {
     auto axis_accel = [&](bool periodic, double hi, double bounds_size_i, double sig_i, double stress_i,
                           double vh_i) -> double {
       if (!periodic) return 0.0;
-      const double h_absolute = hi * bounds_size_i;
-      // compressive stress is positive here, so once stress_i exceeds the target
-      // sig_i the cell must expand (positive driving_force); below target, shrink.
-      const double driving_force = (vol / h_absolute) * (stress_i - sig_i);
-      const double damping_force = damping * vh_i;
-      return (driving_force - damping_force) / mass;
+      return cell_barostat_epilog_axis_accel(hi, bounds_size_i, vol, sig_i, stress_i, vh_i, mass, damping);
     };
 
     ah.x = axis_accel(domain->periodic_boundary_x(), xf.m11, bounds_size.x, sig.x, stress.m11, vh.x);

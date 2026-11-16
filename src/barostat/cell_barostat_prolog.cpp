@@ -25,6 +25,7 @@ under the License.
 
 #include <algorithm>
 #include <cmath>
+#include <exaDEM/barostat/cell_barostat.hpp>
 #include <exaDEM/color_log.hpp>
 
 namespace exaDEM {
@@ -68,21 +69,11 @@ class CellBarostatPrologNode : public OperatorNode {
     double hy = old_xform.m22;
     double hz = old_xform.m33;
 
-    if (domain->periodic_boundary_x()) {
-      hx += h * vh.x + 0.5 * h * h * ah.x;
-      vh.x += 0.5 * h * ah.x;
-    }
-    if (domain->periodic_boundary_y()) {
-      hy += h * vh.y + 0.5 * h * h * ah.y;
-      vh.y += 0.5 * h * ah.y;
-    }
-    if (domain->periodic_boundary_z()) {
-      hz += h * vh.z + 0.5 * h * h * ah.z;
-      vh.z += 0.5 * h * ah.z;
-    }
+    if (domain->periodic_boundary_x()) hx = cell_barostat_prolog_axis(hx, vh.x, ah.x, h);
+    if (domain->periodic_boundary_y()) hy = cell_barostat_prolog_axis(hy, vh.y, ah.y, h);
+    if (domain->periodic_boundary_z()) hz = cell_barostat_prolog_axis(hz, vh.z, ah.z, h);
 
-    const bool valid = std::isfinite(hx) && std::isfinite(hy) && std::isfinite(hz) && hx > 0.0 && hy > 0.0 && hz > 0.0;
-    if (!valid) {
+    if (!cell_barostat_scale_valid(hx, hy, hz)) {
       color_log::error("cell_barostat_prolog",
                        "Invalid cell size (new diagonal xform = [" + std::to_string(hx) + ", " + std::to_string(hy) +
                            ", " + std::to_string(hz) +
@@ -94,9 +85,7 @@ class CellBarostatPrologNode : public OperatorNode {
     // each individual step above looked finite (e.g. Sig is unreachable with the
     // current contact stiffness): once a diagonal entry gets too small, its
     // contribution to det(xform) makes the matrix inverse numerically unreliable.
-    constexpr double min_absolute_scale = 1.e-6;
-    if (std::fabs(hx) < min_absolute_scale || std::fabs(hy) < min_absolute_scale ||
-        std::fabs(hz) < min_absolute_scale) {
+    if (cell_barostat_scale_collapsed(hx, hy, hz)) {
       color_log::error("cell_barostat_prolog",
                        "The domain has collapsed (new diagonal xform = [" + std::to_string(hx) + ", " +
                            std::to_string(hy) + ", " + std::to_string(hz) +
