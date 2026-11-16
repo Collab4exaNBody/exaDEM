@@ -111,12 +111,13 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
 
   template <int start, int end, template <int, ContactLawType, CohesiveLawType, typename> typename FuncT,
             typename XFormT, typename... Args>
-  void loop_contact_force(Classifier& classifier, XFormT& cp_xform, Args&&... args) {
+  void loop_contact_force(onika::parallel::ParallelExecutionQueue& queue, Classifier& classifier, XFormT& cp_xform,
+                          Args&&... args) {
     FuncT<start, ContactLawT, CohesiveLawT, XFormT> contact_law;
     contact_law.xform = cp_xform;
-    run_contact_law<start>(parallel_execution_context(), classifier, contact_law, args...);
+    queue << run_contact_law<start>(parallel_execution_context(), classifier, contact_law, args...);
     if constexpr (start + 1 <= end) {
-      loop_contact_force<start + 1, end, FuncT>(classifier, cp_xform, std::forward<Args>(args)...);
+      loop_contact_force<start + 1, end, FuncT>(queue, classifier, cp_xform, std::forward<Args>(args)...);
     }
   }
 
@@ -147,8 +148,8 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
       return;
     }
 
-    check_slots();
     scan_kn();
+    check_slots();
 
     /** Analysis */
     const uint64_t frequency_interaction = *analysis_interaction_dump_frequency;
@@ -168,6 +169,7 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
 
     const double time = *dt;
     auto& classifier = *ic;
+    auto& queue = this->parallel_execution_queue();
 
     /** Contact force kernels */
     ContactLawDriverFunc<ContactLawT, CohesiveLawT, Cylinder> cyli;
@@ -195,18 +197,19 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
 
       if (is_def_xform) {
         LinearXForm cp_xform = {xform};
-        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(classifier, cp_xform, __params__);
-        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(classifier, cp_xform, __params_driver__);
+        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(queue, classifier, cp_xform, __params__);
+        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(queue, classifier, cp_xform, __params_driver__);
       } else {
         NullXForm cp_xform;
-        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(classifier, cp_xform, __params__);
-        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(classifier, cp_xform, __params_driver__);
+        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(queue, classifier, cp_xform, __params__);
+        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(queue, classifier, cp_xform, __params_driver__);
       }
-      run_contact_law<InteractionTypeId::VertexCylinder>(parallel_execution_context(), classifier, cyli,
-                                                         __params_driver__);
-      run_contact_law<InteractionTypeId::VertexSurface>(parallel_execution_context(), classifier, surf,
-                                                        __params_driver__);
-      run_contact_law<InteractionTypeId::VertexBall>(parallel_execution_context(), classifier, ball, __params_driver__);
+      queue << run_contact_law<InteractionTypeId::VertexCylinder>(parallel_execution_context(), classifier, cyli,
+                                                                   __params_driver__);
+      queue << run_contact_law<InteractionTypeId::VertexSurface>(parallel_execution_context(), classifier, surf,
+                                                                  __params_driver__);
+      queue << run_contact_law<InteractionTypeId::VertexBall>(parallel_execution_context(), classifier, ball,
+                                                               __params_driver__);
     } else { /** Multi materials */
       const auto& contact_parameters = *multimat_cp;
       const MultiMatContactParamsTAccessor<ContactParams> cp = contact_parameters.get_multimat_accessor();
@@ -214,19 +217,22 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
 
       if (is_def_xform) {
         LinearXForm cp_xform = {xform};
-        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(classifier, cp_xform, __params__);
-        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(classifier, cp_xform, __params_driver__);
+        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(queue, classifier, cp_xform, __params__);
+        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(queue, classifier, cp_xform, __params_driver__);
       } else {
         NullXForm cp_xform;
-        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(classifier, cp_xform, __params__);
-        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(classifier, cp_xform, __params_driver__);
+        loop_contact_force<poly_type_start, poly_type_end, ContactLawFunc>(queue, classifier, cp_xform, __params__);
+        loop_contact_force<rshape_type_start, rshape_type_end, ContactLawRShapeDriverFunc>(queue, classifier, cp_xform, __params_driver__);
       }
-      run_contact_law<InteractionTypeId::VertexCylinder>(parallel_execution_context(), classifier, cyli,
-                                                         __params_driver__);
-      run_contact_law<InteractionTypeId::VertexSurface>(parallel_execution_context(), classifier, surf,
-                                                        __params_driver__);
-      run_contact_law<InteractionTypeId::VertexBall>(parallel_execution_context(), classifier, ball, __params_driver__);
+      queue << run_contact_law<InteractionTypeId::VertexCylinder>(parallel_execution_context(), classifier, cyli,
+                                                                   __params_driver__);
+      queue << run_contact_law<InteractionTypeId::VertexSurface>(parallel_execution_context(), classifier, surf,
+                                                                  __params_driver__);
+      queue << run_contact_law<InteractionTypeId::VertexBall>(parallel_execution_context(), classifier, ball,
+                                                               __params_driver__);
     }
+
+    queue << onika::parallel::flush << onika::parallel::synchronize;
 
 #undef __params__
 #undef __params_driver__
@@ -239,8 +245,6 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
   }
 
   void check_slots() {
-    bool pw = *print_warning;
-
     constexpr auto LawCombo = makeLawCombo(ContactLawT, CohesiveLawT);
 
     /** Some check mutlimat versus singlemat */
@@ -259,14 +263,12 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
             operator_name(),
             "You are using the multi-material contact force operator, but you have also defined the input slot "
             "\"config\" which is intended for the single-material version. This slot will be ignored.");
-        pw = false;
       }
       if ((*print_warning) && config_driver.has_value()) {
         color_log::warning(
             operator_name(),
             "You are using the multi-material contact force operator, but you have also defined the input slot "
             "\"config_driver\" which is intended for the single-material version. This slot will be ignored.");
-        pw = false;
       }
     }
     if constexpr (!multimat) { /** Single material */
@@ -286,7 +288,6 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
         msg += "The parameter list will be ignored. If you want to use it, please use the operators types \n";
         msg += "\"contact_multimat_[Shape]_[ContactLaw]_[CohesiveLaw]\".";
         color_log::warning(operator_name(), msg);
-        pw = false;
       }
       /** Some global checks */
       /** Is cohesive force define while it's not used */
@@ -303,7 +304,7 @@ class ComputeContactClassifierPolyhedron : public OperatorNode {
         }
       }
     }
-    *print_warning = pw;
+    *print_warning = false;
   }
 };
 
