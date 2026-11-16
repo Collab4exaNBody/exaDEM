@@ -36,7 +36,7 @@ under the License.
 
 namespace exaDEM {
 
-using namespace onika;
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class SphereCompacityAnalysis : public OperatorNode {
   static constexpr FieldSet<field::_radius> reduce_field_set{};

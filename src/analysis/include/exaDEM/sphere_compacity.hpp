@@ -37,19 +37,19 @@ struct SphereVolumeValue {
 
 struct ReduceSphereVolumeFunctor {
   ONIKA_HOST_DEVICE_FUNC inline void operator()(SphereVolumeValue& local, const double radius,
-                                                reduce_thread_local_t = {}) const {
+                                                exanb::reduce_thread_local_t = {}) const {
     local += radius;
   }
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(SphereVolumeValue& global, const SphereVolumeValue& local,
-                                                reduce_thread_block_t) const {
+                                                exanb::reduce_thread_block_t) const {
     ONIKA_CU_ATOMIC_ADD(global.count_, local.count_);
     ONIKA_CU_ATOMIC_ADD(global.sum_radius_, local.sum_radius_);
     ONIKA_CU_ATOMIC_ADD(global.sum_volume_, local.sum_volume_);
   }
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(SphereVolumeValue& global, const SphereVolumeValue& local,
-                                                reduce_global_t) const {
+                                                exanb::reduce_global_t) const {
     ONIKA_CU_ATOMIC_ADD(global.count_, local.count_);
     ONIKA_CU_ATOMIC_ADD(global.sum_radius_, local.sum_radius_);
     ONIKA_CU_ATOMIC_ADD(global.sum_volume_, local.sum_volume_);
