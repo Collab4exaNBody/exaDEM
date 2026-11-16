@@ -85,6 +85,7 @@ class ComputeInnerBondForce : public OperatorNode {
     auto get_max_kn = [&kn](const InnerBondParams& cp) -> void { kn = std::max(kn, cp.kn_); };
     multimat_ibp->apply(get_max_kn);
     *max_kn = kn;
+    *print_warning = false;
   }
 
   inline void execute() final {
