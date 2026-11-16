@@ -20,11 +20,19 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
-#include <exaDEM/drivers.hpp>
+#include <exaDEM/compute_drivers.hpp>
 
 namespace exaDEM {
 using namespace onika::scg;
 using onika::lout;
+
+struct ResetForceDriverFunc {
+  template <typename DriverT>
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(DriverT& drv) const {
+    drv.forces() = Vec3d{0, 0, 0};
+  }
+};
+
 class ResetForceDriverFunctor : public OperatorNode {
   ADD_SLOT(Drivers, drivers, INPUT_OUTPUT, REQUIRED, DocString{"List of Drivers"});
 
@@ -36,9 +44,8 @@ class ResetForceDriverFunctor : public OperatorNode {
   }
 
   inline void execute() final {
-    for (size_t id = 0; id < drivers->get_size(); id++) {
-      drivers->apply(id, [](auto& drv) { drv.forces() = {0, 0, 0}; });
-    }
+    ResetForceDriverFunc func;
+    compute_drivers(*drivers, func, parallel_execution_context("reset_force_driver"));
   }
 };
 
