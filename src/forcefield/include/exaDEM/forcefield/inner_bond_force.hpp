@@ -22,6 +22,7 @@ under the License.
 
 #include <exaDEM/forcefield/common_kernels.hpp>
 #include <exaDEM/forcefield/inner_bond_parameters.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 ONIKA_HOST_DEVICE_FUNC
@@ -46,7 +47,7 @@ inline void force_law_core(const double dn,
 
   // === Relative velocity (j relative to i)
   auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
-  const double vn = exanb::dot(vel, n);
+  const double vn = dot(vel, n);
 
   // === Normal force (elastic contact + viscous damping)
   const double delta = dn - dn0;

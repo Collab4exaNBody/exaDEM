@@ -32,6 +32,7 @@ under the License.
 #include <exanb/compute/fluid_friction.h>
 
 namespace exaDEM {
+using namespace exanb;
 
 struct SphereFrictionFunctor {
   ONIKA_HOST_DEVICE_FUNC inline Vec3d operator()(const Vec3d& r, const Vec3d& pv, const Vec3d& fv, const double cx,

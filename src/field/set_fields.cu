@@ -42,6 +42,7 @@ under the License.
 #include <vector>
 
 namespace exaDEM {
+using namespace exanb;
 namespace set_fields_detail {
 
 // Counter-based random numbers (usable on host and device): the value only depends on (particle id, stream), so it is

@@ -33,7 +33,7 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
-using exanb::Mat3d;
+using namespace exanb;
 
 /** @brief Functor for reducing stress tensors. */
 struct ReduceStressTensorFunctor {

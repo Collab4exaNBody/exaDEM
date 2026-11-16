@@ -51,7 +51,7 @@ struct ApplyDriverFunctorTraits<ForceToAccelDriverFunc> {
 };
 
 struct GatherForcesMomentDriverFunc {
-  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Ball& arg, const Driver_params& motion) {
+  inline std::tuple<bool, Vec3d, Vec3d> operator()(Ball& arg, const Driver_params& motion) {
     if (is_compressive(arg.motion_type_) || is_force_motion(arg.motion_type_)) {
       return {true, arg.forces(), {0, 0, 0}};
     } else {
@@ -59,7 +59,7 @@ struct GatherForcesMomentDriverFunc {
     }
   }
 
-  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Surface& arg, const Driver_params& motion) {
+  inline std::tuple<bool, Vec3d, Vec3d> operator()(Surface& arg, const Driver_params& motion) {
     if (is_compressive(arg.motion_type_) || is_force_motion(arg.motion_type_)) {
       return {true, arg.fields_.forces_, {0, 0, 0}};
     } else {
@@ -67,11 +67,11 @@ struct GatherForcesMomentDriverFunc {
     }
   }
 
-  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(Cylinder& arg, const Driver_params& motion) {
+  inline std::tuple<bool, Vec3d, Vec3d> operator()(Cylinder& arg, const Driver_params& motion) {
     return {false, {0, 0, 0}, {0, 0, 0}};
   }
 
-  inline std::tuple<bool, exanb::Vec3d, exanb::Vec3d> operator()(RShapeDriver& arg, const Driver_params& motion) {
+  inline std::tuple<bool, Vec3d, Vec3d> operator()(RShapeDriver& arg, const Driver_params& motion) {
     if (need_forces(arg.motion_type_) || arg.need_moment()) {
       return {true, arg.fields_.forces_, arg.fields_.mom_};
     }
@@ -85,8 +85,8 @@ struct ApplyDriverFunctorTraits<GatherForcesMomentDriverFunc> {
 };
 
 struct SetForcesMomentDriverFunc {
-  exanb::Vec3d forces_;
-  exanb::Vec3d moment_;
+  Vec3d forces_;
+  Vec3d moment_;
 
   template <typename DriverT>
   inline void operator()(DriverT& arg) {
@@ -134,8 +134,8 @@ class ForceToAccelDriverFunctor : public OperatorNode {
       for (size_t i = 0; i < ids.size(); i++) {
         int id = ids[i];
         SetForcesMomentDriverFunc func;
-        func.forces_ = exanb::Vec3d{unpack[i * 6], unpack[i * 6 + 1], unpack[i * 6 + 2]};
-        func.moment_ = exanb::Vec3d{unpack[i * 6 + 3], unpack[i * 6 + 4], unpack[i * 6 + 5]};
+        func.forces_ = Vec3d{unpack[i * 6], unpack[i * 6 + 1], unpack[i * 6 + 2]};
+        func.moment_ = Vec3d{unpack[i * 6 + 3], unpack[i * 6 + 4], unpack[i * 6 + 5]};
         drivers->apply(id, func);
       }
     }

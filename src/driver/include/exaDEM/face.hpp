@@ -20,21 +20,22 @@ under the License.
 
 #include <onika/math/basic_types.h>
 #include <exaDEM/normalize.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 /**
  * @brief Struct representing a 3D box.
  */
 struct Box {
-  exanb::Vec3d inf_; /**< The lower corner of the box. */
-  exanb::Vec3d sup_; /**< The upper corner of the box. */
+  Vec3d inf_; /**< The lower corner of the box. */
+  Vec3d sup_; /**< The upper corner of the box. */
 
   /**
    * @brief Calculate the center of the box.
-   * @return The center of the box as a exanb::Vec3d.
+   * @return The center of the box as a Vec3d.
    */
-  exanb::Vec3d center() {
-    exanb::Vec3d res = (sup_ - inf_) / 2;
+  Vec3d center() {
+    Vec3d res = (sup_ - inf_) / 2;
     return res;
   };
 };
@@ -43,15 +44,15 @@ struct Box {
  * @brief Struct representing a 3D face.
  */
 struct Face {
-  std::vector<exanb::Vec3d> vertices_; /**< The vertices_ of the face. */
-  exanb::Vec3d normal_;                /**< The normal_ vector of the face. */
+  std::vector<Vec3d> vertices_;        /**< The vertices_ of the face. */
+  Vec3d normal_;                       /**< The normal_ vector of the face. */
   double offset_;                      /**< The offset_ of the face. */
 
   /**
    * @brief Constructor for the Face struct.
-   * @param in A vector of exanb::Vec3d representing the vertices_ of the face.
+   * @param in A vector of Vec3d representing the vertices_ of the face.
    */
-  Face(std::vector<exanb::Vec3d>& in) {
+  Face(std::vector<Vec3d>& in) {
     vertices_ = in;
     auto [_normal, _offset, _exist] = compute_normal_and_offset();
     normal_ = _normal;
@@ -77,16 +78,16 @@ struct Face {
    *         - `bool` potential_contact: Indicates potential intersection with the face for further testing.
    *         - `Vec3d` contact_position: The contact position if an intersection occurs (otherwise, it is {0,0,0}).
    */
-  std::tuple<bool, bool, exanb::Vec3d> contact_face_sphere(const double rx, const double ry, const double rz,
-                                                           const double rad) const {
+  std::tuple<bool, bool, Vec3d> contact_face_sphere(const double rx, const double ry, const double rz,
+                                                    const double rad) const {
     // printf("CONTACT FACE SPHERE\n");
-    const exanb::Vec3d center = {rx, ry, rz};
-    const exanb::Vec3d default_contact_point = {0, 0, 0};  // won't be used
+    const Vec3d center = {rx, ry, rz};
+    const Vec3d default_contact_point = {0, 0, 0};  // won't be used
     bool potential_contact = false;
     bool face_contact = false;
-    exanb::Vec3d contact_position = default_contact_point;
+    Vec3d contact_position = default_contact_point;
 
-    double p = exanb::dot(center, normal_) - offset_;
+    double p = dot(center, normal_) - offset_;
     if (std::abs(p) > rad) {
       return std::make_tuple(face_contact, potential_contact, contact_position);
     }
@@ -94,16 +95,16 @@ struct Face {
     potential_contact = true;  // This face will be tested versus edges (second pass)
 
     const int nb_vertices = vertices_.size();
-    const exanb::Vec3d& pa = vertices_[0];
-    const exanb::Vec3d& pb = vertices_[1];
-    const exanb::Vec3d& pc = vertices_[nb_vertices - 1];
-    exanb::Vec3d v1 = pb - pa;
-    exanb::Vec3d v2 = pc - pa;
+    const Vec3d& pa = vertices_[0];
+    const Vec3d& pb = vertices_[1];
+    const Vec3d& pc = vertices_[nb_vertices - 1];
+    Vec3d v1 = pb - pa;
+    Vec3d v2 = pc - pa;
     _normalize(v1);
-    exanb::Vec3d n = exanb::cross(v1, v2);
+    Vec3d n = cross(v1, v2);
     _normalize(n);
-    exanb::Vec3d iv = center;  // - pa;
-    double dist = exanb::dot(iv, n);
+    Vec3d iv = center;  // - pa;
+    double dist = dot(iv, n);
     if (dist < 0.0) {
       dist = -dist;
       n = -n;
@@ -113,20 +114,20 @@ struct Face {
     int intersections = 0;
 
     // from rockable
-    exanb::Vec3d P = iv - dist * n;
-    v2 = exanb::cross(n, v1);
-    double ori1 = exanb::dot(P, v1);
-    double ori2 = exanb::dot(P, v2);
+    Vec3d P = iv - dist * n;
+    v2 = cross(n, v1);
+    double ori1 = dot(P, v1);
+    double ori2 = dot(P, v2);
 
     for (int iva = 0; iva < nb_vertices; ++iva) {
       int ivb = iva + 1;
       if (ivb == nb_vertices) ivb = 0;
-      const exanb::Vec3d& posNodeA_jv = vertices_[iva];
-      const exanb::Vec3d& posNodeB_jv = vertices_[ivb];
-      double pa1 = exanb::dot(posNodeA_jv, v1);
-      double pb1 = exanb::dot(posNodeB_jv, v1);
-      double pa2 = exanb::dot(posNodeA_jv, v2);
-      double pb2 = exanb::dot(posNodeB_jv, v2);
+      const Vec3d& posNodeA_jv = vertices_[iva];
+      const Vec3d& posNodeB_jv = vertices_[ivb];
+      double pa1 = dot(posNodeA_jv, v1);
+      double pb1 = dot(posNodeB_jv, v1);
+      double pa2 = dot(posNodeA_jv, v2);
+      double pb2 = dot(posNodeB_jv, v2);
 
       // @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
       // @see http://alienryderflex.com/polygon/
@@ -159,47 +160,47 @@ struct Face {
    *         - `bool` intersects: Indicates whether there is an intersection with an edge.
    *         - `Vec3d` contact_position: The contact position if an intersection occurs (otherwise, it is {0,0,0}).
    */
-  std::tuple<bool, exanb::Vec3d> contact_edge_sphere(const double rx, const double ry, const double rz,
-                                                     const double rad) const {
-    // already tested if  exanb::dot(center,normal_) - offset_ < rad
+  std::tuple<bool, Vec3d> contact_edge_sphere(const double rx, const double ry, const double rz,
+                                              const double rad) const {
+    // already tested if  dot(center,normal_) - offset_ < rad
     // test if the sphere intersects an edge
-    const exanb::Vec3d center = {rx, ry, rz};
-    const exanb::Vec3d default_contact_point = {0, 0, 0};  // won't be used
+    const Vec3d center = {rx, ry, rz};
+    const Vec3d default_contact_point = {0, 0, 0};  // won't be used
     for (size_t i = 0; i < vertices_.size(); ++i) {
-      exanb::Vec3d p1 = vertices_[i];
-      exanb::Vec3d p2 = vertices_[(i + 1) % vertices_.size()];
-      exanb::Vec3d edge = p2 - p1;
-      exanb::Vec3d sphereToEdge = center - p1;
+      Vec3d p1 = vertices_[i];
+      Vec3d p2 = vertices_[(i + 1) % vertices_.size()];
+      Vec3d edge = p2 - p1;
+      Vec3d sphereToEdge = center - p1;
 
-      double distanceToEdge = length(exanb::cross(edge, sphereToEdge)) / length(edge);
+      double distanceToEdge = length(cross(edge, sphereToEdge)) / length(edge);
 
-      if (distanceToEdge <= rad && exanb::dot(sphereToEdge, edge) > 0 && exanb::dot(sphereToEdge - edge, edge) < 0) {
-        auto n_edge = edge / exanb::norm(edge);
-        exanb::Vec3d contact_position = p1 + n_edge * dot(sphereToEdge, n_edge);
+      if (distanceToEdge <= rad && dot(sphereToEdge, edge) > 0 && dot(sphereToEdge - edge, edge) < 0) {
+        auto n_edge = edge / norm(edge);
+        Vec3d contact_position = p1 + n_edge * dot(sphereToEdge, n_edge);
         return std::make_tuple(true, contact_position);
       }
     }
     return std::make_tuple(false, default_contact_point);
   }
 
-  std::tuple<bool, exanb::Vec3d, int> intersect_sphere(const double rx, const double ry, const double rz,
-                                                       const double rad) const {
-    exanb::Vec3d center = {rx, ry, rz};
-    const exanb::Vec3d default_norm = {0, 0, 0};
+  std::tuple<bool, Vec3d, int> intersect_sphere(const double rx, const double ry, const double rz,
+                                                const double rad) const {
+    Vec3d center = {rx, ry, rz};
+    const Vec3d default_norm = {0, 0, 0};
 
-    double p = exanb::dot(center, normal_) - offset_;
+    double p = dot(center, normal_) - offset_;
     if (std::abs(p) >= rad) {
       return std::make_tuple(false, default_norm, -1);
     }
 
     const int nb_vertices = vertices_.size();
-    exanb::Vec3d v1 = vertices_[1] - vertices_[0];
-    exanb::Vec3d v2 = vertices_[nb_vertices - 1] - vertices_[0];
-    v1 = v1 / exanb::norm(v1);
-    exanb::Vec3d n = exanb::cross(v1, v2);
-    n = n / exanb::norm(n);
-    exanb::Vec3d iv = center - vertices_[0];
-    double dist = exanb::dot(iv, n);
+    Vec3d v1 = vertices_[1] - vertices_[0];
+    Vec3d v2 = vertices_[nb_vertices - 1] - vertices_[0];
+    v1 = v1 / norm(v1);
+    Vec3d n = cross(v1, v2);
+    n = n / norm(n);
+    Vec3d iv = center - vertices_[0];
+    double dist = dot(iv, n);
     if (dist < 0.0) {
       dist = -dist;
       n = -n;
@@ -209,20 +210,20 @@ struct Face {
     int intersections = 0;
 
     // from rockable
-    exanb::Vec3d P = iv - dist * n;
-    v2 = exanb::cross(n, v1);
-    double ori1 = exanb::dot(P, v1);
-    double ori2 = exanb::dot(P, v2);
+    Vec3d P = iv - dist * n;
+    v2 = cross(n, v1);
+    double ori1 = dot(P, v1);
+    double ori2 = dot(P, v2);
 
     for (int iva = 0; iva < nb_vertices; ++iva) {
       int ivb = iva + 1;
       if (ivb == nb_vertices) ivb = 0;
-      const exanb::Vec3d& posNodeA_jv = vertices_[iva];
-      const exanb::Vec3d& posNodeB_jv = vertices_[ivb];
-      double pa1 = exanb::dot(posNodeA_jv, v1);
-      double pb1 = exanb::dot(posNodeB_jv, v1);
-      double pa2 = exanb::dot(posNodeA_jv, v2);
-      double pb2 = exanb::dot(posNodeB_jv, v2);
+      const Vec3d& posNodeA_jv = vertices_[iva];
+      const Vec3d& posNodeB_jv = vertices_[ivb];
+      double pa1 = dot(posNodeA_jv, v1);
+      double pb1 = dot(posNodeB_jv, v1);
+      double pa2 = dot(posNodeA_jv, v2);
+      double pb2 = dot(posNodeB_jv, v2);
 
       // @see http://local.wasp.uwa.edu.au/~pbourke/geometry/insidepoly/
       // @see http://alienryderflex.com/polygon/
@@ -234,23 +235,23 @@ struct Face {
     }
 
     if (intersections == 1) {                             // ODD
-      exanb::Vec3d contact_position = normal_ * offset_;  // we need dot(conatct_position, normal_)
+      Vec3d contact_position = normal_ * offset_;         // we need dot(conatct_position, normal_)
       return std::make_tuple(true, contact_position, 0);
     }
 
     // test if the sphere intersects an edge
     for (size_t i = 0; i < vertices_.size(); ++i) {
-      exanb::Vec3d p1 = vertices_[i];
-      exanb::Vec3d p2 = vertices_[(i + 1) % vertices_.size()];
-      exanb::Vec3d edge = p2 - p1;
-      exanb::Vec3d sphereToEdge = center - p1;
+      Vec3d p1 = vertices_[i];
+      Vec3d p2 = vertices_[(i + 1) % vertices_.size()];
+      Vec3d edge = p2 - p1;
+      Vec3d sphereToEdge = center - p1;
 
       // Calculer la distance entre le centre de la sphère et le bord le plus proche
-      double distanceToEdge = length(exanb::cross(edge, sphereToEdge)) / length(edge);
+      double distanceToEdge = length(cross(edge, sphereToEdge)) / length(edge);
 
-      if (distanceToEdge <= rad && exanb::dot(sphereToEdge, edge) > 0 && exanb::dot(sphereToEdge - edge, edge) < 0) {
-        auto n_edge = edge / exanb::norm(edge);
-        exanb::Vec3d contact_position = p1 + n_edge * dot(sphereToEdge, n_edge);
+      if (distanceToEdge <= rad && dot(sphereToEdge, edge) > 0 && dot(sphereToEdge - edge, edge) < 0) {
+        auto n_edge = edge / norm(edge);
+        Vec3d contact_position = p1 + n_edge * dot(sphereToEdge, n_edge);
         return std::make_tuple(true, contact_position, 1);  // La sphère touche un bord
       }
     }
@@ -268,18 +269,18 @@ struct Face {
    *         - `double` offset_: The computed offset_.
    *         - `bool` success: Indicates whether the calculation was successful (true) or not (false).
    */
-  std::tuple<exanb::Vec3d, double, bool> compute_normal_and_offset() {
-    exanb::Vec3d _normal;
+  std::tuple<Vec3d, double, bool> compute_normal_and_offset() {
+    Vec3d _normal;
     double dist = 0;
     if (vertices_.size() < 3) {
       // need three vertices_ at least
       return std::make_tuple(_normal, dist, false);
     }
 
-    exanb::Vec3d v1 = vertices_[1] - vertices_[0];
-    exanb::Vec3d v2 = vertices_[2] - vertices_[0];
+    Vec3d v1 = vertices_[1] - vertices_[0];
+    Vec3d v2 = vertices_[2] - vertices_[0];
     _normal = cross(v1, v2);
-    _normal = _normal / exanb::norm(_normal);
+    _normal = _normal / norm(_normal);
     dist = dot(_normal, vertices_[0]);
     return std::make_tuple(_normal, dist, true);
   }
@@ -292,8 +293,8 @@ struct Face {
    * @return A Box struct representing the bounding box of the polygon.
    */
   Box create_box() {
-    exanb::Vec3d inf_ = vertices_[0];
-    exanb::Vec3d sup_ = inf_;
+    Vec3d inf_ = vertices_[0];
+    Vec3d sup_ = inf_;
     for (auto vertex : vertices_) {
       inf_.x = std::min(inf_.x, vertex.x);
       inf_.y = std::min(inf_.y, vertex.y);

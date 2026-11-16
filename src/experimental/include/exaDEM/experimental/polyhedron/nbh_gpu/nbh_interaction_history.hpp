@@ -1,6 +1,7 @@
 #pragma once
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
 struct InteractionHistory {
@@ -124,7 +125,7 @@ struct UpdateHistoryFunc {
     size_t begin = start[idx];
     size_t end = begin + size[idx];
 
-    for (size_t i = begin; i < end; i++) {
+    ONIKA_CU_BLOCK_SIMD_FOR(unsigned int , i , begin , end ) {
       const PlaceholderInteraction& I = data[i];
       auto type = I.type();
       const int a = cell_storage_accessor_.offset_[idx][type];
@@ -133,13 +134,12 @@ struct UpdateHistoryFunc {
     }
   }
 };
-
 }  // namespace exaDEM
 
 namespace onika {
 namespace parallel {
 template <>
-struct ParallelForFunctorTraits<exaDEM::UpdateHistoryFunc> {
+struct BlockParallelForFunctorTraits<exaDEM::UpdateHistoryFunc> {
   static inline constexpr bool RequiresBlockSynchronousCall = false;
   static inline constexpr bool CudaCompatible = true;
 };

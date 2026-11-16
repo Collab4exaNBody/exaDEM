@@ -21,6 +21,7 @@ under the License.
 
 #include <onika/parallel/parallel_for.h>
 #include <onika/cuda/uninitialized_place_holder.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 struct reduce_thread_block_t {};
@@ -28,17 +29,17 @@ struct reduce_thread_local_t {};
 struct reduce_global_t {};
 struct RShapeDriverDisplacementFunctor {
   const double threshold_sqr_ = 0.0;
-  const exanb::Vec3d* vertices_;
-  const exanb::Vec3d c_a_;
-  const exanb::Quaternion q_a_;
-  const exanb::Vec3d c_b_;
-  const exanb::Quaternion q_b_;
+  const Vec3d* vertices_;
+  const Vec3d c_a_;
+  const Quaternion q_a_;
+  const Vec3d c_b_;
+  const Quaternion q_b_;
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(int& count_over_dist2, uint64_t i, reduce_thread_local_t = {}) const {
-    const exanb::Vec3d v_a = c_a_ + q_a_ * vertices_[i];
-    const exanb::Vec3d v_b = c_b_ + q_b_ * vertices_[i];
-    const exanb::Vec3d dv = v_a - v_b;
-    if (exanb::dot(dv, dv) >= threshold_sqr_) {
+    const Vec3d v_a = c_a_ + q_a_ * vertices_[i];
+    const Vec3d v_b = c_b_ + q_b_ * vertices_[i];
+    const Vec3d dv = v_a - v_b;
+    if (dot(dv, dv) >= threshold_sqr_) {
       ++count_over_dist2;
     }
   }

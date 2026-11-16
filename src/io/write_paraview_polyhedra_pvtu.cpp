@@ -74,17 +74,16 @@ struct par_vtu_poly_helper {
   CellDataField<int32_t> mpi_rank{"mpi_rank"};
 };
 
-inline void build_buffer_vtu_polyhedron(const exanb::Vec3d& pos, const shape* shp, const exanb::Quaternion& orient,
-                                        uint64_t id, uint16_t type, double vx, double vy, double vz, double h,
-                                        const exanb::Vec3d& vrot, const exanb::Vec3d& arot, double mass, double radius,
-                                        const exanb::Vec3d& inertia, const exanb::Mat3d& stress, uint32_t cluster,
-                                        uint32_t group, int mpi_rank, par_vtu_poly_helper& buffers) {
+inline void build_buffer_vtu_polyhedron(const Vec3d& pos, const shape* shp, const Quaternion& orient, uint64_t id,
+                                        uint16_t type, double vx, double vy, double vz, double h, const Vec3d& vrot,
+                                        const Vec3d& arot, double mass, double radius, const Vec3d& inertia,
+                                        const Mat3d& stress, uint32_t cluster, uint32_t group, int mpi_rank,
+                                        par_vtu_poly_helper& buffers) {
   const int vertex_base = buffers.n_vertices;
   const int n_vertices = shp->get_number_of_vertices();
 
-  auto writer_vertex = [&buffers](const exanb::Vec3d& v, const exanb::Vec3d& p, const double& h,
-                                  const exanb::Quaternion& q) {
-    exanb::Vec3d new_pos = p + q * (h * v);
+  auto writer_vertex = [&buffers](const Vec3d& v, const Vec3d& p, const double& h, const Quaternion& q) {
+    Vec3d new_pos = p + q * (h * v);
     append_value(buffers.vertices, new_pos);
   };
 
@@ -117,7 +116,7 @@ inline void build_buffer_vtu_polyhedron(const exanb::Vec3d& pos, const shape* sh
   // unless the corresponding field was selected via the "fields" slot.
   buffers.id.append(static_cast<int64_t>(id));
   buffers.type.append(static_cast<int32_t>(type));
-  buffers.velocity.append(exanb::Vec3d{vx, vy, vz});
+  buffers.velocity.append(Vec3d{vx, vy, vz});
   buffers.vrot.append(vrot);
   buffers.arot.append(arot);
   buffers.mass.append(mass);
@@ -353,7 +352,7 @@ class WriteParaviewPolyhedraPVTU2Operator : public OperatorNode {
       }
 
       for (int j = 0; j < n_particles; j++) {
-        exanb::Vec3d pos{rx[j], ry[j], rz[j]};
+        Vec3d pos{rx[j], ry[j], rz[j]};
         if (defbox) pos = xform.transformCoord(pos);
         const shape* shp = shps[type[j]];
         if constexpr (has_field_cluster) {

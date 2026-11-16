@@ -22,12 +22,13 @@ under the License.
 #include <onika/math/basic_types_operators.h>
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/core/grid.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 struct PushToAngularVelocityFunctor {
   double m_dt_2;
   ONIKA_HOST_DEVICE_FUNC
-  inline void operator()(exanb::Vec3d& vrot, const exanb::Vec3d& arot) const { vrot += arot * m_dt_2; }
+  inline void operator()(Vec3d& vrot, const Vec3d& arot) const { vrot += arot * m_dt_2; }
 };
 }  // namespace exaDEM
 

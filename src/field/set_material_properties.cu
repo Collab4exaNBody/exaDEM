@@ -27,6 +27,7 @@ under the License.
 #include <exaDEM/set_fields.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT,
           class = AssertGridHasFields<GridT, field::_type, field::_radius, field::_mass, field::_orient>>
 class SetMaterialProperties : public OperatorNode {

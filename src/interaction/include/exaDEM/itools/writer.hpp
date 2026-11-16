@@ -24,11 +24,11 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
 
 namespace itools {
-using namespace exanb;
 
 /** CPU only */
 template <typename GridT>
@@ -42,7 +42,7 @@ std::stringstream create_buffer(GridT& grid, Classifier& ic) {
   auto write_wave = [&](auto view, size_t size, double* dn_ptr, Vec3d* cp_ptr, Vec3d* fn_ptr, Vec3d* ft_ptr) {
     for (size_t idx = 0; idx < size; idx++) {
       double dn = dn_ptr[idx];
-      double f = exanb::norm(fn_ptr[idx]) + exanb::norm(ft_ptr[idx]);
+      double f = norm(fn_ptr[idx]) + norm(ft_ptr[idx]);
       auto [i, j, type, swap, ghost] = view.pair(idx);
       /** filter empty interactions */
       if (f != 0 || dn < 0 || type == InteractionTypeId::InnerBondId) {
@@ -84,7 +84,7 @@ std::stringstream create_buffer(GridT& grid, Classifier& ic) {
     } else if (get_typed(i) == 2) {
       write_wave(ic.get_data<InteractionType::InnerBond>(i).view(), size, dn_ptr, cp_ptr, fn_ptr, ft_ptr);
     } else {
-      lout << "skip interaction type: " << i << std::endl;
+      exanb::lout << "skip interaction type: " << i << std::endl;
       continue;
     }
   }

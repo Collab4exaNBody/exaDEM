@@ -44,6 +44,7 @@ under the License.
 #include <exaDEM/shape_detection_driver.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 /**
  * Contact forces between spheres, and between spheres and drivers, with the Hertz contact law
  * (HertzParams). The materials (Young modulus, Poisson ratio) are defined per group, with

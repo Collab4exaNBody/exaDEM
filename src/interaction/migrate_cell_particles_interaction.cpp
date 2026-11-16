@@ -21,6 +21,7 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 // helper template to avoid bug in older g++ compilers
 template <class GridT>
 using MigrateCellParticlesInteractionTmpl = MigrateCellParticlesES<GridT, exaDEM::PlaceholderInteraction>;

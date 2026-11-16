@@ -28,8 +28,10 @@ under the License.
 #include <exaDEM/forcefield/contact_parameters.hpp>
 #include <exaDEM/forcefield/multimat_parameters.hpp>
 #include <exaDEM/interface/interface.hpp>
+#include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class BrokenInterfaceFrictionUpdater : public OperatorNode {
   // attributes processed during computation
@@ -68,8 +70,8 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
       // If the interface is broken, we need to update the friction of the interactions and break them
       if (interfaces.break_interface_[i] == true) {
         auto [offset, size] = interfaces.data_[i];
-        auto type_a = cells[data_view[attr::cell_i][offset]][exanb::field::group][data_view[attr::p_i][offset]];
-        auto type_b = cells[data_view[attr::cell_j][offset]][exanb::field::group][data_view[attr::p_j][offset]];
+        auto type_a = cells[data_view[attr::cell_i][offset]][field::group][data_view[attr::p_i][offset]];
+        auto type_b = cells[data_view[attr::cell_j][offset]][field::group][data_view[attr::p_j][offset]];
 
         uint8_t* __restrict__ unbroken = data_view[attr::unbroken].data();
         Vec3d* __restrict__ friction = data_view[attr::friction].data();
@@ -79,10 +81,10 @@ class BrokenInterfaceFrictionUpdater : public OperatorNode {
           unbroken[idx] = false;  // mark the interaction as broken.
           // Note that broken interactions will be transformed in VertexVertex interactions by the unclassify operator.
           // so we need to use the contact parameters of VertexVertex interactions.
-          double ft = exanb::norm(ft_ptr[idx]);
+          double ft = norm(ft_ptr[idx]);
           double mu = cp(type_a, type_b).mu_;
           // ft_threshold depends on the normal force.
-          double ft_threshold = mu * exanb::norm(fn_ptr[idx]);
+          double ft_threshold = mu * norm(fn_ptr[idx]);
 
           // If the friction is higher than the threshold.
           // We need to reduce it to the threshold

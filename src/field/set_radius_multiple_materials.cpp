@@ -24,6 +24,7 @@ under the License.
 #include <exanb/core/grid.h>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_radius, field::_type>>
 class SetMultipleRadius : public OperatorNode {

@@ -21,6 +21,7 @@ under the License.
 #include <exaDEM/forcefield/contact_force_common.hpp>
 #include <exaDEM/forcefield/hertz_kernels.hpp>
 #include <exaDEM/forcefield/hertz_parameters.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 
@@ -62,7 +63,7 @@ ONIKA_HOST_DEVICE_FUNC inline void hertz_contact_force_core(const double dn,
 
   // === Relative velocity (j relative to i)
   auto vel = compute_relative_velocity(contact_position, pos_i, vel_i, vrot_i, pos_j, vel_j, vrot_j);
-  const double vn = exanb::dot(vel, n);
+  const double vn = dot(vel, n);
 
   // === Compute Contact forces
   // - Normal force (Hertz elastic contact + viscous damping)
@@ -76,7 +77,7 @@ ONIKA_HOST_DEVICE_FUNC inline void hertz_contact_force_core(const double dn,
   if constexpr (!cohesive) {
     threshold_ft = exaDEM::compute_threshold_ft_from_force(hp.mu_, exaDEM::hertz_elastic_force(hp.estar_, reff, dn));
   } else {
-    threshold_ft = exaDEM::compute_threshold_ft_with_cohesive_force(hp.mu_, exanb::dot(fn, n), hp.fc_);
+    threshold_ft = exaDEM::compute_threshold_ft_with_cohesive_force(hp.mu_, dot(fn, n), hp.fc_);
   }
   exaDEM::fit_tangential_force(threshold_ft, ft);
 

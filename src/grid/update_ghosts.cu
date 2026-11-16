@@ -43,6 +43,7 @@ under the License.
 #include <tuple>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT>
 using UpdateGhostsRQ = UpdateGhostsNode<
     GridT,

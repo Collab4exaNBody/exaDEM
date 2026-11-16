@@ -42,6 +42,7 @@ under the License.
 #include <algorithm>
 
 namespace exaDEM {
+using namespace exanb;
 
 // ---------------------------------------------------------------------------
 // Reduction: sum of the forces of the particles located in the region
@@ -94,7 +95,6 @@ struct ReduceCellParticlesTraits<exaDEM::ReduceFrameForceFunctor> {
 }  // namespace exanb
 
 namespace exaDEM {
-using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz>>
 class ComputeFrameVelocityNode : public OperatorNode {

@@ -30,6 +30,7 @@ under the License.
 #include <exaDEM/interaction/interaction.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <class GridT>
 class DEMCostModel : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);

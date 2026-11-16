@@ -25,6 +25,7 @@ under the License.
 // exaNBody
 #include <exanb/compute/compute_cell_particles.h>
 #include <exanb/grid_cell_particles/particle_region.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 
@@ -97,7 +98,7 @@ struct SetFunctor {
  */
 template <typename... Ts>
 struct SetRegionFunctor {
-  const ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
+  const exanb::ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
   onika::FlatTuple<Ts...> default_values_;    /**< Flat tuple of default values of types Ts. */
 
   /**
@@ -152,7 +153,7 @@ struct SetFunctorWithProcessing {
  */
 template <typename Func, typename... Ts>
 struct SetRegionFunctorWithProcessing {
-  const ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
+  const exanb::ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
   mutable Func processing_;                   /**< Functor with processing. */
   onika::FlatTuple<Ts...> default_values_;    /**< Flat tuple of default values of types Ts. */
 
@@ -207,7 +208,7 @@ struct GenSetFunctor {
  */
 template <typename Func>
 struct GenSetRegionFunctor {
-  const ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
+  const exanb::ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
   mutable Func gen_;                          /**< functor used to generate value. */
 
   // this function is only used to apply gen_ on parametes, note that gen_ can't return void.
@@ -260,7 +261,7 @@ struct FilteredSetFunctor {
  */
 template <typename... Ts>
 struct FilteredSetRegionFunctor {
-  const ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
+  const exanb::ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
   uint32_t filtered_type_;                    /**< The filtered type. */
   onika::FlatTuple<Ts...> default_values_;    /**< Flat tuple of default values of types Ts. */
 

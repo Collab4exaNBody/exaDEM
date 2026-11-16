@@ -34,6 +34,7 @@ under the License.
 #include <exaDEM/traversal.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_mass, field::_fx, field::_fy, field::_fz>>
 class GravityForce : public OperatorNode {

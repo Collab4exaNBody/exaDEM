@@ -27,6 +27,7 @@ under the License.
 #include <filesystem>  // C++17
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class WriteStressTensor : public OperatorNode {

@@ -43,6 +43,7 @@ under the License.
 #include <exaDEM/shape_detection_driver.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 /**
  * Contact forces between spheres, and between spheres and drivers, with the Hooke contact law
  * (ContactParams). See contact_force_sphere_hertz.cu.in for the Hertz law.

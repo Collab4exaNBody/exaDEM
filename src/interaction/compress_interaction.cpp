@@ -27,6 +27,7 @@ under the License.
 #include <exaDEM/interaction/interaction.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 class CompressInteraction : public OperatorNode {
   ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, REQUIRED, DocString{"Interaction list"});
 

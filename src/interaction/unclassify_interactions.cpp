@@ -24,6 +24,7 @@ under the License.
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 /** @brief Function to unclassify interactions */
 struct UnclassifyFunc {

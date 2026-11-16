@@ -22,6 +22,7 @@ under the License.
 #include <exanb/extra_storage/sim_dump_writer_es.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 using DumpFieldSet = FieldSet<field::_rx, field::_ry, field::_rz, field::_vx, field::_vy, field::_vz, field::_mass,
                               field::_homothety, field::_radius, field::_orient, field::_mom, field::_vrot,
                               field::_arot, field::_inertia, field::_id, field::_type, field::_group>;

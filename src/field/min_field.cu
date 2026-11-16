@@ -29,6 +29,7 @@ under the License.
 #include <limits>
 
 namespace exaDEM {
+using namespace exanb;
 /** It does not work for quaternion or Vec3d */
 template <typename T>
 struct ReduceMinFieldSet {
@@ -56,7 +57,6 @@ struct ReduceCellParticlesTraits<exaDEM::ReduceMinFieldSet<T>> {
 }  // namespace exanb
 
 namespace exaDEM {
-using namespace exanb;
 
 template <typename T, class FieldSetT, typename GridT>
 class ReduceMinFieldOP : public OperatorNode {

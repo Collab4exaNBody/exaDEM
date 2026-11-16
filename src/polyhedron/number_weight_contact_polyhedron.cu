@@ -37,6 +37,8 @@ under the License.
 #endif
 
 namespace exaDEM {
+using namespace exanb;
+using namespace onika::parallel;
 
 /** @brief Persistent GPU buffers for the pair-counting pass (resized, not reallocated, across steps). */
 struct NumberWeightScratch {

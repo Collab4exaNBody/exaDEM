@@ -30,6 +30,7 @@ under the License.
 #include <exaDEM/shapes.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class StatsInteractions : public OperatorNode {
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
@@ -55,7 +56,7 @@ class StatsInteractions : public OperatorNode {
     int gnvc(0), gnvs(0), gnvb(0), gnSvv(0), gnSve(0), gnSvf(0), gnSee(0), gnSev(0),
         gnSfv(0);  // interaction counters [drivers]
 
-    const exanb::Vec3d null = {0., 0., 0.};
+    const Vec3d null = {0., 0., 0.};
 
     auto incr_interaction_counters = [null](const PlaceholderInteraction& I, int& count, int& active_count,
                                             int& active_global_count, int& ghost_count,

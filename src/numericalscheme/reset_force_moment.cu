@@ -29,6 +29,7 @@ under the License.
 #include <exaDEM/set_fields.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_fx, field::_fy, field::_fz, field::_mom>>
 class ResetForceMomentNode : public OperatorNode {
   ADD_SLOT(GridT, grid, INPUT_OUTPUT, REQUIRED);

@@ -39,6 +39,7 @@ under the License.
 #include <exaDEM/polyhedron/inner_bond.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>>
 class ComputeInnerBondForce : public OperatorNode {

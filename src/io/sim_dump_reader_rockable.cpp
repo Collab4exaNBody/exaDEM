@@ -45,6 +45,7 @@ under the License.
 #include <string>
 
 namespace exaDEM {
+using namespace exanb;
 /** @brief Structure representing a particle type. */
 struct ParticleType {
   static inline constexpr size_t MAX_STR_LEN = 16;

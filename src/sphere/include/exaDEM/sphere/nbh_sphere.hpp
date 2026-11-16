@@ -19,6 +19,7 @@ under the License.
 #pragma once
 #include <vector>
 #include <exaDEM/shape_detection.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 // rVerletMax = rVerlet + sphere radius
@@ -45,7 +46,7 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const RShape
   RShapeDriverCellAccessor grid_rshape_driver_accessor(cell, driver.grid_indexes_);
   auto& shp = driver.shp_;
 
-  exanb::Vec3d v = {rx, ry, rz};
+  Vec3d v = {rx, ry, rz};
   constexpr double dhomothety = 1.0;
   double dradius = shp.minkowski(dhomothety);
   // vertex - vertex

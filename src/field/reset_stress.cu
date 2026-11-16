@@ -26,6 +26,7 @@ under the License.
 #include <exaDEM/set_fields.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_type>>
 class ResetStressTensor : public OperatorNode {
   using ComputeFields = FieldSet<field::_stress>;
@@ -61,10 +62,10 @@ class ResetStressTensor : public OperatorNode {
       }
 
       ParticleRegionCSGShallowCopy prcsg = *region;
-      SetRegionFunctor<exanb::Mat3d> func = {prcsg, exanb::make_zero_matrix()};
+      SetRegionFunctor<Mat3d> func = {prcsg, exanb::make_zero_matrix()};
       compute_cell_particles(*grid, false, func, compute_region_field_set, parallel_execution_context());
     } else {
-      SetFunctor<exanb::Mat3d> func = {exanb::make_zero_matrix()};
+      SetFunctor<Mat3d> func = {exanb::make_zero_matrix()};
       compute_cell_particles(*grid, false, func, compute_field_set, parallel_execution_context());
     }
   }

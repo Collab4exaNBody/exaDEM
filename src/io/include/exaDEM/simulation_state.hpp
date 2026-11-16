@@ -48,7 +48,7 @@ struct simulation_state_variables {
 struct ReduceSimulationStateFunctor {
   ONIKA_HOST_DEVICE_FUNC inline void operator()(simulation_state_variables& local_variables, const double vx,
                                                 const double vy, const double vz, const Vec3d& vrot, const double m,
-                                                reduce_thread_local_t = {}) const {
+                                                exanb::reduce_thread_local_t = {}) const {
     Vec3d v{vx, vy, vz};
     local_variables.mass += m;
     local_variables.rotation_energy += 0.5 * vrot * vrot * m;
@@ -57,7 +57,7 @@ struct ReduceSimulationStateFunctor {
   }
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(simulation_state_variables& global, simulation_state_variables local,
-                                                reduce_thread_block_t) const {
+                                                exanb::reduce_thread_block_t) const {
     ONIKA_CU_ATOMIC_ADD(global.mass, local.mass);
     ONIKA_CU_ATOMIC_ADD(global.rotation_energy.x, local.rotation_energy.x);
     ONIKA_CU_ATOMIC_ADD(global.rotation_energy.y, local.rotation_energy.y);
@@ -69,7 +69,7 @@ struct ReduceSimulationStateFunctor {
   }
 
   ONIKA_HOST_DEVICE_FUNC inline void operator()(simulation_state_variables& global, simulation_state_variables local,
-                                                reduce_global_t) const {
+                                                exanb::reduce_global_t) const {
     ONIKA_CU_ATOMIC_ADD(global.mass, local.mass);
     ONIKA_CU_ATOMIC_ADD(global.rotation_energy.x, local.rotation_energy.x);
     ONIKA_CU_ATOMIC_ADD(global.rotation_energy.y, local.rotation_energy.y);

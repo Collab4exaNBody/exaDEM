@@ -28,6 +28,7 @@ under the License.
 #include <random>
 
 namespace exaDEM {
+using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_vx, field::_vy, field::_vz>>
 class SetRandVelocity : public OperatorNode {

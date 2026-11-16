@@ -42,6 +42,7 @@ under the License.
 #include <exanb/particle_neighbors/chunk_neighbors_execute.h>
 
 namespace exaDEM {
+using namespace exanb;
 template <class CellsT>
 struct ContactNeighborFilterFunc {
   CellsT cells;

@@ -20,9 +20,9 @@
 #include <onika/parallel/block_parallel_for.h>
 #include <onika/parallel/parallel_execution_context.h>
 #include <onika/parallel/parallel_for.h>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
-using namespace onika::parallel;
 
 /**
  * @brief Namespace for utilities related to tuple manipulation.
@@ -220,7 +220,6 @@ struct ParallelForFunctorTraits<exaDEM::WrapperForAll<IT, K, Args...>> {
 }  // namespace onika
 
 namespace exaDEM {
-using namespace onika::parallel;
 
 /**
  * @brief Executes the contact law in parallel for a given interaction type.
@@ -234,23 +233,23 @@ using namespace onika::parallel;
  * @param dataPacker A boolean flag that determines whether to use a data packer or a null packer.
  * @param args Additional arguments forwarded to the kernel.
  *
- * @return A `ParallelExecutionWrapper` that represents the parallel execution of the contact law.
+ * @return A `onika::parallel::ParallelExecutionWrapper` that represents the parallel execution of the contact law.
  *
  * The function retrieves interaction data based on the interaction type and runs the kernel
  * in parallel using the specified execution context. Depending on the `dataPacker` flag, it either
  * applies a null data packer or uses a data packer to process interaction data.
  */
 template <int type, typename Kernel, typename... Args>
-static inline ParallelExecutionWrapper run_contact_law(ParallelExecutionContext* exec_ctx, Classifier& ic,
-                                                       Kernel& kernel, Args&&... args) {
+static inline onika::parallel::ParallelExecutionWrapper run_contact_law(
+    onika::parallel::ParallelExecutionContext* exec_ctx, Classifier& ic, Kernel& kernel, Args&&... args) {
   static_assert(type < InteractionTypeId::NTypes);
   constexpr InteractionType IT = ConvertToIntertactionType<type>();
-  ParallelForOptions opts;
-  opts.omp_scheduling = OMP_SCHED_STATIC;
+  onika::parallel::ParallelForOptions opts;
+  opts.omp_scheduling = onika::parallel::OMP_SCHED_STATIC;
   AnalysisDataPacker packer(ic, type);
   auto [data, size] = ic.get_info<IT>(type);
   typename ClassifierContainer<IT>::View interactions = data.view();
   WrapperContactLawForAll func(interactions, kernel, packer, args...);
-  return parallel_for(size, func, exec_ctx, opts);
+  return onika::parallel::parallel_for(size, func, exec_ctx, opts);
 }
 }  // namespace exaDEM

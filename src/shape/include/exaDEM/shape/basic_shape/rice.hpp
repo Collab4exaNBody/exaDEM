@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <exaDEM/shape.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 namespace basic_shape {
@@ -12,8 +13,6 @@ namespace basic_shape {
  * @param minkowski Minkowski radius
  */
 shape create_rice(std::string name, double length, double minkowski) {
-  using exanb::Quaternion;
-  using exanb::Vec3d;
   // rename
   const double c = length;
   const double r = minkowski;

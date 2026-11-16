@@ -22,6 +22,7 @@ under the License.
 #include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/shape_detection.hpp>
 #include <exaDEM/shape_detection_driver.hpp>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 /**
@@ -61,9 +62,9 @@ namespace exaDEM {
 template <typename Func>
 ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     RShapeDriver& driver, size_t cell_a, Func& add_contact, PlaceholderInteraction& item, const size_t n_particles,
-    const double rVerlet, const ParticleTypeInt* __restrict__ type, const uint64_t* __restrict__ id,
+    const double rVerlet, const exanb::ParticleTypeInt* __restrict__ type, const uint64_t* __restrict__ id,
     const double* __restrict__ rx, const double* __restrict__ ry, const double* __restrict__ rz, VertexField& vertices,
-    const double* __restrict__ homothety, const exanb::Quaternion* __restrict__ orient, const shape* shps) {
+    const double* __restrict__ homothety, const Quaternion* __restrict__ orient, const shape* shps) {
   using onika::cuda::vector_data;
   using onika::cuda::vector_size;
   constexpr double dhomothety = 1.0;
@@ -213,7 +214,7 @@ ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
 template <typename DriverT, typename Func>
 ONIKA_HOST_DEVICE_FUNC inline void add_driver_interaction(
     DriverT& driver, Func& add_contact, PlaceholderInteraction& item, const size_t n_particles, const double rVerlet,
-    const ParticleTypeInt* __restrict__ type, const uint64_t* __restrict__ id, VertexField& vertices,
+    const exanb::ParticleTypeInt* __restrict__ type, const uint64_t* __restrict__ id, VertexField& vertices,
     const double* __restrict__ homothety, const shape* const shps) {
   constexpr int DRIVER_VERTEX_SUB_IDX = -1;  // Convention
   auto& pi = item.i();                       // particle i (id, cell id, particle position, sub vertex)

@@ -21,6 +21,7 @@ under the License.
 #include <onika/math/basic_types.h>
 
 #include <cassert>
+#include <exaDEM/basic_type.hpp>
 
 namespace exaDEM {
 template <bool def_box>
@@ -33,7 +34,7 @@ struct PolyhedraComputeVerticesFunctor<true> {
   Mat3d xform;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(const size_t cell_idx, const size_t p, const uint32_t type,
                                                 const double& rx, const double& ry, const double& rz, const double& h,
-                                                const exanb::Quaternion& orient) const {
+                                                const Quaternion& orient) const {
     ParticleVertexView vertices = {p, pcvf[cell_idx]};
     const shape* __restrict__ shps_ptr = shps.data();
     const auto& shp = shps_ptr[type];
@@ -53,7 +54,7 @@ struct PolyhedraComputeVerticesFunctor<false> {
   VertexField* __restrict__ pcvf;
   ONIKA_HOST_DEVICE_FUNC inline void operator()(const size_t cell_idx, const size_t p, const uint32_t type,
                                                 const double& rx, const double& ry, const double& rz, const double& h,
-                                                const exanb::Quaternion& orient) const {
+                                                const Quaternion& orient) const {
     ParticleVertexView vertices = {p, pcvf[cell_idx]};
     const shape* __restrict__ shps_ptr = shps.data();
     const auto& shp = shps_ptr[type];

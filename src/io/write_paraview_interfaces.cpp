@@ -41,6 +41,7 @@ under the License.
 #include <vector>
 
 namespace exaDEM {
+using namespace exanb;
 template <class GridT, class = AssertGridHasFields<GridT>>
 class WriteParaviewInterfaceOperator : public OperatorNode {
   using ComputeFields = FieldSet<field::_rx, field::_ry, field::_rz, field::_type, field::_orient>;
@@ -124,7 +125,7 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
         En += interaction[attr::en];
         Et += interaction[attr::et];
         if (dn[j] > 0) {
-          S += exanb::norm(fn[j]);
+          S += norm(fn[j]);
         }
         criterion = interaction[attr::criterion];  // same criterion for every interaction of the interface
       }

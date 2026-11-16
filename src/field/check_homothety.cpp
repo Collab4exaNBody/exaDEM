@@ -28,6 +28,7 @@ under the License.
 #include <exaDEM/color_log.hpp>
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT, class = AssertGridHasFields<GridT, field::_homothety>>
 class CheckHomothety : public OperatorNode {
   //      using ReduceFields = FieldSet<field::_radius>;

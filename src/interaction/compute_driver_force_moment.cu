@@ -48,10 +48,10 @@ struct ComputeForceMomentDriverFunc {
     // Compute force + moment contribution from this interaction and add to driver (negative sign for Newton's 3rd law)
     // Thread-safe addition of normal + tangential forces to the driver
     const exanb::Vec3d f = fn[i] + ft[i];  // Total force from this interaction
-    exaDEM::lockAndAdd(forces[id], -f);
+    EXADEM_CU_ATOMIC_ADD(forces[id], -f);
     const exanb::Vec3d Cd = (cp[i] - centers[id]);
     const exanb::Vec3d mom = exanb::cross(Cd, -f) + -I[exaDEM::attr::moment];
-    exaDEM::lockAndAdd(moments[id], mom);
+    EXADEM_CU_ATOMIC_ADD(moments[id], mom);
   }
 };
 
@@ -76,6 +76,8 @@ struct SetForceMomentFunc {
 };
 
 namespace exaDEM {
+using namespace exanb;
+using namespace onika::parallel;
 template <typename T>
 using vector_t = onika::memory::CudaMMVector<T>;
 class ComputeForceMomentDriverOp : public OperatorNode {
@@ -104,14 +106,14 @@ class ComputeForceMomentDriverOp : public OperatorNode {
     if (drivers.has_value()) {
       auto& drvs = *drivers;
       // Allocate temporary buffers (CPU/GPU agnostic) for accumulated forces and moments
-      vector_t<exanb::Vec3d> forces(drvs.get_size());
-      vector_t<exanb::Vec3d> moments(drvs.get_size());
-      vector_t<exanb::Vec3d> centers(drvs.get_size());
+      vector_t<Vec3d> forces(drvs.get_size());
+      vector_t<Vec3d> moments(drvs.get_size());
+      vector_t<Vec3d> centers(drvs.get_size());
       // Get interaction classifier containing classified interactions
       auto& classifier = *ic;
 
       for (size_t i = 0; i < drvs.get_size(); i++) {
-        exanb::Vec3d center;
+        Vec3d center;
         auto get_center = [&center](auto& drv) { center = drv.position(); };
         // center will be set by the functor, which captures it by reference
         drvs.apply(i, get_center);  // Apply functor to driver i
