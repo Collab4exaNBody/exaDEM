@@ -89,6 +89,7 @@ struct convert<RSAParameters> {
 }  // namespace YAML
 
 namespace exaDEM {
+using namespace exanb;
 template <typename GridT>
 class RSAVolFrac : public OperatorNode {
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD,

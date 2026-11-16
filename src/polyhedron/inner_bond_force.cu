@@ -76,14 +76,6 @@ class ComputeInnerBondForce : public OperatorNode {
       )EOF";
   }
 
-  template <int start, int end, template <int, typename> typename FuncT, typename XFormT, typename... Args>
-  void loop_contact_force(Classifier& classifier, XFormT& cp_xform, Args&&... args) {
-    FuncT<start, XFormT> contact_law;
-    if constexpr (start + 1 <= end) {
-      loop_contact_force<start + 1, end, FuncT>(classifier, cp_xform, std::forward<Args>(args)...);
-    }
-  }
-
   /** fill highest kn */
   void scan_kn() {
     if (!(*print_warning)) {
