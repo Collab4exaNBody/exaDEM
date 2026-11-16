@@ -62,19 +62,6 @@ struct CopierFunc {
   }
 };
 
-struct CountActiveInteractionFunc {
-  template <InteractionType IT>
-  ONIKA_HOST_DEVICE_FUNC inline void operator()(typename ClassifierContainer<IT>::View& interactions_view,
-                                                size_t& count, int start, int size) const {
-    for (int j = start; j < start + size; j++) {
-      if (interactions_view(j).active()) {
-        // printf("count %lu\n", count);
-        count++;
-      }
-    }
-  }
-};
-
 struct CopierActiveInteractionFunc {
   template <InteractionType IT>
   ONIKA_HOST_DEVICE_FUNC inline void operator()(typename ClassifierContainer<IT>::View& interactions_view,
@@ -169,26 +156,22 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
     auto& first_elem_per_type = cell_storage.offset_[cell_idx];
     auto& n_elem_per_type = cell_storage.size_[cell_idx];
 
-    // Total number of interactions in this cell
+    // Upper bound on the number of interactions in this cell (exact count when !active_interaction,
+    // an over-estimate otherwise since some of them may be inactive). Known without touching any
+    // individual interaction, so it's always cheap to compute up front.
     size_t number_of_interactions = 0;
-    if constexpr (!active_interaction) {
-      for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
-        number_of_interactions += n_elem_per_type[typeID];
-      }
-    } else {
-      CountActiveInteractionFunc counter;
-      for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
-        int start = first_elem_per_type[typeID];
-        int size = n_elem_per_type[typeID];
-        IDispatcher::dispatch(typeID, interaction_classifier_accessor, counter, number_of_interactions, start, size);
-      }
+    for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
+      number_of_interactions += n_elem_per_type[typeID];
     }
 
     // Reference to storage for this grid cell
     auto& storage = ges.m_data[owner_cell];
     auto& info_particles = storage.m_info;
 
-    // Resize storage to fit all interactions
+    // Resize storage to fit all interactions (the upper bound above). When active_interaction is
+    // true this may over-allocate; it is shrunk back down to the real count below, once it is
+    // known, after the single copy pass -- resizing a vector down never reallocates, so this costs
+    // nothing and avoids a separate counting pass over every interaction.
     size_t old_size = 0;
     if constexpr (append) {
       old_size = storage.m_data.size();
@@ -221,7 +204,15 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
       }
     }
 
-    assert(shift == old_size + number_of_interactions);
+    if constexpr (active_interaction) {
+      assert(shift <= old_size + number_of_interactions);
+      // Shrink back down to the exact number of active interactions copied above (number_of_interactions
+      // was only an upper bound). A vector resize() to a smaller size never reallocates, so this is free.
+      storage.m_data.resize(shift);
+      data_ptr = storage.m_data.data();
+    } else {
+      assert(shift == old_size + number_of_interactions);
+    }
 
     // sorted according the particle position in the cell
     std::stable_sort(
@@ -235,10 +226,12 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
       _offset = info_offset;
       _size = 0;
       for (size_t j = info_offset; j < storage.m_data.size(); j++) {
+#ifndef NDEBUG
         if (!data_ptr[j].consistent()) {
           data_ptr[j].print();
           color_log::mpi_error("transfer_classifier_grid", "This interacion is illformed");
         }
+#endif
         if (_pid != data_ptr[j].owner().id_) {
           break;
         }
