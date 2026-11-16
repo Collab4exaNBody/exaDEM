@@ -104,8 +104,12 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
         }
 
         // note that size > 0 (otherwise -> continue)
-        [[maybe_unused]] uint64_t previous_a_id = InvalidId;
-        [[maybe_unused]] uint64_t previous_b_id = InvalidId;
+        uint64_t previous_a_id = InvalidId;
+        uint64_t previous_b_id = InvalidId;
+        uint16_t previous_a_p = 0;
+        uint32_t previous_b_cell = 0;
+        uint16_t previous_b_p = 0;
+        uint8_t previous_b_ghost = InteractionPair::NotGhost;
         for (size_t i = 0; i < storage.m_data.size(); i++) {
           // get the current interaction.
           PlaceholderInteraction& item = interactions[i];
@@ -119,14 +123,11 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
 
           uint64_t id = particle_loc_a.id_;
 
-          // if( shift > 0 && previous_a_id == particle_loc_a.id_ )
-          //    if( i > 0 && previous_a_id == particle_loc_a.id_ )
-          //    {
-          //        particle_loc_a.cell_ = interactions[i - 1].pair.owner().cell;
-          //        particle_loc_a.p_    = interactions[i - 1].pair.owner().p;
-          //      }
-          //      else
-          {
+          // reuse data from the previous interaction if it shares the same owner particle.
+          if (previous_a_id == id) {
+            particle_loc_a.cell_ = cell_a;
+            particle_loc_a.p_ = previous_a_p;
+          } else {
             auto [find, p_a] = locate_particle_id(id_a, n_particles, id);
             particle_loc_a.cell_ = cell_a;
             particle_loc_a.p_ = p_a;
@@ -139,15 +140,12 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
             }
           }
 
-          // reuse data
-          //    if( previous_b_id == particle_loc_b.id_ )
-          //    {
-          //      assert(i>0);
-          //      particle_loc_b.cell_ = interactions[i - 1].pair.partner().cell;
-          //    particle_loc_b.p_    = interactions[i - 1].pair.partner().p;
-          //      }
-          //      else
-          {
+          // reuse data from the previous interaction if it shares the same partner particle.
+          if (previous_b_id == particle_loc_b.id_) {
+            particle_loc_b.cell_ = previous_b_cell;
+            particle_loc_b.p_ = previous_b_p;
+            item.pair_.ghost_ = previous_b_ghost;
+          } else {
             // looking for both cell and p values in current and other cells
             Vec3d r = {rx_a[particle_loc_a.p_], ry_a[particle_loc_a.p_], rz_a[particle_loc_a.p_]};
             AABB cover_particle = {r - Dmax, r + Dmax};
@@ -184,11 +182,14 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
                   "The particle b with the particle id " + std::to_string(particle_loc_b.id_) + " has not been found");
             }
           }
-          // update previous_ab_id
+          // update previous_ab_id and cached locations
           previous_a_id = particle_loc_a.id_;
+          previous_a_p = particle_loc_a.p_;
           previous_b_id = particle_loc_b.id_;
+          previous_b_cell = particle_loc_b.cell_;
+          previous_b_p = particle_loc_b.p_;
+          previous_b_ghost = item.pair_.ghost_;
         }
-        //          }
       }  //    GRID_OMP_FOR_END
     }
   }
