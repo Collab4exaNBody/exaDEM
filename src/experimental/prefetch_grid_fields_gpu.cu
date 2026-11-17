@@ -42,7 +42,7 @@ inline void prefetch_grid_cells(GridCellsT* grid_cells, const size_t* cell_indic
 #pragma omp parallel num_threads(n_streams)
   {
     onikaStream_t st = streams[omp_get_thread_num()];
-#pragma omp for schedule(static)
+#pragma omp for schedule(guided)
     for (size_t i = 0; i < n_cells; i++) {
       auto& cell = grid_cells[cell_indices[i]];
       if (cell.size() <= 0) continue;
