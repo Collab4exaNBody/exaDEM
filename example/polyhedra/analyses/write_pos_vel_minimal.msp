@@ -51,8 +51,8 @@ iteration_dump_writer:
 
 global:
   simulation_dump_frequency: 500
-  simulation_end_iteration: 20000
+  simulation_end_iteration: 5000
   simulation_log_frequency: 1000
-  simulation_paraview_frequency: 20000
+  simulation_paraview_frequency: 5000
   dt: 0.00005 s 
   rcut_inc: 0.1

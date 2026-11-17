@@ -6,8 +6,8 @@ input_data:
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 2010000
-  simulation_log_frequency: 1000
+  simulation_end_iteration: 2001000
+  simulation_log_frequency: 250
   simulation_paraview_frequency: -1
   dt: 0.0000025 s
   rcut_inc: 0.4 m # rayon plus petite sphere

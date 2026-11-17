@@ -1,0 +1,5 @@
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 6000
+  simulation_log_frequency: 1000
+  simulation_paraview_frequency: -1
