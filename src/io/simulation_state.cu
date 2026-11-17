@@ -59,13 +59,16 @@ struct SimulationStateReducFunc {
    */
   template <InteractionType IT, typename PEC>
   void operator()(ClassifierContainer<IT>& container, int coef, const double* const dnp, IOSimInteractionResult& result,
-                  PEC& pec) {
+                  PEC& pec, onika::parallel::ParallelExecutionQueue& queue) {
     size_t size = container.size();
     typename ClassifierContainer<IT>::View dataView = container.view();
     IOSimInteractionFunctor func = {dnp, coef};
 
     if (size > 0 && dnp != nullptr) {  // skip it if forces has not been computed
-      reduce_data<IT, IOSimInteractionFunctor, IOSimInteractionResult>(pec(), dataView, func, size, result);
+      // Enqueue this type's reduction instead of letting it synchronize (and copy its tiny
+      // result back) right away: all interaction types get flushed and waited on together,
+      // once, in reduce_sim_io(), instead of one GPU round-trip per type.
+      queue << reduce_data<IT, IOSimInteractionFunctor, IOSimInteractionResult>(pec(), dataView, func, size, result);
     }
   }
 };
@@ -99,6 +102,7 @@ struct SimulationStateNode : public OperatorNode {
     int types = classifier.number_of_waves();
     auto pec = [this]() { return this->parallel_execution_context(); };
     results.resize(types);
+    auto& queue = this->parallel_execution_queue();
     {
       SimulationStateReducFunc func;
       for (int typeID = 0; typeID < types; typeID++) {
@@ -107,9 +111,12 @@ struct SimulationStateNode : public OperatorNode {
         const double* const dnp = onika::cuda::vector_data(buffs.dn_);
         // symetric contact laws: a particle-particle interaction counts for both particles
         const int coef = (typeID < InteractionTypeId::NTypesPP) ? 2 : 1;
-        CDispatcher::dispatch(typeID, classifier, func, coef, dnp, results[typeID], pec);
+        CDispatcher::dispatch(typeID, classifier, func, coef, dnp, results[typeID], pec, queue);
       }
-    }  // synchronize
+    }
+    // Wait for every dispatched type's reduction once here, instead of each one
+    // synchronizing (and migrating its tiny result back to host) on its own.
+    queue << onika::parallel::flush << onika::parallel::synchronize;
     for (int i = 0; i < types; i++) {
       res.update(results[i]);
     }

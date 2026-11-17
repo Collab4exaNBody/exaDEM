@@ -163,6 +163,7 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
         auto add_contact = [&manager](PlaceholderInteraction& item, int sub_i, int sub_j) -> void {
           item.pair_.pi_.sub_ = sub_i;
           item.pair_.pj_.sub_ = sub_j;
+          item.reset();
           manager.add_item(item);
         };
 
@@ -173,6 +174,7 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
 
         // First, interaction between a polyhedron and a driver
         if (drivers.has_value()) {
+          item.pair_.ghost_ = InteractionPair::NotGhost;
           item.pair_.swap_ = false;
           auto& pi = item.i();       // particle i (id, cell id, particle position, sub vertex)
           auto& pd = item.driver();  // particle driver (id, cell id, particle position, sub vertex)
@@ -219,9 +221,7 @@ class UpdateGridCellInteractionWithOBBTree : public OperatorNode {
               const uint64_t id_nbh = cells[cell_b][field::id][p_b];
               item.pair_.ghost_ = InteractionPair::NotGhost;
               if (id_a[p_a] >= id_nbh) {
-                if (!g.is_ghost_cell(cell_b)) {
-                  return;
-                }
+                return;
               }
               if (g.is_ghost_cell(cell_b)) {
                 item.pair_.ghost_ = InteractionPair::OwnerGhost;

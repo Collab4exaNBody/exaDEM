@@ -1,7 +1,13 @@
+particle_regions:
+  - WALL:
+     bounds: [[3,-2,0],[4,3,7]]
+  - SPAWN:
+     bounds: [[1,0,4],[2,1,5]]
+
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 10000
-  simulation_log_frequency: 1000
+  simulation_end_iteration: 3000
+  simulation_log_frequency: 500
   simulation_paraview_frequency: -1
   dt: 0.00001 s 
   rcut_inc: 0.025

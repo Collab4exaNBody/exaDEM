@@ -1,5 +1,6 @@
 #pragma once
 
+#include <onika/cuda/cuda_context.h>
 #include <onika/oarray.h>
 #include <onika/parallel/block_parallel_for.h>
 #include <onika/parallel/parallel_execution_context.h>
@@ -29,6 +30,23 @@ ONIKA_HOST_DEVICE_FUNC inline InteractionTypePerCellCounter operator-(const Inte
     res[i] = a[i] - b[i];
   }
   return res;
+}
+
+/**
+ * @brief True if every GPU supports concurrentManagedAccess, i.e. the host may access managed memory while GPU work
+ * is pending. Otherwise, the host must wait for the pending GPU work first.
+ */
+inline bool host_can_access_managed_memory_during_gpu_work(const onika::cuda::CudaContext* ctx) {
+#ifdef ONIKA_CUDA_VERSION
+  if (ctx != nullptr) {
+    for (const auto& device : ctx->m_devices) {
+      if (!device.m_deviceProp.concurrentManagedAccess) {
+        return false;
+      }
+    }
+  }
+#endif
+  return true;
 }
 
 inline void debug_print(InteractionTypePerCellCounter& in) {

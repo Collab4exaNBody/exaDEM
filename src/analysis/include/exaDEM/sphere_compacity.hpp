@@ -25,9 +25,9 @@ under the License.
 namespace exaDEM {
 struct SphereVolumeValue {
   static constexpr double pi = 3.14159265358979323846;
-  long count_;         // number of spheres
-  double sum_radius_;  // sum of radii
-  double sum_volume_;  // sum of (4/3) pi r^3
+  unsigned long long count_;  // number of spheres
+  double sum_radius_;         // sum of radii
+  double sum_volume_;         // sum of (4/3) pi r^3
   inline ONIKA_HOST_DEVICE_FUNC void operator+=(double r) {
     count_++;
     sum_radius_ += r;

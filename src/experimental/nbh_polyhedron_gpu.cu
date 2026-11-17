@@ -139,9 +139,10 @@ inline void initialize_particle_pair_scratch(ScratchT& scratch, size_t cell_pair
   auto& pp_counts = scratch.pp_counts_;
   auto& pp_offsets = scratch.pp_offsets_;
   pp_offsets.resize(cell_pair_size);
-  reset(pp_offsets, st);
   pp_counts.resize(cell_pair_size);
+  reset(pp_offsets, st);
   reset(pp_counts, st);
+  ONIKA_CU_STREAM_SYNCHRONIZE(st);
 }
 
 /* Initialize the temporary buffers used to store interaction counts and prefix offsets. */
@@ -150,9 +151,10 @@ inline void initialize_interaction_scratch(ScratchT& scratch, size_t total_pp, o
   auto& interaction_counts = scratch.interaction_counts_;
   auto& interaction_prefix = scratch.interaction_prefix_;
   interaction_counts.resize(total_pp);
-  reset(interaction_counts, st);
   interaction_prefix.resize(total_pp);
+  reset(interaction_counts, st);
   reset(interaction_prefix, st);
+  ONIKA_CU_STREAM_SYNCHRONIZE(st);
 }
 
 /* Add persistent driver interactions that were not found in the current classifier contents.
@@ -209,6 +211,7 @@ inline void add_unmatched_persistent_interactions(const InteractionHistory& hist
     ClassifierViewAccessor tmp_accessor = wrappers_tmp.accessor();
     auto& w = tmp_accessor.get_typed_accessor<InteractionType::ParticleDriver>(type);
     w.set(old_size, interaction);
+    w.update(old_size, interaction);
   }
 
   wrapper_storage = ClassifierViewStorage(container);
@@ -258,6 +261,8 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
                      "This operator only work on GPU.\n"
                      "                     Please use nbh_polyhedron.");
 #else
+    ONIKA_CU_DEVICE_SYNCHRONIZE();
+    const bool concurrent_managed_access = host_can_access_managed_memory_during_gpu_work(global_cuda_ctx());
     auto& grid_data = *grid;
     const auto grid_cells = grid_data.cells();
     const IJK grid_dimensions = grid_data.dimension();
@@ -299,13 +304,16 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::build_cell_neighbor_metadata");
     build_cell_neighbor_metadata(grid_data, grid_dimensions, cell_indices, active_cell_count,
                                  cell_neighbor_host_storage, cell_interaction_info);
-    cell_interaction_info.prefetch_cpu(st_updateghost);
     CellStorage& cell_storage = interaction_list_layout->cell_storage_;
     cell_storage.resize(active_cell_count, parallel_queue, kLaneInnerBond, get_exec_ctx);
     auto cell_storage_accessor = cell_storage.view();
+    parallel_queue.wait(kLaneInnerBond);
 
     CellPairStorage& cell_pair_storage = interaction_list_layout->cell_pair_storage_;
     cell_pair_storage.reset(cell_neighbor_host_storage, parallel_queue, kLaneParticleParticle, get_exec_ctx);
+    if (concurrent_managed_access) {
+      cell_interaction_info.prefetch_cpu(st_updateghost);
+    }
 
     auto cell_pair_accessor = cell_pair_storage.view();
     ONIKA_CU_PROF_RANGE_POP();
@@ -328,7 +336,6 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     }
 
     // Used in Build particle pairs (PCCP)
-    // Place here to avoid several synchronization calls in the middle of the operator.
     auto& particle_pair_counts = scratch->pp_counts_;
     auto& particle_pair_offsets = scratch->pp_offsets_;
     initialize_particle_pair_scratch(*scratch, neighbor_cell_pair_count, particle_stream);
@@ -350,6 +357,11 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_PROF_RANGE_POP();
 
     InteractionHistory& history = scratch->history_;
+
+    // setup_history_clean_ges() accesses managed memory from the host
+    if (!concurrent_managed_access) {
+      parallel_queue.wait(kLaneParticleDriver);
+    }
 
     ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::setup_history_clean_ges");
     setup_history_clean_ges(grid_cells, cell_indices, active_cell_count, *ges, history, history_stream);
@@ -383,7 +395,6 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     particle_pair_storage.resize(total_pp);
 
     // Used in Count interactions per particle pair (PCCP)
-    // Place here to avoid several synchronization calls in the middle of the operator.
     auto& interaction_counts_per_pair = scratch->interaction_counts_;
     auto& interaction_prefix_per_pair = scratch->interaction_prefix_;
     initialize_interaction_scratch(*scratch, total_pp, particle_stream);
@@ -422,10 +433,13 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
       auto& interaction_type_prefix = scratch->type_prefix_;
       for (int typeID = 0; typeID < InteractionTypeId::NTypesPP; typeID++) {
         interaction_type_counts[typeID].resize(total_pp);
-        reset(interaction_type_counts[typeID], particle_stream);
         interaction_type_prefix[typeID].resize(total_pp);
+      }
+      for (int typeID = 0; typeID < InteractionTypeId::NTypesPP; typeID++) {
+        reset(interaction_type_counts[typeID], particle_stream);
         reset(interaction_type_prefix[typeID], particle_stream);
       }
+      ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
       ExtractInteractionCountsFunc extract_counts{
           make_const_span(interaction_counts_per_pair), make_span(interaction_type_counts[0]),
@@ -508,6 +522,10 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
           particle_pair_storage.ghost_.data(), interaction_prefix_per_pair.data(),
           particle_particle_classifier_accessor, total_pp);
 
+      // reconstruct_cell_pair_offsets() allocates managed memory from the host
+      if (!concurrent_managed_access) {
+        ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
+      }
       reconstruct_cell_pair_offsets(particle_pair_storage, interaction_counts_per_pair.data(), total_pp,
                                     neighbor_cell_pair_count, cell_pair_storage, scratch->cp_type_counts_,
                                     scratch->cp_type_prefix_, parallel_queue, kLaneParticleParticle, particle_stream,
@@ -531,7 +549,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     parallel_queue.wait(kLaneParticleDriver);
     ONIKA_CU_PROF_RANGE_POP();
 
-    history.prefetch_gpu(history_stream);
+    if (concurrent_managed_access) {
+      history.prefetch_gpu(history_stream);
+    }
 
     ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::update_history");
     UpdateHistoryFunc history_updater = {history.view(), cell_storage_accessor, interaction_classifier_accessor};

@@ -35,6 +35,7 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
   ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{""});
   ADD_SLOT(bool, result, OUTPUT);
   ADD_SLOT(bool, display, INPUT, false, DocString{"Display interface broken."});
+  ADD_SLOT(onika::memory::CudaMMVector<int>, scratch, PRIVATE, DocString{"Persistent reduction scratch buffer"});
 
  public:
   inline std::string documentation() const final {
@@ -56,7 +57,7 @@ class ApplyInterfaceFractureCriterion : public OperatorNode {
     ApplyAndReduceInterfaceFractureCriterionFunc func = {data_view, fn, dn};
 
     number_of_broken_interfaces =
-        reduce_interface(interfaces, func, init_value, parallel_execution_context("apply_rupture_criterion"));
+        reduce_interface(interfaces, func, init_value, parallel_execution_context("apply_rupture_criterion"), *scratch);
 #ifdef APPLY_CRITERION_NO_REDUCTION
     ApplyInterfaceFractureCriterionFunc func = {interfaces.data_.data(), interfaces.break_interface_.data(), data_view,
                                                 fn, dn};

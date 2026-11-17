@@ -36,22 +36,16 @@ using VectorT = onika::memory::CudaMMVector<T>;
  */
 struct Accumulator {
  private:
-  VectorT<int> data_;  ///< Storage buffer
+  VectorT<int> data_;  ///< Caller's persistent scratch slot
 
  public:
-  Accumulator() { reset(); }
-
-  /// Reset accumulator to zero
-  void reset() {
-    data_.resize(1);
+  int* __restrict__ get_ptr() {
+    if (data_.empty()) {
+      data_.resize(1);
+    }
     data_[0] = 0;
+    return data_.data();
   }
-
-  /// Get raw pointer to data
-  int* __restrict__ get_ptr() { return data_.data(); }
-
-  /// Get current value
-  int get() { return data_[0]; }
 };
 
 /**
@@ -65,7 +59,7 @@ struct DriverDisplOver {
   Drivers& bcpd_;                                               ///< Backup drivers
   const size_t bd_idx_;                                         ///< Backup driver index
   Driver_params& motion_;                                       ///< Driver Motion reference
-  Accumulator storage_;                                         ///< Result accumulator
+  int* storage_;                                                ///< Result storage pointer
 
   inline int operator()(exaDEM::Cylinder& a) {
     return 0;  // WARNING should not move
@@ -139,17 +133,16 @@ struct DriverDisplOver {
     }
 
 #ifdef ONIKA_CUDA_VERSION
-    storage_.reset();
     size_t size = a.shp_.get_number_of_vertices();
     const Vec3d* __restrict__ ptr_shp_vertices = vector_data(a.shp_.vertices_);
     RShapeDriverDisplacementFunctor SVDFunc = {
         r2_, ptr_shp_vertices, a.fields_.center_, a.fields_.quat_, b.fields_.center_, b.fields_.quat_};
-    ReduceRShapeDriverDisplacementCountFunctor func = {SVDFunc, storage_.get_ptr()};
+    ReduceRShapeDriverDisplacementCountFunctor func = {SVDFunc, storage_};
 
     onika::parallel::ParallelForOptions opts;
     opts.omp_scheduling = onika::parallel::OMP_SCHED_STATIC;
     parallel_for(size, func, parallel_execution_context_(), opts);
-    return storage_.get();
+    return *storage_;
 #else
     int sum = 0;
     // check each vertex
@@ -193,6 +186,8 @@ class DriverDisplacementOver : public OperatorNode {
   ADD_SLOT(bool, result, OUTPUT);
   ADD_SLOT(Drivers, drivers, INPUT, REQUIRED, DocString{"List of Drivers"});
   ADD_SLOT(Drivers, backup_drvs, INPUT, REQUIRED, DocString{"List of backup Drivers"});
+  ADD_SLOT(Accumulator, accumulator_scratch, PRIVATE,
+           DocString{"Persistent scratch buffer for the RShapeDriver displacement accumulator"});
 
  public:
   // -----------------------------------------------
@@ -233,7 +228,8 @@ class DriverDisplacementOver : public OperatorNode {
     auto pec_func = [this]() { return this->parallel_execution_context(); };
 
     for (size_t i = 0; i < bcpd_size && local_drivers_displ == 0; i++) {
-      DriverDisplOver<decltype(pec_func)> func = {pec_func, max_dist2, comm, bcpd_, i, drvs.get_motion(i)};
+      DriverDisplOver<decltype(pec_func)> func = {
+          pec_func, max_dist2, comm, bcpd_, i, drvs.get_motion(i), accumulator_scratch->get_ptr()};
       local_drivers_displ += drvs.apply(i, func);
     }
 

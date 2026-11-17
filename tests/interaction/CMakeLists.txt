@@ -1,0 +1,3 @@
+exadem_add_unit_test(interaction interaction)
+exadem_add_unit_test(interaction classifier)
+exadem_add_unit_test(interaction classifier_compare)

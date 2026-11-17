@@ -1,3 +1,7 @@
+particle_regions:
+  - BOX:
+     bounds: [[-20,0,-20],[20,8,20]]
+
 global:
   simulation_dump_frequency: -1
   simulation_end_iteration: 1000

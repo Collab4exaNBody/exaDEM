@@ -46,7 +46,7 @@ global_stress_tensor:
 
 global:
   simulation_dump_frequency: -1
-  simulation_end_iteration: 150000
+  simulation_end_iteration: 30000
   simulation_log_frequency: 1000
   simulation_paraview_frequency: 10000
   analysis_dump_stress_tensor_frequency: 1000

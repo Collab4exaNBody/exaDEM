@@ -6,15 +6,17 @@
 
 namespace exaDEM {
 
-/* Run an exclusive prefix sum on device memory using CUB. */
+/* Run an exclusive prefix sum on device memory using CUB (synchronous). */
 template <typename T>
 inline void exclusive_scan_device(const T* input, T* output, size_t count, onikaStream_t st = 0) {
   void* d_tmp = nullptr;
   size_t tmp_bytes = 0;
-  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st);
-  cudaMalloc(&d_tmp, tmp_bytes);
-  cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st);
-  cudaFree(d_tmp);
+  cudaGetLastError();  // clear errors left by previous kernel launches
+  ONIKA_CU_CHECK_ERRORS(cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st));
+  ONIKA_CU_CHECK_ERRORS(cudaMalloc(&d_tmp, tmp_bytes));
+  ONIKA_CU_CHECK_ERRORS(cub::DeviceScan::ExclusiveSum(d_tmp, tmp_bytes, input, output, count, st));
+  ONIKA_CU_STREAM_SYNCHRONIZE(st);
+  ONIKA_CU_CHECK_ERRORS(cudaFree(d_tmp));
 }
 
 /**
@@ -414,10 +416,10 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
   }
 
   // BlockScan for prefix per type
-  int counts[4] = {count1, count2 + count5, count3 + count6, count4};
-  int prefix[4];
+  int counts[InteractionTypeId::NTypesPP] = {count1, count2 + count5, count3 + count6, count4};
+  int prefix[InteractionTypeId::NTypesPP];
   InteractionTypePerCellCounter sdata = prefix_data[idx];
-  for (int t = 0; t < 4; t++) {
+  for (int t = 0; t < InteractionTypeId::NTypesPP; t++) {
     BlockScan(temp_storage).ExclusiveSum(counts[t], prefix[t]);
     __syncthreads();
     prefix[t] += sdata[t];
@@ -446,7 +448,8 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.type_ = InteractionTypeId::VertexVertex;
             item.pair_.swap_ = false;
             item.reset();
-            interactions[InteractionTypeId::VertexVertex].set(prefix[0]++, item);
+            interactions[InteractionTypeId::VertexVertex].set(prefix[InteractionTypeId::VertexVertex], item);
+            interactions[InteractionTypeId::VertexVertex].update(prefix[InteractionTypeId::VertexVertex]++, item);
           }
         }
       }
@@ -459,7 +462,8 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.type_ = InteractionTypeId::VertexEdge;
             item.pair_.swap_ = false;
             item.reset();
-            interactions[InteractionTypeId::VertexEdge].set(prefix[1]++, item);
+            interactions[InteractionTypeId::VertexEdge].set(prefix[InteractionTypeId::VertexEdge], item);
+            interactions[InteractionTypeId::VertexEdge].update(prefix[InteractionTypeId::VertexEdge]++, item);
           }
         }
       }
@@ -472,7 +476,8 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.type_ = InteractionTypeId::VertexFace;
             item.pair_.swap_ = false;
             item.reset();
-            interactions[InteractionTypeId::VertexFace].set(prefix[2]++, item);
+            interactions[InteractionTypeId::VertexFace].set(prefix[InteractionTypeId::VertexFace], item);
+            interactions[InteractionTypeId::VertexFace].update(prefix[InteractionTypeId::VertexFace]++, item);
           }
         }
       }
@@ -490,7 +495,8 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
           item.pair_.type_ = InteractionTypeId::EdgeEdge;
           item.pair_.swap_ = false;
           item.reset();
-          interactions[InteractionTypeId::EdgeEdge].set(prefix[3]++, item);
+          interactions[InteractionTypeId::EdgeEdge].set(prefix[InteractionTypeId::EdgeEdge], item);
+          interactions[InteractionTypeId::EdgeEdge].update(prefix[InteractionTypeId::EdgeEdge]++, item);
         }
       }
     }
@@ -512,7 +518,8 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.pj_.sub_ = i;
             item.pair_.type_ = InteractionTypeId::VertexEdge;
             item.reset();
-            interactions[InteractionTypeId::VertexEdge].set(prefix[1]++, item);
+            interactions[InteractionTypeId::VertexEdge].set(prefix[InteractionTypeId::VertexEdge], item);
+            interactions[InteractionTypeId::VertexEdge].update(prefix[InteractionTypeId::VertexEdge]++, item);
           }
         }
       }
@@ -524,7 +531,8 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.pj_.sub_ = i;
             item.pair_.type_ = InteractionTypeId::VertexFace;
             item.reset();
-            interactions[InteractionTypeId::VertexFace].set(prefix[2]++, item);
+            interactions[InteractionTypeId::VertexFace].set(prefix[InteractionTypeId::VertexFace], item);
+            interactions[InteractionTypeId::VertexFace].update(prefix[InteractionTypeId::VertexFace]++, item);
           }
         }
       }
