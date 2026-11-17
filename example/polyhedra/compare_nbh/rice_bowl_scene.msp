@@ -1,0 +1,67 @@
+# Scene shared by the neighbor search comparison tests: rice grains (polyhedra) falling in a bowl made of a
+# surface and a rotating cylinder, i.e. particle/particle and particle/driver interactions with history.
+
+includes:
+  - config_polyhedra.msp
+  - config_compare_nbh_gpu.msp
+
+io_tree:
+  - io_config:
+     dir_name: "CompareNbhDir"
+
+input_data:
+  - init_rcb_grid
+  - add_rice:
+     length: 1.0
+     minkowski: 0.25
+  - enable_obb_tree
+  - lattice:
+     structure: SC
+     types: [ rice ]
+     size: [ 1.6 , 0.6 , 0.6 ]
+  - set_fields:
+     polyhedra: true
+     type:              [    rice ]
+     group:             [       0 ]
+     random_quaternion: [    true ]
+     sigma_velocity:    [     0.1 ]
+     velocity:          [ [0,0,0] ]
+
+setup_drivers:
+  - register_surface:
+     id: 0
+     state:
+        normal: [0,0,1]
+        offset: 0
+     params:
+        motion_type: STATIONARY
+  - register_cylinder:
+     id: 1
+     state:
+        axis: [1,1,0]
+        radius: 4
+        center: [2.5,2.5,0]
+        vrot: [0,0,2]
+     params:
+        motion_type: STATIONARY
+
+compute_force:
+  - gravity_force
+  - contact_polyhedron:
+     config: { kn: 5000, kt: 5000, kr: 0.0, mu: 0.3, damp_rate: 0.87}
+     config_driver: { kn: 5000, kt: 5000, kr: 0.0, mu: 0.3, damp_rate: 0.87}
+
+domain:
+  cell_size: 2.5 m
+  periodic: [false,false,false]
+  grid_dims: [2, 2, 4]
+  bounds: [[0,0,0],[5, 5, 10]]
+  expandable: true
+
+global:
+  simulation_dump_frequency: -1
+  simulation_end_iteration: 3000
+  simulation_log_frequency: 500
+  simulation_paraview_frequency: -1
+  dt: 0.0001
+  rcut_inc: 0.1

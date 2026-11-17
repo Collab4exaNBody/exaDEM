@@ -32,6 +32,7 @@ under the License.
 #include <exaDEM/interaction/interaction_manager.hpp>
 #include <exaDEM/interaction/migration_test.hpp>
 #include <exaDEM/polyhedron/nbh_polyhedron_driver.hpp>
+#include <exaDEM/polyhedron/nbh_polyhedron_pair.hpp>
 #include <exaDEM/shapes.hpp>
 #include <exaDEM/traversal.hpp>
 
@@ -241,141 +242,26 @@ class UpdateGridCellInteractionPolyhedron : public OperatorNode {
                                         }
 
                                         VertexField& vertex_cell_b = vertex_fields[cell_b];
-                                        ParticleVertexView vertices_b = {p_b, vertex_cell_b};
-                                        ParticleVertexView vertices_a = {p_a, vertex_cell_a};
-
-                                        // Get particle pointers for the particle b.
-                                        const uint32_t type_nbh = cells[cell_b][field::type][p_b];
-                                        const double h_nbh = cells[cell_b][field::homothety][p_b];
-                                        const Quaternion orient_nbh = cells[cell_b][field::orient][p_b];
+                                        Vec3d r = {rx_a[p_a], ry_a[p_a], rz_a[p_a]};
                                         Vec3d r_nbh = {cells[cell_b][field::rx][p_b], cells[cell_b][field::ry][p_b],
                                                        cells[cell_b][field::rz][p_b]};
-                                        Vec3d r = {rx_a[p_a], ry_a[p_a], rz_a[p_a]};
-                                        const double hi = h_a[p_a];
-
                                         if (is_xform) {
                                           r = xform * r;
                                           r_nbh = xform * r_nbh;
                                         }
 
-                                        // prev
-                                        const shape* shp = shps[t_a[p_a]];
-                                        const shape* shp_nbh = shps[type_nbh];
-
-                                        // Eliminate if two polyhedra are two far away if there is not intersection
-                                        // between their OBBs.
-                                        const Quaternion& orient = orient_a[p_a];
-                                        OBB obb_i = compute_obb(shp->obb_, r, orient, hi);
-                                        OBB obb_j = compute_obb(shp_nbh->obb_, r_nbh, orient_nbh, h_nbh);
-
-                                        obb_i.enlarge(0.5 * rVerlet);
-                                        obb_j.enlarge(0.5 * rVerlet);
-
-                                        if (!obb_i.intersect(obb_j)) {
-                                          return;
-                                        }
-
-                                        obb_i.enlarge(0.5 * rVerlet);
-                                        obb_j.enlarge(0.5 * rVerlet);
-
-                                        // Add interactions
-                                        // particle i (id, cell id, particle position, sub vertex)
-                                        auto& pi = item.i();
-                                        // particle j (id, cell id, particle position, sub vertex)
-                                        auto& pj = item.j();
-
-                                        pi.id_ = id_a[p_a];
-                                        pi.p_ = p_a;
-                                        pi.cell_ = cell_a;
-
-                                        pj.id_ = id_nbh;
-                                        pj.p_ = p_b;
-                                        pj.cell_ = cell_b;
-
-                                        // get particle j data.
-                                        const int nv = shp->get_number_of_vertices();
-                                        const int ne = shp->get_number_of_edges();
-                                        const int nf = shp->get_number_of_faces();
-                                        const int nv_nbh = shp_nbh->get_number_of_vertices();
-                                        const int ne_nbh = shp_nbh->get_number_of_edges();
-                                        const int nf_nbh = shp_nbh->get_number_of_faces();
-
-#define PARAMETERS_SWAP_FALSE rVerlet, vertices_a, hi, i, shp, vertices_b, h_nbh, j, shp_nbh
-#define PARAMETERS_SWAP_TRUE rVerlet, vertices_b, h_nbh, j, shp_nbh, vertices_a, hi, i, shp
-
-                                        // exclude possibilities with obb
-                                        item.pair_.swap_ = false;
-                                        for (int i = 0; i < nv; i++) {
-                                          auto vi = vertices_a[i];
-                                          OBB obbvi;
-                                          obbvi.center = {vi.x, vi.y, vi.z};
-                                          obbvi.enlarge(shp->minkowski(hi));
-                                          if (obb_j.intersect(obbvi)) {
-                                            item.pair_.type_ = InteractionTypeId::VertexVertex;
-                                            for (int j = 0; j < nv_nbh; j++) {
-                                              if (filter_vertex_vertex(PARAMETERS_SWAP_FALSE)) {
-                                                add_contact(item, i, j);
-                                              }
-                                            }
-                                            item.pair_.type_ = InteractionTypeId::VertexEdge;
-                                            for (int j = 0; j < ne_nbh; j++) {
-                                              if (filter_vertex_edge(PARAMETERS_SWAP_FALSE)) {
-                                                add_contact(item, i, j);
-                                              }
-                                            }
-
-                                            item.pair_.type_ = InteractionTypeId::VertexFace;
-                                            for (int j = 0; j < nf_nbh; j++) {
-                                              if (filter_vertex_face(PARAMETERS_SWAP_FALSE)) {
-                                                add_contact(item, i, j);
-                                              }
-                                            }
-                                          }
-                                        }
-
-                                        item.pair_.type_ = InteractionTypeId::EdgeEdge;
-                                        for (int i = 0; i < ne; i++) {
-                                          for (int j = 0; j < ne_nbh; j++) {
-                                            if (filter_edge_edge(PARAMETERS_SWAP_FALSE)) {
-                                              add_contact(item, i, j);
-                                            }
-                                          }
-                                        }
-
-                                        // interaction of from particle j to particle i
-                                        item.pair_.swap_ = true;
-                                        pj.cell_ = cell_a;
-                                        pj.id_ = id_a[p_a];
-                                        pj.p_ = p_a;
-
-                                        pi.cell_ = cell_b;
-                                        pi.id_ = id_nbh;
-                                        pi.p_ = p_b;
-
-                                        for (int j = 0; j < nv_nbh; j++) {
-                                          auto vj = vertices_b[j];
-                                          OBB obbvj;
-                                          obbvj.center = {vj.x, vj.y, vj.z};
-                                          obbvj.enlarge(shp_nbh->minkowski(h_nbh));
-
-                                          if (obb_i.intersect(obbvj)) {
-                                            item.pair_.type_ = InteractionTypeId::VertexEdge;
-                                            for (int i = 0; i < ne; i++) {
-                                              if (filter_vertex_edge(PARAMETERS_SWAP_TRUE)) {
-                                                add_contact(item, j, i);
-                                              }
-                                            }
-
-                                            item.pair_.type_ = InteractionTypeId::VertexFace;
-                                            for (int i = 0; i < nf; i++) {
-                                              if (filter_vertex_face(PARAMETERS_SWAP_TRUE)) {
-                                                add_contact(item, j, i);
-                                              }
-                                            }
-                                          }
-                                        }
-#undef PARAMETERS_SWAP_FALSE
-#undef PARAMETERS_SWAP_TRUE
+                                        PolyhedronPairSide side_a = {
+                                            id_a[p_a],     uint32_t(cell_a), uint16_t(p_a),  r,
+                                            orient_a[p_a], h_a[p_a],         shps[t_a[p_a]], {p_a, vertex_cell_a}};
+                                        PolyhedronPairSide side_b = {id_nbh,
+                                                                     uint32_t(cell_b),
+                                                                     uint16_t(p_b),
+                                                                     r_nbh,
+                                                                     cells[cell_b][field::orient][p_b],
+                                                                     cells[cell_b][field::homothety][p_b],
+                                                                     shps[cells[cell_b][field::type][p_b]],
+                                                                     {p_b, vertex_cell_b}};
+                                        add_polyhedron_pair_interactions(side_a, side_b, rVerlet, item, add_contact);
                                       });
 
         manager.update_extra_storage<true>(storage);
