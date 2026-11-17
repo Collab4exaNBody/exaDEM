@@ -22,6 +22,7 @@ under the License.
 
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
+#include <limits>
 
 namespace exaDEM {
 using namespace exanb;
@@ -32,6 +33,15 @@ struct UnclassifyFunc {
   void operator()(ClassifierContainer<IT>& container, GridCellParticleInteraction& ges) {
     using namespace onika::cuda;
     auto& ces = ges.m_data;
+    // Cache of the (cell, owner_p) range located for the previous interaction: consecutive
+    // classified interactions sharing the same owner particle (common in dense packings where
+    // a particle has several contacts) can reuse it instead of redoing a binary search.
+    constexpr uint32_t InvalidCell = std::numeric_limits<uint32_t>::max();
+    constexpr uint16_t InvalidP = std::numeric_limits<uint16_t>::max();
+    uint32_t previous_cell = InvalidCell;
+    uint16_t previous_owner_p = InvalidP;
+    size_t previous_start = 0, previous_end = 0;
+    PlaceholderInteraction* previous_data_i_ptr = nullptr;
 #pragma omp for schedule(guided) nowait
     for (size_t it = 0; it < container.size(); it++) {
       auto item1 = container[it];
@@ -39,36 +49,51 @@ struct UnclassifyFunc {
       // Only active interactions should be updated.
       // If an interaction is not active, it means it has been removed / recomputed (nbh operators).
       if (item1.active()) {
-        auto& celli = ces[item1.pair_.owner().cell_];
-        const unsigned int ni = vector_size(celli.m_data);
-        PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
-
-        // Binary search
+        const uint32_t cell_i = item1.pair_.owner().cell_;
         // belonging to the same owner particle
-        uint16_t owner_p = item1.pair_.owner().p_;
+        const uint16_t owner_p = item1.pair_.owner().p_;
 
-        // lower_bound
-        size_t lo = 0, hi = ni;
-        while (lo < hi) {
-          size_t mid = lo + (hi - lo) / 2;
-          if (data_i_ptr[mid].owner().p_ < owner_p) {
-            lo = mid + 1;
-          } else
-            hi = mid;
-        }
-        size_t start = lo;
+        size_t start, end;
+        PlaceholderInteraction* __restrict__ data_i_ptr;
+        if (cell_i == previous_cell && owner_p == previous_owner_p) {
+          start = previous_start;
+          end = previous_end;
+          data_i_ptr = previous_data_i_ptr;
+        } else {
+          auto& celli = ces[cell_i];
+          const unsigned int ni = vector_size(celli.m_data);
+          data_i_ptr = vector_data(celli.m_data);
 
-        // upper_bound
-        hi = ni;
-        while (lo < hi) {
-          size_t mid = lo + (hi - lo) / 2;
-          if (data_i_ptr[mid].owner().p_ <= owner_p) {
-            lo = mid + 1;
-          } else {
-            hi = mid;
+          // Binary search
+          // lower_bound
+          size_t lo = 0, hi = ni;
+          while (lo < hi) {
+            size_t mid = lo + (hi - lo) / 2;
+            if (data_i_ptr[mid].owner().p_ < owner_p) {
+              lo = mid + 1;
+            } else
+              hi = mid;
           }
+          start = lo;
+
+          // upper_bound
+          hi = ni;
+          while (lo < hi) {
+            size_t mid = lo + (hi - lo) / 2;
+            if (data_i_ptr[mid].owner().p_ <= owner_p) {
+              lo = mid + 1;
+            } else {
+              hi = mid;
+            }
+          }
+          end = lo;
+
+          previous_cell = cell_i;
+          previous_owner_p = owner_p;
+          previous_start = start;
+          previous_end = end;
+          previous_data_i_ptr = data_i_ptr;
         }
-        size_t end = lo;
 
         // Linear search
         bool found = false;
@@ -109,6 +134,14 @@ inline void UnclassifyFunc::operator()<InteractionType::InnerBond>(
   using namespace onika::cuda;
   auto& ces = ges.m_data;  // Reference to cells containing interactions
                            // Parallel loop to process interactions within a wave
+  // Cache of the (cell, owner_p) range located for the previous interaction (see the generic
+  // operator() above for the rationale).
+  constexpr uint32_t InvalidCell = std::numeric_limits<uint32_t>::max();
+  constexpr uint16_t InvalidP = std::numeric_limits<uint16_t>::max();
+  uint32_t previous_cell = InvalidCell;
+  uint16_t previous_owner_p = InvalidP;
+  size_t previous_start = 0, previous_end = 0;
+  PlaceholderInteraction* previous_data_i_ptr = nullptr;
 #pragma omp for schedule(guided) nowait
   for (size_t it = 0; it < container.size(); it++) {
     auto item1 = container[it];
@@ -117,13 +150,54 @@ inline void UnclassifyFunc::operator()<InteractionType::InnerBond>(
       item1.print();
       color_log::error("unclassify", "One active interaction is illformed in the classified wave");
     }
-    // Check if interaction in wave has non-zero friction and moment
-    auto& celli = ces[item1.pair_.owner().cell_];
-    const unsigned int ni = vector_size(celli.m_data);
-    PlaceholderInteraction* __restrict__ data_i_ptr = vector_data(celli.m_data);
-    // Iterate through interactions in cell to find matching interaction
+    const uint32_t cell_i = item1.pair_.owner().cell_;
+    const uint16_t owner_p = item1.pair_.owner().p_;
+
+    size_t start, end;
+    PlaceholderInteraction* __restrict__ data_i_ptr;
+    if (cell_i == previous_cell && owner_p == previous_owner_p) {
+      start = previous_start;
+      end = previous_end;
+      data_i_ptr = previous_data_i_ptr;
+    } else {
+      auto& celli = ces[cell_i];
+      const unsigned int ni = vector_size(celli.m_data);
+      data_i_ptr = vector_data(celli.m_data);
+
+      // Binary search: narrow down to the entries sharing the same owner particle before
+      // scanning for the exact (owner, partner) pair match, instead of scanning the whole cell
+      // (which mixes every interaction type, not just inner bonds).
+      size_t lo = 0, hi = ni;
+      while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        if (data_i_ptr[mid].owner().p_ < owner_p) {
+          lo = mid + 1;
+        } else
+          hi = mid;
+      }
+      start = lo;
+
+      hi = ni;
+      while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        if (data_i_ptr[mid].owner().p_ <= owner_p) {
+          lo = mid + 1;
+        } else {
+          hi = mid;
+        }
+      }
+      end = lo;
+
+      previous_cell = cell_i;
+      previous_owner_p = owner_p;
+      previous_start = start;
+      previous_end = end;
+      previous_data_i_ptr = data_i_ptr;
+    }
+
+    // Iterate through interactions sharing the same owner particle to find the matching one.
     bool found = false;
-    for (size_t it2 = 0; it2 < ni; it2++) {
+    for (size_t it2 = start; it2 < end; it2++) {
       PlaceholderInteraction& item2 = data_i_ptr[it2];
       // Only one interaction should match.
       if (item1.pair_ == item2.pair_) {
@@ -189,8 +263,11 @@ class UnclassifyInteractions : public OperatorNode {
     Classifier& classifier = *ic;
     GridCellParticleInteraction& grid_interactions = *ges;  // Reference to cell interactions
     UnclassifyFunc func;
-    for (int typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
-      CDispatcher::dispatch(typeID, classifier, func, grid_interactions);
+#pragma omp parallel
+    {
+      for (int typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
+        CDispatcher::dispatch(typeID, classifier, func, grid_interactions);
+      }
     }
   }
 };

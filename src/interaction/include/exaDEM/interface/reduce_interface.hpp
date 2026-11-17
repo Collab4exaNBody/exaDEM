@@ -72,16 +72,19 @@ struct ReduceInterfaceFunctor {
 
 template <typename FuncT, typename ResultT>
 static inline ResultT reduce_interface(InterfaceManager& interface, FuncT& func, ResultT& init,
-                                       onika::parallel::ParallelExecutionContext* exec_ctx) {
+                                       onika::parallel::ParallelExecutionContext* exec_ctx,
+                                       onika::memory::CudaMMVector<ResultT>& scratch) {
   using namespace onika::parallel;
   onika::parallel::ParallelForOptions opts;
   opts.omp_scheduling = OMP_SCHED_STATIC;
-  onika::memory::CudaMMVector<ResultT> array(1);
-  array[0] = init;
+  if (scratch.empty()) {
+    scratch.resize(1);
+  }
+  scratch[0] = init;
 
-  ReduceInterfaceFunctor reduce = {interface.data_.data(), interface.break_interface_.data(), func, array.data()};
+  ReduceInterfaceFunctor reduce = {interface.data_.data(), interface.break_interface_.data(), func, scratch.data()};
   parallel_for(interface.data_.size(), reduce, exec_ctx, opts);
-  return array[0];
+  return scratch[0];
 }
 }  // namespace exaDEM
 

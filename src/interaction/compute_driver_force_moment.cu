@@ -84,6 +84,9 @@ class ComputeForceMomentDriverOp : public OperatorNode {
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(Drivers, drivers, INPUT, OPTIONAL, DocString{"List of Drivers"});
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD, DocString{"MPI communicator for parallel processing."});
+  ADD_SLOT(vector_t<Vec3d>, forces_cache, PRIVATE, DocString{"Persistent per-driver force accumulation buffer"});
+  ADD_SLOT(vector_t<Vec3d>, moments_cache, PRIVATE, DocString{"Persistent per-driver moment accumulation buffer"});
+  ADD_SLOT(vector_t<Vec3d>, centers_cache, PRIVATE, DocString{"Persistent per-driver centers buffer"});
 
  public:
   inline std::string documentation() const final {
@@ -105,10 +108,17 @@ class ComputeForceMomentDriverOp : public OperatorNode {
     constexpr InteractionType IT = InteractionType::ParticleDriver;
     if (drivers.has_value()) {
       auto& drvs = *drivers;
-      // Allocate temporary buffers (CPU/GPU agnostic) for accumulated forces and moments
-      vector_t<Vec3d> forces(drvs.get_size());
-      vector_t<Vec3d> moments(drvs.get_size());
-      vector_t<Vec3d> centers(drvs.get_size());
+      // (Re)allocate only if the driver count changed; otherwise reuse last call's buffers.
+      auto& forces = *forces_cache;
+      auto& moments = *moments_cache;
+      auto& centers = *centers_cache;
+      if (forces.size() != drvs.get_size()) {
+        forces.resize(drvs.get_size());
+        moments.resize(drvs.get_size());
+        centers.resize(drvs.get_size());
+      }
+      std::fill(forces.begin(), forces.end(), Vec3d{0., 0., 0.});
+      std::fill(moments.begin(), moments.end(), Vec3d{0., 0., 0.});
       // Get interaction classifier containing classified interactions
       auto& classifier = *ic;
 
