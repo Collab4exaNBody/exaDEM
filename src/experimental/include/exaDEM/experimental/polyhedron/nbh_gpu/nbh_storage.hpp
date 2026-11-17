@@ -92,6 +92,7 @@ struct CellPairStorage {
       dest.resize(elems);
 #ifdef ONIKA_CUDA_VERSION
       ONIKA_CU_MEMCPY_KIND(dest.data(), src.data(), elems * sizeof(TDest), onikaMemcpyHostToDevice);
+      ONIKA_CU_STREAM_SYNCHRONIZE(0);
 #else
       dest = src;
 #endif

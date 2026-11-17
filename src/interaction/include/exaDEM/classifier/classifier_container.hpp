@@ -23,6 +23,9 @@ under the License.
 #include <onika/cuda/stl_adaptors.h>
 #include <onika/math/basic_types.h>
 #include <onika/math/basic_types_stream.h>
+#include <onika/memory/allocator.h>
+
+// exaDEM
 
 #include <exaDEM/color_log.hpp>
 #include <exaDEM/interaction/interaction_decoration.hpp>

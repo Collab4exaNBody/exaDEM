@@ -1,0 +1,32 @@
+######### Compare nbh_polyhedron (reference) with nbh_polyhedron_tested (nbh_polyhedron_gpu by default) #########
+# Include it after config_polyhedra.msp. Both run from the same input each time the neighbor lists are rebuilt,
+# the simulation goes on with the reference. Override nbh_polyhedron_tested to compare another operator.
+
+copy_interactions_for_test:
+  rebind: { ges_copy: ges_test }
+  body:
+    - copy_interactions
+
+nbh_polyhedron_tested:
+  rebind: { ges: ges_test, ic: ic_test }
+  body:
+    - nbh_polyhedron_gpu
+    - update_interaction_ghost
+    - classify_interaction_ghost
+
+compare_nbh_polyhedron:
+  body:
+    - compare_classifiers:
+       atol: 1e-12
+       rtol: 1e-9
+       abort_on_error: true
+
+chunk_neighbors_impl:
+  - chunk_neighbors_contact
+  - do_update_persistent_interactions_if_required
+  - copy_interactions_for_test
+  - nbh_polyhedron
+  - update_interaction_ghost
+  - classify_interactions
+  - nbh_polyhedron_tested
+  - compare_nbh_polyhedron

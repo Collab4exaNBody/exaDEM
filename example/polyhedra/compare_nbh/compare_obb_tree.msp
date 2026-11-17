@@ -1,0 +1,7 @@
+# nbh_polyhedron_obb_tree must build exactly the same interactions (and history) as nbh_polyhedron.
+nbh_polyhedron_tested:
+  rebind: { ges: ges_test, ic: ic_test }
+  body:
+    - nbh_polyhedron_obb_tree
+    - update_interaction_ghost
+    - classify_interactions
