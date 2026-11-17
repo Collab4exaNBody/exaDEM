@@ -238,6 +238,11 @@ static inline onika::parallel::ParallelExecutionWrapper reduce_data(onika::paral
 
 namespace onika {
 namespace parallel {
+template <>
+struct ParallelForFunctorTraits<exaDEM::itools::IOSimInteractionFunctor> {
+  static inline constexpr bool CudaCompatible = true;
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+};
 template <exaDEM::InteractionType IT, class FuncT, class ResultT>
 struct ParallelForFunctorTraits<exaDEM::itools::ReduceTFunctor<IT, FuncT, ResultT>> {
   static inline constexpr bool CudaCompatible = ParallelForFunctorTraits<FuncT>::CudaCompatible;
