@@ -1,0 +1,7 @@
+global:
+  simulation_dump_frequency: -1
+  simulation_paraview_frequency: -1
+  simulation_end_iteration: 20000
+  simulation_log_frequency: 2500
+  simulation_analyses_frequency: 2500
+  analysis_dump_stress_tensor_frequency: -1

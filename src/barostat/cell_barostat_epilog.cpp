@@ -41,9 +41,8 @@ class CellBarostatEpilogNode : public OperatorNode {
   ADD_SLOT(double, volume, INPUT, REQUIRED, DocString{"Domain volume, e.g. from domain_volume."});
   ADD_SLOT(Vec3d, cell_sig, INPUT, REQUIRED,
            DocString{"Imposed normal stress per axis [sig_x, sig_y, sig_z] (Rockable's cellControl.Sig, "
-                     "diagonal-only here). Same sign/unit convention as stress_tensor's diagonal: in this "
-                     "codebase's virial convention, compressive is positive (opposite of the usual mechanics "
-                     "convention)."});
+                     "diagonal-only here). Compressive is positive, i.e. opposite to stress_tensor, whose "
+                     "compressive components are negative."});
   ADD_SLOT(double, cell_mass, INPUT, REQUIRED,
            DocString{"Fictive mass of the cell degrees of freedom (Rockable's Cell.mass). Rockable's rule of "
                      "thumb: roughly cellMassRatio * total particle mass, with cellMassRatio = O(1). Larger mass "
@@ -67,9 +66,9 @@ class CellBarostatEpilogNode : public OperatorNode {
 
         Per periodic axis i, with h_i the cell's diagonal xform entry, V the
         domain volume, and m/c the cell mass/damping:
-          ah_i = ( (V / h_i) * (stress_tensor_ii - cell_sig_i) - c * vh_i ) / m
-        (compressive stress is positive in this codebase's virial convention, so a
-        positive cell_sig pulls the cell towards more compression.)
+          ah_i = ( (V / h_i) * (-stress_tensor_ii - cell_sig_i) - c * vh_i ) / m
+        (compressive components of stress_tensor are negative, so a positive
+        cell_sig pulls the cell towards more compression.)
 
         YAML example:
 
@@ -103,9 +102,10 @@ class CellBarostatEpilogNode : public OperatorNode {
       return cell_barostat_epilog_axis_accel(hi, bounds_size_i, vol, sig_i, stress_i, vh_i, mass, damping);
     };
 
-    ah.x = axis_accel(domain->periodic_boundary_x(), xf.m11, bounds_size.x, sig.x, stress.m11, vh.x);
-    ah.y = axis_accel(domain->periodic_boundary_y(), xf.m22, bounds_size.y, sig.y, stress.m22, vh.y);
-    ah.z = axis_accel(domain->periodic_boundary_z(), xf.m33, bounds_size.z, sig.z, stress.m33, vh.z);
+    // cell_barostat_epilog_axis_accel expects a compressive-positive stress
+    ah.x = axis_accel(domain->periodic_boundary_x(), xf.m11, bounds_size.x, sig.x, -stress.m11, vh.x);
+    ah.y = axis_accel(domain->periodic_boundary_y(), xf.m22, bounds_size.y, sig.y, -stress.m22, vh.y);
+    ah.z = axis_accel(domain->periodic_boundary_z(), xf.m33, bounds_size.z, sig.z, -stress.m33, vh.z);
 
     if (!std::isfinite(ah.x) || !std::isfinite(ah.y) || !std::isfinite(ah.z)) {
       color_log::error("cell_barostat_epilog", "Invalid cell acceleration (" + std::to_string(ah.x) + ", " +

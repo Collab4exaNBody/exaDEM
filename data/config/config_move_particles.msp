@@ -49,8 +49,12 @@ chunk_neighbors_contact:
 chunk_neighbors_impl: 
   - chunk_neighbors_contact
 
+## checks that the cells are large enough for the neighbor search, defined by your particle mode
+check_cell_size: nop
+
 update_particle_neighbors:
   - amr_grid_pairs
+  - check_cell_size
   - chunk_neighbors_impl
 ####################################################################
 
