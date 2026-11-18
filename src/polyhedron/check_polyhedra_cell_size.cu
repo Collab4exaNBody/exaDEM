@@ -25,26 +25,34 @@ under the License.
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/parallel_grid_algorithm.h>
+#include <exanb/compute/reduce_cell_particles.h>
+#include <onika/cuda/stl_adaptors.h>
+#include <onika/memory/allocator.h>
 
 #include <exaDEM/color_log.hpp>
+#include <exaDEM/polyhedron/check_polyhedra_cell_size.hpp>
 #include <exaDEM/shapes.hpp>
+#include <exaDEM/traversal.hpp>
 
 #include <algorithm>
 #include <sstream>
-#include <vector>
 
 namespace exaDEM {
 using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_type, field::_homothety>>
 class CheckPolyhedraCellSize : public OperatorNode {
+  static constexpr FieldSet<field::_type, field::_homothety> reduce_field_set{};
+
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
   ADD_SLOT(Domain, domain, INPUT, REQUIRED);
   ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
   ADD_SLOT(double, rcut_max, INPUT, 0.0, DocString{"Neighbor search distance, in physical space."});
   ADD_SLOT(bool, stop_execution, INPUT, true, DocString{"Stop the simulation if a check fails."});
+
+  onika::memory::CudaMMVector<double> shape_rcut_;
 
  public:
   inline std::string documentation() const final {
@@ -62,28 +70,18 @@ class CheckPolyhedraCellSize : public OperatorNode {
   }
 
   inline void execute() final {
+    // max rcut per shape type, in managed memory so the reduction can read it on the GPU
     const shapes& shps = *shapes_collection;
-    std::vector<double> shape_rcut(shps.size(), 0.0);
+    shape_rcut_.resize(shps.size());
     for (size_t t = 0; t < shps.size(); t++) {
-      shape_rcut[t] = shps[t]->compute_max_rcut();
+      shape_rcut_[t] = shps[t]->compute_max_rcut();
     }
 
     // largest particle radius, homothety included
-    auto cells = grid->cells();
-    const IJK dims = grid->dimension();
+    const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
+    ReducePolyhedraMaxRadiusFunctor func = {onika::cuda::vector_data(shape_rcut_)};
     double rmax = 0.0;
-#pragma omp parallel
-    {
-      GRID_OMP_FOR_BEGIN(dims, i, loc, schedule(dynamic) reduction(max : rmax)) {
-        const auto* __restrict__ type = cells[i][field::type];
-        const double* __restrict__ h = cells[i][field::homothety];
-        const size_t n = cells[i].size();
-        for (size_t p = 0; p < n; p++) {
-          rmax = std::max(rmax, h[p] * shape_rcut[type[p]]);
-        }
-      }
-      GRID_OMP_FOR_END
-    }
+    reduce_cell_particles(*grid, false, func, rmax, reduce_field_set, parallel_execution_context(), {}, rcpo);
     MPI_Allreduce(MPI_IN_PLACE, &rmax, 1, MPI_DOUBLE, MPI_MAX, *mpi);
 
     const double diameter = 2.0 * rmax;

@@ -44,9 +44,9 @@ struct Box {
  * @brief Struct representing a 3D face.
  */
 struct Face {
-  std::vector<Vec3d> vertices_;        /**< The vertices_ of the face. */
-  Vec3d normal_;                       /**< The normal_ vector of the face. */
-  double offset_;                      /**< The offset_ of the face. */
+  std::vector<Vec3d> vertices_; /**< The vertices_ of the face. */
+  Vec3d normal_;                /**< The normal_ vector of the face. */
+  double offset_;               /**< The offset_ of the face. */
 
   /**
    * @brief Constructor for the Face struct.
@@ -234,8 +234,8 @@ struct Face {
       }
     }
 
-    if (intersections == 1) {                             // ODD
-      Vec3d contact_position = normal_ * offset_;         // we need dot(conatct_position, normal_)
+    if (intersections == 1) {                      // ODD
+      Vec3d contact_position = normal_ * offset_;  // we need dot(conatct_position, normal_)
       return std::make_tuple(true, contact_position, 0);
     }
 

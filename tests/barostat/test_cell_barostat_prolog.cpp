@@ -45,7 +45,7 @@ UNIT_TEST(prolog_axis_matches_hand_computed_values) {
   const double dt = 0.5;
   const double h_new = cell_barostat_prolog_axis(h_old, vh, ah, dt);
   CHECK_NEAR(h_new, 1.0 + 0.5 * 2.0 + 0.5 * 0.25 * 4.0, 1e-14);  // = 2.5
-  CHECK_NEAR(vh, 2.0 + 0.5 * 0.5 * 4.0, 1e-14);                   // = 3.0
+  CHECK_NEAR(vh, 2.0 + 0.5 * 0.5 * 4.0, 1e-14);                  // = 3.0
 }
 
 UNIT_TEST(prolog_axis_vh_is_updated_in_place_not_overwritten) {
@@ -66,9 +66,7 @@ UNIT_TEST(prolog_axis_negative_ah_shrinks_cell) {
 // === cell_barostat_scale_valid
 // ============================================================
 
-UNIT_TEST(scale_valid_all_positive_finite) {
-  CHECK(cell_barostat_scale_valid(1.0, 2.0, 3.0));
-}
+UNIT_TEST(scale_valid_all_positive_finite) { CHECK(cell_barostat_scale_valid(1.0, 2.0, 3.0)); }
 
 UNIT_TEST(scale_valid_rejects_zero_or_negative) {
   CHECK(!cell_barostat_scale_valid(0.0, 1.0, 1.0));
@@ -88,9 +86,7 @@ UNIT_TEST(scale_valid_rejects_non_finite) {
 // === cell_barostat_scale_collapsed
 // ============================================================
 
-UNIT_TEST(scale_collapsed_false_for_normal_scales) {
-  CHECK(!cell_barostat_scale_collapsed(1.0, 1.0, 1.0));
-}
+UNIT_TEST(scale_collapsed_false_for_normal_scales) { CHECK(!cell_barostat_scale_collapsed(1.0, 1.0, 1.0)); }
 
 UNIT_TEST(scale_collapsed_true_when_any_axis_too_small) {
   const double tiny = cell_barostat_min_absolute_scale * 0.1;

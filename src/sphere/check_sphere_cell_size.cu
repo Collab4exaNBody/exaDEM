@@ -25,9 +25,11 @@ under the License.
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
-#include <exanb/core/parallel_grid_algorithm.h>
+#include <exanb/compute/reduce_cell_particles.h>
 
 #include <exaDEM/color_log.hpp>
+#include <exaDEM/sphere/check_sphere_cell_size.hpp>
+#include <exaDEM/traversal.hpp>
 
 #include <algorithm>
 #include <sstream>
@@ -37,8 +39,11 @@ using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT, field::_radius>>
 class CheckSphereCellSize : public OperatorNode {
+  static constexpr FieldSet<field::_radius> reduce_field_set{};
+
   ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);
+  ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
   ADD_SLOT(Domain, domain, INPUT, REQUIRED);
   ADD_SLOT(double, rcut_max, INPUT, 0.0, DocString{"Neighbor search distance, in physical space."});
   ADD_SLOT(bool, stop_execution, INPUT, true, DocString{"Stop the simulation if a check fails."});
@@ -60,20 +65,10 @@ class CheckSphereCellSize : public OperatorNode {
 
   inline void execute() final {
     // largest particle radius
-    auto cells = grid->cells();
-    const IJK dims = grid->dimension();
+    const ReduceCellParticlesOptions rcpo = traversal_real->get_reduce_cell_particles_options();
+    ReduceMaxRadiusFunctor func;
     double rmax = 0.0;
-#pragma omp parallel
-    {
-      GRID_OMP_FOR_BEGIN(dims, i, loc, schedule(dynamic) reduction(max : rmax)) {
-        const double* __restrict__ r = cells[i][field::radius];
-        const size_t n = cells[i].size();
-        for (size_t p = 0; p < n; p++) {
-          rmax = std::max(rmax, r[p]);
-        }
-      }
-      GRID_OMP_FOR_END
-    }
+    reduce_cell_particles(*grid, false, func, rmax, reduce_field_set, parallel_execution_context(), {}, rcpo);
     MPI_Allreduce(MPI_IN_PLACE, &rmax, 1, MPI_DOUBLE, MPI_MAX, *mpi);
 
     const double diameter = 2.0 * rmax;
