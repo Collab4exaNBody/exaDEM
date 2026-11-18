@@ -27,18 +27,18 @@
 namespace exaDEM {
 // Data fields for a spherical driver (ball)
 struct BallFields {
-  double radius_;                             /**< Radius of the ball. */
-  Vec3d center_;                              /**< Center position of the ball in 3D space. */
-  Vec3d vel_ = Vec3d{0, 0, 0};                /**< Linear velocity of the ball. */
-  Vec3d vrot_ = Vec3d{0, 0, 0};               /**< Angular velocity (rotation) of the ball. */
-  Vec3d forces_ = {0, 0, 0};                  /**< Accumulated forces applied to the ball from interactions. */
-  Vec3d mom_ = {0, 0, 0};                     /**< Accumulated moments (torques) applied to the ball. */
+  double radius_;               /**< Radius of the ball. */
+  Vec3d center_;                /**< Center position of the ball in 3D space. */
+  Vec3d vel_ = Vec3d{0, 0, 0};  /**< Linear velocity of the ball. */
+  Vec3d vrot_ = Vec3d{0, 0, 0}; /**< Angular velocity (rotation) of the ball. */
+  Vec3d forces_ = {0, 0, 0};    /**< Accumulated forces applied to the ball from interactions. */
+  Vec3d mom_ = {0, 0, 0};       /**< Accumulated moments (torques) applied to the ball. */
   double mass_ = std::numeric_limits<double>::max() / 4; /**< Mass of the ball (default: infinite/fixed). */
   double rv_ = 0;                                        /**< Radius velocity for compressive/expanding motion. */
 
   /** Derived quantities (not persisted) */
-  Vec3d acc_ = {0, 0, 0};        /**< Linear acceleration of the ball. */
-  double ra_ = 0;                /**< Radius acceleration for compressive/expanding motion. */
+  Vec3d acc_ = {0, 0, 0}; /**< Linear acceleration of the ball. */
+  double ra_ = 0;         /**< Radius acceleration for compressive/expanding motion. */
 };
 }  // namespace exaDEM
 

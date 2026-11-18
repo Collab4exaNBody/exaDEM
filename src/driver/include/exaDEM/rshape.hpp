@@ -36,20 +36,20 @@ under the License.
 namespace exaDEM {
 // Data fields_ for a rigid shape driver (polyhedron or complex geometry)
 struct RShapeDriverFields {
-  Vec3d center_ = Vec3d{0, 0, 0};               /**< Center position of the shape. */
-  Vec3d vel_ = Vec3d{0, 0, 0};                  /**< Linear velocity of the shape. */
-  Vec3d vrot_ = Vec3d{0, 0, 0};                 /**< Angular velocity (rotation) of the shape. */
-  Vec3d forces_ = Vec3d{0, 0, 0};               /**< Accumulated forces applied to the shape from interactions. */
-  Quaternion quat_ = {1, 0, 0, 0};              /**< Orientation quaternion of the shape. */
-  Vec3d acc_ = {0, 0, 0};                       /**< Linear acceleration of the shape. */
-  double surface_ = -1;                         /**< Contact surface area (for compressive motion). */
+  Vec3d center_ = Vec3d{0, 0, 0};  /**< Center position of the shape. */
+  Vec3d vel_ = Vec3d{0, 0, 0};     /**< Linear velocity of the shape. */
+  Vec3d vrot_ = Vec3d{0, 0, 0};    /**< Angular velocity (rotation) of the shape. */
+  Vec3d forces_ = Vec3d{0, 0, 0};  /**< Accumulated forces applied to the shape from interactions. */
+  Quaternion quat_ = {1, 0, 0, 0}; /**< Orientation quaternion of the shape. */
+  Vec3d acc_ = {0, 0, 0};          /**< Linear acceleration of the shape. */
+  double surface_ = -1;            /**< Contact surface area (for compressive motion). */
   double mass_ = std::numeric_limits<double>::max() / 4; /**< Mass of the shape. */
   // Moment (torque) control mode
-  bool drive_by_mom_ = false;                    /**< Whether shape is driven by applied moment. */
-  Vec3d applied_mom_;                            /**< Applied moment input (for moment-driven motion). */
-  Vec3d mom_;                                    /**< Accumulated moment from interactions. */
-  Vec3d inertia_ = Vec3d{0, 0, 0};               /**< Moment of inertia tensor components. */
-  Vec3d mom_axis_;                               /**< Normalized axis along which moment is applied. */
+  bool drive_by_mom_ = false;      /**< Whether shape is driven by applied moment. */
+  Vec3d applied_mom_;              /**< Applied moment input (for moment-driven motion). */
+  Vec3d mom_;                      /**< Accumulated moment from interactions. */
+  Vec3d inertia_ = Vec3d{0, 0, 0}; /**< Moment of inertia tensor components. */
+  Vec3d mom_axis_;                 /**< Normalized axis along which moment is applied. */
 };
 }  // namespace exaDEM
 
@@ -107,11 +107,11 @@ namespace exaDEM {
  * Orientation is tracked using quaternions for rotation handling.
  */
 struct RShapeDriver {
-  RShapeDriverFields fields_; /**< Contains specific driver parameters */
-  MotionType motion_type_;    /**< Contains motion type parameters */
-  shape shp_;                 /**< Shape of the R-Shape. */
+  RShapeDriverFields fields_;                   /**< Contains specific driver parameters */
+  MotionType motion_type_;                      /**< Contains motion type parameters */
+  shape shp_;                                   /**< Shape of the R-Shape. */
   onika::memory::CudaMMVector<Vec3d> vertices_; /**< Collection of vertices_ (computed from shp_, quat, and center). */
-  RShapeDriverGridCellIndexes grid_indexes_; /**< Grid indexes for vertices_, edges, and faces of the shape. */
+  RShapeDriverGridCellIndexes grid_indexes_;    /**< Grid indexes for vertices_, edges, and faces of the shape. */
 
   /**
    * @brief Get the type of the driver (in this case, RSHAPE).
