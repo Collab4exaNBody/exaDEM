@@ -11,11 +11,10 @@ import sys
 N_PARTICLES = 125
 SHAPE_VOLUME = 3.4814549352253138e-01  # volume of the Dodecahedron in dodecahedron.shp
 INITIAL_COMPACITY = N_PARTICLES * SHAPE_VOLUME / 6.0**3
-MIN_FINAL_COMPACITY = 0.30  # reached at t = 2 (end of the regression run)
 TOL = 1e-5  # values are written with 6 decimals
 
 
-def check_run(rows, col):
+def check_run(rows, col, min_final_compacity):
     errors = 0
     previous = INITIAL_COMPACITY
     for r in rows:
@@ -24,8 +23,8 @@ def check_run(rows, col):
         print(f"t = {t:.3f}  compacity = {c:.6f}  {'OK' if ok else 'WRONG'}")
         errors += not ok
         previous = c
-    if not rows or previous < MIN_FINAL_COMPACITY:
-        print(f"final compacity {previous:.6f} < {MIN_FINAL_COMPACITY}")
+    if not rows or previous < min_final_compacity:
+        print(f"final compacity {previous:.6f} < {min_final_compacity}")
         errors += 1
     return errors
 
@@ -33,6 +32,8 @@ def check_run(rows, col):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir", default=".")
+    parser.add_argument("--min-final-compacity", type=float, required=True,
+                        help="minimal compacity expected at the end of each run")
     args = parser.parse_args()
     path = os.path.join(args.dir, "PolyhedraTriperiodicCompressionDir", "ExaDEMAnalyses", "PolyhedraCompacity.txt")
     with open(path) as f:
@@ -52,7 +53,7 @@ def main():
     if current:
         runs.append(current)
 
-    errors = sum(check_run(run, col) for run in runs)
+    errors = sum(check_run(run, col, args.min_final_compacity) for run in runs)
     if not runs:
         print("no data")
         errors += 1

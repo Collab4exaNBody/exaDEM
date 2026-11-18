@@ -12,9 +12,13 @@ set_tests_properties(Example_ExaDEM_${TestName} Example_ExaDEM_${TestName}_omp E
                      PROPERTIES FIXTURES_REQUIRED ${TestName}_Clean FIXTURES_SETUP ${TestName}
                                 RESOURCE_LOCK ${TestName})
 
+# compacity reached at the end of the regression run (t = 2: 20000 steps, dt = 1e-4) is ~0.265
+set(MinFinalCompacity 0.26)
+
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
   add_test(NAME Example_ExaDEM_${TestName}_Check
-           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_compacity.py --dir ${CMAKE_CURRENT_BINARY_DIR})
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_compacity.py --dir ${CMAKE_CURRENT_BINARY_DIR}
+                   --min-final-compacity ${MinFinalCompacity})
   set_tests_properties(Example_ExaDEM_${TestName}_Check PROPERTIES FIXTURES_REQUIRED ${TestName})
 endif()
