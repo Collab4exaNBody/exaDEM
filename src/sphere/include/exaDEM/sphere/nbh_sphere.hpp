@@ -56,6 +56,7 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const RShape
     size_t didx = grid_rshape_driver_accessor.grid_id_vertices_[j];
     if (filter_vertex_vertex_v2(rVerletMax, v, radius, dvertices, dradius, didx)) {
       pd.sub_ = didx;
+      item.reset();
       res.push_back(item);
     }
   }
@@ -66,6 +67,7 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const RShape
     size_t didx = grid_rshape_driver_accessor.grid_id_edges_[j];
     if (filter_vertex_edge(rVerletMax, v, radius, dvertices, dhomothety, didx, &shp)) {
       pd.sub_ = didx;
+      item.reset();
       res.push_back(item);
     }
   }
@@ -76,6 +78,7 @@ std::vector<exaDEM::PlaceholderInteraction> detection_sphere_driver(const RShape
     size_t didx = grid_rshape_driver_accessor.grid_id_faces_[j];
     if (filter_vertex_face(rVerletMax, v, radius, dvertices, dhomothety, didx, &shp)) {
       pd.sub_ = didx;
+      item.reset();
       res.push_back(item);
     }
   }

@@ -55,12 +55,12 @@ struct ParticlePairStorage {
  * @brief Packed particle data for detection and initialization.
  */
 struct ParticleDetectPack {
-  Quaternion quat_;       ///< Particle orientation as a quaternion
-  Vec3d r_;               ///< Particle position
-  uint64_t id_;           ///< Unique particle ID
+  Quaternion quat_;              ///< Particle orientation as a quaternion
+  Vec3d r_;                      ///< Particle position
+  uint64_t id_;                  ///< Unique particle ID
   exanb::ParticleTypeInt type_;  ///< Particle type (integer code)
-  double radius_;         ///< Particle radius
-  double homothety_;      ///< Scaling factor applied to particle size
+  double radius_;                ///< Particle radius
+  double homothety_;             ///< Scaling factor applied to particle size
 };
 
 /**

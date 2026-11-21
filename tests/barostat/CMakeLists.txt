@@ -1,0 +1,2 @@
+exadem_add_unit_test(barostat cell_barostat_prolog)
+exadem_add_unit_test(barostat cell_barostat_epilog)

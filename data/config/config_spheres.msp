@@ -10,6 +10,8 @@ chunk_neighbors_impl:
   - update_interaction_ghost
   - classify_interactions
 
+check_cell_size: check_sphere_cell_size
+
 migrate_particles:
   - migrate_cell_particles_interaction
   - rebuild_amr

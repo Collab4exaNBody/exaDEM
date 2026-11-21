@@ -29,9 +29,9 @@ namespace exaDEM {
 // Data fields for a planar surface/wall driver
 struct SurfaceFields {
   /** Required geometry parameters */
-  double offset_ = 0;               /**< Offset distance from origin along the normal vector. */
-  Vec3d normal_ = {0, 0, 1};        /**< Normalized normal vector of the surface plane. */
-  Vec3d center_ = {0, 0, 0};        /**< Reference center position of the surface. */
+  double offset_ = 0;        /**< Offset distance from origin along the normal vector. */
+  Vec3d normal_ = {0, 0, 1}; /**< Normalized normal vector of the surface plane. */
+  Vec3d center_ = {0, 0, 0}; /**< Reference center position of the surface. */
 
   /** Optional motion parameters */
   Vec3d vel_ = {0, 0, 0};       /**< Linear velocity of the surface. */
@@ -42,8 +42,8 @@ struct SurfaceFields {
   double surface_ = -1;                                  /**< Contact surface area (for compressive motion). */
 
   /** Derived quantities (not persisted) */
-  Vec3d center_proj_;        /**< Center position projected onto the normal (offset * normal). */
-  double acc_ = 0;           /**< Scalar acceleration along the normal direction. */
+  Vec3d center_proj_; /**< Center position projected onto the normal (offset * normal). */
+  double acc_ = 0;    /**< Scalar acceleration along the normal direction. */
 };
 }  // namespace exaDEM
 

@@ -68,6 +68,7 @@ write_dump_particle_op: write_dump_particle_fragmentation
 ### Initialize
 init_update_particle_neighbors:
   - amr_grid_pairs
+  - check_cell_size
   - chunk_neighbors_contact
   - prepro_fragmentation
   - chunk_neighbors_impl

@@ -1,7 +1,8 @@
 #pragma once
+#include <exanb/core/grid_fields.h>
+
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_gpu_driver.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
-#include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
 struct InteractionHistory {
@@ -125,7 +126,7 @@ struct UpdateHistoryFunc {
     size_t begin = start[idx];
     size_t end = begin + size[idx];
 
-    ONIKA_CU_BLOCK_SIMD_FOR(unsigned int , i , begin , end ) {
+    ONIKA_CU_BLOCK_SIMD_FOR(unsigned int, i, begin, end) {
       const PlaceholderInteraction& I = data[i];
       auto type = I.type();
       const int a = cell_storage_accessor_.offset_[idx][type];
