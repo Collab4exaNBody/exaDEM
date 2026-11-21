@@ -172,6 +172,13 @@ class DumpReaderConfRockable : public OperatorNode {
                                                               // particle positions.
 
     shapes shps = manager.shps;
+    constexpr size_t max_n_types = size_t(std::numeric_limits<ParticleTypeInt>::max()) + 1;
+    if (shps.size() > max_n_types) {
+      color_log::error("read_conf_rockable",
+                       "The shape file defines " + std::to_string(shps.size()) +
+                           " shapes, but the particle type field can only store " + std::to_string(max_n_types) +
+                           " types. Rebuild exaNBody with a larger -DXNB_PARTICLE_TYPE_INT (e.g. uint16_t).");
+    }
     *particle_type_map = manager.ptm;
     *shapes_collection = shps;
 

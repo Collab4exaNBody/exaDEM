@@ -54,6 +54,7 @@ For more details, see the [README.md](samoyed/README.md)
 
 - **Broken Ball** Broken ball A ball composed of two fragments is projected against a solid surface and breaks into two fragments: `fragmentation/two_fragments_break.msp`.
 - **Broken Beam** A Beam is compressed between two surfaces until it breaks into two fragments: `fragmentation/beam_two_fragments.msp`
+- **Three-point bending (f3p, flexion 3 points)** A beam made of 1000 polyhedral fragments (read from a Rockable conf file) bonded together lies on two cylindrical supports and is loaded at mid-span by a third cylinder until it breaks: `f3p/f3p.msp`. This example uses 1000 distinct shapes, so exaNBody must be built with `-DXNB_PARTICLE_TYPE_INT=uint16_t`.
 - **Weighted contact (NumberWeight)** Same two-fragment setup as `two_fragments_unbreak.msp` (the inner bond stays unbroken under impact), with the `number_weight_contact_polyhedron` operator enabled in `compute_force`. This operator divides kn/kt by the number of simultaneously active contact interactions detected between the same pair of particles, so that a pair touching at several points at once (e.g. two fragments still in contact right after their bond breaks) does not end up with an effective stiffness that is a multiple of kn_user/kt_user: `fragmentation/two_fragments_unbreak_weighted.msp`.
 
 ## Analyses
