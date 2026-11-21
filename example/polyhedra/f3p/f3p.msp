@@ -1,0 +1,72 @@
+includes:
+  - config_fragmentation.msp
+
+io_tree:
+  - io_config:
+     dir_name: "F3P"
+
+input_data:
+  - read_conf_rockable:
+     filename: beam_fragments.txt
+     bounds_mode: DOMAIN
+  - density_from_shape:
+     density: 0.006
+  - inertia_from_shape
+  - set_velocity:
+     value: [0, 0, 0]
+  - multimat_contact_params:
+     default_config: { dncut: 0, kn: 1e4, kt: 8e3, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.83}
+  - drivers_contact_params:
+     default_config: { dncut: 0, kn: 1e4, kt: 8e3, kr: 0.0, fc: 0.0, mu: 0.3, damp_rate: 0.83}
+  - inner_bond_params:
+     default_config: { kn: 2.e3, kt: 16.e2, damp_rate: 0.83, g: 2.e-1 }
+
+compute_force:
+  - gravity_force:
+     gravity: [0,0,0]
+  - contact_multimat_polyhedron
+  - inner_bond_polyhedron
+
+setup_drivers:
+  - register_rshape:
+     id: 0
+     state: {center: [0.9,0,-0.261]}
+     params:
+        motion_type: STATIONARY
+     filename: support_right.shp
+     minkowski: 0.001 m
+  - register_rshape:
+     id: 1
+     state: {center: [-0.9,0,-0.261]}
+     params:
+        motion_type: STATIONARY
+     filename: support_left.shp
+     minkowski: 0.001 m
+  - register_rshape:
+     id: 2
+     state: {center: [0.,0,0.261]}
+     params: { motion_type: LINEAR_MOTION, motion_vector: [0,0,-1], const_vel: 5.0 }
+     filename: punch.shp
+     minkowski: 0.001 m
+
+domain:
+  cell_size: 2.5 m
+  periodic: [false, false,false]
+  grid_dims: [2, 2, 2]
+  bounds: [[-2.5 m ,-2.5 m, -2.5 m],[2.5 m, 2.5 m, 2.5 m]]
+  expandable: true
+
+global_stress_tensor:
+  - avg_stress_tensor:
+     volume : 1
+
+global:
+  simulation_dump_frequency: -1
+  analysis_interaction_dump_frequency: 10
+  simulation_end_iteration: 30000
+  simulation_log_frequency: 100
+  simulation_paraview_frequency: 1000
+  analysis_dump_stress_tensor_frequency: 1000
+  apply_particle_sticking: true
+  sticking_threshold: 1e-3
+  rcut_inc: 0.01

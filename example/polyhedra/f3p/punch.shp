@@ -1,0 +1,18 @@
+<
+name punch
+radius 0.01
+preCompDone y
+nv 2
+0 -0.3 0
+0 +0.3 0
+ne 1
+0 1
+nf 0
+obb.extent 0.01 0.3 0.01
+obb.e1 1 0 0
+obb.e2 0 1 0
+obb.e3 0 0 1
+obb.center 0 0 0
+volume 0.008578642339403
+I/m 0.00493333 0.00493333 0.0032
+>
