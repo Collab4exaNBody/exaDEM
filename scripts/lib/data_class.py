@@ -222,6 +222,9 @@ class Shape:
     volume: float
     center: Tuple[float, float, float]
     inertia_tensor: List[Tuple[float, float, float]]
+    # orientation of the shape frame in the world frame: x_world = rotation @ x_body + center
+    quat: Tuple[float, float, float, float] = (1.0, 0.0, 0.0, 0.0)
+    rotation: Optional[List[List[float]]] = None
 
 
 @dataclass

@@ -16,7 +16,7 @@ from lib.data_class import Particle, Params, InteractionsParameters, RockableDat
 from lib.io_utils import read_tess, write_shp_file, write_rockable_file
 from lib.geometry import intersect_planes, inside_all_planes, order_face_vertices, unique_points
 from lib.topology import count_interfaces,check_interfaces
-from lib.mass_properties import polyhedron_mass_properties
+from lib.mass_properties import polyhedron_exact_mass_properties, principal_frame, rotation_to_quaternion
 from lib.data_utils import make_sticked_conf
 
 def get_local_face_normal(face_id, faces, vertices, face_normals, cell_center):
@@ -194,19 +194,22 @@ def compute_cells(cells_data: CellsData, gap) -> Shapes:
                 edge = tuple(sorted((v1, v2)))
                 cell_edges.add(edge)
 
-        volume, center_local, I = polyhedron_mass_properties(
-            eroded_vertices, eroded_faces, n_samples=50000
-        )
-        eroded_vertices -= center_local
+        # Exact mass properties, then express the shape in its principal frame: exaDEM/Rockable
+        # expect I/m to be the principal moments along the shape axes; the particle orientation
+        # (quaternion) maps the shape frame to the world frame.
+        volume, center_local, I_over_m = polyhedron_exact_mass_properties(eroded_vertices, eroded_faces)
+        I, R = principal_frame(I_over_m)
+        eroded_vertices = (eroded_vertices - center_local) @ R  # x_body = R^T x_world
 
-        #center = cell_center
         cell_shapes[pid] = Shape(
             vertices=eroded_vertices,
             faces=eroded_faces,
             edges=list(cell_edges),
             volume=volume,
             center=center_local + cell_center,
-            inertia_tensor=I
+            inertia_tensor=I,
+            quat=tuple(rotation_to_quaternion(R)),
+            rotation=R
         )
 
 
@@ -384,7 +387,8 @@ def main():
       pid: shape.center
       for pid, shape in cell_shapes.items()
     }
-    data = make_sticked_conf(cell_centers, shp_file, gap)
+    cell_quats = {pid: shape.quat for pid, shape in cell_shapes.items()}
+    data = make_sticked_conf(cell_centers, shp_file, gap, cell_quats)
     write_rockable_file(shp_file.replace('.shp', '_sticked.conf'), data)  
 
 if __name__ == '__main__':

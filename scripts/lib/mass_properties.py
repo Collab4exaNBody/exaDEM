@@ -2,6 +2,71 @@ import numpy as np
 import sys
 
 
+def polyhedron_exact_mass_properties(vertices, faces):
+    """
+    Exact volume, centroid and inertia tensor (per unit mass) of a closed polyhedron, by decomposition
+    into tetrahedra (one per triangle of each face fan, apex at the vertex mean). Exact for convex
+    polyhedra whatever the face orientation.
+
+    Returns
+    -------
+    volume : float
+    centroid : array (3,)
+    inertia_over_mass : array (3, 3)  inertia tensor divided by the mass, about the centroid
+    """
+    vertices = np.asarray(vertices, dtype=float)
+    apex = vertices.mean(axis=0)
+    volume = 0.0
+    first = np.zeros(3)
+    second = np.zeros((3, 3))  # integral of r r^T (relative to apex)
+    for face in faces:
+        for k in range(1, len(face) - 1):
+            a = vertices[face[0]] - apex
+            b = vertices[face[k]] - apex
+            c = vertices[face[k + 1]] - apex
+            dv = abs(np.dot(a, np.cross(b, c))) / 6.0
+            volume += dv
+            first += dv * (a + b + c) / 4.0
+            s = a + b + c
+            second += dv / 20.0 * (np.outer(a, a) + np.outer(b, b) + np.outer(c, c) + np.outer(s, s))
+    centroid_rel = first / volume
+    cov = second / volume - np.outer(centroid_rel, centroid_rel)  # per unit mass, about centroid
+    inertia_over_mass = np.trace(cov) * np.eye(3) - cov
+    return volume, centroid_rel + apex, inertia_over_mass
+
+
+def principal_frame(inertia):
+    """
+    Principal moments and a proper rotation R (det = +1) whose columns are the principal axes:
+    x_world = R @ x_body.
+    """
+    eigvals, R = np.linalg.eigh(inertia)
+    if np.linalg.det(R) < 0:
+        R[:, 2] = -R[:, 2]
+    return eigvals, R
+
+
+def rotation_to_quaternion(R):
+    """Unit quaternion (w, x, y, z) of the rotation matrix R (x_world = R @ x_body), w >= 0."""
+    m = R
+    tr = np.trace(m)
+    if tr > 0:
+        s = 2.0 * np.sqrt(tr + 1.0)
+        q = [0.25 * s, (m[2, 1] - m[1, 2]) / s, (m[0, 2] - m[2, 0]) / s, (m[1, 0] - m[0, 1]) / s]
+    elif m[0, 0] > m[1, 1] and m[0, 0] > m[2, 2]:
+        s = 2.0 * np.sqrt(1.0 + m[0, 0] - m[1, 1] - m[2, 2])
+        q = [(m[2, 1] - m[1, 2]) / s, 0.25 * s, (m[0, 1] + m[1, 0]) / s, (m[0, 2] + m[2, 0]) / s]
+    elif m[1, 1] > m[2, 2]:
+        s = 2.0 * np.sqrt(1.0 + m[1, 1] - m[0, 0] - m[2, 2])
+        q = [(m[0, 2] - m[2, 0]) / s, (m[0, 1] + m[1, 0]) / s, 0.25 * s, (m[1, 2] + m[2, 1]) / s]
+    else:
+        s = 2.0 * np.sqrt(1.0 + m[2, 2] - m[0, 0] - m[1, 1])
+        q = [(m[1, 0] - m[0, 1]) / s, (m[0, 2] + m[2, 0]) / s, (m[1, 2] + m[2, 1]) / s, 0.25 * s]
+    q = np.array(q)
+    q /= np.linalg.norm(q)
+    return q if q[0] >= 0 else -q
+
+
 def polyhedron_mass_properties(
     vertices,
     faces,
