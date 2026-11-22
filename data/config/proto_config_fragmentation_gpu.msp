@@ -40,6 +40,8 @@ evaluate_particle_displ:
 global: 
   apply_particle_sticking: false
   sticking_threshold: 2.e-05
+  sticking_area_tolerance: 0.01
+  sticking_same_face_size: true
 
 prepro_fragmentation:
   condition: apply_particle_sticking

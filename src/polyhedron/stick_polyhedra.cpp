@@ -56,6 +56,10 @@ class StickPolyhedraOperator : public OperatorNode {
   ADD_SLOT(GridCellParticleInteraction, ges, INPUT_OUTPUT, DocString{"Interaction list"});
   ADD_SLOT(shapes, shapes_collection, INPUT, REQUIRED, DocString{"Collection of shapes"});
   ADD_SLOT(double, sticking_threshold, INPUT, REQUIRED, DocString{""});
+  ADD_SLOT(double, sticking_area_tolerance, INPUT, 0.01,
+           DocString{"Two faces can be stuck if the ratio of their areas is in [1 - tol, 1 + tol]"});
+  ADD_SLOT(bool, sticking_same_face_size, INPUT, true,
+           DocString{"Two faces can be stuck only if they have the same number of vertices"});
   ADD_SLOT(Traversal, traversal_real, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
   ADD_SLOT(MultiMatParamsT<InnerBondParams>, multimat_ibp, INPUT, REQUIRED,
            DocString{"List of inner bond parameters for simulations with multiple materials"});
@@ -77,6 +81,10 @@ class StickPolyhedraOperator : public OperatorNode {
     auto& interactions = ges->m_data;
     shapes& shps = *shapes_collection;
     double dn_crit = *sticking_threshold;
+    const double area_tol = *sticking_area_tolerance;
+    const bool same_face_size = *sticking_same_face_size;
+    lout << "Sticking threshold = " << dn_crit << ", area tolerance = " << area_tol
+         << ", same face size = " << std::boolalpha << same_face_size << std::endl;
     Mat3d xform = domain->xform();
     bool is_xform = !domain->xform_is_identity();
     const auto& force_law_parameters = *multimat_ibp;
@@ -168,7 +176,7 @@ class StickPolyhedraOperator : public OperatorNode {
         apply_cell_particle_neighbors(
             *grid, *chunk_neighbors, cell_i, loc_i, std::false_type() /* not symetric */,
             // capture
-            [&g, &vertex_fields, &cells, cell_i, &item, &shps, dn_crit, id_i, rx_i, ry_i, rz_i, t_i, g_i, h_i,
+            [&g, &vertex_fields, &cells, cell_i, &item, &shps, dn_crit, area_tol, same_face_size, id_i, rx_i, ry_i, rz_i, t_i, g_i, h_i,
              cluster_i, &vertex_cell_i, &add_contact, xform, is_xform, &manager, &local, &nj_cache, &areaj_cache,
              &ibpa](size_t p_i, size_t cell_j, unsigned int p_j, size_t p_j_index) {
               double clusterj = cells[cell_j][field::cluster][p_j];
@@ -278,12 +286,12 @@ class StickPolyhedraOperator : public OperatorNode {
                   if (size_j < 3) {
                     continue;
                   }
-                  if (size_i != size_j) {
+                  if (same_face_size && size_i != size_j) {
                     continue;
                   }
 
                   double surface_ratio = area_i / areaj_cache[j];
-                  if (surface_ratio > 1.01 || surface_ratio < 0.99) {
+                  if (surface_ratio > 1.0 + area_tol || surface_ratio < 1.0 - area_tol) {
                     continue;
                   }
 
