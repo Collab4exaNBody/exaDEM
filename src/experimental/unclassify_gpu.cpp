@@ -29,6 +29,7 @@ under the License.
 
 #include <cassert>
 #include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/classifier/classifier_pp_tail.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/interaction_list_layout.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
@@ -66,6 +67,8 @@ class UnclassifyGPU : public OperatorNode {
   inline void execute() final {
     // lout << "unclassify active interaction on GridCellParticleInteraction" << std::endl;
     classify_interaction_grid(*ic, *traversal_real, *interaction_list_layout, *ges);
+    // Contacts appended since the last rebuild (broken interfaces) are not described by interaction_list_layout.
+    merge_pp_tail_into_grid(*ic, *ges);
   }
 };
 

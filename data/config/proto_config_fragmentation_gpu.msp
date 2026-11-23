@@ -20,10 +20,16 @@ evaluate_interface_breakage:
     - apply_interface_fracture_criterion:
        display: true
 
+handle_broken_interface:
+  rebind: { result: broken_interface }
+  body:
+    - add_broken_interface_contacts
+
 interface_updater:
   condition: broken_interface
   body:
     - broken_interface_friction_updater
+    - handle_broken_interface
 
 displ_or_break:
   rebind: { in1: particle_displ, in2: broken_interface, result: particle_displ }
@@ -39,6 +45,8 @@ evaluate_particle_displ:
 
 global: 
   apply_particle_sticking: false
+  # extra capacity reserved in the classifier for the contacts created by broken interfaces
+  pp_tail_reserve_ratio: 0.05
   sticking_threshold: 2.e-05
 
 prepro_fragmentation:

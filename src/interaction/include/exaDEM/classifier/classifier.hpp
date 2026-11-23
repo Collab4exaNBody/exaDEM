@@ -17,7 +17,10 @@ under the License.
 
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <cassert>
+#include <vector>
 #include <exaDEM/classifier/classifier_container.hpp>
 #include <exaDEM/classifier/contact_state.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
@@ -40,6 +43,14 @@ struct Classifier {
   std::vector<WavePD> drivers_;              ///< Storage for interactions categorized by type.
   std::vector<WaveIB> innerbonds_;           ///< Used for fragmentation
   std::vector<ContactState> contact_state_;  ///< Storage for contact state data.
+
+  // Particle-particle interactions appended at the end of the ParticleParticle containers between two
+  // neighbor-list rebuilds (e.g. the VV/VE/VF/EE contacts created when an interface breaks, see
+  // add_broken_interface_contacts). They are not described by the layout of the last rebuild
+  // (GridCellParticleInteraction / InteractionListBuildLayout), so the unclassify operators only process
+  // [0, pp_base_size_[t]) with the regular path and merge the tail [pp_base_size_[t], size) separately.
+  bool has_pp_tail_ = false;                                       ///< True if a tail exists.
+  std::array<size_t, InteractionTypeId::NTypesPP> pp_base_size_{};  ///< Container sizes before the tail.
 
   /**
    * @brief Default constructor.
@@ -87,6 +98,54 @@ struct Classifier {
     for (auto& container : innerbonds_) {
       container.clear();
     }
+    reset_pp_tail();
+  }
+
+  /** @brief Forgets the particle-particle tail (to call when the classifier is rebuilt from scratch). */
+  void reset_pp_tail() { has_pp_tail_ = false; }
+
+  /** @brief Number of interactions of type typeID that belong to the layout of the last neighbor-list rebuild,
+   * i.e. excluding the particle-particle tail appended since then.
+   */
+  size_t base_size(int typeID) {
+    if (has_pp_tail_ && typeID >= InteractionTypeId::FirstIdParticle && typeID <= InteractionTypeId::LastIdParticle) {
+      return pp_base_size_[typeID - InteractionTypeId::FirstIdParticle];
+    }
+    return get_size(typeID);
+  }
+
+  /** @brief Before a particle-particle container of type typeID is resized to `size` during a rebuild, reserves
+   * room for a tail (see append_pp_tail) so that appending interactions between two rebuilds does not reallocate
+   * the container and its contact state (a reallocation of managed memory on the host migrates the whole
+   */
+  void reserve_pp_tail(int typeID, size_t size, double ratio) {
+    assert(typeID >= InteractionTypeId::FirstIdParticle && typeID <= InteractionTypeId::LastIdParticle);
+    if (ratio <= 0.0) {
+      return;
+    }
+    constexpr size_t min_extra = 1024;
+    const size_t extra = std::max(min_extra, static_cast<size_t>(ratio * static_cast<double>(size)));
+    const size_t capacity = size + extra;
+    particles_[get_typed_idx<InteractionType::ParticleParticle>(typeID)].reserve_discard(capacity);
+    contact_state_[typeID].reserve_discard(capacity);
+  }
+
+  /** @brief Appends particle-particle interactions at the end of the container of type typeID (tail).
+   * @param typeID Particle-particle interaction type (VertexVertex, VertexEdge, VertexFace, EdgeEdge).
+   * @param interactions Interactions to append, all of type typeID.
+   */
+  void append_pp_tail(int typeID, std::vector<PlaceholderInteraction>& interactions) {
+    assert(typeID >= InteractionTypeId::FirstIdParticle && typeID <= InteractionTypeId::LastIdParticle);
+    if (!has_pp_tail_) {
+      for (int t = InteractionTypeId::FirstIdParticle; t <= InteractionTypeId::LastIdParticle; t++) {
+        pp_base_size_[t - InteractionTypeId::FirstIdParticle] = get_size(t);
+      }
+      has_pp_tail_ = true;
+    }
+    if (interactions.empty()) {
+      return;
+    }
+    particles_[get_typed_idx<InteractionType::ParticleParticle>(typeID)].insert(interactions, typeID);
   }
 
   /** @brief Retrieves the const vector of interactions for a specific type.

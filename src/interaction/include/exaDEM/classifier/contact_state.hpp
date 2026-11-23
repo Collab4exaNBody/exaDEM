@@ -48,5 +48,23 @@ struct ContactState {
       ft_.clear();
     }
   }
+
+  /** @brief Ensures that the buffers can hold `capacity` elements without reallocation.
+   * If a buffer has to grow, its content is discarded (cleared before reallocation) to avoid copying data that
+   * may live on the GPU through the host. Only call it when the content is going to be recomputed.
+   * @param capacity The minimal capacity of the buffers.
+   */
+  void reserve_discard(const size_t capacity) {
+    auto reserve = [capacity](auto& vec) {
+      if (vec.capacity() < capacity) {
+        vec.clear();
+        vec.reserve(capacity);
+      }
+    };
+    reserve(dn_);
+    reserve(cp_);
+    reserve(fn_);
+    reserve(ft_);
+  }
 };
 }  // namespace exaDEM
