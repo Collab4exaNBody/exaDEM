@@ -278,7 +278,6 @@ class UnclassifyInteractions : public OperatorNode {
       }
     }
 
-    // Contacts appended since the last rebuild (broken interfaces) are merged into the grid storage.
     merge_pp_tail_into_grid(classifier, grid_interactions);
   }
 };

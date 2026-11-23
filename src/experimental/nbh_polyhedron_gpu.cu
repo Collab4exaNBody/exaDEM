@@ -237,9 +237,10 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
   ADD_SLOT(PersistentInteractionScratch, persistent_interaction_scratch, PRIVATE,
            DocString{"Scratch space for host-side persistent interaction bookkeeping"});
   ADD_SLOT(bool, enable_persistent_interactions, INPUT, false, DocString{"Enable persistent interactions"});
+  ADD_SLOT(long, pp_tail_reserve_size, INPUT, 0,
+           DocString{"Initial PP capacity (per type) reserved for broken interface contacts (doubled when exceeded)."});
   ADD_SLOT(double, pp_tail_reserve_ratio, INPUT, 0.0,
-           DocString{"Extra capacity (ratio of the number of interactions, at least 1024) reserved per particle-particle "
-                     "type for the contacts created by broken interfaces between two rebuilds. 0 disables it."});
+           DocString{"Initial PP capacity ratio reserved for broken interface contacts (doubled when exceeded)."});
 
  public:
   inline std::string documentation() const final {
@@ -479,14 +480,13 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     // ****** Resize Classifier for PP ******* //
     ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::resize_classifier");
-    // The classifier is rebuilt from scratch: forget the particle-particle tail (broken interface contacts).
     interaction_container.reset_pp_tail();
     InteractionParticleAccessor particle_particle_classifier_accessor;
     for (int typeID = get_first_id<InteractionType::ParticleParticle>();
          typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
       auto& c = interaction_container.get_data<InteractionType::ParticleParticle>(typeID);
-      // Room for the contacts created by broken interfaces until the next rebuild (no reallocation).
-      interaction_container.reserve_pp_tail(typeID, total_interactions_per_type[typeID], *pp_tail_reserve_ratio);
+      interaction_container.reserve_pp_tail(typeID, total_interactions_per_type[typeID], *pp_tail_reserve_ratio,
+                                            std::max(*pp_tail_reserve_size, 0L));
       c.resize(total_interactions_per_type[typeID]);
       particle_particle_classifier_accessor[typeID] = c.view();
     }

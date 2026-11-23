@@ -78,12 +78,11 @@ class AddBrokenInterfaceContacts : public OperatorNode {
     auto& interfaces = *im;
     const size_t n_interfaces = interfaces.size();
 
-    // The fracture criterion may have been evaluated on the GPU.
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
     auto data_view = ic->get_sticked_interaction_wrapper();
 
-    // === Check that every broken interface can be handled locally ===
+    // Interfaces with a ghost particle require a rebuild.
     int n_broken = 0;
     int require_rebuild = (*enable) ? 0 : 1;
     for (size_t i = 0; i < n_interfaces; i++) {
@@ -99,11 +98,9 @@ class AddBrokenInterfaceContacts : public OperatorNode {
       }
     }
 
-    // The neighbor-list rebuild is a collective operation.
     MPI_Allreduce(MPI_IN_PLACE, &require_rebuild, 1, MPI_INT, MPI_MAX, *mpi);
     *result = (require_rebuild != 0);
     if (*result) {
-      // Interfaces and broken inner bonds are rebuilt / converted by the neighbor-list update.
       return;
     }
 
@@ -111,7 +108,6 @@ class AddBrokenInterfaceContacts : public OperatorNode {
       return;  // nothing to do on this process
     }
 
-    // === Create the contacts between the particles of each broken interface ===
     const auto cells = grid->cells();
     auto& vertex_fields = *cvf;
     const shapes& shps = *shapes_collection;
@@ -146,7 +142,6 @@ class AddBrokenInterfaceContacts : public OperatorNode {
       const InnerBondInteraction bond = data_view(offset);
       const ParticleSubLocation& owner = bond.pair_.owner();
       const ParticleSubLocation& partner = bond.pair_.partner();
-      // Convention shared with nbh_polyhedron and stick_polyhedra: the owner has the smallest id.
       assert(owner.id_ < partner.id_);
 
       PolyhedronPairSide side_a = make_side(owner);
@@ -156,8 +151,7 @@ class AddBrokenInterfaceContacts : public OperatorNode {
         item.pair_.pi_.sub_ = sub_i;
         item.pair_.pj_.sub_ = sub_j;
         item.reset();
-        // A broken inner bond is a vertex-vertex interaction: transfer its friction (already bounded by
-        // broken_interface_friction_updater) to the matching vertex-vertex contact.
+        // Friction history from the broken inner bond (VV).
         if (item.type() == InteractionTypeId::VertexVertex) {
           for (size_t j = offset; j < offset + size; j++) {
             const InnerBondInteraction broken_bond = data_view(j);
@@ -180,14 +174,12 @@ class AddBrokenInterfaceContacts : public OperatorNode {
       add_polyhedron_pair_interactions(side_a, side_b, rVerlet, item, add_contact);
     }
 
-    // === Append the contacts at the end of the classifier (tail) ===
     size_t n_contacts = 0;
     for (int typeID = InteractionTypeId::FirstIdParticle; typeID <= InteractionTypeId::LastIdParticle; typeID++) {
       n_contacts += new_contacts[typeID].size();
       ic->append_pp_tail(typeID, new_contacts[typeID]);
     }
 
-    // === Remove the handled interfaces from the interface manager ===
     size_t n_kept = 0;
     for (size_t i = 0; i < n_interfaces; i++) {
       if (!interfaces.break_interface_[i]) {

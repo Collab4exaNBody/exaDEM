@@ -45,8 +45,8 @@ evaluate_particle_displ:
 
 global: 
   apply_particle_sticking: false
-  # extra capacity reserved in the classifier for the contacts created by broken interfaces
-  pp_tail_reserve_ratio: 0.05
+  pp_tail_reserve_size: 20000
+  pp_tail_reserve_ratio: 0.0
   sticking_threshold: 2.e-05
 
 prepro_fragmentation:

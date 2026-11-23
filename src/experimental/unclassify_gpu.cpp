@@ -67,7 +67,6 @@ class UnclassifyGPU : public OperatorNode {
   inline void execute() final {
     // lout << "unclassify active interaction on GridCellParticleInteraction" << std::endl;
     classify_interaction_grid(*ic, *traversal_real, *interaction_list_layout, *ges);
-    // Contacts appended since the last rebuild (broken interfaces) are not described by interaction_list_layout.
     merge_pp_tail_into_grid(*ic, *ges);
   }
 };

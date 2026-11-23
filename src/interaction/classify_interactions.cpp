@@ -35,9 +35,10 @@ class ClassifyInteractions : public OperatorNode {
   ADD_SLOT(GridCellParticleInteraction, ges, INPUT, REQUIRED, DocString{"Interaction list"});
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(Traversal, traversal_all, INPUT, REQUIRED, DocString{"list of non empty cells within the current grid"});
+  ADD_SLOT(long, pp_tail_reserve_size, INPUT, 0,
+           DocString{"Initial PP capacity (per type) reserved for broken interface contacts (doubled when exceeded)."});
   ADD_SLOT(double, pp_tail_reserve_ratio, INPUT, 0.0,
-           DocString{"Extra capacity (ratio of the number of interactions, at least 1024) reserved per particle-particle "
-                     "type for the contacts created by broken interfaces between two rebuilds. 0 disables it."});
+           DocString{"Initial PP capacity ratio reserved for broken interface contacts (doubled when exceeded)."});
 
  public:
   inline std::string documentation() const final {
@@ -72,6 +73,7 @@ class ClassifyInteractions : public OperatorNode {
 
     classifier.reset_containers();  // Clear existing waves
     const double reserve_ratio = *pp_tail_reserve_ratio;
+    const size_t reserve_size = std::max(*pp_tail_reserve_size, 0L);
 
     size_t n_threads;
 #pragma omp parallel
@@ -130,8 +132,7 @@ class ClassifyInteractions : public OperatorNode {
       for (int typeID = 0; typeID < ntypes; typeID++) {
         size_t size = bounds[n_threads - 1][typeID].first + bounds[n_threads - 1][typeID].second;
         if (typeID >= InteractionTypeId::FirstIdParticle && typeID <= InteractionTypeId::LastIdParticle) {
-          // Room for the contacts created by broken interfaces until the next rebuild (no reallocation).
-          classifier.reserve_pp_tail(typeID, size, reserve_ratio);
+          classifier.reserve_pp_tail(typeID, size, reserve_ratio, reserve_size);
         }
         classifier.resize(typeID, size);
       }

@@ -36,10 +36,8 @@ inline void merge_pp_tail_into_grid(Classifier& classifier, GridCellParticleInte
     return;
   }
 
-  // Contact kernels may have updated the tail on the GPU.
   ONIKA_CU_DEVICE_SYNCHRONIZE();
 
-  // Gather active tail interactions per owner cell.
   std::map<size_t, std::vector<PlaceholderInteraction>> per_cell;
   for (int typeID = InteractionTypeId::FirstIdParticle; typeID <= InteractionTypeId::LastIdParticle; typeID++) {
     auto& container = classifier.get_data<InteractionType::ParticleParticle>(typeID);
@@ -92,7 +90,7 @@ inline void merge_pp_tail_into_grid(Classifier& classifier, GridCellParticleInte
       return a.sort_by_owner_p(b);
     });
 
-    // Rebuild the per-particle [offset, size] information (interactions are sorted by owner position).
+    // reindex info
     size_t offset = 0;
     for (size_t p = 0; p < info.size(); p++) {
       info[p].offset = offset;
