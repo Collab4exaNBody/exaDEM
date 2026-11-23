@@ -46,8 +46,8 @@ struct Classifier {
 
   // PP tail: contacts appended between two rebuilds (broken interfaces), not in the rebuild layout.
   bool has_pp_tail_ = false;
-  std::array<size_t, InteractionTypeId::NTypesPP> pp_base_size_{};   ///< sizes before the tail
-  std::array<size_t, InteractionTypeId::NTypesPP> pp_tail_extra_{};  ///< reserved tail capacity
+  std::array<size_t, InteractionTypeId::NTypesPP> pp_base_size_{};     ///< sizes before the tail
+  std::array<size_t, InteractionTypeId::NTypesPP> pp_tail_extra_{};    ///< reserved tail capacity
   std::array<size_t, InteractionTypeId::NTypesPP> pp_reserve_size_{};  ///< size given to the last reserve
 
   /**

@@ -100,8 +100,8 @@ class AddBrokenInterfaceGhostContacts : public OperatorNode {
       }
       for (size_t j = offset; j < offset + size; j++) {
         const InnerBondInteraction bond = data_view(j);
-        local.push_back({bond.pair_.pi_.id_, bond.pair_.pj_.id_, bond.pair_.pi_.sub_, bond.pair_.pj_.sub_,
-                         bond[attr::friction]});
+        local.push_back(
+            {bond.pair_.pi_.id_, bond.pair_.pj_.id_, bond.pair_.pi_.sub_, bond.pair_.pj_.sub_, bond[attr::friction]});
       }
     }
 
@@ -157,7 +157,8 @@ class AddBrokenInterfaceGhostContacts : public OperatorNode {
           }
         }
       };
-      PolyhedronPairSide side_a = make_polyhedron_pair_side(cells, vertex_fields, shps, xform, is_xform, bond.pair_.owner());
+      PolyhedronPairSide side_a =
+          make_polyhedron_pair_side(cells, vertex_fields, shps, xform, is_xform, bond.pair_.owner());
       PolyhedronPairSide side_b =
           make_polyhedron_pair_side(cells, vertex_fields, shps, xform, is_xform, bond.pair_.partner());
       add_broken_pair_contacts(side_a, side_b, InteractionPair::PartnerGhost, *rcut_inc, history, new_contacts);

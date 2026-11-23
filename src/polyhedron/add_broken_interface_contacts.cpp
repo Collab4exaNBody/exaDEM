@@ -105,7 +105,8 @@ class AddBrokenInterfaceContacts : public OperatorNode {
       n_broken++;
       auto [offset, size] = interfaces.data_[i];
       const InnerBondInteraction bond = data_view(offset);
-      PolyhedronPairSide side_a = make_polyhedron_pair_side(cells, vertex_fields, shps, xform, is_xform, bond.pair_.owner());
+      PolyhedronPairSide side_a =
+          make_polyhedron_pair_side(cells, vertex_fields, shps, xform, is_xform, bond.pair_.owner());
       PolyhedronPairSide side_b =
           make_polyhedron_pair_side(cells, vertex_fields, shps, xform, is_xform, bond.pair_.partner());
 

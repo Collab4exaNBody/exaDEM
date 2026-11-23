@@ -83,7 +83,6 @@ struct inner_bond_law {
   ONIKA_HOST_DEVICE_FUNC inline std::tuple<double, Vec3d, Vec3d, Vec3d> operator()(
       InnerBondInteraction& item, TMPLC* const __restrict__ cells, TMPLV* const __restrict__ gv, /* grid of vertices */
       TIBFPA& ibpa, const shape* const shps, const double dt) const {
-
     if (!item[attr::unbroken]) {
       constexpr Vec3d null = {0, 0, 0};
       return {0.0, null, null, null};
