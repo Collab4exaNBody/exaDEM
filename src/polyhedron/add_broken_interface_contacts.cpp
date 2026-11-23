@@ -49,10 +49,10 @@ class AddBrokenInterfaceContacts : public OperatorNode {
            DocString{"value added to the search distance to update neighbor list less frequently. in physical space"});
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(InterfaceManager, im, INPUT_OUTPUT, DocString{"Interfaces built from the InnerBond interactions"});
-  ADD_SLOT(bool, enable, INPUT, true,
+  ADD_SLOT(bool, enable_broken_interface_contacts, INPUT, true,
            DocString{"If false, every broken interface requests a neighbor-list rebuild (previous behavior)."});
-  ADD_SLOT(bool, result, OUTPUT,
-           DocString{"True if a neighbor-list rebuild is required to handle the broken interfaces."});
+  ADD_SLOT(bool, broken_interface, INPUT_OUTPUT, REQUIRED,
+           DocString{"In: an interface is broken. Out: a neighbor-list rebuild is required."});
 
  public:
   inline std::string documentation() const final {
@@ -64,7 +64,7 @@ class AddBrokenInterfaceContacts : public OperatorNode {
         to the matching vertex-vertex contact. Handled interfaces are removed from the interface manager.
 
         An interface involving a ghost particle (MPI or periodic boundary) cannot be handled locally: in
-        that case, the output 'result' is true on every MPI process and the neighbor lists must be rebuilt
+        that case, broken_interface stays true on every MPI process and the neighbor lists must be rebuilt
         (previous behavior). This operator must run after store_broken_interface and
         broken_interface_friction_updater.
 
@@ -75,6 +75,10 @@ class AddBrokenInterfaceContacts : public OperatorNode {
   }
 
   inline void execute() final {
+    if (!(*broken_interface)) {
+      return;  // globally consistent (reduced by apply_interface_fracture_criterion)
+    }
+
     auto& interfaces = *im;
     const size_t n_interfaces = interfaces.size();
 
@@ -84,7 +88,7 @@ class AddBrokenInterfaceContacts : public OperatorNode {
 
     // Interfaces with a ghost particle require a rebuild.
     int n_broken = 0;
-    int require_rebuild = (*enable) ? 0 : 1;
+    int require_rebuild = (*enable_broken_interface_contacts) ? 0 : 1;
     for (size_t i = 0; i < n_interfaces; i++) {
       if (!interfaces.break_interface_[i]) {
         continue;
@@ -99,8 +103,9 @@ class AddBrokenInterfaceContacts : public OperatorNode {
     }
 
     MPI_Allreduce(MPI_IN_PLACE, &require_rebuild, 1, MPI_INT, MPI_MAX, *mpi);
-    *result = (require_rebuild != 0);
-    if (*result) {
+    *broken_interface = (require_rebuild != 0);
+    if (*broken_interface) {
+      lout << "add_broken_interface_contacts: broken interface with a ghost particle, rebuild required" << std::endl;
       return;
     }
 
@@ -180,12 +185,19 @@ class AddBrokenInterfaceContacts : public OperatorNode {
       ic->append_pp_tail(typeID, new_contacts[typeID]);
     }
 
+    // The friction now lives in the tail: avoid a stale history when the bonds are unclassified.
+    Vec3d* __restrict__ bond_friction = data_view[attr::friction].data();
     size_t n_kept = 0;
     for (size_t i = 0; i < n_interfaces; i++) {
       if (!interfaces.break_interface_[i]) {
         interfaces.data_[n_kept] = interfaces.data_[i];
         interfaces.break_interface_[n_kept] = false;
         n_kept++;
+      } else {
+        auto [offset, size] = interfaces.data_[i];
+        for (size_t j = offset; j < offset + size; j++) {
+          bond_friction[j] = Vec3d{0, 0, 0};
+        }
       }
     }
     interfaces.data_.resize(n_kept);

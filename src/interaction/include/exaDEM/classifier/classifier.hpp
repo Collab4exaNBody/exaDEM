@@ -48,6 +48,7 @@ struct Classifier {
   bool has_pp_tail_ = false;
   std::array<size_t, InteractionTypeId::NTypesPP> pp_base_size_{};   ///< sizes before the tail
   std::array<size_t, InteractionTypeId::NTypesPP> pp_tail_extra_{};  ///< reserved tail capacity
+  std::array<size_t, InteractionTypeId::NTypesPP> pp_reserve_size_{};  ///< size given to the last reserve
 
   /**
    * @brief Default constructor.
@@ -98,17 +99,16 @@ struct Classifier {
     }
   }
 
-  /** @brief Forgets the PP tail before a rebuild; doubles the reserved capacity if the tail exceeded it. */
+  /** @brief Forgets the PP tail before a rebuild; doubles the reserved capacity if what was appended since the last
+   * reserve (ghost interactions + tail) exceeded it. */
   void reset_pp_tail() {
-    if (has_pp_tail_) {
-      for (int t = InteractionTypeId::FirstIdParticle; t <= InteractionTypeId::LastIdParticle; t++) {
-        const int idx = t - InteractionTypeId::FirstIdParticle;
-        const size_t size = get_size(t);
-        const size_t tail = size > pp_base_size_[idx] ? size - pp_base_size_[idx] : 0;
-        size_t& extra = pp_tail_extra_[idx];
-        while (extra > 0 && tail > extra) {
-          extra *= 2;
-        }
+    for (int t = InteractionTypeId::FirstIdParticle; t <= InteractionTypeId::LastIdParticle; t++) {
+      const int idx = t - InteractionTypeId::FirstIdParticle;
+      const size_t size = get_size(t);
+      const size_t appended = size > pp_reserve_size_[idx] ? size - pp_reserve_size_[idx] : 0;
+      size_t& extra = pp_tail_extra_[idx];
+      while (extra > 0 && appended > extra) {
+        extra *= 2;
       }
     }
     has_pp_tail_ = false;
@@ -134,6 +134,7 @@ struct Classifier {
     if (extra == 0) {
       return;
     }
+    pp_reserve_size_[typeID - InteractionTypeId::FirstIdParticle] = size;
     const size_t capacity = size + extra;
     particles_[get_typed_idx<InteractionType::ParticleParticle>(typeID)].reserve_discard(capacity);
     contact_state_[typeID].reserve_discard(capacity);
