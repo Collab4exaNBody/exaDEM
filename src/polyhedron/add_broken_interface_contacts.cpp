@@ -19,7 +19,6 @@ under the License.
 #include <exanb/core/domain.h>
 #include <exanb/core/grid.h>
 #include <exanb/core/make_grid_variant_operator.h>
-#include <mpi.h>
 #include <onika/cuda/cuda_context.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
@@ -30,7 +29,7 @@ under the License.
 #include <exaDEM/classifier/classifier.hpp>
 #include <exaDEM/interaction/inner_bond_interaction.hpp>
 #include <exaDEM/interface/interface.hpp>
-#include <exaDEM/polyhedron/nbh_polyhedron_pair.hpp>
+#include <exaDEM/polyhedron/broken_interface_contacts.hpp>
 #include <exaDEM/polyhedron/vertices.hpp>
 #include <exaDEM/shapes.hpp>
 #include <vector>
@@ -40,7 +39,6 @@ using namespace exanb;
 
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class AddBrokenInterfaceContacts : public OperatorNode {
-  ADD_SLOT(MPI_Comm, mpi, INPUT, MPI_COMM_WORLD);
   ADD_SLOT(GridT, grid, INPUT, REQUIRED);
   ADD_SLOT(CellVertexField, cvf, INPUT, REQUIRED, DocString{"Store vertex positions for every polyhedron"});
   ADD_SLOT(Domain, domain, INPUT, REQUIRED);
@@ -63,10 +61,10 @@ class AddBrokenInterfaceContacts : public OperatorNode {
         processed by the regular contact force operators. The friction of a broken inner bond is transferred
         to the matching vertex-vertex contact. Handled interfaces are removed from the interface manager.
 
-        An interface involving a ghost particle (MPI or periodic boundary) cannot be handled locally: in
-        that case, broken_interface stays true on every MPI process and the neighbor lists must be rebuilt
-        (previous behavior). This operator must run after store_broken_interface and
-        broken_interface_friction_updater.
+        The PartnerGhost copies of the broken interfaces (MPI or periodic boundaries) are handled by
+        add_broken_interface_ghost_contacts, which must run before this operator and after
+        broken_interface_friction_updater. broken_interface is set to true (rebuild) only if
+        enable_broken_interface_contacts is false.
 
         YAML example:
 
@@ -78,6 +76,11 @@ class AddBrokenInterfaceContacts : public OperatorNode {
     if (!(*broken_interface)) {
       return;  // globally consistent (reduced by apply_interface_fracture_criterion)
     }
+    // broken_interface is now "a rebuild is required"
+    *broken_interface = !(*enable_broken_interface_contacts);
+    if (*broken_interface) {
+      return;
+    }
 
     auto& interfaces = *im;
     const size_t n_interfaces = interfaces.size();
@@ -85,98 +88,44 @@ class AddBrokenInterfaceContacts : public OperatorNode {
     ONIKA_CU_DEVICE_SYNCHRONIZE();
 
     auto data_view = ic->get_sticked_interaction_wrapper();
-
-    // Interfaces with a ghost particle require a rebuild.
-    int n_broken = 0;
-    int require_rebuild = (*enable_broken_interface_contacts) ? 0 : 1;
-    for (size_t i = 0; i < n_interfaces; i++) {
-      if (!interfaces.break_interface_[i]) {
-        continue;
-      }
-      n_broken++;
-      auto [offset, size] = interfaces.data_[i];
-      for (size_t j = offset; j < offset + size; j++) {
-        if (data_view[attr::ghost][j] != InteractionPair::NotGhost) {
-          require_rebuild = 1;
-        }
-      }
-    }
-
-    MPI_Allreduce(MPI_IN_PLACE, &require_rebuild, 1, MPI_INT, MPI_MAX, *mpi);
-    *broken_interface = (require_rebuild != 0);
-    if (*broken_interface) {
-      lout << "add_broken_interface_contacts: broken interface with a ghost particle, rebuild required" << std::endl;
-      return;
-    }
-
-    if (n_broken == 0) {
-      return;  // nothing to do on this process
-    }
-
     const auto cells = grid->cells();
     auto& vertex_fields = *cvf;
     const shapes& shps = *shapes_collection;
-    const double rVerlet = *rcut_inc;
     const Mat3d xform = domain->xform();
     const bool is_xform = !domain->xform_is_identity();
 
-    auto make_side = [&](const ParticleSubLocation& loc) -> PolyhedronPairSide {
-      const auto& cell = cells[loc.cell_];
-      Vec3d r = {cell[field::rx][loc.p_], cell[field::ry][loc.p_], cell[field::rz][loc.p_]};
-      if (is_xform) {
-        r = xform * r;
-      }
-      return {loc.id_,
-              loc.cell_,
-              loc.p_,
-              r,
-              cell[field::orient][loc.p_],
-              cell[field::homothety][loc.p_],
-              shps[cell[field::type][loc.p_]],
-              {loc.p_, vertex_fields[loc.cell_]}};
-    };
-
-    std::array<std::vector<PlaceholderInteraction>, InteractionTypeId::NTypesPP> new_contacts;
+    BrokenInterfaceContacts new_contacts;
+    size_t n_broken = 0;
     size_t n_history = 0;
 
     for (size_t i = 0; i < n_interfaces; i++) {
       if (!interfaces.break_interface_[i]) {
         continue;
       }
+      n_broken++;
       auto [offset, size] = interfaces.data_[i];
       const InnerBondInteraction bond = data_view(offset);
-      const ParticleSubLocation& owner = bond.pair_.owner();
-      const ParticleSubLocation& partner = bond.pair_.partner();
-      assert(owner.id_ < partner.id_);
+      PolyhedronPairSide side_a = make_polyhedron_pair_side(cells, vertex_fields, shps, xform, is_xform, bond.pair_.owner());
+      PolyhedronPairSide side_b =
+          make_polyhedron_pair_side(cells, vertex_fields, shps, xform, is_xform, bond.pair_.partner());
 
-      PolyhedronPairSide side_a = make_side(owner);
-      PolyhedronPairSide side_b = make_side(partner);
-
-      auto add_contact = [&](PlaceholderInteraction& item, int sub_i, int sub_j) -> void {
-        item.pair_.pi_.sub_ = sub_i;
-        item.pair_.pj_.sub_ = sub_j;
-        item.reset();
-        // Friction history from the broken inner bond (VV).
-        if (item.type() == InteractionTypeId::VertexVertex) {
-          for (size_t j = offset; j < offset + size; j++) {
-            const InnerBondInteraction broken_bond = data_view(j);
-            const Interaction history = broke_interaction(broken_bond);
-            if (history.pair_ == item.pair_) {
-              item.as<Interaction>()[attr::friction] = history[attr::friction];
-              n_history++;
-              break;
-            }
+      // Friction history from the broken inner bonds (VV).
+      auto history = [&, offset = offset, size = size](PlaceholderInteraction& item) {
+        for (size_t j = offset; j < offset + size; j++) {
+          const Interaction hist = broke_interaction(data_view(j));
+          if (hist.pair_ == item.pair_) {
+            item.as<Interaction>()[attr::friction] = hist[attr::friction];
+            n_history++;
+            return;
           }
         }
-        assert(item.type() < InteractionTypeId::NTypesPP);
-        new_contacts[item.type()].push_back(item);
       };
+      // NotGhost or OwnerGhost, the PartnerGhost copies are handled by add_broken_interface_ghost_contacts.
+      add_broken_pair_contacts(side_a, side_b, bond.pair_.ghost_, *rcut_inc, history, new_contacts);
+    }
 
-      PlaceholderInteraction item;
-      item.clear_placeholder();
-      item.pair_.ghost_ = InteractionPair::NotGhost;
-      item.pair_.swap_ = false;
-      add_polyhedron_pair_interactions(side_a, side_b, rVerlet, item, add_contact);
+    if (n_broken == 0) {
+      return;
     }
 
     size_t n_contacts = 0;

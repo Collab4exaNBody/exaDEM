@@ -47,9 +47,8 @@ inline void merge_pp_tail_into_grid(Classifier& classifier, GridCellParticleInte
       item.clear_placeholder();
       item.convert<InteractionType::ParticleParticle>() = container[idx];
       if (!item.active()) {
-        continue;
+        continue;  // also skips PartnerGhost copies (rebuilt by update_interaction_ghost)
       }
-      assert(item.pair_.ghost_ == InteractionPair::NotGhost);
       per_cell[item.owner().cell_].push_back(item);
     }
   }

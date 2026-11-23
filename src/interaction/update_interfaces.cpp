@@ -55,13 +55,22 @@ class UpdateInterfaces : public OperatorNode {
     ClassifierContainer<InteractionType::InnerBond>& interactions =
         ic->get_data<InteractionType::InnerBond>(InteractionTypeId::InnerBondId);
     build_manager.data_.clear();
+    manager.partner_ghost_data_.clear();
     size_t n_interactions = interactions.size();
 
     size_t loc = 0;
     while (loc < n_interactions) {
       // Here, we do not build interfaces that are managed by another MPI process (partner).
+      // They are stored apart (used by add_broken_interface_ghost_contacts).
       if (interactions[attr::ghost][loc] == InteractionPair::PartnerGhost) {
-        loc++;
+        size_t n = 1;
+        while (loc + n < n_interactions && interactions[attr::ghost][loc + n] == InteractionPair::PartnerGhost &&
+               interactions[attr::id_i][loc + n] == interactions[attr::id_i][loc] &&
+               interactions[attr::id_j][loc + n] == interactions[attr::id_j][loc]) {
+          n++;
+        }
+        manager.partner_ghost_data_.push_back({loc, n});
+        loc += n;
         continue;
       }
 
