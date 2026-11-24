@@ -26,10 +26,10 @@ under the License.
 #include <exanb/core/parallel_grid_algorithm.h>
 #include <exanb/particle_neighbors/chunk_neighbors.h>
 #include <exanb/particle_neighbors/chunk_neighbors_apply.h>
+#include <onika/parallel/block_parallel_for.h>
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
-#include <onika/parallel/block_parallel_for.h>
 
 #include <cassert>
 #include <cub/cub.cuh>
@@ -237,6 +237,10 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
   ADD_SLOT(PersistentInteractionScratch, persistent_interaction_scratch, PRIVATE,
            DocString{"Scratch space for host-side persistent interaction bookkeeping"});
   ADD_SLOT(bool, enable_persistent_interactions, INPUT, false, DocString{"Enable persistent interactions"});
+  ADD_SLOT(long, pp_tail_reserve_size, INPUT, 0,
+           DocString{"Initial PP capacity (per type) reserved for broken interface contacts (doubled when exceeded)."});
+  ADD_SLOT(double, pp_tail_reserve_ratio, INPUT, 0.0,
+           DocString{"Initial PP capacity ratio reserved for broken interface contacts (doubled when exceeded)."});
 
  public:
   inline std::string documentation() const final {
@@ -476,10 +480,13 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
 
     // ****** Resize Classifier for PP ******* //
     ONIKA_CU_PROF_RANGE_PUSH("nbh_gpu::resize_classifier");
+    interaction_container.reset_pp_tail();
     InteractionParticleAccessor particle_particle_classifier_accessor;
     for (int typeID = get_first_id<InteractionType::ParticleParticle>();
          typeID <= get_last_id<InteractionType::ParticleParticle>(); typeID++) {
       auto& c = interaction_container.get_data<InteractionType::ParticleParticle>(typeID);
+      interaction_container.reserve_pp_tail(typeID, total_interactions_per_type[typeID], *pp_tail_reserve_ratio,
+                                            std::max(*pp_tail_reserve_size, 0L));
       c.resize(total_interactions_per_type[typeID]);
       particle_particle_classifier_accessor[typeID] = c.view();
     }
@@ -561,7 +568,9 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
     ONIKA_CU_STREAM_SYNCHRONIZE(particle_stream);
 
     parallel_queue << set_lane(kLaneHistory)
-                   << block_parallel_for(history.start_.size(), history_updater, parallel_execution_context(), onika::parallel::BlockParallelForOptions{}) << flush;
+                   << block_parallel_for(history.start_.size(), history_updater, parallel_execution_context(),
+                                         onika::parallel::BlockParallelForOptions{})
+                   << flush;
     parallel_queue.wait(kLaneHistory);
     ONIKA_CU_PROF_RANGE_POP();
 

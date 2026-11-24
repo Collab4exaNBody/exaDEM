@@ -10,8 +10,8 @@ reorder_extra_data: nop
 # define a test node which outputs a boolean value 'trigger_move_particles'
 # which tells when to move particles across cells and update neighbor lists
 evaluate_particle_displ:
-  rebind: { threshold: max_displ , result: particle_displ }
-  body: 
+  rebind: { threshold: max_displ , threshold_lab: max_displ_lab , result: particle_displ }
+  body:
     - particle_displ_over
 
 evaluate_driver_displ:
@@ -49,8 +49,12 @@ chunk_neighbors_contact:
 chunk_neighbors_impl: 
   - chunk_neighbors_contact
 
+## checks that the cells are large enough for the neighbor search, defined by your particle mode
+check_cell_size: nop
+
 update_particle_neighbors:
   - amr_grid_pairs
+  - check_cell_size
   - chunk_neighbors_impl
 ####################################################################
 

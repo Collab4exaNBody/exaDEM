@@ -1,0 +1,60 @@
+grid_flavor: grid_flavor_dem
+
+includes:
+  - config_polyhedra.msp
+  - config_barostat.msp
+
+io_tree:
+  - io_config:
+     dir_name: "PolyhedraTriperiodicCompressionDir"
+
+input_data:
+  - init_rcb_grid
+  - read_shape_file:
+     filename: dodecahedron.shp
+  - lattice:
+      structure: SC
+      types: [ Dodecahedron ]
+      size: [ 1.2 , 1.2 , 1.2 ]
+  - set_fields:
+      polyhedra: true
+      type:              [ Dodecahedron ]
+      group:             [            0 ]
+      velocity:          [      [0,0,0] ]
+      sigma_velocity:    [          0.1 ]
+      random_quaternion: [         true ]
+      density:           [         0.02 ]
+
+compute_force:
+  - contact_polyhedron:
+     config: { kn: 10000, kt: 10000, kr: 0.0, mu: 0.0, damp_rate: 0.9 }
+
+# isotropic stress-controlled compression of the periodic cell
+compute_barostat:
+  - domain_volume
+  - avg_stress_tensor
+  - cell_barostat_epilog:
+     cell_sig: [ 0.5, 0.5, 0.5 ]  # compressive is positive
+     cell_mass: 36.0
+     cell_damping: 360.0
+
+analyses:
+  - domain_volume
+  - polyhedra_compacity
+
+domain:
+  cell_size: 3.0
+  periodic: [true, true, true]
+  grid_dims: [2, 2, 2]
+  bounds: [[0, 0, 0], [6, 6, 6]]
+  expandable: false
+
+global:
+  simulation_dump_frequency: -1
+  simulation_paraview_frequency: 5000
+  simulation_end_iteration: 400000
+  simulation_log_frequency: 5000
+  simulation_analyses_frequency: 5000
+  analysis_dump_stress_tensor_frequency: 5000
+  dt: 0.0001 s
+  rcut_inc: 0.05

@@ -99,7 +99,7 @@ struct SetFunctor {
 template <typename... Ts>
 struct SetRegionFunctor {
   const exanb::ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
-  onika::FlatTuple<Ts...> default_values_;    /**< Flat tuple of default values of types Ts. */
+  onika::FlatTuple<Ts...> default_values_;           /**< Flat tuple of default values of types Ts. */
 
   /**
    * @brief Functor operator for setting values.
@@ -154,8 +154,8 @@ struct SetFunctorWithProcessing {
 template <typename Func, typename... Ts>
 struct SetRegionFunctorWithProcessing {
   const exanb::ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
-  mutable Func processing_;                   /**< Functor with processing. */
-  onika::FlatTuple<Ts...> default_values_;    /**< Flat tuple of default values of types Ts. */
+  mutable Func processing_;                          /**< Functor with processing. */
+  onika::FlatTuple<Ts...> default_values_;           /**< Flat tuple of default values of types Ts. */
 
   /**
    * @brief Functor operator with a processing function.
@@ -209,7 +209,7 @@ struct GenSetFunctor {
 template <typename Func>
 struct GenSetRegionFunctor {
   const exanb::ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
-  mutable Func gen_;                          /**< functor used to generate value. */
+  mutable Func gen_;                                 /**< functor used to generate value. */
 
   // this function is only used to apply gen_ on parametes, note that gen_ can't return void.
   template <typename... Args>
@@ -262,8 +262,8 @@ struct FilteredSetFunctor {
 template <typename... Ts>
 struct FilteredSetRegionFunctor {
   const exanb::ParticleRegionCSGShallowCopy region_; /**< Shallow copy of a particle region. */
-  uint32_t filtered_type_;                    /**< The filtered type. */
-  onika::FlatTuple<Ts...> default_values_;    /**< Flat tuple of default values of types Ts. */
+  uint32_t filtered_type_;                           /**< The filtered type. */
+  onika::FlatTuple<Ts...> default_values_;           /**< Flat tuple of default values of types Ts. */
 
   /**
    * @brief Functor operator for filtered set operations.

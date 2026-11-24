@@ -88,7 +88,7 @@ inline onika::cuda::span<T> to_span(const onika::memory::CudaMMVector<T>& vec) {
 template <typename T>
 inline onika::cuda::span<T> to_span(const std::vector<T>& vec) {
   auto& v = const_cast<std::vector<T>&>(vec);
-  return {v.data(),v.size()};
+  return {v.data(), v.size()};
 }
 
 /**

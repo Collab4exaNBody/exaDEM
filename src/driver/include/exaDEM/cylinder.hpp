@@ -28,14 +28,14 @@ under the License.
 namespace exaDEM {
 // Data fields for a cylindrical driver
 struct CylinderFields {
-  double radius_ = -1;              /**< Radius of the cylinder. */
-  Vec3d axis_ = {1, 0, 1};          /**< Component mask (not a direction): the component set to 0 is the cylinder
-                                                axis, e.g. {1, 0, 1} for a cylinder along y. */
-  Vec3d center_ = {0, 0, 0};        /**< Center position of the cylinder in 3D space. */
-  Vec3d vel_ = {0, 0, 0};           /**< Linear velocity of the cylinder. */
-  Vec3d vrot_ = {0, 0, 0};          /**< Angular velocity (rotation) of the cylinder. */
-  Vec3d forces_ = {0, 0, 0};        /**< Accumulated forces applied to the cylinder from interactions. */
-  Vec3d mom_ = {0, 0, 0};           /**< Accumulated moments (torques) applied to the cylinder. */
+  double radius_ = -1;       /**< Radius of the cylinder. */
+  Vec3d axis_ = {1, 0, 1};   /**< Component mask (not a direction): the component set to 0 is the cylinder
+                                         axis, e.g. {1, 0, 1} for a cylinder along y. */
+  Vec3d center_ = {0, 0, 0}; /**< Center position of the cylinder in 3D space. */
+  Vec3d vel_ = {0, 0, 0};    /**< Linear velocity of the cylinder. */
+  Vec3d vrot_ = {0, 0, 0};   /**< Angular velocity (rotation) of the cylinder. */
+  Vec3d forces_ = {0, 0, 0}; /**< Accumulated forces applied to the cylinder from interactions. */
+  Vec3d mom_ = {0, 0, 0};    /**< Accumulated moments (torques) applied to the cylinder. */
 };
 }  // namespace exaDEM
 

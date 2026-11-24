@@ -35,10 +35,14 @@ evaluate_particle_displ:
   - evaluate_interface_breakage
   - trigger_dump_broken_interface
   - interface_updater
+  - add_broken_interface_ghost_contacts
+  - add_broken_interface_contacts # broken_interface -> true only if a rebuild is still required
   - displ_or_break
 
 global: 
   apply_particle_sticking: false
+  pp_tail_reserve_size: 20000
+  pp_tail_reserve_ratio: 0.0
   sticking_threshold: 2.e-05
 
 prepro_fragmentation:
@@ -67,6 +71,7 @@ write_dump_particle_op: write_dump_particle_fragmentation
 ### Initialize
 init_update_particle_neighbors:
   - amr_grid_pairs
+  - check_cell_size
   - chunk_neighbors_contact
   - prepro_fragmentation
   - nbh_polyhedron
