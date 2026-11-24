@@ -123,8 +123,13 @@ def check_interfaces(cell_shapes: Shapes, polyhedra: dict):
         shape1 = cell_shapes[c1]
         shape2 = cell_shapes[c2]
 
-        v1, f1 = shape1.vertices, shape1.faces
-        v2, f2 = shape2.vertices, shape2.faces
+        # compare faces in the world frame (shapes may be stored in their principal frame)
+        v1, f1 = np.asarray(shape1.vertices), shape1.faces
+        v2, f2 = np.asarray(shape2.vertices), shape2.faces
+        if shape1.rotation is not None:
+            v1 = v1 @ np.asarray(shape1.rotation).T
+        if shape2.rotation is not None:
+            v2 = v2 @ np.asarray(shape2.rotation).T
 
         found = False
 

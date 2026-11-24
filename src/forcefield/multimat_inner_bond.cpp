@@ -36,6 +36,9 @@ class InnerBondParamsOp : public OperatorNode {
            DocString{"List of contact parameters for simulations with multiple materials"});
   ADD_SLOT(std::vector<uint32_t>, group1, INPUT, OPTIONAL, DocString{"List of group indices for the first particle."});
   ADD_SLOT(std::vector<uint32_t>, group2, INPUT, OPTIONAL, DocString{"List of group indices for the second particle."});
+  ADD_SLOT(uint32_t, n_groups, INPUT_OUTPUT, 1,
+           DocString{"Number of distinct groups (e.g. set by set_group or read_conf_rockable). The parameter "
+                     "table covers at least n_groups groups, so that every particle group has an entry."});
   ADD_SLOT(std::vector<double>, kn, INPUT, OPTIONAL, DocString{"List of ln values."});
   ADD_SLOT(std::vector<double>, kt, INPUT, OPTIONAL, DocString{"List of kt values."});
   ADD_SLOT(std::vector<double>, damp_rate, INPUT, OPTIONAL, DocString{"List of en2 values."});
@@ -144,7 +147,10 @@ class InnerBondParamsOp : public OperatorNode {
       uint32_t max_group = 0;
       for (auto grp : groups_1) max_group = std::max(max_group, grp);
       for (auto grp : groups_2) max_group = std::max(max_group, grp);
-      int n_groups = static_cast<int>(max_group) + 1;
+      // The table must also cover the groups present in the particle data (n_groups set upstream),
+      // otherwise the accessor reads out of bounds for particles of an unlisted group.
+      int n_groups = std::max(static_cast<int>(max_group) + 1, static_cast<int>(*this->n_groups));
+      *this->n_groups = n_groups;
 
       if (!default_config.has_value()) {
         std::vector<std::vector<bool>> covered(n_groups, std::vector<bool>(n_groups, false));
@@ -195,7 +201,8 @@ class InnerBondParamsOp : public OperatorNode {
         ibp.register_multimat(g1, g2, params);
       }
     } else if (default_config.has_value()) {
-      ibp.setup_multimat(1, *default_config);
+      // default_config applies to every pair of groups present in the particle data
+      ibp.setup_multimat(std::max(1, static_cast<int>(*n_groups)), *default_config);
     } else {
       color_log::error(this->operator_name(),
                        "You must define either a list for group combinations (group1, group2) or a default config.");

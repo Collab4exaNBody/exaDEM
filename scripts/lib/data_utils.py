@@ -53,7 +53,7 @@ RockableData
 
 # --- STICKED PARTICLES CONFIGURATION ---
 # -----------------------------------------------
-def make_sticked_conf(cell_centers, shapefile, gap):
+def make_sticked_conf(cell_centers, shapefile, gap, cell_quats=None):
     '''
     Create a RockableData object with the parameters, interactions and particles needed for a simulation with sticked particles.
     The particles are created at the positions of the cell centers, and the interactions are defined to allow sticking between particles that are within a certain distance (stick_distance).
@@ -62,6 +62,8 @@ def make_sticked_conf(cell_centers, shapefile, gap):
     ----------
     cell_centers : dict 
         mapping cell ID to its center coordinates (x, y, z)
+    cell_quats : dict, optional
+        mapping cell ID to the orientation quaternion (w, x, y, z) of its shape (default: identity)
     shapefile : str 
         path to the shapefile containing the cell geometries (used for visualization and interaction definitions)
     gap: float 
@@ -113,7 +115,7 @@ def make_sticked_conf(cell_centers, shapefile, gap):
             pos=(x, y, z),
             vel=(0, 0, 0),
             acc=(0, 0, 0),
-            quat=(1, 0, 0, 0),
+            quat=tuple(cell_quats[pid]) if cell_quats is not None else (1, 0, 0, 0),
             vrot=(0, 0, 0),
             arot=(0, 0, 0),
         ))
