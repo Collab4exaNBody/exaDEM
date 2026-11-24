@@ -158,7 +158,7 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
             AABB cover_particle = {r - Dmax, r + Dmax};
             IJK max = g.locate_cell(cover_particle.bmax);
             IJK min = g.locate_cell(cover_particle.bmin);
-           bool do_continue = true;
+            bool do_continue = true;
             double best_d2 = std::numeric_limits<double>::max();
             for (int x = min.i; x <= max.i; x++) {
               for (int y = min.j; y <= max.j; y++) {
