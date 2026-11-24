@@ -30,10 +30,10 @@ namespace exaDEM {
  * @brief Stores driver properties.
  */
 struct info_ball {
-  int id_;              /**< Unique identifier of the driver */
-  Vec3d center_;        /**< Center position of the sphere */
-  double radius_;       /**< Radius of the sphere */
-  Vec3d vel_;           /**< Velocity of the sphere */
+  int id_;        /**< Unique identifier of the driver */
+  Vec3d center_;  /**< Center position of the sphere */
+  double radius_; /**< Radius of the sphere */
+  Vec3d vel_;     /**< Velocity of the sphere */
 };
 
 /**
@@ -41,10 +41,10 @@ struct info_ball {
  * @brief Represents a planar surfar.
  */
 struct info_surface {
-  int id_;              /**< Unique identifier of the surface */
-  Vec3d normal_;        /**< Unit normal vector defining the plane orientation */
-  double offset_;       /**< Plane offset in equation n · x = offset */
-  Vec3d vel_;           /**< Velocity of the surface */
+  int id_;        /**< Unique identifier of the surface */
+  Vec3d normal_;  /**< Unit normal vector defining the plane orientation */
+  double offset_; /**< Plane offset in equation n · x = offset */
+  Vec3d vel_;     /**< Velocity of the surface */
 };
 
 /**
@@ -52,10 +52,10 @@ struct info_surface {
  * @brief Describes a cylindrical geometry.
  */
 struct info_cylinder {
-  int id_;              /**< Unique identifier of the cylinder */
-  Vec3d center_;        /**< A point on the cylinder axis */
-  Vec3d normal_;        /**< Axis direction of the cylinder (should be unit length) */
-  double radius_;       /**< Radius of the cylinder */
+  int id_;        /**< Unique identifier of the cylinder */
+  Vec3d center_;  /**< A point on the cylinder axis */
+  Vec3d normal_;  /**< Axis direction of the cylinder (should be unit length) */
+  double radius_; /**< Radius of the cylinder */
 };
 
 std::tuple<bool, bool, Vec3d> intersect(Vec3d& n, double offset, Vec3d& corner1, Vec3d& corner2) {

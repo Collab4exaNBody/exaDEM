@@ -39,6 +39,28 @@ inline void atomic_add(Vec3d& val, const Vec3d& add) {
   ONIKA_CU_ATOMIC_ADD(val.z, add.z);
 }
 
+/**
+ * @brief Atomically sets val to max(val, a) for doubles (thread safe on CPU and GPU).
+ * CUDA/HIP have no native atomicMax for double, so a compare-and-swap loop is used on the device.
+ */
+ONIKA_HOST_DEVICE_FUNC
+inline void atomic_max(double& val, double a) {
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+  unsigned long long int* address = reinterpret_cast<unsigned long long int*>(&val);
+  unsigned long long int old = *address;
+  unsigned long long int assumed;
+  do {
+    assumed = old;
+    if (__longlong_as_double(assumed) >= a) {
+      return;
+    }
+    old = atomicCAS(address, assumed, __double_as_longlong(a));
+  } while (assumed != old);
+#else
+  ONIKA_CU_ATOMIC_MAX(val, a);
+#endif
+}
+
 ONIKA_HOST_DEVICE_FUNC
 static inline void mat3d_atomic_add_contribution(Mat3d& dst, const Mat3d& src) {
   ONIKA_CU_ATOMIC_ADD(dst.m11, src.m11);
