@@ -48,5 +48,19 @@ struct ContactState {
       ft_.clear();
     }
   }
+
+  /** @brief Reserves capacity; content is discarded if a buffer has to grow. */
+  void reserve_discard(const size_t capacity) {
+    auto reserve = [capacity](auto& vec) {
+      if (vec.capacity() < capacity) {
+        vec.clear();
+        vec.reserve(capacity);
+      }
+    };
+    reserve(dn_);
+    reserve(cp_);
+    reserve(fn_);
+    reserve(ft_);
+  }
 };
 }  // namespace exaDEM

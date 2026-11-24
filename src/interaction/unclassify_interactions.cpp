@@ -20,7 +20,10 @@ under the License.
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
 
+#include <algorithm>
+#include <array>
 #include <exaDEM/classifier/classifier.hpp>
+#include <exaDEM/classifier/classifier_pp_tail.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <limits>
 
@@ -29,21 +32,21 @@ using namespace exanb;
 
 /** @brief Function to unclassify interactions */
 struct UnclassifyFunc {
+  size_t size_limit_ = std::numeric_limits<size_t>::max();
+
   template <InteractionType IT>
   void operator()(ClassifierContainer<IT>& container, GridCellParticleInteraction& ges) {
     using namespace onika::cuda;
     auto& ces = ges.m_data;
-    // Cache of the (cell, owner_p) range located for the previous interaction: consecutive
-    // classified interactions sharing the same owner particle (common in dense packings where
-    // a particle has several contacts) can reuse it instead of redoing a binary search.
     constexpr uint32_t InvalidCell = std::numeric_limits<uint32_t>::max();
     constexpr uint16_t InvalidP = std::numeric_limits<uint16_t>::max();
     uint32_t previous_cell = InvalidCell;
     uint16_t previous_owner_p = InvalidP;
     size_t previous_start = 0, previous_end = 0;
     PlaceholderInteraction* previous_data_i_ptr = nullptr;
+    const size_t n_interactions = std::min(container.size(), size_limit_);
 #pragma omp for schedule(guided) nowait
-    for (size_t it = 0; it < container.size(); it++) {
+    for (size_t it = 0; it < n_interactions; it++) {
       auto item1 = container[it];
       assert(item1.pair_.consistent());  // Check if the interaction is correctly formed before updating
       // Only active interactions should be updated.
@@ -262,13 +265,20 @@ class UnclassifyInteractions : public OperatorNode {
 
     Classifier& classifier = *ic;
     GridCellParticleInteraction& grid_interactions = *ges;  // Reference to cell interactions
-    UnclassifyFunc func;
+    std::array<size_t, InteractionTypeId::NTypes> size_limits;
+    for (int typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
+      size_limits[typeID] = classifier.base_size(typeID);
+    }
 #pragma omp parallel
     {
+      UnclassifyFunc func;
       for (int typeID = 0; typeID < InteractionTypeId::NTypes; typeID++) {
+        func.size_limit_ = size_limits[typeID];
         CDispatcher::dispatch(typeID, classifier, func, grid_interactions);
       }
     }
+
+    merge_pp_tail_into_grid(classifier, grid_interactions);
   }
 };
 

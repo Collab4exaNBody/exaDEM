@@ -138,6 +138,25 @@ struct ClassifierContainer<InteractionType::ParticleParticle> {
     apply_on_fields(func);
   }
 
+  struct ReserveDiscardFunctor {
+    const size_t capacity_;
+    template <typename T>
+    inline void operator()(T& vec) {
+      if (vec.capacity() < capacity_) {
+        vec.clear();
+        vec.reserve(capacity_);
+      }
+    }
+  };
+
+  /**
+   * briefs Ensures that all the lists can hold `capacity` interactions without reallocation.
+   */
+  void reserve_discard(const size_t capacity) {
+    ReserveDiscardFunctor func = {capacity};
+    apply_on_fields(func);
+  }
+
   /**
    * briefs Returns the number of interactions.
    */

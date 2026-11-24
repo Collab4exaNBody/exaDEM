@@ -17,7 +17,10 @@ under the License.
 
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <cassert>
+#include <vector>
 #include <exaDEM/classifier/classifier_container.hpp>
 #include <exaDEM/classifier/contact_state.hpp>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
@@ -40,6 +43,12 @@ struct Classifier {
   std::vector<WavePD> drivers_;              ///< Storage for interactions categorized by type.
   std::vector<WaveIB> innerbonds_;           ///< Used for fragmentation
   std::vector<ContactState> contact_state_;  ///< Storage for contact state data.
+
+  // PP tail: contacts appended between two rebuilds (broken interfaces), not in the rebuild layout.
+  bool has_pp_tail_ = false;
+  std::array<size_t, InteractionTypeId::NTypesPP> pp_base_size_{};     ///< sizes before the tail
+  std::array<size_t, InteractionTypeId::NTypesPP> pp_tail_extra_{};    ///< reserved tail capacity
+  std::array<size_t, InteractionTypeId::NTypesPP> pp_reserve_size_{};  ///< size given to the last reserve
 
   /**
    * @brief Default constructor.
@@ -78,6 +87,7 @@ struct Classifier {
    * @brief Clears all stored interactions in the waves vector.
    */
   void reset_containers() {
+    reset_pp_tail();  // must be called before clear
     for (auto& container : particles_) {
       container.clear();
     }
@@ -87,6 +97,62 @@ struct Classifier {
     for (auto& container : innerbonds_) {
       container.clear();
     }
+  }
+
+  /** @brief Forgets the PP tail before a rebuild; doubles the reserved capacity if what was appended since the last
+   * reserve (ghost interactions + tail) exceeded it. */
+  void reset_pp_tail() {
+    for (int t = InteractionTypeId::FirstIdParticle; t <= InteractionTypeId::LastIdParticle; t++) {
+      const int idx = t - InteractionTypeId::FirstIdParticle;
+      const size_t size = get_size(t);
+      const size_t appended = size > pp_reserve_size_[idx] ? size - pp_reserve_size_[idx] : 0;
+      size_t& extra = pp_tail_extra_[idx];
+      while (extra > 0 && appended > extra) {
+        extra *= 2;
+      }
+    }
+    has_pp_tail_ = false;
+  }
+
+  /** @brief Size of the container typeID without the PP tail. */
+  size_t base_size(int typeID) {
+    if (has_pp_tail_ && typeID >= InteractionTypeId::FirstIdParticle && typeID <= InteractionTypeId::LastIdParticle) {
+      return pp_base_size_[typeID - InteractionTypeId::FirstIdParticle];
+    }
+    return get_size(typeID);
+  }
+
+  /** @brief Reserves size + extra (initially max(base, ratio * size)) for the PP container typeID and its contact
+   * state, to avoid reallocations when the tail grows. Content is discarded on growth: call it before refilling.
+   */
+  void reserve_pp_tail(int typeID, size_t size, double ratio, size_t base) {
+    assert(typeID >= InteractionTypeId::FirstIdParticle && typeID <= InteractionTypeId::LastIdParticle);
+    size_t& extra = pp_tail_extra_[typeID - InteractionTypeId::FirstIdParticle];
+    if (extra == 0) {
+      extra = std::max(base, static_cast<size_t>(std::max(ratio, 0.0) * static_cast<double>(size)));
+    }
+    if (extra == 0) {
+      return;
+    }
+    pp_reserve_size_[typeID - InteractionTypeId::FirstIdParticle] = size;
+    const size_t capacity = size + extra;
+    particles_[get_typed_idx<InteractionType::ParticleParticle>(typeID)].reserve_discard(capacity);
+    contact_state_[typeID].reserve_discard(capacity);
+  }
+
+  /** @brief Appends PP interactions of type typeID to the tail. */
+  void append_pp_tail(int typeID, std::vector<PlaceholderInteraction>& interactions) {
+    assert(typeID >= InteractionTypeId::FirstIdParticle && typeID <= InteractionTypeId::LastIdParticle);
+    if (!has_pp_tail_) {
+      for (int t = InteractionTypeId::FirstIdParticle; t <= InteractionTypeId::LastIdParticle; t++) {
+        pp_base_size_[t - InteractionTypeId::FirstIdParticle] = get_size(t);
+      }
+      has_pp_tail_ = true;
+    }
+    if (interactions.empty()) {
+      return;
+    }
+    particles_[get_typed_idx<InteractionType::ParticleParticle>(typeID)].insert(interactions, typeID);
   }
 
   /** @brief Retrieves the const vector of interactions for a specific type.
