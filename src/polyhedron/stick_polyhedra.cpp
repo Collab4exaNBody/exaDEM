@@ -176,9 +176,9 @@ class StickPolyhedraOperator : public OperatorNode {
         apply_cell_particle_neighbors(
             *grid, *chunk_neighbors, cell_i, loc_i, std::false_type() /* not symetric */,
             // capture
-            [&g, &vertex_fields, &cells, cell_i, &item, &shps, dn_crit, area_tol, same_face_size, id_i, rx_i, ry_i, rz_i, t_i, g_i, h_i,
-             cluster_i, &vertex_cell_i, &add_contact, xform, is_xform, &manager, &local, &nj_cache, &areaj_cache,
-             &ibpa](size_t p_i, size_t cell_j, unsigned int p_j, size_t p_j_index) {
+            [&g, &vertex_fields, &cells, cell_i, &item, &shps, dn_crit, area_tol, same_face_size, id_i, rx_i, ry_i,
+             rz_i, t_i, g_i, h_i, cluster_i, &vertex_cell_i, &add_contact, xform, is_xform, &manager, &local, &nj_cache,
+             &areaj_cache, &ibpa](size_t p_i, size_t cell_j, unsigned int p_j, size_t p_j_index) {
               double clusterj = cells[cell_j][field::cluster][p_j];
               if (clusterj != cluster_i[p_i]) {
                 return;
