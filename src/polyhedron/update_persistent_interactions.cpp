@@ -27,6 +27,7 @@ under the License.
 #include <onika/scg/operator_slot.h>
 
 #include <cassert>
+#include <limits>
 #include <exaDEM/interaction/grid_cell_interaction.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/interaction/interaction_manager.hpp>
@@ -157,10 +158,11 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
             AABB cover_particle = {r - Dmax, r + Dmax};
             IJK max = g.locate_cell(cover_particle.bmax);
             IJK min = g.locate_cell(cover_particle.bmin);
-            bool do_continue = true;
-            for (int x = min.i; x <= max.i && do_continue; x++) {
-              for (int y = min.j; y <= max.j && do_continue; y++) {
-                for (int z = min.k; z <= max.k && do_continue; z++) {
+           bool do_continue = true;
+            double best_d2 = std::numeric_limits<double>::max();
+            for (int x = min.i; x <= max.i; x++) {
+              for (int y = min.j; y <= max.j; y++) {
+                for (int z = min.k; z <= max.k; z++) {
                   IJK next = {x, y, z};
                   if (g.contains(next)) {
                     size_t cell_b = grid_ijk_to_index(dims, next);
@@ -169,12 +171,18 @@ class UpdatePersistentInteractionsOperator : public OperatorNode {
                     ONIKA_ASSUME_ALIGNED(id_b);
                     for (uint16_t p_b = 0; p_b < nb; p_b++) {
                       if (id_b[p_b] == particle_loc_b.id_) {
-                        particle_loc_b.cell_ = cell_b;
-                        particle_loc_b.p_ = p_b;
-                        item.pair_.ghost_ =
-                            g.is_ghost_cell(cell_b) ? InteractionPair::OwnerGhost : InteractionPair::NotGhost;
-                        do_continue = false;
-                        break;
+                        const Vec3d rb = {cells[cell_b][field::rx][p_b], cells[cell_b][field::ry][p_b],
+                                          cells[cell_b][field::rz][p_b]};
+                        const double d2 = norm2(rb - r);
+                        if (d2 < best_d2) {
+                          best_d2 = d2;
+                          particle_loc_b.cell_ = cell_b;
+                          particle_loc_b.p_ = p_b;
+                          item.pair_.ghost_ =
+                              g.is_ghost_cell(cell_b) ? InteractionPair::OwnerGhost : InteractionPair::NotGhost;
+                          do_continue = false;
+                        }
+                        break;  // ids are unique within a cell
                       }
                     }
                   }
