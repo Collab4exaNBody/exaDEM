@@ -46,7 +46,7 @@ struct InterfaceManager {
                               // size (number of interactions that compose the interface)
   vector_t<uint8_t> break_interface_;  // list of booleans that indicate if the interface is broken or not. 1 if the
                                        // interface is broken, 0 otherwise.
-  std::vector<Interface> partner_ghost_data_;  // PartnerGhost copies of interfaces managed by another owner (host only)
+  vector_t<Interface> partner_ghost_data_;  // PartnerGhost copies of interfaces managed by another owner
 
   /** @brief Resize the interface manager
    * @param new_size The new size of the interface manager.

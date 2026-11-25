@@ -2,6 +2,7 @@
 #include <cub/cub.cuh>
 #include <exaDEM/experimental/filter_pair_particle.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_storage.hpp>
+#include <exaDEM/polyhedron/vertices.hpp>
 #include <exanb/core/grid_fields.h>
 
 namespace exaDEM {
@@ -345,13 +346,18 @@ __global__ void CountInteractionsPPKernel(CellsT cells, VertexField* __restrict_
 // Stage 4: Fill Classifier per particle pair
 // 1 block = 1 particle pair (PCCP)
 // ============================================================
-template <int BLOCKX, int BLOCKY, typename CellsT>
+/// @brief Default history hook of FillInteractionsPPKernel: VV contacts start without friction.
+struct NoPairHistory {
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t, PlaceholderInteraction&) const {}
+};
+
+template <int BLOCKX, int BLOCKY, typename CellsT, typename HistoryT = NoPairHistory>
 __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
     CellsT cells, VertexField* __restrict__ vertex_fields, const shape* __restrict__ shps, double rcut_inc,
     uint32_t* __restrict__ pp_cell_i, uint32_t* __restrict__ pp_cell_j, uint16_t* __restrict__ pp_p_i,
     uint16_t* __restrict__ pp_p_j, uint8_t* __restrict__ pp_ghost,
     InteractionTypePerCellCounter* __restrict__ prefix_data, InteractionParticleAccessor interactions,
-    size_t num_pairs) {
+    size_t num_pairs, HistoryT history = {}) {
   using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
   __shared__ typename BlockScan::TempStorage temp_storage;
 
@@ -448,6 +454,7 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
             item.pair_.type_ = InteractionTypeId::VertexVertex;
             item.pair_.swap_ = false;
             item.reset();
+            history(idx, item);
             interactions[InteractionTypeId::VertexVertex].set(prefix[InteractionTypeId::VertexVertex], item);
             interactions[InteractionTypeId::VertexVertex].update(prefix[InteractionTypeId::VertexVertex]++, item);
           }

@@ -155,6 +155,18 @@ struct Classifier {
     particles_[get_typed_idx<InteractionType::ParticleParticle>(typeID)].insert(interactions, typeID);
   }
 
+  /** @brief Grows the PP tail of type typeID by n uninitialized slots (filled on GPU), returns the old size. */
+  size_t extend_pp_tail(int typeID, size_t n) {
+    std::vector<PlaceholderInteraction> none;
+    append_pp_tail(typeID, none);
+    auto& container = particles_[get_typed_idx<InteractionType::ParticleParticle>(typeID)];
+    const size_t old_size = container.size();
+    if (n > 0) {
+      container.resize(old_size + n);
+    }
+    return old_size;
+  }
+
   /** @brief Retrieves the const vector of interactions for a specific type.
    * @return Const reference to the vector storing interactions of the specified type.
    */

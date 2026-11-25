@@ -1,0 +1,12 @@
+includes:
+  - proto_config_fragmentation_gpu.msp
+
+# Previous broken interface pipeline (host side), kept to compare with update_broken_interfaces_gpu
+evaluate_particle_displ:
+  - evaluate_polyhedron_displ
+  - evaluate_interface_breakage
+  - trigger_dump_broken_interface
+  - interface_updater
+  - add_broken_interface_ghost_contacts
+  - add_broken_interface_contacts # broken_interface -> true only if a rebuild is still required
+  - displ_or_break
