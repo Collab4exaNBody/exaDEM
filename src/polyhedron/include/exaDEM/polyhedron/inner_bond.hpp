@@ -19,6 +19,7 @@ under the License.
 #pragma once
 
 #include <exaDEM/forcefield/inner_bond_force.hpp>
+#include <exaDEM/forcefield/xform_velocity.hpp>
 #include <exaDEM/interaction/interaction.hpp>
 #include <exaDEM/shape.hpp>
 #include <exaDEM/shape_detection.hpp>
@@ -60,11 +61,12 @@ struct inner_bond_law {
    * @tparam TMPLC Type of the cell.
    * @param cell Reference to the cell containing particle data.
    * @param p Index of the particle.
-   * @return Vec3d Velocity vector of the particle.
+   * @param r Position of the particle (transformed).
+   * @return Vec3d Velocity vector of the particle (transformed).
    */
   template <typename TMPLC>
-  ONIKA_HOST_DEVICE_FUNC inline Vec3d get_v(TMPLC& cell, const int p) const {
-    return {cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]};
+  ONIKA_HOST_DEVICE_FUNC inline Vec3d get_v(TMPLC& cell, const int p, const Vec3d& r) const {
+    return transform_vel(xform, Vec3d{cell[field::vx][p], cell[field::vy][p], cell[field::vz][p]}, r);
   }
 
   /**
@@ -130,8 +132,8 @@ struct inner_bond_law {
     // === Contact Force parameters
     const InnerBondParams& ibp = ibpa(groupi, groupj);
 
-    const Vec3d vi = get_v(celli, pi.p_);
-    const Vec3d vj = get_v(cellj, pj.p_);
+    const Vec3d vi = get_v(celli, pi.p_, ri);
+    const Vec3d vj = get_v(cellj, pj.p_, rj);
     const auto& mi = celli[field::mass][pi.p_];
     const auto& mj = cellj[field::mass][pj.p_];
 

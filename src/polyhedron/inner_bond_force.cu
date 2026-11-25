@@ -49,6 +49,7 @@ class ComputeInnerBondForce : public OperatorNode {
   ADD_SLOT(MultiMatParamsT<InnerBondParams>, multimat_ibp, INPUT, REQUIRED,
            DocString{"List of inner bond parameters for simulations with multiple materials"});
   ADD_SLOT(double, dt, INPUT, REQUIRED);
+  ADD_SLOT(Vec3d, cell_vh, INPUT, OPTIONAL, DocString{"Periodic cell velocity (barostat)."});
   ADD_SLOT(Classifier, ic, INPUT_OUTPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(shapes, shapes_collection, INPUT_OUTPUT, DocString{"Collection of shapes"});
   // analyses
@@ -115,7 +116,12 @@ class ComputeInnerBondForce : public OperatorNode {
     const auto& force_law_parameters = *multimat_ibp;
     const MultiMatContactParamsTAccessor<InnerBondParams> ibp = force_law_parameters.get_multimat_accessor();
 
-    if (is_def_xform) {
+    if (is_def_xform && cell_vh.has_value()) {
+      const Vec3d& vh = *cell_vh;
+      inner_bond_law<DeformingCellXForm> func;
+      func.xform = DeformingCellXForm{xform, {vh.x / xform.m11, vh.y / xform.m22, vh.z / xform.m33}};
+      run_contact_law<InteractionTypeId::InnerBondId>(parallel_execution_context(), classifier, func, __params__);
+    } else if (is_def_xform) {
       inner_bond_law<LinearXForm> func;
       func.xform = LinearXForm{xform};
       run_contact_law<InteractionTypeId::InnerBondId>(parallel_execution_context(), classifier, func, __params__);

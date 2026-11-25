@@ -84,6 +84,8 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
     auto& shps = *shapes_collection;
     auto [dn, cp, fn, ft] = ic->contact_state(InteractionTypeId::InnerBondId);
     paraview_interface_helper buffers = {*mpi_rank};  // it contains streams
+    const Mat3d xform = domain->xform();
+    const bool is_xform = !domain->xform_is_identity();
 
     if (rank == 0) {
       std::filesystem::create_directories(*filename);
@@ -114,6 +116,9 @@ class WriteParaviewInterfaceOperator : public OperatorNode {
         Quaternion quat = cell[field::orient][loc.p_];
         auto* shp = shps[type];
         Vec3d r = {cell[field::rx][loc.p_], cell[field::ry][loc.p_], cell[field::rz][loc.p_]};
+        if (is_xform) {
+          r = xform * r;
+        }
         double h = cell[field::homothety][loc.p_];
         vertices[j - interface.loc_] = shp->get_vertex(loc.sub_, r, h, quat);
         buffers.ids_ << i << " ";
