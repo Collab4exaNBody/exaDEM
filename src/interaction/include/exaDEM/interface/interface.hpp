@@ -66,6 +66,20 @@ struct InterfaceManager {
   size_t size() { return data_.size(); }
 };
 
+/** @brief Every broken OwnerGhost interface must update exactly one PartnerGhost copy (summed over all ranks).
+ * Collective call. */
+inline bool check_broken_ghost_balance(MPI_Comm comm, uint64_t n_owner_ghost, uint64_t n_partner_updated,
+                                       const std::string& who) {
+  uint64_t counts[2] = {n_owner_ghost, n_partner_updated};
+  MPI_Allreduce(MPI_IN_PLACE, counts, 2, MPI_UINT64_T, MPI_SUM, comm);
+  if (counts[0] != counts[1]) {
+    color_log::warning(who, std::to_string(counts[0]) + " broken OwnerGhost interfaces but " +
+                                std::to_string(counts[1]) + " PartnerGhost copies updated.");
+    return false;
+  }
+  return true;
+}
+
 /** @brief Check the consistency of the interfaces
  * @param interfaces The interface build manager
  * @param interactions The interaction classifier

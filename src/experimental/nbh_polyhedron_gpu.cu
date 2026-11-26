@@ -591,7 +591,10 @@ class UpdateClassifierPolyhedronGPUPCCP : public OperatorNode {
         cell_indices, cell_interaction_info, cell_storage, interaction_classifier_accessor, *ges,
         get_first_id<InteractionType::ParticleDriver>(), get_last_id<InteractionType::ParticleDriver>());
 
-    // Not required for InnerBond interactions, since they are persistent and already accounted for in the classifier.
+    // InnerBond too: update_interaction_ghost needs them to build the PartnerGhost copies.
+    transfer_classifier_grid<do_ghost_only, do_active_interaction_only, true>(
+        cell_indices, cell_interaction_info, cell_storage, interaction_classifier_accessor, *ges,
+        get_first_id<InteractionType::InnerBond>(), get_last_id<InteractionType::InnerBond>());
 
     ONIKA_CU_PROF_RANGE_POP();
 #endif

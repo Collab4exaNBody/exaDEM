@@ -90,6 +90,7 @@ class AddBrokenInterfaceGhostContacts : public OperatorNode {
 
     // Broken bonds of the local interfaces whose partner is a ghost.
     std::vector<BrokenGhostBond> local;
+    size_t n_owner_ghost = 0;
     for (size_t i = 0; i < interfaces.size(); i++) {
       if (!interfaces.break_interface_[i]) {
         continue;
@@ -98,6 +99,7 @@ class AddBrokenInterfaceGhostContacts : public OperatorNode {
       if (data_view[attr::ghost][offset] != InteractionPair::OwnerGhost) {
         continue;
       }
+      n_owner_ghost++;
       for (size_t j = offset; j < offset + size; j++) {
         const InnerBondInteraction bond = data_view(j);
         local.push_back(
@@ -163,6 +165,8 @@ class AddBrokenInterfaceGhostContacts : public OperatorNode {
           make_polyhedron_pair_side(cells, vertex_fields, shps, xform, is_xform, bond.pair_.partner());
       add_broken_pair_contacts(side_a, side_b, InteractionPair::PartnerGhost, *rcut_inc, history, new_contacts);
     }
+
+    check_broken_ghost_balance(*mpi, n_owner_ghost, n_updated, "add_broken_interface_ghost_contacts");
 
     size_t n_contacts = 0;
     for (int typeID = InteractionTypeId::FirstIdParticle; typeID <= InteractionTypeId::LastIdParticle; typeID++) {

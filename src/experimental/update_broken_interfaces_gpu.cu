@@ -494,6 +494,8 @@ class UpdateBrokenInterfacesGPU : public OperatorNode {
       }
     }
 
+    check_broken_ghost_balance(*mpi, m, q, "update_broken_interfaces_gpu");
+
     // 5. Contacts of the broken pairs (local first, then PartnerGhost)
     const size_t n_pairs = k + q;
     size_t n_contacts = 0;
