@@ -19,6 +19,22 @@ static inline onikaError_t ONIKA_PREFETCH(const void* ptr, size_t size, int devi
 }
 
 namespace exaDEM {
+/** @brief Active interactions of the classifier PP tail (see Classifier::append_pp_tail), grouped by owner cell. */
+struct PPTailByCell {
+  std::vector<PlaceholderInteraction> items;  // sorted by owner cell, classifier order within a cell
+  std::vector<uint32_t> cells;                // distinct owner cells, ascending
+  std::vector<uint32_t> begin;                // items of cells[c] are [begin[c], begin[c + 1])
+
+  std::pair<size_t, size_t> range(size_t cell) const {
+    auto it = std::lower_bound(cells.begin(), cells.end(), cell);
+    if (it == cells.end() || *it != cell) {
+      return {0, 0};
+    }
+    const size_t c = it - cells.begin();
+    return {begin[c], begin[c + 1]};
+  }
+};
+
 // Stores information about non-empty cells (GPU/CPU friendly)
 struct CellInteractionInformation {
   // Vector type using unified memory (GPU/CPU compatible)
@@ -132,16 +148,19 @@ inline void add_particle_particle_totals(CellStorage& cell_storage, CellInteract
  * @param classifier Classifier providing access to interactions per type.
  * @param ges GridCellParticleInteraction storage for the grid.
  * @param ghost_only If true, only transfers interactions flagged as ghost.
+ * @param tail If set, active PP tail interactions also merged into their owner cell (an equal interaction is replaced).
  */
 template <bool ghost_only, bool active_interaction, bool append = false>
 void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info, CellStorage& cell_storage,
                               ClassifierViewAccessor& interaction_classifier_accessor, GridCellParticleInteraction& ges,
-                              const int typeID_start = 0, const int typeID_end = InteractionTypeId::NTypes) {
+                              const int typeID_start = 0, const int typeID_end = InteractionTypeId::NTypes - 1,
+                              const PPTailByCell* tail = nullptr) {
   // Number of non-empty cells to process
   size_t ncells = info.start_cell_.size();
+  size_t n_tail_merged = 0;
 
   // Parallel loop over non-empty cells
-#pragma omp parallel for
+#pragma omp parallel for reduction(+ : n_tail_merged)
   for (size_t cell_idx = 0; cell_idx < ncells; cell_idx++) {
     // Skip if we only want ghost cells and this cell is not flagged
     if constexpr (ghost_only) {
@@ -163,6 +182,8 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
     for (int typeID = typeID_start; typeID <= typeID_end; typeID++) {
       number_of_interactions += n_elem_per_type[typeID];
     }
+    auto [tail_begin, tail_end] = tail ? tail->range(owner_cell) : std::pair<size_t, size_t>{0, 0};
+    number_of_interactions += tail_end - tail_begin;
 
     // Reference to storage for this grid cell
     auto& storage = ges.m_data[owner_cell];
@@ -203,6 +224,10 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
         }
       }
     }
+    for (size_t k = tail_begin; k < tail_end; k++) {
+      data_ptr[shift++] = tail->items[k];
+    }
+    n_tail_merged += tail_end - tail_begin;
 
     if constexpr (active_interaction) {
       assert(shift <= old_size + number_of_interactions);
@@ -218,6 +243,20 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
     std::stable_sort(
         storage.m_data.begin(), storage.m_data.end(),
         [](const PlaceholderInteraction& a, const PlaceholderInteraction& b) { return a.sort_by_owner_p(b); });
+
+    if (tail_end > tail_begin) {
+      // equal interactions are adjacent, the tail one last: keep it
+      auto& d = storage.m_data;
+      size_t w = 0;
+      for (size_t k = 0; k < d.size(); k++) {
+        if (k + 1 < d.size() && d[k].owner().p_ == d[k + 1].owner().p_ && d[k].pair_ == d[k + 1].pair_) {
+          continue;
+        }
+        d[w++] = d[k];
+      }
+      d.resize(w);
+      data_ptr = d.data();
+    }
 
     // reindex info
     int info_offset = 0;
@@ -239,6 +278,12 @@ void transfer_classifier_grid(size_t* cell_ptr, CellInteractionInformation& info
       }
       info_offset += _size;
     }
+  }
+
+  if (tail && n_tail_merged != tail->items.size()) {
+    color_log::warning("transfer_classifier_grid",
+                       std::to_string(tail->items.size() - n_tail_merged) +
+                           " PP tail interactions have an owner cell outside the traversal.");
   }
 }
 }  // namespace exaDEM

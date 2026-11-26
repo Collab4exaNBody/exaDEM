@@ -26,10 +26,10 @@ under the License.
 #include <onika/scg/operator.h>
 #include <onika/scg/operator_factory.h>
 #include <onika/scg/operator_slot.h>
+#include <onika/parallel/parallel_for.h>
 
 #include <cassert>
 #include <exaDEM/classifier/classifier.hpp>
-#include <exaDEM/classifier/classifier_pp_tail.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/interaction_list_layout.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_cell_data.hpp>
 #include <exaDEM/experimental/polyhedron/nbh_gpu/nbh_interaction_history.hpp>
@@ -43,6 +43,27 @@ under the License.
 
 namespace exaDEM {
 using namespace exanb;
+
+/** @brief Copies one PP type of the classifier tail into a contiguous buffer. */
+struct CopyPPTailFunc {
+  ClassifierContainer<InteractionType::ParticleParticle>::View view;
+  size_t base;
+  PlaceholderInteraction* out;
+  ONIKA_HOST_DEVICE_FUNC inline void operator()(size_t i) const { out[i] = view(base + i); }
+};
+}  // namespace exaDEM
+
+namespace onika {
+namespace parallel {
+template <>
+struct ParallelForFunctorTraits<exaDEM::CopyPPTailFunc> {
+  static inline constexpr bool RequiresBlockSynchronousCall = false;
+  static inline constexpr bool CudaCompatible = true;
+};
+}  // namespace parallel
+}  // namespace onika
+
+namespace exaDEM {
 template <typename GridT, class = AssertGridHasFields<GridT>>
 class UnclassifyGPU : public OperatorNode {
   ADD_SLOT(Domain, domain, INPUT, REQUIRED);
@@ -51,12 +72,14 @@ class UnclassifyGPU : public OperatorNode {
   ADD_SLOT(Classifier, ic, INPUT, DocString{"Interaction lists classified according to their types"});
   ADD_SLOT(InteractionListBuildLayout, interaction_list_layout, INPUT,
            DocString{"Data about packed interactions within classifier."});
+  ADD_SLOT(onika::memory::CudaMMVector<PlaceholderInteraction>, tail_buffer, PRIVATE);
+  ADD_SLOT(PPTailByCell, pp_tail, PRIVATE);
 
  public:
   inline std::string documentation() const final {
     return R"EOF(
         This operator transfers the active interactions held by the GPU interaction Classifier (ic)
-        back into the GridCellParticleInteraction storage (ges).
+        back into the GridCellParticleInteraction storage (ges), PP tail included (copied on the GPU).
 
         YAML example [no option]:
 
@@ -65,9 +88,57 @@ class UnclassifyGPU : public OperatorNode {
   }
 
   inline void execute() final {
-    // lout << "unclassify active interaction on GridCellParticleInteraction" << std::endl;
-    classify_interaction_grid(*ic, *traversal_real, *interaction_list_layout, *ges);
-    merge_pp_tail_into_grid(*ic, *ges);
+    gather_pp_tail();
+    classify_interaction_grid(*ic, *traversal_real, *interaction_list_layout, *ges, &(*pp_tail));
+  }
+
+ private:
+  /** Active PP tail interactions grouped by owner cell: one contiguous GPU copy, grouping on the host. */
+  void gather_pp_tail() {
+    PPTailByCell& tail = *pp_tail;
+    tail.items.clear();
+    tail.cells.clear();
+    tail.begin.clear();
+    if (!ic->has_pp_tail_) {
+      return;
+    }
+
+    size_t total = 0;
+    for (int typeID = InteractionTypeId::FirstIdParticle; typeID <= InteractionTypeId::LastIdParticle; typeID++) {
+      total += ic->get_size(typeID) - ic->base_size(typeID);
+    }
+    auto& buffer = *tail_buffer;
+    buffer.resize(total);
+    size_t shift = 0;
+    for (int typeID = InteractionTypeId::FirstIdParticle; typeID <= InteractionTypeId::LastIdParticle; typeID++) {
+      const size_t base = ic->base_size(typeID);
+      const size_t n = ic->get_size(typeID) - base;
+      if (n > 0) {
+        CopyPPTailFunc func = {ic->get_data<InteractionType::ParticleParticle>(typeID).view(), base,
+                               buffer.data() + shift};
+        parallel_for(n, func, parallel_execution_context("copy_pp_tail"));
+        shift += n;
+      }
+    }
+    ONIKA_CU_DEVICE_SYNCHRONIZE();
+
+    std::vector<std::pair<uint32_t, uint32_t>> order;  // (owner cell, index in buffer)
+    for (size_t i = 0; i < buffer.size(); i++) {
+      if (buffer[i].active()) {
+        order.push_back({buffer[i].owner().cell_, static_cast<uint32_t>(i)});
+      }
+    }
+    std::stable_sort(order.begin(), order.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    tail.items.resize(order.size());
+    for (size_t k = 0; k < order.size(); k++) {
+      tail.items[k] = buffer[order[k].second];
+      if (k == 0 || order[k].first != order[k - 1].first) {
+        tail.cells.push_back(order[k].first);
+        tail.begin.push_back(k);
+      }
+    }
+    tail.begin.push_back(order.size());
   }
 };
 

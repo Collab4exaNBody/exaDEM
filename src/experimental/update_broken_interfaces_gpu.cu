@@ -117,9 +117,9 @@ struct BondFields {
 };
 
 inline BondFields make_bond_fields(Classifier::WaveIB::View& v) {
-  return {v[attr::id_i].data(),  v[attr::id_j].data(),  v[attr::cell_i].data(), v[attr::cell_j].data(),
-          v[attr::p_i].data(),   v[attr::p_j].data(),   v[attr::sub_i].data(),  v[attr::sub_j].data(),
-          v[attr::swap].data(),  v[attr::ghost].data(), v[attr::friction].data(), v[attr::unbroken].data()};
+  return {v[attr::id_i].data(), v[attr::id_j].data(),  v[attr::cell_i].data(),   v[attr::cell_j].data(),
+          v[attr::p_i].data(),  v[attr::p_j].data(),   v[attr::sub_i].data(),    v[attr::sub_j].data(),
+          v[attr::swap].data(), v[attr::ghost].data(), v[attr::friction].data(), v[attr::unbroken].data()};
 }
 
 /** @brief Where the friction history of a broken pair comes from: local bonds or received ghost bonds. */
@@ -246,8 +246,10 @@ __global__ void match_partner_kernel(size_t n_partner, const Interface* partner,
     size_t lo = 0, hi = n_recv;
     while (lo < hi) {
       const size_t mid = (lo + hi) / 2;
-      if (key_less(recv[mid], id_i, id_j)) lo = mid + 1;
-      else hi = mid;
+      if (key_less(recv[mid], id_i, id_j))
+        lo = mid + 1;
+      else
+        hi = mid;
     }
     if (lo == n_recv || recv[lo].id_i != id_i || recv[lo].id_j != id_j) continue;
     size_t end = lo;
@@ -422,8 +424,7 @@ class UpdateBrokenInterfacesGPU : public OperatorNode {
     ONIKA_CU_DEVICE_SYNCHRONIZE();
     // Clear a non-sticky error left by an unchecked call (e.g. cudaMemPrefetchAsync unsupported on WSL).
     if (cudaError_t pending = cudaGetLastError(); pending != cudaSuccess) {
-      ldbg << "update_broken_interfaces_gpu: clearing pending CUDA error: " << cudaGetErrorString(pending)
-           << std::endl;
+      ldbg << "update_broken_interfaces_gpu: clearing pending CUDA error: " << cudaGetErrorString(pending) << std::endl;
     }
     onikaStream_t st = global_cuda_ctx()->getThreadStream(0);
     Scratch& s = *scratch;
@@ -453,12 +454,12 @@ class UpdateBrokenInterfacesGPU : public OperatorNode {
     size_t n_send = 0;
     if (m > 0) {
       ghost_sizes_kernel<<<nblocks(m), kThreads, 0, st>>>(m, s.ghost_sel_.data(), s.broken_.data(), itf,
-                                                           s.sizes_.reserve(m));
+                                                          s.sizes_.reserve(m));
       ONIKA_CU_CHECK_ERRORS(cudaGetLastError());
       exclusive_scan_device(s.sizes_.data(), s.offsets_.reserve(m), m, st);
       n_send = read_device(s.offsets_.data() + m - 1, st) + read_device(s.sizes_.data() + m - 1, st);
       pack_ghost_kernel<<<nblocks(m), kThreads, 0, st>>>(m, s.ghost_sel_.data(), s.broken_.data(), itf,
-                                                          s.offsets_.data(), bonds, s.send_.reserve(n_send));
+                                                         s.offsets_.data(), bonds, s.send_.reserve(n_send));
       s.host_send_.resize(n_send);
       ONIKA_CU_CHECK_ERRORS(cudaMemcpyAsync(s.host_send_.data(), s.send_.data(), n_send * sizeof(BrokenGhostBond),
                                             cudaMemcpyDeviceToHost, st));
@@ -479,9 +480,8 @@ class UpdateBrokenInterfacesGPU : public OperatorNode {
       s.host_recv_.resize(n_recv);
       MPI_Allgatherv(s.host_send_.data(), local_bytes, MPI_BYTE, s.host_recv_.data(), counts.data(), displs.data(),
                      MPI_BYTE, *mpi);
-      std::stable_sort(s.host_recv_.begin(), s.host_recv_.end(), [](const BrokenGhostBond& a, const BrokenGhostBond& b) {
-        return key_less(a, b.id_i, b.id_j);
-      });
+      std::stable_sort(s.host_recv_.begin(), s.host_recv_.end(),
+                       [](const BrokenGhostBond& a, const BrokenGhostBond& b) { return key_less(a, b.id_i, b.id_j); });
 
       // 4. Match the PartnerGhost copies
       if (n_partner > 0) {
@@ -507,16 +507,16 @@ class UpdateBrokenInterfacesGPU : public OperatorNode {
       }
       if (q > 0) {
         partner_pairs_kernel<<<nblocks(q), kThreads, 0, st>>>(q, k, s.matched_.data(),
-                                                               interfaces.partner_ghost_data_.data(), s.first_.data(),
-                                                               s.count_.data(), bonds, pairs);
+                                                              interfaces.partner_ghost_data_.data(), s.first_.data(),
+                                                              s.count_.data(), bonds, pairs);
       }
 
       auto* vertex_fields = cvf->data();
       const shape* shps = shapes_collection->data();
       dim3 block(kBlockX, kBlockY, 1);
-      CountInteractionsPPKernel<kBlockX, kBlockY><<<n_pairs, block, 0, st>>>(
-          cells, vertex_fields, shps, *rcut_inc, pairs.cell_i, pairs.cell_j, pairs.p_i, pairs.p_j,
-          s.counts_.reserve(n_pairs), n_pairs);
+      CountInteractionsPPKernel<kBlockX, kBlockY>
+          <<<n_pairs, block, 0, st>>>(cells, vertex_fields, shps, *rcut_inc, pairs.cell_i, pairs.cell_j, pairs.p_i,
+                                      pairs.p_j, s.counts_.reserve(n_pairs), n_pairs);
 
       int* tc[InteractionTypeId::NTypesPP];
       int* tp[InteractionTypeId::NTypesPP];
@@ -524,8 +524,7 @@ class UpdateBrokenInterfacesGPU : public OperatorNode {
         tc[t] = s.type_counts_[t].reserve(n_pairs);
         tp[t] = s.type_prefix_[t].reserve(n_pairs);
       }
-      split_counts_kernel<<<nblocks(n_pairs), kThreads, 0, st>>>(n_pairs, s.counts_.data(), tc[0], tc[1], tc[2],
-                                                                   tc[3]);
+      split_counts_kernel<<<nblocks(n_pairs), kThreads, 0, st>>>(n_pairs, s.counts_.data(), tc[0], tc[1], tc[2], tc[3]);
       ONIKA_CU_CHECK_ERRORS(cudaGetLastError());
       TypeBase base;
       InteractionParticleAccessor accessor;
@@ -541,11 +540,11 @@ class UpdateBrokenInterfacesGPU : public OperatorNode {
             ic->get_data<InteractionType::ParticleParticle>(InteractionTypeId::FirstIdParticle + t).view();
       }
       pack_prefix_kernel<<<nblocks(n_pairs), kThreads, 0, st>>>(n_pairs, s.prefix_.reserve(n_pairs), tp[0], tp[1],
-                                                                  tp[2], tp[3], base);
+                                                                tp[2], tp[3], base);
       BrokenPairHistory history = {pairs.hist, bonds, s.recv_.data()};
-      FillInteractionsPPKernel<kBlockX, kBlockY><<<n_pairs, block, 0, st>>>(
-          cells, vertex_fields, shps, *rcut_inc, pairs.cell_i, pairs.cell_j, pairs.p_i, pairs.p_j, pairs.ghost,
-          s.prefix_.data(), accessor, n_pairs, history);
+      FillInteractionsPPKernel<kBlockX, kBlockY>
+          <<<n_pairs, block, 0, st>>>(cells, vertex_fields, shps, *rcut_inc, pairs.cell_i, pairs.cell_j, pairs.p_i,
+                                      pairs.p_j, pairs.ghost, s.prefix_.data(), accessor, n_pairs, history);
     }
 
     // 6. The friction now lives in the tail; drop the broken local interfaces.
@@ -555,9 +554,9 @@ class UpdateBrokenInterfacesGPU : public OperatorNode {
       assert(n_kept == n_interfaces - k);
       if (n_kept > 0) {
         gather_interfaces_kernel<<<nblocks(n_kept), kThreads, 0, st>>>(n_kept, s.kept_.data(), itf,
-                                                                        s.interfaces_.reserve(n_kept));
-        ONIKA_CU_CHECK_ERRORS(cudaMemcpyAsync(interfaces.data_.data(), s.interfaces_.data(),
-                                              n_kept * sizeof(Interface), cudaMemcpyDeviceToDevice, st));
+                                                                       s.interfaces_.reserve(n_kept));
+        ONIKA_CU_CHECK_ERRORS(cudaMemcpyAsync(interfaces.data_.data(), s.interfaces_.data(), n_kept * sizeof(Interface),
+                                              cudaMemcpyDeviceToDevice, st));
       }
       ONIKA_CU_STREAM_SYNCHRONIZE(st);
       interfaces.data_.resize(n_kept);
@@ -570,8 +569,8 @@ class UpdateBrokenInterfacesGPU : public OperatorNode {
     ONIKA_CU_CHECK_ERRORS(cudaGetLastError());
 
     ldbg << "update_broken_interfaces_gpu: " << k << " broken interfaces (" << m << " OwnerGhost, " << n_send
-         << " bonds sent), " << n_recv << " bonds received, " << q << " PartnerGhost interfaces updated, "
-         << n_contacts << " contacts created" << std::endl;
+         << " bonds sent), " << n_recv << " bonds received, " << q << " PartnerGhost interfaces updated, " << n_contacts
+         << " contacts created" << std::endl;
   }
 };
 

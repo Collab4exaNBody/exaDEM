@@ -26,7 +26,7 @@ struct InteractionListBuildLayout {
  */
 inline void classify_interaction_grid(Classifier& classifier, Traversal& traversal,
                                       InteractionListBuildLayout& interaction_list_layout,
-                                      GridCellParticleInteraction& ges) {
+                                      GridCellParticleInteraction& ges, const PPTailByCell* tail = nullptr) {
   ClassifierViewStorage wrappers(classifier);
   ClassifierViewAccessor interaction_classifier_accessor = wrappers.accessor();
   auto [cell_ptr, cell_size] = traversal.info();
@@ -36,6 +36,6 @@ inline void classify_interaction_grid(Classifier& classifier, Traversal& travers
 
   transfer_classifier_grid<do_ghost_only, do_active_interaction_only>(
       cell_ptr, interaction_list_layout.cell_interaction_info_, interaction_list_layout.cell_storage_,
-      interaction_classifier_accessor, ges);
+      interaction_classifier_accessor, ges, 0, InteractionTypeId::NTypes - 1, tail);
 }
 }  // namespace exaDEM

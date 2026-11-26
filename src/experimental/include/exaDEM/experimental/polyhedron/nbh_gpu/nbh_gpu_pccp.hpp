@@ -356,8 +356,8 @@ __global__ __launch_bounds__(64, 10) void FillInteractionsPPKernel(
     CellsT cells, VertexField* __restrict__ vertex_fields, const shape* __restrict__ shps, double rcut_inc,
     uint32_t* __restrict__ pp_cell_i, uint32_t* __restrict__ pp_cell_j, uint16_t* __restrict__ pp_p_i,
     uint16_t* __restrict__ pp_p_j, uint8_t* __restrict__ pp_ghost,
-    InteractionTypePerCellCounter* __restrict__ prefix_data, InteractionParticleAccessor interactions,
-    size_t num_pairs, HistoryT history = {}) {
+    InteractionTypePerCellCounter* __restrict__ prefix_data, InteractionParticleAccessor interactions, size_t num_pairs,
+    HistoryT history = {}) {
   using BlockScan = cub::BlockScan<int, BLOCKX, cub::BLOCK_SCAN_RAKING, BLOCKY>;
   __shared__ typename BlockScan::TempStorage temp_storage;
 
